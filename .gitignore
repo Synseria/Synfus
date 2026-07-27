@@ -1,0 +1,29 @@
+# SwiftPM
+.build/
+.swiftpm/
+Package.resolved
+
+# Produits de build
+*.app/
+*.dmg
+dist/
+
+# Xcode
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+DerivedData/
+*.xcuserstate
+
+# Éditeurs
+.vscode/
+*.swp
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes

@@ -1,0 +1,96 @@
+name: Release
+
+# Un tag « v… » suffit à publier :  git tag v0.0.1 && git push origin v0.0.1
+# Le déclenchement manuel sert à rejouer une release ratée sans retaguer.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag à publier (ex. v0.0.1)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    # macOS 26 est imposé par le SDK : BarView utilise glassEffect (Liquid Glass),
+    # qui n'existe pas dans les SDK antérieurs. Le deployment target reste 14.0,
+    # donc le binaire produit ici tourne de macOS 14 à 26 — la bascule vers le
+    # matériau translucide se fait à l'exécution.
+    runs-on: macos-26
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Sélectionner Xcode
+        run: |
+          LATEST="$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+          sudo xcode-select -s "$LATEST"
+          swift --version
+          xcrun --show-sdk-version
+
+      - name: Déterminer la version
+        id: version
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          echo "tag=$TAG"             >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}"     >> "$GITHUB_OUTPUT"
+
+      - name: Construire les DMG
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          chmod +x build.sh make-dmg.sh
+          mkdir -p dist
+          # Les deux tranches sont compilées avec le même SDK ; x86_64 est
+          # produit par cross-compilation depuis le runner Apple Silicon.
+          for arch in arm64 x86_64; do
+            ARCH="$arch" ./build.sh
+            ./make-dmg.sh Synfus.app "dist/Synfus-$VERSION-$arch.dmg"
+            rm -rf Synfus.app
+          done
+          shasum -a 256 dist/*.dmg | tee dist/SHA256SUMS.txt
+
+      - name: Publier la release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          cat > notes.md <<'EOF'
+          ### Téléchargement
+
+          | Mac | Fichier |
+          | --- | --- |
+          | Apple Silicon (M1 → M4) | `Synfus-VERSION-arm64.dmg` |
+          | Intel | `Synfus-VERSION-x86_64.dmg` |
+
+          Compatible macOS 14 (Sonoma) à macOS 26. L'effet Liquid Glass de la barre
+          n'apparaît que sur macOS 26 ; en deçà la barre utilise un matériau translucide.
+
+          ### Installation
+
+          Monter le DMG, glisser **Synfus** dans **Applications**, puis :
+
+          ```sh
+          xattr -dr com.apple.quarantine /Applications/Synfus.app
+          ```
+
+          Cette commande est nécessaire car l'app est signée ad-hoc et non notarisée :
+          sans elle, macOS refuse de l'ouvrir. Au premier lancement, autoriser Synfus
+          dans **Réglages Système → Confidentialité et sécurité → Accessibilité**.
+          EOF
+          sed -i '' "s/VERSION/$VERSION/g" notes.md
+
+          gh release create "$TAG" \
+            --title "Synfus $VERSION" \
+            --notes-file notes.md \
+            dist/Synfus-"$VERSION"-arm64.dmg \
+            dist/Synfus-"$VERSION"-x86_64.dmg \
+            dist/SHA256SUMS.txt
