@@ -94,6 +94,8 @@ final class WindowManager: ObservableObject {
                 guard isGameWindow(window) else { continue }
 
                 let rawTitle = stringAttribute(window, kAXTitleAttribute) ?? ""
+                guard Self.isCharacterWindow(title: rawTitle) else { continue }
+
                 var name = Self.characterName(fromTitle: rawTitle)
 
                 // Deux persos peuvent porter un titre identique (ou vide) : on les
@@ -146,6 +148,21 @@ final class WindowManager: ObservableObject {
         return size.width > 200 && size.height > 200
     }
 
+    /// Séparateurs rencontrés dans les titres du client selon les versions.
+    private static let separators = [" - ", " – ", " — ", " | ", " • "]
+
+    /// Un client qui n'a pas encore de perso en jeu — écran de connexion,
+    /// sélection de personnage, chargement — s'intitule simplement « Dofus ».
+    /// Ce n'est pas un perso : il n'a rien à faire dans la barre, et lui donner
+    /// un emplacement décalerait les raccourcis des vrais persos.
+    ///
+    /// Un perso connecté porte toujours « Nom - Classe - version - Release ».
+    static func isCharacterWindow(title: String) -> Bool {
+        let cleaned = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleaned.isEmpty, cleaned.lowercased() != "dofus" else { return false }
+        return separators.contains { cleaned.contains($0) }
+    }
+
     /// Extrait le nom du perso du titre de la fenêtre. Le client Dofus n'a pas de
     /// format garanti : on prend ce qui précède le premier séparateur, et à défaut
     /// le titre entier. Le panneau de diagnostic affiche les titres bruts pour
@@ -154,7 +171,7 @@ final class WindowManager: ObservableObject {
         let cleaned = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleaned.isEmpty else { return "Sans titre" }
 
-        for separator in [" - ", " – ", " — ", " | ", " • "] {
+        for separator in separators {
             guard let range = cleaned.range(of: separator) else { continue }
             let head = String(cleaned[..<range.lowerBound])
                 .trimmingCharacters(in: .whitespaces)

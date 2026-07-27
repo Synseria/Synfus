@@ -40,6 +40,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             for (index, client) in manager.clients.enumerated() {
                 let item = add(to: menu, title: client.name, action: #selector(focusClient(_:)))
                 item.tag = index
+                item.image = ClassIconStore.shared.menuIcon(for: client.characterClass)
                 if manager.isFrontmost(client) { item.state = .on }
 
                 // Le raccourci est affiché à titre indicatif seulement : le vrai

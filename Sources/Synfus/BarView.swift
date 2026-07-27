@@ -45,6 +45,7 @@ struct BarView: View {
     @ObservedObject private var manager = WindowManager.shared
     @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var watcher = AttentionWatcher.shared
+    @ObservedObject private var icons = ClassIconStore.shared
     @State private var dragging: String?
     @State private var pulse = false
 
@@ -130,6 +131,31 @@ struct BarView: View {
         prefs.toggleAutoFocus?.displayString ?? "aucun raccourci"
     }
 
+    /// Repère de classe : l'icône choisie dans les réglages, à défaut une
+    /// pastille teintée. L'icône du Dock ne servirait à rien ici — tous les
+    /// clients partagent le même bundle, donc la même image.
+    @ViewBuilder
+    private func classBadge(for className: String?, active: Bool) -> some View {
+        ZStack {
+            if let custom = icons.icon(for: className) {
+                Image(nsImage: custom)
+                    .resizable()
+                    .interpolation(.high)
+                    .scaledToFill()
+                    .clipShape(Circle())
+            } else {
+                Circle().fill(DofusClass.color(for: className))
+                Text(DofusClass.abbreviation(for: className))
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+            }
+        }
+        .frame(width: 20, height: 20)
+        .overlay(
+            Circle().strokeBorder(Color.white.opacity(active ? 0.5 : 0.15), lineWidth: 1)
+        )
+    }
+
     private func chip(index: Int, client: DofusClient) -> some View {
         let active = manager.isFrontmost(client)
         let alerting = watcher.alerting.contains(client.slotKey)
@@ -139,19 +165,7 @@ struct BarView: View {
         } label: {
             HStack(spacing: 5) {
                 if prefs.showClasses {
-                    // L'icône du Dock est la même pour tous les clients (même
-                    // bundle) : une pastille teintée par classe distingue bien
-                    // mieux les persos d'un coup d'œil.
-                    Text(DofusClass.abbreviation(for: client.characterClass))
-                        .font(.system(size: 9, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
-                        .frame(width: 19, height: 19)
-                        .background(
-                            Circle().fill(DofusClass.color(for: client.characterClass))
-                        )
-                        .overlay(
-                            Circle().strokeBorder(Color.white.opacity(active ? 0.5 : 0.15), lineWidth: 1)
-                        )
+                    classBadge(for: client.characterClass, active: active)
                 }
 
                 VStack(alignment: .leading, spacing: 0) {
