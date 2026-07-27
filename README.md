@@ -7,7 +7,13 @@ et fait basculer d'un perso à l'autre sans passer par ⌘-Tab.
 
 - **Barre flottante** listant les persos connectés, chacun avec la couleur de sa
   classe — lue dans le titre de la fenêtre, pas dans l'icône du Dock (tous les
-  clients partagent le même bundle `Dofus.app`, donc la même icône).
+  clients partagent le même bundle `Dofus.app`, donc la même icône). Les clients
+  restés à l'écran de connexion ne sont pas listés : ils décaleraient la
+  numérotation des vrais persos.
+- **Icône par classe**, à fournir soi-même : onglet *Classes* des réglages, par
+  glisser-déposer ou en remplissant `~/Library/Application Support/Synfus/Classes`
+  (`iop.png`, `cra.png`…). Synfus n'embarque aucune image du jeu — celles
+  d'Ankama n'ont pas à être redistribuées. Sans image, la pastille colorée reste.
 - **Raccourcis clavier globaux** : un par emplacement, plus deux pour cycler dans
   l'ordre choisi.
 - **Détection d'attention** : quand un perso réclame la main, Synfus peut le
