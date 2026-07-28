@@ -67,10 +67,13 @@ struct BarView: View {
         }
     }
 
+    /// Poignée de déplacement, et signature de l'app sur l'overlay. Le curseur
+    /// en main ouverte et l'infobulle portent l'affordance que les trois traits
+    /// donnaient auparavant ; la zone sensible reste la même.
     private var handle: some View {
-        Image(systemName: "line.3.horizontal")
-            .font(.system(size: 9, weight: .semibold))
+        SynfusGlyphView()
             .foregroundStyle(.tertiary)
+            .frame(height: 15)
             .frame(width: 15, height: 26)
             .contentShape(Rectangle())
             .background(WindowDragArea())

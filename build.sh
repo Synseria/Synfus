@@ -11,7 +11,10 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 NAME="Synfus"
-BUNDLE_ID="fr.synfus.Synfus"
+# Reverse-DNS du domaine réellement détenu : synseria.fr. Cet identifiant est
+# l'identité vue par TCC et le nom du fichier de préférences — le changer oblige
+# à réautoriser l'Accessibilité, et impose le repli de Preferences.legacyDomains.
+BUNDLE_ID="fr.synseria.Synfus"
 VERSION="${VERSION:-0.0.1}"
 APP="$NAME.app"
 

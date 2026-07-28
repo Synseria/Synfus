@@ -62,7 +62,7 @@ final class HotKeyManager {
         nextID += 1
 
         var ref: EventHotKeyRef?
-        let eventID = EventHotKeyID(signature: dofuSynSignature, id: id)
+        let eventID = EventHotKeyID(signature: synfusSignature, id: id)
         let status = RegisterEventHotKey(
             hotKey.keyCode,
             hotKey.modifiers,
@@ -105,7 +105,7 @@ final class HotKeyManager {
 
 /// Constante de fichier plutôt que membre statique : le callback C ci-dessous
 /// s'exécute hors du main actor et ne peut donc pas lire un membre isolé.
-private let dofuSynSignature: OSType = 0x44_53_59_4E  // 'DSYN'
+private let synfusSignature: OSType = 0x53_59_4E_46  // 'SYNF'
 
 /// Callback C : il ne peut rien capturer, d'où le passage par le singleton.
 private func hotKeyEventCallback(
@@ -123,7 +123,7 @@ private func hotKeyEventCallback(
         nil,
         &eventID
     )
-    guard status == noErr, eventID.signature == dofuSynSignature else { return status }
+    guard status == noErr, eventID.signature == synfusSignature else { return status }
 
     let id = eventID.id
     DispatchQueue.main.async {

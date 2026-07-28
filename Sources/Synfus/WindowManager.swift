@@ -270,7 +270,10 @@ final class WindowManager: ObservableObject {
     /// Ouvre le panneau Accessibilité, en demandant d'abord à macOS d'afficher
     /// sa propre invite si l'app n'a jamais été autorisée.
     func requestAccessibility() {
-        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+        // `kAXTrustedCheckOptionPrompt` est déclaré `extern CFStringRef` côté C,
+        // donc vu comme une variable globale mutable que la concurrence stricte
+        // refuse de lire. Sa valeur est une constante d'API : on la cite.
+        let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
         AXIsProcessTrustedWithOptions(options)
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
             NSWorkspace.shared.open(url)

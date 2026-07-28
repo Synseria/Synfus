@@ -113,6 +113,14 @@ struct SettingsView: View {
                     Button("Recentrer en haut") { FloatingBarController.shared.recenter() }
                         .font(.system(size: 11))
                 }
+                Picker("Icône dans la barre de menus", selection: Binding(
+                    get: { prefs.menuBarIcon },
+                    set: { prefs.menuBarIcon = $0; MenuBarController.shared.refreshIcon() }
+                )) {
+                    ForEach(MenuBarIcon.allCases) { choix in
+                        Text(choix.label).tag(choix)
+                    }
+                }
                 Toggle("Démarrer Synfus avec la session", isOn: $launchAtLogin)
                     .onChange(of: launchAtLogin) { _, value in LaunchAtLogin.set(value) }
             }
