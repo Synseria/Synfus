@@ -1,11 +1,16 @@
 name: Release
 
-# Un tag « v… » suffit à publier :  git tag v0.0.1 && git push origin v0.0.1
+# Un tag « vX.Y.Z » suffit à publier :  git tag v0.1.0 && git push origin v0.1.0
 # Le déclenchement manuel sert à rejouer une release ratée sans retaguer.
+#
+# Le filtre est strict — « v* » acceptait « v.0.1.0 », dont `${TAG#v}` tire la
+# version « .0.1.0 » : des DMG mal nommés et un CFBundleShortVersionString que
+# macOS refuse. Un tag mal formé ne déclenche donc plus rien du tout.
 on:
   push:
     tags:
-      - "v*"
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+-*"
   workflow_dispatch:
     inputs:
       tag:
@@ -39,6 +44,13 @@ jobs:
         id: version
         run: |
           TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          # Le filtre de déclenchement ne couvre pas workflow_dispatch, dont le
+          # tag est saisi à la main : on revérifie ici plutôt que de produire une
+          # release au nom cassé.
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+            echo "::error::Tag « $TAG » mal formé — attendu vX.Y.Z (ex. v0.1.0)."
+            exit 1
+          fi
           echo "tag=$TAG"             >> "$GITHUB_OUTPUT"
           echo "version=${TAG#v}"     >> "$GITHUB_OUTPUT"
 
@@ -91,9 +103,23 @@ jobs:
           EOF
           sed -i '' "s/VERSION/$VERSION/g" notes.md
 
-          gh release create "$TAG" \
-            --title "Synfus $VERSION" \
-            --notes-file notes.md \
-            dist/Synfus-"$VERSION"-arm64.dmg \
-            dist/Synfus-"$VERSION"-x86_64.dmg \
+          # Créer la release échoue si elle existe déjà — c'est le cas dès qu'on
+          # l'a ouverte depuis l'interface GitHub (ce qui pousse le tag et
+          # déclenche ce workflow), ou qu'on rejoue une exécution. On téléverse
+          # alors dans la release en place, en écrasant les fichiers homonymes.
+          FICHIERS=(
+            dist/Synfus-"$VERSION"-arm64.dmg
+            dist/Synfus-"$VERSION"-x86_64.dmg
             dist/SHA256SUMS.txt
+          )
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "▸ Release $TAG déjà présente — mise à jour."
+            gh release edit "$TAG" --title "Synfus $VERSION" --notes-file notes.md
+            gh release upload "$TAG" "${FICHIERS[@]}" --clobber
+          else
+            gh release create "$TAG" \
+              --title "Synfus $VERSION" \
+              --notes-file notes.md \
+              "${FICHIERS[@]}"
+          fi

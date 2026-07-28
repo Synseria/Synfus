@@ -54,8 +54,39 @@ enum SynfusMark {
     /// changer le cadrage de l'œuf emmène l'intérieur avec lui.
     private static let eggBox = CGRect(x: 62, y: 34, width: 156, height: 214)
 
-    /// Épaisseur du contour de l'œuf et des fenêtres, dans le repère.
+    /// Épaisseur du contour de l'œuf et des fenêtres dans la maquette.
     private static let strokeWidth: Double = 7
+
+    /// Épaisseur minimale d'un trait, **en pixels du rendu final**.
+    ///
+    /// En dessous, l'antialiasing étale le trait en un gris pâle et irrégulier :
+    /// c'est ce qui donne l'impression d'une texture sale sur le contour aux
+    /// petites définitions. Le trait de la maquette (2,5 % du côté) ne mesure
+    /// que 0,7 px à 32 px de large.
+    private static let minStrokePixels: Double = 1.7
+
+    /// Plafond de l'épaississement, dans le repère : au-delà, le contour mange
+    /// l'intérieur de l'œuf et la silhouette se referme.
+    private static let maxStrokeWidth: Double = 17
+
+    /// Épaisseur à employer pour un rendu de `side` pixels, traits ramenés à au
+    /// moins `minStrokePixels`. C'est la seule entorse au dessin de la maquette,
+    /// et elle ne joue que sous ~128 px.
+    private static func strokeWidth(pixelSize side: Int, fillRatio: Double, shape: Shape) -> Double {
+        let s = Double(max(1, side))
+        let inset = shape == .rounded ? s * roundedInsetRatio : 0
+        let bounds = eggBox.insetBy(dx: -strokeWidth / 2, dy: -strokeWidth / 2)
+        // Facteur total appliqué au repère : cadrage de la tuile, puis homothétie
+        // qui porte l'œuf à `fillRatio`.
+        let echelle = (s - 2 * inset) / designSide
+            * (fillRatio * designSide / max(bounds.width, bounds.height))
+        guard echelle > 0 else { return strokeWidth }
+        return min(max(strokeWidth, minStrokePixels / echelle), maxStrokeWidth)
+    }
+
+    /// Sous cette taille, les fenêtres sont pleines : leur contour, plus fin
+    /// encore que celui de l'œuf, ne survit pas à la réduction.
+    private static let filledWindowsBelow: Int = 96
 
     // MARK: - Palette (maquette Synfus.svg)
 
@@ -73,6 +104,26 @@ enum SynfusMark {
     private static let windowColor = SynfusRGB(hex: 0xE6D9FF)
 
     // MARK: - Géométrie
+
+    /// Superellipse — la forme des tuiles macOS depuis Big Sur. Un
+    /// `CGPath(roundedRect:)` raccorde un arc de cercle à un côté droit, et la
+    /// cassure se voit à côté des icônes du système.
+    static func squircle(in rect: CGRect, exposant n: Double = 5) -> CGPath {
+        let path = CGMutablePath()
+        let a = rect.width / 2, b = rect.height / 2
+        let steps = 720
+        for i in 0...steps {
+            let t = Double(i) / Double(steps) * 2 * .pi
+            let ct = cos(t), st = sin(t)
+            let point = CGPoint(
+                x: rect.midX + a * copysign(pow(abs(ct), 2 / n), ct),
+                y: rect.midY + b * copysign(pow(abs(st), 2 / n), st)
+            )
+            i == 0 ? path.move(to: point) : path.addLine(to: point)
+        }
+        path.closeSubpath()
+        return path
+    }
 
     /// Contour de l'œuf, tracé dans `rect` : pointe resserrée en haut, base
     /// pleine. Points de contrôle normalisés depuis la maquette.
@@ -138,18 +189,21 @@ enum SynfusMark {
         context.translateBy(x: inset, y: inset)
         context.scaleBy(x: scale, y: scale)
 
-        draw(shape: shape, fillRatio: fillRatio, in: context)
+        draw(shape: shape, fillRatio: fillRatio,
+             trait: strokeWidth(pixelSize: side, fillRatio: fillRatio, shape: shape),
+             fenetresPleines: side < filledWindowsBelow,
+             in: context)
         return context.makeImage()
     }
 
     /// Peint la marque dans le repère de description déjà installé.
-    private static func draw(shape: Shape, fillRatio: Double, in context: CGContext) {
+    private static func draw(shape: Shape, fillRatio: Double, trait: Double,
+                             fenetresPleines: Bool, in context: CGContext) {
         let tile = CGRect(x: 0, y: 0, width: designSide, height: designSide)
 
         // 1. La tuile, et son dégradé radial descendant vers les bords.
         let tilePath: CGPath = shape == .rounded
-            ? CGPath(roundedRect: tile, cornerWidth: cornerRadius, cornerHeight: cornerRadius,
-                     transform: nil)
+            ? squircle(in: tile)
             : CGPath(rect: tile, transform: nil)
         context.saveGState()
         context.addPath(tilePath)
@@ -204,7 +258,7 @@ enum SynfusMark {
         //    surface puis rempli — CoreGraphics ne sait pas caresser un dégradé.
         context.saveGState()
         context.addPath(egg)
-        context.setLineWidth(strokeWidth)
+        context.setLineWidth(trait)
         context.replacePathWithStrokedPath()
         context.clip()
         linear(in: context, colors: [shellStart, shellMid, shellEnd], locations: [0, 0.45, 1],
@@ -213,17 +267,19 @@ enum SynfusMark {
         context.restoreGState()
 
         // 4. Les fenêtres.
-        context.setLineWidth(strokeWidth)
+        context.setLineWidth(trait)
         context.setStrokeColor(cgColor(windowColor))
         context.setFillColor(cgColor(windowColor))
         for window in windows {
+            let plein = window.filled || fenetresPleines
             let cadre = rect(of: window, in: eggBox)
             let r = window.radius * eggBox.width
-            let path = CGPath(roundedRect: window.filled ? cadre : cadre.insetBy(dx: strokeWidth / 2,
-                                                                                dy: strokeWidth / 2),
-                              cornerWidth: r, cornerHeight: r, transform: nil)
+            let path = CGPath(
+                roundedRect: plein ? cadre : cadre.insetBy(dx: trait / 2, dy: trait / 2),
+                cornerWidth: r, cornerHeight: r, transform: nil
+            )
             context.addPath(path)
-            context.drawPath(using: window.filled ? .fill : .stroke)
+            context.drawPath(using: plein ? .fill : .stroke)
         }
     }
 
