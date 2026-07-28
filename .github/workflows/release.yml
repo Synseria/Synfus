@@ -42,6 +42,9 @@ jobs:
           echo "tag=$TAG"             >> "$GITHUB_OUTPUT"
           echo "version=${TAG#v}"     >> "$GITHUB_OUTPUT"
 
+      - name: Tests
+        run: swift test
+
       - name: Construire les DMG
         env:
           VERSION: ${{ steps.version.outputs.version }}

@@ -10,16 +10,33 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
     func install() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        item.button?.image = NSImage(
-            systemSymbolName: "rectangle.3.group",
-            accessibilityDescription: "Synfus"
-        )
-        item.button?.image?.isTemplate = true
+        item.button?.image = icon()
 
         let menu = NSMenu()
         menu.delegate = self
         item.menu = menu
         statusItem = item
+    }
+
+    /// À appeler après un changement de `Preferences.menuBarIcon`.
+    func refreshIcon() {
+        statusItem?.button?.image = icon()
+    }
+
+    /// Les deux images sont *template* : macOS les teint lui-même selon le thème
+    /// et les inverse quand le menu est ouvert.
+    private func icon() -> NSImage? {
+        switch Preferences.shared.menuBarIcon {
+        case .logo:
+            return SynfusGlyph.menuBarImage()
+        case .symbole:
+            let image = NSImage(
+                systemSymbolName: "rectangle.3.group",
+                accessibilityDescription: "Synfus"
+            )
+            image?.isTemplate = true
+            return image
+        }
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) {

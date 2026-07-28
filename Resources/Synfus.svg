@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="280" height="280" viewBox="0 0 280 280">
+      <defs>
+        <radialGradient id="a-bg" cx="50%" cy="42%" r="65%">
+          <stop offset="0%" stop-color="#241a3e"></stop><stop offset="100%" stop-color="#0d0916"></stop>
+        </radialGradient>
+        <linearGradient id="a-shell" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#4f7bd9"></stop><stop offset="45%" stop-color="#7b3fd4"></stop><stop offset="100%" stop-color="#d14fa6"></stop>
+        </linearGradient>
+        <radialGradient id="a-inner" cx="50%" cy="40%" r="70%">
+          <stop offset="0%" stop-color="#2c1f52"></stop><stop offset="70%" stop-color="#171029"></stop><stop offset="100%" stop-color="#0f0a1c"></stop>
+        </radialGradient>
+        <filter id="a-glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="5" result="b"></feGaussianBlur>
+          <feMerge><feMergeNode in="b"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge>
+        </filter>
+      </defs>
+      <rect width="280" height="280" rx="62" fill="url(#a-bg)"></rect>
+      <path d="M140 34 C 96 34, 62 96, 62 158 C 62 214, 97 248, 140 248 C 183 248, 218 214, 218 158 C 218 96, 184 34, 140 34 Z" fill="url(#a-inner)" stroke="url(#a-shell)" stroke-width="7"></path>
+      <path d="M140 34 C 96 34, 62 96, 62 158 C 62 214, 97 248, 140 248 C 183 248, 218 214, 218 158 C 218 96, 184 34, 140 34 Z" fill="none" stroke="url(#a-shell)" stroke-width="14" opacity="0.25" filter="url(#a-glow)"></path>
+      <ellipse cx="112" cy="86" rx="26" ry="40" fill="#8f7bff" opacity="0.12" transform="rotate(-18 112 86)"></ellipse>
+      <g filter="url(#a-glow)">
+        <rect x="96" y="118" width="38" height="26" rx="6" fill="none" stroke="#e6d9ff" stroke-width="7"></rect>
+        <rect x="96" y="156" width="38" height="18" rx="6" fill="#e6d9ff"></rect>
+        <rect x="148" y="118" width="38" height="56" rx="8" fill="none" stroke="#e6d9ff" stroke-width="7"></rect>
+      </g>
+    </svg>

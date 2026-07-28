@@ -1,7 +1,46 @@
 import AppKit
 import Carbon.HIToolbox
 
+/// Où les réglages sont rangés. `UserDefaults` en production.
+///
+/// Cette indirection existe pour les tests : un `UserDefaults(suiteName:)` crée
+/// un domaine persistant que `removePersistentDomain` ne supprime pas vraiment —
+/// `cfprefsd` réécrit le fichier derrière, et la machine finit constellée de
+/// plists de test dans `~/Library/Preferences`. Les tests se donnent donc un
+/// stockage en mémoire.
+///
+/// Les noms diffèrent de ceux de `UserDefaults` à dessein : une surcharge de
+/// `set(_:forKey:)` entrerait en ambiguïté avec la version `Any?` existante.
+protocol PreferencesStore: AnyObject {
+    func donnees(pour cle: String) -> Data?
+    func enregistrer(_ donnees: Data, pour cle: String)
+}
+
+extension UserDefaults: PreferencesStore {
+    func donnees(pour cle: String) -> Data? { data(forKey: cle) }
+    func enregistrer(_ donnees: Data, pour cle: String) { set(donnees, forKey: cle) }
+}
+
+/// Ce que Synfus affiche dans la barre de menus du système.
+enum MenuBarIcon: String, Codable, CaseIterable, Identifiable {
+    case logo
+    case symbole
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .logo: return "Logo Synfus"
+        case .symbole: return "Symbole système"
+        }
+    }
+}
+
 /// Réglages persistés dans les UserDefaults, sérialisés en JSON sous une seule clé.
+///
+/// Isolée au main actor comme le reste de l'app : c'est ce qui rend le singleton
+/// acceptable pour la concurrence stricte de Swift 6, sans verrou ni copie.
+@MainActor
 final class Preferences: ObservableObject {
     static let shared = Preferences()
 
@@ -34,6 +73,10 @@ final class Preferences: ObservableObject {
     /// à la main.
     @Published var autoCenterBar: Bool = true { didSet { save() } }
 
+    /// Icône du `NSStatusItem`. Le rafraîchissement est à la charge de l'appelant
+    /// (`MenuBarController.refreshIcon()`) : les préférences ne pilotent pas l'UI.
+    @Published var menuBarIcon: MenuBarIcon = .logo { didSet { save() } }
+
     /// Nombre de slots exposés (et donc de raccourcis potentiels).
     ///
     /// Le garde-fou `clamping` n'est pas décoratif : `@Published` remplace la
@@ -56,10 +99,21 @@ final class Preferences: ObservableObject {
 
     private var clamping = false
     private var loading = false
-    private let key = "fr.dofusyn.preferences"
 
-    private init() {
+    /// Clé unique sous laquelle tout est sérialisé, dans le domaine
+    /// `UserDefaults` de l'app — lui-même nommé d'après le `BUNDLE_ID`.
+    static let key = "fr.synseria.synfus.preferences"
+
+    private let store: PreferencesStore
+
+    private init(store: PreferencesStore = UserDefaults.standard) {
+        self.store = store
         load()
+    }
+
+    /// Instance jetable adossée à un stockage fourni, pour les tests.
+    static func forTesting(store: PreferencesStore) -> Preferences {
+        Preferences(store: store)
     }
 
     private func resizeHotKeys() {
@@ -115,6 +169,7 @@ final class Preferences: ObservableObject {
         var toggleAutoFocus: HotKey?
         var barOnlyWithDofus: Bool?
         var autoCenterBar: Bool?
+        var menuBarIcon: MenuBarIcon?
     }
 
     private func save() {
@@ -133,10 +188,11 @@ final class Preferences: ObservableObject {
             attentionAction: attentionAction,
             toggleAutoFocus: toggleAutoFocus,
             barOnlyWithDofus: barOnlyWithDofus,
-            autoCenterBar: autoCenterBar
+            autoCenterBar: autoCenterBar,
+            menuBarIcon: menuBarIcon
         )
         if let data = try? JSONEncoder().encode(stored) {
-            UserDefaults.standard.set(data, forKey: key)
+            store.enregistrer(data, pour: Self.key)
         }
     }
 
@@ -147,7 +203,7 @@ final class Preferences: ObservableObject {
             resizeHotKeys()
         }
 
-        guard let data = UserDefaults.standard.data(forKey: key),
+        guard let data = store.donnees(pour: Self.key),
               let stored = try? JSONDecoder().decode(Stored.self, from: data)
         else {
             // Premier lancement : ⌘1 à ⌘5 pour l'accès direct.
@@ -174,6 +230,7 @@ final class Preferences: ObservableObject {
         toggleAutoFocus = stored.toggleAutoFocus ?? HotKey(keyCode: 50, modifiers: UInt32(cmdKey))
         barOnlyWithDofus = stored.barOnlyWithDofus ?? false
         autoCenterBar = stored.autoCenterBar ?? true
+        menuBarIcon = stored.menuBarIcon ?? .logo
         if let x = stored.barOriginX, let y = stored.barOriginY {
             barOrigin = CGPoint(x: x, y: y)
         }

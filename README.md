@@ -52,6 +52,7 @@ n'apparaît que sur macOS 26 ; en deçà, la barre utilise un matériau transluc
 ```sh
 ./build.sh            # produit ./Synfus.app
 ./build.sh --install  # installe dans /Applications et relance
+swift test            # suite de tests
 ```
 
 Deux variables d'environnement pilotent le script :
@@ -69,6 +70,19 @@ Le DMG se fabrique à part :
 
 ```sh
 ./make-dmg.sh Synfus.app dist/Synfus-0.0.1-arm64.dmg
+```
+
+Les tests se lancent avec `swift test`. Ils portent sur la logique pure —
+analyse des titres de fenêtres, classes, raccourcis, persistance — et ne
+touchent pas aux réglages de la machine.
+
+L'icône est **dessinée par le code** plutôt que stockée comme image : la marque
+est décrite une seule fois dans `Sources/Synfus/SynfusMark.swift`, d'où sont
+tirés l'icône du bundle, le symbole de la barre de menus et la poignée de la
+barre flottante. Après toute retouche :
+
+```sh
+./Tools/generate-app-icons.sh   # régénère Resources/Synfus.{icns,png}
 ```
 
 **La compilation exige le SDK macOS 26** (Xcode 26) : `BarView` appelle
