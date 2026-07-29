@@ -91,15 +91,40 @@ jobs:
 
           ### Installation
 
-          Monter le DMG, glisser **Synfus** dans **Applications**, puis :
+          **1.** Monter le DMG et glisser **Synfus** dans **Applications**.
+
+          **2.** Lever la quarantaine — **avant** de lancer l'app :
 
           ```sh
           xattr -dr com.apple.quarantine /Applications/Synfus.app
           ```
 
-          Cette commande est nécessaire car l'app est signée ad-hoc et non notarisée :
-          sans elle, macOS refuse de l'ouvrir. Au premier lancement, autoriser Synfus
-          dans **Réglages Système → Confidentialité et sécurité → Accessibilité**.
+          ⚠️ Cette étape n'est pas facultative, et son oubli ne se voit pas :
+          l'app **se lance normalement**, mais l'autorisation Accessibilité
+          n'a alors aucun effet — la case se coche dans les Réglages et Synfus
+          continue de dire qu'il n'est pas autorisé. Copier l'app depuis le DMG
+          emmène l'attribut avec elle : le retirer du DMG ne suffit pas.
+
+          **3.** Lancer Synfus, puis l'autoriser dans **Réglages Système →
+          Confidentialité et sécurité → Accessibilité**.
+
+          Si l'app a déjà été lancée avant l'étape 2, réinitialiser l'autorisation
+          après avoir levé la quarantaine :
+
+          ```sh
+          tccutil reset Accessibility fr.synseria.Synfus
+          ```
+
+          ### Pourquoi ces manipulations
+
+          Les binaires publiés ici sont signés **ad-hoc** et non notarisés : le
+          projet n'a pas de certificat *Developer ID* (compte Apple Developer
+          payant). macOS n'a donc aucune identité stable à associer à l'app, et
+          se rabat sur l'empreinte du binaire. Conséquence : **chaque nouvelle
+          version doit être réautorisée** — retirer l'ancienne entrée dans la
+          liste Accessibilité, puis rajouter la nouvelle.
+
+          Compiler depuis les sources (`./build.sh --install`) évite tout cela.
           EOF
           sed -i '' "s/VERSION/$VERSION/g" notes.md
 

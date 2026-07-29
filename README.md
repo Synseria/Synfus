@@ -37,8 +37,22 @@ quarantaine :
 xattr -dr com.apple.quarantine /Applications/Synfus.app
 ```
 
-Cette étape est nécessaire tant que l'app n'est pas notarisée : les builds de CI
-sont signés ad-hoc, et macOS refuse de les ouvrir sans ça.
+Cette étape n'est pas facultative, et l'oublier ne se voit pas : l'app **se lance
+normalement**, mais l'autorisation Accessibilité n'a alors aucun effet — la case
+se coche dans les Réglages et Synfus continue de se dire non autorisé. L'attribut
+suit l'app quand on la copie depuis le DMG : le retirer du DMG ne suffit pas.
+
+Si l'app a déjà été lancée avant cette commande, l'entrée enregistrée ne
+redeviendra pas valide ; il faut la réinitialiser :
+
+```sh
+tccutil reset Accessibility fr.synseria.Synfus
+```
+
+Tout cela tient à ce que les binaires publiés sont signés **ad-hoc** faute de
+certificat *Developer ID* : macOS n'a aucune identité stable à leur associer et
+se rabat sur l'empreinte du binaire, ce qui impose aussi de **réautoriser à
+chaque nouvelle version**. Compiler depuis les sources l'évite entièrement.
 
 Au premier lancement, autoriser Synfus dans **Réglages Système → Confidentialité
 et sécurité → Accessibilité** : l'API d'accessibilité est ce qui permet de lire

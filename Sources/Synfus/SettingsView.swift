@@ -156,8 +156,60 @@ struct SettingsView: View {
                     manager.requestAccessibility()
                 }
                 .padding(.top, 2)
+
+                if AppIntegrity.isQuarantined {
+                    quarantineWarning.padding(.top, 8)
+                }
             }
         }
+    }
+
+    /// Sans cet avertissement, l'utilisateur coche la case dans les Réglages,
+    /// voit Synfus continuer à réclamer l'autorisation, et n'a aucun moyen de
+    /// deviner pourquoi : l'app se lance normalement, rien n'indique qu'elle est
+    /// en quarantaine.
+    private var quarantineWarning: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Divider()
+            Text("Cette copie est en quarantaine")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.orange)
+            Text("Elle a été téléchargée, et macOS la marque comme non vérifiée. "
+                 + "Tant que cette marque est là, cocher Synfus dans les Réglages "
+                 + "reste sans effet. À exécuter dans le Terminal, puis relancer Synfus :")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+
+            commandLine(AppIntegrity.quarantineFix)
+
+            Text("Si Synfus a déjà été autorisé avant, réinitialiser l'entrée :")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+
+            commandLine(AppIntegrity.resetCommand)
+        }
+    }
+
+    /// Commande sélectionnable et copiable d'un clic — la recopier à la main
+    /// depuis une capture d'écran est le meilleur moyen de se tromper.
+    private func commandLine(_ command: String) -> some View {
+        HStack(spacing: 6) {
+            Text(command)
+                .font(.system(size: 10, design: .monospaced))
+                .textSelection(.enabled)
+                .lineLimit(2)
+                .truncationMode(.middle)
+            Button {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(command, forType: .string)
+            } label: {
+                Image(systemName: "doc.on.doc")
+            }
+            .buttonStyle(.borderless)
+            .help("Copier la commande")
+        }
+        .padding(6)
+        .background(RoundedRectangle(cornerRadius: 5).fill(Color.primary.opacity(0.06)))
     }
 
     // MARK: - Persos
@@ -330,7 +382,11 @@ struct SettingsView: View {
             if manager.clients.isEmpty {
                 Text(manager.accessibilityGranted
                      ? "Aucune fenêtre Dofus détectée. Le jeu est-il lancé ?"
-                     : "Autorisation Accessibilité manquante.")
+                     : AppIntegrity.isQuarantined
+                       ? "Autorisation Accessibilité manquante — et cette copie est "
+                         + "en quarantaine, ce qui l'empêchera de prendre effet. "
+                         + "Voir l'onglet Raccourcis."
+                       : "Autorisation Accessibilité manquante.")
                     .font(.system(size: 11))
                     .foregroundStyle(.orange)
                     .padding(.top, 6)
