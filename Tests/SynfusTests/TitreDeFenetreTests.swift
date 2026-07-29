@@ -66,6 +66,48 @@ struct TitreDeFenetreTests {
         #expect(WindowManager.characterName(fromTitle: "Bidule") == "Bidule")
     }
 
+    // MARK: - Ce qui mérite d'être mémorisé
+
+    /// Un client resté au login s'intitule « Dofus 3.3.4.9 - Release » : son nom
+    /// dérivé n'est qu'un numéro de version, et s'inscrirait à demeure dans la
+    /// liste des persos — à changer à chaque mise à jour du jeu.
+    @Test("Une version du client ne s'enregistre pas comme perso", arguments: [
+        "Dofus 3.3.4.9",
+        "Dofus - 3.3.4.9 - Release",
+        "Dofus 2.70",
+        "dofus",
+        "3.6.7.7",
+        "",
+        "   ",
+    ])
+    func versionNonMemorisee(nom: String) {
+        #expect(!WindowManager.isPersistableName(nom))
+    }
+
+    /// Le suffixe est ajouté par `refresh()` selon l'ordre de découverte : il ne
+    /// désigne aucun perso en propre.
+    @Test("Un homonyme suffixé ne s'enregistre pas", arguments: [
+        "Syn-App (2)", "Nova (3)", "Dofus 3.3.4.9 (2)",
+    ])
+    func homonymeNonMemorise(nom: String) {
+        #expect(!WindowManager.isPersistableName(nom))
+    }
+
+    @Test("Un vrai nom de perso est mémorisé", arguments: [
+        "Syn-App", "Jean-Michel", "Nova", "Kaeli", "Milo",
+    ])
+    func nomMemorise(nom: String) {
+        #expect(WindowManager.isPersistableName(nom))
+    }
+
+    /// Une parenthèse non numérique n'est pas un suffixe de doublon — et rien
+    /// n'interdit à un nom de contenir un chiffre.
+    @Test("Une parenthèse quelconque ne fait pas un doublon")
+    func parentheseNonNumerique() {
+        #expect(WindowManager.isPersistableName("Machin (bis)"))
+        #expect(WindowManager.isPersistableName("Nova2"))
+    }
+
     // MARK: - Classe du perso
 
     @Test("La classe est le deuxième segment")

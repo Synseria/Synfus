@@ -46,6 +46,10 @@ final class WindowManager: ObservableObject {
     func start() {
         accessibilityGranted = AXIsProcessTrusted()
 
+        // Les versions du client et les homonymes suffixés ont pu s'enregistrer
+        // avant que le filtre n'existe : ils encombreraient la liste indéfiniment.
+        prefs.purgeOrder(keeping: Self.isPersistableName)
+
         let center = NSWorkspace.shared.notificationCenter
         for note in [NSWorkspace.didLaunchApplicationNotification,
                      NSWorkspace.didTerminateApplicationNotification,
@@ -116,7 +120,9 @@ final class WindowManager: ObservableObject {
             }
         }
 
-        prefs.registerIfNeeded(names: found.map(\.name))
+        // Seuls les vrais noms de persos entrent dans la liste ; les clients au
+        // login et les homonymes suffixés restent dans la barre sans s'y inscrire.
+        prefs.registerIfNeeded(names: found.map(\.name).filter(Self.isPersistableName))
 
         let order = prefs.characterOrder
         found.sort { lhs, rhs in
@@ -180,6 +186,54 @@ final class WindowManager: ObservableObject {
             }
         }
         return cleaned
+    }
+
+    /// Mots que le client affiche quand il n'a encore personne en jeu. Ils ne
+    /// nomment aucun perso, et un nom qui n'est fait que de ceux-là ne mérite
+    /// pas d'entrer dans la liste des persos connus.
+    private static let clientOnlyWords: Set<String> = ["dofus", "release", "beta", "alpha", "retail"]
+
+    /// Un nom digne d'être mémorisé dans l'ordre des persos.
+    ///
+    /// Deux formes doivent rester visibles dans la barre — on veut pouvoir
+    /// cliquer dessus — sans pour autant s'inscrire à demeure dans les réglages :
+    ///
+    /// - « Dofus 3.3.4.9 » : un client resté à l'écran de connexion, dont le
+    ///   titre n'annonce que la version. Le perso qui s'y connectera portera son
+    ///   vrai nom, et cette entrée-là resterait à jamais dans la liste, à changer
+    ///   à chaque mise à jour du jeu.
+    /// - « Machin (2) » : le suffixe de désambiguïsation ajouté par `refresh()`,
+    ///   qui dépend de l'ordre de découverte et ne désigne donc aucun perso en
+    ///   propre.
+    ///
+    /// Non mémorisés, ces clients se retrouvent simplement en fin de barre : le
+    /// tri les relègue derrière tous les noms connus, sans décaler personne.
+    static func isPersistableName(_ name: String) -> Bool {
+        let cleaned = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleaned.isEmpty, !hasDuplicateSuffix(cleaned) else { return false }
+
+        // Découpé sur les espaces et les séparateurs : un titre peut être repris
+        // en entier faute de segment exploitable (« Dofus - 3.3.4.9 - Release »).
+        let words = cleaned
+            .components(separatedBy: CharacterSet(charactersIn: " -–—|•"))
+            .map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
+            .filter { !$0.isEmpty }
+
+        return words.contains { !clientOnlyWords.contains($0) && !isVersionNumber($0) }
+    }
+
+    /// « Machin (2) » — le suffixe que `refresh()` ajoute lui-même aux homonymes.
+    static func hasDuplicateSuffix(_ name: String) -> Bool {
+        guard name.hasSuffix(")"), let open = name.lastIndex(of: "(") else { return false }
+        let digits = name[name.index(after: open)..<name.index(before: name.endIndex)]
+        return !digits.isEmpty && digits.allSatisfy(\.isNumber)
+    }
+
+    /// « 3.3.4.9 », « 2.70 » — des chiffres et des points, rien d'autre.
+    static func isVersionNumber(_ word: String) -> Bool {
+        !word.isEmpty
+            && word.contains(where: \.isNumber)
+            && word.allSatisfy { $0.isNumber || $0 == "." }
     }
 
     /// Deuxième segment du titre. Le client Dofus y place la classe, juste après

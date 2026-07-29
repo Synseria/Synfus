@@ -47,7 +47,11 @@ struct BarView: View {
     @ObservedObject private var watcher = AttentionWatcher.shared
     @ObservedObject private var icons = ClassIconStore.shared
     @State private var dragging: String?
+    @State private var chipFrames: [String: CGRect] = [:]
     @State private var pulse = false
+
+    /// Repère commun aux cadres des pastilles et au geste de réordonnancement.
+    private static let barSpace = "synfusBar"
 
     var body: some View {
         HStack(spacing: 3) {
@@ -56,6 +60,7 @@ struct BarView: View {
         }
         .padding(.horizontal, 5)
         .padding(.vertical, 4)
+        .coordinateSpace(name: Self.barSpace)
         .background(WindowDragArea())   // tout le fond libre déplace la barre
         .modifier(BarBackground())
         .fixedSize()
@@ -208,11 +213,42 @@ struct BarView: View {
         .buttonStyle(.plain)
         .help(tooltip(index: index, client: client))
         .opacity(dragging == client.name ? 0.35 : 1)
-        .onDrag {
-            dragging = client.name
-            return NSItemProvider(object: client.name as NSString)
+        .scaleEffect(dragging == client.name ? 1.06 : 1)
+        .background(chipFrameReader(for: client.name))
+        .simultaneousGesture(reorderGesture(for: client))
+    }
+
+    /// Publie le cadre de la pastille dans le repère de la barre, pour que le
+    /// geste de réordonnancement sache quelle pastille est survolée.
+    private func chipFrameReader(for name: String) -> some View {
+        GeometryReader { geo in
+            let frame = geo.frame(in: .named(Self.barSpace))
+            Color.clear
+                .onAppear { chipFrames[name] = frame }
+                .onChange(of: frame) { _, new in chipFrames[name] = new }
+                .onDisappear { chipFrames[name] = nil }
         }
-        .onDrop(of: [.text], delegate: ReorderDropDelegate(target: client.name, dragging: $dragging))
+    }
+
+    /// Réordonnancement au glisser, sans passer par le drag & drop système :
+    /// une session `.onDrag` ne démarre pas de façon fiable depuis un panneau
+    /// non activable, et sa vignette volante n'apporte rien ici. Un simple
+    /// `DragGesture` suit la souris au plus près — dès que le curseur entre
+    /// dans une autre pastille, les deux persos sont permutés. Le geste est
+    /// simultané au bouton : un clic sans mouvement active toujours le perso.
+    private func reorderGesture(for client: DofusClient) -> some Gesture {
+        DragGesture(minimumDistance: 6, coordinateSpace: .named(Self.barSpace))
+            .onChanged { value in
+                dragging = client.name
+                guard let target = chipFrames.first(where: { entry in
+                    entry.key != client.name && entry.value.contains(value.location)
+                })?.key else { return }
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    Preferences.shared.swapOrder(client.name, target)
+                }
+                WindowManager.shared.refresh()
+            }
+            .onEnded { _ in dragging = nil }
     }
 
     private func tooltip(index: Int, client: DofusClient) -> String {
@@ -235,30 +271,5 @@ struct BarView: View {
         Button("Rafraîchir") { manager.refresh() }
         Divider()
         Button("Quitter Synfus") { NSApp.terminate(nil) }
-    }
-}
-
-/// Réorganisation par glisser-déposer : on permute la cible et l'élément glissé.
-/// La permutation se fait dans l'ordre de préférence global, celui qui contient
-/// aussi les persos déconnectés, pour que le classement survive à la session.
-private struct ReorderDropDelegate: DropDelegate {
-    let target: String
-    @Binding var dragging: String?
-
-    func dropEntered(info: DropInfo) {
-        guard let source = dragging, source != target else { return }
-        withAnimation(.easeInOut(duration: 0.15)) {
-            Preferences.shared.swapOrder(source, target)
-        }
-        WindowManager.shared.refresh()
-    }
-
-    func dropUpdated(info: DropInfo) -> DropProposal? {
-        DropProposal(operation: .move)
-    }
-
-    func performDrop(info: DropInfo) -> Bool {
-        dragging = nil
-        return true
     }
 }

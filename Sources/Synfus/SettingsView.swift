@@ -1,6 +1,31 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
+/// Sections des réglages, listées dans la barre latérale.
+private enum SettingsSection: String, CaseIterable, Identifiable {
+    case raccourcis, persos, classes, diagnostic
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .raccourcis: return "Raccourcis"
+        case .persos: return "Persos"
+        case .classes: return "Classes"
+        case .diagnostic: return "Diagnostic"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .raccourcis: return "keyboard"
+        case .persos: return "person.3"
+        case .classes: return "paintpalette"
+        case .diagnostic: return "stethoscope"
+        }
+    }
+}
+
 struct SettingsView: View {
     @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var manager = WindowManager.shared
@@ -8,19 +33,64 @@ struct SettingsView: View {
     @ObservedObject private var watcher = AttentionWatcher.shared
     @ObservedObject private var icons = ClassIconStore.shared
     @State private var launchAtLogin = LaunchAtLogin.isEnabled
+    @State private var section: SettingsSection = .raccourcis
 
+    /// Barre latérale à gauche, contenu à droite : les quatre sections en
+    /// onglets faisaient défiler des formulaires interminables — le menu
+    /// vertical garde tout sous les yeux.
     var body: some View {
-        TabView {
-            shortcutsTab
-                .tabItem { Label("Raccourcis", systemImage: "keyboard") }
-            charactersTab
-                .tabItem { Label("Persos", systemImage: "person.3") }
-            classesTab
-                .tabItem { Label("Classes", systemImage: "paintpalette") }
-            diagnosticTab
-                .tabItem { Label("Diagnostic", systemImage: "stethoscope") }
+        HStack(spacing: 0) {
+            sidebar
+            Divider()
+            detail
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(width: 520, height: 480)
+        .frame(width: 680, height: 480)
+    }
+
+    private var sidebar: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            ForEach(SettingsSection.allCases) { item in
+                sidebarRow(item)
+            }
+            Spacer()
+            Text("Synfus")
+                .font(.system(size: 10))
+                .foregroundStyle(.tertiary)
+                .padding(.horizontal, 8)
+        }
+        .padding(8)
+        .frame(width: 150)
+        .background(Color.primary.opacity(0.035))
+    }
+
+    private func sidebarRow(_ item: SettingsSection) -> some View {
+        Button {
+            section = item
+        } label: {
+            Label(item.label, systemImage: item.icon)
+                .font(.system(size: 12, weight: section == item ? .semibold : .regular))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(section == item ? Color.accentColor : Color.clear)
+                )
+                .foregroundStyle(section == item ? Color.white : Color.primary)
+                .contentShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private var detail: some View {
+        switch section {
+        case .raccourcis: shortcutsTab
+        case .persos: charactersTab
+        case .classes: classesTab
+        case .diagnostic: diagnosticTab
+        }
     }
 
     // MARK: - Raccourcis
@@ -217,35 +287,15 @@ struct SettingsView: View {
     private var charactersTab: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("L'ordre ci-dessous décide de la numérotation. Les persos non connectés "
-                 + "sont simplement sautés : tu peux en garder autant que tu veux dans la liste.")
+                 + "sont simplement sautés : tu peux en garder autant que tu veux dans la liste. "
+                 + "Glisse une ligne, ou utilise les flèches, pour réordonner.")
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
                 .padding(12)
 
             List {
                 ForEach(Array(prefs.characterOrder.enumerated()), id: \.element) { index, name in
-                    HStack(spacing: 8) {
-                        Image(systemName: "line.3.horizontal")
-                            .font(.system(size: 9))
-                            .foregroundStyle(.tertiary)
-                        Circle()
-                            .fill(isOnline(name) ? Color.green : Color.secondary.opacity(0.3))
-                            .frame(width: 7, height: 7)
-                        Text(name)
-                        Spacer()
-                        if let slot = slotOf(name) {
-                            Text("\(slot + 1)")
-                                .font(.system(size: 10, weight: .bold, design: .rounded))
-                                .foregroundStyle(.secondary)
-                        }
-                        Text(isOnline(name) ? "connecté" : "hors ligne")
-                            .font(.system(size: 10))
-                            .foregroundStyle(.tertiary)
-                    }
-                    .padding(.vertical, 1)
-                    .contextMenu {
-                        Button("Retirer de la liste") { prefs.forget(name: name) }
-                    }
+                    characterRow(index: index, name: name)
                 }
                 .onMove { offsets, destination in
                     prefs.move(fromOffsets: offsets, toOffset: destination)
@@ -267,6 +317,60 @@ struct SettingsView: View {
             }
             .padding(12)
         }
+    }
+
+    /// Une ligne de la liste des persos. `contentShape` étend la zone de prise
+    /// du glisser à toute la ligne — viser le seul texte demandait une précision
+    /// pénible — et les flèches offrent un déplacement au clic, infaillible.
+    private func characterRow(index: Int, name: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "line.3.horizontal")
+                .font(.system(size: 9))
+                .foregroundStyle(.tertiary)
+            Circle()
+                .fill(isOnline(name) ? Color.green : Color.secondary.opacity(0.3))
+                .frame(width: 7, height: 7)
+            Text(name)
+            Spacer()
+            if let slot = slotOf(name) {
+                Text("\(slot + 1)")
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundStyle(.secondary)
+            }
+            Text(isOnline(name) ? "connecté" : "hors ligne")
+                .font(.system(size: 10))
+                .foregroundStyle(.tertiary)
+
+            HStack(spacing: 2) {
+                Button { moveCharacter(at: index, by: -1) } label: {
+                    Image(systemName: "chevron.up")
+                }
+                .disabled(index == 0)
+                .help("Monter dans l'ordre")
+
+                Button { moveCharacter(at: index, by: 1) } label: {
+                    Image(systemName: "chevron.down")
+                }
+                .disabled(index == prefs.characterOrder.count - 1)
+                .help("Descendre dans l'ordre")
+            }
+            .buttonStyle(.borderless)
+            .font(.system(size: 10, weight: .semibold))
+        }
+        .padding(.vertical, 4)
+        .contentShape(Rectangle())
+        .contextMenu {
+            Button("Retirer de la liste") { prefs.forget(name: name) }
+        }
+    }
+
+    private func moveCharacter(at index: Int, by delta: Int) {
+        let target = index + delta
+        guard target >= 0, target < prefs.characterOrder.count else { return }
+        // `toOffset` désigne un interstice, pas une case : descendre d'un cran
+        // veut dire viser l'interstice situé après la ligne suivante.
+        prefs.move(fromOffsets: IndexSet(integer: index), toOffset: delta > 0 ? target + 1 : target)
+        manager.refresh()
     }
 
     // MARK: - Classes
@@ -292,6 +396,19 @@ struct SettingsView: View {
 
                 Text("Tu peux aussi y déposer les fichiers directement, nommés d'après "
                      + "la classe : iop.png, cra.png, xelor.png… puis « Recharger ».")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
+            }
+
+            Section("Emblèmes officiels") {
+                Text("Le script Tools/fetch-class-icons.sh du dépôt remplit ce dossier "
+                     + "avec les emblèmes des 19 classes. Synfus ne redistribue aucune "
+                     + "image du jeu : c'est ta machine qui les télécharge, pour ton "
+                     + "usage personnel.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                Text("Certaines illustrations sont la propriété d'Ankama Studio et de "
+                     + "Dofus — Tous droits réservés.")
                     .font(.system(size: 10))
                     .foregroundStyle(.tertiary)
             }
@@ -548,12 +665,40 @@ final class SettingsWindowController {
             window.title = "Réglages Synfus"
             window.styleMask = [.titled, .closable, .miniaturizable]
             window.isReleasedWhenClosed = false
-            window.center()
             self.window = window
         }
+        guard let window else { return }
+
+        // À chaque (ré)ouverture, la fenêtre se place sous la barre flottante :
+        // c'est de là qu'on l'invoque, autant qu'elle apparaisse sous les yeux.
+        // Tant qu'elle reste ouverte, en revanche, on ne la déplace pas.
+        if !window.isVisible {
+            position(window)
+        }
+
         // L'app tourne en accessory : sans activation explicite, la fenêtre
         // s'ouvrirait derrière le jeu.
         NSApp.activate(ignoringOtherApps: true)
-        window?.makeKeyAndOrderFront(nil)
+        window.makeKeyAndOrderFront(nil)
+    }
+
+    /// Centre la fenêtre sous la barre flottante, bornée à l'écran ; à défaut
+    /// de barre visible, au centre de l'écran.
+    private func position(_ window: NSWindow) {
+        guard let bar = FloatingBarController.shared.visibleBarFrame else {
+            window.center()
+            return
+        }
+
+        var origin = CGPoint(
+            x: (bar.midX - window.frame.width / 2).rounded(),
+            y: (bar.minY - 12 - window.frame.height).rounded()
+        )
+        if let screen = NSScreen.screens.first(where: { $0.frame.intersects(bar) }) ?? NSScreen.main {
+            let visible = screen.visibleFrame
+            origin.x = min(max(origin.x, visible.minX + 8), visible.maxX - window.frame.width - 8)
+            origin.y = min(max(origin.y, visible.minY + 8), visible.maxY - window.frame.height - 8)
+        }
+        window.setFrameOrigin(origin)
     }
 }
