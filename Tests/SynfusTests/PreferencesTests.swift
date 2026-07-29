@@ -95,6 +95,24 @@ struct PreferencesTests {
         #expect(prefs.characterOrder == avant)
     }
 
+    @Test("La purge retire les entrées que le filtre rejette")
+    func purge() {
+        let (prefs, _) = neuves()
+        prefs.characterOrder = ["Amarine", "Dofus 3.3.4.9", "Nelo", "Nelo (2)"]
+        prefs.purgeOrder(keeping: WindowManager.isPersistableName)
+        #expect(prefs.characterOrder == ["Amarine", "Nelo"])
+    }
+
+    /// Sans court-circuit, chaque démarrage réenregistrerait les préférences.
+    @Test("Une purge sans rien à retirer n'écrit pas")
+    func purgeInerte() {
+        let (prefs, store) = neuves()
+        prefs.characterOrder = ["Amarine", "Nelo"]
+        let avant = store.donnees(pour: Preferences.key)
+        prefs.purgeOrder { _ in true }
+        #expect(store.donnees(pour: Preferences.key) == avant)
+    }
+
     @Test("Deux persos se permutent dans l'ordre")
     func permutation() {
         let (prefs, _) = neuves()

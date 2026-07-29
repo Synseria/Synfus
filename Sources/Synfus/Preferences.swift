@@ -152,6 +152,18 @@ final class Preferences: ObservableObject {
         characterOrder.removeAll { $0 == name }
     }
 
+    /// Ne conserve dans l'ordre que les noms retenus par `isKept`.
+    ///
+    /// Sert à purger les entrées héritées d'avant le filtre d'enregistrement —
+    /// versions du client, homonymes suffixés. L'égalité des tailles court-circuite
+    /// l'écriture : sans elle, chaque démarrage réenregistrerait les préférences
+    /// pour rien.
+    func purgeOrder(keeping isKept: (String) -> Bool) {
+        let filtered = characterOrder.filter(isKept)
+        guard filtered.count != characterOrder.count else { return }
+        characterOrder = filtered
+    }
+
     // MARK: - Persistance
 
     private struct Stored: Codable {

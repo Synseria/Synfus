@@ -20,6 +20,7 @@ swift test --filter "migration"                 # un test par son nom
 VERSION=0.0.3 ARCH=x86_64 ./build.sh
 ./make-dmg.sh Synfus.app dist/Synfus-0.0.3-arm64.dmg
 ./Tools/generate-app-icons.sh      # régénère Resources/Synfus.{icns,png}
+./Tools/fetch-class-icons.sh       # remplit le dossier d'icônes de classes
 ```
 
 Les tests portent sur la logique pure — analyse des titres de fenêtres, classes,
@@ -95,6 +96,16 @@ L'identité d'un client est `slotKey` = `"<pid>#<index de fenêtre>"`. Le tri su
 `Preferences.characterOrder`, une liste de noms : les persos non lancés sont
 simplement sautés, d'où des numéros de slot stables.
 
+Tout ce qui est affiché n'est pas mémorisé pour autant : `isPersistableName`
+écarte de `characterOrder` les noms qui ne désignent aucun perso — « Dofus
+3.3.4.9 » (client resté au login, dont le titre n'annonce que la version, et qui
+changerait à chaque mise à jour du jeu) et « Machin (2) » (le suffixe que
+`refresh()` ajoute lui-même aux homonymes, selon l'ordre de découverte). Ces
+clients restent dans la barre — on veut pouvoir cliquer dessus — mais, faute
+d'entrée dans l'ordre, le tri les relègue en fin sans décaler personne.
+`Preferences.purgeOrder` nettoie au démarrage les entrées enregistrées avant que
+ce filtre n'existe.
+
 ### Détection d'attention
 
 Aucune API publique ne dit qu'une *autre* app réclame l'attention.
@@ -155,10 +166,14 @@ propriété calculée, donc s'y réassigner relance le `didSet` — d'où le dra
   un overlay de jeu ne doit jamais capter le clavier. Le déplacement passe par
   `performDrag(with:)` d'AppKit (`WindowDragArea`), pas par un `DragGesture` —
   ce dernier reste toujours un cran derrière la souris.
-- [SettingsView.swift](Sources/Synfus/SettingsView.swift) — quatre onglets
-  (Raccourcis, Persos, Classes, Diagnostic) + `SettingsWindowController`, qui
-  doit appeler `NSApp.activate(ignoringOtherApps:)` car l'app est en mode
-  accessory.
+- [SettingsView.swift](Sources/Synfus/SettingsView.swift) — barre latérale à
+  gauche, quatre sections (Raccourcis, Persos, Classes, Diagnostic) à droite +
+  `SettingsWindowController`, qui doit appeler `NSApp.activate(ignoringOtherApps:)`
+  car l'app est en mode accessory. À l'ouverture, la fenêtre se place centrée
+  sous la barre flottante (`visibleBarFrame`), au centre de l'écran sinon.
+- Le réordonnancement des persos dans la barre passe par un `DragGesture` en
+  espace de coordonnées nommé, pas par `.onDrag`/`.onDrop` : le drag & drop
+  système ne démarre pas de façon fiable depuis un `NSPanel` non activable.
 - [MenuBarController.swift](Sources/Synfus/MenuBarController.swift) — le menu est
   reconstruit à chaque ouverture (`menuNeedsUpdate`). Les raccourcis y sont
   affichés en texte attribué, à titre indicatif : ce sont de vrais raccourcis
@@ -177,6 +192,16 @@ sont fournies par l'utilisateur dans
 `~/Library/Application Support/Synfus/Classes/<clé>.png`. Ce dossier est l'unique
 état ; les images importées sont réencodées en PNG 128 px. Ne pas ajouter d'assets
 de classe au dépôt.
+
+[Tools/fetch-class-icons.sh](Tools/fetch-class-icons.sh) automatise le
+remplissage de ce dossier depuis l'API communautaire DofusDB (le CDN d'Ankama
+répond 403). C'est **la seule forme acceptable** : l'article 13.2 des CGU de
+Dofus interdit de distribuer les visuels du jeu sans accord écrit d'Ankama, donc
+le dépôt ne transporte que des URL — la copie est faite par l'utilisateur, sur
+sa machine, pour son usage personnel. Ne jamais convertir ce script en assets
+embarqués, et conserver la mention « Certaines illustrations sont la propriété
+d'Ankama Studio et de Dofus — Tous droits réservés », qui est la pratique
+constante des sites communautaires tolérés.
 
 La marque — un œuf cerné, abritant trois fenêtres — est décrite **une seule
 fois**, dans [SynfusMark.swift](Sources/Synfus/SynfusMark.swift) : un moteur pur

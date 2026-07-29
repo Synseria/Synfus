@@ -21,6 +21,13 @@ final class FloatingBarController: NSObject {
 
     private override init() { super.init() }
 
+    /// Cadre de la barre à l'écran, si elle est affichée — sert à placer la
+    /// fenêtre de réglages juste en dessous.
+    var visibleBarFrame: NSRect? {
+        guard let panel, panel.isVisible else { return nil }
+        return panel.frame
+    }
+
     func apply() {
         Preferences.shared.barVisible ? show() : hide()
     }

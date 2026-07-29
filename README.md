@@ -10,10 +10,16 @@ et fait basculer d'un perso à l'autre sans passer par ⌘-Tab.
   clients partagent le même bundle `Dofus.app`, donc la même icône). Les clients
   restés à l'écran de connexion ne sont pas listés : ils décaleraient la
   numérotation des vrais persos.
-- **Icône par classe**, à fournir soi-même : onglet *Classes* des réglages, par
+- **Icône par classe**, à fournir soi-même : section *Classes* des réglages, par
   glisser-déposer ou en remplissant `~/Library/Application Support/Synfus/Classes`
   (`iop.png`, `cra.png`…). Synfus n'embarque aucune image du jeu — celles
   d'Ankama n'ont pas à être redistribuées. Sans image, la pastille colorée reste.
+  Pour aller vite, `./Tools/fetch-class-icons.sh` remplit ce dossier avec les
+  emblèmes des 19 classes : le dépôt ne transporte que des adresses, c'est ta
+  machine qui télécharge, pour ton usage personnel.
+
+  > Certaines illustrations sont la propriété d'Ankama Studio et de Dofus
+  > — Tous droits réservés.
 - **Raccourcis clavier globaux** : un par emplacement, plus deux pour cycler dans
   l'ordre choisi.
 - **Détection d'attention** : quand un perso réclame la main, Synfus peut le
