@@ -37,6 +37,18 @@ struct BounceDetectorTests {
         releves.flatMap { detecteur.ingest($0) }
     }
 
+    /// Indice du relevé qui a déclenché — c'est-à-dire le délai, en tours de
+    /// 0,1 s. Ce que le résultat seul ne dit pas.
+    private func tourDeDeclenchement(
+        _ detecteur: inout BounceDetector,
+        _ releves: [BounceDetector.Snapshot]
+    ) -> Int? {
+        for (index, releve) in releves.enumerated() where !detecteur.ingest(releve).isEmpty {
+            return index
+        }
+        return nil
+    }
+
     // MARK: - Le cas nominal
 
     @Test("Une montée suivie du retour au repos est un rebond")
@@ -83,16 +95,47 @@ struct BounceDetectorTests {
     @Test("Un rebond se voit alors même que le Dock est masqué")
     func rebondDockMasque() {
         var detecteur = BounceDetector()
-        let bas: CGFloat = 1117
-        let declenches = rejouer(&detecteur, [
-            releve([bas, bas], bandeau: bas), releve([bas, bas], bandeau: bas),
-            // Seule la seconde icône décolle : le bandeau, lui, ne bouge pas.
-            releve([bas, 1084.783447], bandeau: bas),
-            releve([bas, 1055.784424], bandeau: bas),
-            releve([bas, 1092.109009], bandeau: bas),
-            releve([bas, 1116.689697], bandeau: bas),
-        ])
+        let declenches = rejouer(&detecteur, Self.relevéDu3Aout.map(releveReel))
         #expect(declenches == [1])
+    }
+
+    /// La même suite, mesurée en délai. Le rebond s'étale sur deux secondes de
+    /// relevé ; conclure au retour coûtait tout l'arc, soit la latence dont
+    /// l'usage se plaignait. La montée est décisive dès son premier tour : 32
+    /// points pour une icône de 56 de haut.
+    @Test("Un rebond franc se conclut sur la montée, sans attendre le retour")
+    func declenchementSurLaMontee() {
+        var detecteur = BounceDetector()
+        let tour = tourDeDeclenchement(&detecteur, Self.relevéDu3Aout.map(releveReel))
+        // Indices 0 et 1 amorcent (effectif puis position de repos), l'indice 2
+        // est le premier tour de la montée.
+        #expect(tour == 2)
+    }
+
+    /// Sans bandeau, la mesure est absolue et un Dock qui se dévoile ressemble
+    /// trait pour trait à un saut : là, l'aller-retour reste exigé.
+    @Test("Faute de bandeau, le retour reste exigé")
+    func sansBandeauLeRetourResteExige() {
+        var detecteur = BounceDetector()
+        let hauteur = Self.tailleIcone.height
+        let releves = [
+            releve([900]), releve([900]),
+            releve([900 - hauteur]), releve([900 - hauteur]),   // montée franche
+            releve([900]),                                       // le retour
+        ]
+        #expect(tourDeDeclenchement(&detecteur, releves) == 4)
+    }
+
+    /// Relevé réel du 03/08 : Dock masqué à y = 1117, seconde icône qui saute.
+    /// Le bandeau, lui, ne bouge pas d'un point.
+    private static let relevéDu3Aout: [[CGFloat]] = [
+        [1117, 1117], [1117, 1117],
+        [1117, 1084.783447], [1117, 1055.784424],
+        [1117, 1092.109009], [1117, 1116.689697],
+    ]
+
+    private func releveReel(_ ordonnees: [CGFloat]) -> BounceDetector.Snapshot {
+        releve(ordonnees, bandeau: 1117, hauteurs: [56.106445, 56.106445])
     }
 
     /// Sans bandeau lisible, on retombe sur des ordonnées absolues : la détection
