@@ -48,13 +48,8 @@ final class AttentionWatcher: ObservableObject {
     @Published private(set) var pairing: [(dock: String, character: String)] = []
 
     private var timer: Timer?
-    private var restingY: [String: CGFloat] = [:]
-    private var restingSize: [String: CGSize] = [:]
+    private var detector = BounceDetector()
     private var lastTrigger: [String: Date] = [:]
-
-    /// Amplitude minimale du saut, en points. Le relevé montre une montée de
-    /// plus de 50 points ; 6 suffit à écarter le tremblement de mesure.
-    private let jumpThreshold: CGFloat = 6
 
     /// Un rebond dure environ une seconde et se répète tant que l'app n'est pas
     /// activée : sans ce délai de garde, un seul tour déclencherait en rafale.
@@ -96,35 +91,53 @@ final class AttentionWatcher: ObservableObject {
         // C'est une hypothèse, d'où son affichage dans l'onglet Diagnostic.
         pairing = zip(items, clients).map { ($0.key, $1.name) }
 
-        for (index, item) in items.enumerated() {
-            let key = item.key
+        let screens = Self.screenFramesInAXSpace()
+        let snapshot = BounceDetector.Snapshot(
+            keys: items.map(\.key),
+            y: items.reduce(into: [:]) { $0[$1.key] = $1.position.y },
+            size: items.reduce(into: [:]) { $0[$1.key] = $1.size },
+            onScreen: Set(items.filter { item in
+                screens.contains { $0.contains(item.frame) }
+            }.map(\.key)),
+            mouseInDock: isMouseOverDock(items)
+        )
 
-            guard let baseline = restingY[key], let baseSize = restingSize[key] else {
-                restingY[key] = item.position.y
-                restingSize[key] = item.size
-                continue
-            }
-
-            // Le survol du Dock agrandit les icônes et les fait monter, ce qui
-            // ressemble à un rebond. La taille, elle, ne change que dans ce
-            // cas-là : elle sert donc à écarter les faux positifs.
-            let magnified = abs(item.size.height - baseSize.height) > 1
-            let jumped = baseline - item.position.y > jumpThreshold
-
-            if jumped && !magnified {
-                trigger(index: index, clients: clients, action: action, key: key)
-            } else if !magnified {
-                // Le repos est la position la plus basse à l'écran, donc le y le
-                // plus grand : on suit ce maximum pour absorber un Dock déplacé.
-                restingY[key] = max(baseline, item.position.y)
-            }
+        for rank in detector.ingest(snapshot) where rank < items.count {
+            trigger(index: rank, clients: clients, action: action, key: items[rank].key)
         }
+    }
 
-        // Oublie les icônes disparues (client fermé), sinon leur repos périmé
-        // ferait diverger la détection au prochain lancement.
-        let present = Set(items.map(\.key))
-        restingY = restingY.filter { present.contains($0.key) }
-        restingSize = restingSize.filter { present.contains($0.key) }
+    /// Cadres des écrans dans le repère de l'Accessibilité — origine en haut à
+    /// gauche de l'écran principal, ordonnée vers le bas —, alors que `NSScreen`
+    /// compte depuis le bas. Sert à savoir si une icône est réellement affichée :
+    /// un Dock en masquage automatique glisse ses icônes hors de l'écran.
+    private static func screenFramesInAXSpace() -> [CGRect] {
+        guard let primary = NSScreen.screens.first else { return [] }
+        return NSScreen.screens.map { screen in
+            CGRect(
+                x: screen.frame.minX,
+                y: primary.frame.maxY - screen.frame.maxY,
+                width: screen.frame.width,
+                // Un point de marge en bas : le Dock déployé pose ses icônes au
+                // ras du bord, et un arrondi de mesure les ferait passer pour
+                // masquées.
+                height: screen.frame.height + 1
+            )
+        }
+    }
+
+    /// Le curseur survole-t-il le Dock ?
+    ///
+    /// `NSEvent.mouseLocation` compte depuis le bas de l'écran principal, alors
+    /// que l'Accessibilité compte depuis le haut : il faut retourner l'ordonnée
+    /// avant de comparer les deux.
+    private func isMouseOverDock(_ items: [DockInspector.Item]) -> Bool {
+        guard let box = DockInspector.boundingFrame(items),
+              let reference = NSScreen.screens.first
+        else { return false }
+
+        let mouse = NSEvent.mouseLocation
+        return box.contains(CGPoint(x: mouse.x, y: reference.frame.maxY - mouse.y))
     }
 
     private func trigger(index: Int, clients: [DofusClient], action: AttentionAction, key: String) {
