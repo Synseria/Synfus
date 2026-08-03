@@ -292,6 +292,14 @@ fermés — une passe entamée à cinq ne se solderait jamais à trois — et re
 vide quand tout le monde est coché, une coche qui ne s'efface jamais ne
 renseignant plus sur rien.
 
+Ce qui périme une coche, c'est **la fin du tour et non le temps** : le repère
+sert à savoir qui reste à faire, et dix secondes passées sur un perso ne doivent
+pas effacer les précédents. Un délai par coche était donc exclu. Les deux
+secondes de `clearDelay` ne sont que le temps de voir que tout est fait, après
+quoi l'ensemble s'efface en fondu. Le fondu, et pas un clignotement : la barre
+réserve celui-ci à l'appel d'attention, le seul signal qui réclame vraiment
+qu'on la regarde.
+
 ### Préférences
 
 [Preferences.swift](Sources/Synfus/Preferences.swift) sérialise l'ensemble en

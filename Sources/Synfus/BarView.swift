@@ -234,12 +234,19 @@ struct BarView: View {
                 // La coche garde sa place même absente : sans quoi la barre
                 // changerait de largeur à chaque perso passé, et se recentrerait
                 // sous le curseur au milieu d'un enchaînement.
+                //
+                // Le fondu joue dans les deux sens : à l'apparition il confirme
+                // le clic sans le claquer, et à la disparition il porte
+                // l'effacement de fin de tour. Pas de clignotement : la barre le
+                // réserve à l'appel d'attention, le seul signal qui réclame
+                // vraiment qu'on la regarde.
                 if prefs.advanceOnClick {
                     Image(systemName: "checkmark")
                         .font(.system(size: 9, weight: .bold))
                         .foregroundStyle(active ? Color.white : Color.green)
                         .opacity(clicks.visited.contains(client.slotKey) ? 1 : 0)
                         .frame(width: 9)
+                        .animation(.easeInOut(duration: 0.35), value: clicks.visited)
                 }
             }
             .padding(.horizontal, 7)
