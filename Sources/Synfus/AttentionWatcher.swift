@@ -43,9 +43,17 @@ final class AttentionWatcher: ObservableObject {
     /// Persos actuellement en train de réclamer l'attention.
     @Published private(set) var alerting: Set<String> = []
 
+    /// Une icône du Dock et le perso qu'on lui attribue. Un type nommé plutôt
+    /// qu'un tuple, pour être `Equatable` — ce qui permet de ne republier
+    /// l'appariement que lorsqu'il change réellement.
+    struct Pair: Equatable {
+        let dock: String
+        let character: String
+    }
+
     /// Correspondance icône du Dock → perso, exposée pour vérification dans
     /// l'onglet Diagnostic.
-    @Published private(set) var pairing: [(dock: String, character: String)] = []
+    @Published private(set) var pairing: [Pair] = []
 
     private var timer: Timer?
     private var detector = BounceDetector()
@@ -83,13 +91,28 @@ final class AttentionWatcher: ObservableObject {
             return
         }
 
-        let items = DockInspector.dofusItems()
+        // Sans perso à signaler, il n'y a rien à détecter : inutile d'aller
+        // interroger le Dock par l'Accessibilité dix fois par seconde alors que
+        // Dofus n'est même pas lancé.
         let clients = WindowManager.shared.clients.sorted { $0.pid < $1.pid }
+        guard !clients.isEmpty else {
+            if !pairing.isEmpty { pairing = [] }
+            if !alerting.isEmpty { alerting.removeAll() }
+            return
+        }
+
+        let items = DockInspector.dofusItems()
 
         // Les icônes du Dock s'ajoutent dans l'ordre de lancement des apps, tout
         // comme les pid croissent dans cet ordre : on apparie donc rang à rang.
         // C'est une hypothèse, d'où son affichage dans l'onglet Diagnostic.
-        pairing = zip(items, clients).map { ($0.key, $1.name) }
+        //
+        // L'égalité court-circuite la republication. Ce tour de boucle passe dix
+        // fois par seconde : réassigner sans regarder invalidait la barre
+        // flottante — qui observe ce watcher — à la même cadence, en permanence,
+        // pour un appariement qui ne change qu'au lancement d'un client.
+        let paired = zip(items, clients).map { Pair(dock: $0.key, character: $1.name) }
+        if paired != pairing { pairing = paired }
 
         let screens = Self.screenFramesInAXSpace()
         let snapshot = BounceDetector.Snapshot(

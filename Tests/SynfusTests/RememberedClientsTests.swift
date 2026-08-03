@@ -17,7 +17,6 @@ struct RememberedClientsTests {
             axWindow: AXUIElementCreateApplication(pid),
             rawTitle: "\(nom) - Feca - 3.6.8.8 - Release",
             name: nom,
-            icon: nil,
             characterClass: "Feca",
             dormant: false
         )
