@@ -32,6 +32,7 @@ struct SettingsView: View {
     @ObservedObject private var probe = AttentionProbe.shared
     @ObservedObject private var watcher = AttentionWatcher.shared
     @ObservedObject private var icons = ClassIconStore.shared
+    @ObservedObject private var previews = WindowPreviewService.shared
     @State private var launchAtLogin = LaunchAtLogin.isEnabled
     @State private var section: SettingsSection = .raccourcis
 
@@ -178,6 +179,14 @@ struct SettingsView: View {
                     set: { prefs.barOnlyWithDofus = $0; FloatingBarController.shared.updateVisibility() }
                 ))
                 HStack {
+                    Text("Afficher / masquer la barre")
+                    Spacer()
+                    ShortcutRecorder(hotKey: Binding(
+                        get: { prefs.toggleBar },
+                        set: { prefs.toggleBar = $0; rebind() }
+                    ))
+                }
+                HStack {
                     Text("Position de la barre")
                     Spacer()
                     Button("Recentrer en haut") { FloatingBarController.shared.recenter() }
@@ -193,6 +202,57 @@ struct SettingsView: View {
                 }
                 Toggle("Démarrer Synfus avec la session", isOn: $launchAtLogin)
                     .onChange(of: launchAtLogin) { _, value in LaunchAtLogin.set(value) }
+            }
+
+            Section("Aperçus des fenêtres") {
+                Toggle("Aperçu au survol d'un perso", isOn: Binding(
+                    get: { prefs.showPreviewOnHover },
+                    set: { value in
+                        prefs.showPreviewOnHover = value
+                        if value { previews.requestAuthorization() }
+                    }
+                ))
+                HStack {
+                    Text("Voir tous les persos (à maintenir)")
+                    Spacer()
+                    ShortcutRecorder(hotKey: Binding(
+                        get: { prefs.previewHotKey },
+                        set: { value in
+                            prefs.previewHotKey = value
+                            rebind()
+                            if value != nil { previews.requestAuthorization() }
+                        }
+                    ))
+                }
+                Text("Les aperçus restent affichés tant que la combinaison est maintenue. "
+                     + "Elle doit comporter un modificateur : le système ne réserve pas "
+                     + "une touche seule.")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
+
+                if !previews.authorized {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "rectangle.on.rectangle")
+                            .foregroundStyle(.orange)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Autorisation « Enregistrement de l'écran » requise")
+                                .font(.system(size: 11, weight: .semibold))
+                            Text("C'est une seconde autorisation, distincte de l'Accessibilité. "
+                                 + "Sans elle, les aperçus restent vides. macOS demande en général "
+                                 + "de relancer Synfus après l'avoir accordée.")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                            Button("Ouvrir les Réglages Système…") { previews.requestAuthorization() }
+                                .font(.system(size: 11))
+                        }
+                    }
+                }
+
+                Text("Un perso sur un autre bureau ou en plein écran ailleurs est capturable, "
+                     + "mais son image peut dater de son dernier affichage : macOS ne redessine "
+                     + "pas une fenêtre qu'il ne montre pas.")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
             }
 
             if !HotKeyManager.shared.rejected.isEmpty {
@@ -521,6 +581,15 @@ struct SettingsView: View {
                                 Text("pid \(client.pid)")
                                     .font(.system(size: 10, design: .monospaced))
                                     .foregroundStyle(.tertiary)
+                                if previews.authorized {
+                                    Text(previews.unmatched.contains(client.slotKey)
+                                         ? "aperçu : fenêtre introuvable à la capture"
+                                         : previews.previews[client.slotKey] != nil
+                                           ? "aperçu : capturé"
+                                           : "aperçu : pas encore demandé")
+                                        .font(.system(size: 10, design: .monospaced))
+                                        .foregroundStyle(.tertiary)
+                                }
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(8)

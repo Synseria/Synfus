@@ -182,6 +182,26 @@ struct PreferencesTests {
         #expect(prefs.autoCenterBar == true)
         #expect(prefs.barOnlyWithDofus == false)
         #expect(prefs.menuBarIcon == .logo)
+        // Les raccourcis facultatifs restent vides : on ne confisque aucune
+        // combinaison sans que l'utilisateur l'ait choisie.
+        #expect(prefs.toggleBar == nil)
+        #expect(prefs.previewHotKey == nil)
+        // L'aperçu réclame l'autorisation d'enregistrement de l'écran : il ne
+        // s'active jamais tout seul à la faveur d'une mise à jour.
+        #expect(prefs.showPreviewOnHover == false)
+    }
+
+    @Test("Les réglages d'aperçu se relisent après un redémarrage")
+    func apercusPersistes() {
+        let (prefs, store) = neuves()
+        prefs.showPreviewOnHover = true
+        prefs.previewHotKey = HotKey(keyCode: 49, modifiers: UInt32(optionKey))
+        prefs.toggleBar = HotKey(keyCode: 11, modifiers: UInt32(cmdKey) | UInt32(shiftKey))
+
+        let relues = Preferences.forTesting(store: store)
+        #expect(relues.showPreviewOnHover == true)
+        #expect(relues.previewHotKey == HotKey(keyCode: 49, modifiers: UInt32(optionKey)))
+        #expect(relues.toggleBar == HotKey(keyCode: 11, modifiers: UInt32(cmdKey) | UInt32(shiftKey)))
     }
 
     @Test("Une sauvegarde illisible ramène aux valeurs par défaut")

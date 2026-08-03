@@ -45,6 +45,10 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>LSMinimumSystemVersion</key>    <string>14.0</string>
     <!-- Accessory : pas d'icône dans le Dock, l'app vit dans la barre de menus. -->
     <key>LSUIElement</key>               <true/>
+    <!-- Motif affiché par macOS lors de la demande d'autorisation, pour les
+         aperçus de fenêtres. Rien n'est capturé tant qu'ils sont désactivés. -->
+    <key>NSScreenCaptureUsageDescription</key>
+    <string>Synfus capture les fenêtres de Dofus pour en afficher un aperçu dans la barre.</string>
     <key>NSHumanReadableCopyright</key>  <string>Synfus</string>
 </dict>
 </plist>
