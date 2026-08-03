@@ -62,6 +62,9 @@ final class HotKeyManager {
         if let toggle = prefs.toggleBar {
             register(toggle) { FloatingBarController.shared.toggle() }
         }
+        if let arm = prefs.advanceArmHotKey {
+            register(arm) { ClickAdvanceWatcher.shared.toggleArmed() }
+        }
         if let preview = prefs.previewHotKey {
             register(preview) {
                 PreviewPanelController.shared.showGrid(WindowManager.shared.clients)

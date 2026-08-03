@@ -163,7 +163,21 @@ struct SettingsView: View {
                 }
                 .disabled(!prefs.advanceOnClick)
 
+                HStack {
+                    Text("Amorcer l'enchaînement (clic simple)")
+                    Spacer()
+                    ShortcutRecorder(hotKey: Binding(
+                        get: { prefs.advanceArmHotKey },
+                        set: { prefs.advanceArmHotKey = $0; rebind() }
+                    ))
+                }
+                .disabled(!prefs.advanceOnClick)
+
                 Text(advanceExplanation)
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
+
+                Text(advanceArmExplanation)
                     .font(.system(size: 10))
                     .foregroundStyle(.tertiary)
 
@@ -311,6 +325,16 @@ struct SettingsView: View {
         puis Synfus bascule sur le perso suivant. Tu cliques donc toujours une fois par perso — \
         seul le changement de fenêtre est automatique, comme le fait déjà \(suivant). Synfus \
         n'émet aucun clic et n'en rejoue aucun.
+        """
+    }
+
+    private var advanceArmExplanation: String {
+        """
+        Si le jeu ignore les clics modifiés — c'est le cas de ⌘ — essaie d'abord un autre \
+        modificateur. Sinon, amorce l'enchaînement : le clic devient alors un clic nu, que le \
+        client comprend à coup sûr, et c'est l'amorce qui dit « les prochains clics enchaînent ». \
+        Elle retombe d'elle-même une fois le tour bouclé, et se pilote aussi depuis la flèche \
+        verte de la barre.
         """
     }
 

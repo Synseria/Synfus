@@ -114,8 +114,38 @@ struct BarView: View {
             ForEach(Array(manager.clients.enumerated()), id: \.element.id) { index, client in
                 chip(index: index, client: client)
             }
+            if prefs.advanceOnClick { armToggle }
             autoFocusToggle
         }
+    }
+
+    /// Amorce de l'enchaînement : une fois armée, le clic **nu** passe au perso
+    /// suivant. C'est la parade au client de jeu qui ignore les clics modifiés.
+    private var armToggle: some View {
+        let on = clicks.armed
+        return Button {
+            ClickAdvanceWatcher.shared.toggleArmed()
+        } label: {
+            Image(systemName: on ? "arrow.right.circle.fill" : "arrow.right.circle")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(on ? Color.green : Color.secondary)
+                .frame(width: 22, height: 22)
+                .background(
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(on ? Color.green.opacity(0.18) : Color.primary.opacity(0.05))
+                )
+                .contentShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .help(on
+              ? "Enchaînement amorcé — un clic simple passe au perso suivant, "
+                + "et l'amorce retombe une fois le tour bouclé (\(armShortcut))"
+              : "Amorcer l'enchaînement : le clic simple passera au perso suivant "
+                + "(\(armShortcut))")
+    }
+
+    private var armShortcut: String {
+        prefs.advanceArmHotKey?.displayString ?? "aucun raccourci"
     }
 
     /// Bascule du passage automatique. Doublé par un raccourci global, pour

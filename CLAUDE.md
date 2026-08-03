@@ -265,6 +265,18 @@ qu'il refuse d'embarquer les visuels d'Ankama. Aucun délai n'est randomisé :
 `settleDelay` est fixe et n'existe que pour laisser le client traiter le clic
 avant de perdre le focus.
 
+Deux déclencheurs, et le second existe parce que le premier ne suffit pas
+toujours : **le client de jeu ignore les clics modifiés**, ⌘ au moins. Le clic
+lui parvient bien, mais avec le drapeau dessus, et il ne le traite pas comme un
+clic ordinaire. Synfus ne peut rien y faire — il observe, il ne réécrit pas ;
+retirer le modificateur de l'évènement demanderait exactement le `CGEventTap`
+que le projet refuse. D'où le **mode amorcé** : plutôt que de marquer chaque
+clic, on arme la série, et le jeu reçoit alors un clic parfaitement nu.
+L'amorce retombe d'elle-même une fois le tour bouclé, sans quoi un mode oublié
+transformerait le moindre clic de la partie suivante en changement de fenêtre.
+Le modificateur reste configurable pour qui trouve une touche que son client
+laisse passer.
+
 L'observation passe par `addGlobalMonitorForEvents`, **passif** — rien n'est
 intercepté ni modifié —, et sur `.leftMouseUp` plutôt que `.leftMouseDown` : à
 l'appui, le relâchement n'est pas encore parti, et prendre le focus entre les
