@@ -37,7 +37,7 @@ et fait basculer d'un perso à l'autre sans passer par ⌘-Tab.
   soi-même dans les réglages si le besoin est là.
 - **Détection d'attention** : quand un perso réclame la main, Synfus peut le
   signaler dans la barre ou basculer dessus automatiquement.
-- **Mode « enchaîner »**, désactivé par défaut : une fois activé — ⌃⌥⌘@ ou la
+- **Mode « enchaîner »**, désactivé par défaut : une fois activé — ⌘< ou la
   flèche verte de la barre —, chaque clic sur un client de jeu part normalement,
   puis Synfus bascule sur le perso suivant. Le mode reste actif jusqu'à ce qu'on
   le coupe, et la flèche est verte tant qu'il l'est.

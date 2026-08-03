@@ -279,7 +279,8 @@ rebascule, par `advanceArmHotKey` ou par la flèche de la barre. Pas de
 désactivation automatique en fin de tour — c'est une bascule, pas une amorce à
 usage unique. La flèche verte est ce qui empêche de l'oublier.
 
-Son raccourci a un défaut (⌃⌥⌘@) alors que `toggleBar` n'en a pas, et ce n'est
+Son raccourci a un défaut (⌘< sur un clavier ISO) alors que `toggleBar` n'en a
+pas, et ce n'est
 pas une incohérence : il n'est **réservé auprès du système que lorsque
 `advanceOnClick` est vrai**, donc il ne confisque rien à qui n'utilise pas la
 fonction.

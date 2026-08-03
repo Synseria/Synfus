@@ -195,13 +195,18 @@ struct HotKey: Codable, Equatable, Hashable {
     static var defaultToggleAutoFocus: HotKey {
         HotKey(keyCode: escapeRowKey, modifiers: UInt32(cmdKey) | UInt32(controlKey))
     }
-    /// ⌃⌥⌘@ — active ou coupe le mode « enchaîner ». Trois modificateurs, mais
-    /// c'est une bascule que l'on presse deux fois par session, pas un geste de
-    /// jeu ; et elle reste sur la touche que toute la navigation occupe déjà.
+    /// ⌘< — active ou coupe le mode « enchaîner ».
+    ///
+    /// Un seul modificateur : c'est une bascule, pas un accord. Sur un clavier
+    /// ISO la touche voisine de Majuscule gauche est le keycode 50 — « < » sur
+    /// AZERTY —, et elle est libre puisque la navigation occupe le keycode 10.
+    ///
+    /// Sur un ANSI cette touche n'existe pas, et le 50 y est justement celui de
+    /// la navigation : le défaut s'y replie sur ⌥⌘⇥, faute d'équivalent. Deux
+    /// branches ici, mais une seule combinaison simple sous chaque clavier.
     static var defaultAdvanceArm: HotKey {
-        HotKey(
-            keyCode: escapeRowKey,
-            modifiers: UInt32(cmdKey) | UInt32(controlKey) | UInt32(optionKey)
-        )
+        escapeRowKey == isoSectionKey
+            ? HotKey(keyCode: ansiGraveKey, modifiers: UInt32(cmdKey))
+            : HotKey(keyCode: 48, modifiers: UInt32(cmdKey) | UInt32(optionKey))
     }
 }
