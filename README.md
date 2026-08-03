@@ -20,8 +20,21 @@ et fait basculer d'un perso à l'autre sans passer par ⌘-Tab.
 
   > Certaines illustrations sont la propriété d'Ankama Studio et de Dofus
   > — Tous droits réservés.
-- **Raccourcis clavier globaux** : un par emplacement, plus deux pour cycler dans
-  l'ordre choisi.
+- **Raccourcis clavier globaux**, tous modifiables dans les réglages. Par défaut,
+  la navigation tient sur la touche sous Échap — « @ » sur un clavier Mac
+  français —, atteignable de la main gauche sans lâcher la souris :
+
+  | Raccourci | Effet |
+  | --- | --- |
+  | ⌘@ | perso suivant |
+  | ⇧⌘@ | perso précédent |
+  | ⌥⌘@ | aperçu de tous les persos, tant que c'est maintenu |
+  | ⌃⌘@ | activer / désactiver le passage automatique |
+  | ⌘1 … ⌘5 | aller droit à un perso (jusqu'à ⌘0 pour le dixième) |
+
+  Afficher / masquer la barre n'a **pas** de raccourci par défaut : une
+  combinaison imposée est une combinaison prise au reste du système. À définir
+  soi-même dans les réglages si le besoin est là.
 - **Détection d'attention** : quand un perso réclame la main, Synfus peut le
   signaler dans la barre ou basculer dessus automatiquement.
 - **Ordre des persos** réglable, mémorisé d'une session à l'autre.

@@ -199,6 +199,53 @@ final class Preferences: ObservableObject {
         var menuBarIcon: MenuBarIcon?
         var showPreviewOnHover: Bool?
         var previewHotKey: HotKey?
+        /// Génération du jeu de raccourcis par défaut appliqué à cette
+        /// sauvegarde. Absente des sauvegardes d'avant la refonte, d'où le repli
+        /// sur 1 à la lecture.
+        var defaultsVersion: Int?
+    }
+
+    /// Génération courante des raccourcis par défaut. À incrémenter — avec la
+    /// reprise correspondante dans `adoptDefaults` — chaque fois que les défauts
+    /// changent, sans quoi les installations existantes resteraient sur les
+    /// anciens à jamais.
+    static let defaultsVersion = 2
+
+    /// Les défauts de la génération 1, ceux qu'une installation existante peut
+    /// encore porter sans que l'utilisateur les ait choisis. Seules ces
+    /// valeurs-là sont reprises : un raccourci personnalisé, ou effacé
+    /// délibérément, n'est jamais réécrit.
+    private static let legacyCycleNext = HotKey(keyCode: 48, modifiers: UInt32(controlKey))
+    private static let legacyCyclePrevious = HotKey(
+        keyCode: 48, modifiers: UInt32(controlKey) | UInt32(shiftKey))
+    private static let legacyToggleAutoFocus = HotKey(keyCode: 50, modifiers: UInt32(cmdKey))
+
+    /// Fait passer une sauvegarde ancienne au jeu de raccourcis courant.
+    ///
+    /// ⌘@ change de rôle : il ouvrait la bascule du passage automatique, il fait
+    /// désormais avancer dans la barre — le geste que l'on répète le plus, sur la
+    /// touche la plus facile à atteindre. La bascule glisse d'un modificateur, et
+    /// l'aperçu d'ensemble reçoit enfin un défaut.
+    ///
+    /// Rend `true` s'il y a eu quelque chose à reprendre, pour que l'appelant
+    /// n'écrive les préférences que dans ce cas.
+    @discardableResult
+    func adoptDefaults(from version: Int?) -> Bool {
+        guard (version ?? 1) < Self.defaultsVersion else { return false }
+        if cycleNext == Self.legacyCycleNext { cycleNext = .defaultCycleNext }
+        if cyclePrevious == Self.legacyCyclePrevious { cyclePrevious = .defaultCyclePrevious }
+        // `nil` compris : la bascule est apparue après coup, une sauvegarde plus
+        // ancienne que la clé ne l'a jamais eue. Passé cette reprise, un
+        // raccourci effacé le reste — c'est la génération inscrite qui fait la
+        // différence entre « jamais eu » et « retiré exprès ».
+        if toggleAutoFocus == Self.legacyToggleAutoFocus || toggleAutoFocus == nil {
+            toggleAutoFocus = .defaultToggleAutoFocus
+        }
+        // L'aperçu d'ensemble n'a jamais eu de défaut : le poser ne retire donc
+        // rien à personne. Il ne déclenche aucune demande d'autorisation — la
+        // capture ne part que si l'enregistrement de l'écran est déjà accordé.
+        if previewHotKey == nil { previewHotKey = .defaultPreview }
+        return true
     }
 
     private func save() {
@@ -221,7 +268,8 @@ final class Preferences: ObservableObject {
             autoCenterBar: autoCenterBar,
             menuBarIcon: menuBarIcon,
             showPreviewOnHover: showPreviewOnHover,
-            previewHotKey: previewHotKey
+            previewHotKey: previewHotKey,
+            defaultsVersion: Self.defaultsVersion
         )
         if let data = try? JSONEncoder().encode(stored) {
             store.enregistrer(data, pour: Self.key)
@@ -230,23 +278,20 @@ final class Preferences: ObservableObject {
 
     private func load() {
         loading = true
-        defer {
-            loading = false
-            resizeHotKeys()
-        }
 
         guard let data = store.donnees(pour: Self.key),
               let stored = try? JSONDecoder().decode(Stored.self, from: data)
         else {
-            // Premier lancement : ⌘1 à ⌘5 pour l'accès direct.
+            // Premier lancement : ⌘1 à ⌘5 pour l'accès direct, et toute la
+            // navigation sur la touche sous Échap.
             slotCount = 5
             hotKeys = (0..<5).map { HotKey.defaultHotKey(slot: $0) }
-            // Cycle sur ⌃⇥ et non ⌘⇥ : macOS réserve ⌘⇥ pour son sélecteur
-            // d'applications et refuserait purement et simplement de nous l'attribuer.
-            cycleNext = HotKey(keyCode: 48, modifiers: UInt32(controlKey))
-            cyclePrevious = HotKey(keyCode: 48, modifiers: UInt32(controlKey) | UInt32(shiftKey))
-            // ⌘@ : la touche sous Échap sur un clavier Mac français.
-            toggleAutoFocus = HotKey(keyCode: 50, modifiers: UInt32(cmdKey))
+            cycleNext = .defaultCycleNext
+            cyclePrevious = .defaultCyclePrevious
+            toggleAutoFocus = .defaultToggleAutoFocus
+            previewHotKey = .defaultPreview
+            loading = false
+            resizeHotKeys()
             return
         }
 
@@ -259,7 +304,9 @@ final class Preferences: ObservableObject {
         slotCount = stored.slotCount
         showClasses = stored.showClasses ?? true
         attentionAction = stored.attentionAction ?? .highlight
-        toggleAutoFocus = stored.toggleAutoFocus ?? HotKey(keyCode: 50, modifiers: UInt32(cmdKey))
+        // Sans repli : un raccourci vide est un choix. Les sauvegardes plus
+        // anciennes que la clé sont rattrapées par `adoptDefaults`, une fois.
+        toggleAutoFocus = stored.toggleAutoFocus
         toggleBar = stored.toggleBar
         barOnlyWithDofus = stored.barOnlyWithDofus ?? false
         autoCenterBar = stored.autoCenterBar ?? true
@@ -269,5 +316,12 @@ final class Preferences: ObservableObject {
         if let x = stored.barOriginX, let y = stored.barOriginY {
             barOrigin = CGPoint(x: x, y: y)
         }
+
+        loading = false
+        resizeHotKeys()
+        // La reprise se fait le drapeau `loading` relâché : c'est elle, et elle
+        // seule, qui doit réécrire la sauvegarde — ne serait-ce que pour y
+        // inscrire la génération, sans quoi elle se rejouerait à chaque lancement.
+        if adoptDefaults(from: stored.defaultsVersion) { save() }
     }
 }

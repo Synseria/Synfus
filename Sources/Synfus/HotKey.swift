@@ -84,10 +84,34 @@ struct HotKey: Codable, Equatable, Hashable {
     ]
 
     /// Keycodes des touches 1 à 9 puis 0, dans l'ordre visuel de la rangée.
+    /// Elle est réservée à l'accès direct : ⌘1…⌘0 numérotent les emplacements,
+    /// ⌘0 étant celui du dixième. Aucun autre défaut ne doit y piocher.
     static let digitRow: [UInt32] = [18, 19, 20, 21, 23, 22, 26, 28, 25, 29]
 
     static func defaultHotKey(slot: Int) -> HotKey? {
         guard slot < digitRow.count else { return nil }
         return HotKey(keyCode: digitRow[slot], modifiers: UInt32(cmdKey))
     }
+
+    // MARK: - Jeu de raccourcis par défaut
+
+    /// Touche sous Échap : « @ » sur un clavier Mac français, « ` » sur un
+    /// QWERTY. Toutes les commandes de navigation tiennent dessus, différenciées
+    /// par les modificateurs — un seul repère à mémoriser, atteignable de la main
+    /// gauche sans lâcher la souris, et hors de la rangée de chiffres que se
+    /// réserve l'accès direct.
+    static let escapeRowKey: UInt32 = 50
+
+    /// ⌘@ — passer au perso suivant. C'est le geste central : plutôt que de viser
+    /// un numéro, on avance dans la barre.
+    static let defaultCycleNext = HotKey(keyCode: escapeRowKey, modifiers: UInt32(cmdKey))
+    /// ⇧⌘@ — revenir au précédent.
+    static let defaultCyclePrevious = HotKey(
+        keyCode: escapeRowKey, modifiers: UInt32(cmdKey) | UInt32(shiftKey))
+    /// ⌥⌘@ — aperçu de tous les persos, tant que la combinaison est maintenue.
+    static let defaultPreview = HotKey(
+        keyCode: escapeRowKey, modifiers: UInt32(cmdKey) | UInt32(optionKey))
+    /// ⌃⌘@ — bascule du passage automatique.
+    static let defaultToggleAutoFocus = HotKey(
+        keyCode: escapeRowKey, modifiers: UInt32(cmdKey) | UInt32(controlKey))
 }
