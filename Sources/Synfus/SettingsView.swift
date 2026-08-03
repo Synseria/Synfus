@@ -648,6 +648,24 @@ struct SettingsView: View {
                 .padding(.bottom, 4)
             }
 
+            if let lecture = watcher.dockReading {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Relevé du Dock")
+                        .font(.system(size: 11, weight: .medium))
+                    Text(lecture)
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                    Text("Un rebond éloigne une icône de son bandeau ; un Dock qui se masque ou "
+                         + "se dévoile les emporte ensemble. C'est ce qui les distingue, et c'est "
+                         + "pourquoi la mesure se fait sur l'écart et non sur l'ordonnée à "
+                         + "l'écran — avec le masquage automatique, les icônes reposent sous le "
+                         + "bord de l'écran. Au repos, ces écarts ne doivent pas bouger.")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(.bottom, 4)
+            }
+
             if !probe.watchedItems.isEmpty {
                 Text("Icônes surveillées : " + probe.watchedItems.joined(separator: ", "))
                     .font(.system(size: 10, design: .monospaced))

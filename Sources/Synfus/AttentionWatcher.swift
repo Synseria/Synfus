@@ -55,6 +55,12 @@ final class AttentionWatcher: ObservableObject {
     /// l'onglet Diagnostic.
     @Published private(set) var pairing: [Pair] = []
 
+    /// Dernier relevé du bandeau du Dock et de la première icône, exposé au
+    /// Diagnostic. Toute la détection repose sur l'idée qu'un rebond éloigne
+    /// l'icône de son bandeau alors qu'un Dock qui glisse les emporte ensemble :
+    /// c'est une hypothèse, elle doit pouvoir se vérifier d'un coup d'œil.
+    @Published private(set) var dockReading: String?
+
     private var timer: Timer?
     private var detector = BounceDetector()
     private var lastTrigger: [String: Date] = [:]
@@ -101,7 +107,8 @@ final class AttentionWatcher: ObservableObject {
             return
         }
 
-        let items = DockInspector.dofusItems()
+        let inventory = DockInspector.inventory()
+        let items = inventory.items
 
         // Les icônes du Dock s'ajoutent dans l'ordre de lancement des apps, tout
         // comme les pid croissent dans cet ordre : on apparie donc rang à rang.
@@ -114,15 +121,15 @@ final class AttentionWatcher: ObservableObject {
         let paired = zip(items, clients).map { Pair(dock: $0.key, character: $1.name) }
         if paired != pairing { pairing = paired }
 
-        let screens = Self.screenFramesInAXSpace()
+        let reading = Self.describe(inventory)
+        if reading != dockReading { dockReading = reading }
+
         let snapshot = BounceDetector.Snapshot(
             keys: items.map(\.key),
             y: items.reduce(into: [:]) { $0[$1.key] = $1.position.y },
             size: items.reduce(into: [:]) { $0[$1.key] = $1.size },
-            onScreen: Set(items.filter { item in
-                screens.contains { $0.contains(item.frame) }
-            }.map(\.key)),
-            mouseInDock: isMouseOverDock(items)
+            dockTop: inventory.strip?.minY,
+            mouseInDock: isMouseOverDock(inventory)
         )
 
         for rank in detector.ingest(snapshot) where rank < items.count {
@@ -130,23 +137,18 @@ final class AttentionWatcher: ObservableObject {
         }
     }
 
-    /// Cadres des écrans dans le repère de l'Accessibilité — origine en haut à
-    /// gauche de l'écran principal, ordonnée vers le bas —, alors que `NSScreen`
-    /// compte depuis le bas. Sert à savoir si une icône est réellement affichée :
-    /// un Dock en masquage automatique glisse ses icônes hors de l'écran.
-    private static func screenFramesInAXSpace() -> [CGRect] {
-        guard let primary = NSScreen.screens.first else { return [] }
-        return NSScreen.screens.map { screen in
-            CGRect(
-                x: screen.frame.minX,
-                y: primary.frame.maxY - screen.frame.maxY,
-                width: screen.frame.width,
-                // Un point de marge en bas : le Dock déployé pose ses icônes au
-                // ras du bord, et un arrondi de mesure les ferait passer pour
-                // masquées.
-                height: screen.frame.height + 1
-            )
+    /// Une ligne lisible : où est le bandeau, et de combien chaque icône s'en
+    /// écarte. Au repos les écarts sont constants ; pendant un rebond, celui de
+    /// l'icône qui saute — et lui seul — se creuse.
+    private static func describe(_ inventory: DockInspector.Inventory) -> String {
+        guard let strip = inventory.strip else {
+            return "bandeau illisible — mesure sur l'ordonnée écran"
         }
+        let ecarts = inventory.items
+            .map { String(format: "%+.0f", $0.position.y - strip.minY) }
+            .joined(separator: ", ")
+        return String(format: "bandeau y=%.0f h=%.0f · écarts des icônes : ", strip.minY, strip.height)
+            + (ecarts.isEmpty ? "aucune" : ecarts)
     }
 
     /// Le curseur survole-t-il le Dock ?
@@ -154,9 +156,8 @@ final class AttentionWatcher: ObservableObject {
     /// `NSEvent.mouseLocation` compte depuis le bas de l'écran principal, alors
     /// que l'Accessibilité compte depuis le haut : il faut retourner l'ordonnée
     /// avant de comparer les deux.
-    private func isMouseOverDock(_ items: [DockInspector.Item]) -> Bool {
-        guard let box = DockInspector.boundingFrame(items),
-              let reference = NSScreen.screens.first
+    private func isMouseOverDock(_ inventory: DockInspector.Inventory) -> Bool {
+        guard let box = inventory.mouseZone, let reference = NSScreen.screens.first
         else { return false }
 
         let mouse = NSEvent.mouseLocation

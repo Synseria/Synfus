@@ -147,10 +147,26 @@ Deux règles y font tout le travail, et aucune n'est décorative :
 
 - **Un rebond est un aller-retour.** Regarder la seule montée revenait à prendre
   la réapparition d'un Dock masqué pour un appel d'attention.
-- **Un rebond a lieu Dock visible.** Un Dock en masquage automatique glisse hors
-  écran ; le survol le fait remonter puis redescendre, ce qui est un aller-retour
-  parfait. Seule la visibilité les sépare : une icône dont le cadre n'est pas
-  entièrement contenu dans un écran est ignorée, position de repos comprise.
+- **Un rebond se mesure par rapport au Dock, pas à l'écran.** Une icône qui
+  rebondit se détache du bandeau ; un Dock qui se masque ou se dévoile emporte
+  l'un et l'autre. `DockInspector.Inventory.strip` donne le cadre du bandeau, et
+  le détecteur suit l'**écart** icône ↔ bandeau. C'est une hypothèse — que le
+  bandeau ne bouge pas pendant un rebond —, d'où son affichage dans le
+  Diagnostic, comme l'appariement des rangs.
+
+  Elle remplace une règle antérieure, « un rebond a lieu Dock visible », qui
+  exigeait que le cadre de l'icône tienne entièrement dans un écran. Un relevé
+  réel l'a mise en défaut : **en masquage automatique, les icônes reposent sous
+  le bord de l'écran** — sur un 1728 × 1117, à `y = 1117` pile. Aucune position
+  de repos n'était donc jamais retenue, et un rebond parfaitement net —
+  61 points de montée — ne déclenchait rien. La règle protégeait des faux
+  positifs en rendant la détection impossible pour qui masque son Dock.
+  `BounceDetectorTests` rejoue ce relevé tel quel.
+
+Le survol reste écarté à part, par `mouseInDock`. Sa zone est celle du **bandeau
+entier**, pas des seules icônes Dofus : un Dock masqué se dévoile dès que le
+curseur touche le bord de l'écran, fût-ce à l'autre bout du Dock, et les icônes
+de Dofus remontent alors sans que le curseur soit au-dessus d'elles.
 
 S'y ajoutent les garde-fous d'origine — la taille écarte la magnification, un
 cooldown de 4 s évite les rafales — et le relevé est mis de côté tant que le

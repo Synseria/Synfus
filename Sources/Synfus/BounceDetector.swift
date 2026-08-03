@@ -14,10 +14,19 @@ import Foundation
 ///   résolution, redimensionnement. La version précédente ne regardait que la
 ///   montée, et prenait donc la réapparition d'un Dock masqué pour un appel
 ///   d'attention.
-/// - **Un rebond a lieu Dock visible.** Un Dock en masquage automatique glisse
-///   hors de l'écran, et le survol le fait remonter puis redescendre : c'est un
-///   aller-retour parfait, que la géométrie de l'icône seule ne distingue pas
-///   d'un saut. Seule la visibilité les sépare, d'où `onScreen`.
+/// - **Un rebond se mesure par rapport au Dock, pas à l'écran.** Une icône qui
+///   rebondit se détache du bandeau ; un Dock qui se masque ou se dévoile
+///   emporte l'un et l'autre. Comparer l'icône au bandeau distingue donc les
+///   deux mouvements, sans rien avoir à supposer de la visibilité.
+///
+///   C'est ce qui remplace la règle « un rebond a lieu Dock visible », qui
+///   exigeait que le cadre de l'icône tienne entièrement dans un écran. Un relevé
+///   réel l'a mise en défaut : avec le masquage automatique, les icônes reposent
+///   *sous* le bord de l'écran — sur un 1728 × 1117, à y = 1117 pile. Aucune
+///   position de repos n'était donc jamais retenue, et un rebond parfaitement
+///   net — l'icône montait à y = 1055, soit 61 points — ne déclenchait rien du
+///   tout. La règle protégeait des faux positifs en rendant la détection
+///   impossible.
 struct BounceDetector {
 
     /// Ce que le détecteur reçoit à chaque tour.
@@ -29,13 +38,21 @@ struct BounceDetector {
         /// l'icône est basse à l'écran).
         let y: [String: CGFloat]
         let size: [String: CGSize]
-        /// Icônes entièrement visibles à l'écran. Les autres appartiennent à un
-        /// Dock masqué ou en cours de glissement : leurs positions ne veulent
-        /// rien dire.
-        let onScreen: Set<String>
+        /// Ordonnée du bandeau du Dock, quand l'Accessibilité la rend. Tout se
+        /// mesure relativement à elle. Sans elle, on retombe sur des ordonnées
+        /// absolues — la détection marche encore, mais un Dock qui glisse n'est
+        /// plus distingué que par `isBlockTranslation` et `mouseInDock`.
+        let dockTop: CGFloat?
         /// Le curseur survole le Dock. La magnification déplace et agrandit alors
         /// les icônes : tout relevé pris dans ces conditions est inexploitable.
         let mouseInDock: Bool
+
+        /// Position de l'icône **dans** le Dock. C'est cette grandeur-là, et non
+        /// l'ordonnée écran, que le détecteur suit d'un tour à l'autre.
+        func offset(of key: String) -> CGFloat? {
+            guard let y = y[key] else { return nil }
+            return y - (dockTop ?? 0)
+        }
     }
 
     private enum State {
@@ -94,17 +111,14 @@ struct BounceDetector {
 
         var triggered: [Int] = []
         for (rank, key) in snapshot.keys.enumerated() {
-            // Dock masqué ou en train de glisser : la position ne dit rien de
-            // l'état de repos, et un vol commencé avant ne peut plus se conclure.
-            guard snapshot.onScreen.contains(key),
-                  let y = snapshot.y[key],
-                  let size = snapshot.size[key]
+            guard let size = snapshot.size[key],
+                  let y = snapshot.offset(of: key)
             else {
                 states[key] = .resting
                 continue
             }
 
-            // Première apparition à l'écran : on ne fait que prendre la référence.
+            // Première mesure : on ne fait que prendre la référence.
             guard let baseline = restingY[key], let baseSize = restingSize[key] else {
                 restingY[key] = y
                 restingSize[key] = size
@@ -153,13 +167,15 @@ struct BounceDetector {
         return triggered
     }
 
-    /// Toutes les icônes visibles se déplacent ensemble, de la même quantité :
-    /// c'est le Dock qui bouge — changement d'écran, de taille —, pas une icône
-    /// qui saute.
+    /// Toutes les icônes se déplacent ensemble, de la même quantité : c'est le
+    /// Dock qui bouge — changement d'écran, de taille —, pas une icône qui saute.
+    ///
+    /// Le filet ne sert plus que lorsque le bandeau n'a pas pu être lu : mesurées
+    /// relativement à lui, les icônes d'un Dock qui glisse ne bougent pas du tout.
     private func isBlockTranslation(_ snapshot: Snapshot) -> Bool {
         var deltas: [CGFloat] = []
-        for key in snapshot.keys where snapshot.onScreen.contains(key) {
-            guard let baseline = restingY[key], let y = snapshot.y[key] else { return false }
+        for key in snapshot.keys {
+            guard let baseline = restingY[key], let y = snapshot.offset(of: key) else { return false }
             let delta = baseline - y
             guard abs(delta) > jumpThreshold else { return false }
             deltas.append(delta)
@@ -176,8 +192,8 @@ struct BounceDetector {
     }
 
     private mutating func rebaseAll(_ snapshot: Snapshot) {
-        for key in snapshot.keys where snapshot.onScreen.contains(key) {
-            restingY[key] = snapshot.y[key]
+        for key in snapshot.keys {
+            restingY[key] = snapshot.offset(of: key)
             restingSize[key] = snapshot.size[key]
         }
         markAllResting(snapshot)

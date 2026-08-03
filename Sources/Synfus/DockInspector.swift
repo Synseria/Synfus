@@ -41,16 +41,43 @@ enum DockInspector {
     /// rang ↔ pid, et un rebond ferait basculer vers le mauvais perso.
     private static let applicationDockItem = "AXApplicationDockItem"
 
+    /// Ce qu'un tour d'inspection rapporte du Dock.
+    struct Inventory {
+        /// Icônes des clients Dofus lancés, de gauche à droite.
+        let items: [Item]
+        /// Cadre du **bandeau** entier — la liste qui héberge les icônes, toutes
+        /// applications confondues. C'est la référence par rapport à laquelle une
+        /// icône monte ou non : le bandeau accompagne le Dock quand il se masque
+        /// ou se dévoile, alors qu'une icône qui rebondit s'en détache seule.
+        let strip: CGRect?
+
+        /// Zone où le curseur est réputé « sur le Dock ».
+        ///
+        /// Elle part du bandeau et non des seules icônes Dofus, faute de quoi un
+        /// Dock masqué dévoilé à l'autre bout du bandeau ferait remonter les
+        /// icônes de Dofus sans que le curseur soit jamais réputé dessus. La
+        /// marge verticale couvre à la fois le bandeau caché et la bande de
+        /// déclenchement au bord de l'écran ; l'horizontale, la magnification.
+        var mouseZone: CGRect? {
+            guard let base = strip ?? DockInspector.boundingFrame(items) else { return nil }
+            return base.insetBy(dx: -60, dy: -max(80, base.height))
+        }
+    }
+
     /// Icônes du Dock appartenant à des clients Dofus lancés, de gauche à droite.
-    static func dofusItems() -> [Item] {
+    static func dofusItems() -> [Item] { inventory().items }
+
+    static func inventory() -> Inventory {
         guard let dock = NSRunningApplication
             .runningApplications(withBundleIdentifier: "com.apple.dock").first
-        else { return [] }
+        else { return Inventory(items: [], strip: nil) }
 
         let axDock = AXUIElementCreateApplication(dock.processIdentifier)
         var items: [(title: String, position: CGPoint, size: CGSize)] = []
+        var strip: CGRect?
 
         for list in children(axDock) {
+            var holdsDofus = false
             for element in children(list) {
                 guard let title = value(element, kAXTitleAttribute) as? String,
                       title.lowercased().contains("dofus"),
@@ -62,12 +89,23 @@ enum DockInspector {
                       let size = dimension(element, kAXSizeAttribute)
                 else { continue }
                 items.append((title, position, size))
+                holdsDofus = true
+            }
+            // Le bandeau retenu est celui qui héberge réellement les icônes.
+            if holdsDofus,
+               let position = point(list, kAXPositionAttribute),
+               let size = dimension(list, kAXSizeAttribute) {
+                strip = CGRect(origin: position, size: size)
             }
         }
-        return items
-            .sorted { $0.position.x < $1.position.x }
-            .enumerated()
-            .map { Item(title: $1.title, position: $1.position, size: $1.size, rank: $0) }
+
+        return Inventory(
+            items: items
+                .sorted { $0.position.x < $1.position.x }
+                .enumerated()
+                .map { Item(title: $1.title, position: $1.position, size: $1.size, rank: $0) },
+            strip: strip
+        )
     }
 
     /// Cadre couvrant les icônes, élargi de la place que prend la magnification :
