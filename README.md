@@ -37,25 +37,22 @@ et fait basculer d'un perso à l'autre sans passer par ⌘-Tab.
   soi-même dans les réglages si le besoin est là.
 - **Détection d'attention** : quand un perso réclame la main, Synfus peut le
   signaler dans la barre ou basculer dessus automatiquement.
-- **Enchaîner les persos au clic**, désactivé par défaut : un clic sur un client
-  de jeu part normalement, puis Synfus bascule sur le perso suivant. Une coche
-  marque dans la barre ceux par lesquels on est déjà passé, et le tour suivant
-  les efface.
+- **Mode « enchaîner »**, désactivé par défaut : une fois activé — ⌃⌥⌘@ ou la
+  flèche verte de la barre —, chaque clic sur un client de jeu part normalement,
+  puis Synfus bascule sur le perso suivant. Le mode reste actif jusqu'à ce qu'on
+  le coupe. Une coche marque dans la barre les persos par lesquels on est déjà
+  passé.
 
-  Le déclencheur est au choix un clic **modifié** (⌘, ⌥, ⌃ ou ⇧), ou un clic
-  **nu** une fois la série amorcée — par la flèche verte de la barre ou un
-  raccourci. La seconde voie existe parce que le client Dofus ignore les clics
-  modifiés, ⌘ en particulier : le clic lui parvient, mais avec le modificateur
-  dessus, et il ne le traite pas comme un clic ordinaire. Une fois amorcée, la
-  série retombe d'elle-même au bout d'un tour.
+  Le clic est **nu** : le jeu reçoit exactement ce qu'il attend. Un clic modifié
+  lui parvient bien, mais avec le modificateur dessus, et il ne le traite pas
+  comme un clic ordinaire — déplacer un perso passe, parler à un PNJ non.
 
-  C'est le raccourci « perso suivant » déclenché par le clic que l'on allait
-  faire de toute façon : **il faut toujours un clic par perso**. Synfus n'émet
-  aucun évènement, n'en rejoue aucun et n'en duplique aucun — dupliquer une
-  action sur plusieurs clients est précisément ce que les conditions
-  d'utilisation de Dofus interdisent, et ce n'est pas ce que fait cette
-  fonction. L'observation est passive et porte sur la souris seule ; le clavier
-  reste hors de vue.
+  **Il faut toujours un clic par perso.** Synfus n'émet aucun évènement, n'en
+  rejoue aucun et n'en duplique aucun — dupliquer une action sur plusieurs
+  clients est précisément ce que les conditions d'utilisation de Dofus
+  interdisent, et ce n'est pas ce que fait cette fonction. L'observation est
+  passive et porte sur la souris seule ; le clavier reste hors de vue.
+
 - **Ordre des persos** réglable, mémorisé d'une session à l'autre.
 
 ## Installation
@@ -115,7 +112,7 @@ Deux variables d'environnement pilotent le script :
 
 | Variable | Effet |
 | --- | --- |
-| `VERSION` | Numéro inscrit dans l'`Info.plist` (défaut `0.0.1`) |
+| `VERSION` | Numéro inscrit dans l'`Info.plist` (défaut : dernier tag du dépôt) |
 | `ARCH` | Architecture cible, `arm64` ou `x86_64` (défaut : celle de la machine) |
 
 Si un certificat *Apple Development* est présent dans le trousseau, `build.sh`

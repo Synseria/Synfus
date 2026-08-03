@@ -1,98 +1,49 @@
 import AppKit
 
-/// Modificateur qui, associé à un clic, fait avancer d'un perso.
+/// Mode « enchaîner » : tant qu'il est actif, chaque clic sur un client de jeu
+/// passe au perso suivant une fois le clic délivré.
 ///
-/// Configurable, et pas figé sur ⌘ : rien ne garantit que le client de jeu
-/// traite un ⌘-clic comme un clic ordinaire, et le savoir demande d'essayer.
-enum ClickModifier: String, Codable, CaseIterable, Identifiable {
-    case command, option, control, shift
-
-    var id: String { rawValue }
-
-    var label: String {
-        switch self {
-        case .command: return "⌘ Commande"
-        case .option: return "⌥ Option"
-        case .control: return "⌃ Contrôle"
-        case .shift: return "⇧ Majuscule"
-        }
-    }
-
-    var symbol: String {
-        switch self {
-        case .command: return "⌘"
-        case .option: return "⌥"
-        case .control: return "⌃"
-        case .shift: return "⇧"
-        }
-    }
-
-    var flag: NSEvent.ModifierFlags {
-        switch self {
-        case .command: return .command
-        case .option: return .option
-        case .control: return .control
-        case .shift: return .shift
-        }
-    }
-}
-
-/// Enchaîne les persos au clic : un clic modifié sur un client Dofus passe au
-/// suivant une fois le clic délivré.
+/// Synfus **n'émet, ne rejoue et ne duplique aucun évènement**. Un clic reste un
+/// clic, et il en faut toujours autant que de persos ; la seule chose
+/// automatisée est le changement de fenêtre, que `cycleNext` fait déjà au
+/// clavier. Un clic qui produirait N actions serait un multiplicateur, ce que
+/// les conditions d'utilisation de Dofus interdisent — et ce que le dépôt refuse
+/// au même titre qu'il refuse d'embarquer les visuels d'Ankama.
 ///
-/// Synfus **n'émet aucun évènement** : il ne rejoue pas le clic, ne le duplique
-/// pas, ne le retarde pas. L'utilisateur clique une fois par perso, comme il le
-/// ferait à la main ; la seule chose automatisée est le changement de fenêtre,
-/// qui est le métier de l'app et que ⌘@ fait déjà au clavier. Ce raccourci-ci
-/// épargne la frappe, rien de plus — un clic reste un clic, et il en faut
-/// toujours autant que de persos.
+/// **Le clic est nu, et ce n'est pas un détail.** Une première version demandait
+/// un clic modifié, ⌘-clic, pour n'agir que sur ces clics-là. Le client de jeu
+/// reçoit bien ces clics, mais avec le drapeau dessus, et ne les traite pas
+/// comme des clics ordinaires : déplacer un perso passait, parler à un PNJ non.
+/// Synfus ne pouvait rien y faire — il observe, il ne réécrit pas ; retirer le
+/// modificateur demanderait exactement le `CGEventTap` que le projet refuse.
+/// D'où l'inversion : c'est le **mode** qui porte l'intention, et le jeu reçoit
+/// le clic qu'il attend.
 ///
-/// L'observation est **passive** (`addGlobalMonitorForEvents`), et porte sur la
-/// souris seule. C'est ce qui la distingue du `CGEventTap` que
-/// [HotKeyManager] refuse : rien n'est intercepté, rien n'est modifié, et le
-/// clavier reste hors de vue — l'app ne voit toujours pas ce qui est tapé.
+/// L'observation est passive (`addGlobalMonitorForEvents`) et porte sur la
+/// souris seule : rien n'est intercepté, rien n'est modifié, et le clavier reste
+/// hors de vue — l'app ne voit toujours pas ce qui est tapé.
 @MainActor
 final class ClickAdvanceWatcher: ObservableObject {
     static let shared = ClickAdvanceWatcher()
 
-    /// Persos déjà visités dans la passe en cours, par `slotKey`. Sert la
+    /// Mode actif. Bascule franche : il reste ce qu'on en a fait jusqu'à ce
+    /// qu'on le rebascule. La flèche verte de la barre est là pour qu'on ne
+    /// l'oublie pas.
+    @Published private(set) var armed = false
+
+    /// Persos déjà visités depuis l'activation du mode, par `slotKey`. Sert la
     /// coche affichée dans la barre.
     @Published private(set) var visited: Set<String> = []
 
-    /// Mode amorcé : le **clic nu** enchaîne, sans modificateur.
-    ///
-    /// C'est la parade au cas où le client de jeu ignore les clics modifiés — ce
-    /// qu'il fait, pour ⌘ au moins : le clic lui parvient, mais avec le drapeau
-    /// dessus, et il ne le traite pas comme un clic ordinaire. Synfus ne peut
-    /// rien y faire, il ne fait qu'observer ; retirer le modificateur de
-    /// l'évènement demanderait de l'intercepter et de le réécrire, c'est-à-dire
-    /// le `CGEventTap` que le projet refuse.
-    ///
-    /// D'où l'inversion : plutôt que de marquer chaque clic, on arme la série.
-    /// Le jeu reçoit alors exactement ce qu'il attend. L'amorce retombe d'elle-
-    /// même une fois le tour bouclé, pour qu'un mode oublié ne transforme pas la
-    /// partie suivante en carrousel.
-    @Published private(set) var armed = false
-
-    /// Nombre de clics captés depuis l'activation, exposé au Diagnostic.
+    /// Nombre de clics captés depuis l'activation, exposé aux réglages.
     ///
     /// C'est la réponse à la seule question que la documentation d'Apple laisse
     /// en suspens : un moniteur global de souris réclame-t-il l'autorisation
-    /// « Surveillance de la saisie » ? S'il reste à zéro alors que la fonction
-    /// est active et qu'on a cliqué, c'est que macOS ne nous livre rien.
+    /// « Surveillance de la saisie » ? S'il reste à zéro alors que le mode est
+    /// actif et qu'on a cliqué, c'est que macOS ne nous livre rien.
     @Published private(set) var seenClicks = 0
 
     private var monitor: Any?
-    private var clearTimer: Timer?
-
-    /// Délai avant l'effacement des coches, une fois le tour bouclé.
-    ///
-    /// Rien ne s'efface *pendant* la passe, et surtout pas coche par coche : le
-    /// repère sert à savoir qui reste à faire, et dix secondes passées sur un
-    /// perso ne doivent pas effacer les précédents. C'est la fin du tour qui les
-    /// périme, pas le temps. Ces deux secondes-là ne sont que le moment de voir
-    /// que tout est fait avant que la barre ne se rende disponible.
-    private static let clearDelay: TimeInterval = 2
 
     private init() {}
 
@@ -100,6 +51,15 @@ final class ClickAdvanceWatcher: ObservableObject {
     /// chaque bascule du réglage.
     func apply() {
         Preferences.shared.advanceOnClick ? start() : stop()
+    }
+
+    /// Active ou coupe le mode. Doublé d'un raccourci global : basculer depuis
+    /// la barre oblige à y emmener la souris, ce qui est précisément le geste
+    /// qu'on cherche à éviter.
+    func toggleArmed() {
+        guard Preferences.shared.advanceOnClick else { return }
+        armed.toggle()
+        visited.removeAll()
     }
 
     private func start() {
@@ -123,31 +83,17 @@ final class ClickAdvanceWatcher: ObservableObject {
         if let monitor { NSEvent.removeMonitor(monitor) }
         monitor = nil
         armed = false
-        resetVisited()
-    }
-
-    /// Amorce ou désamorce la série. Doublé d'un raccourci global : amorcer
-    /// depuis la barre oblige à y emmener la souris, ce qui est précisément le
-    /// geste qu'on cherche à éviter.
-    func toggleArmed() {
-        guard Preferences.shared.advanceOnClick else { return }
-        armed.toggle()
-        if armed { visited.removeAll() }
+        visited.removeAll()
     }
 
     private func handle(_ flags: NSEvent.ModifierFlags) {
-        let prefs = Preferences.shared
-        guard prefs.advanceOnClick else { return }
+        guard armed, Preferences.shared.advanceOnClick else { return }
 
-        // Amorcé, c'est le clic nu qui enchaîne — celui que le jeu comprend à
-        // coup sûr. Sinon, exactement le modificateur choisi et lui seul :
-        // ⇧⌘-clic ne doit pas déclencher ce qu'un ⌘-clic déclenche.
-        let pressed = flags.intersection(.deviceIndependentFlagsMask)
-        let matches = armed ? pressed.isEmpty : pressed == prefs.advanceModifier.flag
-        guard matches else { return }
+        // Un clic nu, et lui seul : ⌘-clic, ⌥-clic et consorts gardent partout
+        // le sens que leur donnent macOS et le jeu.
+        guard flags.intersection(.deviceIndependentFlagsMask).isEmpty else { return }
 
-        // Et seulement sur un client de jeu : ailleurs, un clic garde le sens
-        // que lui donnent macOS et les autres applications.
+        // Et seulement sur un client de jeu : ailleurs, un clic reste un clic.
         guard WindowManager.shared.frontmostIsDofus else { return }
 
         seenClicks += 1
@@ -163,48 +109,25 @@ final class ClickAdvanceWatcher: ObservableObject {
 
     private func advance() {
         let manager = WindowManager.shared
-        guard let index = manager.currentIndex else { return }
+        guard armed, let index = manager.currentIndex else { return }
 
-        let alive = Set(manager.clients.map(\.slotKey))
-        let marked = Self.nextVisited(
-            visited, leaving: manager.clients[index].slotKey, among: alive
+        visited = Self.nextVisited(
+            visited,
+            leaving: manager.clients[index].slotKey,
+            among: Set(manager.clients.map(\.slotKey))
         )
-        visited = marked
-
-        if marked.count >= alive.count {
-            // Tour bouclé : l'amorce retombe — un mode resté armé transformerait
-            // le moindre clic de la partie suivante en changement de fenêtre —
-            // et les coches s'effacent après un temps de lecture.
-            armed = false
-            scheduleClear()
-        } else {
-            cancelClear()
-        }
-
         manager.cycle(by: 1)
-    }
-
-    private func scheduleClear() {
-        cancelClear()
-        clearTimer = Timer.scheduledTimer(withTimeInterval: Self.clearDelay, repeats: false) { _ in
-            MainActor.assumeIsolated { ClickAdvanceWatcher.shared.resetVisited() }
-        }
-    }
-
-    private func cancelClear() {
-        clearTimer?.invalidate()
-        clearTimer = nil
     }
 
     /// État des coches au moment où l'on quitte `current`. Pure, donc testable
     /// sans clients ni fenêtres — c'est la règle qui décide de ce que la barre
     /// montre, elle mérite de l'être.
     ///
-    /// Deux points valent la peine d'être fixés. Les persos fermés depuis la
-    /// dernière passe sont retirés, sans quoi une passe entamée à cinq ne se
+    /// Deux points valent la peine d'être fixés. Les persos fermés depuis le
+    /// début du tour sont retirés, sans quoi un tour entamé à cinq ne se
     /// solderait jamais à trois. Et lorsque tout le monde est coché, le clic
-    /// suivant ouvre une passe neuve plutôt que de laisser la barre pleine :
-    /// une coche qui ne s'efface jamais ne renseigne plus sur rien.
+    /// suivant ouvre un tour neuf plutôt que de laisser la barre pleine : une
+    /// coche qui ne s'efface jamais ne renseigne plus sur rien.
     static func nextVisited(
         _ visited: Set<String>,
         leaving current: String,
@@ -216,9 +139,8 @@ final class ClickAdvanceWatcher: ObservableObject {
         return marked
     }
 
-    /// Décoche tout, sans attendre la fin de la passe.
+    /// Décoche tout, sans attendre la fin du tour.
     func resetVisited() {
-        cancelClear()
         guard !visited.isEmpty else { return }
         visited.removeAll()
     }

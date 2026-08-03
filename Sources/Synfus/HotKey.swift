@@ -195,4 +195,13 @@ struct HotKey: Codable, Equatable, Hashable {
     static var defaultToggleAutoFocus: HotKey {
         HotKey(keyCode: escapeRowKey, modifiers: UInt32(cmdKey) | UInt32(controlKey))
     }
+    /// ⌃⌥⌘@ — active ou coupe le mode « enchaîner ». Trois modificateurs, mais
+    /// c'est une bascule que l'on presse deux fois par session, pas un geste de
+    /// jeu ; et elle reste sur la touche que toute la navigation occupe déjà.
+    static var defaultAdvanceArm: HotKey {
+        HotKey(
+            keyCode: escapeRowKey,
+            modifiers: UInt32(cmdKey) | UInt32(controlKey) | UInt32(optionKey)
+        )
+    }
 }

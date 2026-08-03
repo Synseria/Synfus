@@ -87,19 +87,16 @@ final class Preferences: ObservableObject {
     /// à la main.
     @Published var autoCenterBar: Bool = true { didSet { save() } }
 
-    /// Passer au perso suivant après un clic modifié sur un client de jeu.
-    /// Désactivé par défaut : cela change ce que fait un ⌘-clic partout où Dofus
-    /// est au premier plan, et personne n'a demandé ça en installant l'app.
+    /// Rendre disponible le mode « enchaîner » : chaque clic sur un client de
+    /// jeu passe au perso suivant tant que le mode est actif. Éteint par défaut
+    /// — il installe un moniteur global de souris, et personne n'a demandé ça en
+    /// installant l'app.
     @Published var advanceOnClick: Bool = false { didSet { save() } }
 
-    /// Modificateur qui arme ce clic.
-    @Published var advanceModifier: ClickModifier = .command { didSet { save() } }
-
-    /// Raccourci qui amorce la série — le clic nu enchaîne alors, sans
-    /// modificateur. Sans valeur par défaut, comme `toggleBar` : la fonction
-    /// elle-même est éteinte à l'installation, lui réserver une combinaison
-    /// d'office n'aurait pas de sens.
-    @Published var advanceArmHotKey: HotKey? { didSet { save() } }
+    /// Raccourci qui active ou coupe le mode. Il n'est réservé auprès du système
+    /// que lorsque `advanceOnClick` est vrai : lui donner un défaut ne confisque
+    /// donc rien à qui n'utilise pas la fonction.
+    @Published var advanceArmHotKey: HotKey? = .defaultAdvanceArm { didSet { save() } }
 
     /// Icône du `NSStatusItem`. Le rafraîchissement est à la charge de l'appelant
     /// (`MenuBarController.refreshIcon()`) : les préférences ne pilotent pas l'UI.
@@ -214,7 +211,6 @@ final class Preferences: ObservableObject {
         var showPreviewOnHover: Bool?
         var previewHotKey: HotKey?
         var advanceOnClick: Bool?
-        var advanceModifier: ClickModifier?
         var advanceArmHotKey: HotKey?
         /// Génération du jeu de raccourcis par défaut appliqué à cette
         /// sauvegarde. Absente des sauvegardes d'avant la refonte, d'où le repli
@@ -226,7 +222,7 @@ final class Preferences: ObservableObject {
     /// reprise correspondante dans `adoptDefaults` — chaque fois que les défauts
     /// changent, sans quoi les installations existantes resteraient sur les
     /// anciens à jamais.
-    static let defaultsVersion = 3
+    static let defaultsVersion = 4
 
     /// Les défauts de la génération 1, ceux qu'une installation existante peut
     /// encore porter sans que l'utilisateur les ait choisis. Seules ces
@@ -274,6 +270,12 @@ final class Preferences: ObservableObject {
         // Les raccourcis étaient donc bien enregistrés, mais sur une touche que
         // personne n'allait chercher — muets, en pratique.
         if from < 3 { moveToEscapeRow() }
+
+        // La bascule du mode « enchaîner » est arrivée après coup : une
+        // sauvegarde plus ancienne que la clé ne l'a jamais eue. Rien n'est
+        // confisqué pour autant — ce raccourci n'est réservé auprès du système
+        // que lorsque la fonction est activée, et elle est éteinte par défaut.
+        if from < 4, advanceArmHotKey == nil { advanceArmHotKey = .defaultAdvanceArm }
         return true
     }
 
@@ -314,7 +316,6 @@ final class Preferences: ObservableObject {
             showPreviewOnHover: showPreviewOnHover,
             previewHotKey: previewHotKey,
             advanceOnClick: advanceOnClick,
-            advanceModifier: advanceModifier,
             advanceArmHotKey: advanceArmHotKey,
             defaultsVersion: Self.defaultsVersion
         )
@@ -361,7 +362,6 @@ final class Preferences: ObservableObject {
         showPreviewOnHover = stored.showPreviewOnHover ?? false
         previewHotKey = stored.previewHotKey
         advanceOnClick = stored.advanceOnClick ?? false
-        advanceModifier = stored.advanceModifier ?? .command
         advanceArmHotKey = stored.advanceArmHotKey
         if let x = stored.barOriginX, let y = stored.barOriginY {
             barOrigin = CGPoint(x: x, y: y)

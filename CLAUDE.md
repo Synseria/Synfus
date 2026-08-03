@@ -265,17 +265,24 @@ qu'il refuse d'embarquer les visuels d'Ankama. Aucun délai n'est randomisé :
 `settleDelay` est fixe et n'existe que pour laisser le client traiter le clic
 avant de perdre le focus.
 
-Deux déclencheurs, et le second existe parce que le premier ne suffit pas
-toujours : **le client de jeu ignore les clics modifiés**, ⌘ au moins. Le clic
-lui parvient bien, mais avec le drapeau dessus, et il ne le traite pas comme un
-clic ordinaire. Synfus ne peut rien y faire — il observe, il ne réécrit pas ;
-retirer le modificateur de l'évènement demanderait exactement le `CGEventTap`
-que le projet refuse. D'où le **mode amorcé** : plutôt que de marquer chaque
-clic, on arme la série, et le jeu reçoit alors un clic parfaitement nu.
-L'amorce retombe d'elle-même une fois le tour bouclé, sans quoi un mode oublié
-transformerait le moindre clic de la partie suivante en changement de fenêtre.
-Le modificateur reste configurable pour qui trouve une touche que son client
-laisse passer.
+**Le clic est nu, et c'est le résultat d'une correction.** La première version
+demandait un clic modifié — ⌘-clic — pour n'agir que sur ces clics-là. Mesuré en
+jeu : le client reçoit bien ces clics, mais avec le drapeau dessus, et ne les
+traite pas comme des clics ordinaires. Déplacer un perso passait, parler à un
+PNJ non. Synfus ne peut rien y faire — il observe, il ne réécrit pas ; retirer
+le modificateur de l'évènement demanderait exactement le `CGEventTap` que le
+projet refuse. D'où l'inversion : c'est le **mode** qui porte l'intention, et le
+jeu reçoit le clic qu'il attend.
+
+La bascule est franche : le mode reste ce qu'on en a fait jusqu'à ce qu'on le
+rebascule, par `advanceArmHotKey` ou par la flèche de la barre. Pas de
+désactivation automatique en fin de tour — c'est une bascule, pas une amorce à
+usage unique. La flèche verte est ce qui empêche de l'oublier.
+
+Son raccourci a un défaut (⌃⌥⌘@) alors que `toggleBar` n'en a pas, et ce n'est
+pas une incohérence : il n'est **réservé auprès du système que lorsque
+`advanceOnClick` est vrai**, donc il ne confisque rien à qui n'utilise pas la
+fonction.
 
 L'observation passe par `addGlobalMonitorForEvents`, **passif** — rien n'est
 intercepté ni modifié —, et sur `.leftMouseUp` plutôt que `.leftMouseDown` : à

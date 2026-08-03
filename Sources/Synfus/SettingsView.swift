@@ -149,22 +149,17 @@ struct SettingsView: View {
             }
 
             Section("Enchaîner les persos") {
-                Toggle("Passer au suivant après un clic modifié", isOn: Binding(
+                Toggle("Rendre le mode « enchaîner » disponible", isOn: Binding(
                     get: { prefs.advanceOnClick },
-                    set: { prefs.advanceOnClick = $0; ClickAdvanceWatcher.shared.apply() }
-                ))
-                Picker("Modificateur", selection: Binding(
-                    get: { prefs.advanceModifier },
-                    set: { prefs.advanceModifier = $0 }
-                )) {
-                    ForEach(ClickModifier.allCases) { modificateur in
-                        Text(modificateur.label).tag(modificateur)
+                    set: {
+                        prefs.advanceOnClick = $0
+                        ClickAdvanceWatcher.shared.apply()
+                        rebind()
                     }
-                }
-                .disabled(!prefs.advanceOnClick)
+                ))
 
                 HStack {
-                    Text("Amorcer l'enchaînement (clic simple)")
+                    Text("Activer / couper le mode")
                     Spacer()
                     ShortcutRecorder(hotKey: Binding(
                         get: { prefs.advanceArmHotKey },
@@ -174,10 +169,6 @@ struct SettingsView: View {
                 .disabled(!prefs.advanceOnClick)
 
                 Text(advanceExplanation)
-                    .font(.system(size: 10))
-                    .foregroundStyle(.tertiary)
-
-                Text(advanceArmExplanation)
                     .font(.system(size: 10))
                     .foregroundStyle(.tertiary)
 
@@ -319,22 +310,15 @@ struct SettingsView: View {
     /// Sortie de la vue : les concaténations longues mêlées d'interpolations
     /// font exploser le temps d'inférence de SwiftUI.
     private var advanceExplanation: String {
+        let bascule = prefs.advanceArmHotKey?.displayString ?? "le raccourci ci-dessus"
         let suivant = prefs.cycleNext?.displayString ?? "le raccourci « perso suivant »"
         return """
-        \(prefs.advanceModifier.symbol)-clic sur un client de jeu : le clic part normalement, \
-        puis Synfus bascule sur le perso suivant. Tu cliques donc toujours une fois par perso — \
-        seul le changement de fenêtre est automatique, comme le fait déjà \(suivant). Synfus \
-        n'émet aucun clic et n'en rejoue aucun.
-        """
-    }
-
-    private var advanceArmExplanation: String {
-        """
-        Si le jeu ignore les clics modifiés — c'est le cas de ⌘ — essaie d'abord un autre \
-        modificateur. Sinon, amorce l'enchaînement : le clic devient alors un clic nu, que le \
-        client comprend à coup sûr, et c'est l'amorce qui dit « les prochains clics enchaînent ». \
-        Elle retombe d'elle-même une fois le tour bouclé, et se pilote aussi depuis la flèche \
-        verte de la barre.
+        Une fois le mode actif — par \(bascule) ou la flèche verte de la barre —, chaque clic \
+        sur un client de jeu part normalement, puis Synfus bascule sur le perso suivant. Le clic \
+        est nu : le jeu reçoit exactement ce qu'il attend, contrairement à un clic modifié qu'il \
+        ne traite pas comme un clic ordinaire. Tu cliques donc toujours une fois par perso — seul \
+        le changement de fenêtre est automatique, comme le fait déjà \(suivant). Synfus n'émet \
+        aucun clic et n'en rejoue aucun. Le mode reste actif jusqu'à ce que tu le coupes.
         """
     }
 
