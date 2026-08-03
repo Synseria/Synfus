@@ -64,6 +64,10 @@ Au premier lancement, autoriser Synfus dans **Réglages Système → Confidentia
 et sécurité → Accessibilité** : l'API d'accessibilité est ce qui permet de lire
 les fenêtres des clients et de leur donner le focus.
 
+Les aperçus de fenêtres, eux, réclament en plus **Enregistrement de l'écran** —
+c'est la seule façon de capturer une image de fenêtre sur macOS. Ils sont
+désactivés par défaut, et rien n'est capturé tant qu'ils le restent.
+
 Compatible **macOS 14 (Sonoma) à macOS 26**. L'effet Liquid Glass de la barre
 n'apparaît que sur macOS 26 ; en deçà, la barre utilise un matériau translucide.
 

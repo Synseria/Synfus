@@ -111,13 +111,34 @@ ce filtre n'existe.
 Aucune API publique ne dit qu'une *autre* app réclame l'attention.
 [AttentionWatcher.swift](Sources/Synfus/AttentionWatcher.swift) contourne en
 observant, via [DockInspector.swift](Sources/Synfus/DockInspector.swift), la
-géométrie AX des icônes du Dock : `AXPosition.y` chute pendant le rebond. Deux
-garde-fous — la taille sert à écarter la magnification au survol, et un cooldown
-de 4 s évite les déclenchements en rafale.
+géométrie AX des icônes du Dock : `AXPosition.y` chute pendant le rebond. La
+décision elle-même est isolée dans
+[BounceDetector.swift](Sources/Synfus/BounceDetector.swift), une struct pure —
+elle ne lit rien, on la nourrit d'un relevé par tour — donc testable sans Dock ni
+écran ([BounceDetectorTests.swift](Tests/SynfusTests/BounceDetectorTests.swift)).
+
+Deux règles y font tout le travail, et aucune n'est décorative :
+
+- **Un rebond est un aller-retour.** Regarder la seule montée revenait à prendre
+  la réapparition d'un Dock masqué pour un appel d'attention.
+- **Un rebond a lieu Dock visible.** Un Dock en masquage automatique glisse hors
+  écran ; le survol le fait remonter puis redescendre, ce qui est un aller-retour
+  parfait. Seule la visibilité les sépare : une icône dont le cadre n'est pas
+  entièrement contenu dans un écran est ignorée, position de repos comprise.
+
+S'y ajoutent les garde-fous d'origine — la taille écarte la magnification, un
+cooldown de 4 s évite les rafales — et le relevé est mis de côté tant que le
+curseur survole le Dock.
 
 L'appariement icône du Dock ↔ perso est une **hypothèse** : rang dans le Dock
 (trié par abscisse) ↔ rang par pid croissant, les deux suivant l'ordre de
-lancement. C'est pour cette raison qu'il est exposé dans l'onglet Diagnostic.
+lancement. `dofusItems()` ne retient que les icônes de sous-rôle
+`AXApplicationDockItem` appartenant à une app lancée : une fenêtre réduite ou une
+entrée « récents » intitulée « Dofus » décalerait les rangs, donc l'appariement.
+L'identité d'une icône est son **rang**, jamais son abscisse — la magnification
+écarte les icônes sous le curseur, et chaque survol créait sinon une identité
+neuve. C'est pour cette raison que l'appariement est exposé dans l'onglet
+Diagnostic.
 [AttentionProbe.swift](Sources/Synfus/AttentionProbe.swift) est l'outil
 d'exploration qui a servi à établir ce mécanisme ; il journalise tout changement
 d'attribut dans `~/Library/Logs/Synfus/attention.log`.
@@ -129,6 +150,13 @@ d'attribut dans `~/Library/Logs/Synfus/attention.log`.
 combinaison auprès du système au lieu d'observer la frappe, donc aucune
 permission de saisie et aucune visibilité sur ce qui est tapé ailleurs. Le
 callback C ne pouvant rien capturer, il repasse par le singleton.
+
+Le gestionnaire écoute `kEventHotKeyPressed` **et** `kEventHotKeyReleased` : les
+raccourcis « à maintenir » — l'aperçu d'ensemble — en dépendent. Carbon n'émet pas
+de répétition automatique, un appui prolongé ne donne donc qu'un appui et un
+relâchement. Un modificateur seul reste hors de portée : `RegisterEventHotKey`
+exige une touche, et l'observer demanderait un moniteur d'évènements, c'est-à-dire
+exactement ce que l'on refuse de faire.
 
 [HotKey.swift](Sources/Synfus/HotKey.swift) stocke des **keycodes de position
 ANSI** et non des caractères : sur AZERTY la rangée du haut tape `& é " '`, mais
@@ -166,6 +194,17 @@ propriété calculée, donc s'y réassigner relance le `didSet` — d'où le dra
   un overlay de jeu ne doit jamais capter le clavier. Le déplacement passe par
   `performDrag(with:)` d'AppKit (`WindowDragArea`), pas par un `DragGesture` —
   ce dernier reste toujours un cran derrière la souris.
+  Le panneau est au niveau `.statusBar` et non `.floating` : un espace plein
+  écran héberge la fenêtre du jeu à un niveau propre, sous lequel `.floating`
+  disparaît. `.stationary` est délibérément absent du `collectionBehavior`, il
+  brouille le suivi lors d'un passage en plein écran.
+- La visibilité de la barre se décide sur `WindowManager.frontmostPID` /
+  `frontmostIsDofus`, jamais en interrogeant `NSWorkspace` : au moment où l'on
+  apprend qu'une app passe devant, `frontmostApplication` désigne encore la
+  précédente. Le pid vient de la notification elle-même, la décision est prise
+  **avant** `refresh()` — l'inventaire AX peut bloquer des centaines de
+  millisecondes sur un client occupé —, et le timer de 2 s la réévalue en filet.
+  La règle est isolée en fonction pure, `computeVisibility`, donc testée.
 - [SettingsView.swift](Sources/Synfus/SettingsView.swift) — barre latérale à
   gauche, quatre sections (Raccourcis, Persos, Classes, Diagnostic) à droite +
   `SettingsWindowController`, qui doit appeler `NSApp.activate(ignoringOtherApps:)`
@@ -178,6 +217,31 @@ propriété calculée, donc s'y réassigner relance le `didSet` — d'où le dra
   reconstruit à chaque ouverture (`menuNeedsUpdate`). Les raccourcis y sont
   affichés en texte attribué, à titre indicatif : ce sont de vrais raccourcis
   globaux Carbon, pas des key equivalents de menu.
+- [PreviewPanelController.swift](Sources/Synfus/PreviewPanelController.swift) —
+  aperçus des fenêtres, dans un `NSPanel` **distinct** de la barre : celle-ci se
+  dimensionne sur son contenu (`fixedSize` + `preferredContentSize`) et se
+  recentre à chaque changement de taille, donc y greffer un aperçu la ferait
+  sauter à chaque survol. Le panneau est `ignoresMouseEvents`.
+
+### Aperçus des fenêtres
+
+[WindowPreviewService.swift](Sources/Synfus/WindowPreviewService.swift) capture
+via **ScreenCaptureKit** — `CGWindowListCreateImage` est déprécié depuis
+macOS 14. Aucune API publique ne relie un `AXUIElement` à une fenêtre capturable :
+l'appariement se fait sur `(pid, titre)`, avec repli sur le pid quand le processus
+n'a qu'une fenêtre (le titre change à la reconnexion). C'est une hypothèse au même
+titre que l'appariement du Dock, donc testée à part et exposée dans le Diagnostic.
+
+La capture s'exécute hors du main actor et ne rend que du **PNG** : ni `SCWindow`
+ni `CGImage` ne franchissent la frontière d'isolation, ce qui évite d'avoir à
+plaider leur sendabilité.
+
+C'est une **seconde autorisation TCC**, distincte de l'Accessibilité
+(`NSScreenCaptureUsageDescription` dans l'Info.plist généré par `build.sh`). Les
+deux réglages d'aperçu sont donc désactivés par défaut : une mise à jour ne doit
+pas faire surgir une demande d'autorisation que personne n'a demandée. Limite
+connue et documentée dans les réglages : une fenêtre d'un espace inactif est
+capturable, mais macOS ne la redessine pas — l'image peut dater.
 
 ### Classes et icônes
 
