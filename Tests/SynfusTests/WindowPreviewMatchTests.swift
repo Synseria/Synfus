@@ -53,4 +53,32 @@ struct WindowPreviewMatchTests {
         #expect(WindowPreviewService.match(
             pid: 42, title: "Syn-App", among: [Candidat(pid: 42, title: nil)]) == 0)
     }
+
+    /// ScreenCaptureKit expose aussi les info-bulles et panneaux hors écran du
+    /// client. Les compter faisait passer un perso ordinaire pour ambigu, et son
+    /// aperçu restait désespérément vide.
+    @Test("Les fenêtres de service du client ne rendent pas l'appariement ambigu")
+    func fenetresDeService() {
+        let candidats = [
+            Candidat(pid: 42, title: nil, size: CGSize(width: 60, height: 24)),
+            Candidat(pid: 42, title: "Syn-App - Feca - 3.6.7.8 - Release"),
+            Candidat(pid: 42, title: "", size: CGSize(width: 1, height: 1)),
+        ]
+        // Titre périmé : c'est la seule fenêtre à la taille d'un jeu qui répond.
+        #expect(WindowPreviewService.match(
+            pid: 42, title: "Syn-App - Feca - 3.6.7.7 - Release", among: candidats) == 1)
+    }
+
+    /// Le garde-fou tient toujours : deux persos dans un même processus, aucun
+    /// titre qui colle, on renonce plutôt que de montrer le mauvais.
+    @Test("Deux fenêtres de jeu du même processus restent ambiguës")
+    func deuxFenetresDeJeu() {
+        let candidats = [
+            Candidat(pid: 42, title: "Un - Feca - 3.6.7.7 - Release",
+                     size: CGSize(width: 1280, height: 720)),
+            Candidat(pid: 42, title: "Deux - Iop - 3.6.7.7 - Release",
+                     size: CGSize(width: 1440, height: 900)),
+        ]
+        #expect(WindowPreviewService.match(pid: 42, title: "Trois", among: candidats) == nil)
+    }
 }

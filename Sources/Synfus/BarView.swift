@@ -51,6 +51,8 @@ struct BarView: View {
     @State private var pulse = false
     /// Ouverture différée de l'aperçu, annulée dès que le curseur ressort.
     @State private var hoverTask: Task<Void, Never>?
+    /// Perso pour lequel cette attente a été lancée. Cf. `hover(_:inside:)`.
+    @State private var hoverTarget: String?
 
     /// Repère commun aux cadres des pastilles et au geste de réordonnancement.
     private static let barSpace = "synfusBar"
@@ -72,6 +74,7 @@ struct BarView: View {
                 pulse = true
             }
         }
+        .onChange(of: manager.clients) { _, clients in pruneChipFrames(clients) }
     }
 
     /// Poignée de déplacement, et signature de l'app sur l'overlay. Le curseur
@@ -226,14 +229,29 @@ struct BarView: View {
     /// Ouvre l'aperçu après un court délai : sans lui, le simple fait de
     /// traverser la barre pour aller ailleurs déclencherait une capture par
     /// pastille survolée au passage.
+    ///
+    /// L'attente est unique pour toute la barre, et la sortie d'une pastille
+    /// n'est **pas** garantie d'arriver avant l'entrée dans la suivante :
+    /// AppKit émet `mouseEntered` et `mouseExited` de deux zones de suivi
+    /// voisines dans l'ordre qui l'arrange. Annuler sans regarder revenait, une
+    /// fois sur deux, à tuer l'attente que la pastille d'à côté venait
+    /// d'ouvrir — le premier aperçu s'affichait, les suivants jamais. D'où
+    /// `hoverTarget` : une sortie n'annule que sa propre attente.
     private func hover(_ client: DofusClient, inside: Bool) {
         guard prefs.showPreviewOnHover else { return }
 
-        hoverTask?.cancel()
         guard inside else {
+            if hoverTarget == client.slotKey {
+                hoverTask?.cancel()
+                hoverTask = nil
+                hoverTarget = nil
+            }
             PreviewPanelController.shared.hide(ifShowing: client)
             return
         }
+
+        hoverTask?.cancel()
+        hoverTarget = client.slotKey
         hoverTask = Task {
             try? await Task.sleep(for: .milliseconds(400))
             guard !Task.isCancelled,
@@ -245,15 +263,26 @@ struct BarView: View {
     }
 
     /// Publie le cadre de la pastille dans le repère de la barre, pour que le
-    /// geste de réordonnancement sache quelle pastille est survolée.
+    /// geste de réordonnancement sache quelle pastille est survolée, et l'aperçu
+    /// sous quelle pastille se placer.
+    ///
+    /// Le nettoyage se fait sur la liste des persos, et surtout pas dans un
+    /// `onDisappear` : quand SwiftUI reconstruit une ligne, la disparition de
+    /// l'ancienne peut arriver après l'apparition de la nouvelle, et effacerait
+    /// un cadre parfaitement valide — la pastille perdait alors son aperçu sans
+    /// que rien ne le laisse deviner.
     private func chipFrameReader(for name: String) -> some View {
         GeometryReader { geo in
             let frame = geo.frame(in: .named(Self.barSpace))
             Color.clear
                 .onAppear { chipFrames[name] = frame }
                 .onChange(of: frame) { _, new in chipFrames[name] = new }
-                .onDisappear { chipFrames[name] = nil }
         }
+    }
+
+    private func pruneChipFrames(_ clients: [DofusClient]) {
+        let alive = Set(clients.map(\.name))
+        chipFrames = chipFrames.filter { alive.contains($0.key) }
     }
 
     /// Réordonnancement au glisser, sans passer par le drag & drop système :

@@ -37,28 +37,45 @@ final class WindowPreviewService: ObservableObject {
 
     // MARK: - Capture
 
+    /// Ce qu'une capture a besoin de savoir d'un client. Types simples
+    /// uniquement : la capture s'exécute hors du main actor.
+    private struct Request: Sendable {
+        let key: String
+        let pid: pid_t
+        let title: String
+    }
+
+    /// Rafraîchit toutes les vignettes demandées **en un seul inventaire**.
+    ///
+    /// C'est le point important : `SCShareableContent` fait le tour de toutes les
+    /// fenêtres du système, et la grille d'aperçu se rafraîchit chaque seconde.
+    /// Un inventaire par perso revenait à en faire cinq par seconde pour cinq
+    /// clients, alors qu'un seul les sert tous.
     func refresh(_ clients: [DofusClient]) {
-        for client in clients { refresh(client) }
+        guard authorized else { return }
+        let requests = clients
+            .filter { !inFlight.contains($0.slotKey) }
+            .map { Request(key: $0.slotKey, pid: $0.pid, title: $0.rawTitle) }
+        guard !requests.isEmpty else { return }
+
+        for request in requests { inFlight.insert(request.key) }
+
+        Task {
+            let captured = await Self.capture(requests)
+            for request in requests {
+                inFlight.remove(request.key)
+                if let data = captured[request.key], let image = NSImage(data: data) {
+                    previews[request.key] = image
+                    unmatched.remove(request.key)
+                } else {
+                    unmatched.insert(request.key)
+                }
+            }
+        }
     }
 
     func refresh(_ client: DofusClient) {
-        guard authorized, !inFlight.contains(client.slotKey) else { return }
-        inFlight.insert(client.slotKey)
-
-        let key = client.slotKey
-        let pid = client.pid
-        let title = client.rawTitle
-
-        Task {
-            let data = await Self.captureWindow(pid: pid, title: title)
-            inFlight.remove(key)
-            if let data, let image = NSImage(data: data) {
-                previews[key] = image
-                unmatched.remove(key)
-            } else {
-                unmatched.insert(key)
-            }
-        }
+        refresh([client])
     }
 
     /// Oublie les vignettes des persos qui ne sont plus connectés.
@@ -68,35 +85,51 @@ final class WindowPreviewService: ObservableObject {
         unmatched = unmatched.intersection(alive)
     }
 
-    /// Capture hors du main actor et rend un PNG : `SCWindow` et `CGImage` ne
+    /// Capture hors du main actor et rend des PNG : `SCWindow` et `CGImage` ne
     /// franchissent jamais la frontière d'isolation, seules des données le font.
-    private nonisolated static func captureWindow(pid: pid_t, title: String) async -> Data? {
-        do {
-            // `onScreenWindowsOnly: false` est indispensable : un client sur un
-            // autre bureau, ou en plein écran ailleurs, n'est pas « à l'écran ».
-            let content = try await SCShareableContent.excludingDesktopWindows(
-                false, onScreenWindowsOnly: false
-            )
-            let candidates = content.windows.map {
-                Candidate(pid: $0.owningApplication?.processID ?? -1, title: $0.title)
-            }
-            guard let index = match(pid: pid, title: title, among: candidates) else { return nil }
-            let window = content.windows[index]
+    ///
+    /// Le déroulé est séquentiel à dessein : les captures ne peuvent pas partir
+    /// en parallèle sans faire traverser un `SCWindow` — qui n'est pas
+    /// `Sendable` — vers une tâche fille. Ce n'est de toute façon pas là qu'est
+    /// le coût, l'inventaire l'emporte de loin, et il est désormais unique.
+    private nonisolated static func capture(_ requests: [Request]) async -> [String: Data] {
+        // `onScreenWindowsOnly: false` est indispensable : un client sur un
+        // autre bureau, ou en plein écran ailleurs, n'est pas « à l'écran ».
+        guard let content = try? await SCShareableContent.excludingDesktopWindows(
+            false, onScreenWindowsOnly: false
+        ) else { return [:] }
 
-            let configuration = SCStreamConfiguration()
-            let scale = min(1, CGFloat(maxWidth) / max(window.frame.width, 1))
-            configuration.width = Int((window.frame.width * scale).rounded())
-            configuration.height = Int((window.frame.height * scale).rounded())
-            configuration.showsCursor = false
-
-            let image = try await SCScreenshotManager.captureImage(
-                contentFilter: SCContentFilter(desktopIndependentWindow: window),
-                configuration: configuration
+        let candidates = content.windows.map {
+            Candidate(
+                pid: $0.owningApplication?.processID ?? -1,
+                title: $0.title,
+                size: $0.frame.size
             )
-            return png(from: image)
-        } catch {
-            return nil
         }
+
+        var captured: [String: Data] = [:]
+        for request in requests {
+            guard let index = match(pid: request.pid, title: request.title, among: candidates)
+            else { continue }
+            if let data = await shot(of: content.windows[index]) {
+                captured[request.key] = data
+            }
+        }
+        return captured
+    }
+
+    private nonisolated static func shot(of window: SCWindow) async -> Data? {
+        let configuration = SCStreamConfiguration()
+        let scale = min(1, CGFloat(maxWidth) / max(window.frame.width, 1))
+        configuration.width = Int((window.frame.width * scale).rounded())
+        configuration.height = Int((window.frame.height * scale).rounded())
+        configuration.showsCursor = false
+
+        guard let image = try? await SCScreenshotManager.captureImage(
+            contentFilter: SCContentFilter(desktopIndependentWindow: window),
+            configuration: configuration
+        ) else { return nil }
+        return png(from: image)
     }
 
     private nonisolated static func png(from image: CGImage) -> Data? {
@@ -110,6 +143,15 @@ final class WindowPreviewService: ObservableObject {
     struct Candidate: Sendable, Equatable {
         let pid: pid_t
         let title: String?
+        /// Taille de la fenêtre. Sert à écarter les fenêtres de service, pas à
+        /// choisir entre deux persos. La valeur par défaut est celle d'une
+        /// fenêtre de jeu : un test qui ne parle pas de taille n'en parle pas.
+        var size: CGSize = CGSize(width: 1280, height: 720)
+
+        /// Un client de jeu occupe forcément une bonne part de l'écran. Le seuil
+        /// est celui de `WindowManager.isGameWindow`, pour que les deux côtés de
+        /// Synfus s'accordent sur ce qu'est une fenêtre de jeu.
+        var isGameSized: Bool { size.width > 200 && size.height > 200 }
     }
 
     /// Retrouve la fenêtre d'un client parmi celles que le système expose.
@@ -118,11 +160,22 @@ final class WindowPreviewService: ObservableObject {
     /// changé entre l'inventaire et la capture (reconnexion, changement de
     /// perso) : dans ce cas, un processus qui n'a qu'une fenêtre ne laisse aucune
     /// place au doute.
+    ///
+    /// Encore faut-il savoir les compter. ScreenCaptureKit expose *toutes* les
+    /// fenêtres d'un processus, y compris celles que le jeu n'affiche pas comme
+    /// telles — info-bulles, panneaux hors écran. Les compter faisait passer un
+    /// client parfaitement ordinaire pour ambigu, et son aperçu restait vide.
+    /// Elles sont donc écartées sur la taille, exactement comme le fait
+    /// l'inventaire des fenêtres AX. Deux vrais persos dans un même processus
+    /// restent, eux, un cas où l'on renonce : mieux vaut aucun aperçu que celui
+    /// du mauvais perso.
     nonisolated static func match(pid: pid_t, title: String, among candidates: [Candidate]) -> Int? {
         if let exact = candidates.firstIndex(where: { $0.pid == pid && $0.title == title }) {
             return exact
         }
-        let sameProcess = candidates.indices.filter { candidates[$0].pid == pid }
+        let sameProcess = candidates.indices.filter {
+            candidates[$0].pid == pid && candidates[$0].isGameSized
+        }
         return sameProcess.count == 1 ? sameProcess[0] : nil
     }
 
