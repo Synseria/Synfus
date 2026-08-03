@@ -145,8 +145,14 @@ elle ne lit rien, on la nourrit d'un relevé par tour — donc testable sans Doc
 
 Deux règles y font tout le travail, et aucune n'est décorative :
 
-- **Un rebond est un aller-retour.** Regarder la seule montée revenait à prendre
-  la réapparition d'un Dock masqué pour un appel d'attention.
+- **Un rebond est un aller-retour — sauf quand l'aller suffit.** Regarder une
+  montée modeste revenait à prendre la réapparition d'un Dock masqué pour un
+  appel d'attention. Mais attendre l'arc entier coûte **une seconde de latence**,
+  ce qui se sent à l'usage : sur le relevé du 03/08, la montée commence à
+  15:00:51 et le retour ne s'achève qu'à 15:00:52. Au-delà de `certaintyRatio`
+  (0,45 de la hauteur de l'icône, atteint dès le premier tour de la montée), on
+  conclut donc sur l'aller. En deçà, ou faute de bandeau pour repère — la mesure
+  redevenant alors absolue —, le retour reste exigé.
 - **Un rebond se mesure par rapport au Dock, pas à l'écran.** Une icône qui
   rebondit se détache du bandeau ; un Dock qui se masque ou se dévoile emporte
   l'un et l'autre. `DockInspector.Inventory.strip` donne le cadre du bandeau, et

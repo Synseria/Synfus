@@ -9,11 +9,13 @@ import Foundation
 ///
 /// Deux règles gouvernent tout le reste :
 ///
-/// - **Un rebond est un aller-retour.** Une simple montée ne suffit pas : le Dock
-///   lui-même monte et descend d'un bloc — masquage automatique, changement de
-///   résolution, redimensionnement. La version précédente ne regardait que la
-///   montée, et prenait donc la réapparition d'un Dock masqué pour un appel
-///   d'attention.
+/// - **Un rebond est un aller-retour — sauf quand l'aller suffit.** Une montée
+///   modeste ne prouve rien : le Dock lui-même monte et descend d'un bloc
+///   — masquage automatique, changement de résolution, redimensionnement.
+///   Mais attendre l'arc entier coûte une seconde de latence, et une montée de
+///   la moitié de la hauteur de l'icône n'a plus rien d'ambigu. Au-delà de
+///   `certaintyRatio`, on conclut donc sur l'aller ; en deçà, on attend le
+///   retour comme avant.
 /// - **Un rebond se mesure par rapport au Dock, pas à l'écran.** Une icône qui
 ///   rebondit se détache du bandeau ; un Dock qui se masque ou se dévoile
 ///   emporte l'un et l'autre. Comparer l'icône au bandeau distingue donc les
@@ -57,13 +59,29 @@ struct BounceDetector {
 
     private enum State {
         case resting
-        /// Montée détectée ; on attend le retour au repos pour conclure.
+        /// Montée détectée, trop modeste pour conclure ; on attend le retour.
         case inFlight(sinceTick: Int)
+        /// Rebond déjà annoncé. On attend le retour au repos pour se réarmer,
+        /// sans réannoncer à chaque tour du même saut.
+        case announced(sinceTick: Int)
     }
 
     /// Amplitude minimale du saut, en points. Le relevé montre une montée de plus
     /// de 50 points ; 6 suffit à écarter le tremblement de mesure.
     private let jumpThreshold: CGFloat = 6
+
+    /// Fraction de la hauteur de l'icône au-delà de laquelle une montée ne peut
+    /// plus être qu'un rebond, et se conclut donc **sans attendre le retour**.
+    ///
+    /// C'est ce qui décide de la latence ressentie. Exiger l'aller-retour
+    /// coûtait une seconde pleine : sur le relevé du 03/08, la montée commence à
+    /// 15:00:51 et le retour ne s'achève qu'à 15:00:52. Or l'aller seul est déjà
+    /// sans équivoque — 32 points dès le premier tour, 61 au sommet, pour une
+    /// icône de 56 de haut. Attendre la fin de l'arc n'apprenait rien de plus.
+    ///
+    /// Le seuil se prend en proportion de l'icône, et non en points : le Dock
+    /// tasse ses icônes à mesure qu'on en ajoute, et l'amplitude du saut suit.
+    private let certaintyRatio: CGFloat = 0.45
 
     /// Tolérance sur le retour au repos, pour conclure le rebond sans exiger le
     /// pixel près.
@@ -129,6 +147,14 @@ struct BounceDetector {
             // Positif quand l'icône est montée par rapport à son repos.
             let delta = baseline - y
 
+            // Une montée franche ne se conclut sans attendre le retour que si
+            // l'on tient le Dock comme repère. Sans lui, la mesure est absolue,
+            // et un Dock qui se dévoile ressemble trait pour trait à un saut :
+            // seul l'aller-retour, lui, finit par le trahir.
+            let decisive = snapshot.dockTop != nil
+                && delta >= certaintyRatio * baseSize.height
+                && abs(size.height - baseSize.height) <= 1
+
             switch states[key] ?? .resting {
             case .resting:
                 if delta < -jumpThreshold {
@@ -140,7 +166,10 @@ struct BounceDetector {
                 } else if delta > jumpThreshold {
                     // La taille ne bouge qu'au survol ; elle écarte ce qui reste
                     // de magnification quand le curseur frôle le Dock sans y entrer.
-                    if abs(size.height - baseSize.height) <= 1 {
+                    if decisive {
+                        triggered.append(rank)
+                        states[key] = .announced(sinceTick: tick)
+                    } else if abs(size.height - baseSize.height) <= 1 {
                         states[key] = .inFlight(sinceTick: tick)
                     }
                 } else {
@@ -156,9 +185,26 @@ struct BounceDetector {
                     restingY[key] = y
                     restingSize[key] = size
                     states[key] = .resting
+                } else if decisive {
+                    // La montée s'est amplifiée jusqu'à ne plus laisser de doute.
+                    triggered.append(rank)
+                    states[key] = .announced(sinceTick: tick)
                 } else if delta <= returnTolerance {
                     // Montée puis retour : c'est bien un rebond.
                     triggered.append(rank)
+                    restingY[key] = max(baseline, y)
+                    states[key] = .resting
+                }
+
+            case .announced(let since):
+                // Le rebond est dit. Il reste à retomber pour pouvoir en
+                // reconnaître un suivant — et, s'il ne retombe pas, à admettre
+                // que l'icône a bougé pour de bon et à s'y recaler.
+                if tick - since > maxFlightTicks {
+                    restingY[key] = y
+                    restingSize[key] = size
+                    states[key] = .resting
+                } else if delta <= returnTolerance {
                     restingY[key] = max(baseline, y)
                     states[key] = .resting
                 }
