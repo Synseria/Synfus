@@ -29,9 +29,91 @@ struct PreferencesTests {
         #expect(prefs.slotCount == 5)
         #expect(prefs.hotKeys.count == 5)
         #expect(prefs.hotKeys[0] == HotKey(keyCode: 18, modifiers: UInt32(cmdKey)))
-        // ⌃⇥ et non ⌘⇥ : macOS réserve ⌘⇥ pour son sélecteur d'applications.
-        #expect(prefs.cycleNext == HotKey(keyCode: 48, modifiers: UInt32(controlKey)))
         #expect(prefs.characterOrder.isEmpty)
+    }
+
+    /// Toute la navigation tient sur la touche sous Échap, différenciée par les
+    /// modificateurs, et laisse la rangée de chiffres à l'accès direct.
+    @Test("Le jeu de raccourcis par défaut tient sur la touche sous Échap")
+    func raccourcisParDefaut() {
+        let (prefs, _) = neuves()
+        let echap = HotKey.escapeRowKey
+        #expect(prefs.cycleNext == HotKey(keyCode: echap, modifiers: UInt32(cmdKey)))
+        #expect(prefs.cyclePrevious
+                == HotKey(keyCode: echap, modifiers: UInt32(cmdKey) | UInt32(shiftKey)))
+        #expect(prefs.previewHotKey
+                == HotKey(keyCode: echap, modifiers: UInt32(cmdKey) | UInt32(optionKey)))
+        #expect(prefs.toggleAutoFocus
+                == HotKey(keyCode: echap, modifiers: UInt32(cmdKey) | UInt32(controlKey)))
+        // Aucun défaut ne pioche dans la rangée de chiffres : ⌘0 reste au
+        // dixième emplacement.
+        for defaut in [prefs.cycleNext, prefs.cyclePrevious, prefs.previewHotKey,
+                       prefs.toggleAutoFocus].compactMap({ $0 }) {
+            #expect(!HotKey.digitRow.contains(defaut.keyCode))
+        }
+        // Masquer la barre reste sans défaut : on ne confisque pas une
+        // combinaison que personne n'a demandée.
+        #expect(prefs.toggleBar == nil)
+    }
+
+    // MARK: - Reprise des anciens défauts
+
+    /// ⌘@ servait à la bascule du passage automatique et le cycle vivait sur ⌃⇥.
+    /// Une installation restée sur ces valeurs doit basculer sur le nouveau jeu.
+    @Test("Une installation aux anciens défauts passe au nouveau jeu")
+    func repriseDesDefauts() {
+        let ancien = """
+        {"characterOrder":[],"hotKeys":[],"barVisible":true,"showNumbers":true,
+         "slotCount":5,
+         "cycleNext":{"keyCode":48,"modifiers":4096},
+         "cyclePrevious":{"keyCode":48,"modifiers":4608},
+         "toggleAutoFocus":{"keyCode":50,"modifiers":256}}
+        """
+        let store = StockageMemoire([Preferences.key: Data(ancien.utf8)])
+
+        let prefs = Preferences.forTesting(store: store)
+        #expect(prefs.cycleNext == HotKey.defaultCycleNext)
+        #expect(prefs.cyclePrevious == HotKey.defaultCyclePrevious)
+        #expect(prefs.toggleAutoFocus == HotKey.defaultToggleAutoFocus)
+        #expect(prefs.previewHotKey == HotKey.defaultPreview)
+
+        // La génération est inscrite dans la sauvegarde : la reprise ne se
+        // rejoue pas au lancement suivant, où l'utilisateur est libre de
+        // reprendre ⌃⇥ s'il le veut.
+        let relues = Preferences.forTesting(store: store)
+        relues.cycleNext = HotKey(keyCode: 48, modifiers: UInt32(controlKey))
+        #expect(Preferences.forTesting(store: store).cycleNext
+                == HotKey(keyCode: 48, modifiers: UInt32(controlKey)))
+    }
+
+    /// Un raccourci choisi à la main est un choix : la reprise ne doit pas
+    /// passer par-dessus.
+    @Test("Un raccourci personnalisé survit à la reprise des défauts")
+    func repriseRespecteLesChoix() {
+        let ancien = """
+        {"characterOrder":[],"hotKeys":[],"barVisible":true,"showNumbers":true,
+         "slotCount":5,
+         "cycleNext":{"keyCode":122,"modifiers":0},
+         "previewHotKey":{"keyCode":120,"modifiers":0}}
+        """
+        let store = StockageMemoire([Preferences.key: Data(ancien.utf8)])
+
+        let prefs = Preferences.forTesting(store: store)
+        #expect(prefs.cycleNext == HotKey(keyCode: 122, modifiers: 0))
+        #expect(prefs.previewHotKey == HotKey(keyCode: 120, modifiers: 0))
+    }
+
+    /// Une fois la reprise passée, effacer un raccourci le laisse effacé : sans
+    /// la génération inscrite, chaque lancement le ressusciterait.
+    @Test("Un raccourci effacé après la reprise ne revient pas")
+    func raccourciEffaceApresReprise() {
+        let (prefs, store) = neuves()
+        prefs.toggleAutoFocus = nil
+        prefs.previewHotKey = nil
+
+        let relues = Preferences.forTesting(store: store)
+        #expect(relues.toggleAutoFocus == nil)
+        #expect(relues.previewHotKey == nil)
     }
 
     // MARK: - Nombre d'emplacements
@@ -182,10 +264,11 @@ struct PreferencesTests {
         #expect(prefs.autoCenterBar == true)
         #expect(prefs.barOnlyWithDofus == false)
         #expect(prefs.menuBarIcon == .logo)
-        // Les raccourcis facultatifs restent vides : on ne confisque aucune
-        // combinaison sans que l'utilisateur l'ait choisie.
+        // Masquer la barre reste sans défaut : on ne confisque aucune
+        // combinaison réservée par le système sans qu'elle ait été demandée.
         #expect(prefs.toggleBar == nil)
-        #expect(prefs.previewHotKey == nil)
+        // L'aperçu d'ensemble, lui, reçoit son défaut à la reprise.
+        #expect(prefs.previewHotKey == HotKey.defaultPreview)
         // L'aperçu réclame l'autorisation d'enregistrement de l'écran : il ne
         // s'active jamais tout seul à la faveur d'une mise à jour.
         #expect(prefs.showPreviewOnHover == false)

@@ -186,6 +186,21 @@ ANSI** et non des caractères : sur AZERTY la rangée du haut tape `& é " '`, m
 tout le monde l'appelle « 1 2 3 4 5 ». `rebind()` réenregistre tout après chaque
 modification de préférence.
 
+Le jeu par défaut sépare deux territoires, et cette séparation est une règle :
+la **rangée de chiffres** (`digitRow`) appartient à l'accès direct — ⌘1…⌘0
+numérotent les emplacements, ⌘0 étant celui du dixième —, tandis que toute la
+navigation tient sur la **touche sous Échap** (`escapeRowKey`, keycode 50),
+différenciée par les modificateurs : ⌘@ suivant, ⇧⌘@ précédent, ⌥⌘@ aperçu
+d'ensemble, ⌃⌘@ bascule du passage auto. Aucun nouveau défaut ne doit piocher
+dans `digitRow`, sous peine de se heurter au slot du même rang.
+
+Changer un défaut ne suffit pas : les préférences déjà enregistrées ne repassent
+jamais par la branche « premier lancement ». D'où `Preferences.defaultsVersion`
+et `adoptDefaults(from:)`, qui ne réécrit que les valeurs **encore identiques à
+l'ancien défaut** — un raccourci personnalisé est un choix. La génération est
+inscrite dans la sauvegarde, ce qui donne au passage la seule façon de
+distinguer « jamais eu ce réglage » de « effacé exprès ».
+
 ### Préférences
 
 [Preferences.swift](Sources/Synfus/Preferences.swift) sérialise l'ensemble en
