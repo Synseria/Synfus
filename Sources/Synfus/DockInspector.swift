@@ -23,33 +23,60 @@ enum DockInspector {
         let title: String
         let position: CGPoint
         let size: CGSize
+        /// Rang d'affichage, de gauche à droite.
+        let rank: Int
 
-        /// Identité stable d'une icône. Les clients Dofus s'intitulent tous
-        /// « Dofus » dans le Dock : seule l'abscisse les distingue, et elle ne
-        /// bouge pas tant qu'aucune app n'est ajoutée ni retirée.
-        var key: String { "\(title)@\(Int(position.x.rounded()))" }
+        /// Identité d'une icône. Les clients Dofus s'intitulent tous « Dofus »
+        /// dans le Dock : seul leur rang les distingue. On tient délibérément le
+        /// rang plutôt que l'abscisse, qui bouge dès que la magnification écarte
+        /// les icônes sous le curseur — chaque survol créait alors une identité
+        /// neuve, et autant de positions de repos parasites.
+        var key: String { "dofus#\(rank)" }
+
+        var frame: CGRect { CGRect(origin: position, size: size) }
     }
 
-    /// Icônes du Dock appartenant à Dofus, rangées de gauche à droite.
+    /// Sous-rôle des icônes d'application. Les fenêtres réduites en portent un
+    /// autre (`AXMinimizedWindowDockItem`) : les compter décalerait l'appariement
+    /// rang ↔ pid, et un rebond ferait basculer vers le mauvais perso.
+    private static let applicationDockItem = "AXApplicationDockItem"
+
+    /// Icônes du Dock appartenant à des clients Dofus lancés, de gauche à droite.
     static func dofusItems() -> [Item] {
         guard let dock = NSRunningApplication
             .runningApplications(withBundleIdentifier: "com.apple.dock").first
         else { return [] }
 
         let axDock = AXUIElementCreateApplication(dock.processIdentifier)
-        var items: [Item] = []
+        var items: [(title: String, position: CGPoint, size: CGSize)] = []
 
         for list in children(axDock) {
             for element in children(list) {
                 guard let title = value(element, kAXTitleAttribute) as? String,
                       title.lowercased().contains("dofus"),
+                      value(element, kAXSubroleAttribute) as? String == applicationDockItem,
+                      // Une app seulement épinglée ou « récente » ne rebondit pas :
+                      // la retenir décalerait les rangs sans jamais servir.
+                      value(element, "AXIsApplicationRunning") as? Bool == true,
                       let position = point(element, kAXPositionAttribute),
                       let size = dimension(element, kAXSizeAttribute)
                 else { continue }
-                items.append(Item(title: title, position: position, size: size))
+                items.append((title, position, size))
             }
         }
-        return items.sorted { $0.position.x < $1.position.x }
+        return items
+            .sorted { $0.position.x < $1.position.x }
+            .enumerated()
+            .map { Item(title: $1.title, position: $1.position, size: $1.size, rank: $0) }
+    }
+
+    /// Cadre couvrant les icônes, élargi de la place que prend la magnification :
+    /// elle écarte les icônes voisines et les fait monter bien au-delà de leur
+    /// cadre au repos. Sert à savoir si le curseur est sur le Dock.
+    static func boundingFrame(_ items: [Item]) -> CGRect? {
+        guard var box = items.first?.frame else { return nil }
+        for item in items.dropFirst() { box = box.union(item.frame) }
+        return box.insetBy(dx: -60, dy: -80)
     }
 
     private static func point(_ element: AXUIElement, _ attribute: String) -> CGPoint? {
