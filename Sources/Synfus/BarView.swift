@@ -49,6 +49,8 @@ struct BarView: View {
     @State private var dragging: String?
     @State private var chipFrames: [String: CGRect] = [:]
     @State private var pulse = false
+    /// Ouverture différée de l'aperçu, annulée dès que le curseur ressort.
+    @State private var hoverTask: Task<Void, Never>?
 
     /// Repère commun aux cadres des pastilles et au geste de réordonnancement.
     private static let barSpace = "synfusBar"
@@ -216,6 +218,28 @@ struct BarView: View {
         .scaleEffect(dragging == client.name ? 1.06 : 1)
         .background(chipFrameReader(for: client.name))
         .simultaneousGesture(reorderGesture(for: client))
+        .onHover { inside in hover(client, inside: inside) }
+    }
+
+    /// Ouvre l'aperçu après un court délai : sans lui, le simple fait de
+    /// traverser la barre pour aller ailleurs déclencherait une capture par
+    /// pastille survolée au passage.
+    private func hover(_ client: DofusClient, inside: Bool) {
+        guard prefs.showPreviewOnHover else { return }
+
+        hoverTask?.cancel()
+        guard inside else {
+            PreviewPanelController.shared.hide(ifShowing: client)
+            return
+        }
+        hoverTask = Task {
+            try? await Task.sleep(for: .milliseconds(400))
+            guard !Task.isCancelled,
+                  let local = chipFrames[client.name],
+                  let onScreen = FloatingBarController.shared.screenFrame(fromBarFrame: local)
+            else { return }
+            PreviewPanelController.shared.show(client, below: onScreen)
+        }
     }
 
     /// Publie le cadre de la pastille dans le repère de la barre, pour que le

@@ -66,8 +66,22 @@ final class Preferences: ObservableObject {
     /// Raccourci de bascule du passage automatique.
     @Published var toggleAutoFocus: HotKey? { didSet { save() } }
 
+    /// Raccourci d'affichage / masquage de la barre. Sans valeur par défaut :
+    /// une combinaison réservée au système est une combinaison prise à
+    /// l'utilisateur, on ne le fait pas sans qu'il l'ait demandé.
+    @Published var toggleBar: HotKey? { didSet { save() } }
+
     /// N'afficher la barre que lorsque Dofus est au premier plan.
     @Published var barOnlyWithDofus: Bool = false { didSet { save() } }
+
+    /// Aperçu de la fenêtre au survol d'une pastille. Désactivé par défaut :
+    /// la première capture réclame l'autorisation « Enregistrement de l'écran »,
+    /// et une mise à jour n'a pas à faire surgir une demande que personne n'a
+    /// demandée.
+    @Published var showPreviewOnHover: Bool = false { didSet { save() } }
+
+    /// Raccourci d'aperçu de tous les persos, actif tant qu'il est maintenu.
+    @Published var previewHotKey: HotKey? { didSet { save() } }
 
     /// Recentrer la barre en haut de l'écran tant qu'elle n'a pas été déplacée
     /// à la main.
@@ -179,9 +193,12 @@ final class Preferences: ObservableObject {
         var showClasses: Bool?
         var attentionAction: AttentionAction?
         var toggleAutoFocus: HotKey?
+        var toggleBar: HotKey?
         var barOnlyWithDofus: Bool?
         var autoCenterBar: Bool?
         var menuBarIcon: MenuBarIcon?
+        var showPreviewOnHover: Bool?
+        var previewHotKey: HotKey?
     }
 
     private func save() {
@@ -199,9 +216,12 @@ final class Preferences: ObservableObject {
             showClasses: showClasses,
             attentionAction: attentionAction,
             toggleAutoFocus: toggleAutoFocus,
+            toggleBar: toggleBar,
             barOnlyWithDofus: barOnlyWithDofus,
             autoCenterBar: autoCenterBar,
-            menuBarIcon: menuBarIcon
+            menuBarIcon: menuBarIcon,
+            showPreviewOnHover: showPreviewOnHover,
+            previewHotKey: previewHotKey
         )
         if let data = try? JSONEncoder().encode(stored) {
             store.enregistrer(data, pour: Self.key)
@@ -240,9 +260,12 @@ final class Preferences: ObservableObject {
         showClasses = stored.showClasses ?? true
         attentionAction = stored.attentionAction ?? .highlight
         toggleAutoFocus = stored.toggleAutoFocus ?? HotKey(keyCode: 50, modifiers: UInt32(cmdKey))
+        toggleBar = stored.toggleBar
         barOnlyWithDofus = stored.barOnlyWithDofus ?? false
         autoCenterBar = stored.autoCenterBar ?? true
         menuBarIcon = stored.menuBarIcon ?? .logo
+        showPreviewOnHover = stored.showPreviewOnHover ?? false
+        previewHotKey = stored.previewHotKey
         if let x = stored.barOriginX, let y = stored.barOriginY {
             barOrigin = CGPoint(x: x, y: y)
         }

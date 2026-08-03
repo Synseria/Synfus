@@ -53,13 +53,32 @@ final class FloatingBarController: NSObject {
     /// La barre peut être réservée aux moments où Dofus est devant. Synfus
     /// compte comme « devant » : sans ça, ouvrir les réglages ferait disparaître
     /// la barre que l'on est en train de configurer.
+    ///
+    /// La décision se prend sur l'état déjà tenu par `WindowManager`, et non en
+    /// interrogeant `NSWorkspace` : au moment où l'on apprend qu'une application
+    /// vient de passer devant, `frontmostApplication` désigne encore la
+    /// précédente, et la barre décidait donc avec un tour de retard.
     private var shouldBeVisible: Bool {
-        guard Preferences.shared.barVisible else { return false }
-        guard Preferences.shared.barOnlyWithDofus else { return true }
+        Self.computeVisibility(
+            barVisible: Preferences.shared.barVisible,
+            onlyWithDofus: Preferences.shared.barOnlyWithDofus,
+            frontPID: WindowManager.shared.frontmostPID,
+            frontIsDofus: WindowManager.shared.frontmostIsDofus,
+            ownPID: ProcessInfo.processInfo.processIdentifier
+        )
+    }
 
-        guard let front = NSWorkspace.shared.frontmostApplication else { return false }
-        if front.processIdentifier == ProcessInfo.processInfo.processIdentifier { return true }
-        return front.bundleIdentifier?.lowercased().contains("dofus") ?? false
+    static func computeVisibility(
+        barVisible: Bool,
+        onlyWithDofus: Bool,
+        frontPID: pid_t?,
+        frontIsDofus: Bool,
+        ownPID: pid_t
+    ) -> Bool {
+        guard barVisible else { return false }
+        guard onlyWithDofus else { return true }
+        guard let frontPID else { return false }
+        return frontPID == ownPID || frontIsDofus
     }
 
     /// Appelé à chaque changement d'application active.
@@ -80,7 +99,11 @@ final class FloatingBarController: NSObject {
         )
         panel.contentViewController = hosting
         panel.isFloatingPanel = true
-        panel.level = .floating
+        // `.floating` passe *sous* une app en plein écran : l'espace plein écran
+        // héberge sa fenêtre à un niveau propre, et la barre y disparaissait. Le
+        // niveau de la barre de menus est celui des overlays qui doivent rester
+        // lisibles par-dessus un jeu, sans monter jusqu'aux alertes système.
+        panel.level = .statusBar
         panel.backgroundColor = .clear
         panel.isOpaque = false
         panel.hasShadow = true
@@ -91,7 +114,10 @@ final class FloatingBarController: NSObject {
         panel.animationBehavior = .none
         // Suit l'utilisateur d'un bureau à l'autre et survit au plein écran d'une
         // autre app, sans apparaître dans Mission Control comme une vraie fenêtre.
-        panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary, .ignoresCycle]
+        // `.stationary` est délibérément absent : il demande de ne pas participer
+        // aux transitions d'espace, ce qui brouille le suivi lors d'un passage en
+        // plein écran.
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
 
         self.panel = panel
         restorePosition()
@@ -126,11 +152,31 @@ final class FloatingBarController: NSObject {
     func centerAtTop() {
         guard let panel, let screen = panel.screen ?? NSScreen.main else { return }
         let size = panel.frame.size
+        // Sur un espace plein écran la barre de menus est masquée, `visibleFrame`
+        // rejoint donc `frame` et la barre se colle au bord haut — là où la barre
+        // de menus se déploie au survol et la recouvre. Une marge l'en dégage.
+        let menuBarHidden = screen.visibleFrame.maxY >= screen.frame.maxY - 1
+        let top = screen.visibleFrame.maxY - (menuBarHidden ? Self.fullScreenTopInset : 0)
         let origin = CGPoint(
             x: (screen.frame.midX - size.width / 2).rounded(),
-            y: (screen.visibleFrame.maxY - size.height).rounded()
+            y: (top - size.height).rounded()
         )
         reposition(to: origin)
+    }
+
+    /// Marge sous le bord haut quand la barre de menus est masquée.
+    private static let fullScreenTopInset: CGFloat = 6
+
+    /// Convertit un cadre exprimé dans le repère de la barre — celui de SwiftUI,
+    /// origine en haut à gauche — en coordonnées écran, où l'ordonnée monte.
+    func screenFrame(fromBarFrame rect: CGRect) -> CGRect? {
+        guard let panel, panel.isVisible else { return nil }
+        return CGRect(
+            x: panel.frame.minX + rect.minX,
+            y: panel.frame.maxY - rect.maxY,
+            width: rect.width,
+            height: rect.height
+        )
     }
 
     private func reposition(to origin: CGPoint) {

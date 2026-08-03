@@ -16,8 +16,15 @@ final class HotKeyManager {
         let id: UInt32
     }
 
+    /// Ce qu'un raccourci déclenche. `release` n'est renseigné que pour les
+    /// raccourcis « à maintenir » — l'aperçu d'ensemble, aujourd'hui.
+    private struct Action {
+        let press: () -> Void
+        let release: (() -> Void)?
+    }
+
     private var entries: [Entry] = []
-    private var actions: [UInt32: () -> Void] = [:]
+    private var actions: [UInt32: Action] = [:]
     private var handler: EventHandlerRef?
     private var nextID: UInt32 = 1
 
@@ -52,10 +59,24 @@ final class HotKeyManager {
                 FloatingBarController.shared.flashAutoFocusState()
             }
         }
+        if let toggle = prefs.toggleBar {
+            register(toggle) { FloatingBarController.shared.toggle() }
+        }
+        if let preview = prefs.previewHotKey {
+            register(preview) {
+                PreviewPanelController.shared.showGrid(WindowManager.shared.clients)
+            } onRelease: {
+                PreviewPanelController.shared.hide()
+            }
+        }
     }
 
     @discardableResult
-    func register(_ hotKey: HotKey, action: @escaping () -> Void) -> Bool {
+    func register(
+        _ hotKey: HotKey,
+        action: @escaping () -> Void,
+        onRelease: (() -> Void)? = nil
+    ) -> Bool {
         installHandlerIfNeeded()
 
         let id = nextID
@@ -78,7 +99,7 @@ final class HotKeyManager {
         }
 
         entries.append(Entry(ref: ref, id: id))
-        actions[id] = action
+        actions[id] = Action(press: action, release: onRelease)
         return true
     }
 
@@ -89,17 +110,23 @@ final class HotKeyManager {
         rejected.removeAll()
     }
 
-    fileprivate func perform(id: UInt32) {
-        actions[id]?()
+    fileprivate func perform(id: UInt32, released: Bool) {
+        guard let action = actions[id] else { return }
+        released ? action.release?() : action.press()
     }
 
     private func installHandlerIfNeeded() {
         guard handler == nil else { return }
-        var spec = EventTypeSpec(
-            eventClass: OSType(kEventClassKeyboard),
-            eventKind: UInt32(kEventHotKeyPressed)
-        )
-        InstallEventHandler(GetApplicationEventTarget(), hotKeyEventCallback, 1, &spec, nil, &handler)
+        // Deux types d'évènement : l'appui, et le relâchement dont dépendent les
+        // raccourcis à maintenir. Carbon n'émet pas de répétition automatique,
+        // un appui prolongé ne donne donc bien qu'un « pressed » et un « released ».
+        var specs = [
+            EventTypeSpec(eventClass: OSType(kEventClassKeyboard),
+                          eventKind: UInt32(kEventHotKeyPressed)),
+            EventTypeSpec(eventClass: OSType(kEventClassKeyboard),
+                          eventKind: UInt32(kEventHotKeyReleased)),
+        ]
+        InstallEventHandler(GetApplicationEventTarget(), hotKeyEventCallback, 2, &specs, nil, &handler)
     }
 }
 
@@ -126,9 +153,10 @@ private func hotKeyEventCallback(
     guard status == noErr, eventID.signature == synfusSignature else { return status }
 
     let id = eventID.id
+    let released = GetEventKind(event) == UInt32(kEventHotKeyReleased)
     DispatchQueue.main.async {
         MainActor.assumeIsolated {
-            HotKeyManager.shared.perform(id: id)
+            HotKeyManager.shared.perform(id: id, released: released)
         }
     }
     return noErr

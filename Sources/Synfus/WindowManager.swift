@@ -36,6 +36,10 @@ final class WindowManager: ObservableObject {
     /// Persos connectés, déjà triés selon l'ordre de préférence.
     @Published private(set) var clients: [DofusClient] = []
     @Published private(set) var frontmostPID: pid_t?
+    /// L'app au premier plan est-elle un client Dofus ? Tenu à jour en même temps
+    /// que `frontmostPID`, pour que la barre puisse décider de sa visibilité sans
+    /// refaire le tour des applications.
+    @Published private(set) var frontmostIsDofus = false
     @Published private(set) var accessibilityGranted = false
 
     private var timer: Timer?
@@ -51,9 +55,41 @@ final class WindowManager: ObservableObject {
         prefs.purgeOrder(keeping: Self.isPersistableName)
 
         let center = NSWorkspace.shared.notificationCenter
+
+        // L'application au premier plan change : la barre doit suivre *tout de
+        // suite*. On lit l'app dans la notification plutôt que `frontmostApplication`,
+        // qui est encore en retard d'un tour à cet instant précis, et on décide de
+        // la visibilité avant de rafraîchir — l'inventaire des fenêtres passe par
+        // l'Accessibilité, dont un client occupé met parfois plusieurs centaines de
+        // millisecondes à répondre. La barre n'a pas à attendre cela.
+        for note in [NSWorkspace.didActivateApplicationNotification,
+                     NSWorkspace.didDeactivateApplicationNotification] {
+            center.addObserver(forName: note, object: nil, queue: .main) { [weak self] notification in
+                // La notification elle-même ne peut pas franchir la frontière du
+                // main actor sous concurrence stricte : on en tire tout de suite
+                // les deux valeurs utiles, qui sont, elles, des types simples.
+                let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
+                let pid = app?.processIdentifier
+                let bundleID = app?.bundleIdentifier
+                let activated = note == NSWorkspace.didActivateApplicationNotification
+
+                MainActor.assumeIsolated {
+                    if activated, let pid {
+                        self?.setFrontmost(pid: pid, bundleID: bundleID)
+                    } else {
+                        // Une désactivation ne dit pas qui prend la relève : là,
+                        // `frontmostApplication` est à jour, ou le sera au prochain
+                        // tour de timer.
+                        self?.setFrontmost(NSWorkspace.shared.frontmostApplication)
+                    }
+                    FloatingBarController.shared.updateVisibility()
+                    self?.refresh()
+                }
+            }
+        }
+
         for note in [NSWorkspace.didLaunchApplicationNotification,
-                     NSWorkspace.didTerminateApplicationNotification,
-                     NSWorkspace.didActivateApplicationNotification] {
+                     NSWorkspace.didTerminateApplicationNotification] {
             center.addObserver(forName: note, object: nil, queue: .main) { [weak self] _ in
                 MainActor.assumeIsolated {
                     self?.refresh()
@@ -62,12 +98,35 @@ final class WindowManager: ObservableObject {
             }
         }
 
+        // Passer en plein écran ou changer de bureau ne réactive aucune app : sans
+        // cette notification, la barre resterait derrière le nouvel espace.
+        center.addObserver(
+            forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main
+        ) { _ in
+            MainActor.assumeIsolated { FloatingBarController.shared.updateVisibility() }
+        }
+
         // Les titres de fenêtres changent sans émettre de notification système
         // (reconnexion, changement de perso), d'où ce rafraîchissement régulier.
+        // Il sert aussi de filet : une notification manquée figerait sinon la
+        // barre dans un état faux jusqu'au prochain changement d'application.
         timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.refresh() }
+            MainActor.assumeIsolated {
+                self?.refresh()
+                FloatingBarController.shared.updateVisibility()
+            }
         }
         refresh()
+    }
+
+    /// Mémorise l'application de premier plan et si c'est un client Dofus.
+    private func setFrontmost(_ app: NSRunningApplication?) {
+        setFrontmost(pid: app?.processIdentifier, bundleID: app?.bundleIdentifier)
+    }
+
+    private func setFrontmost(pid: pid_t?, bundleID: String?) {
+        frontmostPID = pid
+        frontmostIsDofus = Self.isDofusBundle(bundleID)
     }
 
     // MARK: - Découverte
@@ -75,7 +134,7 @@ final class WindowManager: ObservableObject {
     func refresh() {
         let granted = AXIsProcessTrusted()
         if granted != accessibilityGranted { accessibilityGranted = granted }
-        frontmostPID = NSWorkspace.shared.frontmostApplication?.processIdentifier
+        setFrontmost(NSWorkspace.shared.frontmostApplication)
 
         guard granted else {
             if !clients.isEmpty { clients = [] }
@@ -132,15 +191,24 @@ final class WindowManager: ObservableObject {
             return lhs.pid < rhs.pid
         }
 
-        if found != clients { clients = found }
+        if found != clients {
+            clients = found
+            // Les vignettes des persos déconnectés n'ont plus de sens, et leur
+            // `slotKey` sera repris par un autre client au prochain lancement.
+            WindowPreviewService.shared.prune(keeping: found)
+        }
     }
 
     private func isDofus(_ app: NSRunningApplication) -> Bool {
-        // On teste le bundle ID en minuscules : l'Info.plist déclare
-        // « com.Ankama.Dofus », mais mieux vaut ne pas dépendre de la casse.
-        // Le launcher (com.ankama.zaap) ne contient pas « dofus », il est donc
-        // naturellement exclu.
-        guard let bundle = app.bundleIdentifier?.lowercased() else { return false }
+        Self.isDofusBundle(app.bundleIdentifier)
+    }
+
+    /// On teste le bundle ID en minuscules : l'Info.plist déclare
+    /// « com.Ankama.Dofus », mais mieux vaut ne pas dépendre de la casse. Le
+    /// launcher (com.ankama.zaap) ne contient pas « dofus », il est donc
+    /// naturellement exclu.
+    static func isDofusBundle(_ bundleID: String?) -> Bool {
+        guard let bundle = bundleID?.lowercased() else { return false }
         return bundle.contains("dofus")
     }
 
@@ -266,10 +334,25 @@ final class WindowManager: ObservableObject {
         if let minimized = boolAttribute(client.axWindow, kAXMinimizedAttribute), minimized {
             AXUIElementSetAttributeValue(client.axWindow, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
         }
-        AXUIElementSetAttributeValue(client.axWindow, kAXMainAttribute as CFString, kCFBooleanTrue)
-        AXUIElementPerformAction(client.axWindow, kAXRaiseAction as CFString)
+
+        // L'activation vient en premier : c'est elle, et non `AXRaise`, qui fait
+        // basculer macOS vers l'espace où vit la fenêtre quand le client est en
+        // plein écran. Dans l'ordre inverse, le raise s'appliquait à une fenêtre
+        // d'un autre espace et ne menait nulle part.
         NSRunningApplication(processIdentifier: client.pid)?.activate()
+
+        // Les attributs AX ne servent qu'à départager plusieurs fenêtres d'un même
+        // processus ; on les pose une fois la transition d'espace engagée.
+        let window = client.axWindow
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            MainActor.assumeIsolated {
+                AXUIElementSetAttributeValue(window, kAXMainAttribute as CFString, kCFBooleanTrue)
+                AXUIElementPerformAction(window, kAXRaiseAction as CFString)
+            }
+        }
+
         frontmostPID = client.pid
+        frontmostIsDofus = true
         AttentionWatcher.shared.clear(client)
     }
 
