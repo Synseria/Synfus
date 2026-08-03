@@ -8,12 +8,6 @@ struct DofusClient: Identifiable, Hashable {
     let axWindow: AXUIElement
     let rawTitle: String
     let name: String
-    /// Icône affichée dans le Dock par ce client. Dofus y place le symbole de la
-    /// classe du perso, ce qui en fait un repère visuel bien plus rapide à lire
-    /// qu'un nom. Volontairement exclue de `==` : elle ne change pas en cours de
-    /// session, et la comparer à chaque rafraîchissement coûterait plus cher que
-    /// ça ne rapporte.
-    let icon: NSImage?
     /// Classe du perso, lue dans le titre de la fenêtre
     /// (« Syn-App - Feca - 3.6.7.7 - Release » → « Feca »).
     let characterClass: String?
@@ -28,7 +22,7 @@ struct DofusClient: Identifiable, Hashable {
     func remembered() -> DofusClient {
         DofusClient(
             pid: pid, slotKey: slotKey, axWindow: axWindow, rawTitle: rawTitle,
-            name: name, icon: icon, characterClass: characterClass, dormant: true
+            name: name, characterClass: characterClass, dormant: true
         )
     }
 
@@ -56,6 +50,13 @@ final class WindowManager: ObservableObject {
 
     private var timer: Timer?
     private let prefs = Preferences.shared
+
+    /// Fin du dernier inventaire, et attente déjà programmée. Cf. `refreshSoon()`.
+    private var lastRefresh = Date.distantPast
+    private var refreshScheduled = false
+
+    /// Délai minimal entre deux inventaires déclenchés par notification.
+    private static let refreshInterval: TimeInterval = 0.2
 
     /// Derniers persos vus pour chaque processus. La clé est le pid : il vit
     /// aussi longtemps que le client, alors que la fenêtre, elle, va et vient
@@ -100,7 +101,7 @@ final class WindowManager: ObservableObject {
                         self?.setFrontmost(NSWorkspace.shared.frontmostApplication)
                     }
                     FloatingBarController.shared.updateVisibility()
-                    self?.refresh()
+                    self?.refreshSoon()
                 }
             }
         }
@@ -109,7 +110,7 @@ final class WindowManager: ObservableObject {
                      NSWorkspace.didTerminateApplicationNotification] {
             center.addObserver(forName: note, object: nil, queue: .main) { [weak self] _ in
                 MainActor.assumeIsolated {
-                    self?.refresh()
+                    self?.refreshSoon()
                     FloatingBarController.shared.updateVisibility()
                 }
             }
@@ -148,7 +149,35 @@ final class WindowManager: ObservableObject {
 
     // MARK: - Découverte
 
+    /// Inventaire regroupé, pour les rafales de notifications.
+    ///
+    /// Passer d'une application à l'autre en émet deux — une désactivation et
+    /// une activation —, chacune réclamant un inventaire. Or celui-ci passe par
+    /// l'Accessibilité, dont un client occupé met parfois plusieurs centaines de
+    /// millisecondes à répondre : en enchaîner deux, c'est doubler ce gel au
+    /// moment précis où l'utilisateur bascule. Le second est donc retardé, et
+    /// fondu dans le premier s'ils se suivent de près.
+    ///
+    /// La visibilité de la barre, elle, n'attend pas : elle se décide sur le pid
+    /// que porte la notification, sans rien demander à l'Accessibilité.
+    func refreshSoon() {
+        let elapsed = Date().timeIntervalSince(lastRefresh)
+        guard elapsed >= Self.refreshInterval else {
+            guard !refreshScheduled else { return }
+            refreshScheduled = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + Self.refreshInterval - elapsed) {
+                MainActor.assumeIsolated {
+                    self.refreshScheduled = false
+                    self.refresh()
+                }
+            }
+            return
+        }
+        refresh()
+    }
+
     func refresh() {
+        lastRefresh = Date()
         let granted = AXIsProcessTrusted()
         if granted != accessibilityGranted { accessibilityGranted = granted }
         setFrontmost(NSWorkspace.shared.frontmostApplication)
@@ -198,7 +227,6 @@ final class WindowManager: ObservableObject {
                     axWindow: window,
                     rawTitle: rawTitle,
                     name: name,
-                    icon: app.icon,
                     characterClass: Self.characterClass(fromTitle: rawTitle),
                     dormant: false
                 ))
