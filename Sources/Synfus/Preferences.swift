@@ -95,6 +95,12 @@ final class Preferences: ObservableObject {
     /// Modificateur qui arme ce clic.
     @Published var advanceModifier: ClickModifier = .command { didSet { save() } }
 
+    /// Raccourci qui amorce la série — le clic nu enchaîne alors, sans
+    /// modificateur. Sans valeur par défaut, comme `toggleBar` : la fonction
+    /// elle-même est éteinte à l'installation, lui réserver une combinaison
+    /// d'office n'aurait pas de sens.
+    @Published var advanceArmHotKey: HotKey? { didSet { save() } }
+
     /// Icône du `NSStatusItem`. Le rafraîchissement est à la charge de l'appelant
     /// (`MenuBarController.refreshIcon()`) : les préférences ne pilotent pas l'UI.
     @Published var menuBarIcon: MenuBarIcon = .logo { didSet { save() } }
@@ -209,6 +215,7 @@ final class Preferences: ObservableObject {
         var previewHotKey: HotKey?
         var advanceOnClick: Bool?
         var advanceModifier: ClickModifier?
+        var advanceArmHotKey: HotKey?
         /// Génération du jeu de raccourcis par défaut appliqué à cette
         /// sauvegarde. Absente des sauvegardes d'avant la refonte, d'où le repli
         /// sur 1 à la lecture.
@@ -308,6 +315,7 @@ final class Preferences: ObservableObject {
             previewHotKey: previewHotKey,
             advanceOnClick: advanceOnClick,
             advanceModifier: advanceModifier,
+            advanceArmHotKey: advanceArmHotKey,
             defaultsVersion: Self.defaultsVersion
         )
         if let data = try? JSONEncoder().encode(stored) {
@@ -354,6 +362,7 @@ final class Preferences: ObservableObject {
         previewHotKey = stored.previewHotKey
         advanceOnClick = stored.advanceOnClick ?? false
         advanceModifier = stored.advanceModifier ?? .command
+        advanceArmHotKey = stored.advanceArmHotKey
         if let x = stored.barOriginX, let y = stored.barOriginY {
             barOrigin = CGPoint(x: x, y: y)
         }

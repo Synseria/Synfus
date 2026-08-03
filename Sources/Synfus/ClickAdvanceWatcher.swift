@@ -59,6 +59,21 @@ final class ClickAdvanceWatcher: ObservableObject {
     /// coche affichée dans la barre.
     @Published private(set) var visited: Set<String> = []
 
+    /// Mode amorcé : le **clic nu** enchaîne, sans modificateur.
+    ///
+    /// C'est la parade au cas où le client de jeu ignore les clics modifiés — ce
+    /// qu'il fait, pour ⌘ au moins : le clic lui parvient, mais avec le drapeau
+    /// dessus, et il ne le traite pas comme un clic ordinaire. Synfus ne peut
+    /// rien y faire, il ne fait qu'observer ; retirer le modificateur de
+    /// l'évènement demanderait de l'intercepter et de le réécrire, c'est-à-dire
+    /// le `CGEventTap` que le projet refuse.
+    ///
+    /// D'où l'inversion : plutôt que de marquer chaque clic, on arme la série.
+    /// Le jeu reçoit alors exactement ce qu'il attend. L'amorce retombe d'elle-
+    /// même une fois le tour bouclé, pour qu'un mode oublié ne transforme pas la
+    /// partie suivante en carrousel.
+    @Published private(set) var armed = false
+
     /// Nombre de clics captés depuis l'activation, exposé au Diagnostic.
     ///
     /// C'est la réponse à la seule question que la documentation d'Apple laisse
@@ -97,19 +112,31 @@ final class ClickAdvanceWatcher: ObservableObject {
     private func stop() {
         if let monitor { NSEvent.removeMonitor(monitor) }
         monitor = nil
+        armed = false
         if !visited.isEmpty { visited.removeAll() }
+    }
+
+    /// Amorce ou désamorce la série. Doublé d'un raccourci global : amorcer
+    /// depuis la barre oblige à y emmener la souris, ce qui est précisément le
+    /// geste qu'on cherche à éviter.
+    func toggleArmed() {
+        guard Preferences.shared.advanceOnClick else { return }
+        armed.toggle()
+        if armed { visited.removeAll() }
     }
 
     private func handle(_ flags: NSEvent.ModifierFlags) {
         let prefs = Preferences.shared
         guard prefs.advanceOnClick else { return }
 
-        // Exactement ce modificateur-là, et lui seul : ⇧⌘-clic ne doit pas
-        // déclencher ce qu'un ⌘-clic déclenche.
-        let wanted = prefs.advanceModifier.flag
-        guard flags.intersection(.deviceIndependentFlagsMask) == wanted else { return }
+        // Amorcé, c'est le clic nu qui enchaîne — celui que le jeu comprend à
+        // coup sûr. Sinon, exactement le modificateur choisi et lui seul :
+        // ⇧⌘-clic ne doit pas déclencher ce qu'un ⌘-clic déclenche.
+        let pressed = flags.intersection(.deviceIndependentFlagsMask)
+        let matches = armed ? pressed.isEmpty : pressed == prefs.advanceModifier.flag
+        guard matches else { return }
 
-        // Et seulement sur un client de jeu : ailleurs, un ⌘-clic garde le sens
+        // Et seulement sur un client de jeu : ailleurs, un clic garde le sens
         // que lui donnent macOS et les autres applications.
         guard WindowManager.shared.frontmostIsDofus else { return }
 
@@ -128,11 +155,16 @@ final class ClickAdvanceWatcher: ObservableObject {
         let manager = WindowManager.shared
         guard let index = manager.currentIndex else { return }
 
-        visited = Self.nextVisited(
-            visited,
-            leaving: manager.clients[index].slotKey,
-            among: Set(manager.clients.map(\.slotKey))
+        let alive = Set(manager.clients.map(\.slotKey))
+        let marked = Self.nextVisited(
+            visited, leaving: manager.clients[index].slotKey, among: alive
         )
+        visited = marked
+
+        // Tour bouclé : l'amorce retombe. Un mode resté armé transformerait le
+        // moindre clic de la partie suivante en changement de fenêtre.
+        if armed, marked.count >= alive.count { armed = false }
+
         manager.cycle(by: 1)
     }
 

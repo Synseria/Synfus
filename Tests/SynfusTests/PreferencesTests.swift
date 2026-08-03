@@ -296,12 +296,19 @@ struct PreferencesTests {
         #expect(prefs.advanceOnClick == false)
         #expect(prefs.advanceModifier == .command)
 
+        // L'amorce du clic nu n'a pas de raccourci d'office : la fonction est
+        // éteinte à l'installation, lui réserver une combinaison n'aurait pas
+        // de sens.
+        #expect(prefs.advanceArmHotKey == nil)
+
         prefs.advanceOnClick = true
         prefs.advanceModifier = .option
+        prefs.advanceArmHotKey = HotKey(keyCode: 96, modifiers: 0)   // F5
 
         let relues = Preferences.forTesting(store: store)
         #expect(relues.advanceOnClick == true)
         #expect(relues.advanceModifier == .option)
+        #expect(relues.advanceArmHotKey == HotKey(keyCode: 96, modifiers: 0))
     }
 
     @Test("Une sauvegarde illisible ramène aux valeurs par défaut")
