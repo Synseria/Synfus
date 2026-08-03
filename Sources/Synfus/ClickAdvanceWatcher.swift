@@ -31,10 +31,6 @@ final class ClickAdvanceWatcher: ObservableObject {
     /// l'oublie pas.
     @Published private(set) var armed = false
 
-    /// Persos déjà visités depuis l'activation du mode, par `slotKey`. Sert la
-    /// coche affichée dans la barre.
-    @Published private(set) var visited: Set<String> = []
-
     /// Nombre de clics captés depuis l'activation, exposé aux réglages.
     ///
     /// C'est la réponse à la seule question que la documentation d'Apple laisse
@@ -59,7 +55,6 @@ final class ClickAdvanceWatcher: ObservableObject {
     func toggleArmed() {
         guard Preferences.shared.advanceOnClick else { return }
         armed.toggle()
-        visited.removeAll()
     }
 
     private func start() {
@@ -83,7 +78,6 @@ final class ClickAdvanceWatcher: ObservableObject {
         if let monitor { NSEvent.removeMonitor(monitor) }
         monitor = nil
         armed = false
-        visited.removeAll()
     }
 
     private func handle(_ flags: NSEvent.ModifierFlags) {
@@ -108,40 +102,7 @@ final class ClickAdvanceWatcher: ObservableObject {
     private static let settleDelay: TimeInterval = 0.08
 
     private func advance() {
-        let manager = WindowManager.shared
-        guard armed, let index = manager.currentIndex else { return }
-
-        visited = Self.nextVisited(
-            visited,
-            leaving: manager.clients[index].slotKey,
-            among: Set(manager.clients.map(\.slotKey))
-        )
-        manager.cycle(by: 1)
-    }
-
-    /// État des coches au moment où l'on quitte `current`. Pure, donc testable
-    /// sans clients ni fenêtres — c'est la règle qui décide de ce que la barre
-    /// montre, elle mérite de l'être.
-    ///
-    /// Deux points valent la peine d'être fixés. Les persos fermés depuis le
-    /// début du tour sont retirés, sans quoi un tour entamé à cinq ne se
-    /// solderait jamais à trois. Et lorsque tout le monde est coché, le clic
-    /// suivant ouvre un tour neuf plutôt que de laisser la barre pleine : une
-    /// coche qui ne s'efface jamais ne renseigne plus sur rien.
-    static func nextVisited(
-        _ visited: Set<String>,
-        leaving current: String,
-        among alive: Set<String>
-    ) -> Set<String> {
-        var marked = visited.intersection(alive)
-        if marked.count >= alive.count { marked.removeAll() }
-        marked.insert(current)
-        return marked
-    }
-
-    /// Décoche tout, sans attendre la fin du tour.
-    func resetVisited() {
-        guard !visited.isEmpty else { return }
-        visited.removeAll()
+        guard armed else { return }
+        WindowManager.shared.cycle(by: 1)
     }
 }

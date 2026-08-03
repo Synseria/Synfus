@@ -119,8 +119,9 @@ struct BarView: View {
         }
     }
 
-    /// Amorce de l'enchaînement : une fois armée, le clic **nu** passe au perso
-    /// suivant. C'est la parade au client de jeu qui ignore les clics modifiés.
+    /// Bascule du mode « enchaîner » : tant qu'il est actif, un clic **nu** sur
+    /// un client de jeu passe au perso suivant. C'est aussi le seul témoin d'un
+    /// mode qui ne s'éteint pas tout seul — d'où la couleur franche.
     private var armToggle: some View {
         let on = clicks.armed
         return Button {
@@ -138,10 +139,10 @@ struct BarView: View {
         }
         .buttonStyle(.plain)
         .help(on
-              ? "Enchaînement amorcé — un clic simple passe au perso suivant, "
-                + "et l'amorce retombe une fois le tour bouclé (\(armShortcut))"
-              : "Amorcer l'enchaînement : le clic simple passera au perso suivant "
-                + "(\(armShortcut))")
+              ? "Enchaînement actif — chaque clic sur le jeu passe au perso suivant, "
+                + "jusqu'à ce que tu le coupes (\(armShortcut))"
+              : "Activer l'enchaînement : chaque clic sur le jeu passera au perso "
+                + "suivant (\(armShortcut))")
     }
 
     private var armShortcut: String {
@@ -231,23 +232,9 @@ struct BarView: View {
                         .foregroundStyle(active ? Color.white.opacity(0.7) : Color.secondary.opacity(0.8))
                 }
 
-                // La coche garde sa place même absente : sans quoi la barre
-                // changerait de largeur à chaque perso passé, et se recentrerait
-                // sous le curseur au milieu d'un enchaînement.
-                //
-                // Le fondu joue dans les deux sens : à l'apparition il confirme
-                // le clic sans le claquer, et à la disparition il porte
-                // l'effacement de fin de tour. Pas de clignotement : la barre le
-                // réserve à l'appel d'attention, le seul signal qui réclame
-                // vraiment qu'on la regarde.
-                if prefs.advanceOnClick {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(active ? Color.white : Color.green)
-                        .opacity(clicks.visited.contains(client.slotKey) ? 1 : 0)
-                        .frame(width: 9)
-                        .animation(.easeInOut(duration: 0.35), value: clicks.visited)
-                }
+                // Rien de plus : le mode « enchaîner » suit l'ordre de la barre,
+                // et le surlignage du perso courant dit déjà où l'on en est. Une
+                // coche « déjà passé » n'ajoutait qu'un clignotement de plus.
             }
             .padding(.horizontal, 7)
             .padding(.vertical, 4)
@@ -372,9 +359,6 @@ struct BarView: View {
     @ViewBuilder
     private var contextMenu: some View {
         Button("Réglages…") { SettingsWindowController.shared.show() }
-        if prefs.advanceOnClick {
-            Button("Décocher tous les persos") { ClickAdvanceWatcher.shared.resetVisited() }
-        }
         Button("Recentrer la barre") { FloatingBarController.shared.recenter() }
         Button("Masquer la barre") { FloatingBarController.shared.toggle() }
         Divider()

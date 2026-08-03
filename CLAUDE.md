@@ -294,18 +294,11 @@ un moniteur de souris réclame-t-il « Surveillance de la saisie » ? — d'où 
 compteur `seenClicks` affiché dans les réglages : à zéro après un clic, c'est
 que macOS ne livre rien.
 
-La règle des coches, `nextVisited`, est pure et testée. Elle retire les persos
-fermés — une passe entamée à cinq ne se solderait jamais à trois — et repart à
-vide quand tout le monde est coché, une coche qui ne s'efface jamais ne
-renseignant plus sur rien.
-
-Ce qui périme une coche, c'est **la fin du tour et non le temps** : le repère
-sert à savoir qui reste à faire, et dix secondes passées sur un perso ne doivent
-pas effacer les précédents. Un délai par coche était donc exclu. Les deux
-secondes de `clearDelay` ne sont que le temps de voir que tout est fait, après
-quoi l'ensemble s'efface en fondu. Le fondu, et pas un clignotement : la barre
-réserve celui-ci à l'appel d'attention, le seul signal qui réclame vraiment
-qu'on la regarde.
+Aucun repère « déjà passé » n'est affiché, et c'est un choix après essai : le
+mode suit l'ordre de la barre et le surlignage du perso courant dit déjà où l'on
+en est. Une coche par perso visité n'ajoutait qu'un clignotement de plus dans un
+mode où l'on clique en continu. Le seul témoin est la flèche de la barre, qui
+dit si le mode est actif — et il le faut, puisqu'il ne s'éteint pas tout seul.
 
 ### Préférences
 

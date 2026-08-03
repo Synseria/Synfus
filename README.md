@@ -40,8 +40,7 @@ et fait basculer d'un perso à l'autre sans passer par ⌘-Tab.
 - **Mode « enchaîner »**, désactivé par défaut : une fois activé — ⌃⌥⌘@ ou la
   flèche verte de la barre —, chaque clic sur un client de jeu part normalement,
   puis Synfus bascule sur le perso suivant. Le mode reste actif jusqu'à ce qu'on
-  le coupe. Une coche marque dans la barre les persos par lesquels on est déjà
-  passé.
+  le coupe, et la flèche est verte tant qu'il l'est.
 
   Le clic est **nu** : le jeu reçoit exactement ce qu'il attend. Un clic modifié
   lui parvient bien, mais avec le modificateur dessus, et il ne le traite pas

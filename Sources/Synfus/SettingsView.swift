@@ -327,8 +327,7 @@ struct SettingsView: View {
             ? "S'il reste à zéro après avoir cliqué dans le jeu, macOS ne nous livre pas les "
               + "évènements — regarde Réglages Système → Confidentialité et sécurité → "
               + "Surveillance de la saisie."
-            : "Une coche apparaît dans la barre sur les persos déjà passés ; elle se remet à "
-              + "zéro au tour suivant."
+            : "La flèche verte de la barre indique si le mode est actif."
         return "Clics captés depuis l'activation : \(clicks.seenClicks). " + suite
     }
 
