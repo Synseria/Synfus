@@ -8,10 +8,11 @@ struct BounceDetectorTests {
 
     private static let tailleIcone = CGSize(width: 52, height: 52)
 
-    /// Fabrique un relevé à partir des ordonnées de chaque icône.
+    /// Fabrique un relevé à partir des ordonnées de chaque icône. `bandeau` est
+    /// l'ordonnée du Dock lui-même ; l'omettre revient à ne pas l'avoir lue.
     private func releve(
         _ ordonnees: [CGFloat],
-        visibles: Bool = true,
+        bandeau: CGFloat? = nil,
         hauteurs: [CGFloat]? = nil,
         sourisSurLeDock: Bool = false
     ) -> BounceDetector.Snapshot {
@@ -23,7 +24,7 @@ struct BounceDetectorTests {
                 (cle, CGSize(width: Self.tailleIcone.width,
                              height: hauteurs?[index] ?? Self.tailleIcone.height))
             }),
-            onScreen: visibles ? Set(cles) : [],
+            dockTop: bandeau,
             mouseInDock: sourisSurLeDock
         )
     }
@@ -59,30 +60,57 @@ struct BounceDetectorTests {
         #expect(rejouer(&detecteur, releves).isEmpty)
     }
 
-    // MARK: - Le faux positif d'origine
+    // MARK: - Le masquage automatique du Dock
 
-    @Test("Un Dock en masquage automatique ne déclenche rien en remontant")
+    @Test("Un Dock en masquage automatique ne déclenche rien en se dévoilant")
     func dockMasquePuisSurvole() {
         var detecteur = BounceDetector()
-        var releves = [releve([900]), releve([900])]
-        // Le Dock se masque : les icônes glissent hors de l'écran.
-        releves += Array(repeating: releve([970], visibles: false), count: 5)
-        // Survol : il remonte, reste déployé, puis se masque de nouveau. C'est un
-        // aller-retour parfait — seule la visibilité le distingue d'un rebond.
-        releves += Array(repeating: releve([900], sourisSurLeDock: true), count: 8)
-        releves += Array(repeating: releve([970], visibles: false), count: 5)
+        // Repos, Dock masqué : bandeau et icône reposent ensemble sous l'écran.
+        var releves = [releve([970], bandeau: 970), releve([970], bandeau: 970)]
+        // Survol : le bandeau *et* l'icône remontent de 70, restent déployés,
+        // puis se masquent de nouveau. C'est un aller-retour parfait, que la
+        // seule géométrie de l'icône ne distingue pas d'un saut — mais l'icône
+        // n'a pas bougé d'un point par rapport à son bandeau.
+        releves += Array(repeating: releve([900], bandeau: 900), count: 8)
+        releves += Array(repeating: releve([970], bandeau: 970), count: 5)
         #expect(rejouer(&detecteur, releves).isEmpty)
     }
 
-    @Test("Un Dock masqué ne sert jamais de position de repos")
-    func positionMasqueeJamaisPriseCommeRepos() {
+    /// Relevé réel du 03/08, écran 1728 × 1117 et Dock en masquage automatique :
+    /// les icônes reposent à y = 1117, donc entièrement sous le bord de l'écran.
+    /// L'ancienne règle « un rebond a lieu Dock visible » refusait toute position
+    /// de repos, et ce rebond-là — 61 points de montée — ne déclenchait rien.
+    @Test("Un rebond se voit alors même que le Dock est masqué")
+    func rebondDockMasque() {
         var detecteur = BounceDetector()
-        // Sans la garde de visibilité, le y hors écran deviendrait la référence
-        // et la remontée suivante passerait pour un saut de 70 points.
-        var releves = [releve([900]), releve([900])]
-        releves += Array(repeating: releve([970], visibles: false), count: 20)
-        releves += Array(repeating: releve([900]), count: 3)
-        #expect(rejouer(&detecteur, releves).isEmpty)
+        let bas: CGFloat = 1117
+        let declenches = rejouer(&detecteur, [
+            releve([bas, bas], bandeau: bas), releve([bas, bas], bandeau: bas),
+            // Seule la seconde icône décolle : le bandeau, lui, ne bouge pas.
+            releve([bas, 1084.783447], bandeau: bas),
+            releve([bas, 1055.784424], bandeau: bas),
+            releve([bas, 1092.109009], bandeau: bas),
+            releve([bas, 1116.689697], bandeau: bas),
+        ])
+        #expect(declenches == [1])
+    }
+
+    /// Sans bandeau lisible, on retombe sur des ordonnées absolues : la détection
+    /// doit continuer de fonctionner, et le Dock qui glisse d'un bloc reste
+    /// écarté par la solidarité des icônes.
+    @Test("Faute de bandeau, la détection tient encore sur les ordonnées brutes")
+    func sansBandeau() {
+        var detecteur = BounceDetector()
+        var declenches = rejouer(&detecteur, [
+            releve([900, 900]), releve([900, 900]),
+            releve([900, 850]), releve([900, 900]),
+        ])
+        #expect(declenches == [1])
+
+        declenches = rejouer(&detecteur, [
+            releve([830, 830]), releve([830, 830]), releve([900, 900]),
+        ])
+        #expect(declenches.isEmpty)
     }
 
     @Test("Le Dock entier qui se déplace ne déclenche rien")
