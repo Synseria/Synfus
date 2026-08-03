@@ -69,6 +69,11 @@ enum SynfusMain {
             DockInspector.runCommandLine(filter: filter, seconds: seconds)
         }
 
+        // Mode diagnostic : --dump-windows
+        if CommandLine.arguments.contains("--dump-windows") {
+            WindowDump.runCommandLine()
+        }
+
         let application = NSApplication.shared
         let delegate = AppDelegate()
         application.delegate = delegate
