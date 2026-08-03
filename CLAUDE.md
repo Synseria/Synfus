@@ -250,6 +250,36 @@ l'ancien défaut** — un raccourci personnalisé est un choix. La génération 
 inscrite dans la sauvegarde, ce qui donne au passage la seule façon de
 distinguer « jamais eu ce réglage » de « effacé exprès ».
 
+### Enchaîner les persos au clic
+
+[ClickAdvanceWatcher.swift](Sources/Synfus/ClickAdvanceWatcher.swift) : un clic
+modifié sur un client de jeu passe au perso suivant, une fois le clic délivré.
+
+La limite est nette et ne doit pas bouger. **Synfus n'émet, ne rejoue et ne
+duplique aucun évènement.** Un clic reste un clic, et il en faut toujours autant
+que de persos ; la seule chose automatisée est le changement de fenêtre, que
+`cycleNext` fait déjà au clavier. Rejouer une même action sur plusieurs clients
+serait un multiplicateur, c'est-à-dire exactement ce que les conditions
+d'utilisation de Dofus interdisent — et ce que le dépôt refuse au même titre
+qu'il refuse d'embarquer les visuels d'Ankama. Aucun délai n'est randomisé :
+`settleDelay` est fixe et n'existe que pour laisser le client traiter le clic
+avant de perdre le focus.
+
+L'observation passe par `addGlobalMonitorForEvents`, **passif** — rien n'est
+intercepté ni modifié —, et sur `.leftMouseUp` plutôt que `.leftMouseDown` : à
+l'appui, le relâchement n'est pas encore parti, et prendre le focus entre les
+deux laisse le client avec un bouton jamais relâché. Elle porte sur la souris
+seule, ce qui préserve la règle posée pour les raccourcis : l'app ne voit pas ce
+qui est tapé. Reste une inconnue que la documentation d'Apple ne tranche pas —
+un moniteur de souris réclame-t-il « Surveillance de la saisie » ? — d'où le
+compteur `seenClicks` affiché dans les réglages : à zéro après un clic, c'est
+que macOS ne livre rien.
+
+La règle des coches, `nextVisited`, est pure et testée. Elle retire les persos
+fermés — une passe entamée à cinq ne se solderait jamais à trois — et repart à
+vide quand tout le monde est coché, une coche qui ne s'efface jamais ne
+renseignant plus sur rien.
+
 ### Préférences
 
 [Preferences.swift](Sources/Synfus/Preferences.swift) sérialise l'ensemble en

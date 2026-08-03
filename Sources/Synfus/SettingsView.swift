@@ -33,6 +33,7 @@ struct SettingsView: View {
     @ObservedObject private var watcher = AttentionWatcher.shared
     @ObservedObject private var icons = ClassIconStore.shared
     @ObservedObject private var previews = WindowPreviewService.shared
+    @ObservedObject private var clicks = ClickAdvanceWatcher.shared
     @State private var launchAtLogin = LaunchAtLogin.isEnabled
     @State private var section: SettingsSection = .raccourcis
 
@@ -144,6 +145,32 @@ struct SettingsView: View {
                         get: { prefs.cyclePrevious },
                         set: { prefs.cyclePrevious = $0; rebind() }
                     ))
+                }
+            }
+
+            Section("Enchaîner les persos") {
+                Toggle("Passer au suivant après un clic modifié", isOn: Binding(
+                    get: { prefs.advanceOnClick },
+                    set: { prefs.advanceOnClick = $0; ClickAdvanceWatcher.shared.apply() }
+                ))
+                Picker("Modificateur", selection: Binding(
+                    get: { prefs.advanceModifier },
+                    set: { prefs.advanceModifier = $0 }
+                )) {
+                    ForEach(ClickModifier.allCases) { modificateur in
+                        Text(modificateur.label).tag(modificateur)
+                    }
+                }
+                .disabled(!prefs.advanceOnClick)
+
+                Text(advanceExplanation)
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
+
+                if prefs.advanceOnClick {
+                    Text(advanceClickCount)
+                        .font(.system(size: 10))
+                        .foregroundStyle(clicks.seenClicks == 0 ? Color.orange : Color.secondary)
                 }
             }
 
@@ -273,6 +300,28 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
+    }
+
+    /// Sortie de la vue : les concaténations longues mêlées d'interpolations
+    /// font exploser le temps d'inférence de SwiftUI.
+    private var advanceExplanation: String {
+        let suivant = prefs.cycleNext?.displayString ?? "le raccourci « perso suivant »"
+        return """
+        \(prefs.advanceModifier.symbol)-clic sur un client de jeu : le clic part normalement, \
+        puis Synfus bascule sur le perso suivant. Tu cliques donc toujours une fois par perso — \
+        seul le changement de fenêtre est automatique, comme le fait déjà \(suivant). Synfus \
+        n'émet aucun clic et n'en rejoue aucun.
+        """
+    }
+
+    private var advanceClickCount: String {
+        let suite = clicks.seenClicks == 0
+            ? "S'il reste à zéro après avoir cliqué dans le jeu, macOS ne nous livre pas les "
+              + "évènements — regarde Réglages Système → Confidentialité et sécurité → "
+              + "Surveillance de la saisie."
+            : "Une coche apparaît dans la barre sur les persos déjà passés ; elle se remet à "
+              + "zéro au tour suivant."
+        return "Clics captés depuis l'activation : \(clicks.seenClicks). " + suite
     }
 
     private var accessibilityWarning: some View {

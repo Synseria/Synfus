@@ -46,6 +46,7 @@ struct BarView: View {
     @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var watcher = AttentionWatcher.shared
     @ObservedObject private var icons = ClassIconStore.shared
+    @ObservedObject private var clicks = ClickAdvanceWatcher.shared
     @State private var dragging: String?
     @State private var chipFrames: [String: CGRect] = [:]
     @State private var pulse = false
@@ -199,6 +200,17 @@ struct BarView: View {
                         .font(.system(size: 9, weight: .semibold, design: .rounded))
                         .foregroundStyle(active ? Color.white.opacity(0.7) : Color.secondary.opacity(0.8))
                 }
+
+                // La coche garde sa place même absente : sans quoi la barre
+                // changerait de largeur à chaque perso passé, et se recentrerait
+                // sous le curseur au milieu d'un enchaînement.
+                if prefs.advanceOnClick {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(active ? Color.white : Color.green)
+                        .opacity(clicks.visited.contains(client.slotKey) ? 1 : 0)
+                        .frame(width: 9)
+                }
             }
             .padding(.horizontal, 7)
             .padding(.vertical, 4)
@@ -323,6 +335,9 @@ struct BarView: View {
     @ViewBuilder
     private var contextMenu: some View {
         Button("Réglages…") { SettingsWindowController.shared.show() }
+        if prefs.advanceOnClick {
+            Button("Décocher tous les persos") { ClickAdvanceWatcher.shared.resetVisited() }
+        }
         Button("Recentrer la barre") { FloatingBarController.shared.recenter() }
         Button("Masquer la barre") { FloatingBarController.shared.toggle() }
         Divider()

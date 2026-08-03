@@ -37,6 +37,18 @@ et fait basculer d'un perso à l'autre sans passer par ⌘-Tab.
   soi-même dans les réglages si le besoin est là.
 - **Détection d'attention** : quand un perso réclame la main, Synfus peut le
   signaler dans la barre ou basculer dessus automatiquement.
+- **Enchaîner les persos au clic**, désactivé par défaut : un ⌘-clic sur un
+  client de jeu part normalement, puis Synfus bascule sur le perso suivant. Une
+  coche marque dans la barre ceux par lesquels on est déjà passé, et le tour
+  suivant les efface.
+
+  C'est le raccourci « perso suivant » déclenché par le clic que l'on allait
+  faire de toute façon : **il faut toujours un clic par perso**. Synfus n'émet
+  aucun évènement, n'en rejoue aucun et n'en duplique aucun — dupliquer une
+  action sur plusieurs clients est précisément ce que les conditions
+  d'utilisation de Dofus interdisent, et ce n'est pas ce que fait cette
+  fonction. L'observation est passive et porte sur la souris seule ; le clavier
+  reste hors de vue.
 - **Ordre des persos** réglable, mémorisé d'une session à l'autre.
 
 ## Installation
