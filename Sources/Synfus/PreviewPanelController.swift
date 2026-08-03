@@ -166,8 +166,17 @@ private struct PreviewPanelView: View {
     @ObservedObject private var controller = PreviewPanelController.shared
     @ObservedObject private var service = WindowPreviewService.shared
 
-    /// Largeur d'une vignette à l'écran.
+    /// Encombrement d'une vignette à l'écran.
+    ///
+    /// La **hauteur** est imposée, elle aussi, et ce n'est pas cosmétique : sans
+    /// elle, la taille du panneau suivait celle de l'image, donc l'instant où la
+    /// capture arrivait. Le premier perso survolé avait le temps de se faire
+    /// capturer, les suivants s'ouvraient sur le cadre d'attente — plus court —,
+    /// puis le panneau se redimensionnait et se replaçait une fois l'image là.
+    /// Vu de l'utilisateur : le premier aperçu était bon, les autres s'affichaient
+    /// de travers. Un cadre fixe rend le panneau prévisible avant même la capture.
     private static let thumbnailWidth: CGFloat = 240
+    private static let thumbnailHeight: CGFloat = 150
 
     var body: some View {
         Group {
@@ -208,6 +217,7 @@ private struct PreviewPanelView: View {
     private func thumbnail(for client: DofusClient, number: Int? = nil) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             ZStack {
+                Color.primary.opacity(0.06)
                 if let image = service.previews[client.slotKey] {
                     Image(nsImage: image)
                         .resizable()
@@ -217,7 +227,7 @@ private struct PreviewPanelView: View {
                     placeholder
                 }
             }
-            .frame(width: Self.thumbnailWidth)
+            .frame(width: Self.thumbnailWidth, height: Self.thumbnailHeight)
             .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
 
             HStack(spacing: 5) {
@@ -235,18 +245,15 @@ private struct PreviewPanelView: View {
         }
     }
 
+    /// Occupe le cadre de la vignette sans en décider la taille : c'est le cadre
+    /// fixe qui commande, l'attente s'y loge.
     private var placeholder: some View {
-        RoundedRectangle(cornerRadius: 6, style: .continuous)
-            .fill(Color.primary.opacity(0.06))
-            .frame(height: Self.thumbnailWidth * 0.6)
-            .overlay(
-                Text(service.authorized
-                     ? "Capture en cours…"
-                     : "Autorisation « Enregistrement de l'écran » requise")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(8)
-            )
+        Text(service.authorized
+             ? "Capture en cours…"
+             : "Autorisation « Enregistrement de l'écran » requise")
+            .font(.system(size: 10))
+            .foregroundStyle(.secondary)
+            .multilineTextAlignment(.center)
+            .padding(8)
     }
 }
