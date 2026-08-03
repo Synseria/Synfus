@@ -13,6 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         HotKeyManager.shared.rebind()
         MenuBarController.shared.install()
         AttentionWatcher.shared.start()
+        ClickAdvanceWatcher.shared.apply()
         FloatingBarController.shared.apply()
 
         if !AXIsProcessTrusted() {

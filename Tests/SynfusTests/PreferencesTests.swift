@@ -287,6 +287,23 @@ struct PreferencesTests {
         #expect(relues.toggleBar == HotKey(keyCode: 11, modifiers: UInt32(cmdKey) | UInt32(shiftKey)))
     }
 
+    /// L'enchaînement au clic change ce que fait un ⌘-clic dès que Dofus est
+    /// devant : il ne doit jamais s'activer tout seul à la faveur d'une mise à
+    /// jour, pas plus que les aperçus.
+    @Test("L'enchaînement au clic est éteint par défaut et se relit")
+    func enchainementAuClic() {
+        let (prefs, store) = neuves()
+        #expect(prefs.advanceOnClick == false)
+        #expect(prefs.advanceModifier == .command)
+
+        prefs.advanceOnClick = true
+        prefs.advanceModifier = .option
+
+        let relues = Preferences.forTesting(store: store)
+        #expect(relues.advanceOnClick == true)
+        #expect(relues.advanceModifier == .option)
+    }
+
     @Test("Une sauvegarde illisible ramène aux valeurs par défaut")
     func sauvegardeIllisible() {
         let store = StockageMemoire([Preferences.key: Data("pas du JSON".utf8)])

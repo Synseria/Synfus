@@ -87,6 +87,14 @@ final class Preferences: ObservableObject {
     /// à la main.
     @Published var autoCenterBar: Bool = true { didSet { save() } }
 
+    /// Passer au perso suivant après un clic modifié sur un client de jeu.
+    /// Désactivé par défaut : cela change ce que fait un ⌘-clic partout où Dofus
+    /// est au premier plan, et personne n'a demandé ça en installant l'app.
+    @Published var advanceOnClick: Bool = false { didSet { save() } }
+
+    /// Modificateur qui arme ce clic.
+    @Published var advanceModifier: ClickModifier = .command { didSet { save() } }
+
     /// Icône du `NSStatusItem`. Le rafraîchissement est à la charge de l'appelant
     /// (`MenuBarController.refreshIcon()`) : les préférences ne pilotent pas l'UI.
     @Published var menuBarIcon: MenuBarIcon = .logo { didSet { save() } }
@@ -199,6 +207,8 @@ final class Preferences: ObservableObject {
         var menuBarIcon: MenuBarIcon?
         var showPreviewOnHover: Bool?
         var previewHotKey: HotKey?
+        var advanceOnClick: Bool?
+        var advanceModifier: ClickModifier?
         /// Génération du jeu de raccourcis par défaut appliqué à cette
         /// sauvegarde. Absente des sauvegardes d'avant la refonte, d'où le repli
         /// sur 1 à la lecture.
@@ -296,6 +306,8 @@ final class Preferences: ObservableObject {
             menuBarIcon: menuBarIcon,
             showPreviewOnHover: showPreviewOnHover,
             previewHotKey: previewHotKey,
+            advanceOnClick: advanceOnClick,
+            advanceModifier: advanceModifier,
             defaultsVersion: Self.defaultsVersion
         )
         if let data = try? JSONEncoder().encode(stored) {
@@ -340,6 +352,8 @@ final class Preferences: ObservableObject {
         menuBarIcon = stored.menuBarIcon ?? .logo
         showPreviewOnHover = stored.showPreviewOnHover ?? false
         previewHotKey = stored.previewHotKey
+        advanceOnClick = stored.advanceOnClick ?? false
+        advanceModifier = stored.advanceModifier ?? .command
         if let x = stored.barOriginX, let y = stored.barOriginY {
             barOrigin = CGPoint(x: x, y: y)
         }
