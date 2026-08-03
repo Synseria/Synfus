@@ -83,6 +83,16 @@ final class ClickAdvanceWatcher: ObservableObject {
     @Published private(set) var seenClicks = 0
 
     private var monitor: Any?
+    private var clearTimer: Timer?
+
+    /// Délai avant l'effacement des coches, une fois le tour bouclé.
+    ///
+    /// Rien ne s'efface *pendant* la passe, et surtout pas coche par coche : le
+    /// repère sert à savoir qui reste à faire, et dix secondes passées sur un
+    /// perso ne doivent pas effacer les précédents. C'est la fin du tour qui les
+    /// périme, pas le temps. Ces deux secondes-là ne sont que le moment de voir
+    /// que tout est fait avant que la barre ne se rende disponible.
+    private static let clearDelay: TimeInterval = 2
 
     private init() {}
 
@@ -113,7 +123,7 @@ final class ClickAdvanceWatcher: ObservableObject {
         if let monitor { NSEvent.removeMonitor(monitor) }
         monitor = nil
         armed = false
-        if !visited.isEmpty { visited.removeAll() }
+        resetVisited()
     }
 
     /// Amorce ou désamorce la série. Doublé d'un raccourci global : amorcer
@@ -161,11 +171,29 @@ final class ClickAdvanceWatcher: ObservableObject {
         )
         visited = marked
 
-        // Tour bouclé : l'amorce retombe. Un mode resté armé transformerait le
-        // moindre clic de la partie suivante en changement de fenêtre.
-        if armed, marked.count >= alive.count { armed = false }
+        if marked.count >= alive.count {
+            // Tour bouclé : l'amorce retombe — un mode resté armé transformerait
+            // le moindre clic de la partie suivante en changement de fenêtre —
+            // et les coches s'effacent après un temps de lecture.
+            armed = false
+            scheduleClear()
+        } else {
+            cancelClear()
+        }
 
         manager.cycle(by: 1)
+    }
+
+    private func scheduleClear() {
+        cancelClear()
+        clearTimer = Timer.scheduledTimer(withTimeInterval: Self.clearDelay, repeats: false) { _ in
+            MainActor.assumeIsolated { ClickAdvanceWatcher.shared.resetVisited() }
+        }
+    }
+
+    private func cancelClear() {
+        clearTimer?.invalidate()
+        clearTimer = nil
     }
 
     /// État des coches au moment où l'on quitte `current`. Pure, donc testable
@@ -190,6 +218,7 @@ final class ClickAdvanceWatcher: ObservableObject {
 
     /// Décoche tout, sans attendre la fin de la passe.
     func resetVisited() {
+        cancelClear()
         guard !visited.isEmpty else { return }
         visited.removeAll()
     }
