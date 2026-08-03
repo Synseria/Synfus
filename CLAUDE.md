@@ -214,10 +214,28 @@ modification de préférence.
 Le jeu par défaut sépare deux territoires, et cette séparation est une règle :
 la **rangée de chiffres** (`digitRow`) appartient à l'accès direct — ⌘1…⌘0
 numérotent les emplacements, ⌘0 étant celui du dixième —, tandis que toute la
-navigation tient sur la **touche sous Échap** (`escapeRowKey`, keycode 50),
-différenciée par les modificateurs : ⌘@ suivant, ⇧⌘@ précédent, ⌥⌘@ aperçu
-d'ensemble, ⌃⌘@ bascule du passage auto. Aucun nouveau défaut ne doit piocher
-dans `digitRow`, sous peine de se heurter au slot du même rang.
+navigation tient sur la **touche sous Échap** (`escapeRowKey`), différenciée par
+les modificateurs : ⌘@ suivant, ⇧⌘@ précédent, ⌥⌘@ aperçu d'ensemble, ⌃⌘@
+bascule du passage auto. Aucun nouveau défaut ne doit piocher dans `digitRow`,
+sous peine de se heurter au slot du même rang.
+
+**Le keycode de la touche sous Échap dépend du type physique du clavier**, et
+non de la disposition : un ANSI y place `kVK_ANSI_Grave` (50), un ISO — donc
+tous les claviers Apple européens, clavier interne français compris —
+`kVK_ISO_Section` (10), et relègue le 50 à côté de la touche Majuscule gauche,
+là où AZERTY tape `<`. `escapeRowKey` interroge donc `KBGetLayoutType`. Le
+supposer à 50 partout est ce qui rendait ces quatre raccourcis muets sur un
+clavier français : ils étaient bien enregistrés — `RegisterEventHotKey` rendait
+`noErr` —, simplement sur une autre touche que celle annoncée.
+
+De là une règle sur les **libellés** : hormis la rangée de chiffres, nommée par
+sa position parce que ce sont les numéros d'emplacement, et les touches qui ne
+tapent rien (⇥ ⎋ ↩ flèches…), `keyName` demande le caractère à la **disposition
+active** via `UCKeyTranslate`. Aucune table figée : c'en était une qui affichait
+« @ » pour le keycode 50, et « A » pour la touche marquée Q d'un AZERTY. La
+table est résolue **une seule fois**, dans un `static let` — appelée de
+plusieurs fils à la fois, `TISCopyCurrentKeyboardLayoutInputSource` abandonne
+sur SIGABRT, ce que la suite de tests parallèle a mis au jour.
 
 Changer un défaut ne suffit pas : les préférences déjà enregistrées ne repassent
 jamais par la branche « premier lancement ». D'où `Preferences.defaultsVersion`

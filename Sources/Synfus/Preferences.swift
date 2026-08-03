@@ -209,7 +209,7 @@ final class Preferences: ObservableObject {
     /// reprise correspondante dans `adoptDefaults` — chaque fois que les défauts
     /// changent, sans quoi les installations existantes resteraient sur les
     /// anciens à jamais.
-    static let defaultsVersion = 2
+    static let defaultsVersion = 3
 
     /// Les défauts de la génération 1, ceux qu'une installation existante peut
     /// encore porter sans que l'utilisateur les ait choisis. Seules ces
@@ -231,21 +231,48 @@ final class Preferences: ObservableObject {
     /// n'écrive les préférences que dans ce cas.
     @discardableResult
     func adoptDefaults(from version: Int?) -> Bool {
-        guard (version ?? 1) < Self.defaultsVersion else { return false }
-        if cycleNext == Self.legacyCycleNext { cycleNext = .defaultCycleNext }
-        if cyclePrevious == Self.legacyCyclePrevious { cyclePrevious = .defaultCyclePrevious }
-        // `nil` compris : la bascule est apparue après coup, une sauvegarde plus
-        // ancienne que la clé ne l'a jamais eue. Passé cette reprise, un
-        // raccourci effacé le reste — c'est la génération inscrite qui fait la
-        // différence entre « jamais eu » et « retiré exprès ».
-        if toggleAutoFocus == Self.legacyToggleAutoFocus || toggleAutoFocus == nil {
-            toggleAutoFocus = .defaultToggleAutoFocus
+        let from = version ?? 1
+        guard from < Self.defaultsVersion else { return false }
+
+        if from < 2 {
+            if cycleNext == Self.legacyCycleNext { cycleNext = .defaultCycleNext }
+            if cyclePrevious == Self.legacyCyclePrevious { cyclePrevious = .defaultCyclePrevious }
+            // `nil` compris : la bascule est apparue après coup, une sauvegarde
+            // plus ancienne que la clé ne l'a jamais eue. Passé cette reprise, un
+            // raccourci effacé le reste — c'est la génération inscrite qui fait la
+            // différence entre « jamais eu » et « retiré exprès ».
+            if toggleAutoFocus == Self.legacyToggleAutoFocus || toggleAutoFocus == nil {
+                toggleAutoFocus = .defaultToggleAutoFocus
+            }
+            // L'aperçu d'ensemble n'a jamais eu de défaut : le poser ne retire
+            // donc rien à personne. Il ne déclenche aucune demande d'autorisation
+            // — la capture ne part que si l'enregistrement de l'écran est déjà
+            // accordé.
+            if previewHotKey == nil { previewHotKey = .defaultPreview }
         }
-        // L'aperçu d'ensemble n'a jamais eu de défaut : le poser ne retire donc
-        // rien à personne. Il ne déclenche aucune demande d'autorisation — la
-        // capture ne part que si l'enregistrement de l'écran est déjà accordé.
-        if previewHotKey == nil { previewHotKey = .defaultPreview }
+
+        // La génération 2 posait la navigation sur le keycode 50 en le croyant
+        // « la touche sous Échap ». C'est vrai d'un clavier ANSI seulement : sur
+        // un ISO, cette position est le keycode 10 et le 50 est la touche `<>`.
+        // Les raccourcis étaient donc bien enregistrés, mais sur une touche que
+        // personne n'allait chercher — muets, en pratique.
+        if from < 3 { moveToEscapeRow() }
         return true
+    }
+
+    /// Reporte sur la touche sous Échap les raccourcis restés sur le keycode 50.
+    /// Sur un clavier ANSI, où les deux coïncident, c'est sans effet.
+    private func moveToEscapeRow() {
+        guard HotKey.escapeRowKey != HotKey.ansiGraveKey else { return }
+        func replaced(_ hotKey: HotKey?) -> HotKey? {
+            guard let hotKey, hotKey.keyCode == HotKey.ansiGraveKey else { return hotKey }
+            return HotKey(keyCode: HotKey.escapeRowKey, modifiers: hotKey.modifiers)
+        }
+        cycleNext = replaced(cycleNext)
+        cyclePrevious = replaced(cyclePrevious)
+        toggleAutoFocus = replaced(toggleAutoFocus)
+        previewHotKey = replaced(previewHotKey)
+        toggleBar = replaced(toggleBar)
     }
 
     private func save() {
