@@ -287,28 +287,41 @@ struct PreferencesTests {
         #expect(relues.toggleBar == HotKey(keyCode: 11, modifiers: UInt32(cmdKey) | UInt32(shiftKey)))
     }
 
-    /// L'enchaînement au clic change ce que fait un ⌘-clic dès que Dofus est
-    /// devant : il ne doit jamais s'activer tout seul à la faveur d'une mise à
-    /// jour, pas plus que les aperçus.
-    @Test("L'enchaînement au clic est éteint par défaut et se relit")
+    /// Le mode « enchaîner » installe un moniteur global de souris : il ne doit
+    /// jamais s'activer tout seul à la faveur d'une mise à jour, pas plus que
+    /// les aperçus.
+    @Test("Le mode « enchaîner » est éteint par défaut et se relit")
     func enchainementAuClic() {
         let (prefs, store) = neuves()
         #expect(prefs.advanceOnClick == false)
-        #expect(prefs.advanceModifier == .command)
 
-        // L'amorce du clic nu n'a pas de raccourci d'office : la fonction est
-        // éteinte à l'installation, lui réserver une combinaison n'aurait pas
-        // de sens.
-        #expect(prefs.advanceArmHotKey == nil)
+        // Sa bascule a un défaut, elle : ce raccourci n'est réservé auprès du
+        // système que lorsque la fonction est active.
+        #expect(prefs.advanceArmHotKey == HotKey.defaultAdvanceArm)
+        #expect(!HotKey.digitRow.contains(HotKey.defaultAdvanceArm.keyCode))
 
         prefs.advanceOnClick = true
-        prefs.advanceModifier = .option
         prefs.advanceArmHotKey = HotKey(keyCode: 96, modifiers: 0)   // F5
 
         let relues = Preferences.forTesting(store: store)
         #expect(relues.advanceOnClick == true)
-        #expect(relues.advanceModifier == .option)
         #expect(relues.advanceArmHotKey == HotKey(keyCode: 96, modifiers: 0))
+    }
+
+    /// Une installation antérieure à la bascule ne l'a jamais eue : elle doit la
+    /// recevoir, sans que cela confisque quoi que ce soit — la fonction reste
+    /// éteinte, et le raccourci n'est réservé qu'avec elle.
+    @Test("La bascule du mode arrive aux installations qui ne l'avaient pas")
+    func repriseDeLaBascule() {
+        let ancien = """
+        {"characterOrder":[],"hotKeys":[],"barVisible":true,"showNumbers":true,
+         "slotCount":5,"defaultsVersion":3}
+        """
+        let store = StockageMemoire([Preferences.key: Data(ancien.utf8)])
+
+        let prefs = Preferences.forTesting(store: store)
+        #expect(prefs.advanceArmHotKey == HotKey.defaultAdvanceArm)
+        #expect(prefs.advanceOnClick == false)
     }
 
     @Test("Une sauvegarde illisible ramène aux valeurs par défaut")

@@ -62,7 +62,9 @@ final class HotKeyManager {
         if let toggle = prefs.toggleBar {
             register(toggle) { FloatingBarController.shared.toggle() }
         }
-        if let arm = prefs.advanceArmHotKey {
+        // Réservée seulement quand la fonction est active : lui donner un défaut
+        // ne confisque ainsi aucune combinaison à qui ne s'en sert pas.
+        if prefs.advanceOnClick, let arm = prefs.advanceArmHotKey {
             register(arm) { ClickAdvanceWatcher.shared.toggleArmed() }
         }
         if let preview = prefs.previewHotKey {
