@@ -11,6 +11,27 @@ import Foundation
 /// l'app se lance normalement. Autant le détecter et le dire.
 enum AppIntegrity {
 
+    /// Version affichée, telle que `build.sh` l'a inscrite dans l'Info.plist.
+    ///
+    /// `nil` hors bundle — un `swift build` produit un binaire nu, sans
+    /// Info.plist, et il vaut mieux ne rien afficher qu'afficher une version
+    /// inventée. Comme les binaires publiés sont signés ad-hoc et qu'il faut
+    /// réautoriser l'Accessibilité à chaque version, savoir laquelle tourne
+    /// n'est pas un détail : c'est la première chose à demander sur un rapport
+    /// de bug.
+    static var version: String? {
+        guard let raw = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
+        else { return nil }
+        let cleaned = raw.trimmingCharacters(in: .whitespaces)
+        return cleaned.isEmpty ? nil : cleaned
+    }
+
+    /// « Synfus v0.2.0 », ou « Synfus » à défaut de version lisible.
+    static var displayName: String {
+        guard let version else { return "Synfus" }
+        return "Synfus v\(version)"
+    }
+
     /// Vrai si ce chemin porte encore l'attribut de quarantaine.
     ///
     /// `XATTR_NOFOLLOW` : on interroge le bundle lui-même, pas la cible d'un

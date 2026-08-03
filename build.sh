@@ -4,7 +4,7 @@
 #   ./build.sh --install  -> construit puis installe dans /Applications et relance
 #
 # Deux variables d'environnement pilotent la CI sans changer l'usage local :
-#   VERSION=0.0.1   numéro inscrit dans l'Info.plist (défaut : 0.0.1)
+#   VERSION=0.0.1   numéro inscrit dans l'Info.plist (défaut : dernier tag git)
 #   ARCH=x86_64     architecture cible (défaut : celle de la machine)
 set -euo pipefail
 
@@ -15,7 +15,17 @@ NAME="Synfus"
 # l'identité vue par TCC et le nom du fichier de préférences — le changer oblige
 # à réautoriser l'Accessibilité, et impose le repli de Preferences.legacyDomains.
 BUNDLE_ID="fr.synseria.Synfus"
+# La version est désormais affichée dans les réglages, et les binaires étant
+# signés ad-hoc — donc à réautoriser à chaque version —, savoir laquelle tourne
+# n'est pas un détail. À défaut de VERSION fournie (c'est la CI qui la donne,
+# tirée du tag), on prend le dernier tag du dépôt plutôt qu'un 0.0.1 qui
+# mentirait à chaque build local.
+VERSION="${VERSION:-$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//')}"
 VERSION="${VERSION:-0.0.1}"
+# Numéro de build : le tag suivi du nombre de commits et de l'empreinte quand
+# HEAD s'en est écarté. `CFBundleShortVersionString` reste purement numérique,
+# comme Apple l'attend ; c'est ici que va le détail.
+BUILD="$(git describe --tags --always --dirty 2>/dev/null || echo "$VERSION")"
 APP="$NAME.app"
 
 BUILD_FLAGS=(-c release)
@@ -41,7 +51,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>CFBundleExecutable</key>        <string>$NAME</string>
     <key>CFBundlePackageType</key>       <string>APPL</string>
     <key>CFBundleShortVersionString</key><string>$VERSION</string>
-    <key>CFBundleVersion</key>           <string>$VERSION</string>
+    <key>CFBundleVersion</key>           <string>$BUILD</string>
     <key>LSMinimumSystemVersion</key>    <string>14.0</string>
     <!-- Accessory : pas d'icône dans le Dock, l'app vit dans la barre de menus. -->
     <key>LSUIElement</key>               <true/>

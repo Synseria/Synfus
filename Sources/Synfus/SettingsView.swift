@@ -55,9 +55,13 @@ struct SettingsView: View {
                 sidebarRow(item)
             }
             Spacer()
-            Text("Synfus")
+            // Sélectionnable : les binaires publiés sont signés ad-hoc, il faut
+            // réautoriser l'Accessibilité à chaque version, et c'est donc la
+            // première chose à savoir sur un rapport de bug.
+            Text(AppIntegrity.displayName)
                 .font(.system(size: 10))
                 .foregroundStyle(.tertiary)
+                .textSelection(.enabled)
                 .padding(.horizontal, 8)
         }
         .padding(8)
@@ -741,9 +745,19 @@ struct SettingsView: View {
 }
 
 @MainActor
-final class SettingsWindowController {
+final class SettingsWindowController: NSObject {
     static let shared = SettingsWindowController()
     private var window: NSWindow?
+
+    /// La fenêtre est en cours de placement automatique : tant que ce drapeau
+    /// tient, chaque changement de taille la replace. Un déplacement à la souris
+    /// y met fin — l'utilisateur a dit où il la voulait.
+    private var placing = false
+    /// Distingue notre propre `setFrameOrigin` d'un geste de l'utilisateur, comme
+    /// le fait `FloatingBarController` pour la barre.
+    private var repositioning = false
+
+    private override init() { super.init() }
 
     func show() {
         if window == nil {
@@ -753,6 +767,15 @@ final class SettingsWindowController {
             window.styleMask = [.titled, .closable, .miniaturizable]
             window.isReleasedWhenClosed = false
             self.window = window
+
+            for (note, action) in [
+                (NSWindow.didResizeNotification, #selector(windowResized)),
+                (NSWindow.didMoveNotification, #selector(windowMoved)),
+            ] {
+                NotificationCenter.default.addObserver(
+                    self, selector: action, name: note, object: window
+                )
+            }
         }
         guard let window else { return }
 
@@ -760,6 +783,14 @@ final class SettingsWindowController {
         // c'est de là qu'on l'invoque, autant qu'elle apparaisse sous les yeux.
         // Tant qu'elle reste ouverte, en revanche, on ne la déplace pas.
         if !window.isVisible {
+            placing = true
+            // La taille définitive n'est connue qu'une fois SwiftUI passé. Placer
+            // avant revenait à calculer sur une fenêtre encore vide : elle
+            // grandissait ensuite vers le haut — AppKit ancre au coin bas gauche —
+            // et se retrouvait n'importe où sauf sous la barre. D'où la mise en
+            // page forcée, doublée du replacement à chaque redimensionnement :
+            // changer d'onglet change aussi la hauteur.
+            window.layoutIfNeeded()
             position(window)
         }
 
@@ -769,23 +800,47 @@ final class SettingsWindowController {
         window.makeKeyAndOrderFront(nil)
     }
 
-    /// Centre la fenêtre sous la barre flottante, bornée à l'écran ; à défaut
-    /// de barre visible, au centre de l'écran.
+    @objc private func windowResized() {
+        guard placing, let window else { return }
+        position(window)
+    }
+
+    @objc private func windowMoved() {
+        guard !repositioning else { return }
+        placing = false
+    }
+
+    /// Au milieu de l'écran, sous la barre flottante, bornée à l'écran.
+    ///
+    /// Le centrage horizontal se fait sur l'écran et non sur la barre : celle-ci
+    /// se déplace à la main, la fenêtre de réglages n'a pas à la suivre de biais.
+    /// Et sur `frame` plutôt que `visibleFrame`, comme le fait la barre — un Dock
+    /// posé sur un côté décalerait sinon les deux ensemble.
     private func position(_ window: NSWindow) {
-        guard let bar = FloatingBarController.shared.visibleBarFrame else {
-            window.center()
-            return
-        }
+        let bar = FloatingBarController.shared.visibleBarFrame
+        let screen = bar.flatMap { rect in NSScreen.screens.first { $0.frame.intersects(rect) } }
+            ?? NSScreen.main
+        guard let screen else { return }
+
+        let size = window.frame.size
+        let visible = screen.visibleFrame
 
         var origin = CGPoint(
-            x: (bar.midX - window.frame.width / 2).rounded(),
-            y: (bar.minY - 12 - window.frame.height).rounded()
+            x: (screen.frame.midX - size.width / 2).rounded(),
+            // Sous la barre quand elle est là ; à mi-hauteur sinon.
+            y: ((bar.map { $0.minY - Self.gap } ?? visible.midY + size.height / 2) - size.height)
+                .rounded()
         )
-        if let screen = NSScreen.screens.first(where: { $0.frame.intersects(bar) }) ?? NSScreen.main {
-            let visible = screen.visibleFrame
-            origin.x = min(max(origin.x, visible.minX + 8), visible.maxX - window.frame.width - 8)
-            origin.y = min(max(origin.y, visible.minY + 8), visible.maxY - window.frame.height - 8)
-        }
+        origin.x = min(max(origin.x, visible.minX + 8), visible.maxX - size.width - 8)
+        origin.y = min(max(origin.y, visible.minY + 8), visible.maxY - size.height - 8)
+
+        repositioning = true
         window.setFrameOrigin(origin)
+        // `didMove` peut arriver au tour de boucle suivant : on ne relâche le
+        // drapeau qu'une fois la notification passée.
+        DispatchQueue.main.async { self.repositioning = false }
     }
+
+    /// Écart entre la barre et le haut de la fenêtre de réglages.
+    private static let gap: CGFloat = 12
 }
