@@ -92,6 +92,29 @@ Aucune notification système ne signale un changement de titre (reconnexion,
 changement de perso) : un `Timer` de 2 s rafraîchit, complété par les
 notifications `NSWorkspace` (lancement / terminaison / activation).
 
+**Un client peut cesser de rendre ses fenêtres.** Mesuré au `--dump-windows` :
+un client dont l'espace plein écran n'est pas actif retire sa fenêtre de l'ordre
+d'affichage, et `kAXWindows` — qui ne liste que ce qui s'y trouve — rend alors
+une liste **vide**, sans erreur. Le perso disparaissait donc de la barre, et son
+icône du Dock restant en place, l'appariement de la détection d'attention se
+décalait avec lui.
+
+D'où `rememberedClients`, une mémoire par **pid** : le processus vit aussi
+longtemps que le client, alors que la fenêtre va et vient au gré des espaces. Un
+perso mémorisé reste affiché, atténué, et reste cliquable — `activate()` sur le
+processus suffit à basculer vers son espace, l'élément AX ne sert qu'à départager
+plusieurs fenêtres d'un même client, et celui d'un perso mémorisé est périmé.
+
+La règle de fusion, `withRemembered`, est pure et testée. Elle ne ressuscite que
+les processus **silencieux** — ceux qui ne rendent aucune fenêtre. Un client
+revenu à l'écran de connexion en rend une, simplement sans perso : le
+ressusciter afficherait un perso qui n'est plus en jeu.
+
+Limite assumée : un client déjà sur un espace inactif au démarrage de Synfus n'a
+jamais livré son titre, donc reste invisible jusqu'à ce qu'on y bascule une fois.
+Le lever demanderait de lire les titres via `CGWindowListCopyWindowInfo`, ce qui
+exige l'autorisation d'enregistrement de l'écran — celle des aperçus.
+
 L'identité d'un client est `slotKey` = `"<pid>#<index de fenêtre>"`. Le tri suit
 `Preferences.characterOrder`, une liste de noms : les persos non lancés sont
 simplement sautés, d'où des numéros de slot stables.

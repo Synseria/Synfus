@@ -214,7 +214,9 @@ struct BarView: View {
         }
         .buttonStyle(.plain)
         .help(tooltip(index: index, client: client))
-        .opacity(dragging == client.name ? 0.35 : 1)
+        // Un perso sur un autre espace reste cliquable, mais on ne le donne pas
+        // pour présent : sa vignette et son titre datent de sa dernière visite.
+        .opacity(dragging == client.name ? 0.35 : (client.dormant ? 0.55 : 1))
         .scaleEffect(dragging == client.name ? 1.06 : 1)
         .background(chipFrameReader(for: client.name))
         .simultaneousGesture(reorderGesture(for: client))
@@ -277,6 +279,9 @@ struct BarView: View {
 
     private func tooltip(index: Int, client: DofusClient) -> String {
         var lines = [client.name]
+        if client.dormant {
+            lines.append("Sur un autre bureau — cliquer pour y basculer")
+        }
         if index < prefs.hotKeys.count, let hotKey = prefs.hotKeys[index] {
             lines.append("Raccourci : \(hotKey.displayString)")
         }
