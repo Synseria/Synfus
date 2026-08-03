@@ -222,7 +222,7 @@ final class Preferences: ObservableObject {
     /// reprise correspondante dans `adoptDefaults` — chaque fois que les défauts
     /// changent, sans quoi les installations existantes resteraient sur les
     /// anciens à jamais.
-    static let defaultsVersion = 4
+    static let defaultsVersion = 5
 
     /// Les défauts de la génération 1, ceux qu'une installation existante peut
     /// encore porter sans que l'utilisateur les ait choisis. Seules ces
@@ -276,7 +276,21 @@ final class Preferences: ObservableObject {
         // confisqué pour autant — ce raccourci n'est réservé auprès du système
         // que lorsque la fonction est activée, et elle est éteinte par défaut.
         if from < 4, advanceArmHotKey == nil { advanceArmHotKey = .defaultAdvanceArm }
+
+        // La génération 4 la posait sur ⌃⌥⌘@ — trois modificateurs pour une
+        // bascule que l'on presse deux fois par session. C'était la première
+        // combinaison libre trouvée, pas la plus simple.
+        if from < 5, advanceArmHotKey == Self.legacyAdvanceArm {
+            advanceArmHotKey = .defaultAdvanceArm
+        }
         return true
+    }
+
+    private static var legacyAdvanceArm: HotKey {
+        HotKey(
+            keyCode: HotKey.escapeRowKey,
+            modifiers: UInt32(cmdKey) | UInt32(controlKey) | UInt32(optionKey)
+        )
     }
 
     /// Reporte sur la touche sous Échap les raccourcis restés sur le keycode 50.
