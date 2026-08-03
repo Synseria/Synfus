@@ -17,11 +17,23 @@ struct DofusClient: Identifiable, Hashable {
     /// Classe du perso, lue dans le titre de la fenêtre
     /// (« Syn-App - Feca - 3.6.7.7 - Release » → « Feca »).
     let characterClass: String?
+    /// Perso connu de mémoire, dont l'Accessibilité ne rend plus la fenêtre —
+    /// en pratique, un client dans un espace plein écran qui n'est pas actif.
+    /// Il reste cliquable : l'activation du processus suffit à y basculer.
+    let dormant: Bool
 
     var id: String { slotKey }
 
+    /// Le même perso, tel qu'on se le rappelle une fois sa fenêtre hors de vue.
+    func remembered() -> DofusClient {
+        DofusClient(
+            pid: pid, slotKey: slotKey, axWindow: axWindow, rawTitle: rawTitle,
+            name: name, icon: icon, characterClass: characterClass, dormant: true
+        )
+    }
+
     static func == (lhs: DofusClient, rhs: DofusClient) -> Bool {
-        lhs.slotKey == rhs.slotKey && lhs.name == rhs.name
+        lhs.slotKey == rhs.slotKey && lhs.name == rhs.name && lhs.dormant == rhs.dormant
     }
 
     func hash(into hasher: inout Hasher) {
@@ -44,6 +56,11 @@ final class WindowManager: ObservableObject {
 
     private var timer: Timer?
     private let prefs = Preferences.shared
+
+    /// Derniers persos vus pour chaque processus. La clé est le pid : il vit
+    /// aussi longtemps que le client, alors que la fenêtre, elle, va et vient
+    /// au gré des espaces.
+    private var rememberedClients: [pid_t: [DofusClient]] = [:]
 
     private init() {}
 
@@ -143,15 +160,23 @@ final class WindowManager: ObservableObject {
 
         var found: [DofusClient] = []
         var usedNames: [String: Int] = [:]
+        var livePIDs: Set<pid_t> = []
+        var talkativePIDs: Set<pid_t> = []
 
         for app in NSWorkspace.shared.runningApplications {
             guard isDofus(app) else { continue }
+            livePIDs.insert(app.processIdentifier)
             let axApp = AXUIElementCreateApplication(app.processIdentifier)
 
             var value: CFTypeRef?
             guard AXUIElementCopyAttributeValue(axApp, kAXWindowsAttribute as CFString, &value) == .success,
                   let windows = value as? [AXUIElement]
             else { continue }
+
+            // Un client qui rend au moins une fenêtre est joignable : s'il n'en
+            // ressort aucun perso, c'est qu'il est retourné à l'écran de
+            // connexion, et non qu'il se cache sur un autre bureau.
+            if !windows.isEmpty { talkativePIDs.insert(app.processIdentifier) }
 
             for (index, window) in windows.enumerated() {
                 guard isGameWindow(window) else { continue }
@@ -174,10 +199,25 @@ final class WindowManager: ObservableObject {
                     rawTitle: rawTitle,
                     name: name,
                     icon: app.icon,
-                    characterClass: Self.characterClass(fromTitle: rawTitle)
+                    characterClass: Self.characterClass(fromTitle: rawTitle),
+                    dormant: false
                 ))
             }
         }
+
+        // Un client dont l'espace plein écran n'est pas actif ne rend plus
+        // *aucune* fenêtre à l'Accessibilité : il retire la sienne de l'ordre
+        // d'affichage, et `kAXWindows` ne liste que ce qui s'y trouve. Sans
+        // mémoire, le perso disparaîtrait de la barre à chaque fois qu'on le
+        // quitte — et son icône du Dock, elle, resterait, décalant l'appariement
+        // de la détection d'attention.
+        remember(found)
+        forgetDeadProcesses(livePIDs: livePIDs)
+        found = Self.withRemembered(
+            found: found,
+            remembered: rememberedClients,
+            silentPIDs: livePIDs.subtracting(talkativePIDs)
+        )
 
         // Seuls les vrais noms de persos entrent dans la liste ; les clients au
         // login et les homonymes suffixés restent dans la barre sans s'y inscrire.
@@ -197,6 +237,43 @@ final class WindowManager: ObservableObject {
             // `slotKey` sera repris par un autre client au prochain lancement.
             WindowPreviewService.shared.prune(keeping: found)
         }
+    }
+
+    /// Retient les persos effectivement vus, par processus. Un pid dont on ne
+    /// voit plus rien garde sa dernière mémoire ; il ne sera oublié qu'à la
+    /// fermeture du client (voir `withRemembered`).
+    private func remember(_ found: [DofusClient]) {
+        for (pid, clients) in Dictionary(grouping: found, by: \.pid) {
+            rememberedClients[pid] = clients
+        }
+    }
+
+    /// Complète les persos trouvés de ceux dont le processus vit encore mais ne
+    /// rend plus aucune fenêtre — `silentPIDs`. Isolée et pure : c'est la règle
+    /// qui décide ce que la barre affiche, elle mérite d'être testée.
+    ///
+    /// Un client rendu à l'écran de connexion n'en fait délibérément pas partie :
+    /// il rend bien une fenêtre, simplement sans perso. Le ressusciter afficherait
+    /// un perso qui n'est plus en jeu.
+    static func withRemembered(
+        found: [DofusClient],
+        remembered: [pid_t: [DofusClient]],
+        silentPIDs: Set<pid_t>
+    ) -> [DofusClient] {
+        let visible = Set(found.map(\.pid))
+        let dormant = remembered
+            .filter { silentPIDs.contains($0.key) && !visible.contains($0.key) }
+            // Tri par pid : le dictionnaire n'a pas d'ordre, et la barre ne doit
+            // pas se réorganiser d'un rafraîchissement à l'autre.
+            .sorted { $0.key < $1.key }
+            .flatMap(\.value)
+            .map { $0.remembered() }
+        return found + dormant
+    }
+
+    /// Oublie les clients fermés — leur pid ne reviendra pas.
+    private func forgetDeadProcesses(livePIDs: Set<pid_t>) {
+        rememberedClients = rememberedClients.filter { livePIDs.contains($0.key) }
     }
 
     private func isDofus(_ app: NSRunningApplication) -> Bool {
@@ -331,7 +408,8 @@ final class WindowManager: ObservableObject {
     }
 
     func focus(_ client: DofusClient) {
-        if let minimized = boolAttribute(client.axWindow, kAXMinimizedAttribute), minimized {
+        if !client.dormant,
+           let minimized = boolAttribute(client.axWindow, kAXMinimizedAttribute), minimized {
             AXUIElementSetAttributeValue(client.axWindow, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
         }
 
@@ -342,12 +420,16 @@ final class WindowManager: ObservableObject {
         NSRunningApplication(processIdentifier: client.pid)?.activate()
 
         // Les attributs AX ne servent qu'à départager plusieurs fenêtres d'un même
-        // processus ; on les pose une fois la transition d'espace engagée.
-        let window = client.axWindow
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-            MainActor.assumeIsolated {
-                AXUIElementSetAttributeValue(window, kAXMainAttribute as CFString, kCFBooleanTrue)
-                AXUIElementPerformAction(window, kAXRaiseAction as CFString)
+        // processus ; on les pose une fois la transition d'espace engagée. Sur un
+        // perso seulement mémorisé, la référence de fenêtre est périmée — il n'y
+        // a rien à y poser, l'activation du processus fait tout le travail.
+        if !client.dormant {
+            let window = client.axWindow
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                MainActor.assumeIsolated {
+                    AXUIElementSetAttributeValue(window, kAXMainAttribute as CFString, kCFBooleanTrue)
+                    AXUIElementPerformAction(window, kAXRaiseAction as CFString)
+                }
             }
         }
 
