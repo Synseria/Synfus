@@ -45,33 +45,94 @@ struct HotKey: Codable, Equatable, Hashable {
         return out
     }
 
-    /// Libellé d'une touche par sa position physique. On reste sur les positions
-    /// ANSI plutôt que sur le caractère produit : sur un clavier AZERTY la rangée
-    /// du haut tape & é " ' ( alors que tout le monde l'appelle « 1 2 3 4 5 ».
+    /// Libellé d'une touche.
+    ///
+    /// La rangée de chiffres reste nommée par sa **position ANSI** : sur AZERTY
+    /// elle tape `& é " ' (`, mais tout le monde l'appelle « 1 2 3 4 5 », et ce
+    /// sont les numéros d'emplacement de Synfus.
+    ///
+    /// Tout le reste est demandé à la **disposition active**, et surtout pas
+    /// codé en dur. Une table figée a déjà menti : elle donnait « @ » au keycode
+    /// 50, ce qui n'est vrai que sur un clavier ANSI. Sur un ISO — tous les
+    /// claviers Apple européens —, la touche sous Échap est le keycode 10, et 50
+    /// est la touche `<>` près de la touche Majuscule gauche. Les réglages
+    /// affichaient donc « ⌘@ » pour une combinaison que cette touche-là ne
+    /// déclenchait pas.
     static func keyName(_ code: UInt32) -> String {
         if let name = functionKeyNames[code] { return name }
         if let name = namedKeys[code] { return name }
         if let name = positionalKeys[code] { return name }
+        if let typed = layoutCharacter(code) { return typed }
         return "#\(code)"
     }
 
+    /// Ce que la touche tape réellement dans la disposition active, en majuscule.
+    /// `nil` si la touche ne tape rien, ou si la disposition n'est pas une
+    /// disposition de clavier — une méthode de saisie idéographique n'expose
+    /// aucune table.
+    static func layoutCharacter(_ code: UInt32) -> String? {
+        layoutCharacters[code]
+    }
+
+    /// La table complète, résolue **une seule fois**.
+    ///
+    /// Une fois, et pas à chaque affichage : `TISCopyCurrentKeyboardLayoutInputSource`
+    /// ne supporte pas d'être appelée depuis plusieurs fils à la fois — la suite
+    /// de tests, qui s'exécute en parallèle, la faisait abandonner sur SIGABRT.
+    /// Un `static let` paresseux sérialise l'initialisation par construction,
+    /// sans verrou ni isolation à plaider.
+    ///
+    /// La contrepartie est assumée : changer de disposition en cours de session
+    /// ne rafraîchit pas les libellés avant le prochain lancement. Les raccourcis
+    /// eux-mêmes, qui sont des positions physiques, ne bougent pas pour autant.
+    private static let layoutCharacters: [UInt32: String] = readLayout()
+
+    private static func readLayout() -> [UInt32: String] {
+        guard let source = TISCopyCurrentKeyboardLayoutInputSource()?.takeRetainedValue(),
+              let raw = TISGetInputSourceProperty(source, kTISPropertyUnicodeKeyLayoutData)
+        else { return [:] }
+
+        let data = Unmanaged<CFData>.fromOpaque(raw).takeUnretainedValue() as Data
+        let kind = UInt32(LMGetKbdType())
+
+        return data.withUnsafeBytes { bytes -> [UInt32: String] in
+            guard let layout = bytes.bindMemory(to: UCKeyboardLayout.self).baseAddress
+            else { return [:] }
+
+            var table: [UInt32: String] = [:]
+            for code in UInt32(0)...127 {
+                var deadState: UInt32 = 0
+                var length = 0
+                var buffer = [UniChar](repeating: 0, count: 8)
+                let status = UCKeyTranslate(
+                    layout, UInt16(code), UInt16(kUCKeyActionDown), 0, kind,
+                    OptionBits(kUCKeyTranslateNoDeadKeysBit),
+                    &deadState, buffer.count, &length, &buffer
+                )
+                guard status == noErr, length > 0 else { continue }
+                let typed = String(utf16CodeUnits: buffer, count: length)
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                if !typed.isEmpty { table[code] = typed.uppercased() }
+            }
+            return table
+        }
+    }
+
+    /// Les seules touches nommées par leur position, et pour cause : ce sont des
+    /// numéros. Les lettres en sont volontairement absentes — les y mettre
+    /// affichait « A » pour la touche marquée Q d'un clavier AZERTY, ce qui est
+    /// simplement faux. Elles passent par la disposition active.
     private static let positionalKeys: [UInt32: String] = [
         18: "1", 19: "2", 20: "3", 21: "4", 23: "5",
         22: "6", 26: "7", 28: "8", 25: "9", 29: "0",
-        0: "A", 1: "S", 2: "D", 3: "F", 4: "H", 5: "G", 6: "Z", 7: "X",
-        8: "C", 9: "V", 11: "B", 12: "Q", 13: "W", 14: "E", 15: "R",
-        16: "Y", 17: "T", 31: "O", 32: "U", 34: "I", 35: "P", 37: "L",
-        38: "J", 40: "K", 45: "N", 46: "M",
         // Pavé numérique : très pratique en multi-compte sur un clavier complet.
         83: "num1", 84: "num2", 85: "num3", 86: "num4", 87: "num5",
         88: "num6", 89: "num7", 91: "num8", 92: "num9", 82: "num0",
     ]
 
+    /// Touches qui ne tapent rien : la disposition n'a rien à en dire.
     private static let namedKeys: [UInt32: String] = [
         48: "⇥", 49: "espace", 36: "↩", 51: "⌫", 53: "⎋",
-        // Touche en haut à gauche, sous Échap : « @ » sur un clavier Mac
-        // français, « ` » sur un QWERTY. On affiche le libellé français.
-        50: "@", 10: "<",
         123: "←", 124: "→", 125: "↓", 126: "↑",
         115: "⇱", 119: "⇲", 116: "⇞", 121: "⇟",
     ]
@@ -95,23 +156,43 @@ struct HotKey: Codable, Equatable, Hashable {
 
     // MARK: - Jeu de raccourcis par défaut
 
-    /// Touche sous Échap : « @ » sur un clavier Mac français, « ` » sur un
-    /// QWERTY. Toutes les commandes de navigation tiennent dessus, différenciées
-    /// par les modificateurs — un seul repère à mémoriser, atteignable de la main
-    /// gauche sans lâcher la souris, et hors de la rangée de chiffres que se
-    /// réserve l'accès direct.
-    static let escapeRowKey: UInt32 = 50
+    /// Touche sous Échap — « @ » sur un clavier Mac français, « ` » sur un
+    /// QWERTY américain. Toutes les commandes de navigation tiennent dessus,
+    /// différenciées par les modificateurs : un seul repère à mémoriser,
+    /// atteignable de la main gauche sans lâcher la souris, et hors de la rangée
+    /// de chiffres que se réserve l'accès direct.
+    ///
+    /// Son keycode dépend du **type physique** du clavier, et non de la
+    /// disposition. Un ANSI place là `kVK_ANSI_Grave` (50) ; un ISO — donc tous
+    /// les claviers Apple européens, clavier interne français compris — y place
+    /// `kVK_ISO_Section` (10) et relègue le 50 à côté de la touche Majuscule
+    /// gauche, là où AZERTY tape `<` et `>`.
+    ///
+    /// Le supposer à 50 partout est précisément ce qui rendait ces raccourcis
+    /// muets sur un clavier français : ils étaient bien enregistrés, simplement
+    /// sur une autre touche que celle annoncée.
+    static var escapeRowKey: UInt32 {
+        KBGetLayoutType(Int16(LMGetKbdType())) == kKeyboardISO ? isoSectionKey : ansiGraveKey
+    }
+
+    static let ansiGraveKey: UInt32 = 50
+    static let isoSectionKey: UInt32 = 10
 
     /// ⌘@ — passer au perso suivant. C'est le geste central : plutôt que de viser
     /// un numéro, on avance dans la barre.
-    static let defaultCycleNext = HotKey(keyCode: escapeRowKey, modifiers: UInt32(cmdKey))
+    static var defaultCycleNext: HotKey {
+        HotKey(keyCode: escapeRowKey, modifiers: UInt32(cmdKey))
+    }
     /// ⇧⌘@ — revenir au précédent.
-    static let defaultCyclePrevious = HotKey(
-        keyCode: escapeRowKey, modifiers: UInt32(cmdKey) | UInt32(shiftKey))
+    static var defaultCyclePrevious: HotKey {
+        HotKey(keyCode: escapeRowKey, modifiers: UInt32(cmdKey) | UInt32(shiftKey))
+    }
     /// ⌥⌘@ — aperçu de tous les persos, tant que la combinaison est maintenue.
-    static let defaultPreview = HotKey(
-        keyCode: escapeRowKey, modifiers: UInt32(cmdKey) | UInt32(optionKey))
+    static var defaultPreview: HotKey {
+        HotKey(keyCode: escapeRowKey, modifiers: UInt32(cmdKey) | UInt32(optionKey))
+    }
     /// ⌃⌘@ — bascule du passage automatique.
-    static let defaultToggleAutoFocus = HotKey(
-        keyCode: escapeRowKey, modifiers: UInt32(cmdKey) | UInt32(controlKey))
+    static var defaultToggleAutoFocus: HotKey {
+        HotKey(keyCode: escapeRowKey, modifiers: UInt32(cmdKey) | UInt32(controlKey))
+    }
 }

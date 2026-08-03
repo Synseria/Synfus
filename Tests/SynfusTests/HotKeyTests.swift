@@ -34,11 +34,25 @@ struct HotKeyTests {
     }
 
     @Test("Les touches nommées ont un symbole", arguments: [
-        (UInt32(48), "⇥"), (UInt32(53), "⎋"), (UInt32(36), "↩"),
-        (UInt32(50), "@"), (UInt32(122), "F1"),
+        (UInt32(48), "⇥"), (UInt32(53), "⎋"), (UInt32(36), "↩"), (UInt32(122), "F1"),
     ])
     func touchesNommees(code: UInt32, attendu: String) {
         #expect(HotKey.keyName(code) == attendu)
+    }
+
+    /// Ce test attendait « @ » pour le keycode 50. C'était vrai d'un clavier
+    /// ANSI, et faux de tous les claviers Apple européens, où cette position est
+    /// le keycode 10 — 50 y étant la touche `<>` près de la touche Majuscule.
+    /// Les libellés viennent donc désormais de la disposition active, et il n'y
+    /// a plus de caractère à figer dans un test : ce qui doit tenir, c'est que
+    /// la touche sous Échap soit celle que le clavier place vraiment là.
+    @Test("La touche sous Échap suit le type physique du clavier")
+    func toucheSousEchap() {
+        #expect([HotKey.ansiGraveKey, HotKey.isoSectionKey].contains(HotKey.escapeRowKey))
+        // Elle tape forcément quelque chose, et jamais un chiffre de la rangée
+        // du haut : les deux territoires ne doivent pas se recouvrir.
+        #expect(!HotKey.digitRow.contains(HotKey.escapeRowKey))
+        #expect(HotKey.keyName(HotKey.escapeRowKey) != "#\(HotKey.escapeRowKey)")
     }
 
     @Test("Un keycode inconnu reste identifiable")
