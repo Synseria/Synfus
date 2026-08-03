@@ -90,7 +90,10 @@ toutes les fenêtres AX des processus dont le bundle ID contient `dofus`, puis
 
 Aucune notification système ne signale un changement de titre (reconnexion,
 changement de perso) : un `Timer` de 2 s rafraîchit, complété par les
-notifications `NSWorkspace` (lancement / terminaison / activation).
+notifications `NSWorkspace` (lancement / terminaison / activation). Celles-ci
+passent par `refreshSoon()` et non `refresh()` : un changement d'application en
+émet deux, et enchaîner deux inventaires AX double le gel au moment précis où
+l'utilisateur bascule.
 
 **Un client peut cesser de rendre ses fenêtres.** Mesuré au `--dump-windows` :
 un client dont l'espace plein écran n'est pas actif retire sa fenêtre de l'ordre
@@ -152,6 +155,12 @@ Deux règles y font tout le travail, et aucune n'est décorative :
 S'y ajoutent les garde-fous d'origine — la taille écarte la magnification, un
 cooldown de 4 s évite les rafales — et le relevé est mis de côté tant que le
 curseur survole le Dock.
+
+Le relevé passe dix fois par seconde : rien de ce qu'il produit ne doit être
+republié sans avoir changé. `pairing` l'était sans condition, et la barre
+flottante — qui observe ce watcher — se recalculait donc en permanence à cette
+cadence. C'est aussi pourquoi le tour de boucle sort avant d'interroger le Dock
+quand aucun perso n'est connecté.
 
 L'appariement icône du Dock ↔ perso est une **hypothèse** : rang dans le Dock
 (trié par abscisse) ↔ rang par pid croissant, les deux suivant l'ordre de
@@ -273,6 +282,24 @@ titre que l'appariement du Dock, donc testée à part et exposée dans le Diagno
 La capture s'exécute hors du main actor et ne rend que du **PNG** : ni `SCWindow`
 ni `CGImage` ne franchissent la frontière d'isolation, ce qui évite d'avoir à
 plaider leur sendabilité.
+
+L'inventaire `SCShareableContent` fait le tour de toutes les fenêtres du système
+et coûte bien plus que la capture elle-même : il est fait **une fois par
+rafraîchissement**, pour tous les persos demandés, et non une fois par perso. Les
+captures qui suivent restent séquentielles, faute de pouvoir faire traverser un
+`SCWindow` — non `Sendable` — vers une tâche fille.
+
+L'appariement écarte les candidats trop petits pour être une fenêtre de jeu,
+avec le seuil de `WindowManager.isGameWindow`. Sans ce filtre, les info-bulles
+et panneaux hors écran que ScreenCaptureKit expose au nom du même processus
+faisaient passer un client parfaitement ordinaire pour ambigu, et son aperçu
+restait vide. Deux vraies fenêtres de jeu dans un même processus restent, elles,
+un cas où l'on renonce : mieux vaut aucun aperçu que celui du mauvais perso.
+
+La vignette a une **taille fixe**, hauteur comprise. Laisser le panneau se
+dimensionner sur l'image revenait à le faire dépendre de l'instant où la capture
+arrive : le premier perso survolé avait le temps d'être capturé, les suivants
+s'ouvraient sur le cadre d'attente puis se redimensionnaient et se replaçaient.
 
 C'est une **seconde autorisation TCC**, distincte de l'Accessibilité
 (`NSScreenCaptureUsageDescription` dans l'Info.plist généré par `build.sh`). Les
