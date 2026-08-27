@@ -570,6 +570,18 @@ final class WindowManager: ObservableObject {
         clients.forEach(close)
     }
 
+    /// Le geste « lancer la session » : ranger les fenêtres selon la dernière
+    /// disposition, basculer sur le premier perso, et armer l'enchaînement si
+    /// le mode est disponible. Rien que des gestes existants, enchaînés — et
+    /// toujours aucun évènement émis.
+    func lancerSession() {
+        WindowArranger.shared.appliquerDerniere()
+        if !clients.isEmpty { focus(slot: 0) }
+        if prefs.advanceOnClick, !ClickAdvanceWatcher.shared.armed {
+            ClickAdvanceWatcher.shared.toggleArmed()
+        }
+    }
+
     func cycle(by step: Int) {
         guard !clients.isEmpty else {
             NSSound.beep()

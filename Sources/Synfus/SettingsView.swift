@@ -159,10 +159,24 @@ struct SettingsView: View {
                         set: { prefs.arrangeHotKey = $0; rebind() }
                     ))
                 }
-                Text("Les dispositions — côte à côte, mosaïque, un grand + vignettes — "
-                     + "s'appliquent depuis le menu de la barre de menus ou le clic droit "
-                     + "sur la barre. Le raccourci rejoue la dernière employée. Sans "
-                     + "valeur par défaut : à toi de choisir la combinaison.")
+                Text("Les dispositions — côte à côte, mosaïque, un grand + vignettes, "
+                     + "empilés plein cadre, et les bascules de plein écran — s'appliquent "
+                     + "depuis le bouton de la barre flottante, la barre de menus ou le "
+                     + "clic droit. Le raccourci rejoue la dernière disposition employée. "
+                     + "Sans valeur par défaut : à toi de choisir la combinaison.")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
+
+                HStack {
+                    Text("Lancer la session")
+                    Spacer()
+                    ShortcutRecorder(hotKey: Binding(
+                        get: { prefs.sessionHotKey },
+                        set: { prefs.sessionHotKey = $0; rebind() }
+                    ))
+                }
+                Text("Le geste du matin : range selon la dernière disposition, bascule "
+                     + "sur le perso 1, et arme l'enchaînement si le mode est disponible.")
                     .font(.system(size: 10))
                     .foregroundStyle(.tertiary)
             }
@@ -733,7 +747,7 @@ struct SettingsView: View {
                 .font(.system(size: 12, weight: .semibold))
 
             if let rapport = arranger.dernierRapport {
-                Text("\(rapport.disposition.label) — écran « \(rapport.ecran) » — "
+                Text("\(rapport.titre) — écran « \(rapport.ecran) » — "
                      + rapport.date.formatted(date: .omitted, time: .standard))
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(.secondary)

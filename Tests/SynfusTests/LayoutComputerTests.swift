@@ -47,7 +47,13 @@ struct LayoutComputerTests {
         }
     }
 
-    @Test("Les cadres ne se chevauchent pas", arguments: Disposition.allCases)
+    @Test("Empilée : tout le monde reçoit la zone entière")
+    func empilee() {
+        #expect(cadres(.empilee, 4) == Array(repeating: Self.zone, count: 4))
+    }
+
+    @Test("Les cadres ne se chevauchent pas — sauf l'empilée, par définition",
+          arguments: [Disposition.coteACote, .mosaique, .principale])
     func chevauchement(_ disposition: Disposition) {
         for nombre in 2...8 {
             let tous = cadres(disposition, nombre)

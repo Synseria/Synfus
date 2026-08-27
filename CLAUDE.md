@@ -354,9 +354,24 @@ dans le `Rapport` publié, affiché dans l'onglet Diagnostic. Tout est ramené s
 **taille → position → taille** : certains clients plafonnent la taille tant que
 la fenêtre chevauche son ancien écran.
 
-Points d'entrée : sous-menu « Ranger les fenêtres » (barre de menus et clic
-droit sur la barre), et un raccourci optionnel **sans défaut** (modèle
-`toggleBar`) qui rejoue `Preferences.lastArrangement`.
+Quatre dispositions : côte à côte, mosaïque, un grand + vignettes, et
+**empilés plein cadre** (`.empilee`, la seule où les cadres se recouvrent —
+chaque client occupe tout l'écran, la barre fait tourner la pile). S'y ajoutent
+deux bascules hors `LayoutComputer` : **tout en plein écran** (un espace par
+perso, attribut littéral `"AXFullScreen"` posé y compris sur les dormants —
+le basculement passe par l'objet fenêtre, hypothèse rapportée au Diagnostic)
+et son inverse. « Rapatrier les fenêtres des autres bureaux » a été étudié et
+écarté : aucune API publique ne déplace une fenêtre entre espaces.
+
+Points d'entrée : le **bouton de la barre flottante** (`ArrangeMenuButton`,
+dans la zone des modes — le seul clic droit s'était avéré introuvable), le
+sous-menu de la barre de menus, le clic droit, et un raccourci optionnel
+**sans défaut** (modèle `toggleBar`) qui rejoue `Preferences.lastArrangement`.
+
+Le geste **« Lancer la session »** (`WindowManager.lancerSession`) compose des
+gestes existants : ranger selon la dernière disposition, basculer sur le
+perso 1, armer l'enchaînement si `advanceOnClick` — raccourci optionnel sans
+défaut (`sessionHotKey`).
 
 ### Préférences
 

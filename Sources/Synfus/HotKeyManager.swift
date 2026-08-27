@@ -65,6 +65,9 @@ final class HotKeyManager {
         if let arrange = prefs.arrangeHotKey {
             register(arrange) { WindowArranger.shared.appliquerDerniere() }
         }
+        if let session = prefs.sessionHotKey {
+            register(session) { WindowManager.shared.lancerSession() }
+        }
         // Réservée seulement quand la fonction est active : lui donner un défaut
         // ne confisque ainsi aucune combinaison à qui ne s'en sert pas.
         if prefs.advanceOnClick, let arm = prefs.advanceArmHotKey {

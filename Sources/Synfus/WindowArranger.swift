@@ -22,7 +22,8 @@ final class WindowArranger: ObservableObject {
     /// bonne volonté du client) : le rapport est leur vérité terrain.
     struct Rapport {
         let date: Date
-        let disposition: Disposition
+        /// Libellé du geste — une disposition, ou une bascule de plein écran.
+        let titre: String
         let ecran: String
         let rangees: [String]
         let ecartees: [Ecartee]
@@ -64,7 +65,7 @@ final class WindowArranger: ObservableObject {
         guard !eligibles.isEmpty, let hauteurPrincipale = NSScreen.screens.first?.frame.height
         else {
             NSSound.beep()
-            dernierRapport = Rapport(date: Date(), disposition: disposition,
+            dernierRapport = Rapport(date: Date(), titre: disposition.label,
                                      ecran: "—", rangees: [], ecartees: ecartees)
             return
         }
@@ -110,10 +111,53 @@ final class WindowArranger: ObservableObject {
             }
         }
 
-        dernierRapport = Rapport(date: Date(), disposition: disposition,
+        dernierRapport = Rapport(date: Date(), titre: disposition.label,
                                  ecran: ecran.localizedName, rangees: rangees,
                                  ecartees: ecartees)
         Preferences.shared.lastArrangement = disposition
+    }
+
+    // MARK: - Plein écran
+
+    /// Envoie chaque client dans son propre espace plein écran — un bureau par
+    /// perso, et la bascule (⌘n, la barre) fait le voyage d'un espace à
+    /// l'autre. L'attribut est tenté aussi sur les dormants : leur élément est
+    /// périmé pour la géométrie, mais le basculement passe par l'objet fenêtre
+    /// lui-même — hypothèse, rapportée au Diagnostic comme les autres.
+    func toutEnPleinEcran() { pleinEcran(true, titre: "Tout en plein écran") }
+
+    /// L'inverse : ramène toutes les fenêtres en mode fenêtré, chacune sur le
+    /// bureau d'où elle était partie.
+    func toutSortirDuPleinEcran() { pleinEcran(false, titre: "Tout sortir du plein écran") }
+
+    private func pleinEcran(_ actif: Bool, titre: String) {
+        let manager = WindowManager.shared
+        manager.refresh()
+
+        var rangees: [String] = []
+        var ecartees: [Ecartee] = []
+        for client in manager.clients {
+            let fenetre = client.axWindow
+            if boolAttribute(fenetre, "AXFullScreen") == actif {
+                rangees.append(client.name)
+                continue
+            }
+            let erreur = AXUIElementSetAttributeValue(
+                fenetre, "AXFullScreen" as CFString,
+                actif ? kCFBooleanTrue : kCFBooleanFalse
+            )
+            if erreur == .success {
+                rangees.append(client.name)
+            } else {
+                ecartees.append(Ecartee(nom: client.name, raison: client.dormant
+                    ? "sur un autre bureau — bascule dessus puis relance"
+                    : "le client a refusé (AXError \(erreur.rawValue))"))
+            }
+        }
+
+        if rangees.isEmpty { NSSound.beep() }
+        dernierRapport = Rapport(date: Date(), titre: titre, ecran: "—",
+                                 rangees: rangees, ecartees: ecartees)
     }
 
     // MARK: - Écran

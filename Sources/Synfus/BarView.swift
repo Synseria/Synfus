@@ -79,6 +79,45 @@ private struct ModeButton: View {
     }
 }
 
+/// Le menu de rangement des fenêtres, au gabarit des bascules de mode. Un menu
+/// et non une bascule : il propose des gestes, il ne porte pas d'état.
+private struct ArrangeMenuButton: View {
+    @State private var survole = false
+
+    var body: some View {
+        Menu {
+            ForEach(Disposition.allCases) { disposition in
+                Button {
+                    WindowArranger.shared.appliquer(disposition)
+                } label: {
+                    Label(disposition.label, systemImage: disposition.symbolName)
+                }
+            }
+            Divider()
+            Button("Tout en plein écran") { WindowArranger.shared.toutEnPleinEcran() }
+            Button("Tout sortir du plein écran") { WindowArranger.shared.toutSortirDuPleinEcran() }
+            Divider()
+            Button("Lancer la session") { WindowManager.shared.lancerSession() }
+        } label: {
+            Image(systemName: "rectangle.3.group")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Color.secondary)
+                .frame(width: 22, height: 22)
+                .background(
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .fill(survole ? Color.primary.opacity(0.08) : Color.clear)
+                )
+                .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .onHover { survole = $0 }
+        .animation(.easeOut(duration: 0.15), value: survole)
+        .help("Ranger les fenêtres — dispositions, plein écran, lancer la session")
+    }
+}
+
 /// L'engrenage d'accès aux réglages. Plus discret que les bascules — pas de
 /// fond, contour seulement — : c'est une porte, pas un état.
 private struct GearButton: View {
@@ -202,9 +241,17 @@ struct BarView: View {
                 chip(index: index, client: client)
             }
             separator
+            arrangeMenu
             if prefs.advanceOnClick { armToggle }
             autoFocusToggle
         }
+    }
+
+    /// Le rangement, sous la main : dispositions et bascules de plein écran,
+    /// là où on les cherche — cachés dans le seul clic droit, ils étaient
+    /// introuvables.
+    private var arrangeMenu: some View {
+        ArrangeMenuButton()
     }
 
     /// Bascule du mode « enchaîner » : tant qu'il est actif, un clic **nu** sur
@@ -451,7 +498,11 @@ struct BarView: View {
                     Label(disposition.label, systemImage: disposition.symbolName)
                 }
             }
+            Divider()
+            Button("Tout en plein écran") { WindowArranger.shared.toutEnPleinEcran() }
+            Button("Tout sortir du plein écran") { WindowArranger.shared.toutSortirDuPleinEcran() }
         }
+        Button("Lancer la session") { manager.lancerSession() }
         Divider()
         Button("Rafraîchir") { manager.refresh() }
         Divider()

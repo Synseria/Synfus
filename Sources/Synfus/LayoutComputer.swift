@@ -10,6 +10,10 @@ enum Disposition: String, Codable, CaseIterable, Identifiable {
     case mosaique
     /// Le perso au premier plan en grand, les autres en colonne de vignettes.
     case principale
+    /// Toutes les fenêtres plein cadre, empilées : chacun occupe tout l'écran,
+    /// la barre et les raccourcis font tourner la pile. Le grand écran du
+    /// multi-compte, sans passer par les espaces plein écran.
+    case empilee
 
     var id: String { rawValue }
 
@@ -18,6 +22,7 @@ enum Disposition: String, Codable, CaseIterable, Identifiable {
         case .coteACote: "Côte à côte"
         case .mosaique: "Mosaïque"
         case .principale: "Un grand + vignettes"
+        case .empilee: "Plein cadre, empilés"
         }
     }
 
@@ -26,6 +31,7 @@ enum Disposition: String, Codable, CaseIterable, Identifiable {
         case .coteACote: "rectangle.split.2x1"
         case .mosaique: "square.grid.2x2"
         case .principale: "rectangle.leadinghalf.inset.filled"
+        case .empilee: "square.stack"
         }
     }
 }
@@ -67,6 +73,11 @@ enum LayoutComputer {
         guard nombre > 1 else { return [zone] }
 
         switch disposition {
+        // La seule disposition où les cadres se recouvrent, par définition —
+        // tout le monde reçoit la zone entière.
+        case .empilee:
+            return Array(repeating: zone, count: nombre)
+
         case .coteACote:
             let largeur = (zone.width - CGFloat(nombre - 1) * espacement) / CGFloat(nombre)
             return (0..<nombre).map { index in
