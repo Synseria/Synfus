@@ -68,6 +68,12 @@ final class WindowManager: ObservableObject {
     func start() {
         accessibilityGranted = AXIsProcessTrusted()
 
+        // Borne l'attente de tous les appels AX du processus : un client gelé
+        // ne répond jamais, et sans cette borne chaque inventaire resterait
+        // suspendu plusieurs secondes sur lui — barre comprise. Les clients
+        // simplement occupés tiennent bien en deçà de la seconde.
+        AXUIElementSetMessagingTimeout(AXUIElementCreateSystemWide(), 1.0)
+
         // Les versions du client et les homonymes suffixés ont pu s'enregistrer
         // avant que le filtre n'existe : ils encombreraient la liste indéfiniment.
         prefs.purgeOrder(keeping: Self.isPersistableName)
@@ -241,11 +247,39 @@ final class WindowManager: ObservableObject {
         // de la détection d'attention.
         remember(found)
         forgetDeadProcesses(livePIDs: livePIDs)
+        let silentPIDs = livePIDs.subtracting(talkativePIDs)
         found = Self.withRemembered(
             found: found,
             remembered: rememberedClients,
-            silentPIDs: livePIDs.subtracting(talkativePIDs)
+            silentPIDs: silentPIDs
         )
+
+        // Un client déjà sur un espace inactif au démarrage de Synfus n'a
+        // jamais livré son titre à l'Accessibilité. Quand l'enregistrement de
+        // l'écran est accordé (celui des aperçus), CGWindowList voit à travers
+        // les espaces et lève cette limite ; la lecture n'a lieu que pour les
+        // pids sans aucune mémoire, puis la mémoire prend le relais — le tour
+        // de toutes les fenêtres du système n'est pas payé à chaque inventaire.
+        let unknownPIDs = silentPIDs.subtracting(Set(found.map(\.pid)))
+        if !unknownPIDs.isEmpty {
+            let discovered = Self.discoveredAcrossSpaces(
+                titles: CrossSpaceTitles.read(pids: unknownPIDs),
+                existingNames: Set(found.map(\.name)),
+                appElement: AXUIElementCreateApplication
+            )
+            found += discovered
+            remember(discovered)
+        }
+
+        // Un processus vivant, sans fenêtre et muet à l'Accessibilité est un
+        // client gelé à la fermeture : le veilleur l'achève, que la fermeture
+        // soit passée par Synfus ou par le jeu lui-même.
+        if prefs.killFrozenClients {
+            let names = Dictionary(uniqueKeysWithValues: rememberedClients.compactMap {
+                pid, list in list.first.map { (pid, $0.name) }
+            })
+            FreezeWatcher.shared.inspect(silentPIDs: silentPIDs, names: names)
+        }
 
         // Seuls les vrais noms de persos entrent dans la liste ; les clients au
         // login et les homonymes suffixés restent dans la barre sans s'y inscrire.
@@ -297,6 +331,40 @@ final class WindowManager: ObservableObject {
             .flatMap(\.value)
             .map { $0.remembered() }
         return found + dormant
+    }
+
+    /// Persos découverts à travers les espaces par CGWindowList : les pids
+    /// vivants, muets pour l'Accessibilité et sans aucune mémoire. Pure, comme
+    /// `withRemembered` : c'est une règle d'affichage, elle se teste.
+    ///
+    /// L'élément AX fourni est celui de l'application, pas d'une fenêtre — pour
+    /// un perso dormant il ne sert à rien, l'activation du processus fait tout.
+    /// Les homonymes sont suffixés comme ceux de l'inventaire, en comptant les
+    /// noms déjà pris.
+    static func discoveredAcrossSpaces(
+        titles: [pid_t: String],
+        existingNames: Set<String>,
+        appElement: (pid_t) -> AXUIElement
+    ) -> [DofusClient] {
+        var taken = existingNames
+        // Tri par pid : l'ordre d'un dictionnaire changerait d'un inventaire à
+        // l'autre, et les suffixes d'homonymes avec lui.
+        return titles.sorted { $0.key < $1.key }.compactMap { pid, title in
+            guard isCharacterWindow(title: title) else { return nil }
+            let base = characterName(fromTitle: title)
+            var name = base
+            var seen = 1
+            while taken.contains(name) {
+                seen += 1
+                name = "\(base) (\(seen))"
+            }
+            taken.insert(name)
+            return DofusClient(
+                pid: pid, slotKey: "\(pid)#cg", axWindow: appElement(pid),
+                rawTitle: title, name: name,
+                characterClass: characterClass(fromTitle: title), dormant: true
+            )
+        }
     }
 
     /// Oublie les clients fermés — leur pid ne reviendra pas.
@@ -467,9 +535,10 @@ final class WindowManager: ObservableObject {
     }
 
     /// Délai de grâce entre la demande polie de fermeture et le coup de grâce.
-    /// Assez long pour laisser un client sain écrire sa configuration et
-    /// s'éteindre, assez court pour que le geste reste un seul geste.
-    private static let closeGracePeriod: TimeInterval = 6
+    /// Mesuré à l'usage : un client sain s'éteint bien avant 2 s, et un client
+    /// gelé ne changera pas d'avis — attendre 6 s ne faisait que ralentir le
+    /// geste.
+    private static let closeGracePeriod: TimeInterval = 2
 
     /// Ferme un client — poliment d'abord, de force s'il ne répond plus.
     ///
