@@ -34,6 +34,7 @@ struct SettingsView: View {
     @ObservedObject private var icons = ClassIconStore.shared
     @ObservedObject private var previews = WindowPreviewService.shared
     @ObservedObject private var clicks = ClickAdvanceWatcher.shared
+    @ObservedObject private var arranger = WindowArranger.shared
     @State private var launchAtLogin = LaunchAtLogin.isEnabled
     @State private var section: SettingsSection = .raccourcis
 
@@ -146,6 +147,23 @@ struct SettingsView: View {
                         set: { prefs.cyclePrevious = $0; rebind() }
                     ))
                 }
+            }
+
+            Section("Ranger les fenêtres") {
+                HStack {
+                    Text("Appliquer la dernière disposition")
+                    Spacer()
+                    ShortcutRecorder(hotKey: Binding(
+                        get: { prefs.arrangeHotKey },
+                        set: { prefs.arrangeHotKey = $0; rebind() }
+                    ))
+                }
+                Text("Les dispositions — côte à côte, mosaïque, un grand + vignettes — "
+                     + "s'appliquent depuis le menu de la barre de menus ou le clic droit "
+                     + "sur la barre. Le raccourci rejoue la dernière employée. Sans "
+                     + "valeur par défaut : à toi de choisir la combinaison.")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
             }
 
             Section("Enchaîner les persos") {
@@ -660,6 +678,9 @@ struct SettingsView: View {
             }
 
             Divider().padding(.vertical, 4)
+            arrangementSection
+
+            Divider().padding(.vertical, 4)
             attentionProbeSection
 
             Spacer()
@@ -672,6 +693,44 @@ struct SettingsView: View {
             }
         }
         .padding(14)
+    }
+
+    /// Ce que le dernier rangement a réellement fait. Il repose sur des
+    /// hypothèses — l'écran cible, la bonne volonté du client — et laisse des
+    /// fenêtres de côté par principe : tout cela doit se lire quelque part.
+    private var arrangementSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Dernier rangement des fenêtres")
+                .font(.system(size: 12, weight: .semibold))
+
+            if let rapport = arranger.dernierRapport {
+                Text("\(rapport.disposition.label) — écran « \(rapport.ecran) » — "
+                     + rapport.date.formatted(date: .omitted, time: .standard))
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                if !rapport.rangees.isEmpty {
+                    Text("Rangés : \(rapport.rangees.joined(separator: ", "))")
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                }
+                ForEach(rapport.ecartees) { ecartee in
+                    Text("Écarté : \(ecartee.nom) — \(ecartee.raison)")
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundStyle(.orange)
+                }
+            } else {
+                Text("Aucun rangement pour l'instant — menu « Ranger les fenêtres » "
+                     + "de la barre de menus, ou clic droit sur la barre.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+
+            Text("Une fenêtre en plein écran n'est jamais déplacée, et un perso d'un "
+                 + "autre bureau est hors de portée de l'Accessibilité — bascule dessus, "
+                 + "puis relance le rangement.")
+                .font(.system(size: 10))
+                .foregroundStyle(.tertiary)
+        }
     }
 
     private var attentionProbeSection: some View {

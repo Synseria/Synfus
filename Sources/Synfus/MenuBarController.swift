@@ -73,9 +73,43 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         let barTitle = Preferences.shared.barVisible ? "Masquer la barre" : "Afficher la barre"
         add(to: menu, title: barTitle, action: #selector(toggleBar))
         add(to: menu, title: "Recentrer la barre", action: #selector(recenterBar))
+        menu.addItem(arrangeSubmenu(enabled: manager.accessibilityGranted
+                                             && !manager.clients.isEmpty))
         add(to: menu, title: "Réglages…", action: #selector(openSettings))
         menu.addItem(.separator())
+        // Reconstruit à chaque ouverture : l'item n'apparaît que s'il y a
+        // quelqu'un à fermer, inutile de jouer avec `isEnabled`.
+        if !manager.clients.isEmpty {
+            add(to: menu, title: "Fermer tous les persos", action: #selector(closeAllClients))
+        }
         add(to: menu, title: "Quitter Synfus", action: #selector(quit))
+    }
+
+    /// Sous-menu « Ranger les fenêtres » : une entrée par disposition. Le
+    /// raccourci, s'il existe, est montré sur la dernière disposition employée —
+    /// c'est elle qu'il rejoue.
+    private func arrangeSubmenu(enabled: Bool) -> NSMenuItem {
+        let parent = NSMenuItem(title: "Ranger les fenêtres", action: nil, keyEquivalent: "")
+        let submenu = NSMenu()
+        let prefs = Preferences.shared
+        for (index, disposition) in Disposition.allCases.enumerated() {
+            let item = NSMenuItem(title: disposition.label,
+                                  action: enabled ? #selector(arrange(_:)) : nil,
+                                  keyEquivalent: "")
+            item.target = self
+            item.tag = index
+            item.image = NSImage(systemSymbolName: disposition.symbolName,
+                                 accessibilityDescription: disposition.label)
+            if let hotKey = prefs.arrangeHotKey,
+               disposition == prefs.lastArrangement {
+                item.attributedTitle = attributed(name: disposition.label,
+                                                  shortcut: hotKey.displayString)
+            }
+            submenu.addItem(item)
+        }
+        parent.submenu = submenu
+        parent.isEnabled = enabled
+        return parent
     }
 
     @discardableResult
@@ -105,6 +139,14 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
     @objc private func focusClient(_ sender: NSMenuItem) {
         WindowManager.shared.focus(slot: sender.tag)
+    }
+
+    @objc private func arrange(_ sender: NSMenuItem) {
+        WindowArranger.shared.appliquer(Disposition.allCases[sender.tag])
+    }
+
+    @objc private func closeAllClients() {
+        WindowManager.shared.closeAll()
     }
 
     @objc private func toggleBar() {

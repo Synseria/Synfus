@@ -102,6 +102,15 @@ final class Preferences: ObservableObject {
     /// (`MenuBarController.refreshIcon()`) : les préférences ne pilotent pas l'UI.
     @Published var menuBarIcon: MenuBarIcon = .logo { didSet { save() } }
 
+    /// Dernière disposition de rangement appliquée — celle que rejoue le
+    /// raccourci. `nil` = jamais rangé.
+    @Published var lastArrangement: Disposition? = nil { didSet { save() } }
+
+    /// Raccourci de rangement des fenêtres. Sans défaut, comme `toggleBar` :
+    /// une combinaison réservée au système est une combinaison prise à
+    /// l'utilisateur.
+    @Published var arrangeHotKey: HotKey? { didSet { save() } }
+
     /// Nombre de slots exposés (et donc de raccourcis potentiels).
     ///
     /// Le garde-fou `clamping` n'est pas décoratif : `@Published` remplace la
@@ -212,6 +221,8 @@ final class Preferences: ObservableObject {
         var previewHotKey: HotKey?
         var advanceOnClick: Bool?
         var advanceArmHotKey: HotKey?
+        var lastArrangement: Disposition?
+        var arrangeHotKey: HotKey?
         /// Génération du jeu de raccourcis par défaut appliqué à cette
         /// sauvegarde. Absente des sauvegardes d'avant la refonte, d'où le repli
         /// sur 1 à la lecture.
@@ -331,6 +342,8 @@ final class Preferences: ObservableObject {
             previewHotKey: previewHotKey,
             advanceOnClick: advanceOnClick,
             advanceArmHotKey: advanceArmHotKey,
+            lastArrangement: lastArrangement,
+            arrangeHotKey: arrangeHotKey,
             defaultsVersion: Self.defaultsVersion
         )
         if let data = try? JSONEncoder().encode(stored) {
@@ -377,6 +390,8 @@ final class Preferences: ObservableObject {
         previewHotKey = stored.previewHotKey
         advanceOnClick = stored.advanceOnClick ?? false
         advanceArmHotKey = stored.advanceArmHotKey
+        lastArrangement = stored.lastArrangement
+        arrangeHotKey = stored.arrangeHotKey
         if let x = stored.barOriginX, let y = stored.barOriginY {
             barOrigin = CGPoint(x: x, y: y)
         }
