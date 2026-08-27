@@ -41,6 +41,65 @@ private struct BarBackground: ViewModifier {
     }
 }
 
+/// Gabarit commun des bascules de mode — flèche d'enchaînement, éclair du
+/// passage automatique. Au repos le bouton est nu : le fond n'apparaît qu'au
+/// survol ou quand le mode est actif, la barre ne montre plus une rangée de
+/// carrés gris en permanence.
+private struct ModeButton: View {
+    let icone: String
+    let teinte: Color
+    let actif: Bool
+    let aide: String
+    let action: () -> Void
+    @State private var survole = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: icone)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(actif ? teinte : Color.secondary)
+                .contentTransition(.symbolEffect(.replace))
+                .frame(width: 22, height: 22)
+                .background(
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .fill(fond)
+                )
+                .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .onHover { survole = $0 }
+        .animation(.easeOut(duration: 0.15), value: survole)
+        .animation(.easeOut(duration: 0.15), value: actif)
+        .help(aide)
+    }
+
+    private var fond: Color {
+        if actif { return teinte.opacity(survole ? 0.22 : 0.18) }
+        return survole ? Color.primary.opacity(0.08) : .clear
+    }
+}
+
+/// L'engrenage d'accès aux réglages. Plus discret que les bascules — pas de
+/// fond, contour seulement — : c'est une porte, pas un état.
+private struct GearButton: View {
+    @State private var survole = false
+
+    var body: some View {
+        Button {
+            SettingsWindowController.shared.show()
+        } label: {
+            Image(systemName: "gearshape")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(survole ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tertiary))
+                .frame(width: 22, height: 22)
+                .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .onHover { survole = $0 }
+        .help("Réglages de Synfus")
+    }
+}
+
 struct BarView: View {
     @ObservedObject private var manager = WindowManager.shared
     @ObservedObject private var prefs = Preferences.shared
@@ -59,11 +118,12 @@ struct BarView: View {
     private static let barSpace = "synfusBar"
 
     var body: some View {
-        HStack(spacing: 3) {
+        HStack(spacing: 4) {
             handle
             content
+            settingsButton
         }
-        .padding(.horizontal, 5)
+        .padding(.horizontal, 6)
         .padding(.vertical, 4)
         .coordinateSpace(name: Self.barSpace)
         .background(WindowDragArea())   // tout le fond libre déplace la barre
@@ -78,17 +138,44 @@ struct BarView: View {
         .onChange(of: manager.clients) { _, clients in pruneChipFrames(clients) }
     }
 
-    /// Poignée de déplacement, et signature de l'app sur l'overlay. Le curseur
-    /// en main ouverte et l'infobulle portent l'affordance que les trois traits
-    /// donnaient auparavant ; la zone sensible reste la même.
+    /// Poignée de déplacement : le grip de points, affordance universelle du
+    /// « saisis-moi ». Le glyphe de la marque l'a occupée un temps, mais il ne
+    /// disait rien du déplacement — la marque vit dans la barre de menus et
+    /// l'icône du bundle, un overlay de jeu reste un outil. La zone sensible,
+    /// le curseur en main ouverte et l'infobulle sont inchangés.
     private var handle: some View {
-        SynfusGlyphView()
-            .foregroundStyle(.tertiary)
-            .frame(height: 15)
-            .frame(width: 15, height: 26)
-            .contentShape(Rectangle())
-            .background(WindowDragArea())
-            .help("Glisser pour déplacer la barre")
+        HStack(spacing: 3) {
+            ForEach(0..<2, id: \.self) { _ in
+                VStack(spacing: 3) {
+                    ForEach(0..<3, id: \.self) { _ in
+                        Circle()
+                            .fill(Color.primary.opacity(0.28))
+                            .frame(width: 2.5, height: 2.5)
+                    }
+                }
+            }
+        }
+        .frame(width: 15, height: 26)
+        .contentShape(Rectangle())
+        .background(WindowDragArea())
+        .help("Glisser pour déplacer la barre")
+    }
+
+    /// Trait qui sépare le territoire des persos de celui des modes : sans lui,
+    /// les bascules se lisaient comme une pastille de plus.
+    private var separator: some View {
+        Capsule()
+            .fill(Color.primary.opacity(0.15))
+            .frame(width: 1, height: 14)
+            .padding(.horizontal, 2)
+            .allowsHitTesting(false)
+    }
+
+    /// Porte vers les réglages — sans elle, il fallait deviner le clic droit ou
+    /// passer par la barre de menus. Hors du contenu conditionnel : c'est quand
+    /// rien ne marche qu'on cherche les réglages.
+    private var settingsButton: some View {
+        GearButton().padding(.leading, 2)
     }
 
     @ViewBuilder
@@ -114,6 +201,7 @@ struct BarView: View {
             ForEach(Array(manager.clients.enumerated()), id: \.element.id) { index, client in
                 chip(index: index, client: client)
             }
+            separator
             if prefs.advanceOnClick { armToggle }
             autoFocusToggle
         }
@@ -124,25 +212,18 @@ struct BarView: View {
     /// mode qui ne s'éteint pas tout seul — d'où la couleur franche.
     private var armToggle: some View {
         let on = clicks.armed
-        return Button {
+        return ModeButton(
+            icone: on ? "arrow.right.circle.fill" : "arrow.right.circle",
+            teinte: .green,
+            actif: on,
+            aide: on
+                ? "Enchaînement actif — chaque clic sur le jeu passe au perso suivant, "
+                  + "jusqu'à ce que tu le coupes (\(armShortcut))"
+                : "Activer l'enchaînement : chaque clic sur le jeu passera au perso "
+                  + "suivant (\(armShortcut))"
+        ) {
             ClickAdvanceWatcher.shared.toggleArmed()
-        } label: {
-            Image(systemName: on ? "arrow.right.circle.fill" : "arrow.right.circle")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(on ? Color.green : Color.secondary)
-                .frame(width: 22, height: 22)
-                .background(
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(on ? Color.green.opacity(0.18) : Color.primary.opacity(0.05))
-                )
-                .contentShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
         }
-        .buttonStyle(.plain)
-        .help(on
-              ? "Enchaînement actif — chaque clic sur le jeu passe au perso suivant, "
-                + "jusqu'à ce que tu le coupes (\(armShortcut))"
-              : "Activer l'enchaînement : chaque clic sur le jeu passera au perso "
-                + "suivant (\(armShortcut))")
     }
 
     private var armShortcut: String {
@@ -153,23 +234,17 @@ struct BarView: View {
     /// pouvoir l'éteindre sans lâcher le combat des yeux.
     private var autoFocusToggle: some View {
         let on = prefs.attentionAction == .focus
-        return Button {
-            prefs.attentionAction = on ? .highlight : .focus
-        } label: {
-            Image(systemName: on ? "bolt.fill" : "bolt.slash")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(on ? Color.orange : Color.secondary)
-                .frame(width: 22, height: 22)
-                .background(
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(on ? Color.orange.opacity(0.18) : Color.primary.opacity(0.05))
-                )
-                .contentShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        return ModeButton(
+            icone: on ? "bolt.fill" : "bolt.slash",
+            teinte: .orange,
+            actif: on,
+            aide: on
+                ? "Passage automatique activé — Synfus bascule sur le perso dont l'icône rebondit (\(toggleShortcut))"
+                : "Passage automatique désactivé — le perso est seulement signalé (\(toggleShortcut))"
+        ) {
+            let prefs = Preferences.shared
+            prefs.attentionAction = prefs.attentionAction == .focus ? .highlight : .focus
         }
-        .buttonStyle(.plain)
-        .help(on
-              ? "Passage automatique activé — Synfus bascule sur le perso dont l'icône rebondit (\(toggleShortcut))"
-              : "Passage automatique désactivé — le perso est seulement signalé (\(toggleShortcut))")
     }
 
     private var toggleShortcut: String {
@@ -245,13 +320,20 @@ struct BarView: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .strokeBorder(Color.orange, lineWidth: 2)
+                    .strokeBorder(Color.orange, lineWidth: 1.5)
                     .opacity(alerting ? (pulse ? 1 : 0.2) : 0)
             )
             .foregroundStyle(active ? Color.white : Color.primary)
             .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
         .buttonStyle(.plain)
+        // Fermer depuis la barre : le client gèle souvent quand on le quitte
+        // par sa propre fenêtre, et il fallait alors « Forcer à quitter » à la
+        // main. Ici la fermeture escalade toute seule si le client ne répond
+        // plus (cf. `WindowManager.close`).
+        .contextMenu {
+            Button("Fermer « \(client.name) »") { manager.close(client) }
+        }
         .help(tooltip(index: index, client: client))
         // Un perso sur un autre espace reste cliquable, mais on ne le donne pas
         // pour présent : sa vignette et son titre datent de sa dernière visite.
@@ -361,9 +443,20 @@ struct BarView: View {
         Button("Réglages…") { SettingsWindowController.shared.show() }
         Button("Recentrer la barre") { FloatingBarController.shared.recenter() }
         Button("Masquer la barre") { FloatingBarController.shared.toggle() }
+        Menu("Ranger les fenêtres") {
+            ForEach(Disposition.allCases) { disposition in
+                Button {
+                    WindowArranger.shared.appliquer(disposition)
+                } label: {
+                    Label(disposition.label, systemImage: disposition.symbolName)
+                }
+            }
+        }
         Divider()
         Button("Rafraîchir") { manager.refresh() }
         Divider()
+        Button("Fermer tous les persos") { manager.closeAll() }
+            .disabled(manager.clients.isEmpty)
         Button("Quitter Synfus") { NSApp.terminate(nil) }
     }
 }
