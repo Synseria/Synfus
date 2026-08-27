@@ -301,6 +301,40 @@ en est. Une coche par perso visité n'ajoutait qu'un clignotement de plus dans u
 mode où l'on clique en continu. Le seul témoin est la flèche de la barre, qui
 dit si le mode est actif — et il le faut, puisqu'il ne s'éteint pas tout seul.
 
+### Fermer les clients
+
+Le client gèle systématiquement à la fermeture chez certains joueurs, qui
+finissaient chaque session dans « Forcer à quitter ». `WindowManager.close`
+automatise l'escalade : `terminate()` (Quit Apple Event — un client gelé
+l'ignore), puis `forceTerminate()` si le processus est toujours là après 6 s.
+C'est une opération de **processus**, pas une saisie — la règle « Synfus n'émet
+aucun évènement » reste entière. Points d'entrée : clic droit sur une pastille
+(« Fermer “Nom” »), « Fermer tous les persos » dans le menu contextuel de la
+barre et la barre de menus.
+
+### Rangement des fenêtres
+
+[WindowArranger.swift](Sources/Synfus/WindowArranger.swift) applique une
+disposition — côte à côte, mosaïque, un grand + vignettes — aux fenêtres des
+clients en posant `kAXPosition`/`kAXSize`, et rien d'autre : la règle « aucun
+évènement synthétisé » vaut ici aussi. Le calcul des cadres est isolé dans
+[LayoutComputer.swift](Sources/Synfus/LayoutComputer.swift), une logique pure
+(zone + nombre → cadres, repère AX y vers le bas) testée dans
+[LayoutComputerTests.swift](Tests/SynfusTests/LayoutComputerTests.swift) — la
+conversion Cocoa → AX (`zoneAX`) comprise, multi-écrans inclus.
+
+Les exclusions sont des décisions : un perso `dormant` (élément AX périmé) et
+une fenêtre en plein écran (lue sur l'attribut littéral `"AXFullScreen"` — on ne
+sort jamais personne du plein écran d'autorité) sont écartés, avec leur raison
+dans le `Rapport` publié, affiché dans l'onglet Diagnostic. Tout est ramené sur
+**un seul** écran — celui du perso au premier plan — et la pose se fait
+**taille → position → taille** : certains clients plafonnent la taille tant que
+la fenêtre chevauche son ancien écran.
+
+Points d'entrée : sous-menu « Ranger les fenêtres » (barre de menus et clic
+droit sur la barre), et un raccourci optionnel **sans défaut** (modèle
+`toggleBar`) qui rejoue `Preferences.lastArrangement`.
+
 ### Préférences
 
 [Preferences.swift](Sources/Synfus/Preferences.swift) sérialise l'ensemble en
@@ -423,16 +457,24 @@ embarqués, et conserver la mention « Certaines illustrations sont la propriét
 d'Ankama Studio et de Dofus — Tous droits réservés », qui est la pratique
 constante des sites communautaires tolérés.
 
-La marque — un œuf cerné, abritant trois fenêtres — est décrite **une seule
-fois**, dans [SynfusMark.swift](Sources/Synfus/SynfusMark.swift) : un moteur pur
-CoreGraphics, sans AppKit ni SwiftUI, pour rester compilable hors de l'app. Cette
-description sert trois usages :
+La marque — **la Couvée** : trois œufs de dragon, l'émeraude écaillé devant, la
+turquoise mouchetée et le pourpre ondé qui dépassent derrière ; un œuf par
+compte, le perso actif au premier plan — est décrite **une seule fois**, dans
+[SynfusMark.swift](Sources/Synfus/SynfusMark.swift) : un moteur pur
+CoreGraphics, sans AppKit ni SwiftUI, pour rester compilable hors de l'app. Le
+dessin suit la grammaire visuelle d'Ankama (contour unique sombre, volume par
+dégradé, détails ton sur ton, brillance en croissant) sans reprendre aucun
+asset du jeu — chaque tracé est original, la règle de l'article 13.2 reste
+entière. Cette description sert deux usages :
 
 | Usage | Par |
 | --- | --- |
 | Icône du bundle (`.icns`, `.png`) | [Tools/AppIconExport.swift](Tools/AppIconExport.swift) |
 | Symbole de la barre de menus | `SynfusGlyph.menuBarImage()` |
-| Poignée de la barre flottante | `SynfusGlyphView` |
+
+La poignée de la barre flottante a porté le glyphe un temps ; elle est redevenue
+un grip de points — le glyphe n'y disait rien du déplacement. `SynfusGlyphView`,
+la version SwiftUI du dessin, reste disponible pour le prochain usage.
 
 ```sh
 ./Tools/generate-app-icons.sh   # régénère Resources/Synfus.{icns,png}
@@ -444,18 +486,22 @@ PNG à la main — modifier la marque veut dire modifier `SynfusMark` puis relan
 le script. C'est aussi pourquoi `SynfusMark` ne doit importer que CoreGraphics et
 Foundation : un `import AppKit` casserait la compilation du générateur.
 
-Deux réglages y gouvernent le cadrage : `defaultFillRatio` (0,90 — la part de la
-tuile qu'occupe l'œuf) et `roundedInsetRatio` (la marge Apple, 824/1024). Le
-repère de description est celui de la maquette, **280 × 280, y vers le bas**.
+Le repère de description est **256 × 256, y vers le bas** — celui de la maquette
+validée sur la planche d'exploration (artifact « L'Œuf de Synfus »).
+`roundedInsetRatio` porte la marge Apple (824/1024), `eggAspect` fixe la
+silhouette (0,772 — entre l'œuf de poule et le galet aplati, tous deux essayés
+et rejetés), et `texturesBelow` (96 px) abandonne les peaux — écailles,
+mouchetures, ondes — aux tailles où leurs traits ne survivraient pas.
 
-[Resources/Synfus.svg](Resources/Synfus.svg) est la maquette d'origine, gardée
-comme référence. Elle n'est **plus la source** et diverge du rendu : son effet
-néon (`feGaussianBlur`) a été retiré et son œuf agrandi.
+[Resources/Synfus.svg](Resources/Synfus.svg) est la maquette du **logo
+précédent** (l'œuf filaire aux trois fenêtres), gardée comme archive : elle ne
+correspond plus au rendu.
 
-`SynfusGlyph` s'écarte de la marque sur deux points, imposés par la taille de
-lecture : monochrome (macOS teint lui-même les images *template*) et fenêtres
-pleines à trait épaissi — sous 20 px, le contour de la maquette tombe sous le
-pixel.
+`SynfusGlyph` réduit la couvée à sa silhouette : les trois œufs en aplat,
+l'œuf de tête détouré par un mince **jour transparent** — dans une image
+*template*, seule l'opacité compte, le détourage passe par un effacement de
+l'alpha (`.clear` / `.destinationOut`), jamais par un trait de couleur. Aucune
+peau n'y survit : la matière reste sur l'icône.
 
 ## Publication
 
