@@ -272,6 +272,21 @@ struct PreferencesTests {
         // L'aperçu réclame l'autorisation d'enregistrement de l'écran : il ne
         // s'active jamais tout seul à la faveur d'une mise à jour.
         #expect(prefs.showPreviewOnHover == false)
+        // Le rangement des fenêtres : pas de raccourci confisqué, et rien à
+        // rejouer tant qu'aucune disposition n'a été choisie.
+        #expect(prefs.arrangeHotKey == nil)
+        #expect(prefs.lastArrangement == nil)
+    }
+
+    @Test("Le rangement des fenêtres se relit après un redémarrage")
+    func rangementPersiste() {
+        let (prefs, store) = neuves()
+        prefs.lastArrangement = .principale
+        prefs.arrangeHotKey = HotKey(keyCode: 40, modifiers: UInt32(cmdKey))
+
+        let relues = Preferences.forTesting(store: store)
+        #expect(relues.lastArrangement == .principale)
+        #expect(relues.arrangeHotKey == HotKey(keyCode: 40, modifiers: UInt32(cmdKey)))
     }
 
     @Test("Les réglages d'aperçu se relisent après un redémarrage")
