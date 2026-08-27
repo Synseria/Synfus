@@ -120,4 +120,50 @@ struct RememberedClientsTests {
         #expect(resultat.map(\.slotKey) == ["10#0", "10#1"])
         #expect(resultat.allSatisfy { $0.dormant })
     }
+
+    // MARK: - Découverte à travers les espaces (CGWindowList)
+
+    private func decouverts(_ titles: [pid_t: String],
+                            existants: Set<String> = []) -> [DofusClient] {
+        WindowManager.discoveredAcrossSpaces(
+            titles: titles,
+            existingNames: existants,
+            appElement: AXUIElementCreateApplication
+        )
+    }
+
+    @Test("Un titre de perso sur un pid inconnu devient un dormant complet")
+    func decouverteSimple() {
+        let resultat = decouverts([42: "Aeryn - Feca - 3.6.8.8 - Release"])
+        #expect(resultat.count == 1)
+        #expect(resultat[0].name == "Aeryn")
+        #expect(resultat[0].characterClass == "Feca")
+        #expect(resultat[0].dormant)
+        #expect(resultat[0].slotKey == "42#cg")
+    }
+
+    @Test("Un client au login vu par CGWindowList n'invente pas de perso")
+    func decouverteEcarteLeLogin() {
+        #expect(decouverts([42: "Dofus"]).isEmpty)
+        #expect(decouverts([42: "Dofus 3.6.8.8"]).isEmpty)
+    }
+
+    @Test("Un homonyme découvert est suffixé comme ceux de l'inventaire")
+    func decouverteSuffixeLesHomonymes() {
+        let resultat = decouverts(
+            [42: "Aeryn - Feca - 3.6.8.8 - Release"],
+            existants: ["Aeryn"]
+        )
+        #expect(resultat.map(\.name) == ["Aeryn (2)"])
+    }
+
+    @Test("La découverte est ordonnée par pid, pas par l'ordre du dictionnaire")
+    func decouverteStable() {
+        let titres: [pid_t: String] = [
+            30: "Ciel - Iop - 3.6.8.8 - Release",
+            10: "Aeryn - Feca - 3.6.8.8 - Release",
+            20: "Brok - Sacrieur - 3.6.8.8 - Release",
+        ]
+        #expect(decouverts(titres).map(\.name) == ["Aeryn", "Brok", "Ciel"])
+    }
 }

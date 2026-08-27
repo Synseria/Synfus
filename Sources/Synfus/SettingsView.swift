@@ -35,6 +35,7 @@ struct SettingsView: View {
     @ObservedObject private var previews = WindowPreviewService.shared
     @ObservedObject private var clicks = ClickAdvanceWatcher.shared
     @ObservedObject private var arranger = WindowArranger.shared
+    @ObservedObject private var freezes = FreezeWatcher.shared
     @State private var launchAtLogin = LaunchAtLogin.isEnabled
     @State private var section: SettingsSection = .raccourcis
 
@@ -454,6 +455,19 @@ struct SettingsView: View {
                 .font(.system(size: 11))
             }
             .padding(12)
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 4) {
+                Toggle("Achever les clients gelés à la fermeture", isOn: $prefs.killFrozenClients)
+                Text("Un client qui gèle en se fermant reste en mémoire sans aucune fenêtre. "
+                     + "Synfus le sonde et, muet trois fois de suite (~15 s), le force à "
+                     + "quitter — que la fermeture soit passée par Synfus ou par le jeu. "
+                     + "Les abattages sont consignés dans le Diagnostic.")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(12)
         }
     }
 
@@ -679,6 +693,21 @@ struct SettingsView: View {
 
             Divider().padding(.vertical, 4)
             arrangementSection
+
+            if !freezes.journal.isEmpty {
+                Divider().padding(.vertical, 4)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Clients gelés achevés")
+                        .font(.system(size: 12, weight: .semibold))
+                    ForEach(freezes.journal.suffix(5)) { abattu in
+                        Text("\(abattu.date.formatted(date: .omitted, time: .standard))  "
+                             + "\(abattu.nom) (pid \(abattu.pid)) — sans fenêtre et muet "
+                             + "à trois sondes, forcé à quitter")
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
 
             Divider().padding(.vertical, 4)
             attentionProbeSection

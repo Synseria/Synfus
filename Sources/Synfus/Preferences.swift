@@ -102,6 +102,12 @@ final class Preferences: ObservableObject {
     /// (`MenuBarController.refreshIcon()`) : les préférences ne pilotent pas l'UI.
     @Published var menuBarIcon: MenuBarIcon = .logo { didSet { save() } }
 
+    /// Achever les clients gelés à la fermeture (voir `FreezeWatcher`). Activé
+    /// par défaut : la règle d'abattage est assez stricte pour ne viser que des
+    /// processus déjà morts en pratique, et c'est tout l'intérêt de la fonction
+    /// qu'elle agisse sans qu'on la lui demande à chaque fois.
+    @Published var killFrozenClients: Bool = true { didSet { save() } }
+
     /// Dernière disposition de rangement appliquée — celle que rejoue le
     /// raccourci. `nil` = jamais rangé.
     @Published var lastArrangement: Disposition? = nil { didSet { save() } }
@@ -221,6 +227,7 @@ final class Preferences: ObservableObject {
         var previewHotKey: HotKey?
         var advanceOnClick: Bool?
         var advanceArmHotKey: HotKey?
+        var killFrozenClients: Bool?
         var lastArrangement: Disposition?
         var arrangeHotKey: HotKey?
         /// Génération du jeu de raccourcis par défaut appliqué à cette
@@ -342,6 +349,7 @@ final class Preferences: ObservableObject {
             previewHotKey: previewHotKey,
             advanceOnClick: advanceOnClick,
             advanceArmHotKey: advanceArmHotKey,
+            killFrozenClients: killFrozenClients,
             lastArrangement: lastArrangement,
             arrangeHotKey: arrangeHotKey,
             defaultsVersion: Self.defaultsVersion
@@ -390,6 +398,7 @@ final class Preferences: ObservableObject {
         previewHotKey = stored.previewHotKey
         advanceOnClick = stored.advanceOnClick ?? false
         advanceArmHotKey = stored.advanceArmHotKey
+        killFrozenClients = stored.killFrozenClients ?? true
         lastArrangement = stored.lastArrangement
         arrangeHotKey = stored.arrangeHotKey
         if let x = stored.barOriginX, let y = stored.barOriginY {
