@@ -14,16 +14,22 @@ struct SynfusRGB: Equatable, Sendable {
     }
 }
 
-/// Rendu **vectoriel** de la marque Synfus : l'œuf, et les fenêtres qu'il abrite.
+/// Rendu **vectoriel** de la marque Synfus : la Couvée — trois œufs de dragon,
+/// l'émeraude écaillé devant, la turquoise mouchetée et le pourpre ondé qui
+/// dépassent derrière. Un œuf par compte, le perso actif au premier plan :
+/// c'est la barre de Synfus racontée en œufs.
 ///
-/// Moteur **pur** — entrées → `CGImage`, aucun état. C'est cette description
-/// unique qui sert à l'icône du bundle (via `Tools/AppIconExport.swift`), au
-/// symbole de la barre de menus et à la poignée de la barre flottante
-/// (via `SynfusGlyph`) : il n'y a pas de second dessin à maintenir.
+/// Le dessin suit la grammaire visuelle d'Ankama — contour unique sombre,
+/// volume par dégradé saturé, détails ton sur ton, brillance en croissant —
+/// sans reprendre aucun asset du jeu : chaque tracé est original.
 ///
-/// Repère de description : **280 × 280, y vers le bas**, celui de la maquette
-/// [Resources/Synfus.svg](Resources/Synfus.svg). La mise à l'échelle et le
-/// retournement vers le bitmap CoreGraphics sont faits au moment du rendu.
+/// Moteur **pur** — entrées → `CGImage`, aucun état. Cette description unique
+/// sert à l'icône du bundle (via `Tools/AppIconExport.swift`) et au symbole de
+/// la barre de menus (via `SynfusGlyph`) : il n'y a pas de second dessin à
+/// maintenir.
+///
+/// Repère de description : **256 × 256, y vers le bas** — celui de la maquette
+/// validée sur la planche d'exploration (artifact « L'Œuf de Synfus »).
 enum SynfusMark {
 
     /// Cadrage de la tuile.
@@ -37,71 +43,56 @@ enum SynfusMark {
 
     // MARK: - Repère
 
-    private static let designSide: Double = 280
-    private static let cornerRadius: Double = 62
+    private static let designSide: Double = 256
     /// Marge Apple pour une tuile macOS (spec : 824/1024 du côté).
     private static let roundedInsetRatio: Double = 50.0 / 512.0
 
-    /// Part de la tuile qu'occupe l'œuf, traits compris.
-    ///
-    /// La maquette le posait à 214/280 ≈ 0,76 : à côté des icônes système, qui
-    /// remplissent leur tuile, il paraissait petit et flottant. Le dessin est
-    /// inchangé, seul son cadrage l'est — une homothétie unique autour du centre.
-    static let defaultFillRatio: Double = 0.90
+    /// Aspect d'un œuf : large de 0,772 fois sa hauteur. Un œuf de dragon est
+    /// un bloc — la maquette v2, à 0,81, tombait dans le galet aplati ; la v1,
+    /// à 0,73, restait un œuf de poule.
+    static let eggAspect: Double = 176.0 / 228.0
 
-    /// Rectangle englobant de l'œuf dans la maquette. Tout le reste du dessin
-    /// (fenêtres, reflet) est exprimé en fractions de ce rectangle, si bien que
-    /// changer le cadrage de l'œuf emmène l'intérieur avec lui.
-    private static let eggBox = CGRect(x: 62, y: 34, width: 156, height: 214)
+    /// Épaisseur du contour d'un œuf, en fraction de sa largeur.
+    static let outlineRatio: Double = 12.0 / 176.0
 
-    /// Épaisseur du contour de l'œuf et des fenêtres dans la maquette.
-    private static let strokeWidth: Double = 7
-
-    /// Épaisseur minimale d'un trait, **en pixels du rendu final**.
-    ///
-    /// En dessous, l'antialiasing étale le trait en un gris pâle et irrégulier :
-    /// c'est ce qui donne l'impression d'une texture sale sur le contour aux
-    /// petites définitions. Le trait de la maquette (2,5 % du côté) ne mesure
-    /// que 0,7 px à 32 px de large.
+    /// Épaisseur minimale d'un trait, **en pixels du rendu final** : en deçà,
+    /// l'antialiasing l'étale en gris sale.
     private static let minStrokePixels: Double = 1.7
 
-    /// Plafond de l'épaississement, dans le repère : au-delà, le contour mange
-    /// l'intérieur de l'œuf et la silhouette se referme.
-    private static let maxStrokeWidth: Double = 17
+    /// Sous cette taille de rendu, les peaux (écailles, mouchetures, ondes)
+    /// sont abandonnées : leurs traits ne survivent pas à la réduction. Les
+    /// corps, la brillance et les contours suffisent à porter la marque.
+    private static let texturesBelow: Int = 96
 
-    /// Épaisseur à employer pour un rendu de `side` pixels, traits ramenés à au
-    /// moins `minStrokePixels`. C'est la seule entorse au dessin de la maquette,
-    /// et elle ne joue que sous ~128 px.
-    private static func strokeWidth(pixelSize side: Int, fillRatio: Double, shape: Shape) -> Double {
-        let s = Double(max(1, side))
-        let inset = shape == .rounded ? s * roundedInsetRatio : 0
-        let bounds = eggBox.insetBy(dx: -strokeWidth / 2, dy: -strokeWidth / 2)
-        // Facteur total appliqué au repère : cadrage de la tuile, puis homothétie
-        // qui porte l'œuf à `fillRatio`.
-        let echelle = (s - 2 * inset) / designSide
-            * (fillRatio * designSide / max(bounds.width, bounds.height))
-        guard echelle > 0 else { return strokeWidth }
-        return min(max(strokeWidth, minStrokePixels / echelle), maxStrokeWidth)
-    }
+    // MARK: - Palette (maquette « L'Œuf de Synfus »)
 
-    /// Sous cette taille, les fenêtres sont pleines : leur contour, plus fin
-    /// encore que celui de l'œuf, ne survit pas à la réduction.
-    private static let filledWindowsBelow: Int = 96
+    private static let backgroundInner = SynfusRGB(hex: 0x241D2A)
+    private static let backgroundOuter = SynfusRGB(hex: 0x0F0B13)
+    private static let outline = SynfusRGB(hex: 0x1A1410)
 
-    // MARK: - Palette (maquette Synfus.svg)
+    /// L'émeraude — l'œuf de tête.
+    private static let emeraldTop = SynfusRGB(hex: 0x7ED67F)
+    private static let emeraldMid = SynfusRGB(hex: 0x3FA65C)
+    private static let emeraldLow = SynfusRGB(hex: 0x1C6E38)
+    private static let emeraldScaleDark = SynfusRGB(hex: 0x155A2E)
+    private static let emeraldScaleLight = SynfusRGB(hex: 0x9FE8A6)
+    private static let emeraldBelly = SynfusRGB(hex: 0x124424)
 
-    private static let backgroundInner = SynfusRGB(hex: 0x241A3E)
-    private static let backgroundOuter = SynfusRGB(hex: 0x0D0916)
-    /// Coquille : le dégradé du contour, bleu → violet → rose.
-    private static let shellStart = SynfusRGB(hex: 0x4F7BD9)
-    private static let shellMid = SynfusRGB(hex: 0x7B3FD4)
-    private static let shellEnd = SynfusRGB(hex: 0xD14FA6)
-    /// Intérieur de l'œuf : un creux plus sombre que le fond de la tuile.
-    private static let innerTop = SynfusRGB(hex: 0x2C1F52)
-    private static let innerMid = SynfusRGB(hex: 0x171029)
-    private static let innerEdge = SynfusRGB(hex: 0x0F0A1C)
-    private static let highlight = SynfusRGB(hex: 0x8F7BFF)
-    private static let windowColor = SynfusRGB(hex: 0xE6D9FF)
+    /// La turquoise, mouchetée.
+    private static let turquoiseTop = SynfusRGB(hex: 0x58C4D4)
+    private static let turquoiseLow = SynfusRGB(hex: 0x16758F)
+    private static let turquoiseSpot = SynfusRGB(hex: 0x0C556C)
+    private static let turquoiseSpotCore = SynfusRGB(hex: 0x6FD4E2)
+    private static let turquoiseBelly = SynfusRGB(hex: 0x0B4A5E)
+
+    /// Le pourpre, parcouru d'ondes.
+    private static let crimsonTop = SynfusRGB(hex: 0xE86A63)
+    private static let crimsonLow = SynfusRGB(hex: 0xA31B33)
+    private static let crimsonWaveDark = SynfusRGB(hex: 0x7F1029)
+    private static let crimsonWaveLight = SynfusRGB(hex: 0xFF9D86)
+    private static let crimsonBelly = SynfusRGB(hex: 0x6D0D24)
+
+    private static let highlight = SynfusRGB(hex: 0xFFFFFF)
 
     // MARK: - Géométrie
 
@@ -125,51 +116,43 @@ enum SynfusMark {
         return path
     }
 
-    /// Contour de l'œuf, tracé dans `rect` : pointe resserrée en haut, base
-    /// pleine. Points de contrôle normalisés depuis la maquette.
-    static func egg(in rect: CGRect) -> CGPath {
+    /// L'œuf de dragon, tracé dans `rect` : pointe resserrée et haute, ventre
+    /// très large sous la mi-hauteur, assise lourde. Points de contrôle
+    /// normalisés depuis la maquette validée.
+    static func dragonEgg(in rect: CGRect) -> CGPath {
         func p(_ x: Double, _ y: Double) -> CGPoint {
             CGPoint(x: rect.minX + x * rect.width, y: rect.minY + y * rect.height)
         }
         let path = CGMutablePath()
         path.move(to: p(0.500, 0.000))
-        path.addCurve(to: p(0.000, 0.579), control1: p(0.218, 0.000), control2: p(0.000, 0.290))
-        path.addCurve(to: p(0.500, 1.000), control1: p(0.000, 0.841), control2: p(0.224, 1.000))
-        path.addCurve(to: p(1.000, 0.579), control1: p(0.776, 1.000), control2: p(1.000, 0.841))
-        path.addCurve(to: p(0.500, 0.000), control1: p(1.000, 0.290), control2: p(0.782, 0.000))
+        path.addCurve(to: p(0.000, 0.605), control1: p(0.273, 0.018), control2: p(0.000, 0.246))
+        path.addCurve(to: p(0.500, 1.000), control1: p(0.000, 0.895), control2: p(0.216, 1.000))
+        path.addCurve(to: p(1.000, 0.605), control1: p(0.784, 1.000), control2: p(1.000, 0.895))
+        path.addCurve(to: p(0.500, 0.000), control1: p(1.000, 0.246), control2: p(0.727, 0.018))
         path.closeSubpath()
         return path
     }
 
-    /// Une fenêtre du motif intérieur.
-    struct Window {
-        /// Position et taille, en fractions du rectangle de l'œuf.
-        let x, y, width, height, radius: Double
-        /// Pleine, ou seulement cernée comme dans la maquette.
-        let filled: Bool
+    /// Cadre d'un œuf de la couvée : `center` et `width` dans le repère de la
+    /// tuile, la hauteur suit l'aspect.
+    private static func eggRect(center: CGPoint, width: Double) -> CGRect {
+        let height = width / eggAspect
+        return CGRect(x: center.x - width / 2, y: center.y - height / 2,
+                      width: width, height: height)
     }
 
-    /// Deux fenêtres empilées à gauche, une haute à droite : le motif de la barre
-    /// flottante, plusieurs clients côte à côte.
-    static let windows: [Window] = [
-        Window(x: 0.218, y: 0.393, width: 0.244, height: 0.121, radius: 0.038, filled: false),
-        Window(x: 0.218, y: 0.570, width: 0.244, height: 0.084, radius: 0.038, filled: true),
-        Window(x: 0.551, y: 0.393, width: 0.244, height: 0.262, radius: 0.051, filled: false),
-    ]
-
-    static func rect(of window: Window, in rect: CGRect) -> CGRect {
-        CGRect(x: rect.minX + window.x * rect.width,
-               y: rect.minY + window.y * rect.height,
-               width: window.width * rect.width,
-               height: window.height * rect.height)
-    }
+    /// La composition, recentrée optiquement dans la tuile : la masse visuelle
+    /// (œufs + ombre) s'équilibre autour du centre, l'assise à peine plus
+    /// lourde — un objet posé, pas un objet qui flotte.
+    static var frontEggRect: CGRect { eggRect(center: CGPoint(x: 128, y: 132), width: 137.3) }
+    static var leftEggRect: CGRect { eggRect(center: CGPoint(x: 62, y: 112), width: 88) }
+    static var rightEggRect: CGRect { eggRect(center: CGPoint(x: 194, y: 112), width: 88) }
 
     // MARK: - Rendu
 
     /// Rend l'icône dans un bitmap carré de `pixelSize` pixels de côté.
     /// Renvoie `nil` seulement si CoreGraphics refuse d'allouer le contexte.
-    static func image(pixelSize: Int, shape: Shape,
-                      fillRatio: Double = defaultFillRatio) -> CGImage? {
+    static func image(pixelSize: Int, shape: Shape) -> CGImage? {
         let side = max(1, pixelSize)
         guard let context = CGContext(
             data: nil, width: side, height: side, bitsPerComponent: 8, bytesPerRow: 0,
@@ -189,16 +172,15 @@ enum SynfusMark {
         context.translateBy(x: inset, y: inset)
         context.scaleBy(x: scale, y: scale)
 
-        draw(shape: shape, fillRatio: fillRatio,
-             trait: strokeWidth(pixelSize: side, fillRatio: fillRatio, shape: shape),
-             fenetresPleines: side < filledWindowsBelow,
-             in: context)
+        draw(shape: shape, echelle: scale, textures: side >= texturesBelow, in: context)
         return context.makeImage()
     }
 
-    /// Peint la marque dans le repère de description déjà installé.
-    private static func draw(shape: Shape, fillRatio: Double, trait: Double,
-                             fenetresPleines: Bool, in context: CGContext) {
+    /// Peint la marque dans le repère de description déjà installé. `echelle`
+    /// est le facteur pixels/unité, pour ne jamais laisser un trait descendre
+    /// sous `minStrokePixels` au rendu final.
+    private static func draw(shape: Shape, echelle: Double, textures: Bool,
+                             in context: CGContext) {
         let tile = CGRect(x: 0, y: 0, width: designSide, height: designSide)
 
         // 1. La tuile, et son dégradé radial descendant vers les bords.
@@ -211,75 +193,184 @@ enum SynfusMark {
         radial(in: context,
                colors: [backgroundInner, backgroundOuter], locations: [0, 1],
                center: CGPoint(x: designSide * 0.5, y: designSide * 0.42),
-               radius: designSide * 0.65, aspect: 1)
+               radius: designSide * 0.70)
+
+        // 2. L'ombre portée, sous toute la couvée.
+        context.setFillColor(cgColor(SynfusRGB(hex: 0x000000), alpha: 0.38))
+        context.fillEllipse(in: CGRect(x: 128 - 108, y: 220 - 13, width: 216, height: 26))
+
+        // 3. Les deux œufs du fond, puis l'œuf de tête par-dessus.
+        drawEgg(in: leftEggRect, body: [turquoiseTop, turquoiseLow], bodyStops: [0, 1],
+                belly: turquoiseBelly, glossAlpha: 0.30, echelle: echelle,
+                texture: textures ? .spots : nil, in: context)
+        drawEgg(in: rightEggRect, body: [crimsonTop, crimsonLow], bodyStops: [0, 1],
+                belly: crimsonBelly, glossAlpha: 0.30, echelle: echelle,
+                texture: textures ? .waves : nil, in: context)
+        drawEgg(in: frontEggRect, body: [emeraldTop, emeraldMid, emeraldLow],
+                bodyStops: [0, 0.5, 1], belly: emeraldBelly, glossAlpha: 0.34,
+                echelle: echelle, texture: textures ? .scales : nil, in: context)
+
         context.restoreGState()
+    }
 
-        // 2. L'œuf, cadré dans la tuile par une homothétie autour du centre. La
-        //    tuile vient d'être peinte hors de cette transformation : ses coins
-        //    ne bougent pas.
-        context.saveGState()
-        defer { context.restoreGState() }
+    /// Les trois peaux de la couvée.
+    private enum Texture { case scales, spots, waves }
 
-        let bounds = eggBox.insetBy(dx: -strokeWidth / 2, dy: -strokeWidth / 2)
-        let k = fillRatio * designSide / max(bounds.width, bounds.height)
-        let center = designSide / 2
-        context.translateBy(x: center, y: center)
-        context.scaleBy(x: k, y: k)
-        context.translateBy(x: -bounds.midX, y: -bounds.midY)
+    /// Peint un œuf complet : corps en dégradé, peau, ombre de ventre,
+    /// brillance, contour.
+    private static func drawEgg(in rect: CGRect, body: [SynfusRGB], bodyStops: [CGFloat],
+                                belly: SynfusRGB, glossAlpha: Double, echelle: Double,
+                                texture: Texture?, in context: CGContext) {
+        let egg = dragonEgg(in: rect)
+        func p(_ x: Double, _ y: Double) -> CGPoint {
+            CGPoint(x: rect.minX + x * rect.width, y: rect.minY + y * rect.height)
+        }
+        // Unité de la maquette : les cotes des peaux sont exprimées pour un
+        // œuf de 176 de large, et suivent son échelle.
+        let u = rect.width / 176
+        func trait(_ nominal: Double) -> Double {
+            max(nominal * u, minStrokePixels / echelle)
+        }
 
-        let egg = egg(in: eggBox)
-
-        // Creux intérieur.
+        // Corps : dégradé diagonal haut-gauche → bas-droit.
         context.saveGState()
         context.addPath(egg)
         context.clip()
-        radial(in: context,
-               colors: [innerTop, innerMid, innerEdge], locations: [0, 0.7, 1],
-               center: CGPoint(x: eggBox.midX, y: eggBox.minY + eggBox.height * 0.40),
-               radius: eggBox.width * 0.70, aspect: eggBox.height / eggBox.width)
+        linear(in: context, colors: body, locations: bodyStops,
+               from: p(0, 0), to: p(0.6, 1))
 
-        // Reflet : une ellipse inclinée, très peu opaque, qui donne son galbe à
-        // la coquille sans la faire briller.
-        context.saveGState()
-        let reflet = CGPoint(x: eggBox.minX + eggBox.width * 0.321,
-                             y: eggBox.minY + eggBox.height * 0.243)
-        context.translateBy(x: reflet.x, y: reflet.y)
-        context.rotate(by: -18 * .pi / 180)
-        context.scaleBy(x: 1, y: (eggBox.height * 0.187) / (eggBox.width * 0.167))
-        context.setFillColor(cgColor(highlight, alpha: 0.12))
-        context.addEllipse(in: CGRect(x: -eggBox.width * 0.167, y: -eggBox.width * 0.167,
-                                      width: eggBox.width * 0.334, height: eggBox.width * 0.334))
+        // Peau, ton sur ton.
+        switch texture {
+        case .scales: drawScales(in: rect, trait: trait, in: context)
+        case .spots: drawSpots(in: rect, in: context)
+        case .waves: drawWaves(in: rect, trait: trait, in: context)
+        case nil: break
+        }
+
+        // Ombre du ventre : l'assise de l'œuf s'enfonce dans la pénombre.
+        let shadow = CGMutablePath()
+        shadow.move(to: p(0, 0.754))
+        shadow.addCurve(to: p(1, 0.754), control1: p(0.25, 0.877), control2: p(0.75, 0.877))
+        shadow.addLine(to: p(1, 1.05))
+        shadow.addLine(to: p(0, 1.05))
+        shadow.closeSubpath()
+        context.addPath(shadow)
+        context.setFillColor(cgColor(belly, alpha: 0.55))
         context.fillPath()
         context.restoreGState()
 
-        context.restoreGState()
+        // Brillance en croissant, près de la pointe.
+        let gloss = CGMutablePath()
+        gloss.move(to: p(0.239, 0.175))
+        gloss.addCurve(to: p(0.653, 0.053), control1: p(0.330, 0.070), control2: p(0.511, 0.026))
+        gloss.addCurve(to: p(0.295, 0.276), control1: p(0.523, 0.083), control2: p(0.364, 0.154))
+        gloss.addCurve(to: p(0.239, 0.175), control1: p(0.261, 0.241), control2: p(0.239, 0.206))
+        gloss.closeSubpath()
+        context.addPath(gloss)
+        context.setFillColor(cgColor(highlight, alpha: glossAlpha))
+        context.fillPath()
 
-        // 3. Le contour de la coquille : un dégradé, donc un tracé converti en
-        //    surface puis rempli — CoreGraphics ne sait pas caresser un dégradé.
-        context.saveGState()
+        // Le contour, unique et sombre — la signature Ankama.
         context.addPath(egg)
-        context.setLineWidth(trait)
-        context.replacePathWithStrokedPath()
-        context.clip()
-        linear(in: context, colors: [shellStart, shellMid, shellEnd], locations: [0, 0.45, 1],
-               from: CGPoint(x: eggBox.minX, y: eggBox.minY),
-               to: CGPoint(x: eggBox.maxX, y: eggBox.maxY))
-        context.restoreGState()
+        context.setLineWidth(trait(12))
+        context.setStrokeColor(cgColor(outline))
+        context.strokePath()
+    }
 
-        // 4. Les fenêtres.
-        context.setLineWidth(trait)
-        context.setStrokeColor(cgColor(windowColor))
-        context.setFillColor(cgColor(windowColor))
-        for window in windows {
-            let plein = window.filled || fenetresPleines
-            let cadre = rect(of: window, in: eggBox)
-            let r = window.radius * eggBox.width
-            let path = CGPath(
-                roundedRect: plein ? cadre : cadre.insetBy(dx: trait / 2, dy: trait / 2),
-                cornerWidth: r, cornerHeight: r, transform: nil
-            )
-            context.addPath(path)
-            context.drawPath(using: plein ? .fill : .stroke)
+    /// Écailles en quinconce, à deux tons : le creux sombre, et le liseré de
+    /// lumière que chaque rangée pose sur le ventre de la précédente.
+    private static func drawScales(in rect: CGRect, trait: (Double) -> Double,
+                                   in context: CGContext) {
+        let u = rect.width / 176
+        let tuileX = 40 * u, demiRangee = 14.5 * u
+        let profondeur = 24 * u  // contrôle cubique ≈ demi-ellipse de 18 de creux
+
+        func arcs(decalageY: Double) -> CGPath {
+            let path = CGMutablePath()
+            var rangee = 0
+            var y = rect.minY + decalageY
+            while y < rect.maxY + demiRangee {
+                let depart = rect.minX + (rangee.isMultiple(of: 2) ? -tuileX / 2 : 0) - tuileX
+                var x = depart
+                while x < rect.maxX + tuileX {
+                    path.move(to: CGPoint(x: x, y: y))
+                    path.addCurve(to: CGPoint(x: x + tuileX, y: y),
+                                  control1: CGPoint(x: x, y: y + profondeur),
+                                  control2: CGPoint(x: x + tuileX, y: y + profondeur))
+                    x += tuileX
+                }
+                rangee += 1
+                y += demiRangee
+            }
+            return path
+        }
+
+        context.setLineCap(.round)
+        context.addPath(arcs(decalageY: -3 * u))
+        context.setLineWidth(trait(2.4))
+        context.setStrokeColor(cgColor(emeraldScaleLight, alpha: 0.38))
+        context.strokePath()
+        context.addPath(arcs(decalageY: 0))
+        context.setLineWidth(trait(5))
+        context.setStrokeColor(cgColor(emeraldScaleDark))
+        context.strokePath()
+    }
+
+    /// Mouchetures : tache sombre, cœur clair décentré — un caillou poli.
+    private static func drawSpots(in rect: CGRect, in context: CGContext) {
+        let u = rect.width / 176
+        let tuileX = 52 * u, tuileY = 44 * u
+        let taches: [(x: Double, y: Double, r: Double)] = [(12, 12, 8), (38, 32, 5.5)]
+
+        var y = rect.minY
+        while y < rect.maxY + tuileY {
+            var x = rect.minX - tuileX
+            while x < rect.maxX + tuileX {
+                for tache in taches {
+                    let centre = CGPoint(x: x + tache.x * u, y: y + tache.y * u)
+                    let r = tache.r * u
+                    context.setFillColor(cgColor(turquoiseSpot))
+                    context.fillEllipse(in: CGRect(x: centre.x - r, y: centre.y - r,
+                                                   width: r * 2, height: r * 2))
+                    let coeur = r / 2
+                    context.setFillColor(cgColor(turquoiseSpotCore, alpha: 0.5))
+                    context.fillEllipse(in: CGRect(x: centre.x - 1.5 * u - coeur,
+                                                   y: centre.y - 1.5 * u - coeur,
+                                                   width: coeur * 2, height: coeur * 2))
+                }
+                x += tuileX
+            }
+            y += tuileY
+        }
+    }
+
+    /// Ondes embossées : l'arête claire au-dessus, le creux sombre dessous.
+    private static func drawWaves(in rect: CGRect, trait: (Double) -> Double,
+                                  in context: CGContext) {
+        func p(_ x: Double, _ y: Double) -> CGPoint {
+            CGPoint(x: rect.minX + x * rect.width, y: rect.minY + y * rect.height)
+        }
+        // Trois ondes, cotes normalisées de la maquette (œuf 176 × 228).
+        let ondes: [(a: (Double, Double), c1: (Double, Double),
+                     c2: (Double, Double), b: (Double, Double))] = [
+            ((0, 0.351), (0.261, 0.254), (0.739, 0.254), (1, 0.351)),
+            ((0, 0.544), (0.261, 0.456), (0.739, 0.456), (1, 0.544)),
+            ((0.034, 0.737), (0.284, 0.649), (0.716, 0.649), (0.966, 0.737)),
+        ]
+        context.setLineCap(.round)
+        for onde in ondes {
+            for (decalage, largeur, couleur, alpha): (Double, Double, SynfusRGB, Double) in
+                [(-0.0175, 3, crimsonWaveLight, 0.45), (0, 8, crimsonWaveDark, 1)] {
+                let path = CGMutablePath()
+                path.move(to: p(onde.a.0, onde.a.1 + decalage))
+                path.addCurve(to: p(onde.b.0, onde.b.1 + decalage),
+                              control1: p(onde.c1.0, onde.c1.1 + decalage),
+                              control2: p(onde.c2.0, onde.c2.1 + decalage))
+                context.addPath(path)
+                context.setLineWidth(trait(largeur))
+                context.setStrokeColor(cgColor(couleur, alpha: alpha))
+                context.strokePath()
+            }
         }
     }
 
@@ -293,20 +384,14 @@ enum SynfusMark {
         context.drawLinearGradient(gradient, start: from, end: to, options: [])
     }
 
-    /// Dégradé radial, éventuellement écrasé en ellipse par `aspect` — la bande
-    /// de l'œuf est plus haute que large.
     private static func radial(in context: CGContext, colors: [SynfusRGB], locations: [CGFloat],
-                               center: CGPoint, radius: Double, aspect: Double) {
+                               center: CGPoint, radius: Double) {
         guard let gradient = CGGradient(colorsSpace: colorSpace,
                                         colors: colors.map { cgColor($0) } as CFArray,
                                         locations: locations) else { return }
-        context.saveGState()
-        context.translateBy(x: center.x, y: center.y)
-        context.scaleBy(x: 1, y: aspect)
-        context.drawRadialGradient(gradient, startCenter: .zero, startRadius: 0,
-                                   endCenter: .zero, endRadius: radius,
+        context.drawRadialGradient(gradient, startCenter: center, startRadius: 0,
+                                   endCenter: center, endRadius: radius,
                                    options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
-        context.restoreGState()
     }
 
     /// **sRGB**, et le même des deux côtés (contexte *et* couleurs) : les teintes
