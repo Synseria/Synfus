@@ -75,6 +75,13 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         add(to: menu, title: "Recentrer la barre", action: #selector(recenterBar))
         menu.addItem(arrangeSubmenu(enabled: manager.accessibilityGranted
                                              && !manager.clients.isEmpty))
+        if !manager.clients.isEmpty {
+            let session = add(to: menu, title: "Lancer la session", action: #selector(launchSession))
+            if let hotKey = Preferences.shared.sessionHotKey {
+                session.attributedTitle = attributed(name: "Lancer la session",
+                                                     shortcut: hotKey.displayString)
+            }
+        }
         add(to: menu, title: "Réglages…", action: #selector(openSettings))
         menu.addItem(.separator())
         // Reconstruit à chaque ouverture : l'item n'apparaît que s'il y a
@@ -105,6 +112,14 @@ final class MenuBarController: NSObject, NSMenuDelegate {
                 item.attributedTitle = attributed(name: disposition.label,
                                                   shortcut: hotKey.displayString)
             }
+            submenu.addItem(item)
+        }
+        submenu.addItem(.separator())
+        for (titre, action) in [("Tout en plein écran", #selector(fullscreenAll)),
+                                ("Tout sortir du plein écran", #selector(unfullscreenAll))] {
+            let item = NSMenuItem(title: titre, action: enabled ? action : nil,
+                                  keyEquivalent: "")
+            item.target = self
             submenu.addItem(item)
         }
         parent.submenu = submenu
@@ -147,6 +162,18 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
     @objc private func closeAllClients() {
         WindowManager.shared.closeAll()
+    }
+
+    @objc private func fullscreenAll() {
+        WindowArranger.shared.toutEnPleinEcran()
+    }
+
+    @objc private func unfullscreenAll() {
+        WindowArranger.shared.toutSortirDuPleinEcran()
+    }
+
+    @objc private func launchSession() {
+        WindowManager.shared.lancerSession()
     }
 
     @objc private func toggleBar() {

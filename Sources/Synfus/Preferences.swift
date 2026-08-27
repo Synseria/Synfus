@@ -117,6 +117,9 @@ final class Preferences: ObservableObject {
     /// l'utilisateur.
     @Published var arrangeHotKey: HotKey? { didSet { save() } }
 
+    /// Raccourci du geste « lancer la session ». Sans défaut, même règle.
+    @Published var sessionHotKey: HotKey? { didSet { save() } }
+
     /// Nombre de slots exposés (et donc de raccourcis potentiels).
     ///
     /// Le garde-fou `clamping` n'est pas décoratif : `@Published` remplace la
@@ -230,6 +233,7 @@ final class Preferences: ObservableObject {
         var killFrozenClients: Bool?
         var lastArrangement: Disposition?
         var arrangeHotKey: HotKey?
+        var sessionHotKey: HotKey?
         /// Génération du jeu de raccourcis par défaut appliqué à cette
         /// sauvegarde. Absente des sauvegardes d'avant la refonte, d'où le repli
         /// sur 1 à la lecture.
@@ -352,6 +356,7 @@ final class Preferences: ObservableObject {
             killFrozenClients: killFrozenClients,
             lastArrangement: lastArrangement,
             arrangeHotKey: arrangeHotKey,
+            sessionHotKey: sessionHotKey,
             defaultsVersion: Self.defaultsVersion
         )
         if let data = try? JSONEncoder().encode(stored) {
@@ -401,6 +406,7 @@ final class Preferences: ObservableObject {
         killFrozenClients = stored.killFrozenClients ?? true
         lastArrangement = stored.lastArrangement
         arrangeHotKey = stored.arrangeHotKey
+        sessionHotKey = stored.sessionHotKey
         if let x = stored.barOriginX, let y = stored.barOriginY {
             barOrigin = CGPoint(x: x, y: y)
         }
