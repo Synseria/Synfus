@@ -466,6 +466,41 @@ final class WindowManager: ObservableObject {
         AttentionWatcher.shared.clear(client)
     }
 
+    /// Délai de grâce entre la demande polie de fermeture et le coup de grâce.
+    /// Assez long pour laisser un client sain écrire sa configuration et
+    /// s'éteindre, assez court pour que le geste reste un seul geste.
+    private static let closeGracePeriod: TimeInterval = 6
+
+    /// Ferme un client — poliment d'abord, de force s'il ne répond plus.
+    ///
+    /// Le client gèle systématiquement à la fermeture chez certains joueurs, et
+    /// il faut alors passer par « Forcer à quitter ». On automatise ce geste :
+    /// un Quit Apple Event (`terminate()`), puis, si le processus est toujours
+    /// là après le délai de grâce — un client gelé ignore les Apple Events —,
+    /// un `forceTerminate()`. C'est une opération de **processus**, pas une
+    /// saisie : la règle « Synfus n'émet aucun évènement » reste entière.
+    func close(_ client: DofusClient) {
+        guard let app = NSRunningApplication(processIdentifier: client.pid) else { return }
+        let pid = client.pid
+        app.terminate()
+        Timer.scheduledTimer(withTimeInterval: Self.closeGracePeriod, repeats: false) { _ in
+            MainActor.assumeIsolated {
+                if let survivant = NSRunningApplication(processIdentifier: pid),
+                   !survivant.isTerminated {
+                    survivant.forceTerminate()
+                }
+                WindowManager.shared.refreshSoon()
+            }
+        }
+        refreshSoon()
+    }
+
+    /// Ferme tous les clients, chacun avec la même escalade. Le geste de fin
+    /// de session — sans lui, c'est autant de « Forcer à quitter » que de persos.
+    func closeAll() {
+        clients.forEach(close)
+    }
+
     func cycle(by step: Int) {
         guard !clients.isEmpty else {
             NSSound.beep()
