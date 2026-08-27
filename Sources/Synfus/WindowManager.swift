@@ -48,6 +48,12 @@ final class WindowManager: ObservableObject {
     @Published private(set) var frontmostIsDofus = false
     @Published private(set) var accessibilityGranted = false
 
+    /// Clients en cours de fermeture. Tant qu'un pid y figure, l'inventaire ne
+    /// l'interroge plus — questionner l'Accessibilité d'un mourant, c'est payer
+    /// la borne d'une seconde à chaque tour — et sa pastille porte l'indicateur
+    /// d'attente. Le pid en sort quand le processus meurt.
+    @Published private(set) var closingPIDs: Set<pid_t> = []
+
     private var timer: Timer?
     private let prefs = Preferences.shared
 
@@ -201,6 +207,9 @@ final class WindowManager: ObservableObject {
         for app in NSWorkspace.shared.runningApplications {
             guard isDofus(app) else { continue }
             livePIDs.insert(app.processIdentifier)
+            // Un client en cours de fermeture n'est plus interrogé : sa mémoire
+            // le maintient dans la barre, avec l'indicateur, jusqu'à sa mort.
+            guard !closingPIDs.contains(app.processIdentifier) else { continue }
             let axApp = AXUIElementCreateApplication(app.processIdentifier)
 
             var value: CFTypeRef?
@@ -247,6 +256,8 @@ final class WindowManager: ObservableObject {
         // de la détection d'attention.
         remember(found)
         forgetDeadProcesses(livePIDs: livePIDs)
+        let stillClosing = closingPIDs.intersection(livePIDs)
+        if stillClosing != closingPIDs { closingPIDs = stillClosing }
         let silentPIDs = livePIDs.subtracting(talkativePIDs)
         found = Self.withRemembered(
             found: found,
@@ -278,7 +289,10 @@ final class WindowManager: ObservableObject {
             let names = Dictionary(uniqueKeysWithValues: rememberedClients.compactMap {
                 pid, list in list.first.map { (pid, $0.name) }
             })
-            FreezeWatcher.shared.inspect(silentPIDs: silentPIDs, names: names)
+            // Les fermetures en cours ont déjà leur escalade : les sonder ne
+            // ferait que payer le délai d'expiration une fois de plus.
+            FreezeWatcher.shared.inspect(silentPIDs: silentPIDs.subtracting(closingPIDs),
+                                         names: names)
         }
 
         // Seuls les vrais noms de persos entrent dans la liste ; les clients au
@@ -549,9 +563,17 @@ final class WindowManager: ObservableObject {
     /// un `forceTerminate()`. C'est une opération de **processus**, pas une
     /// saisie : la règle « Synfus n'émet aucun évènement » reste entière.
     func close(_ client: DofusClient) {
-        guard let app = NSRunningApplication(processIdentifier: client.pid) else { return }
         let pid = client.pid
-        app.terminate()
+        guard NSRunningApplication(processIdentifier: pid) != nil else { return }
+        closingPIDs.insert(pid)
+
+        // L'envoi du Quit Apple Event peut bloquer plusieurs secondes quand le
+        // client est déjà gelé — c'est lui qui figeait Synfus au moment de
+        // fermer. Il part donc d'un fil secondaire ; le coup de grâce, lui,
+        // est un signal, il ne bloque jamais.
+        Task.detached(priority: .userInitiated) {
+            NSRunningApplication(processIdentifier: pid)?.terminate()
+        }
         Timer.scheduledTimer(withTimeInterval: Self.closeGracePeriod, repeats: false) { _ in
             MainActor.assumeIsolated {
                 if let survivant = NSRunningApplication(processIdentifier: pid),

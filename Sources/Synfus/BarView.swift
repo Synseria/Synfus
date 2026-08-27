@@ -326,12 +326,19 @@ struct BarView: View {
     private func chip(index: Int, client: DofusClient) -> some View {
         let active = manager.isFrontmost(client)
         let alerting = watcher.alerting.contains(client.slotKey)
+        let closing = manager.closingPIDs.contains(client.pid)
 
         return Button {
             manager.focus(client)
         } label: {
             HStack(spacing: 5) {
-                if prefs.showClasses {
+                // La fermeture en cours prend la place du badge : le geste a
+                // été entendu, la pastille le dit — et disparaîtra seule.
+                if closing {
+                    ProgressView()
+                        .controlSize(.small)
+                        .frame(width: 20, height: 20)
+                } else if prefs.showClasses {
                     classBadge(for: client.characterClass, active: active)
                 }
 
@@ -374,17 +381,22 @@ struct BarView: View {
             .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
         .buttonStyle(.plain)
+        .disabled(closing)
         // Fermer depuis la barre : le client gèle souvent quand on le quitte
         // par sa propre fenêtre, et il fallait alors « Forcer à quitter » à la
         // main. Ici la fermeture escalade toute seule si le client ne répond
         // plus (cf. `WindowManager.close`).
         .contextMenu {
-            Button("Fermer « \(client.name) »") { manager.close(client) }
+            if closing {
+                Button("Fermeture en cours…") {}.disabled(true)
+            } else {
+                Button("Fermer « \(client.name) »") { manager.close(client) }
+            }
         }
         .help(tooltip(index: index, client: client))
         // Un perso sur un autre espace reste cliquable, mais on ne le donne pas
         // pour présent : sa vignette et son titre datent de sa dernière visite.
-        .opacity(dragging == client.name ? 0.35 : (client.dormant ? 0.55 : 1))
+        .opacity(dragging == client.name ? 0.35 : (closing ? 0.45 : client.dormant ? 0.55 : 1))
         .scaleEffect(dragging == client.name ? 1.06 : 1)
         .background(chipFrameReader(for: client.name))
         .simultaneousGesture(reorderGesture(for: client))

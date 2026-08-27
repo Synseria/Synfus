@@ -322,6 +322,15 @@ aucun évènement » reste entière. Points d'entrée : clic droit sur une pasti
 (« Fermer “Nom” »), « Fermer tous les persos » dans le menu contextuel de la
 barre et la barre de menus.
 
+**L'envoi du Quit Apple Event peut bloquer plusieurs secondes** quand le client
+est déjà gelé — c'est ce qui figeait Synfus au moment de fermer. `terminate()`
+part donc d'une `Task.detached` ; le `forceTerminate()`, un signal, ne bloque
+jamais et reste sur le main actor. Pendant la fermeture, le pid est dans
+`closingPIDs` : l'inventaire ne l'interroge plus (questionner l'Accessibilité
+d'un mourant, c'est payer la borne d'une seconde à chaque tour), `FreezeWatcher`
+ne le sonde pas, et sa pastille — maintenue par la mémoire — porte un indicateur
+d'attente jusqu'à la mort du processus.
+
 [FreezeWatcher.swift](Sources/Synfus/FreezeWatcher.swift) rattrape en plus les
 fermetures qui ne sont **pas** passées par Synfus. Un client gelé après
 fermeture est, vu d'ici, un processus vivant sans aucune fenêtre — exactement
