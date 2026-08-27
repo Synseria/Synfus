@@ -113,10 +113,20 @@ les processus **silencieux** — ceux qui ne rendent aucune fenêtre. Un client
 revenu à l'écran de connexion en rend une, simplement sans perso : le
 ressusciter afficherait un perso qui n'est plus en jeu.
 
-Limite assumée : un client déjà sur un espace inactif au démarrage de Synfus n'a
-jamais livré son titre, donc reste invisible jusqu'à ce qu'on y bascule une fois.
-Le lever demanderait de lire les titres via `CGWindowListCopyWindowInfo`, ce qui
-exige l'autorisation d'enregistrement de l'écran — celle des aperçus.
+Un client déjà sur un espace inactif au démarrage de Synfus n'a jamais livré son
+titre à l'Accessibilité. Quand l'enregistrement de l'écran est accordé (celui
+des aperçus), [CrossSpaceTitles.swift](Sources/Synfus/CrossSpaceTitles.swift)
+lève cette limite : `CGWindowListCopyWindowInfo` voit à travers les espaces, et
+`discoveredAcrossSpaces` — pure, testée — fabrique le dormant à partir du titre
+lu. La lecture n'a lieu que pour les pids sans aucune mémoire (le tour de toutes
+les fenêtres du système n'est pas payé à chaque inventaire), et l'autorisation
+n'est **jamais demandée** par ce chemin : sans elle, la limite demeure,
+documentée dans les réglages.
+
+Tous les appels AX du processus sont bornés à 1 s
+(`AXUIElementSetMessagingTimeout` sur l'élément système, posé dans `start()`) :
+un client gelé ne répond jamais, et sans borne chaque inventaire resterait
+suspendu plusieurs secondes sur lui — barre comprise.
 
 L'identité d'un client est `slotKey` = `"<pid>#<index de fenêtre>"`. Le tri suit
 `Preferences.characterOrder`, une liste de noms : les persos non lancés sont
@@ -306,11 +316,24 @@ dit si le mode est actif — et il le faut, puisqu'il ne s'éteint pas tout seul
 Le client gèle systématiquement à la fermeture chez certains joueurs, qui
 finissaient chaque session dans « Forcer à quitter ». `WindowManager.close`
 automatise l'escalade : `terminate()` (Quit Apple Event — un client gelé
-l'ignore), puis `forceTerminate()` si le processus est toujours là après 6 s.
+l'ignore), puis `forceTerminate()` si le processus est toujours là après 2 s.
 C'est une opération de **processus**, pas une saisie — la règle « Synfus n'émet
 aucun évènement » reste entière. Points d'entrée : clic droit sur une pastille
 (« Fermer “Nom” »), « Fermer tous les persos » dans le menu contextuel de la
 barre et la barre de menus.
+
+[FreezeWatcher.swift](Sources/Synfus/FreezeWatcher.swift) rattrape en plus les
+fermetures qui ne sont **pas** passées par Synfus. Un client gelé après
+fermeture est, vu d'ici, un processus vivant sans aucune fenêtre — exactement
+comme un dormant sain sur un espace plein écran inactif. Ce qui les distingue
+est la **réponse** : un dormant sain répond à l'Accessibilité (une liste vide
+est une réponse), un gelé laisse la sonde expirer
+(`AXUIElementSetMessagingTimeout` par élément, 0,3 s). La règle d'abattage est
+volontairement stricte — sans fenêtre **et** muet à trois sondes consécutives
+espacées de 5 s — pour ne jamais viser un vivant : un client qui charge a une
+fenêtre, un dormant répond en quelques millisecondes. Chaque abattage est
+consigné dans le Diagnostic ; la bascule `killFrozenClients` (onglet Persos)
+est active par défaut.
 
 ### Rangement des fenêtres
 
