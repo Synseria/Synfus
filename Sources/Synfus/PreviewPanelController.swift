@@ -68,9 +68,51 @@ final class PreviewPanelController: NSObject, ObservableObject {
 
     /// Masque l'aperçu s'il montre ce perso-là — le survol d'une pastille ne doit
     /// pas fermer l'aperçu qu'un autre survol vient d'ouvrir.
+    ///
+    /// La comparaison porte sur l'**identité** (`slotKey`), pas sur l'égalité de
+    /// `DofusClient` : celle-ci regarde aussi `dormant` et le nom, qu'un
+    /// `refresh()` peut changer entre l'entrée et la sortie du survol — un perso
+    /// passé dormant ou en cours de fermeture n'était plus « le même », et
+    /// l'aperçu restait affiché.
     func hide(ifShowing client: DofusClient) {
-        guard case .single(let shown) = mode, shown == client else { return }
+        guard case .single(let shown) = mode, shown.slotKey == client.slotKey else { return }
         hide()
+    }
+
+    /// Masque l'aperçu ancré sous une pastille. La grille, elle, n'est liée à
+    /// aucune pastille : elle suit le raccourci maintenu, pas la barre.
+    func hideAnchored() {
+        guard case .single = mode else { return }
+        hide()
+    }
+
+    /// Réaligne l'aperçu sur la liste des persos : un perso qui n'y figure plus
+    /// — déconnecté, fermé, ou dont la fermeture vient d'être demandée — n'a plus
+    /// de vignette à montrer. Sans ce point d'appel, l'aperçu ouvert sur une
+    /// pastille survivait à la fermeture du perso : le menu contextuel a déjà
+    /// emporté le `mouseExited`, plus rien ne venait le fermer.
+    func reconcile(with clients: [DofusClient]) {
+        let next = Self.surviving(mode, among: clients)
+        guard next != mode else { return }
+        if next == nil { hide() } else { mode = next }
+    }
+
+    /// Règle pure : que reste-t-il de l'aperçu une fois la liste des persos mise
+    /// à jour ? Un aperçu simple ne survit que si son perso est encore là ; une
+    /// grille se resserre sur les persos restants et disparaît avec le dernier.
+    /// La liste fait foi sur l'identité seule : les persos y reviennent avec
+    /// un autre état (dormant, titre) sans cesser d'être les mêmes.
+    static func surviving(_ mode: Mode?, among clients: [DofusClient]) -> Mode? {
+        let present = Set(clients.map(\.slotKey))
+        switch mode {
+        case nil:
+            return nil
+        case .single(let client):
+            return present.contains(client.slotKey) ? mode : nil
+        case .grid(let shown):
+            let kept = shown.filter { present.contains($0.slotKey) }
+            return kept.isEmpty ? nil : .grid(kept)
+        }
     }
 
     private func present(_ newMode: Mode) {
