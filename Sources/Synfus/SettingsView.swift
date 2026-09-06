@@ -30,7 +30,7 @@ struct SettingsView: View {
     @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var manager = WindowManager.shared
     @ObservedObject private var probe = AttentionProbe.shared
-    @ObservedObject private var watcher = AttentionWatcher.shared
+    @ObservedObject private var attention = AttentionDiagnostics.shared
     @ObservedObject private var icons = ClassIconStore.shared
     @ObservedObject private var previews = WindowPreviewService.shared
     @ObservedObject private var clicks = ClickAdvanceWatcher.shared
@@ -452,7 +452,7 @@ struct SettingsView: View {
                 }
                 .onMove { offsets, destination in
                     prefs.move(fromOffsets: offsets, toOffset: destination)
-                    manager.refresh()
+                    manager.resort()
                 }
             }
 
@@ -536,7 +536,7 @@ struct SettingsView: View {
         // `toOffset` désigne un interstice, pas une case : descendre d'un cran
         // veut dire viser l'interstice situé après la ligne suivante.
         prefs.move(fromOffsets: IndexSet(integer: index), toOffset: delta > 0 ? target + 1 : target)
-        manager.refresh()
+        manager.resort()
     }
 
     // MARK: - Classes
@@ -792,11 +792,11 @@ struct SettingsView: View {
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
 
-            if !watcher.pairing.isEmpty {
+            if !attention.pairing.isEmpty {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Appariement icône du Dock → perso")
                         .font(.system(size: 11, weight: .medium))
-                    ForEach(Array(watcher.pairing.enumerated()), id: \.offset) { _, pair in
+                    ForEach(Array(attention.pairing.enumerated()), id: \.offset) { _, pair in
                         Text("\(pair.dock)  →  \(pair.character)")
                             .font(.system(size: 10, design: .monospaced))
                             .foregroundStyle(.secondary)
@@ -810,7 +810,7 @@ struct SettingsView: View {
                 .padding(.bottom, 4)
             }
 
-            if let lecture = watcher.dockReading {
+            if let lecture = attention.dockReading {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Relevé du Dock")
                         .font(.system(size: 11, weight: .medium))

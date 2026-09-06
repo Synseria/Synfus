@@ -57,12 +57,39 @@ final class WindowManager: ObservableObject {
     private var timer: Timer?
     private let prefs = Preferences.shared
 
-    /// Fin du dernier inventaire, et attente déjà programmée. Cf. `refreshSoon()`.
+    /// Fin du dernier inventaire, et inventaire différé en attente, avec son
+    /// échéance. Cf. `refreshSoon(after:)`.
     private var lastRefresh = Date.distantPast
-    private var refreshScheduled = false
+    private var pendingRefresh: DispatchWorkItem?
+    private var pendingDeadline = Date.distantPast
 
     /// Délai minimal entre deux inventaires déclenchés par notification.
     private static let refreshInterval: TimeInterval = 0.2
+
+    /// Délai minimal entre deux inventaires quand c'est le timer qui parle :
+    /// une notification arrivée juste avant lui a déjà fait le travail.
+    private static let timerMinimumGap: TimeInterval = 1.0
+
+    /// Délai laissé à une bascule faite par Synfus avant l'inventaire qui la
+    /// suit : le temps que la transition d'espace s'achève, plutôt que de
+    /// questionner l'Accessibilité au beau milieu.
+    private static let selfActivationSettle: TimeInterval = 1.0
+
+    /// Le pid qu'une bascule de Synfus vient d'activer. La notification
+    /// d'activation qui en découle n'est pas une nouvelle de l'extérieur : elle
+    /// n'a pas besoin d'un inventaire dans les 200 ms.
+    private var selfActivatedPID: pid_t?
+    /// Tous les processus Dofus vivants, persos ou non : un client resté au
+    /// login sur un autre bureau n'est pas dans `clients` mais a bien son icône
+    /// dans le Dock, et c'est ce compte-là qui périme le cache de structure.
+    private(set) var liveDofusPIDs: Set<pid_t> = []
+
+    /// Dernière lecture de CGWindowList pour un pid sans mémoire. Un client
+    /// resté au login sur un autre bureau n'a rien à livrer et le resterait à
+    /// chaque tour : le tour de toutes les fenêtres du système ne se paie donc
+    /// qu'une fois par `crossSpaceInterval` pour un même pid.
+    private var crossSpaceChecked: [pid_t: Date] = [:]
+    private static let crossSpaceInterval: TimeInterval = 10
 
     /// Derniers persos vus pour chaque processus. La clé est le pid : il vit
     /// aussi longtemps que le client, alors que la fenêtre, elle, va et vient
@@ -104,16 +131,26 @@ final class WindowManager: ObservableObject {
                 let activated = note == NSWorkspace.didActivateApplicationNotification
 
                 MainActor.assumeIsolated {
+                    guard let self else { return }
                     if activated, let pid {
-                        self?.setFrontmost(pid: pid, bundleID: bundleID)
+                        self.setFrontmost(pid: pid, bundleID: bundleID)
                     } else {
                         // Une désactivation ne dit pas qui prend la relève : là,
                         // `frontmostApplication` est à jour, ou le sera au prochain
                         // tour de timer.
-                        self?.setFrontmost(NSWorkspace.shared.frontmostApplication)
+                        self.setFrontmost(NSWorkspace.shared.frontmostApplication)
                     }
                     FloatingBarController.shared.updateVisibility()
-                    self?.refreshSoon()
+
+                    // Une activation que Synfus a lui-même provoquée n'apprend
+                    // rien : la barre est déjà à jour, et l'inventaire peut
+                    // attendre la fin de la transition d'espace.
+                    if activated, let pid, pid == self.selfActivatedPID {
+                        self.selfActivatedPID = nil
+                        self.refreshSoon(after: Self.selfActivationSettle)
+                    } else {
+                        self.refreshSoon()
+                    }
                 }
             }
         }
@@ -140,12 +177,27 @@ final class WindowManager: ObservableObject {
         // (reconnexion, changement de perso), d'où ce rafraîchissement régulier.
         // Il sert aussi de filet : une notification manquée figerait sinon la
         // barre dans un état faux jusqu'au prochain changement d'application.
+        //
+        // La visibilité est réévaluée à chaque tour ; l'inventaire, lui, est
+        // sauté si une notification vient d'en faire un — deux inventaires
+        // collés, c'est deux fois le gel pour rien.
+        //
+        // Sans `force` : le filet ne corrige qu'un état faux, il ne réordonne
+        // pas un panneau déjà visible toutes les 2 s. Remonter la barre
+        // au-dessus d'un espace fraîchement activé reste l'affaire des
+        // notifications, qui gardent le comportement franc.
         timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
-                self?.refresh()
-                FloatingBarController.shared.updateVisibility()
+                FloatingBarController.shared.updateVisibility(force: false)
+                guard let self,
+                      Date().timeIntervalSince(self.lastRefresh) >= Self.timerMinimumGap
+                else { return }
+                self.refresh()
             }
         }
+        // Rien ici n'exige la seconde près : laisser le système regrouper ce
+        // réveil avec d'autres épargne des réveils.
+        timer?.tolerance = 0.3
         refresh()
     }
 
@@ -155,8 +207,15 @@ final class WindowManager: ObservableObject {
     }
 
     private func setFrontmost(pid: pid_t?, bundleID: String?) {
-        frontmostPID = pid
-        frontmostIsDofus = Self.isDofusBundle(bundleID)
+        setFrontmost(pid: pid, isDofus: Self.isDofusBundle(bundleID))
+    }
+
+    /// Ne republie que ce qui change : ces deux valeurs sont relues à chaque
+    /// tour de timer, et chaque affectation d'un `@Published` réveille toutes
+    /// les vues qui l'observent, changement ou pas.
+    private func setFrontmost(pid: pid_t?, isDofus: Bool) {
+        if frontmostPID != pid { frontmostPID = pid }
+        if frontmostIsDofus != isDofus { frontmostIsDofus = isDofus }
     }
 
     // MARK: - Découverte
@@ -172,20 +231,34 @@ final class WindowManager: ObservableObject {
     ///
     /// La visibilité de la barre, elle, n'attend pas : elle se décide sur le pid
     /// que porte la notification, sans rien demander à l'Accessibilité.
-    func refreshSoon() {
+    ///
+    /// `after` impose une attente minimale à partir de maintenant, en plus du
+    /// délai entre inventaires. Si un inventaire différé est déjà programmé
+    /// plus tôt, il est repoussé : une seule échéance, la plus tardive — c'est
+    /// ce qui permet à une bascule faite par Synfus de laisser passer la
+    /// transition d'espace avant d'interroger l'Accessibilité.
+    func refreshSoon(after delay: TimeInterval = 0) {
         let elapsed = Date().timeIntervalSince(lastRefresh)
-        guard elapsed >= Self.refreshInterval else {
-            guard !refreshScheduled else { return }
-            refreshScheduled = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + Self.refreshInterval - elapsed) {
-                MainActor.assumeIsolated {
-                    self.refreshScheduled = false
-                    self.refresh()
-                }
-            }
+        let wait = max(delay, Self.refreshInterval - elapsed)
+        guard wait > 0 else {
+            refresh()
             return
         }
-        refresh()
+
+        let deadline = Date().addingTimeInterval(wait)
+        if let pendingRefresh, !pendingRefresh.isCancelled {
+            guard deadline > pendingDeadline else { return }
+            pendingRefresh.cancel()
+        }
+        let item = DispatchWorkItem {
+            MainActor.assumeIsolated {
+                self.pendingRefresh = nil
+                self.refresh()
+            }
+        }
+        pendingRefresh = item
+        pendingDeadline = deadline
+        DispatchQueue.main.asyncAfter(deadline: .now() + wait, execute: item)
     }
 
     func refresh() {
@@ -195,7 +268,10 @@ final class WindowManager: ObservableObject {
         setFrontmost(NSWorkspace.shared.frontmostApplication)
 
         guard granted else {
-            if !clients.isEmpty { clients = [] }
+            if !clients.isEmpty {
+                clients = []
+                PreviewPanelController.shared.reconcile(with: clients)
+            }
             return
         }
 
@@ -203,29 +279,49 @@ final class WindowManager: ObservableObject {
         var usedNames: [String: Int] = [:]
         var livePIDs: Set<pid_t> = []
         var talkativePIDs: Set<pid_t> = []
+        /// Clients qui ont laissé expirer la question `kAXWindows` : l'inventaire
+        /// est la seule sonde du veilleur de gel, c'est ici que le mutisme se
+        /// constate.
+        var mutePIDs: Set<pid_t> = []
+        let freezes = FreezeWatcher.shared
 
         for app in NSWorkspace.shared.runningApplications {
             guard isDofus(app) else { continue }
-            livePIDs.insert(app.processIdentifier)
+            let pid = app.processIdentifier
+            livePIDs.insert(pid)
             // Un client en cours de fermeture n'est plus interrogé : sa mémoire
             // le maintient dans la barre, avec l'indicateur, jusqu'à sa mort.
-            guard !closingPIDs.contains(app.processIdentifier) else { continue }
-            let axApp = AXUIElementCreateApplication(app.processIdentifier)
+            guard !closingPIDs.contains(pid) else { continue }
+            let axApp = AXUIElementCreateApplication(pid)
+
+            // Un client déjà pris en défaut n'est réinterrogé qu'à l'échéance
+            // de la sonde, mais avec la **même** borne d'une seconde que les
+            // autres : une borne plus courte lui ôterait tout moyen de se
+            // blanchir, et un client vivant mais lent — chargement, combat
+            // chargé — finirait abattu. Entre deux échéances, il reste dans
+            // `livePIDs` sans être bavard : la mémoire l'affiche atténué.
+            if freezes.suspects.contains(pid), !freezes.shouldProbe(pid) { continue }
 
             var value: CFTypeRef?
-            guard AXUIElementCopyAttributeValue(axApp, kAXWindowsAttribute as CFString, &value) == .success,
-                  let windows = value as? [AXUIElement]
-            else { continue }
+            let error = AXUIElementCopyAttributeValue(axApp, kAXWindowsAttribute as CFString, &value)
+            if error == .cannotComplete {
+                mutePIDs.insert(pid)
+                continue
+            }
+            guard error == .success, let windows = value as? [AXUIElement] else { continue }
 
             // Un client qui rend au moins une fenêtre est joignable : s'il n'en
             // ressort aucun perso, c'est qu'il est retourné à l'écran de
             // connexion, et non qu'il se cache sur un autre bureau.
-            if !windows.isEmpty { talkativePIDs.insert(app.processIdentifier) }
+            if !windows.isEmpty { talkativePIDs.insert(pid) }
 
             for (index, window) in windows.enumerated() {
-                guard isGameWindow(window) else { continue }
+                // Un seul aller-retour par fenêtre pour les trois attributs :
+                // chaque appel AX est un IPC, et l'inventaire passe toutes les 2 s.
+                let facts = windowFacts(window)
+                guard Self.isGameWindow(subrole: facts.subrole, size: facts.size) else { continue }
 
-                let rawTitle = stringAttribute(window, kAXTitleAttribute) ?? ""
+                let rawTitle = facts.title ?? ""
                 guard Self.isCharacterWindow(title: rawTitle) else { continue }
 
                 var name = Self.characterName(fromTitle: rawTitle)
@@ -256,6 +352,7 @@ final class WindowManager: ObservableObject {
         // de la détection d'attention.
         remember(found)
         forgetDeadProcesses(livePIDs: livePIDs)
+        if liveDofusPIDs != livePIDs { liveDofusPIDs = livePIDs }
         let stillClosing = closingPIDs.intersection(livePIDs)
         if stillClosing != closingPIDs { closingPIDs = stillClosing }
         let silentPIDs = livePIDs.subtracting(talkativePIDs)
@@ -271,8 +368,15 @@ final class WindowManager: ObservableObject {
         // les espaces et lève cette limite ; la lecture n'a lieu que pour les
         // pids sans aucune mémoire, puis la mémoire prend le relais — le tour
         // de toutes les fenêtres du système n'est pas payé à chaque inventaire.
-        let unknownPIDs = silentPIDs.subtracting(Set(found.map(\.pid)))
+        // Un pid qui n'a rien livré — client au login sur un autre bureau — le
+        // resterait à chaque tour : on ne le relit qu'à l'échéance.
+        let now = Date()
+        let unknownPIDs = silentPIDs.subtracting(Set(found.map(\.pid))).filter { pid in
+            guard let checked = crossSpaceChecked[pid] else { return true }
+            return now.timeIntervalSince(checked) >= Self.crossSpaceInterval
+        }
         if !unknownPIDs.isEmpty {
+            for pid in unknownPIDs { crossSpaceChecked[pid] = now }
             let discovered = Self.discoveredAcrossSpaces(
                 titles: CrossSpaceTitles.read(pids: unknownPIDs),
                 existingNames: Set(found.map(\.name)),
@@ -284,34 +388,58 @@ final class WindowManager: ObservableObject {
 
         // Un processus vivant, sans fenêtre et muet à l'Accessibilité est un
         // client gelé à la fermeture : le veilleur l'achève, que la fermeture
-        // soit passée par Synfus ou par le jeu lui-même.
-        if prefs.killFrozenClients {
-            let names = Dictionary(uniqueKeysWithValues: rememberedClients.compactMap {
-                pid, list in list.first.map { (pid, $0.name) }
-            })
-            // Les fermetures en cours ont déjà leur escalade : les sonder ne
-            // ferait que payer le délai d'expiration une fois de plus.
-            FreezeWatcher.shared.inspect(silentPIDs: silentPIDs.subtracting(closingPIDs),
-                                         names: names)
-        }
+        // soit passée par Synfus ou par le jeu lui-même. Il est nourri à
+        // chaque tour, réglage ou non : les strikes épargnent à l'inventaire
+        // la borne pleine, seul le coup de grâce dépend du réglage.
+        let names = Dictionary(uniqueKeysWithValues: rememberedClients.compactMap {
+            pid, list in list.first.map { (pid, $0.name) }
+        })
+        // Les fermetures en cours ont déjà leur escalade.
+        freezes.inspect(silentPIDs: silentPIDs.subtracting(closingPIDs),
+                        mutePIDs: mutePIDs,
+                        names: names,
+                        achever: prefs.killFrozenClients)
 
         // Seuls les vrais noms de persos entrent dans la liste ; les clients au
         // login et les homonymes suffixés restent dans la barre sans s'y inscrire.
         prefs.registerIfNeeded(names: found.map(\.name).filter(Self.isPersistableName))
 
-        let order = prefs.characterOrder
-        found.sort { lhs, rhs in
-            let li = order.firstIndex(of: lhs.name) ?? Int.max
-            let ri = order.firstIndex(of: rhs.name) ?? Int.max
-            if li != ri { return li < ri }
-            return lhs.pid < rhs.pid
-        }
+        found = Self.sorted(found, by: prefs.characterOrder)
 
         if found != clients {
             clients = found
             // Les vignettes des persos déconnectés n'ont plus de sens, et leur
             // `slotKey` sera repris par un autre client au prochain lancement.
             WindowPreviewService.shared.prune(keeping: found)
+            // Et l'aperçu ouvert sur l'un d'eux n'a plus rien à montrer.
+            PreviewPanelController.shared.reconcile(with: found)
+        }
+    }
+
+    /// Retrie les persos déjà connus selon l'ordre de préférence, sans
+    /// inventaire. Réordonner dans la barre ou les réglages ne change rien à ce
+    /// qui est connecté : refaire le tour de l'Accessibilité à chaque
+    /// permutation, c'était payer un inventaire complet pour un tri.
+    func resort() {
+        let sorted = Self.sorted(clients, by: prefs.characterOrder)
+        if sorted != clients { clients = sorted }
+    }
+
+    /// L'ordre de la barre : rang dans `characterOrder`, les inconnus en fin —
+    /// c'est ce qui laisse les clients au login et les homonymes suffixés
+    /// derrière sans décaler personne —, puis pid croissant, l'ordre de
+    /// lancement, pour que deux inconnus ne s'échangent pas d'un tour à l'autre.
+    static func sorted(_ clients: [DofusClient], by order: [String]) -> [DofusClient] {
+        // Premier rang en cas de doublon : `firstIndex` faisait de même.
+        var rank: [String: Int] = [:]
+        for (index, name) in order.enumerated() where rank[name] == nil {
+            rank[name] = index
+        }
+        return clients.sorted { lhs, rhs in
+            let li = rank[lhs.name] ?? Int.max
+            let ri = rank[rhs.name] ?? Int.max
+            if li != ri { return li < ri }
+            return lhs.pid < rhs.pid
         }
     }
 
@@ -384,6 +512,7 @@ final class WindowManager: ObservableObject {
     /// Oublie les clients fermés — leur pid ne reviendra pas.
     private func forgetDeadProcesses(livePIDs: Set<pid_t>) {
         rememberedClients = rememberedClients.filter { livePIDs.contains($0.key) }
+        crossSpaceChecked = crossSpaceChecked.filter { livePIDs.contains($0.key) }
     }
 
     private func isDofus(_ app: NSRunningApplication) -> Bool {
@@ -399,14 +528,78 @@ final class WindowManager: ObservableObject {
         return bundle.contains("dofus")
     }
 
-    private func isGameWindow(_ window: AXUIElement) -> Bool {
-        if let subrole = stringAttribute(window, kAXSubroleAttribute),
-           subrole != kAXStandardWindowSubrole as String {
+    /// Ce que l'inventaire veut savoir d'une fenêtre, lu en un seul appel.
+    private struct WindowFacts {
+        var subrole: String?
+        var size: CGSize?
+        var title: String?
+    }
+
+    /// Sous-rôle, taille et titre en **un** IPC — `AXUIElementCopyMultipleAttributeValues`
+    /// — là où trois lectures séparées en coûtaient trois par fenêtre et par
+    /// tour. Sans `stopOnError`, un attribut absent arrive sous la forme d'un
+    /// `AXValue` de type `.axError` à sa place : la fenêtre reste lue pour le
+    /// reste, comme avant.
+    private func windowFacts(_ window: AXUIElement) -> WindowFacts {
+        let attributes = [kAXSubroleAttribute, kAXSizeAttribute, kAXTitleAttribute] as CFArray
+        var values: CFArray?
+        guard AXUIElementCopyMultipleAttributeValues(
+            window, attributes, AXCopyMultipleAttributeOptions(rawValue: 0), &values
+        ) == .success,
+            let raw = values as? [AnyObject], raw.count == 3
+        else { return windowFactsOneByOne(window) }
+
+        var facts = WindowFacts()
+        facts.subrole = raw[0] as? String
+        facts.title = raw[2] as? String
+        if CFGetTypeID(raw[1]) == AXValueGetTypeID() {
+            let value = raw[1] as! AXValue
+            var size = CGSize.zero
+            if AXValueGetType(value) == .cgSize, AXValueGetValue(value, .cgSize, &size) {
+                facts.size = size
+            }
+        }
+        return facts
+    }
+
+    /// Repli attribut par attribut si la lecture groupée échoue en bloc : un
+    /// client qui refuserait cet appel (ou une version d'AX qui le boude)
+    /// verrait sinon toutes ses fenêtres prises pour « sans titre », donc
+    /// écartées — le perso disparaîtrait de la barre sans explication.
+    private func windowFactsOneByOne(_ window: AXUIElement) -> WindowFacts {
+        var facts = WindowFacts()
+        var value: CFTypeRef?
+        if AXUIElementCopyAttributeValue(window, kAXSubroleAttribute as CFString, &value) == .success {
+            facts.subrole = value as? String
+        }
+        value = nil
+        if AXUIElementCopyAttributeValue(window, kAXTitleAttribute as CFString, &value) == .success {
+            facts.title = value as? String
+        }
+        value = nil
+        if AXUIElementCopyAttributeValue(window, kAXSizeAttribute as CFString, &value) == .success,
+           let value, CFGetTypeID(value) == AXValueGetTypeID() {
+            var size = CGSize.zero
+            if AXValueGetValue(value as! AXValue, .cgSize, &size) { facts.size = size }
+        }
+        return facts
+    }
+
+    /// Une fenêtre de jeu : sous-rôle standard (ou inconnu), et assez grande.
+    /// Écarte les palettes et fenêtres de service, qui sont toujours petites ;
+    /// une taille illisible ne condamne pas. `WindowPreviewService` applique le
+    /// même seuil de son côté.
+    static func isGameWindow(subrole: String?, size: CGSize?) -> Bool {
+        if let subrole, subrole != kAXStandardWindowSubrole as String {
             return false
         }
-        // Écarte les palettes et fenêtres de service, qui sont toujours petites.
-        guard let size = sizeAttribute(window, kAXSizeAttribute) else { return true }
+        guard let size else { return true }
         return size.width > 200 && size.height > 200
+    }
+
+    func isGameWindow(_ window: AXUIElement) -> Bool {
+        let facts = windowFacts(window)
+        return Self.isGameWindow(subrole: facts.subrole, size: facts.size)
     }
 
     /// Séparateurs rencontrés dans les titres du client selon les versions.
@@ -530,10 +723,13 @@ final class WindowManager: ObservableObject {
         NSRunningApplication(processIdentifier: client.pid)?.activate()
 
         // Les attributs AX ne servent qu'à départager plusieurs fenêtres d'un même
-        // processus ; on les pose une fois la transition d'espace engagée. Sur un
-        // perso seulement mémorisé, la référence de fenêtre est périmée — il n'y
-        // a rien à y poser, l'activation du processus fait tout le travail.
-        if !client.dormant {
+        // processus ; on les pose une fois la transition d'espace engagée — et
+        // seulement s'il y a quelque chose à départager : pour un client à
+        // fenêtre unique, l'activation fait tout, et deux appels AX de plus
+        // n'ajoutent que de la latence à la bascule. Sur un perso seulement
+        // mémorisé, la référence de fenêtre est périmée — il n'y a rien à y poser.
+        let siblings = clients.filter { $0.pid == client.pid && !$0.dormant }.count
+        if !client.dormant, siblings > 1 {
             let window = client.axWindow
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                 MainActor.assumeIsolated {
@@ -543,8 +739,12 @@ final class WindowManager: ObservableObject {
             }
         }
 
-        frontmostPID = client.pid
-        frontmostIsDofus = true
+        // La notification d'activation qui va suivre est la nôtre : elle n'aura
+        // pas à déclencher un inventaire à chaud. Si le client est déjà devant,
+        // aucune ne viendra, et le drapeau resterait collé jusqu'à une
+        // activation extérieure qu'il ferait passer pour la nôtre.
+        selfActivatedPID = frontmostPID == client.pid ? nil : client.pid
+        setFrontmost(pid: client.pid, isDofus: true)
         AttentionWatcher.shared.clear(client)
     }
 
@@ -566,6 +766,11 @@ final class WindowManager: ObservableObject {
         let pid = client.pid
         guard NSRunningApplication(processIdentifier: pid) != nil else { return }
         closingPIDs.insert(pid)
+        // La pastille reste affichée le temps de la fermeture (cf. la mémoire),
+        // mais son aperçu, lui, n'a plus lieu d'être : on le retire tout de
+        // suite plutôt que d'attendre un `mouseExited` que le menu contextuel a
+        // déjà consommé.
+        PreviewPanelController.shared.reconcile(with: clients.filter { $0.pid != pid })
 
         // L'envoi du Quit Apple Event peut bloquer plusieurs secondes quand le
         // client est déjà gelé — c'est lui qui figeait Synfus au moment de
@@ -630,26 +835,10 @@ final class WindowManager: ObservableObject {
 
     // MARK: - Lecture d'attributs Accessibilité
 
-    private func stringAttribute(_ element: AXUIElement, _ attribute: String) -> String? {
-        var value: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success else { return nil }
-        return value as? String
-    }
-
     private func boolAttribute(_ element: AXUIElement, _ attribute: String) -> Bool? {
         var value: CFTypeRef?
         guard AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success else { return nil }
         return (value as? Bool)
-    }
-
-    private func sizeAttribute(_ element: AXUIElement, _ attribute: String) -> CGSize? {
-        var value: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success,
-              let raw = value, CFGetTypeID(raw) == AXValueGetTypeID()
-        else { return nil }
-        var size = CGSize.zero
-        guard AXValueGetValue(raw as! AXValue, .cgSize, &size) else { return nil }
-        return size
     }
 
     /// Ouvre le panneau Accessibilité, en demandant d'abord à macOS d'afficher

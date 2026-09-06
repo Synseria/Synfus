@@ -93,7 +93,22 @@ changement de perso) : un `Timer` de 2 s rafraîchit, complété par les
 notifications `NSWorkspace` (lancement / terminaison / activation). Celles-ci
 passent par `refreshSoon()` et non `refresh()` : un changement d'application en
 émet deux, et enchaîner deux inventaires AX double le gel au moment précis où
-l'utilisateur bascule.
+l'utilisateur bascule. Le timer, lui, saute son tour si un inventaire date de
+moins d'une seconde. Une bascule faite par Synfus est reconnue à
+`selfActivatedPID`, posé dans `focus()` : la notification d'activation qui en
+découle n'apprend rien, et l'inventaire attend 1 s (`refreshSoon(after:)`, qui
+ne garde qu'une échéance, la plus tardive) — le temps que la transition
+d'espace s'achève. `focus()` ne pose `kAXMain`/`kAXRaise` que s'il y a
+plusieurs fenêtres à départager dans le processus.
+
+Chaque fenêtre est lue en **un seul IPC** (`AXUIElementCopyMultipleAttributeValues`
+pour sous-rôle, taille et titre), et rien n'est republié sans avoir changé :
+`frontmostPID`, `frontmostIsDofus` et `clients` ne sont réaffectés qu'en cas
+de différence. Réordonner les persos passe par `resort()`, un simple retri de
+`clients` selon `characterOrder` — pas un inventaire —, avec le même
+comparateur pur que `refresh()` (`sorted(_:by:)`, testé dans
+`ClientOrderTests`). Le menu de la barre de menus se construit sur `clients`
+tel quel et ne demande qu'un `refreshSoon()`.
 
 **Un client peut cesser de rendre ses fenêtres.** Mesuré au `--dump-windows` :
 un client dont l'espace plein écran n'est pas actif retire sa fenêtre de l'ordre
@@ -118,10 +133,11 @@ titre à l'Accessibilité. Quand l'enregistrement de l'écran est accordé (celu
 des aperçus), [CrossSpaceTitles.swift](Sources/Synfus/CrossSpaceTitles.swift)
 lève cette limite : `CGWindowListCopyWindowInfo` voit à travers les espaces, et
 `discoveredAcrossSpaces` — pure, testée — fabrique le dormant à partir du titre
-lu. La lecture n'a lieu que pour les pids sans aucune mémoire (le tour de toutes
-les fenêtres du système n'est pas payé à chaque inventaire), et l'autorisation
-n'est **jamais demandée** par ce chemin : sans elle, la limite demeure,
-documentée dans les réglages.
+lu. La lecture n'a lieu que pour les pids sans aucune mémoire, et au plus une
+fois par 10 s pour un même pid (`crossSpaceChecked` — un client au login sur
+un autre bureau n'a rien à livrer et le resterait à chaque tour), et
+l'autorisation n'est **jamais demandée** par ce chemin : sans elle, la limite
+demeure, documentée dans les réglages.
 
 Tous les appels AX du processus sont bornés à 1 s
 (`AXUIElementSetMessagingTimeout` sur l'élément système, posé dans `start()`) :
@@ -189,9 +205,28 @@ cooldown de 4 s évite les rafales — et le relevé est mis de côté tant que 
 curseur survole le Dock.
 
 Le relevé passe dix fois par seconde : rien de ce qu'il produit ne doit être
-republié sans avoir changé. `pairing` l'était sans condition, et la barre
-flottante — qui observe ce watcher — se recalculait donc en permanence à cette
-cadence. C'est aussi pourquoi le tour de boucle sort avant d'interroger le Dock
+republié sans avoir changé, et rien de ce qui ne change pas ne doit être relu.
+Deux mesures en découlent :
+
+- **Cache de structure.** Retrouver les icônes Dofus — enfants du Dock, titre
+  de chaque icône, sous-rôle, état de lancement — coûtait trente à cinquante
+  allers-retours Accessibilité par tour, alors que seules position et taille
+  varient. [DockGeometryReader.swift](Sources/Synfus/DockGeometryReader.swift)
+  garde les éléments AX (`DockInspector.Structure`) et, en régime permanent,
+  ne lit que la géométrie, en **un** IPC par élément
+  (`AXUIElementCopyMultipleAttributeValues`). Le tour complet ne revient qu'au
+  premier tour, quand le nombre de pids Dofus distincts diffère du nombre
+  d'icônes en cache, quand une lecture légère échoue (élément invalidé), et au
+  plus tard toutes les 2 s en filet. La décision, `DockRefreshPolicy`, est pure
+  et testée. `BounceDetector` reçoit exactement le même relevé qu'avant.
+- **`AttentionDiagnostics`.** `pairing` et `dockReading` vivent dans cet objet
+  séparé, observé par les seuls réglages : sur `AttentionWatcher`, ils
+  réévaluaient la barre flottante — qui n'a besoin que d'`alerting` — à chaque
+  mouvement du Dock. Les chaînes de diagnostic ne sont recomposées que si le
+  relevé a numériquement changé, et la liste des persos triée par pid est tenue
+  par abonnement à `$clients`, pas retriée à chaque tour.
+
+C'est aussi pourquoi le tour de boucle sort avant d'interroger le Dock
 quand aucun perso n'est connecté.
 
 L'appariement icône du Dock ↔ perso est une **hypothèse** : rang dans le Dock
@@ -336,13 +371,25 @@ fermetures qui ne sont **pas** passées par Synfus. Un client gelé après
 fermeture est, vu d'ici, un processus vivant sans aucune fenêtre — exactement
 comme un dormant sain sur un espace plein écran inactif. Ce qui les distingue
 est la **réponse** : un dormant sain répond à l'Accessibilité (une liste vide
-est une réponse), un gelé laisse la sonde expirer
-(`AXUIElementSetMessagingTimeout` par élément, 0,3 s). La règle d'abattage est
+est une réponse), un gelé laisse la sonde expirer. La règle d'abattage est
 volontairement stricte — sans fenêtre **et** muet à trois sondes consécutives
 espacées de 5 s — pour ne jamais viser un vivant : un client qui charge a une
 fenêtre, un dormant répond en quelques millisecondes. Chaque abattage est
 consigné dans le Diagnostic ; la bascule `killFrozenClients` (onglet Persos)
 est active par défaut.
+
+**La sonde, c'est l'inventaire.** `refresh()` interroge déjà `kAXWindows` sur
+chaque client : c'est lui qui constate le mutisme (`.cannotComplete`) et le
+transmet en `mutePIDs`. Le veilleur ne sonde plus rien lui-même — la double
+sonde coûtait 1 s de borne globale plus 0,3 s, toutes les 2 s pendant quinze
+secondes. Un pid pris en défaut (`suspects`) n'est réinterrogé qu'à l'échéance
+(`shouldProbe`), avec la **même** borne d'une seconde que les autres : une
+borne plus courte lui ôterait tout moyen de se blanchir, et un client vivant
+mais lent — chargement, combat chargé — finirait abattu. Entre deux
+échéances, l'inventaire le saute et la mémoire l'affiche atténué. Un pid silencieux mais non sondé garde son ardoise : seule une
+réponse à une sonde due l'efface. La comptabilité est une struct pure,
+`FreezeStrikes`, testée dans `FreezeStrikesTests` ; les strikes sont comptés
+même quand `killFrozenClients` est désactivé, seul le coup de grâce en dépend.
 
 ### Rangement des fenêtres
 
@@ -412,7 +459,16 @@ propriété calculée, donc s'y réassigner relance le `didSet` — d'où le dra
   [FloatingBarController.swift](Sources/Synfus/FloatingBarController.swift) :
   un overlay de jeu ne doit jamais capter le clavier. Le déplacement passe par
   `performDrag(with:)` d'AppKit (`WindowDragArea`), pas par un `DragGesture` —
-  ce dernier reste toujours un cran derrière la souris.
+  ce dernier reste toujours un cran derrière la souris. `didMove` arrive en
+  continu pendant le geste : `panelMoved` ne coupe `autoCenterBar` que s'il est
+  encore vrai et garde la position dans `pendingOrigin`, écrite dans
+  `barOrigin` 250 ms après le dernier mouvement (`flushPendingOrigin`, aussi
+  appelé à la fermeture de l'app). Écrire à chaque évènement, c'était un JSON
+  et un redessin de toutes les vues qui observent `Preferences` par pixel.
+  Le timer de 2 s appelle `updateVisibility(force: false)` — il ne touche au
+  panneau que si son état est faux —, les notifications gardent `force: true` :
+  c'est ce qui remonte la barre au-dessus d'un espace plein écran fraîchement
+  activé.
   Le panneau est au niveau `.statusBar` et non `.floating` : un espace plein
   écran héberge la fenêtre du jeu à un niveau propre, sous lequel `.floating`
   disparaît. `.stationary` est délibérément absent du `collectionBehavior`, il
@@ -456,10 +512,18 @@ ni `CGImage` ne franchissent la frontière d'isolation, ce qui évite d'avoir à
 plaider leur sendabilité.
 
 L'inventaire `SCShareableContent` fait le tour de toutes les fenêtres du système
-et coûte bien plus que la capture elle-même : il est fait **une fois par
-rafraîchissement**, pour tous les persos demandés, et non une fois par perso. Les
-captures qui suivent restent séquentielles, faute de pouvoir faire traverser un
-`SCWindow` — non `Sendable` — vers une tâche fille.
+et coûte bien plus que la capture elle-même. Il appartient à
+`PreviewCaptureEngine`, un `actor` qui le garde en mémoire et ne le refait que
+s'il date de plus de 3 s ou si un perso demandé n'y trouve pas sa fenêtre — et
+toujours **une fois par rafraîchissement**, pour tous les persos restants, non
+une fois par perso. Il n'entre dans l'acteur que des requêtes `Sendable`, il
+n'en sort que du PNG. Les captures restent séquentielles, faute de pouvoir
+faire traverser un `SCWindow` — non `Sendable` — vers une tâche fille.
+
+Le survol d'une pastille **préchauffe** la capture : `BarView.hover` appelle
+`refresh` dès l'entrée, en parallèle des 400 ms d'attente, si aucune vignette
+n'est connue pour ce perso et si l'autorisation est déjà accordée — `refresh`
+ne la demande jamais, un survol ne doit pas faire surgir une invite.
 
 L'appariement écarte les candidats trop petits pour être une fenêtre de jeu,
 avec le seuil de `WindowManager.isGameWindow`. Sans ce filtre, les info-bulles

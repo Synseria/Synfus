@@ -41,9 +41,12 @@ enum AppIntegrity {
     }
 
     /// Vrai si l'app en cours d'exécution est en quarantaine.
-    static var isQuarantined: Bool {
-        isQuarantined(path: Bundle.main.bundlePath)
-    }
+    ///
+    /// Résolu **une seule fois** : l'attribut ne change pas pendant l'exécution
+    /// — lever la quarantaine se fait app fermée —, et la fenêtre de réglages
+    /// relisait cette valeur à chacune de ses évaluations, soit un `getxattr`
+    /// par redessin de l'interface.
+    static let isQuarantined: Bool = isQuarantined(path: Bundle.main.bundlePath)
 
     /// La commande qui lève la quarantaine, avec le chemin réel de l'app —
     /// copiable telle quelle, y compris si l'app n'est pas dans `/Applications`.
