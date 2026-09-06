@@ -19,7 +19,7 @@ enum DockInspector {
     /// Géométrie d'une icône du Dock. C'est tout ce dont le détecteur de rebond
     /// a besoin : quand une app réclame l'attention, le Dock fait monter son
     /// icône et l'expose réellement — `AXPosition.y` diminue le temps du saut.
-    struct Item {
+    struct Item: Equatable {
         let title: String
         let position: CGPoint
         let size: CGSize
@@ -42,7 +42,7 @@ enum DockInspector {
     private static let applicationDockItem = "AXApplicationDockItem"
 
     /// Ce qu'un tour d'inspection rapporte du Dock.
-    struct Inventory {
+    struct Inventory: Equatable {
         /// Icônes des clients Dofus lancés, de gauche à droite.
         let items: [Item]
         /// Cadre du **bandeau** entier — la liste qui héberge les icônes, toutes
@@ -64,17 +64,45 @@ enum DockInspector {
         }
     }
 
+    /// Ce qui, dans le Dock, ne change pas d'un tour à l'autre : les éléments AX
+    /// eux-mêmes. Les icônes Dofus et le bandeau qui les héberge sont des objets
+    /// stables tant qu'aucun client ne se lance ni ne se ferme ; seules leur
+    /// position et leur taille bougent. Retrouver ces éléments coûte cher —
+    /// enfants du Dock, enfants de chaque liste, titre de **chaque** icône, puis
+    /// sous-rôle et état de lancement des icônes Dofus — et dix fois par seconde,
+    /// c'étaient trente à cinquante allers-retours vers le Dock. D'où ce cache,
+    /// tenu par `DockGeometryReader`, qui n'est reconstruit qu'à bon escient.
+    struct Structure {
+        let dockPID: pid_t
+        /// La liste qui héberge les icônes Dofus, quand elle a pu être lue.
+        let strip: AXUIElement?
+        /// Icônes des clients Dofus lancés, dans l'ordre d'abscisse à la
+        /// découverte. L'ordre de rang est recalculé à chaque relevé.
+        let items: [(title: String, element: AXUIElement)]
+        let date: Date
+    }
+
     /// Icônes du Dock appartenant à des clients Dofus lancés, de gauche à droite.
     static func dofusItems() -> [Item] { inventory().items }
 
+    /// Tour complet : découverte structurelle puis relevé géométrique.
     static func inventory() -> Inventory {
+        guard let structure = discoverStructure(now: Date()),
+              let inventory = geometry(of: structure)
+        else { return Inventory(items: [], strip: nil) }
+        return inventory
+    }
+
+    /// Le tour complet : retrouve les éléments AX des icônes Dofus et du bandeau.
+    /// Rend `nil` si le Dock n'est pas lancé.
+    static func discoverStructure(now: Date) -> Structure? {
         guard let dock = NSRunningApplication
             .runningApplications(withBundleIdentifier: "com.apple.dock").first
-        else { return Inventory(items: [], strip: nil) }
+        else { return nil }
 
         let axDock = AXUIElementCreateApplication(dock.processIdentifier)
-        var items: [(title: String, position: CGPoint, size: CGSize)] = []
-        var strip: CGRect?
+        var items: [(title: String, x: CGFloat, element: AXUIElement)] = []
+        var strip: AXUIElement?
 
         for list in children(axDock) {
             var holdsDofus = false
@@ -85,20 +113,38 @@ enum DockInspector {
                       // Une app seulement épinglée ou « récente » ne rebondit pas :
                       // la retenir décalerait les rangs sans jamais servir.
                       value(element, "AXIsApplicationRunning") as? Bool == true,
-                      let position = point(element, kAXPositionAttribute),
-                      let size = dimension(element, kAXSizeAttribute)
+                      let position = point(element, kAXPositionAttribute)
                 else { continue }
-                items.append((title, position, size))
+                items.append((title, position.x, element))
                 holdsDofus = true
             }
             // Le bandeau retenu est celui qui héberge réellement les icônes.
-            if holdsDofus,
-               let position = point(list, kAXPositionAttribute),
-               let size = dimension(list, kAXSizeAttribute) {
-                strip = CGRect(origin: position, size: size)
-            }
+            if holdsDofus { strip = list }
         }
 
+        return Structure(
+            dockPID: dock.processIdentifier,
+            strip: strip,
+            items: items.sorted { $0.x < $1.x }.map { ($0.title, $0.element) },
+            date: now
+        )
+    }
+
+    /// Le tour léger : position et taille de chaque élément connu, en **un seul**
+    /// aller-retour par élément. Rend `nil` dès qu'un élément ne répond plus
+    /// comme attendu — icône disparue, Dock relancé — : c'est le signal que la
+    /// structure est périmée et qu'il faut la redécouvrir.
+    static func geometry(of structure: Structure) -> Inventory? {
+        var items: [(title: String, position: CGPoint, size: CGSize)] = []
+        for item in structure.items {
+            guard let frame = frame(of: item.element) else { return nil }
+            items.append((item.title, frame.origin, frame.size))
+        }
+        var strip: CGRect?
+        if let element = structure.strip {
+            guard let frame = frame(of: element) else { return nil }
+            strip = frame
+        }
         return Inventory(
             items: items
                 .sorted { $0.position.x < $1.position.x }
@@ -106,6 +152,30 @@ enum DockInspector {
                 .map { Item(title: $1.title, position: $1.position, size: $1.size, rank: $0) },
             strip: strip
         )
+    }
+
+    /// Position et taille d'un élément en un seul appel Accessibilité, là où deux
+    /// `AXUIElementCopyAttributeValue` en coûtaient deux. Sans `stopOnError`, une
+    /// lecture ratée rend une `AXValue` de type `.axError` à la place de la
+    /// valeur, d'où le contrôle du type de chacune.
+    private static func frame(of element: AXUIElement) -> CGRect? {
+        var values: CFArray?
+        let attributes = [kAXPositionAttribute, kAXSizeAttribute] as CFArray
+        guard AXUIElementCopyMultipleAttributeValues(
+                element, attributes, AXCopyMultipleAttributeOptions(rawValue: 0), &values
+              ) == .success,
+              let list = values as? [AnyObject], list.count == 2,
+              CFGetTypeID(list[0]) == AXValueGetTypeID(),
+              CFGetTypeID(list[1]) == AXValueGetTypeID()
+        else { return nil }
+        let rawPosition = list[0] as! AXValue
+        let rawSize = list[1] as! AXValue
+        var position = CGPoint.zero
+        var size = CGSize.zero
+        guard AXValueGetType(rawPosition) == .cgPoint, AXValueGetValue(rawPosition, .cgPoint, &position),
+              AXValueGetType(rawSize) == .cgSize, AXValueGetValue(rawSize, .cgSize, &size)
+        else { return nil }
+        return CGRect(origin: position, size: size)
     }
 
     /// Cadre couvrant les icônes, élargi de la place que prend la magnification :
@@ -121,13 +191,6 @@ enum DockInspector {
         guard let raw = value(element, attribute), CFGetTypeID(raw) == AXValueGetTypeID() else { return nil }
         var result = CGPoint.zero
         guard AXValueGetValue(raw as! AXValue, .cgPoint, &result) else { return nil }
-        return result
-    }
-
-    private static func dimension(_ element: AXUIElement, _ attribute: String) -> CGSize? {
-        guard let raw = value(element, attribute), CFGetTypeID(raw) == AXValueGetTypeID() else { return nil }
-        var result = CGSize.zero
-        guard AXValueGetValue(raw as! AXValue, .cgSize, &result) else { return nil }
         return result
     }
 

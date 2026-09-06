@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 
 /// Ce que Synfus fait quand un perso réclame l'attention.
 enum AttentionAction: String, Codable, CaseIterable, Identifiable {
@@ -43,23 +44,20 @@ final class AttentionWatcher: ObservableObject {
     /// Persos actuellement en train de réclamer l'attention.
     @Published private(set) var alerting: Set<String> = []
 
-    /// Une icône du Dock et le perso qu'on lui attribue. Un type nommé plutôt
-    /// qu'un tuple, pour être `Equatable` — ce qui permet de ne republier
-    /// l'appariement que lorsqu'il change réellement.
-    struct Pair: Equatable {
-        let dock: String
-        let character: String
-    }
+    /// Le lecteur du Dock, qui garde les éléments AX d'un tour à l'autre : en
+    /// régime permanent, le tour ne relit que les positions et tailles.
+    private let dockReader = DockGeometryReader()
+    private let diagnostics = AttentionDiagnostics.shared
 
-    /// Correspondance icône du Dock → perso, exposée pour vérification dans
-    /// l'onglet Diagnostic.
-    @Published private(set) var pairing: [Pair] = []
+    /// Persos triés par pid croissant, tenus à jour par abonnement plutôt que
+    /// retriés à chaque tour : la liste ne change qu'à l'inventaire, dix fois
+    /// moins souvent que ce tour ne passe.
+    private var sortedClients: [DofusClient] = []
+    private var clientsSubscription: AnyCancellable?
 
-    /// Dernier relevé du bandeau du Dock et de la première icône, exposé au
-    /// Diagnostic. Toute la détection repose sur l'idée qu'un rebond éloigne
-    /// l'icône de son bandeau alors qu'un Dock qui glisse les emporte ensemble :
-    /// c'est une hypothèse, elle doit pouvoir se vérifier d'un coup d'œil.
-    @Published private(set) var dockReading: String?
+    /// Relevé du tour précédent. Les chaînes du Diagnostic ne sont recomposées
+    /// que si les valeurs numériques ont bougé.
+    private var lastInventory: DockInspector.Inventory?
 
     private var timer: Timer?
     private var detector = BounceDetector()
@@ -73,6 +71,13 @@ final class AttentionWatcher: ObservableObject {
 
     func start() {
         timer?.invalidate()
+        // `@Published` émet la nouvelle valeur avant de l'affecter : c'est bien
+        // elle que l'on trie, pas la précédente.
+        clientsSubscription = WindowManager.shared.$clients.sink { [weak self] clients in
+            MainActor.assumeIsolated {
+                self?.sortedClients = clients.sorted { $0.pid < $1.pid }
+            }
+        }
         // 0,1 s : le saut dure environ une seconde, on le voit largement.
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tick() }
@@ -100,29 +105,35 @@ final class AttentionWatcher: ObservableObject {
         // Sans perso à signaler, il n'y a rien à détecter : inutile d'aller
         // interroger le Dock par l'Accessibilité dix fois par seconde alors que
         // Dofus n'est même pas lancé.
-        let clients = WindowManager.shared.clients.sorted { $0.pid < $1.pid }
+        let clients = sortedClients
         guard !clients.isEmpty else {
-            if !pairing.isEmpty { pairing = [] }
+            diagnostics.update(pairing: [])
             if !alerting.isEmpty { alerting.removeAll() }
             return
         }
 
-        let inventory = DockInspector.inventory()
+        // Un processus, une icône : le compte de processus vivants périme la
+        // structure en cache dès qu'un client se lance ou se ferme. Celui de
+        // `clients` ne suffirait pas : un client au login sur un autre bureau
+        // a une icône sans avoir de perso, et le cache serait périmé à jamais.
+        let processes = WindowManager.shared.liveDofusPIDs.count
+        let inventory = dockReader.read(dofusProcesses: processes)
         let items = inventory.items
 
         // Les icônes du Dock s'ajoutent dans l'ordre de lancement des apps, tout
         // comme les pid croissent dans cet ordre : on apparie donc rang à rang.
         // C'est une hypothèse, d'où son affichage dans l'onglet Diagnostic.
         //
-        // L'égalité court-circuite la republication. Ce tour de boucle passe dix
-        // fois par seconde : réassigner sans regarder invalidait la barre
-        // flottante — qui observe ce watcher — à la même cadence, en permanence,
-        // pour un appariement qui ne change qu'au lancement d'un client.
-        let paired = zip(items, clients).map { Pair(dock: $0.key, character: $1.name) }
-        if paired != pairing { pairing = paired }
-
-        let reading = Self.describe(inventory)
-        if reading != dockReading { dockReading = reading }
+        // Ce tour de boucle passe dix fois par seconde : rien n'est republié
+        // sans avoir changé, et les chaînes du Diagnostic ne sont même pas
+        // recomposées tant que le relevé est numériquement le même.
+        diagnostics.update(pairing: zip(items, clients).map {
+            AttentionDiagnostics.Pair(dock: $0.key, character: $1.name)
+        })
+        if inventory != lastInventory {
+            lastInventory = inventory
+            diagnostics.update(reading: Self.describe(inventory))
+        }
 
         let snapshot = BounceDetector.Snapshot(
             keys: items.map(\.key),

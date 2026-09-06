@@ -139,6 +139,29 @@ private struct GearButton: View {
     }
 }
 
+/// Contour orange qui pulse autour d'une pastille dont le perso réclame
+/// l'attention.
+///
+/// L'animation est portée par cette vue, et cette vue n'existe que le temps de
+/// l'alerte : `repeatForever` ne tourne donc que quand il y a quelque chose à
+/// montrer. Une version antérieure posait la boucle au `onAppear` de la barre
+/// et l'appliquait, invisible, à toutes les pastilles — la barre se redessinait
+/// deux fois par seconde en permanence, alerte ou pas.
+private struct AlertPulse: View {
+    @State private var pulse = false
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 8, style: .continuous)
+            .strokeBorder(Color.orange, lineWidth: 1.5)
+            .opacity(pulse ? 1 : 0.2)
+            .onAppear {
+                withAnimation(.easeInOut(duration: 0.55).repeatForever(autoreverses: true)) {
+                    pulse = true
+                }
+            }
+    }
+}
+
 struct BarView: View {
     @ObservedObject private var manager = WindowManager.shared
     @ObservedObject private var prefs = Preferences.shared
@@ -147,7 +170,6 @@ struct BarView: View {
     @ObservedObject private var clicks = ClickAdvanceWatcher.shared
     @State private var dragging: String?
     @State private var chipFrames: [String: CGRect] = [:]
-    @State private var pulse = false
     /// Ouverture différée de l'aperçu, annulée dès que le curseur ressort.
     @State private var hoverTask: Task<Void, Never>?
     /// Perso pour lequel cette attente a été lancée. Cf. `hover(_:inside:)`.
@@ -169,11 +191,6 @@ struct BarView: View {
         .modifier(BarBackground())
         .fixedSize()
         .contextMenu { contextMenu }
-        .onAppear {
-            withAnimation(.easeInOut(duration: 0.55).repeatForever(autoreverses: true)) {
-                pulse = true
-            }
-        }
         .onChange(of: manager.clients) { _, clients in pruneChipFrames(clients) }
     }
 
@@ -372,11 +389,7 @@ struct BarView: View {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .fill(active ? Color.accentColor : Color.clear)
             )
-            .overlay(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .strokeBorder(Color.orange, lineWidth: 1.5)
-                    .opacity(alerting ? (pulse ? 1 : 0.2) : 0)
-            )
+            .overlay { if alerting { AlertPulse() } }
             .foregroundStyle(active ? Color.white : Color.primary)
             .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
@@ -425,6 +438,17 @@ struct BarView: View {
             }
             PreviewPanelController.shared.hide(ifShowing: client)
             return
+        }
+
+        // Préchauffage : la capture part tout de suite, en parallèle de
+        // l'attente, pour que l'aperçu s'ouvre avec son image plutôt que sur
+        // le cadre « Capture en cours… ». Seulement si l'autorisation est déjà
+        // là — `refresh` ne la demande jamais, un survol ne doit pas faire
+        // surgir une invite système — et si aucune image n'est connue : une
+        // vignette existante attend le rafraîchissement normal du panneau.
+        let service = WindowPreviewService.shared
+        if service.authorized, service.previews[client.slotKey] == nil {
+            service.refresh(client)
         }
 
         hoverTask?.cancel()
@@ -477,8 +501,9 @@ struct BarView: View {
                 })?.key else { return }
                 withAnimation(.easeInOut(duration: 0.15)) {
                     Preferences.shared.swapOrder(client.name, target)
+                    // Un tri, pas un inventaire : rien n'a changé côté clients.
+                    WindowManager.shared.resort()
                 }
-                WindowManager.shared.refresh()
             }
             .onEnded { _ in dragging = nil }
     }

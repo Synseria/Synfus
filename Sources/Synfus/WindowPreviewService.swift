@@ -28,40 +28,34 @@ final class WindowPreviewService: ObservableObject {
     /// plus rapide que ScreenCaptureKit.
     private var inFlight: Set<String> = []
 
-    private init() {}
+    /// Le moteur de capture, seul détenteur de l'inventaire ScreenCaptureKit.
+    private let engine = PreviewCaptureEngine()
 
-    /// Largeur maximale d'une vignette. Capturer en pleine résolution pour
-    /// afficher 240 points coûterait cher sans rien apporter. `nonisolated` :
-    /// la capture s'exécute hors du main actor.
-    private nonisolated static let maxWidth = 480
+    private init() {}
 
     // MARK: - Capture
 
-    /// Ce qu'une capture a besoin de savoir d'un client. Types simples
-    /// uniquement : la capture s'exécute hors du main actor.
-    private struct Request: Sendable {
-        let key: String
-        let pid: pid_t
-        let title: String
-    }
-
-    /// Rafraîchit toutes les vignettes demandées **en un seul inventaire**.
+    /// Rafraîchit toutes les vignettes demandées **en un seul inventaire** — et
+    /// le plus souvent sans inventaire du tout, cf. `PreviewCaptureEngine`.
     ///
     /// C'est le point important : `SCShareableContent` fait le tour de toutes les
     /// fenêtres du système, et la grille d'aperçu se rafraîchit chaque seconde.
     /// Un inventaire par perso revenait à en faire cinq par seconde pour cinq
     /// clients, alors qu'un seul les sert tous.
+    ///
+    /// L'autorisation n'est **jamais demandée** ici : sans elle, rien ne part.
+    /// Le survol d'une pastille compte dessus pour préchauffer la capture.
     func refresh(_ clients: [DofusClient]) {
         guard authorized else { return }
         let requests = clients
             .filter { !inFlight.contains($0.slotKey) }
-            .map { Request(key: $0.slotKey, pid: $0.pid, title: $0.rawTitle) }
+            .map { PreviewRequest(key: $0.slotKey, pid: $0.pid, title: $0.rawTitle) }
         guard !requests.isEmpty else { return }
 
         for request in requests { inFlight.insert(request.key) }
 
         Task {
-            let captured = await Self.capture(requests)
+            let captured = await engine.capture(requests)
             for request in requests {
                 inFlight.remove(request.key)
                 if let data = captured[request.key], let image = NSImage(data: data) {
@@ -83,57 +77,6 @@ final class WindowPreviewService: ObservableObject {
         let alive = Set(clients.map(\.slotKey))
         previews = previews.filter { alive.contains($0.key) }
         unmatched = unmatched.intersection(alive)
-    }
-
-    /// Capture hors du main actor et rend des PNG : `SCWindow` et `CGImage` ne
-    /// franchissent jamais la frontière d'isolation, seules des données le font.
-    ///
-    /// Le déroulé est séquentiel à dessein : les captures ne peuvent pas partir
-    /// en parallèle sans faire traverser un `SCWindow` — qui n'est pas
-    /// `Sendable` — vers une tâche fille. Ce n'est de toute façon pas là qu'est
-    /// le coût, l'inventaire l'emporte de loin, et il est désormais unique.
-    private nonisolated static func capture(_ requests: [Request]) async -> [String: Data] {
-        // `onScreenWindowsOnly: false` est indispensable : un client sur un
-        // autre bureau, ou en plein écran ailleurs, n'est pas « à l'écran ».
-        guard let content = try? await SCShareableContent.excludingDesktopWindows(
-            false, onScreenWindowsOnly: false
-        ) else { return [:] }
-
-        let candidates = content.windows.map {
-            Candidate(
-                pid: $0.owningApplication?.processID ?? -1,
-                title: $0.title,
-                size: $0.frame.size
-            )
-        }
-
-        var captured: [String: Data] = [:]
-        for request in requests {
-            guard let index = match(pid: request.pid, title: request.title, among: candidates)
-            else { continue }
-            if let data = await shot(of: content.windows[index]) {
-                captured[request.key] = data
-            }
-        }
-        return captured
-    }
-
-    private nonisolated static func shot(of window: SCWindow) async -> Data? {
-        let configuration = SCStreamConfiguration()
-        let scale = min(1, CGFloat(maxWidth) / max(window.frame.width, 1))
-        configuration.width = Int((window.frame.width * scale).rounded())
-        configuration.height = Int((window.frame.height * scale).rounded())
-        configuration.showsCursor = false
-
-        guard let image = try? await SCScreenshotManager.captureImage(
-            contentFilter: SCContentFilter(desktopIndependentWindow: window),
-            configuration: configuration
-        ) else { return nil }
-        return png(from: image)
-    }
-
-    private nonisolated static func png(from image: CGImage) -> Data? {
-        NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:])
     }
 
     // MARK: - Appariement
@@ -197,5 +140,110 @@ final class WindowPreviewService: ObservableObject {
     func refreshAuthorization() {
         let granted = CGPreflightScreenCaptureAccess()
         if granted != authorized { authorized = granted }
+    }
+}
+
+// MARK: - Moteur de capture
+
+/// Ce qu'une capture a besoin de savoir d'un client. Types simples uniquement :
+/// c'est ce qui entre dans le moteur, et rien d'autre.
+private struct PreviewRequest: Sendable {
+    let key: String
+    let pid: pid_t
+    let title: String
+}
+
+/// Inventaire ScreenCaptureKit et captures, hors du main actor.
+///
+/// La règle d'isolation est celle d'avant, déplacée autour de cet acteur : il
+/// n'en entre que des requêtes et il n'en sort que des PNG. `SCWindow`,
+/// `SCShareableContent` et `CGImage` ne franchissent jamais sa frontière.
+///
+/// Ce qu'il apporte, c'est la **mémoire de l'inventaire**. `SCShareableContent`
+/// fait le tour de toutes les fenêtres du système et coûte bien plus que la
+/// capture elle-même ; le panneau d'aperçu se rafraîchit chaque seconde tant
+/// qu'il est ouvert, et refaisait ce tour à chaque fois. Les fenêtres de jeu ne
+/// naissent pas toutes les secondes : l'inventaire est gardé et ne se refait
+/// que s'il date de plus de `maxAge`, ou si un perso demandé n'y trouve pas sa
+/// fenêtre — un client qui vient de se connecter, ou dont la fenêtre a changé.
+private actor PreviewCaptureEngine {
+    private var content: SCShareableContent?
+    private var inventoriedAt: Date = .distantPast
+
+    /// Au-delà, l'inventaire est réputé périmé.
+    private static let maxAge: TimeInterval = 3
+    /// Largeur maximale d'une vignette. Capturer en pleine résolution pour
+    /// afficher 240 points coûterait cher sans rien apporter.
+    private static let maxWidth = 480
+
+    /// Rend les PNG des persos retrouvés, par clé. Un perso absent du résultat
+    /// n'a pas de fenêtre capturable — l'appariement est une hypothèse.
+    func capture(_ requests: [PreviewRequest]) async -> [String: Data] {
+        var captured: [String: Data] = [:]
+        var pending = requests
+
+        // Premier passage sur l'inventaire en mémoire, s'il est encore frais.
+        if let content, Date().timeIntervalSince(inventoriedAt) < Self.maxAge {
+            captured = await shots(pending, in: content)
+            pending = pending.filter { captured[$0.key] == nil }
+        }
+        guard !pending.isEmpty else { return captured }
+
+        // Inventaire périmé, ou un perso sans fenêtre dedans : on refait le
+        // tour, une fois, pour les seuls persos qui restent.
+        //
+        // `onScreenWindowsOnly: false` est indispensable : un client sur un
+        // autre bureau, ou en plein écran ailleurs, n'est pas « à l'écran ».
+        guard let fresh = try? await SCShareableContent.excludingDesktopWindows(
+            false, onScreenWindowsOnly: false
+        ) else { return captured }
+        content = fresh
+        inventoriedAt = Date()
+
+        captured.merge(await shots(pending, in: fresh)) { _, new in new }
+        return captured
+    }
+
+    /// Le déroulé est séquentiel à dessein : les captures ne peuvent pas partir
+    /// en parallèle sans faire traverser un `SCWindow` — qui n'est pas
+    /// `Sendable` — vers une tâche fille. Ce n'est de toute façon pas là qu'est
+    /// le coût, l'inventaire l'emporte de loin.
+    private func shots(_ requests: [PreviewRequest], in content: SCShareableContent) async -> [String: Data] {
+        let candidates = content.windows.map {
+            WindowPreviewService.Candidate(
+                pid: $0.owningApplication?.processID ?? -1,
+                title: $0.title,
+                size: $0.frame.size
+            )
+        }
+
+        var captured: [String: Data] = [:]
+        for request in requests {
+            guard let index = WindowPreviewService.match(
+                pid: request.pid, title: request.title, among: candidates
+            ) else { continue }
+            if let data = await shot(of: content.windows[index]) {
+                captured[request.key] = data
+            }
+        }
+        return captured
+    }
+
+    private func shot(of window: SCWindow) async -> Data? {
+        let configuration = SCStreamConfiguration()
+        let scale = min(1, CGFloat(Self.maxWidth) / max(window.frame.width, 1))
+        configuration.width = Int((window.frame.width * scale).rounded())
+        configuration.height = Int((window.frame.height * scale).rounded())
+        configuration.showsCursor = false
+
+        guard let image = try? await SCScreenshotManager.captureImage(
+            contentFilter: SCContentFilter(desktopIndependentWindow: window),
+            configuration: configuration
+        ) else { return nil }
+        return Self.png(from: image)
+    }
+
+    private static func png(from image: CGImage) -> Data? {
+        NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:])
     }
 }

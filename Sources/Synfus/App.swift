@@ -23,6 +23,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        // La position de la barre s'écrit avec un temps de retard sur le
+        // déplacement : quitter dans cet intervalle ne doit pas la perdre.
+        FloatingBarController.shared.flushPendingOrigin()
         HotKeyManager.shared.unregisterAll()
     }
 

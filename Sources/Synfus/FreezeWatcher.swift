@@ -18,8 +18,15 @@ import ApplicationServices
 /// secondes de silence complet. Un client occupé qui charge une carte a une
 /// fenêtre ; un dormant sain répond en quelques millisecondes.
 ///
-/// La sonde borne son attente par `AXUIElementSetMessagingTimeout` : sans elle,
-/// interroger un processus gelé bloquerait Synfus plusieurs secondes.
+/// Le veilleur ne sonde rien lui-même : **la sonde, c'est l'inventaire.**
+/// `WindowManager.refresh` interroge déjà `kAXWindows` sur chaque client, et
+/// c'est lui qui constate le mutisme (`.cannotComplete`). Sonder une seconde
+/// fois le même pid, c'était payer deux fois l'expiration — 1 s de borne
+/// globale puis 0,3 s — toutes les 2 s pendant quinze secondes. L'inventaire
+/// consulte donc `suspects` et `shouldProbe(_:)` pour ne réinterroger un pid
+/// déjà pris en défaut qu'à l'échéance — avec la borne ordinaire d'une
+/// seconde, pour qu'un vivant lent puisse toujours se blanchir. Entre deux
+/// échéances, le perso reste affiché, atténué, par la mémoire.
 @MainActor
 final class FreezeWatcher: ObservableObject {
     static let shared = FreezeWatcher()
@@ -39,52 +46,109 @@ final class FreezeWatcher: ObservableObject {
     static let probeInterval: TimeInterval = 5
     /// Sondes muettes consécutives avant le coup de grâce.
     static let strikesRequired = 3
-    /// Attente maximale d'une réponse — c'est aussi le temps que Synfus accepte
-    /// de bloquer sur un processus gelé, une fois toutes les `probeInterval`.
-    static let probeTimeout: Float = 0.3
 
-    private var strikes: [pid_t: Int] = [:]
-    private var lastProbe: [pid_t: Date] = [:]
+    private var strikes = FreezeStrikes(probeInterval: probeInterval,
+                                        strikesRequired: strikesRequired)
 
     private init() {}
 
-    /// À appeler après chaque inventaire, avec les processus vivants qui ne
-    /// rendent aucune fenêtre et un nom à mettre au journal le cas échéant.
-    func inspect(silentPIDs: Set<pid_t>, names: [pid_t: String]) {
-        // Un processus redevenu bavard ou disparu repart de zéro.
-        strikes = strikes.filter { silentPIDs.contains($0.key) }
-        lastProbe = lastProbe.filter { silentPIDs.contains($0.key) }
+    /// Processus déjà pris en défaut au moins une fois : l'inventaire ne les
+    /// réinterroge qu'à l'échéance, et avec la borne courte.
+    var suspects: Set<pid_t> { strikes.suspects }
 
-        for pid in silentPIDs {
-            if let derniere = lastProbe[pid],
-               Date().timeIntervalSince(derniere) < Self.probeInterval { continue }
-            lastProbe[pid] = Date()
-
-            if responds(pid) {
-                strikes[pid] = 0
-                continue
-            }
-
-            let compte = strikes[pid, default: 0] + 1
-            strikes[pid] = compte
-            guard compte >= Self.strikesRequired else { continue }
-
-            NSRunningApplication(processIdentifier: pid)?.forceTerminate()
-            journal.append(Abattu(date: Date(), pid: pid,
-                                  nom: names[pid] ?? "pid \(pid)"))
-            strikes[pid] = nil
-            lastProbe[pid] = nil
-        }
+    /// Une sonde de ce processus est-elle due ?
+    func shouldProbe(_ pid: pid_t) -> Bool {
+        strikes.shouldProbe(pid, now: Date())
     }
 
-    /// Le processus répond-il encore à l'Accessibilité ? La question posée est
-    /// `kAXWindows` — la même que l'inventaire — et une liste vide vaut oui :
-    /// seule l'expiration du délai vaut non.
-    private func responds(_ pid: pid_t) -> Bool {
-        let element = AXUIElementCreateApplication(pid)
-        AXUIElementSetMessagingTimeout(element, Self.probeTimeout)
-        var value: CFTypeRef?
-        let error = AXUIElementCopyAttributeValue(element, kAXWindowsAttribute as CFString, &value)
-        return error != .cannotComplete
+    /// À appeler après chaque inventaire, avec les processus vivants qui ne
+    /// rendent aucune fenêtre, ceux d'entre eux que l'inventaire a trouvés
+    /// muets, et un nom à mettre au journal le cas échéant.
+    ///
+    /// Les strikes sont comptés même quand `achever` est faux : ils ne coûtent
+    /// rien et épargnent à l'inventaire la borne pleine sur un client gelé.
+    /// Seul le coup de grâce dépend du réglage.
+    func inspect(silentPIDs: Set<pid_t>, mutePIDs: Set<pid_t>,
+                 names: [pid_t: String], achever: Bool) {
+        let now = Date()
+        strikes.prune(keeping: silentPIDs)
+
+        for pid in silentPIDs {
+            guard case .condamne = strikes.record(pid, mute: mutePIDs.contains(pid), now: now),
+                  achever
+            else { continue }
+
+            NSRunningApplication(processIdentifier: pid)?.forceTerminate()
+            journal.append(Abattu(date: now, pid: pid, nom: names[pid] ?? "pid \(pid)"))
+            strikes.forget(pid)
+        }
+    }
+}
+
+/// La règle d'abattage, pure : on la nourrit du résultat de chaque inventaire
+/// et elle rend un verdict, sans rien lire elle-même — donc testable sans
+/// client ni Accessibilité.
+struct FreezeStrikes: Equatable {
+    enum Verdict: Equatable {
+        /// Pas sondé ce tour-ci : rien ne change.
+        case ignore
+        /// A répondu : l'ardoise est effacée.
+        case blanchi
+        /// Muet, mais pas encore assez de fois.
+        case frappe(Int)
+        /// Muet à `strikesRequired` sondes consécutives.
+        case condamne
+    }
+
+    let probeInterval: TimeInterval
+    let strikesRequired: Int
+
+    private(set) var strikes: [pid_t: Int] = [:]
+    private(set) var lastProbe: [pid_t: Date] = [:]
+
+    init(probeInterval: TimeInterval, strikesRequired: Int) {
+        self.probeInterval = probeInterval
+        self.strikesRequired = strikesRequired
+    }
+
+    var suspects: Set<pid_t> {
+        Set(strikes.filter { $0.value > 0 }.keys)
+    }
+
+    /// Une sonde est due si le pid n'a jamais été sondé ou si `probeInterval`
+    /// s'est écoulé depuis la dernière.
+    func shouldProbe(_ pid: pid_t, now: Date) -> Bool {
+        guard let derniere = lastProbe[pid] else { return true }
+        return now.timeIntervalSince(derniere) >= probeInterval
+    }
+
+    /// Un processus redevenu bavard ou disparu repart de zéro.
+    mutating func prune(keeping silentPIDs: Set<pid_t>) {
+        strikes = strikes.filter { silentPIDs.contains($0.key) }
+        lastProbe = lastProbe.filter { silentPIDs.contains($0.key) }
+    }
+
+    /// Consigne ce que l'inventaire a vu d'un processus silencieux.
+    ///
+    /// Un pid muet a forcément été sondé : le strike est compté. Un pid
+    /// silencieux mais non muet n'a été sondé que si la sonde était due —
+    /// sinon l'inventaire l'a sauté, et son ardoise ne doit pas être effacée
+    /// sur une réponse qui n'a jamais été demandée.
+    mutating func record(_ pid: pid_t, mute: Bool, now: Date) -> Verdict {
+        if mute {
+            lastProbe[pid] = now
+            let compte = strikes[pid, default: 0] + 1
+            strikes[pid] = compte
+            return compte >= strikesRequired ? .condamne : .frappe(compte)
+        }
+        guard shouldProbe(pid, now: now) else { return .ignore }
+        lastProbe[pid] = now
+        strikes[pid] = nil
+        return .blanchi
+    }
+
+    mutating func forget(_ pid: pid_t) {
+        strikes[pid] = nil
+        lastProbe[pid] = nil
     }
 }

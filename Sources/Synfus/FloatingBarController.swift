@@ -19,6 +19,15 @@ final class FloatingBarController: NSObject {
     /// et désactiverait aussitôt le centrage automatique.
     private var repositioning = false
 
+    /// Position issue d'un déplacement à la souris, pas encore écrite dans les
+    /// préférences. `didMove` arrive en continu pendant `performDrag`, et
+    /// chaque écriture de `barOrigin` sérialise le JSON et réveille toutes les
+    /// vues qui observent `Preferences` : l'écriture attend la fin du geste.
+    private var pendingOrigin: CGPoint?
+    private var originWriter: DispatchWorkItem?
+    /// Silence après le dernier mouvement avant d'écrire la position.
+    private static let originWriteDelay: TimeInterval = 0.25
+
     private override init() { super.init() }
 
     /// Cadre de la barre à l'écran, si elle est affichée — sert à placer la
@@ -40,14 +49,22 @@ final class FloatingBarController: NSObject {
     func show() {
         if panel == nil { build() }
         guard shouldBeVisible else {
-            panel?.orderOut(nil)
+            conceal()
             return
         }
         panel?.orderFrontRegardless()
     }
 
     func hide() {
+        conceal()
+    }
+
+    /// Retire la barre — et avec elle l'aperçu ancré sous l'une de ses
+    /// pastilles : sans la pastille, la vignette flotterait seule à l'écran, et
+    /// la barre disparue n'émet plus le `mouseExited` qui l'aurait fermée.
+    private func conceal() {
         panel?.orderOut(nil)
+        PreviewPanelController.shared.hideAnchored()
     }
 
     /// La barre peut être réservée aux moments où Dofus est devant. Synfus
@@ -81,10 +98,22 @@ final class FloatingBarController: NSObject {
         return frontPID == ownPID || frontIsDofus
     }
 
-    /// Appelé à chaque changement d'application active.
-    func updateVisibility() {
-        guard panel != nil else { return }
-        shouldBeVisible ? panel?.orderFrontRegardless() : panel?.orderOut(nil)
+    /// Appelé à chaque changement d'application active, et par le timer de
+    /// `WindowManager` en filet.
+    ///
+    /// `force` distingue les deux. Une notification — activation, changement
+    /// d'espace — réordonne toujours le panneau : c'est ce qui le remonte
+    /// au-dessus d'un espace plein écran qui vient de s'activer, où il est
+    /// « visible » tout en étant passé dessous. Le filet, lui, ne touche au
+    /// panneau que si son état est faux : `orderFrontRegardless` toutes les
+    /// 2 s sur une barre déjà devant, c'est un réordonnancement pour rien.
+    func updateVisibility(force: Bool = true) {
+        guard let panel else { return }
+        if shouldBeVisible {
+            if force || !panel.isVisible { panel.orderFrontRegardless() }
+        } else if force || panel.isVisible {
+            conceal()
+        }
     }
 
     private func build() {
@@ -194,9 +223,28 @@ final class FloatingBarController: NSObject {
 
     @objc private func panelMoved() {
         guard !repositioning, let panel else { return }
-        // Déplacement à la souris : on mémorise la position et on cesse de recentrer.
-        Preferences.shared.barOrigin = panel.frame.origin
-        Preferences.shared.autoCenterBar = false
+        // Déplacement à la souris : on cesse de recentrer — une fois, pas à
+        // chaque évènement, la réaffectation d'une valeur identique passant
+        // quand même par `save()`.
+        if Preferences.shared.autoCenterBar { Preferences.shared.autoCenterBar = false }
+        // La position, elle, attend que le geste s'achève.
+        pendingOrigin = panel.frame.origin
+        originWriter?.cancel()
+        let writer = DispatchWorkItem { [weak self] in
+            MainActor.assumeIsolated { self?.flushPendingOrigin() }
+        }
+        originWriter = writer
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.originWriteDelay, execute: writer)
+    }
+
+    /// Écrit tout de suite la position en attente. Appelé par le délai après le
+    /// dernier mouvement, et à la fermeture de l'app pour ne rien perdre.
+    func flushPendingOrigin() {
+        originWriter?.cancel()
+        originWriter = nil
+        guard let origin = pendingOrigin else { return }
+        pendingOrigin = nil
+        Preferences.shared.barOrigin = origin
     }
 
     @objc private func panelResized() {
@@ -206,6 +254,10 @@ final class FloatingBarController: NSObject {
 
     /// Remet la barre au centre et réactive le suivi automatique.
     func recenter() {
+        // Une position en attente n'a plus de sens : le centrage la remplace.
+        originWriter?.cancel()
+        originWriter = nil
+        pendingOrigin = nil
         Preferences.shared.autoCenterBar = true
         centerAtTop()
     }

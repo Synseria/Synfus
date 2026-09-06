@@ -42,7 +42,13 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
         let manager = WindowManager.shared
-        manager.refresh()
+        // Le menu se construit sur ce qui est déjà connu : un inventaire à cet
+        // instant retardait l'ouverture du temps d'un tour d'Accessibilité, et
+        // le timer de 2 s tient la liste assez fraîche. L'inventaire est
+        // simplement demandé pour la suite — avec un délai, car sans lui
+        // `refreshSoon` l'exécute sur-le-champ dès que le dernier date de plus
+        // de 200 ms, c'est-à-dire presque toujours.
+        manager.refreshSoon(after: 0.05)
 
         if !manager.accessibilityGranted {
             add(to: menu, title: "Autoriser Synfus…", action: #selector(requestAccess))
