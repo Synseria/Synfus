@@ -134,6 +134,7 @@ struct GameCommand: Codable, Equatable, Sendable, Identifiable {
 /// vérifier dans Options → Raccourcis, et modifiables ici.
 enum GameCommands {
     static let suiviID = "suivi"
+    static let havresacID = "havresac"
 
     /// Les défauts sont définis par la **lettre** que le jeu attend, résolue en
     /// touche dans la disposition active : « M » n'est pas au même endroit sur
@@ -153,7 +154,19 @@ enum GameCommands {
             GameCommand(id: "guilde", nom: "Guilde", symbole: "flag", touche: key("G")),
             GameCommand(id: "metiers", nom: "Métiers", symbole: "hammer", touche: key("J")),
             GameCommand(id: "bestiaire", nom: "Bestiaire", symbole: "pawprint", touche: key("B")),
+            GameCommand(id: "succes", nom: "Succès", symbole: "trophy", touche: key("U")),
+            // Page 2 — les touches sans défaut sont à relever dans Options → Raccourcis.
             GameCommand(id: "alliance", nom: "Alliance", symbole: "shield", touche: key("A")),
+            GameCommand(id: "cosmetiques", nom: "Cosmétiques", symbole: "tshirt", touche: nil),
+            GameCommand(id: "calendrier", nom: "Calendrier", symbole: "calendar", touche: nil),
+            GameCommand(id: "classement", nom: "Classement", symbole: "list.number", touche: nil),
+            GameCommand(id: "groupe", nom: "Recherche de groupe", symbole: "person.3", touche: nil),
+            GameCommand(id: "profil", nom: "Mon profil", symbole: "person.crop.circle", touche: key("P")),
+            GameCommand(id: "ogrines", nom: "Bourse aux ogrines", symbole: "dollarsign.circle", touche: nil),
+            GameCommand(id: "guide", nom: "Guide d'aventure", symbole: "signpost.right", touche: nil),
+            GameCommand(id: "songes", nom: "Ensembles / Songes", symbole: "sparkles", touche: nil),
+            // Hors pages : sur leur propre touche.
+            GameCommand(id: havresacID, nom: "Havre-sac", symbole: "house", touche: key("H")),
             GameCommand(id: suiviID, nom: "Suivi du perso", symbole: "figure.walk", touche: key("W", UInt32(controlKey))),
         ]
     }
