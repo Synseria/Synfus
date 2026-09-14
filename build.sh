@@ -78,17 +78,19 @@ if [ -d "Resources/Ankama" ]; then
 fi
 
 # La signature détermine l'identité vue par TCC (l'autorisation Accessibilité).
-# Une identité de développement donne une identité stable d'un build à l'autre ;
-# à défaut, la signature ad-hoc oblige parfois à réautoriser après un rebuild.
+# Une identité stable d'un build à l'autre évite de réautoriser à chaque
+# rebuild : le certificat local « Synfus Dev » (Tools/make-signing-identity.sh)
+# d'abord, un certificat Apple Development sinon, ad-hoc en dernier recours —
+# et là, la case Accessibilité est à recocher après chaque build.
 echo "==> Signature"
 IDENTITY="$(security find-identity -v -p codesigning 2>/dev/null \
-    | grep -o '"Apple Development: [^"]*"' | head -1 | tr -d '"' || true)"
+    | grep -o '"\(Synfus Dev\|Apple Development: [^"]*\)"' | head -1 | tr -d '"' || true)"
 
 if [ -n "$IDENTITY" ]; then
     echo "    identité : $IDENTITY"
     codesign --force --deep --sign "$IDENTITY" --identifier "$BUNDLE_ID" "$APP"
 else
-    echo "    identité : ad-hoc (aucun certificat de développement trouvé)"
+    echo "    identité : ad-hoc — ./Tools/make-signing-identity.sh pour ne plus réautoriser l'Accessibilité à chaque build"
     codesign --force --deep --sign - --identifier "$BUNDLE_ID" "$APP"
 fi
 

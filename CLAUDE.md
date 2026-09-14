@@ -73,8 +73,12 @@ l'autorisation Accessibilité est liée à l'identité de code signée.
 - Les constantes `extern CFStringRef` de l'API Accessibilité (par ex.
   `kAXTrustedCheckOptionPrompt`) sont vues comme des `var` globales et refusées
   par la concurrence stricte : leur valeur littérale est citée directement.
-- `build.sh` signe avec un certificat *Apple Development* s'il en trouve un dans
-  le trousseau, sinon ad-hoc. Toucher à la signature ou au `BUNDLE_ID` change
+- `build.sh` signe avec le certificat local **« Synfus Dev »** s'il existe
+  (`./Tools/make-signing-identity.sh` le crée une fois : auto-signé, approuvé
+  pour la signature de code dans le trousseau de session — macOS demande le
+  mot de passe à cette étape, sans elle `codesign` refuse l'identité), sinon
+  avec un certificat *Apple Development*, sinon ad-hoc — et là, l'identité
+  change à chaque build et l'Accessibilité est à réautoriser à chaque fois. Toucher à la signature ou au `BUNDLE_ID` change
   l'identité vue par TCC et **oblige à réautoriser l'Accessibilité** — et, le
   `BUNDLE_ID` nommant aussi le fichier de préférences, remet les réglages à zéro.
   Il vaut `fr.synseria.Synfus` : le reverse-DNS d'un domaine réellement détenu.
