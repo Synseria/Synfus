@@ -1,86 +1,68 @@
 # Synfus
 
-Gestionnaire de multi-comptes Dofus pour macOS. L'app vit dans la barre de menus
-et fait basculer d'un perso à l'autre sans passer par ⌘-Tab.
+**Gestionnaire de multi-comptes Dofus pour macOS.** Gratuit, open source, dans
+la barre de menus.
+
+Quatre clients Dofus, c'est quatre fenêtres avec **la même icône** dans le
+Dock, et ⌘-Tab pour deviner laquelle est laquelle. En combat, avec le chrono,
+on clique une fois sur deux sur le mauvais perso — et quand c'est le tour d'un
+autre, rien ne le dit. Sur Windows, des outils règlent ça depuis toujours ; sur
+Mac, il n'y avait rien. Synfus est celui que je me suis fait.
+
+![La barre flottante au-dessus du jeu](docs/screenshots/barre.png)
 
 ## Ce que ça fait
 
-- **Barre flottante** listant les persos connectés, chacun avec la couleur de sa
-  classe — lue dans le titre de la fenêtre, pas dans l'icône du Dock (tous les
-  clients partagent le même bundle `Dofus.app`, donc la même icône). Les clients
-  restés à l'écran de connexion ne sont pas listés : ils décaleraient la
-  numérotation des vrais persos.
-- **Icône par classe**, à fournir soi-même : section *Classes* des réglages, par
-  glisser-déposer ou en remplissant `~/Library/Application Support/Synfus/Classes`
-  (`iop.png`, `cra.png`…). Synfus n'embarque aucune image du jeu — celles
-  d'Ankama n'ont pas à être redistribuées. Sans image, la pastille colorée reste.
-  Pour aller vite, `./Tools/fetch-ankama-assets.sh` remplit ce dossier avec les
-  emblèmes des 19 classes : le dépôt ne transporte que des adresses, c'est ta
-  machine qui télécharge, pour ton usage personnel.
+- **Une barre flottante** qui liste les persos connectés, avec leur classe —
+  un clic et on est dessus. Le nom et la classe sont lus dans le **titre de la
+  fenêtre**, pas dans l'icône du Dock. Les clients restés à l'écran de
+  connexion ne sont pas listés.
+- **⌘@ pour passer au suivant** sans lâcher la souris, ⇧⌘@ pour le précédent,
+  ⌘1…⌘0 pour aller droit à un perso. Tout est modifiable, et « @ » n'est que
+  la touche sous Échap d'un clavier Mac français.
+- **Quand un perso réclame la main**, sa pastille clignote — ou Synfus bascule
+  dessus tout seul, au choix. Détecté au rebond de l'icône dans le Dock, le
+  seul signal qu'une app peut émettre vers l'extérieur.
+- **Un mode « enchaîner »** : un clic sur un perso, il passe au suivant, un
+  clic, il passe au suivant… pour faire la même action sur toute la team.
+  **Il faut toujours un clic par perso** — voir la ligne rouge ci-dessous.
+- **Les clients qui gèlent en quittant** sont fermés proprement, fini le
+  « Forcer à quitter » à chaque session.
+- **Le rangement des fenêtres** : côte à côte, mosaïque, un grand + vignettes,
+  tout en plein écran, « lancer la session » le matin.
+- **Un aperçu** de la fenêtre au survol d'un perso, et tous les persos d'un
+  coup en maintenant ⌥⌘@.
+- **Les icônes de classe** sont à fournir soi-même (*Réglages → Classes*, ou
+  `~/Library/Application Support/Synfus/Classes/<clé>.png`) : Synfus
+  n'embarque aucune image du jeu. `./Tools/fetch-ankama-assets.sh` télécharge
+  les emblèmes sur ta machine, pour ton usage personnel.
 
   > Certaines illustrations sont la propriété d'Ankama Studio et de Dofus
   > — Tous droits réservés.
-- **Raccourcis clavier globaux**, tous modifiables dans les réglages. Par défaut,
-  la navigation tient sur la touche sous Échap — « @ » sur un clavier Mac
-  français —, atteignable de la main gauche sans lâcher la souris :
 
-  | Raccourci | Effet |
-  | --- | --- |
-  | ⌘@ | perso suivant |
-  | ⇧⌘@ | perso précédent |
-  | ⌥⌘@ | aperçu de tous les persos, tant que c'est maintenu |
-  | ⌃⌘@ | activer / désactiver le passage automatique |
-  | ⌘1 … ⌘5 | aller droit à un perso (jusqu'à ⌘0 pour le dixième) |
+![Les réglages](docs/screenshots/reglages.png)
 
-  Afficher / masquer la barre n'a **pas** de raccourci par défaut : une
-  combinaison imposée est une combinaison prise au reste du système. À définir
-  soi-même dans les réglages si le besoin est là.
-- **Détection d'attention** : quand un perso réclame la main, Synfus peut le
-  signaler dans la barre ou basculer dessus automatiquement.
-- **Mode « enchaîner »**, désactivé par défaut : une fois activé — ⌘< ou la
-  flèche verte de la barre —, chaque clic sur un client de jeu part normalement,
-  puis Synfus bascule sur le perso suivant. Le mode reste actif jusqu'à ce qu'on
-  le coupe, et la flèche est verte tant qu'il l'est.
+## La ligne rouge
 
-  Le clic est **nu** : le jeu reçoit exactement ce qu'il attend. Un clic modifié
-  lui parvient bien, mais avec le modificateur dessus, et il ne le traite pas
-  comme un clic ordinaire — déplacer un perso passe, parler à un PNJ non.
+Synfus **ne joue rien à ta place**. Il n'envoie aucun clic, aucune touche, ne
+rejoue et ne duplique rien — dupliquer une action sur plusieurs clients est
+précisément ce que les conditions d'utilisation de Dofus interdisent. Il lit le
+titre des fenêtres, regarde le Dock, et change la fenêtre qui est devant, c'est
+tout. Un clic reste un clic. L'observation de la souris (mode « enchaîner ») est
+passive ; le clavier reste hors de vue.
 
-  **Il faut toujours un clic par perso.** Synfus n'émet aucun évènement, n'en
-  rejoue aucun et n'en duplique aucun — dupliquer une action sur plusieurs
-  clients est précisément ce que les conditions d'utilisation de Dofus
-  interdisent, et ce n'est pas ce que fait cette fonction. L'observation est
-  passive et porte sur la souris seule ; le clavier reste hors de vue.
-
-- **Ordre des persos** réglable, mémorisé d'une session à l'autre.
-- **Fermeture des clients** qui gèlent en quittant : *Fermer* puis, s'il ne
-  répond plus, coup de grâce — plus de « Forcer à quitter » à chaque session.
-- **Rangement des fenêtres** : côte à côte, mosaïque, un grand + vignettes,
-  empilés, tout en plein écran.
+Pas de lecture mémoire, pas de réseau. Deux autorisations macOS :
+**Accessibilité**, et **Enregistrement de l'écran** seulement si tu veux les
+aperçus.
 
 ## Stream Deck (optionnel)
 
-Avec un Stream Deck Elgato, Synfus peut montrer **les sorts du perso devant**
-sous les doigts et frapper la touche que le jeu attend. Tout est désactivé par
-défaut ; ça s'active dans *Réglages → Stream Deck*, qui installe le plugin (un
-clic) et fait apparaître l'onglet *Sorts*.
-
-- Les sorts de chaque perso sont **reconnus à l'écran** (une capture de la
-  barre, comparée aux icônes de sa classe) ou choisis à la main ; un profil JSON
-  par perso.
-- Trois dispositions — barre par barre, une barre par rangée, personnalisée —,
-  générique ou propre à un perso, composées par Synfus : rien à réimporter dans
-  le logiciel Elgato quand on change quelque chose.
-- Trois niveaux d'appui sur une touche de sort : court, long, très long — les
-  trois barres du jeu sous dix touches, avec la **sélection visible dans le jeu
-  pendant qu'on tient**. Pas de double-clic : deux appuis sont deux frappes.
-- Menu des commandes du jeu (inventaire, carte, quêtes…), perso suivant, fin de
-  tour, corps à corps ; détection de combat calibrée par deux captures.
-
-La règle ne change pas : **Synfus n'émet aucun évènement**. C'est le plugin,
-comme n'importe quel périphérique d'entrée, qui frappe une touche par appui —
-rien n'est rejoué ni multiplié. La liaison entre les deux est un socket Unix
-réservé à ton compte, jamais un port réseau.
+Avec un Stream Deck Elgato, Synfus peut montrer les sorts du perso devant sous
+les doigts et frapper la touche que le jeu attend — trois niveaux d'appui, les
+trois barres sous dix touches, la sélection visible dans le jeu pendant qu'on
+tient. Désactivé par défaut ; *Réglages → Stream Deck* installe le plugin et
+fait apparaître l'onglet *Sorts*. Même règle : c'est le plugin qui frappe, une
+pression = une frappe, et la liaison est un socket local réservé à ton compte.
 
 ## Installation
 
