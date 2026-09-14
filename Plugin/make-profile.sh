@@ -11,9 +11,13 @@
 # dossier `<uuid>.sdProfile/manifest.json` dont les actions sont indexées par
 # « colonne,ligne ».
 #
-#   ./Plugin/make-profile.sh <dossier .sdPlugin>
+# Appelé par build.sh ; à la main, sans argument, il vise dist/ :
+#   ./Plugin/make-profile.sh [dossier .sdPlugin]
 set -euo pipefail
-PLUGIN="${1:?usage: make-profile.sh <dossier .sdPlugin>}"
+cd "$(dirname "$0")/.."
+PLUGIN="${1:-dist/fr.synseria.synfus.sdPlugin}"
+[ -d "$PLUGIN" ] || { echo "Dossier introuvable : $PLUGIN — lance ./build.sh d'abord." >&2; exit 1; }
+PLUGIN="$(cd "$PLUGIN" && pwd)"
 UUID="7F0D2C1A-5E4B-4C63-9A21-5D6E8F3A1B02"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
@@ -34,4 +38,5 @@ action() { # colonne ligne uuid nom
     printf '}}'
 } > "$DIR/manifest.json"
 rm -f "$PLUGIN/Synfus.streamDeckProfile"
-(cd "$WORK" && zip -qr "$OLDPWD/$PLUGIN/Synfus.streamDeckProfile" "$UUID.sdProfile")
+(cd "$WORK" && zip -qr "$PLUGIN/Synfus.streamDeckProfile" "$UUID.sdProfile")
+echo "✓ $PLUGIN/Synfus.streamDeckProfile — double-clic pour l'importer dans le logiciel Stream Deck." 
