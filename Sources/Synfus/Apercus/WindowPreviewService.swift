@@ -23,6 +23,9 @@ final class WindowPreviewService: ObservableObject {
     /// Persos pour lesquels aucune fenêtre capturable n'a été retrouvée, exposé
     /// dans l'onglet Diagnostic : l'appariement par titre est une hypothèse.
     @Published private(set) var unmatched: Set<String> = []
+    /// Pourquoi la dernière capture à la demande a échoué — le Diagnostic le
+    /// montre, sinon « ça ne marche pas » n'a pas de cause.
+    @Published private(set) var lastCaptureError: String?
 
     /// Captures en cours, pour ne pas en empiler quand le rafraîchissement est
     /// plus rapide que ScreenCaptureKit.
@@ -79,13 +82,21 @@ final class WindowPreviewService: ObservableObject {
     /// la reconnaissance des sorts et de la détection de combat : le même
     /// moteur, le même appariement, un seul foyer.
     func capture(_ client: DofusClient, region: CGRect? = nil) async -> CGImage? {
-        guard authorized else { return nil }
+        guard authorized else { lastCaptureError = "enregistrement de l'écran non autorisé"; return nil }
         let request = PreviewRequest(key: client.slotKey, pid: client.pid, title: client.rawTitle,
                                      maxWidth: nil, region: region)
-        guard let data = (await engine.capture([request]))[request.key],
-              let source = CGImageSourceCreateWithData(data as CFData, nil)
-        else { return nil }
-        return CGImageSourceCreateImageAtIndex(source, 0, nil)
+        switch await engine.captureOne(request) {
+        case .success(let data):
+            lastCaptureError = nil
+            guard let source = CGImageSourceCreateWithData(data as CFData, nil) else {
+                lastCaptureError = "PNG illisible"
+                return nil
+            }
+            return CGImageSourceCreateImageAtIndex(source, 0, nil)
+        case .failure(let failure):
+            lastCaptureError = failure.description
+            return nil
+        }
     }
 
     /// Oublie les vignettes des persos qui ne sont plus connectés.
@@ -174,6 +185,22 @@ private struct PreviewRequest: Sendable {
     let region: CGRect?
 }
 
+/// Ce qui a empêché une capture — pour le dire plutôt que rendre `nil`.
+enum CaptureFailure: Error, CustomStringConvertible, Sendable {
+    case inventory(String)
+    case notFound(sameProcess: Int, gameSized: Int)
+    case screenshot(String)
+
+    var description: String {
+        switch self {
+        case .inventory(let e): return "inventaire ScreenCaptureKit impossible — \(e)"
+        case .notFound(let same, let sized):
+            return "fenêtre introuvable côté ScreenCaptureKit (\(same) fenêtre(s) du processus, \(sized) de taille de jeu — titre changé ? deux persos dans le même client ?)"
+        case .screenshot(let e): return "capture refusée — \(e)"
+        }
+    }
+}
+
 /// Inventaire ScreenCaptureKit et captures, hors du main actor.
 ///
 /// La règle d'isolation est celle d'avant, déplacée autour de cet acteur : il
@@ -225,6 +252,33 @@ private actor PreviewCaptureEngine {
         return captured
     }
 
+    /// Une capture, avec sa raison d'échec : l'inventaire est toujours refait
+    /// — c'est une demande explicite, la fraîcheur prime.
+    func captureOne(_ request: PreviewRequest) async -> Result<Data, CaptureFailure> {
+        let fresh: SCShareableContent
+        do {
+            fresh = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
+        } catch {
+            return .failure(.inventory(error.localizedDescription))
+        }
+        content = fresh
+        inventoriedAt = Date()
+        let candidates = fresh.windows.map {
+            WindowPreviewService.Candidate(pid: $0.owningApplication?.processID ?? -1,
+                                           title: $0.title, size: $0.frame.size)
+        }
+        guard let index = WindowPreviewService.match(pid: request.pid, title: request.title, among: candidates)
+        else {
+            let same = candidates.filter { $0.pid == request.pid }
+            return .failure(.notFound(sameProcess: same.count, gameSized: same.filter(\.isGameSized).count))
+        }
+        do {
+            return .success(try await shotThrowing(of: fresh.windows[index], request: request))
+        } catch {
+            return .failure(.screenshot(error.localizedDescription))
+        }
+    }
+
     /// Le déroulé est séquentiel à dessein : les captures ne peuvent pas partir
     /// en parallèle sans faire traverser un `SCWindow` — qui n'est pas
     /// `Sendable` — vers une tâche fille. Ce n'est de toute façon pas là qu'est
@@ -251,6 +305,12 @@ private actor PreviewCaptureEngine {
     }
 
     private func shot(of window: SCWindow, request: PreviewRequest) async -> Data? {
+        try? await shotThrowing(of: window, request: request)
+    }
+
+    private enum ShotError: Error { case encoding }
+
+    private func shotThrowing(of window: SCWindow, request: PreviewRequest) async throws -> Data {
         let configuration = SCStreamConfiguration()
         // La zone demandée d'abord — en points de la fenêtre —, puis l'échelle :
         // une capture de la seule barre de sorts pèse cent fois moins qu'une
@@ -270,11 +330,12 @@ private actor PreviewCaptureEngine {
         configuration.height = Int((size.height * scale).rounded())
         configuration.showsCursor = false
 
-        guard let image = try? await SCScreenshotManager.captureImage(
+        let image = try await SCScreenshotManager.captureImage(
             contentFilter: SCContentFilter(desktopIndependentWindow: window),
             configuration: configuration
-        ) else { return nil }
-        return Self.png(from: image)
+        )
+        guard let data = Self.png(from: image) else { throw ShotError.encoding }
+        return data
     }
 
     private static func png(from image: CGImage) -> Data? {

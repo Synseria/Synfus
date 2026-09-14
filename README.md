@@ -102,7 +102,7 @@ n'apparaît que sur macOS 26 ; en deçà, la barre utilise un matériau transluc
 ## Compiler depuis les sources
 
 ```sh
-./build.sh            # produit ./Synfus.app
+./build.sh            # produit dist/Synfus.app
 ./build.sh --install  # installe dans /Applications et relance
 swift test            # suite de tests
 ```
@@ -121,7 +121,7 @@ l'autorisation Accessibilité n'est pas à redonner à chaque fois.
 Le DMG se fabrique à part :
 
 ```sh
-./make-dmg.sh Synfus.app dist/Synfus-0.0.1-arm64.dmg
+./make-dmg.sh dist/Synfus.app dist/Synfus-0.0.1-arm64.dmg
 ```
 
 Les tests se lancent avec `swift test`. Ils portent sur la logique pure —

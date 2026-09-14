@@ -28,7 +28,7 @@ enum SpellRecognition {
         let key = classe.flatMap(DofusClass.key(for:))
         let entries = key.map { index.entries(forClass: $0) } ?? index.entries
         return entries.compactMap { entry in
-            guard let url = AnkamaAssets.spellIconURL(classe: entry.classe, id: entry.id),
+            guard let url = AnkamaAssets.spellIconURL(fichier: entry.fichier),
                   let icon = LumaBitmap(contentsOf: url)
             else { return nil }
             return SpellRecognizer.candidate(id: entry.id, nom: entry.nom, icon: icon)

@@ -15,10 +15,10 @@ swift build                        # compilation debug rapide (pas de bundle)
 swift test                         # suite complète (Swift Testing)
 swift test --filter PreferencesTests            # une suite
 swift test --filter "migration"                 # un test par son nom
-./build.sh                         # produit ./Synfus.app (release + signature)
+./build.sh                         # produit dist/Synfus.app + dist/fr.synseria.synfus.sdPlugin (release + signature)
 ./build.sh --install               # installe dans /Applications et relance
 VERSION=0.0.3 ARCH=x86_64 ./build.sh
-./make-dmg.sh Synfus.app dist/Synfus-0.0.3-arm64.dmg
+./make-dmg.sh dist/Synfus.app dist/Synfus-0.0.3-arm64.dmg
 ./Tools/generate-app-icons.sh      # régénère Resources/Synfus.{icns,png}
 ./Tools/fetch-ankama-assets.sh     # télécharge emblèmes et icônes de sorts dans Resources/Ankama (gitignoré)
 open dist/fr.synseria.synfus.sdPlugin   # installe le plugin Stream Deck produit par build.sh
@@ -635,7 +635,7 @@ compile [Tools/FetchAnkamaAssets.swift](Tools/FetchAnkamaAssets.swift) avec
 `DofusClass.swift`, pour que les clés soient celles de l'app — télécharge
 depuis l'API communautaire DofusDB (le CDN d'Ankama répond 403) les emblèmes
 des classes **et** les icônes de sorts, dans `Resources/Ankama/` :
-`Classes/<clé>.png`, `Sorts/<clé>/<id>.png` et un index `sorts.json`
+`Classes/<clé>.png`, `Sorts/<clé>/<Nom>.png` (le nom du sort, l'id seulement en cas d'homonymie) et un index `sorts.json`
 (`{id, nom, classe, fichier}`). Ce dossier est **ignoré par Git** ; `build.sh`
 l'embarque dans `Contents/Resources/Ankama` s'il existe, et
 [AnkamaAssets.swift](Sources/Synfus/Classes/AnkamaAssets.swift) le résout —

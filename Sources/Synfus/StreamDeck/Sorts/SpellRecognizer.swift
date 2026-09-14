@@ -12,6 +12,12 @@ struct SpellIndex: Sendable {
     }
 
     let entries: [Entry]
+    private let byID: [Int: Entry]
+
+    init(entries: [Entry]) {
+        self.entries = entries
+        byID = Dictionary(entries.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+    }
 
     static func load() -> SpellIndex? {
         guard let url = AnkamaAssets.spellIndexURL,
@@ -21,8 +27,19 @@ struct SpellIndex: Sendable {
         return SpellIndex(entries: entries)
     }
 
+    /// L'index lu une fois — `reload()` après un nouveau téléchargement.
+    @MainActor private(set) static var shared: SpellIndex? = load()
+    @MainActor static func reload() { shared = load() }
+
     func entries(forClass key: String) -> [Entry] {
         entries.filter { $0.classe == key }
+    }
+
+    func entry(id: Int) -> Entry? { byID[id] }
+
+    /// L'icône d'un sort, par identifiant.
+    func iconURL(id: Int) -> URL? {
+        entry(id: id).flatMap { AnkamaAssets.spellIconURL(fichier: $0.fichier) }
     }
 }
 

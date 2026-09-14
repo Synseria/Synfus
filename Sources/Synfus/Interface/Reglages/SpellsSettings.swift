@@ -30,15 +30,23 @@ struct SpellsSettings: View {
 
     var body: some View {
         Form {
-            Section("Perso") {
-                Picker("Perso", selection: $perso) {
-                    ForEach(persos, id: \.self) { Text($0).tag($0) }
+            Section {
+                HStack {
+                    Picker("Perso", selection: $perso) {
+                        ForEach(persos, id: \.self) { Text($0).tag($0) }
+                    }
+                    .onAppear { if perso.isEmpty { perso = persos.first ?? "" } }
+                    if !perso.isEmpty {
+                        Text(classe ?? "classe inconnue")
+                            .font(.system(size: 11)).foregroundStyle(.secondary)
+                    }
                 }
-                .onAppear { if perso.isEmpty { perso = persos.first ?? "" } }
-                if !perso.isEmpty {
-                    Text(classe.map { "Classe : \($0)" } ?? "Classe inconnue — connecte le perso pour la lire.")
-                        .font(.system(size: 11)).foregroundStyle(.secondary)
-                }
+            } header: {
+                SectionTitle("Profil de sorts", help: "Un profil par perso : trois barres de dix cases, "
+                             + "enregistré dans Application Support/Synfus/Profils/<perso>.json. Clique une case "
+                             + "pour y mettre un sort de la classe, ou laisse « Reconnaître » lire la barre affichée "
+                             + "à l'écran — le perso doit être connecté et sa fenêtre visible. La classe se lit sur "
+                             + "la fenêtre du perso connecté.")
             }
 
             if !perso.isEmpty {
@@ -47,10 +55,7 @@ struct SpellsSettings: View {
                 }
             }
 
-            Section("Touches du jeu") {
-                Text("Ce que le Stream Deck frappe pour chaque case — des positions de touches, "
-                     + "pas des caractères : la rangée de chiffres, quel que soit le clavier.")
-                    .font(.system(size: 11)).foregroundStyle(.secondary)
+            Section {
                 ForEach(prefs.spellKeyMap.barres.indices, id: \.self) { bar in
                     HStack {
                         Text("Barre \(bar + 1)").frame(width: 60, alignment: .leading)
@@ -62,47 +67,51 @@ struct SpellsSettings: View {
                             .font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary)
                     }
                 }
-                HStack {
-                    Text("Fin de tour").frame(width: 60, alignment: .leading)
-                    ShortcutRecorder(hotKey: Binding(
-                        get: { prefs.spellKeyMap.finDeTour },
-                        set: { prefs.spellKeyMap.finDeTour = $0 }
-                    ))
-                    Text("À confirmer en jeu (Options → Raccourcis).")
-                        .font(.system(size: 10)).foregroundStyle(.tertiary)
-                }
+                ShortcutRow(label: "Fin de tour", help: "La touche « fin de tour » du jeu (Options → Raccourcis). "
+                            + "Sans défaut tant que tu ne l'as pas confirmée : une touche fausse en combat coûte cher.",
+                            hotKey: Binding(
+                                get: { prefs.spellKeyMap.finDeTour },
+                                set: { prefs.spellKeyMap.finDeTour = $0 }
+                            ))
+            } header: {
+                SectionTitle("Touches du jeu", help: "Ce que le Stream Deck frappe pour chaque case : la rangée "
+                             + "de chiffres, avec le modificateur de la barre. Ce sont des positions de touches, pas "
+                             + "des caractères — sur AZERTY la touche « 1 » tape &, c'est bien elle qui est frappée.")
             }
 
-            Section("Stream Deck") {
-                Toggle("Activer la liaison Stream Deck", isOn: $prefs.streamDeckEnabled)
-                Text("Ouvre un socket local (\(StreamDeckLink.socketURL.path)), réservé à ton compte, "
-                     + "sur lequel le plugin SynfusDeck lit le perso actif et ses sorts. Il ne peut "
-                     + "demander que ce que fait la barre : perso suivant, précédent, barre suivante.")
-                    .font(.system(size: 11)).foregroundStyle(.secondary)
+            Section {
+                Toggle("Liaison active", isOn: $prefs.streamDeckEnabled)
                 if prefs.streamDeckEnabled {
                     Text(link.status)
                         .font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary)
                 }
+            } header: {
+                SectionTitle("Stream Deck", help: "Ouvre un socket local, réservé à ton compte, sur lequel le "
+                             + "plugin SynfusDeck lit le perso actif et ses sorts. Il ne peut demander que ce que "
+                             + "fait la barre : perso suivant, précédent, barre suivante. Le plugin s'installe en "
+                             + "ouvrant dist/fr.synseria.synfus.sdPlugin.\n\n" + StreamDeckLink.socketURL.path)
             }
 
-            Section("Détection de combat") {
-                Text("Le Stream Deck peut changer de page à l'entrée en combat. Le jeu ne le dit pas : "
-                     + "Synfus compare, une fois par seconde, la bande basse de la fenêtre à deux références "
-                     + "que tu captures toi-même — une fois en combat, une fois hors combat, perso devant.")
-                    .font(.system(size: 11)).foregroundStyle(.secondary)
+            Section {
                 HStack {
-                    Button("Capturer la référence « en combat »") { calibrate(true) }
-                    Button("Capturer la référence « hors combat »") { calibrate(false) }
+                    Button("Référence en combat") { calibrate(true) }
+                    Button("Référence hors combat") { calibrate(false) }
+                    Spacer()
+                    Text(combat.calibrated ? combat.status : "non calibrée")
+                        .font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary)
                 }
                 .font(.system(size: 11))
                 .disabled(!previews.authorized)
-                Text(combat.calibrated ? "Calibrée — \(combat.status)" : "Non calibrée")
-                    .font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary)
                 if let reading = combat.lastReading {
                     Text(String(format: "dernier relevé : combat %.2f · hors combat %.2f · %d ms",
                                 reading.correlationCombat, reading.correlationHors, Int(combat.lastDuration * 1000)))
                         .font(.system(size: 10, design: .monospaced)).foregroundStyle(.tertiary)
                 }
+            } header: {
+                SectionTitle("Détection de combat", help: "Le Stream Deck peut changer de page à l'entrée en "
+                             + "combat. Le jeu ne le dit pas : Synfus compare, une fois par seconde, la bande basse "
+                             + "de la fenêtre à deux références que tu captures toi-même — une fois en combat, une "
+                             + "fois hors combat, perso devant. Le coût du relevé s'affiche ici.")
             }
 
             if !message.isEmpty {
@@ -125,14 +134,17 @@ struct SpellsSettings: View {
             HStack {
                 Text(profile.barres[bar].nom)
                 Spacer()
-                Button("Reconnaître la barre affichée") { recognize(into: bar) }
+                Button { recognize(into: bar) } label: { Label("Reconnaître", systemImage: "wand.and.stars") }
                     .font(.system(size: 11))
                     .disabled(!previews.authorized || !isConnected)
                     .help(previews.authorized
-                          ? "Capture la fenêtre du perso et remplit cette barre avec les sorts reconnus"
-                          : "Demande d'abord l'enregistrement de l'écran (onglet Raccourcis)")
-                Button("Vider") { var p = profile; p.barres[bar] = .empty(nom: p.barres[bar].nom); store.save(p) }
-                    .font(.system(size: 11))
+                          ? "Lit la barre affichée à l'écran et remplit celle-ci"
+                          : "Autorise d'abord l'enregistrement de l'écran (onglet Général)")
+                Button { var p = profile; p.barres[bar] = .empty(nom: p.barres[bar].nom); store.save(p) } label: {
+                    Image(systemName: "trash")
+                }
+                .font(.system(size: 11))
+                .help("Vider cette barre")
             }
         }
     }
@@ -151,7 +163,7 @@ struct SpellsSettings: View {
             }
         } label: {
             VStack(spacing: 2) {
-                if let slot, let url = AnkamaAssets.spellIconURL(classe: DofusClass.key(for: classe) ?? "", id: slot.sortId),
+                if let slot, let url = SpellIndex.shared?.iconURL(id: slot.sortId),
                    let image = NSImage(contentsOf: url) {
                     Image(nsImage: image).resizable().frame(width: 32, height: 32).cornerRadius(4)
                 } else {
@@ -168,7 +180,7 @@ struct SpellsSettings: View {
     }
 
     private var classSpells: [SpellIndex.Entry] {
-        guard let key = DofusClass.key(for: classe), let index = SpellIndex.load() else { return [] }
+        guard let key = DofusClass.key(for: classe), let index = SpellIndex.shared else { return [] }
         return index.entries(forClass: key).sorted { $0.nom < $1.nom }
     }
 
@@ -188,7 +200,7 @@ struct SpellsSettings: View {
         Task {
             guard let image = await WindowPreviewService.shared.capture(client),
                   let luma = LumaBitmap(cgImage: image)
-            else { message = "Capture impossible — la fenêtre est-elle visible ?"; return }
+            else { message = "Capture impossible : " + (WindowPreviewService.shared.lastCaptureError ?? "raison inconnue"); return }
             let analysis = SpellRecognition.analyze(luma, classe: classe)
             guard let found = analysis.bar else {
                 message = "Aucune barre de sorts trouvée dans la capture (voir Diagnostic pour les détails)."

@@ -66,6 +66,13 @@ private enum Erreur: Error, CustomStringConvertible {
     }
 }
 
+/// Un nom de fichier sûr : ni séparateur ni caractère réservé, les espaces en `_`.
+private func cleanName(_ name: String) -> String {
+    let forbidden = CharacterSet(charactersIn: "<>:\"/\\|?*")
+    let cleaned = name.unicodeScalars.map { forbidden.contains($0) ? "" : String($0) }.joined()
+    return cleaned.split(whereSeparator: \.isWhitespace).joined(separator: "_")
+}
+
 private struct Options {
     var force = false
     var liste = false
@@ -152,11 +159,20 @@ struct FetchAnkamaAssets {
         var downloads: [(spell: Spell, key: String, target: URL, fichier: String)] = []
         for classe in classes {
             let dir = options.destination.appending(path: "Sorts/\(classe.key)", directoryHint: .isDirectory)
-            for id in classe.breed.breedSpellsId {
-                guard let spell = spells[id], let img = spell.img, !img.isEmpty else { continue }
-                let fichier = "Sorts/\(classe.key)/\(id).png"
-                downloads.append((spell, classe.key, dir.appending(path: "\(id).png"), fichier))
-                index.append(SpellEntry(id: id, nom: spell.name.fr, classe: classe.key, fichier: fichier))
+            // Le nom du sort fait le nom du fichier — on veut pouvoir s'y retrouver
+            // dans le dossier. Deux sorts de même nom dans une classe (ça arrive :
+            // variantes) se distinguent par leur identifiant.
+            let named = classe.breed.breedSpellsId.compactMap { id -> (Spell, String)? in
+                guard let spell = spells[id], let img = spell.img, !img.isEmpty else { return nil }
+                return (spell, cleanName(spell.name.fr))
+            }
+            var seen: [String: Int] = [:]
+            for (_, name) in named { seen[name, default: 0] += 1 }
+            for (spell, name) in named {
+                let base = seen[name, default: 0] > 1 ? "\(name)_\(spell.id)" : name
+                let fichier = "Sorts/\(classe.key)/\(base).png"
+                downloads.append((spell, classe.key, dir.appending(path: "\(base).png"), fichier))
+                index.append(SpellEntry(id: spell.id, nom: spell.name.fr, classe: classe.key, fichier: fichier))
             }
         }
         try await batches(downloads) { item in

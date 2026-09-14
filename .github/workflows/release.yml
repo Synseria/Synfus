@@ -67,8 +67,8 @@ jobs:
           # produit par cross-compilation depuis le runner Apple Silicon.
           for arch in arm64 x86_64; do
             ARCH="$arch" ./build.sh
-            ./make-dmg.sh Synfus.app "dist/Synfus-$VERSION-$arch.dmg"
-            rm -rf Synfus.app
+            ./make-dmg.sh dist/Synfus.app "dist/Synfus-$VERSION-$arch.dmg"
+            rm -rf dist/Synfus.app dist/fr.synseria.synfus.sdPlugin
           done
           shasum -a 256 dist/*.dmg | tee dist/SHA256SUMS.txt
 

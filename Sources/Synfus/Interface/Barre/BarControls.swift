@@ -7,11 +7,18 @@ import SwiftUI
 /// SwiftUI à base de `DragGesture` qui repositionne la fenêtre à chaque
 /// évènement reste toujours un cran derrière la souris — c'est ce qui rendait
 /// la barre poussive.
+///
+/// La vue est posée **par-dessus** la poignée (`overlay`), pas derrière : sous
+/// un `glassEffect`, ce qui est en fond ne reçoit plus le clic. Et le panneau
+/// n'est jamais fenêtre clé : sans `acceptsFirstMouse`, le premier clic ne
+/// servirait qu'à le « réveiller » et le glisser ne partirait pas.
 struct WindowDragArea: NSViewRepresentable {
     func makeNSView(context: Context) -> NSView { DragView() }
     func updateNSView(_ nsView: NSView, context: Context) {}
 
     private final class DragView: NSView {
+        override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+        override var mouseDownCanMoveWindow: Bool { false }
         override func mouseDown(with event: NSEvent) {
             window?.performDrag(with: event)
         }

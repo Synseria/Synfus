@@ -50,8 +50,7 @@ struct BarView: View {
             }
         }
         .frame(width: 15, height: 26)
-        .contentShape(Rectangle())
-        .background(WindowDragArea())
+        .overlay(WindowDragArea())
         .help("Glisser pour déplacer la barre")
     }
 

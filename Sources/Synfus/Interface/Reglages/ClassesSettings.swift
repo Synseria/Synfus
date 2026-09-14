@@ -11,44 +11,25 @@ struct ClassesSettings: View {
     var body: some View {
         Form {
             Section {
-                Text("Chaque classe peut recevoir l'image de ton choix : un portrait, "
-                     + "une capture d'écran, n'importe quel PNG ou JPEG. Sans image, "
-                     + "Synfus affiche la pastille colorée.")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-
                 HStack {
                     Button("Ouvrir le dossier") { NSWorkspace.shared.open(icons.directory) }
                     Button("Recharger") { icons.reloadAll() }
                     Spacer()
+                    Text("Certaines illustrations sont la propriété d'Ankama Studio et de Dofus — Tous droits réservés.")
+                        .font(.system(size: 9)).foregroundStyle(.tertiary).lineLimit(2)
                 }
                 .font(.system(size: 11))
-
-                Text("Tu peux aussi y déposer les fichiers directement, nommés d'après "
-                     + "la classe : iop.png, cra.png, xelor.png… puis « Recharger ».")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.tertiary)
-            }
-
-            Section("Emblèmes officiels") {
-                Text("Le script Tools/fetch-ankama-assets.sh du dépôt télécharge les "
-                     + "emblèmes des 19 classes et les icônes de sorts dans Resources/Ankama, "
-                     + "que build.sh embarque ensuite dans l'app. Synfus ne redistribue "
-                     + "aucune image du jeu : c'est ta machine qui les télécharge, pour ton "
-                     + "usage personnel. Une icône déposée ici garde la priorité sur "
-                     + "l'embarquée.")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-                Text("Certaines illustrations sont la propriété d'Ankama Studio et de "
-                     + "Dofus — Tous droits réservés.")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.tertiary)
-            }
-
-            Section("Icônes") {
                 ForEach(DofusClass.breeds) { breed in
                     classRow(breed)
                 }
+            } header: {
+                SectionTitle("Icônes de classe", help: "Chaque classe peut recevoir l'image de ton choix : un "
+                             + "portrait, une capture, n'importe quel PNG ou JPEG — par « Choisir… », par glisser-"
+                             + "déposer, ou en déposant iop.png, cra.png… dans le dossier puis « Recharger ». Sans "
+                             + "image, Synfus affiche la pastille colorée.\n\nLes emblèmes officiels viennent de "
+                             + "Tools/fetch-ankama-assets.sh, qui les télécharge pour ton usage personnel dans "
+                             + "Resources/Ankama, embarqué par build.sh. Synfus ne redistribue aucune image du jeu. "
+                             + "Une icône déposée ici garde la priorité sur l'embarquée.")
             }
         }
         .formStyle(.grouped)

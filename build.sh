@@ -1,6 +1,6 @@
 #!/bin/bash
 # Compile Synfus et assemble le bundle .app.
-#   ./build.sh            -> construit ./Synfus.app
+#   ./build.sh            -> construit dist/Synfus.app (et le plugin Stream Deck)
 #   ./build.sh --install  -> construit puis installe dans /Applications et relance
 #
 # Deux variables d'environnement pilotent la CI sans changer l'usage local :
@@ -26,7 +26,8 @@ VERSION="${VERSION:-0.0.1}"
 # HEAD s'en est écarté. `CFBundleShortVersionString` reste purement numérique,
 # comme Apple l'attend ; c'est ici que va le détail.
 BUILD="$(git describe --tags --always --dirty 2>/dev/null || echo "$VERSION")"
-APP="$NAME.app"
+# Tout ce qui est produit va dans dist/ — l'app comme le plugin.
+APP="dist/$NAME.app"
 
 BUILD_FLAGS=(-c release)
 [ -n "${ARCH:-}" ] && BUILD_FLAGS+=(--arch "$ARCH")
@@ -120,8 +121,8 @@ echo "==> $PLUGIN prêt"
 if [ "${1:-}" = "--install" ]; then
     echo "==> Installation dans /Applications"
     pkill -x "$NAME" 2>/dev/null || true
-    rm -rf "/Applications/$APP"
+    rm -rf "/Applications/$NAME.app"
     cp -R "$APP" /Applications/
-    open "/Applications/$APP"
-    echo "==> Lancé depuis /Applications/$APP"
+    open "/Applications/$NAME.app"
+    echo "==> Lancé depuis /Applications/$NAME.app"
 fi
