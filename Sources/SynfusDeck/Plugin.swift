@@ -263,8 +263,15 @@ final class Plugin {
             elgato.setTitle(context, "")
             return
         }
-        if let icone = touche.icone {
-            elgato.setImage(context, base64PNG: Images.framed(icone, cornerLeft: touche.iconeLong, cornerRight: touche.iconeTresLong,
+        // Pendant un appui, la touche montre **en grand** le seul sort du
+        // niveau atteint — au repos, le sort principal et ses vignettes.
+        let stageIcon = highlight == 1 ? touche.iconeLong : highlight == 2 ? touche.iconeTresLong : nil
+        if let icone = stageIcon {
+            elgato.setImage(context, base64PNG: Images.framed(icone, dimmed: touche.attenuee, highlight: highlight))
+        } else if let icone = touche.icone {
+            let corners = highlight > 0
+            elgato.setImage(context, base64PNG: Images.framed(icone, cornerLeft: corners ? nil : touche.iconeLong,
+                                                              cornerRight: corners ? nil : touche.iconeTresLong,
                                                               dimmed: touche.attenuee, highlight: highlight))
         } else if let symbole = touche.symbole {
             elgato.setImage(context, base64PNG: Images.symbol(symbole, dimmed: touche.attenuee, highlight: highlight))

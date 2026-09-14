@@ -807,7 +807,9 @@ Trois règles tiennent l'ensemble :
   d'après (décalage 2) : les trois barres sous dix touches, sans page. Les
   vignettes sont dessinées en bas à gauche (long) et à droite (très long) de
   la touche (`iconeLong`/`iconeTresLong`, `Images.framed(cornerLeft:cornerRight:)`) ;
-  une case d'en face vide n'a pas d'action à ce niveau. **La fin de tour n'a jamais d'action longue** : elle ne doit
+  une case inconnue de Synfus joue quand même sa touche — le profil peut être
+  vide, pas la barre du jeu —, simplement sans vignette. Pendant l'appui, la
+  touche montre en grand le seul sort du niveau atteint. **La fin de tour n'a jamais d'action longue** : elle ne doit
   partir que d'un geste voulu. Rien n'est réimporté dans le logiciel Elgato :
   le profil livré ne contient que des touches Synfus, et le paquet comme le
   profil sont embarqués dans l'app (`Contents/Resources`), ouverts d'un

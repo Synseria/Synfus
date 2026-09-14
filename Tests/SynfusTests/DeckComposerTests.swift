@@ -50,8 +50,9 @@ struct DeckComposerTests {
         // Appui long sur la case 1 : la case 1 de la barre 2, en vignette ; case 2 d'en face vide → rien.
         #expect(page.touches[5].long?.touche == DeckKey(HotKey(keyCode: 18, modifiers: UInt32(controlKey))))
         #expect(page.touches[5].tresLong?.touche == DeckKey(HotKey(keyCode: 18, modifiers: UInt32(controlKey | shiftKey))))
-        #expect(page.touches[5].iconeLong == nil && page.touches[6].long == nil && page.touches[6].tresLong == nil)
-        #expect(page.touches[5].progressif && !page.touches[1].progressif && !page.touches[6].progressif)
+        // La case 2 d'en face est inconnue de Synfus, pas du jeu : elle joue sa touche, sans vignette.
+        #expect(page.touches[5].iconeLong == nil && page.touches[6].long?.touche != nil && page.touches[6].iconeLong == nil)
+        #expect(page.touches[5].progressif && !page.touches[1].progressif && page.touches[6].progressif)
         #expect(page.touches[5].titre == "Bouclier" && page.touches[5].icone == "PNG")
         #expect(page.touches[5].court?.touche == DeckKey(HotKey(keyCode: 18, modifiers: 0)))
         #expect(page.touches[6].icone == nil && page.touches[6].titre == "2" && page.touches[6].court?.touche != nil)
@@ -83,8 +84,8 @@ struct DeckComposerTests {
         #expect(rangee.pageCount(colonnes: 5, lignes: 3) == 6)
         let p0 = compose(input(rangee))
         #expect(p0.touches[5].long?.touche == DeckKey(HotKey(keyCode: 22, modifiers: 0)))   // case 6
-        #expect(p0.touches[5].iconeLong == "PNG" && p0.touches[6].long == nil)   // case 7 vide : rien en appui long
-        #expect(p0.touches[5].tresLong == nil)   // case 11 vide : rien en très long
+        #expect(p0.touches[5].iconeLong == "PNG" && p0.touches[6].long?.touche != nil && p0.touches[6].iconeLong == nil)   // case 7 inconnue : la touche, sans vignette
+        #expect(p0.touches[5].tresLong?.touche == DeckKey(HotKey(keyCode: 27, modifiers: 0)))   // case 11
         #expect(p0.touches[6].tresLong?.touche == DeckKey(HotKey(keyCode: 24, modifiers: 0)))   // case 2 → très long = case 12
         #expect(DeckLayout.pageLabelParRangee(0, colonnes: 5, lignes: 3) == "Barres 1-2 · cases 1-5")
         #expect(DeckLayout.pageLabelParRangee(5, colonnes: 5, lignes: 3) == "Barre 3 · cases 11-12")

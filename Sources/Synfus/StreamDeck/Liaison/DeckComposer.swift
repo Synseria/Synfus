@@ -35,8 +35,6 @@ enum DeckComposer {
         var titre = ""
         var attenuee = false
         var action: DeckAction?
-        /// Une case de sort sans sort : rien à jouer en appui long.
-        var vide = false
     }
 
     static func compose(_ input: Input, icone: (SpellSlot) -> String?) -> DeckPage {
@@ -63,7 +61,7 @@ enum DeckComposer {
             let slot = input.profile?.slot(bar: barre, position: position)
             let key = input.keyMap.key(bar: barre, position: position)
             return Rendu(icone: slot.flatMap(icone), titre: slot?.nom ?? "\(position + 1)", attenuee: dimmed,
-                         action: frappe(key, nom: slot?.nom ?? "Case \(position + 1)"), vide: slot == nil)
+                         action: frappe(key, nom: slot?.nom ?? "Case \(position + 1)"))
         }
 
         func perso(_ p: DeckPerso?, titre: (String) -> String, commande: DeckCommand.Kind) -> Rendu {
@@ -129,15 +127,15 @@ enum DeckComposer {
                 rendu = absolute < paged.count ? gameCommand(paged[absolute].id) : Rendu(attenuee: true)
             } else {
                 rendu = render(tile.court)
-                // Une case d'en face vide n'a rien à jouer : sans action longue,
-                // la touche joue plus tôt.
-                long = tile.long.map(render).flatMap { $0.vide ? nil : $0 }
-                tresLong = tile.tresLong.map(render).flatMap { $0.vide ? nil : $0 }
+                // Une case que Synfus ne connaît pas n'est pas une case vide
+                // pour le jeu : le profil peut simplement ne pas être rempli.
+                // Le niveau joue sa touche quand même — le deck est un clavier
+                // —, il n'a juste pas de vignette.
+                long = tile.long.map(render)
+                tresLong = tile.tresLong.map(render)
             }
-            // Les vignettes — seulement s'il y a bien quelque chose à jouer.
             touches.append(DeckTouche(index: index, role: tile.court.role, icone: rendu.icone,
-                                      iconeLong: long?.action != nil ? long?.icone : nil,
-                                      iconeTresLong: tresLong?.action != nil ? tresLong?.icone : nil,
+                                      iconeLong: long?.icone, iconeTresLong: tresLong?.icone,
                                       symbole: rendu.symbole, titre: rendu.titre, attenuee: rendu.attenuee,
                                       court: rendu.action, long: long?.action, tresLong: tresLong?.action,
                                       progressif: input.progressif && !input.menuOuvert && tile.sources.allSatisfy(\.estUnSort)
