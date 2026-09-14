@@ -21,6 +21,8 @@ VERSION=0.0.3 ARCH=x86_64 ./build.sh
 ./make-dmg.sh Synfus.app dist/Synfus-0.0.3-arm64.dmg
 ./Tools/generate-app-icons.sh      # régénère Resources/Synfus.{icns,png}
 ./Tools/fetch-ankama-assets.sh     # télécharge emblèmes et icônes de sorts dans Resources/Ankama (gitignoré)
+open dist/fr.synseria.synfus.sdPlugin   # installe le plugin Stream Deck produit par build.sh
+nc -U ~/Library/Application\ Support/Synfus/streamdeck.sock   # lire l'état poussé au plugin
 ```
 
 Les tests portent sur la logique pure — analyse des titres de fenêtres, classes,
@@ -104,7 +106,8 @@ de son domaine ; un fichier qui n'en a pas est le signe d'un domaine à créer.
 | `Classes/` | Classes du jeu et icônes fournies par l'utilisateur |
 | `Marque/` | La Couvée : `SynfusMark` (CoreGraphics pur) et `SynfusGlyph` |
 | `Interface/` | `MenuBarController` ; `Barre/` (barre flottante et ses contrôles) ; `Reglages/` (une vue par onglet + contrôleur de fenêtre) |
-| `StreamDeck/` | L'interface physique contextuelle : `Sorts/` (reconnaissance de la barre de sorts) ; à venir `Profils/`, `Liaison/` |
+| `StreamDeck/` | L'interface physique contextuelle : `Sorts/` (reconnaissance de la barre), `Profils/` (sorts par perso, touches), `Liaison/` (protocole et socket), `Combat/` (détection combat) |
+| `../SynfusDeck/` | Le plugin Elgato — second target, binaire séparé, sans code partagé : le protocole JSON est le contrat |
 
 Les logiques pures ont leur fichier propre (`WindowTitle`, `ClientMemory`,
 `LayoutComputer`, `BounceDetector`, `FreezeStrikes`…) : c'est ce qui les rend
@@ -725,6 +728,68 @@ opération de configuration, jamais en continu.
   `~/Library/Logs/Synfus/captures/` (jamais dans le dépôt), analyse avec les
   scores par case et les durées. C'est sur ce rapport que se prend la décision
   go/no-go de la reconnaissance automatique.
+
+### Stream Deck — profils, liaison, plugin, combat
+
+Le Stream Deck est une **interface physique contextuelle** : il montre les
+sorts du perso que Synfus voit devant, et frappe la touche que le jeu attend.
+Trois règles tiennent l'ensemble :
+
+- **Synfus n'émet toujours aucun évènement.** C'est le plugin, `SynfusDeck`,
+  qui pose la frappe (`CGEvent`, appui puis relâchement, `Keystroke.press`) —
+  un périphérique d'entrée de plus, une pression = une frappe, rien n'est
+  rejoué ni multiplié. Il ne frappe que si `dofusDevant` est vrai : jamais
+  dans une autre app.
+- **L'API locale n'est pas un port réseau.** [StreamDeckLink.swift](Sources/Synfus/StreamDeck/Liaison/StreamDeckLink.swift)
+  écoute sur un socket Unix `~/Library/Application Support/Synfus/streamdeck.sock`,
+  `chmod 0600` dès qu'il existe, et seulement si `streamDeckEnabled` (faux par
+  défaut). Le protocole, [DeckProtocol.swift](Sources/Synfus/StreamDeck/Liaison/DeckProtocol.swift),
+  est du JSON par ligne, **descriptif** : Synfus pousse `DeckState` (perso,
+  classe, barre active, dix `DeckCell` avec icône en base64 et touche, fin de
+  tour, `enCombat`), et n'accepte que `DeckCommand` — `persoSuivant`,
+  `persoPrecedent`, `perso(slot)`, `barreSuivante`, `barrePrecedente`, tout
+  ce que la barre flottante sait déjà faire. Une commande inconnue est
+  journalisée et ignorée. `StreamDeckLink.state(client:profile:…)` est pure et
+  testée (`SpellProfileTests`). La barre active est un état de session, pas
+  une préférence.
+- **Le plugin est en Swift, pas en TypeScript.** Le logiciel Elgato lance
+  n'importe quel exécutable déclaré en `CodePathMac` avec
+  `-port -pluginUUID -registerEvent -info` ; [Sources/SynfusDeck/](Sources/SynfusDeck/)
+  s'enregistre sur son WebSocket (`URLSessionWebSocketTask`), se connecte au
+  socket de Synfus (reconnexion à délai croissant : il peut être lancé avant
+  Synfus) et redessine les touches à chaque `etat`. Il ne partage **aucun
+  code** avec l'app — `DeckMessages.swift` est le miroir du protocole, et
+  c'est voulu : pas de target commun à maintenir pour cinq structs. Les
+  touches « sort » n'ont aucune configuration : leur position est leur ordre
+  de lecture sur l'appareil (ligne puis colonne). `build.sh` assemble
+  `dist/fr.synseria.synfus.sdPlugin/` (manifest de [Plugin/](Plugin/), binaire,
+  icônes tirées de la marque).
+
+[Profils/](Sources/Synfus/StreamDeck/Profils/) : `SpellProfile` (perso →
+3 barres × 10 cases, `sortId` DofusDB + nom, `normalize()` complète une
+sauvegarde ancienne sans la tronquer), un fichier JSON par perso dans
+`Application Support/Synfus/Profils/` (`SpellProfileStore`, exportable,
+versionnable par l'utilisateur). `SpellKeyMap` (dans `Preferences`) porte les
+touches du jeu par barre — des keycodes de position, défaut `1…0` / `⌃` /
+`⌃⇧`, **jamais ⌘**, réservé aux emplacements de Synfus — et `finDeTour`,
+sans défaut tant qu'elle n'est pas confirmée en jeu. L'onglet **Sorts** remplit
+un profil au clic, ou par « Reconnaître la barre affichée », qui passe par
+`SpellRecognition` — le même foyer que le banc d'essai du Diagnostic — et ne
+retient que les cases `isConfident`.
+
+[Combat/](Sources/Synfus/StreamDeck/Combat/) : aucune API ne dit l'état du
+combat, et une signature figée du jeu casserait à chaque mise à jour. La
+détection se **calibre** : deux captures de la bande basse de la fenêtre
+(`CombatDetector.region`, 22 % du bas, réduite à 64 × 14), l'une en combat,
+l'autre hors combat, faites par l'utilisateur dans l'onglet Sorts et gardées
+dans `Application Support/Synfus/Combat/`. `CombatDetector` est pur (comme
+`BounceDetector`) : chaque relevé est corrélé aux deux références, le verdict
+ne bascule qu'après deux relevés concordants et une marge minimale ; testé
+dans `CombatDetectorTests`. `CombatWatcher` relève à 1 Hz, seulement liaison
+active + Dofus devant + autorisation d'écran + références présentes, par
+`WindowPreviewService.capture(_:region:)` — quelques milliers de pixels, coût
+affiché dans l'onglet. Tant qu'il n'y a pas de verdict, `enCombat` est `nil`
+et le plugin garde sa page.
 
 ## Publication
 

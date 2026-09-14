@@ -8,6 +8,7 @@ struct SpellsSettings: View {
     @ObservedObject private var store = SpellProfileStore.shared
     @ObservedObject private var previews = WindowPreviewService.shared
     @ObservedObject private var link = StreamDeckLink.shared
+    @ObservedObject private var combat = CombatWatcher.shared
     @State private var perso: String = ""
     @State private var message = ""
 
@@ -81,6 +82,26 @@ struct SpellsSettings: View {
                 if prefs.streamDeckEnabled {
                     Text(link.status)
                         .font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary)
+                }
+            }
+
+            Section("Détection de combat") {
+                Text("Le Stream Deck peut changer de page à l'entrée en combat. Le jeu ne le dit pas : "
+                     + "Synfus compare, une fois par seconde, la bande basse de la fenêtre à deux références "
+                     + "que tu captures toi-même — une fois en combat, une fois hors combat, perso devant.")
+                    .font(.system(size: 11)).foregroundStyle(.secondary)
+                HStack {
+                    Button("Capturer la référence « en combat »") { calibrate(true) }
+                    Button("Capturer la référence « hors combat »") { calibrate(false) }
+                }
+                .font(.system(size: 11))
+                .disabled(!previews.authorized)
+                Text(combat.calibrated ? "Calibrée — \(combat.status)" : "Non calibrée")
+                    .font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary)
+                if let reading = combat.lastReading {
+                    Text(String(format: "dernier relevé : combat %.2f · hors combat %.2f · %d ms",
+                                reading.correlationCombat, reading.correlationHors, Int(combat.lastDuration * 1000)))
+                        .font(.system(size: 10, design: .monospaced)).foregroundStyle(.tertiary)
                 }
             }
 
@@ -189,6 +210,10 @@ struct SpellsSettings: View {
             message = "\(found.cells.count) cases trouvées, \(filled) reconnues avec certitude → \(p.barres[bar].nom). "
                 + "Les autres se choisissent au clic."
         }
+    }
+
+    private func calibrate(_ enCombat: Bool) {
+        Task { message = await CombatWatcher.shared.calibrate(enCombat: enCombat) }
     }
 
     private func modifiersBinding(_ bar: Int) -> Binding<UInt32> {
