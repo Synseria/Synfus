@@ -181,7 +181,7 @@ struct PreferencesTests {
     func purge() {
         let (prefs, _) = neuves()
         prefs.characterOrder = ["Amarine", "Dofus 3.3.4.9", "Nelo", "Nelo (2)"]
-        prefs.purgeOrder(keeping: WindowManager.isPersistableName)
+        prefs.purgeOrder(keeping: WindowTitle.isPersistableName)
         #expect(prefs.characterOrder == ["Amarine", "Nelo"])
     }
 

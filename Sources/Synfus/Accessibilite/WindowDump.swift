@@ -86,7 +86,7 @@ enum WindowDump {
         // Les deux filtres de `refresh()`, dans l'ordre où ils s'appliquent.
         let subroleOK = subrole == nil || subrole == kAXStandardWindowSubrole as String
         let sizeOK = dimension.map { $0.width > 200 && $0.height > 200 } ?? true
-        let characterOK = WindowManager.isCharacterWindow(title: title ?? "")
+        let characterOK = WindowTitle.isCharacterWindow(title: title ?? "")
 
         let verdict: String
         if !subroleOK {
