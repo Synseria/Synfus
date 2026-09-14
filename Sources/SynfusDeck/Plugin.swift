@@ -35,7 +35,13 @@ final class Plugin {
 
     private var menuPageCount: Int {
         let perPage = max(1, sortKeys.count)
-        return max(1, ((state?.commandes.count ?? 0) + perPage - 1) / perPage)
+        return max(1, (pagedCommands.count + perPage - 1) / perPage)
+    }
+
+    /// Les commandes des pages du menu — celles qui ont leur propre touche
+    /// (suivi, havre-sac) n'y sont pas répétées.
+    private var pagedCommands: [DeckGameCommand] {
+        (state?.commandes ?? []).filter { $0.id != "suivi" && $0.id != "havresac" }
     }
 
     private static let socketPath = FileManager.default
@@ -118,7 +124,8 @@ final class Plugin {
             guard let index = sortKeys.firstIndex(where: { $0.context == context }) else { return }
             if menuOpen {
                 let absolute = menuPage * max(1, sortKeys.count) + index
-                guard absolute < state.commandes.count, let touche = state.commandes[absolute].touche
+                let commands = pagedCommands
+                guard absolute < commands.count, let touche = commands[absolute].touche
                 else { elgato?.showAlert(context); return }
                 Keystroke.press(touche)
                 return
@@ -128,6 +135,11 @@ final class Plugin {
             Keystroke.press(touche)
         case ActionID.suivi:
             guard let touche = state.commandes.first(where: { $0.id == "suivi" })?.touche
+            else { elgato?.showAlert(context); return }
+            Keystroke.press(touche)
+        case ActionID.finDeTour where menuOpen:
+            // En mode menu, la touche de fin de tour ouvre le havre-sac.
+            guard let touche = state.commandes.first(where: { $0.id == "havresac" })?.touche
             else { elgato?.showAlert(context); return }
             Keystroke.press(touche)
         case ActionID.finDeTour:
@@ -186,7 +198,9 @@ final class Plugin {
             switch key.action {
             case ActionID.sort where menuOpen && state != nil:
                 let index = (sorts.firstIndex { $0.context == key.context } ?? 0) + menuPage * max(1, sorts.count)
-                if let command = state.flatMap({ index < $0.commandes.count ? $0.commandes[index] : nil }) {
+                let commands = pagedCommands
+                if index < commands.count {
+                    let command = commands[index]
                     elgato.setImage(key.context, base64PNG: Images.symbol(command.symbole, dimmed: dimmed || command.touche == nil))
                     elgato.setTitle(key.context, Images.title(command.nom))
                 } else {
@@ -194,8 +208,12 @@ final class Plugin {
                     elgato.setTitle(key.context, "")
                 }
             case ActionID.menu:
-                elgato.setImage(key.context, base64PNG: Images.symbol(menuOpen ? "xmark" : "square.grid.2x2", dimmed: dimmed))
+                elgato.setImage(key.context, base64PNG: Images.symbol("square.grid.2x2", dimmed: dimmed))
                 elgato.setTitle(key.context, menuOpen ? "Sorts" : "Menu")
+            case ActionID.finDeTour where menuOpen && state != nil:
+                let ready = state?.commandes.contains { $0.id == "havresac" && $0.touche != nil } == true
+                elgato.setImage(key.context, base64PNG: Images.symbol("house", dimmed: dimmed || !ready))
+                elgato.setTitle(key.context, "Havre-sac")
             case ActionID.suivi:
                 let ready = state?.commandes.contains { $0.id == "suivi" && $0.touche != nil } == true
                 elgato.setImage(key.context, base64PNG: Images.symbol("figure.walk", dimmed: dimmed || !ready))
