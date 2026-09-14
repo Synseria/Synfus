@@ -7,6 +7,8 @@ import Foundation
 enum SpellRecognition {
 
     struct CellResult: Equatable, Sendable {
+        /// Rangée (0 = la plus haute) et position dans la rangée (0-based).
+        let row: Int
         let position: Int
         let match: SpellRecognizer.Match?
     }
@@ -43,9 +45,11 @@ enum SpellRecognition {
         }
         let located = Date()
         let candidates = candidates(forClass: classe)
-        let cells = bar.cells.enumerated().map { index, cell in
-            CellResult(position: index,
-                       match: SpellRecognizer.identify(cell: image.cropped(to: cell), among: candidates))
+        let cells = bar.rows.enumerated().flatMap { row, rects in
+            rects.enumerated().map { position, cell in
+                CellResult(row: row, position: position,
+                           match: SpellRecognizer.identify(cell: image.cropped(to: cell), among: candidates))
+            }
         }
         return Analysis(bar: bar, candidateCount: candidates.count, cells: cells,
                         locateDuration: located.timeIntervalSince(start),

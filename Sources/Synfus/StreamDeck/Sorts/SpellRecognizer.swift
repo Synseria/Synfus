@@ -76,16 +76,23 @@ enum SpellRecognizer {
 
     /// Côté des imagettes comparées. Assez petit pour être rapide, assez
     /// grand pour que deux sorts de la même classe se distinguent.
-    static let side = 32
-    static let minScore = 0.6
-    static let minMargin = 0.1
+    static let side = 40
+    static let minScore = 0.7
+    static let minMargin = 0.12
+    /// Part rognée de chaque bord, **des deux côtés** — la case du jeu comme
+    /// l'icône de référence. Le cadre et le fond sont les mêmes pour tous les
+    /// sorts d'une classe : les garder, c'était comparer des cadres. Mesuré
+    /// sur une capture réelle : sans rognage, 0,7 de score et 0,1 de marge ;
+    /// le picto seul creuse l'écart.
+    static let inset: CGFloat = 0.22
 
     static func candidate(id: Int, nom: String, icon: LumaBitmap) -> Candidate {
-        Candidate(id: id, nom: nom, thumb: icon.resized(to: side))
+        Candidate(id: id, nom: nom, thumb: thumbnail(ofCell: icon))
     }
 
-    /// La case rognée de son cadre, puis réduite — comme les candidats.
-    static func thumbnail(ofCell cell: LumaBitmap, inset: CGFloat = 0.08) -> LumaBitmap {
+    /// Le centre de la case, réduit — le même traitement pour la case du jeu
+    /// et pour l'icône de référence.
+    static func thumbnail(ofCell cell: LumaBitmap) -> LumaBitmap {
         let dx = CGFloat(cell.width) * inset, dy = CGFloat(cell.height) * inset
         return cell.cropped(to: CGRect(x: dx, y: dy, width: CGFloat(cell.width) - 2 * dx,
                                        height: CGFloat(cell.height) - 2 * dy)).resized(to: side)
@@ -95,23 +102,47 @@ enum SpellRecognizer {
         guard !candidates.isEmpty else { return nil }
         let probe = thumbnail(ofCell: cell)
         let ranked = candidates
-            .map { ($0, correlation(probe, $0.thumb)) }
+            .map { ($0, bestCorrelation(probe, $0.thumb)) }
             .sorted { $0.1 > $1.1 }
         let best = ranked[0]
         let second = ranked.count > 1 ? ranked[1].1 : -1
         return Match(id: best.0.id, nom: best.0.nom, score: best.1, runnerUp: second)
     }
 
+    /// Décalage maximal, en pixels d'imagette, toléré entre la case et la
+    /// référence : le cadre du jeu et celui du PNG ne coïncident pas au pixel.
+    static let maxShift = 2
+
+    /// La meilleure corrélation à un petit décalage près.
+    static func bestCorrelation(_ a: LumaBitmap, _ b: LumaBitmap) -> Double {
+        var best = -1.0
+        for dy in -maxShift...maxShift {
+            for dx in -maxShift...maxShift {
+                best = max(best, correlation(a, b, dx: dx, dy: dy))
+            }
+        }
+        return best
+    }
+
     /// Corrélation normalisée (coefficient de Pearson) de deux imagettes de
-    /// même taille. Une image uniforme n'a pas de forme : corrélation nulle.
-    static func correlation(_ a: LumaBitmap, _ b: LumaBitmap) -> Double {
-        guard a.pixels.count == b.pixels.count, !a.pixels.isEmpty else { return 0 }
-        let n = Double(a.pixels.count)
-        let meanA = a.pixels.reduce(0.0) { $0 + Double($1) } / n
-        let meanB = b.pixels.reduce(0.0) { $0 + Double($1) } / n
+    /// même taille, `b` décalée de (dx, dy) — sur leur recouvrement. Une image
+    /// uniforme n'a pas de forme : corrélation nulle.
+    static func correlation(_ a: LumaBitmap, _ b: LumaBitmap, dx: Int = 0, dy: Int = 0) -> Double {
+        guard a.width == b.width, a.height == b.height, a.width > abs(dx), a.height > abs(dy) else { return 0 }
+        var sa = 0.0, sb = 0.0, n = 0.0
+        var pairs: [(Double, Double)] = []
+        pairs.reserveCapacity(a.pixels.count)
+        for y in max(0, dy)..<min(a.height, a.height + dy) {
+            for x in max(0, dx)..<min(a.width, a.width + dx) {
+                let va = Double(a[x, y]), vb = Double(b[x - dx, y - dy])
+                pairs.append((va, vb)); sa += va; sb += vb; n += 1
+            }
+        }
+        guard n > 0 else { return 0 }
+        let meanA = sa / n, meanB = sb / n
         var cov = 0.0, varA = 0.0, varB = 0.0
-        for i in 0..<a.pixels.count {
-            let da = Double(a.pixels[i]) - meanA, db = Double(b.pixels[i]) - meanB
+        for (va, vb) in pairs {
+            let da = va - meanA, db = vb - meanB
             cov += da * db; varA += da * da; varB += db * db
         }
         guard varA > 0, varB > 0 else { return 0 }

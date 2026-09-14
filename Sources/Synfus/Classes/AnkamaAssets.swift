@@ -18,7 +18,13 @@ enum AnkamaAssets {
         .appending(path: "Synfus", directoryHint: .isDirectory)
 
     /// `Contents/Resources/Ankama` du bundle, s'il a été embarqué.
+    ///
+    /// `SYNFUS_ANKAMA_DIR` dans l'environnement le remplace — pour les tests de
+    /// calibrage sur captures réelles, qui tournent hors bundle.
     static let bundledDirectory: URL? = {
+        if let override = ProcessInfo.processInfo.environment["SYNFUS_ANKAMA_DIR"] {
+            return URL(fileURLWithPath: (override as NSString).expandingTildeInPath, isDirectory: true)
+        }
         let url = Bundle.main.resourceURL?.appending(path: "Ankama", directoryHint: .isDirectory)
         guard let url, FileManager.default.fileExists(atPath: url.path) else { return nil }
         return url

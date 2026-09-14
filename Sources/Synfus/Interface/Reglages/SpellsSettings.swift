@@ -40,6 +40,13 @@ struct SpellsSettings: View {
                         Text(classe ?? "classe inconnue")
                             .font(.system(size: 11)).foregroundStyle(.secondary)
                     }
+                    Spacer()
+                    Button { recognize() } label: { Label("Reconnaître les barres affichées", systemImage: "wand.and.stars") }
+                        .font(.system(size: 11))
+                        .disabled(!previews.authorized || !isConnected)
+                        .help(previews.authorized
+                              ? "Capture la fenêtre du perso, lit les trois rangées de sorts et remplit les barres"
+                              : "Autorise d'abord l'enregistrement de l'écran (onglet Général)")
                 }
             } header: {
                 SectionTitle("Profil de sorts", help: "Un profil par perso : trois barres de dix cases, "
@@ -63,7 +70,7 @@ struct SpellsSettings: View {
                             ForEach(SpellKeyMap.modifierChoices, id: \.value) { Text($0.label).tag($0.value) }
                         }
                         .labelsHidden().frame(width: 110)
-                        Text(prefs.spellKeyMap.barres[bar].map(\.displayString).joined(separator: " "))
+                        Text(prefs.spellKeyMap.barres[bar].map { $0?.displayString ?? "·" }.joined(separator: " "))
                             .font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary)
                     }
                 }
@@ -125,21 +132,18 @@ struct SpellsSettings: View {
 
     private func barSection(_ bar: Int) -> some View {
         Section {
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 5), spacing: 6) {
+            LazyVGrid(columns: Array(repeating: GridItem(.fixed(58), spacing: 6), count: 6), alignment: .leading, spacing: 8) {
                 ForEach(0..<SpellProfile.slotsPerBar, id: \.self) { position in
                     slotView(bar: bar, position: position)
                 }
             }
+            .padding(.vertical, 4)
         } header: {
-            HStack {
-                Text(profile.barres[bar].nom)
+            HStack(spacing: 8) {
+                Text(profile.barres[bar].nom).font(.system(size: 12, weight: .semibold))
+                Text(SpellKeyMap.modifierChoices.first { $0.value == (prefs.spellKeyMap.barres[bar].first??.modifiers ?? 0) }?.label ?? "")
+                    .font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary)
                 Spacer()
-                Button { recognize(into: bar) } label: { Label("Reconnaître", systemImage: "wand.and.stars") }
-                    .font(.system(size: 11))
-                    .disabled(!previews.authorized || !isConnected)
-                    .help(previews.authorized
-                          ? "Lit la barre affichée à l'écran et remplit celle-ci"
-                          : "Autorise d'abord l'enregistrement de l'écran (onglet Général)")
                 Button { var p = profile; p.barres[bar] = .empty(nom: p.barres[bar].nom); store.save(p) } label: {
                     Image(systemName: "trash")
                 }
@@ -151,32 +155,16 @@ struct SpellsSettings: View {
 
     private var isConnected: Bool { manager.clients.contains { $0.name == perso } }
 
+    /// Une case : l'icône en carré, le nom, la touche. Un clic ouvre le choix
+    /// du sort — la façon manuelle, toujours disponible.
     private func slotView(bar: Int, position: Int) -> some View {
         let slot = profile.slot(bar: bar, position: position)
         let key = prefs.spellKeyMap.key(bar: bar, position: position)
-        return Menu {
-            Button("Vider") { set(nil, bar: bar, position: position) }
-                .disabled(slot == nil)
-            Divider()
-            ForEach(classSpells, id: \.id) { entry in
-                Button(entry.nom) { set(SpellSlot(sortId: entry.id, nom: entry.nom), bar: bar, position: position) }
-            }
-        } label: {
-            VStack(spacing: 2) {
-                if let slot, let url = SpellIndex.shared?.iconURL(id: slot.sortId),
-                   let image = NSImage(contentsOf: url) {
-                    Image(nsImage: image).resizable().frame(width: 32, height: 32).cornerRadius(4)
-                } else {
-                    RoundedRectangle(cornerRadius: 4).fill(Color.primary.opacity(0.06)).frame(width: 32, height: 32)
-                        .overlay(Text("\(position + 1)").font(.system(size: 11)).foregroundStyle(.tertiary))
-                }
-                Text(slot?.nom ?? "—").font(.system(size: 9)).lineLimit(1)
-                Text(key?.displayString ?? "").font(.system(size: 9, design: .monospaced)).foregroundStyle(.tertiary)
-            }
-            .frame(maxWidth: .infinity)
-        }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
+        return SpellSlotCell(slot: slot, keyLabel: key?.displayString, position: position,
+                             icon: slot.flatMap { SpellIndex.shared?.iconURL(id: $0.sortId) }.flatMap { NSImage(contentsOf: $0) },
+                             choices: classSpells,
+                             iconFor: { SpellIndex.shared?.iconURL(id: $0).flatMap { NSImage(contentsOf: $0) } },
+                             onSelect: { entry in set(entry.map { SpellSlot(sortId: $0.id, nom: $0.nom) }, bar: bar, position: position) })
     }
 
     private var classSpells: [SpellIndex.Entry] {
@@ -191,10 +179,10 @@ struct SpellsSettings: View {
         store.save(p)
     }
 
-    /// Capture la fenêtre du perso sélectionné, reconnaît la barre affichée
-    /// à l'écran et remplit `bar` avec les cases sûres — les autres restent
-    /// à choisir dans le menu.
-    private func recognize(into bar: Int) {
+    /// Capture la fenêtre du perso sélectionné, reconnaît les rangées
+    /// affichées à l'écran — jusqu'à trois, une par barre — et remplit les
+    /// cases sûres ; les autres restent à choisir au clic.
+    private func recognize() {
         guard let client = manager.clients.first(where: { $0.name == perso }) else { return }
         message = "Capture en cours…"
         Task {
@@ -213,14 +201,14 @@ struct SpellsSettings: View {
             var p = profile
             p.classe = classe ?? p.classe
             var filled = 0
-            for cell in analysis.cells.prefix(SpellProfile.slotsPerBar) {
+            for cell in analysis.cells where cell.row < SpellProfile.barCount && cell.position < SpellProfile.slotsPerBar {
                 guard let match = cell.match, match.isConfident else { continue }
-                p.set(SpellSlot(sortId: match.id, nom: match.nom), bar: bar, position: cell.position)
+                p.set(SpellSlot(sortId: match.id, nom: match.nom), bar: cell.row, position: cell.position)
                 filled += 1
             }
             store.save(p)
-            message = "\(found.cells.count) cases trouvées, \(filled) reconnues avec certitude → \(p.barres[bar].nom). "
-                + "Les autres se choisissent au clic."
+            message = "\(found.rows.count) rangée(s) de \(found.rows.first?.count ?? 0) cases trouvées, \(filled) sorts reconnus avec certitude. "
+                + "Les autres se choisissent au clic ; le détail est dans Diagnostic."
         }
     }
 
@@ -230,8 +218,90 @@ struct SpellsSettings: View {
 
     private func modifiersBinding(_ bar: Int) -> Binding<UInt32> {
         Binding(
-            get: { prefs.spellKeyMap.barres[bar].first?.modifiers ?? 0 },
-            set: { mods in prefs.spellKeyMap.barres[bar] = HotKey.digitRow.map { HotKey(keyCode: $0, modifiers: mods) } }
+            get: { prefs.spellKeyMap.barres[bar].first??.modifiers ?? 0 },
+            set: { mods in prefs.spellKeyMap.barres[bar] = SpellKeyMap.row(modifiers: mods) }
         )
+    }
+}
+
+/// Une case de barre : carré d'icône, nom, touche ; au clic, la liste des
+/// sorts de la classe avec leurs icônes, et « Vider ».
+private struct SpellSlotCell: View {
+    let slot: SpellSlot?
+    let keyLabel: String?
+    let position: Int
+    let icon: NSImage?
+    let choices: [SpellIndex.Entry]
+    let iconFor: (Int) -> NSImage?
+    let onSelect: (SpellIndex.Entry?) -> Void
+    @State private var choosing = false
+    @State private var filter = ""
+
+    var body: some View {
+        Button { choosing.toggle() } label: {
+            VStack(spacing: 3) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.primary.opacity(slot == nil ? 0.05 : 0.1))
+                    if let icon {
+                        Image(nsImage: icon).resizable().aspectRatio(contentMode: .fit)
+                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    } else {
+                        Image(systemName: "plus").font(.system(size: 14, weight: .light)).foregroundStyle(.tertiary)
+                    }
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .strokeBorder(Color.primary.opacity(0.15), lineWidth: 0.5)
+                }
+                .frame(width: 48, height: 48)
+                .overlay(alignment: .topLeading) {
+                    Text("\(position + 1)")
+                        .font(.system(size: 8, weight: .semibold, design: .rounded))
+                        .padding(.horizontal, 3).padding(.vertical, 1)
+                        .background(Capsule().fill(Color.black.opacity(0.45)))
+                        .foregroundStyle(.white)
+                        .padding(2)
+                }
+                Text(slot?.nom ?? "—").font(.system(size: 9)).lineLimit(1).frame(width: 56)
+                Text(keyLabel ?? " ").font(.system(size: 9, design: .monospaced)).foregroundStyle(.tertiary)
+            }
+        }
+        .buttonStyle(.plain)
+        .help(slot.map { "\($0.nom) — cliquer pour changer" } ?? "Cliquer pour choisir un sort")
+        .popover(isPresented: $choosing, arrowEdge: .bottom) { picker }
+    }
+
+    private var picker: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            TextField("Filtrer", text: $filter).textFieldStyle(.roundedBorder)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 2) {
+                    ForEach(choices.filter { filter.isEmpty || $0.nom.localizedCaseInsensitiveContains(filter) }, id: \.id) { entry in
+                        Button { onSelect(entry); choosing = false } label: {
+                            HStack(spacing: 8) {
+                                if let image = iconFor(entry.id) {
+                                    Image(nsImage: image).resizable().frame(width: 24, height: 24).cornerRadius(4)
+                                }
+                                Text(entry.nom).font(.system(size: 12))
+                                Spacer()
+                                if slot?.sortId == entry.id { Image(systemName: "checkmark") }
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.vertical, 2)
+                    }
+                }
+            }
+            .frame(width: 240, height: 260)
+            if slot != nil {
+                Divider()
+                Button("Vider la case") { onSelect(nil); choosing = false }.font(.system(size: 11))
+            }
+            if choices.isEmpty {
+                Text("Aucune icône de sort pour cette classe — lance Tools/fetch-ankama-assets.sh puis ./build.sh --install.")
+                    .font(.system(size: 10)).foregroundStyle(.secondary).frame(width: 240)
+            }
+        }
+        .padding(10)
     }
 }

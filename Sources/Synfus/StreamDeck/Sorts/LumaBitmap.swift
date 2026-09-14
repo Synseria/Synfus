@@ -38,13 +38,10 @@ struct LumaBitmap: Sendable, Equatable, Codable {
             return true
         }
         guard ok else { return nil }
-        // CoreGraphics dessine l'origine en bas : on remet la première ligne en haut.
-        var flipped = [UInt8](repeating: 0, count: width * height)
-        for y in 0..<height {
-            flipped.replaceSubrange(y * width..<(y + 1) * width,
-                                    with: pixels[(height - 1 - y) * width..<(height - y) * width])
-        }
-        self.init(width: width, height: height, pixels: flipped)
+        // La mémoire d'un contexte bitmap commence par la ligne du **haut** :
+        // pas de retournement — `LumaBitmapTests` le vérifie, une inversion
+        // silencieuse a envoyé le localisateur chercher la barre dans le ciel.
+        self.init(width: width, height: height, pixels: pixels)
     }
 
     /// Un PNG (ou tout format lu par ImageIO) du disque.

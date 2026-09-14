@@ -7,7 +7,7 @@ import Foundation
 struct SpellBarLocatorTests {
 
     /// Une « fenêtre » sombre avec, en bas, `count` cases bordées de clair.
-    private func window(width: Int = 900, height: Int = 600, count: Int = 10,
+    private func window(width: Int = 900, height: Int = 600, count: Int = 10, rows: Int = 1,
                         side: Int = 44, gap: Int = 6, originX: Int = 200, bottomMargin: Int = 40,
                         noise: Bool = false) -> LumaBitmap {
         var image = LumaBitmap(width: width, height: height, fill: 30)
@@ -16,12 +16,14 @@ struct SpellBarLocatorTests {
             image.fill(CGRect(x: 100, y: 80, width: 300, height: 120), with: 90)
             image.fill(CGRect(x: 500, y: 200, width: 200, height: 60), with: 140)
         }
-        let top = height - bottomMargin - side
-        for k in 0..<count {
-            let x = originX + k * (side + gap)
-            let cell = CGRect(x: x, y: top, width: side, height: side)
-            image.fill(cell, with: 200)                       // le cadre
-            image.fill(cell.insetBy(dx: 2, dy: 2), with: 60 + UInt8(k * 9))  // l'icône, variable
+        for r in 0..<rows {
+            let top = height - bottomMargin - side - r * (side + gap)
+            for k in 0..<count {
+                let x = originX + k * (side + gap)
+                let cell = CGRect(x: x, y: top, width: side, height: side)
+                image.fill(cell, with: 200)                       // le cadre
+                image.fill(cell.insetBy(dx: 2, dy: 2), with: 60 + UInt8(k * 9 + r * 20))  // l'icône, variable
+            }
         }
         return image
     }
@@ -67,5 +69,14 @@ struct SpellBarLocatorTests {
         #expect(bar.cells.count == 8)
         #expect(bar.side == 72)
         #expect(bar.pitch == 80)
+    }
+
+    @Test("Trois rangées superposées sont rendues de haut en bas")
+    func troisRangees() throws {
+        let bar = try #require(SpellBarLocator.locate(in: window(count: 12, rows: 3)))
+        #expect(bar.rows.count == 3)
+        #expect(bar.rows.allSatisfy { $0.count == 12 })
+        #expect(bar.rows[0][0].minY < bar.rows[2][0].minY)
+        #expect(Int(bar.rows[2][0].minY - bar.rows[1][0].minY) == bar.pitch)
     }
 }

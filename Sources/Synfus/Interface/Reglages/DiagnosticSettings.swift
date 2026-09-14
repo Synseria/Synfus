@@ -11,7 +11,31 @@ struct DiagnosticSettings: View {
     @ObservedObject private var spells = SpellRecognitionProbe.shared
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 10) {
+                    content
+                }
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            Divider()
+            HStack {
+                Button("Rafraîchir") { manager.refresh() }
+                // La seconde qu'un client gelé coûte se paie ici, hors main :
+                // si elle monte à ~1 s alors que la barre reste fluide, c'est
+                // que le déport fait son travail.
+                Text("dernier inventaire : \(Int(manager.lastInventoryDuration * 1000)) ms")
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(manager.lastInventoryDuration > 0.5 ? .orange : .secondary)
+                Spacer()
+            }
+            .padding(10)
+        }
+    }
+
+    @ViewBuilder
+    private var content: some View {
             HStack(spacing: 6) {
                 Text("Fenêtres détectées").font(.system(size: 12, weight: .semibold))
                 HelpTip("Les titres bruts des fenêtres Dofus. Si le nom affiché ne correspond pas à ton perso, "
@@ -31,7 +55,6 @@ struct DiagnosticSettings: View {
                     .foregroundStyle(.orange)
                     .padding(.top, 6)
             } else {
-                ScrollView {
                     VStack(alignment: .leading, spacing: 8) {
                         ForEach(manager.clients) { client in
                             VStack(alignment: .leading, spacing: 2) {
@@ -59,7 +82,6 @@ struct DiagnosticSettings: View {
                             .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.04)))
                         }
                     }
-                }
             }
 
             Divider().padding(.vertical, 4)
@@ -85,23 +107,6 @@ struct DiagnosticSettings: View {
 
             Divider().padding(.vertical, 4)
             attentionProbeSection
-
-            Spacer()
-            HStack {
-                Button("Rafraîchir") { manager.refresh() }
-                // La seconde qu'un client gelé coûte se paie ici, hors main :
-                // si elle monte à ~1 s alors que la barre reste fluide, c'est
-                // que le déport fait son travail.
-                Text("dernier inventaire : \(Int(manager.lastInventoryDuration * 1000)) ms")
-                    .font(.system(size: 10, design: .monospaced))
-                    .foregroundStyle(manager.lastInventoryDuration > 0.5 ? .orange : .secondary)
-                Spacer()
-                Text("Synfus — barre et raccourcis de fenêtres")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.tertiary)
-            }
-        }
-        .padding(14)
     }
 
     /// Ce que le dernier rangement a réellement fait. Il repose sur des
@@ -158,16 +163,18 @@ struct DiagnosticSettings: View {
                     .help("Ouvrir le dossier des captures")
             }
             .font(.system(size: 11))
+            if let picture = spells.lastPicture {
+                CaptureOverlay(picture: picture, bar: spells.lastBar, analysis: spells.lastAnalysis)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 300)
+            }
             if !spells.report.isEmpty {
-                ScrollView {
-                    Text(spells.report)
-                        .font(.system(size: 10, design: .monospaced))
-                        .textSelection(.enabled)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .frame(maxHeight: 160)
-                .padding(6)
-                .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.04)))
+                Text(spells.report)
+                    .font(.system(size: 10, design: .monospaced))
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(6)
+                    .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.04)))
             }
         }
     }
@@ -250,8 +257,45 @@ struct DiagnosticSettings: View {
                         }
                     }
                 }
-                .frame(maxHeight: 130)
+                .frame(maxHeight: 200)
             }
         }
+    }
+}
+
+/// La capture avec, par-dessus, les cases trouvées : vertes quand le sort est
+/// reconnu avec certitude, orange sinon. C'est ce qui permet de voir d'un
+/// coup d'œil si le localisateur a visé la barre — ou le décor.
+private struct CaptureOverlay: View {
+    let picture: NSImage
+    let bar: SpellBarLocator.Bar?
+    let analysis: SpellRecognition.Analysis?
+
+    var body: some View {
+        GeometryReader { geometry in
+            let scale = min(geometry.size.width / picture.size.width, geometry.size.height / picture.size.height)
+            let drawn = CGSize(width: picture.size.width * scale, height: picture.size.height * scale)
+            ZStack(alignment: .topLeading) {
+                Image(nsImage: picture)
+                    .resizable()
+                    .frame(width: drawn.width, height: drawn.height)
+                if let bar {
+                    Canvas { context, _ in
+                        for (row, rects) in bar.rows.enumerated() {
+                            for (position, rect) in rects.enumerated() {
+                                let cell = analysis?.cells.first { $0.row == row && $0.position == position }
+                                let confident = cell?.match?.isConfident == true
+                                let scaled = CGRect(x: rect.minX * scale, y: rect.minY * scale,
+                                                    width: rect.width * scale, height: rect.height * scale)
+                                context.stroke(Path(scaled), with: .color(confident ? .green : .orange), lineWidth: 1.5)
+                            }
+                        }
+                    }
+                    .frame(width: drawn.width, height: drawn.height)
+                }
+            }
+            .frame(width: geometry.size.width, height: geometry.size.height, alignment: .center)
+        }
+        .background(RoundedRectangle(cornerRadius: 6).fill(Color.black.opacity(0.06)))
     }
 }
