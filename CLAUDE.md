@@ -50,12 +50,23 @@ l'autorisation Accessibilité est liée à l'identité de code signée.
   absent des SDK antérieurs. Le deployment target reste `14.0`, la bascule vers
   `.ultraThinMaterial` se fait à l'exécution via `if #available(macOS 26.0, *)`.
 - Le paquet est en **Swift 6, concurrence stricte**, sans dérogation. Le modèle
-  est simple : tout vit sur le main thread. Les classes à état sont `@MainActor`
+  est simple : l'état vit sur le main thread. Les classes à état sont `@MainActor`
   (`Preferences` comprise), les callbacks Timer et notification repassent par
   `MainActor.assumeIsolated`, et le callback C de `HotKeyManager` — qui ne peut
   rien capturer — franchit la frontière via `DispatchQueue.main.async`.
   Toute nouvelle classe à état doit être `@MainActor` plutôt que d'obtenir une
-  exemption.
+  exemption. Les deux exceptions sont des **acteurs sans état partagé** qui
+  font du travail bloquant : `PreviewCaptureEngine` (captures) et
+  `ClientInventoryEngine` (inventaire Accessibilité). Il n'y entre et n'en sort
+  que des valeurs `Sendable`.
+- **Un seul foyer par logique.** Pas deux fonctions qui font à peu près la même
+  chose : la lecture AX est dans `AccessibilityReader`, la reconnaissance d'un
+  processus Dofus dans `DofusProcesses`, l'escalade de fermeture dans
+  `ClientTerminator`, le décodage des titres dans `WindowTitle`. Avant d'écrire
+  une fonction, chercher celle qui existe ; quand une correction touche un
+  chemin, vérifier que son jumeau en bénéficie — le gel à la fermeture externe
+  venait exactement de là : `close()` déportait ce que l'inventaire refaisait
+  sur main.
 - Les constantes `extern CFStringRef` de l'API Accessibilité (par ex.
   `kAXTrustedCheckOptionPrompt`) sont vues comme des `var` globales et refusées
   par la concurrence stricte : leur valeur littérale est citée directement.
@@ -127,6 +138,25 @@ ne garde qu'une échéance, la plus tardive) — le temps que la transition
 d'espace s'achève. `focus()` ne pose `kAXMain`/`kAXRaise` que s'il y a
 plusieurs fenêtres à départager dans le processus.
 
+**L'inventaire tourne hors du main thread.** `refresh()` ne lit plus rien :
+il compose une `InventoryRequest` avec l'état de l'instant (pids vivants dans
+l'ordre de lancement, pids à sauter, candidats cross-space) et l'envoie à
+`ClientInventoryEngine`, un `actor` à **exécuteur dédié** (`DispatchSerialQueue`
+— des IPC bloquants d'une seconde n'ont rien à faire sur le pool coopératif)
+dont `inventory(_:)` ne contient aucun `await` : un inventaire à la fois, par
+construction. Le résultat, des valeurs (`InventoryResult`, `DofusClient` est
+`Sendable` grâce à `AXHandle`), revient sur main dans `apply`, qui décide avec
+l'état **courant** : `ClientMemory.consolidate` (pur, testé) pour la mémoire et
+les découvertes cross-space, puis veilleur de gel, préférences, tri,
+publication. La politique de lancement, `InventoryScheduling` (pure, testée),
+garantit au plus un inventaire en vol et un différé, quelle que soit la
+rafale, et jette un résultat d'une génération dépassée. `refreshed()` attend
+qu'un inventaire lancé après l'appel soit appliqué — c'est ce que l'arrangeur
+utilise. Les **gestes** AX (focus, rangement, plein écran) restent sur main :
+ce sont des actions utilisateur sur un client à la fois, et `isReachable`
+leur épargne les processus en fermeture ou suspects. Cette séparation —
+inventaire hors main, gestes sur main — est une décision, pas un oubli.
+
 Chaque fenêtre est lue en **un seul IPC** (`AXUIElementCopyMultipleAttributeValues`
 pour sous-rôle, taille et titre), et rien n'est republié sans avoir changé :
 `frontmostPID`, `frontmostIsDofus` et `clients` ne sont réaffectés qu'en cas
@@ -168,7 +198,12 @@ demeure, documentée dans les réglages.
 Tous les appels AX du processus sont bornés à 1 s
 (`AXUIElementSetMessagingTimeout` sur l'élément système, posé dans `start()`) :
 un client gelé ne répond jamais, et sans borne chaque inventaire resterait
-suspendu plusieurs secondes sur lui — barre comprise.
+suspendu plusieurs secondes sur lui. La borne posée sur l'élément système est
+**par processus** (header SDK), elle vaut donc pour l'acteur ; elle reste à
+1 s même hors main — l'acteur est série, l'allonger retarderait la fraîcheur
+de tous les autres persos. Le Diagnostic affiche la durée du dernier
+inventaire : ~1 s pendant qu'un client gèle, barre fluide, c'est le déport qui
+fait son travail.
 
 L'identité d'un client est `slotKey` = `"<pid>#<index de fenêtre>"`. Le tri suit
 `Preferences.characterOrder`, une liste de noms : les persos non lancés sont
@@ -412,10 +447,16 @@ secondes. Un pid pris en défaut (`suspects`) n'est réinterrogé qu'à l'éché
 (`shouldProbe`), avec la **même** borne d'une seconde que les autres : une
 borne plus courte lui ôterait tout moyen de se blanchir, et un client vivant
 mais lent — chargement, combat chargé — finirait abattu. Entre deux
-échéances, l'inventaire le saute et la mémoire l'affiche atténué. Un pid silencieux mais non sondé garde son ardoise : seule une
-réponse à une sonde due l'efface. La comptabilité est une struct pure,
-`FreezeStrikes`, testée dans `FreezeStrikesTests` ; les strikes sont comptés
-même quand `killFrozenClients` est désactivé, seul le coup de grâce en dépend.
+échéances, l'inventaire le saute et la mémoire l'affiche atténué. Un pid
+silencieux mais non sondé garde son ardoise : la sonde est un **fait
+rapporté** par l'inventaire (`probedPIDs`), pas déduit de l'échéance — entre
+le départ de l'inventaire et son retour, une échéance a pu passer, et un
+suspect sauté au départ serait sinon blanchi sur une réponse jamais demandée.
+La comptabilité est une struct pure, `FreezeStrikes`, testée dans
+`FreezeStrikesTests` ; les strikes sont comptés même quand `killFrozenClients`
+est désactivé, seul le coup de grâce en dépend — et un condamné qu'on n'achève
+pas n'est plus resondé que toutes les 30 s (`condemnedInterval`). Le coup de
+grâce lui-même, comme celui de `close()`, passe par `ClientTerminator`.
 
 ### Rangement des fenêtres
 

@@ -365,18 +365,7 @@ struct BarView: View {
         Button("Réglages…") { SettingsWindowController.shared.show() }
         Button("Recentrer la barre") { FloatingBarController.shared.recenter() }
         Button("Masquer la barre") { FloatingBarController.shared.toggle() }
-        Menu("Ranger les fenêtres") {
-            ForEach(Disposition.allCases) { disposition in
-                Button {
-                    WindowArranger.shared.appliquer(disposition)
-                } label: {
-                    Label(disposition.label, systemImage: disposition.symbolName)
-                }
-            }
-            Divider()
-            Button("Tout en plein écran") { WindowArranger.shared.toutEnPleinEcran() }
-            Button("Tout sortir du plein écran") { WindowArranger.shared.toutSortirDuPleinEcran() }
-        }
+        Menu("Ranger les fenêtres") { ArrangementMenuItems() }
         Button("Lancer la session") { manager.lancerSession() }
         Divider()
         Button("Rafraîchir") { manager.refresh() }

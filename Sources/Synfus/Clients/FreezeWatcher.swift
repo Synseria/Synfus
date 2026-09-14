@@ -73,13 +73,14 @@ final class FreezeWatcher: ObservableObject {
     /// Les strikes sont comptés même quand `achever` est faux : ils ne coûtent
     /// rien et épargnent à l'inventaire la borne pleine sur un client gelé.
     /// Seul le coup de grâce dépend du réglage.
-    func inspect(silentPIDs: Set<pid_t>, mutePIDs: Set<pid_t>,
+    func inspect(silentPIDs: Set<pid_t>, mutePIDs: Set<pid_t>, probedPIDs: Set<pid_t>,
                  names: [pid_t: String], achever: Bool) {
         let now = Date()
         strikes.prune(keeping: silentPIDs)
 
         for pid in silentPIDs {
-            guard case .condamne = strikes.record(pid, mute: mutePIDs.contains(pid), now: now),
+            guard case .condamne = strikes.record(pid, mute: mutePIDs.contains(pid),
+                                                  probed: probedPIDs.contains(pid), now: now),
                   achever
             else { continue }
 
@@ -142,17 +143,19 @@ struct FreezeStrikes: Equatable {
     /// Consigne ce que l'inventaire a vu d'un processus silencieux.
     ///
     /// Un pid muet a forcément été sondé : le strike est compté. Un pid
-    /// silencieux mais non muet n'a été sondé que si la sonde était due —
-    /// sinon l'inventaire l'a sauté, et son ardoise ne doit pas être effacée
-    /// sur une réponse qui n'a jamais été demandée.
-    mutating func record(_ pid: pid_t, mute: Bool, now: Date) -> Verdict {
+    /// silencieux mais non muet n'est blanchi que s'il a **réellement** été
+    /// sondé — `probed` est un fait rapporté par l'inventaire, pas déduit de
+    /// l'échéance : entre le départ de l'inventaire et son retour, une
+    /// échéance a pu passer, et un suspect sauté au départ serait sinon
+    /// blanchi sur une réponse qui n'a jamais été demandée.
+    mutating func record(_ pid: pid_t, mute: Bool, probed: Bool, now: Date) -> Verdict {
         if mute {
             lastProbe[pid] = now
             let compte = strikes[pid, default: 0] + 1
             strikes[pid] = compte
             return compte >= strikesRequired ? .condamne : .frappe(compte)
         }
-        guard shouldProbe(pid, now: now) else { return .ignore }
+        guard probed else { return .ignore }
         lastProbe[pid] = now
         strikes[pid] = nil
         return .blanchi

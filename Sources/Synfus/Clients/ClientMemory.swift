@@ -77,4 +77,53 @@ enum ClientMemory {
             )
         }
     }
+
+    /// Ce que le résultat d'un inventaire fait à la mémoire, et ce que la barre
+    /// affiche — pure : on la nourrit du relevé et de l'état courant, elle rend
+    /// le nouvel état sans rien lire.
+    struct Consolidation: Equatable {
+        /// Persos à afficher, avant tri : vus, mémorisés, découverts.
+        var clients: [DofusClient]
+        var remembered: [pid_t: [DofusClient]]
+        var crossSpaceChecked: [pid_t: Date]
+        /// Vivants qui n'ont rendu aucune fenêtre — sondés ou non.
+        var silentPIDs: Set<pid_t>
+    }
+
+    /// Retient les persos vus, oublie les processus morts, ressuscite les
+    /// silencieux depuis la mémoire, puis fabrique les dormants découverts à
+    /// travers les espaces — pour les seuls pids **encore** sans mémoire, et
+    /// en datant tous ceux qui ont été lus, titre ou non.
+    static func consolidate(
+        _ result: InventoryResult,
+        remembered: [pid_t: [DofusClient]],
+        crossSpaceChecked: [pid_t: Date],
+        now: Date,
+        appElement: (pid_t) -> AXHandle = AXHandle.application
+    ) -> Consolidation {
+        var memory = remembered
+        for (pid, clients) in Dictionary(grouping: result.found, by: \.pid) {
+            memory[pid] = clients
+        }
+        memory = memory.filter { result.livePIDs.contains($0.key) }
+
+        var checked = crossSpaceChecked.filter { result.livePIDs.contains($0.key) }
+        for pid in result.crossSpaceProbed { checked[pid] = now }
+
+        let silentPIDs = result.livePIDs.subtracting(result.talkativePIDs)
+        var clients = withRemembered(found: result.found, remembered: memory, silentPIDs: silentPIDs)
+
+        let discovered = discoveredAcrossSpaces(
+            titles: result.crossSpaceTitles.filter { memory[$0.key] == nil },
+            existingNames: Set(clients.map(\.name)),
+            appElement: appElement
+        )
+        clients += discovered
+        for (pid, list) in Dictionary(grouping: discovered, by: \.pid) {
+            memory[pid] = list
+        }
+
+        return Consolidation(clients: clients, remembered: memory,
+                             crossSpaceChecked: checked, silentPIDs: silentPIDs)
+    }
 }
