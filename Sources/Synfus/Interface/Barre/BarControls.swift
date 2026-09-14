@@ -19,11 +19,21 @@ struct WindowDragArea: NSViewRepresentable {
     private final class DragView: NSView {
         override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
         override var mouseDownCanMoveWindow: Bool { false }
-        override func mouseDown(with event: NSEvent) {
-            window?.performDrag(with: event)
+
+        /// Le curseur dit ce que la zone fait : main ouverte au survol, fermée
+        /// pendant le glisser. Les `cursorRects` seuls ne suffisent pas sur un
+        /// panneau non-clé — une zone de suivi les remplace.
+        override func updateTrackingAreas() {
+            super.updateTrackingAreas()
+            for area in trackingAreas { removeTrackingArea(area) }
+            addTrackingArea(NSTrackingArea(rect: bounds, options: [.cursorUpdate, .activeAlways, .inVisibleRect],
+                                           owner: self, userInfo: nil))
         }
-        override func resetCursorRects() {
-            addCursorRect(bounds, cursor: .openHand)
+        override func cursorUpdate(with event: NSEvent) { NSCursor.openHand.set() }
+        override func mouseDown(with event: NSEvent) {
+            NSCursor.closedHand.push()
+            window?.performDrag(with: event)
+            NSCursor.pop()
         }
     }
 }

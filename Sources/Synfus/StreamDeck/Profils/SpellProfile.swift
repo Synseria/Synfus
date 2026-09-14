@@ -22,7 +22,8 @@ struct SpellBar: Codable, Equatable, Sendable {
 /// ce perso est devant. Un fichier JSON par perso, lisible, exportable,
 /// versionnable par l'utilisateur s'il le souhaite.
 struct SpellProfile: Codable, Equatable, Sendable {
-    static let slotsPerBar = 10
+    /// Le jeu affiche douze cases par rangée.
+    static let slotsPerBar = 12
     static let barCount = 3
     static let currentVersion = 1
 
@@ -64,22 +65,25 @@ struct SpellProfile: Codable, Equatable, Sendable {
 /// qui compte, pas le caractère.
 ///
 /// Défaut : barre 1 → `1…0` nus, barre 2 → `⌃1…⌃0`, barre 3 → `⌃⇧1…⌃⇧0` —
-/// l'organisation courante des joueurs à plusieurs barres. Aucune n'emploie
-/// ⌘, réservé aux raccourcis de Synfus (`digitRow` + ⌘ = les emplacements).
+/// l'organisation courante des joueurs à plusieurs barres. Les cases 11 et 12
+/// n'ont pas de touche par défaut. Aucune n'emploie ⌘, réservé aux raccourcis
+/// de Synfus (`digitRow` + ⌘ = les emplacements).
 struct SpellKeyMap: Codable, Equatable, Sendable {
-    var barres: [[HotKey]]
+    var barres: [[HotKey?]]
     /// La touche « fin de tour » du jeu ; sans défaut tant qu'elle n'a pas été
     /// confirmée en jeu — une touche fausse en combat coûte cher.
     var finDeTour: HotKey?
 
     static let defaults = SpellKeyMap(
-        barres: [
-            HotKey.digitRow.map { HotKey(keyCode: $0, modifiers: 0) },
-            HotKey.digitRow.map { HotKey(keyCode: $0, modifiers: UInt32(controlKey)) },
-            HotKey.digitRow.map { HotKey(keyCode: $0, modifiers: UInt32(controlKey | shiftKey)) },
-        ],
+        barres: [row(modifiers: 0), row(modifiers: UInt32(controlKey)), row(modifiers: UInt32(controlKey | shiftKey))],
         finDeTour: nil
     )
+
+    /// La rangée de chiffres avec un modificateur, complétée de cases sans touche.
+    static func row(modifiers: UInt32) -> [HotKey?] {
+        let digits: [HotKey?] = HotKey.digitRow.map { HotKey(keyCode: $0, modifiers: modifiers) }
+        return digits + Array(repeating: nil, count: max(0, SpellProfile.slotsPerBar - digits.count))
+    }
 
     func key(bar: Int, position: Int) -> HotKey? {
         guard barres.indices.contains(bar), barres[bar].indices.contains(position) else { return nil }

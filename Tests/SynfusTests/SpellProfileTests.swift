@@ -12,7 +12,7 @@ struct SpellProfileTests {
     func profilVide() {
         let p = SpellProfile.empty(perso: "Aeryn", classe: "Feca")
         #expect(p.barres.count == 3)
-        #expect(p.barres.allSatisfy { $0.cases.count == 10 && $0.cases.allSatisfy { $0 == nil } })
+        #expect(p.barres.allSatisfy { $0.cases.count == 12 && $0.cases.allSatisfy { $0 == nil } })
     }
 
     @Test("Un profil se relit à l'identique après encodage")
@@ -33,7 +33,7 @@ struct SpellProfileTests {
         var p = try JSONDecoder().decode(SpellProfile.self, from: Data(json.utf8))
         p.normalize()
         #expect(p.barres.count == 3)
-        #expect(p.barres[0].cases.count == 10)
+        #expect(p.barres[0].cases.count == 12)
         #expect(p.slot(bar: 0, position: 0)?.sortId == 1)
         #expect(p.classe == nil)
     }
@@ -45,7 +45,8 @@ struct SpellProfileTests {
         #expect(map.key(bar: 0, position: 0) == HotKey(keyCode: 18, modifiers: 0))
         #expect(map.key(bar: 1, position: 9) == HotKey(keyCode: 29, modifiers: UInt32(controlKey)))
         #expect(map.key(bar: 2, position: 0)?.modifiers == UInt32(controlKey | shiftKey))
-        #expect(map.barres.flatMap { $0 }.allSatisfy { $0.modifiers & UInt32(cmdKey) == 0 })
+        #expect(map.barres.flatMap { $0 }.compactMap { $0 }.allSatisfy { $0.modifiers & UInt32(cmdKey) == 0 })
+        #expect(map.key(bar: 0, position: 11) == nil)
         #expect(map.finDeTour == nil)
     }
 
@@ -60,7 +61,7 @@ struct SpellProfileTests {
                                          keyMap: .defaults, enCombat: nil) { id in id == 7 ? "PNG" : nil }
         #expect(state.perso == "Aeryn")
         #expect(state.barre == 2 && state.barres == 3)
-        #expect(state.cases.count == 10)
+        #expect(state.cases.count == 12)
         #expect(state.cases[0].nom == "Bouclier" && state.cases[0].icone == "PNG")
         #expect(state.cases[0].touche == DeckKey(HotKey(keyCode: 18, modifiers: UInt32(controlKey))))
         #expect(state.cases[1].sortId == nil && state.cases[1].touche != nil)

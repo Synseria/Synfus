@@ -42,7 +42,7 @@ struct SettingsView: View {
             detail
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(width: 680, height: 480)
+        .frame(width: 780, height: 600)
     }
 
     private var sidebar: some View {
