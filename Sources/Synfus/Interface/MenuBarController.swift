@@ -163,7 +163,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     }
 
     @objc private func arrange(_ sender: NSMenuItem) {
-        WindowArranger.shared.appliquer(Disposition.allCases[sender.tag])
+        Task { await WindowArranger.shared.appliquer(Disposition.allCases[sender.tag]) }
     }
 
     @objc private func closeAllClients() {
@@ -171,11 +171,11 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     }
 
     @objc private func fullscreenAll() {
-        WindowArranger.shared.toutEnPleinEcran()
+        Task { await WindowArranger.shared.toutEnPleinEcran() }
     }
 
     @objc private func unfullscreenAll() {
-        WindowArranger.shared.toutSortirDuPleinEcran()
+        Task { await WindowArranger.shared.toutSortirDuPleinEcran() }
     }
 
     @objc private func launchSession() {

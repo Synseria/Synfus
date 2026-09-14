@@ -63,7 +63,7 @@ final class HotKeyManager {
             register(toggle) { FloatingBarController.shared.toggle() }
         }
         if let arrange = prefs.arrangeHotKey {
-            register(arrange) { WindowArranger.shared.appliquerDerniere() }
+            register(arrange) { Task { await WindowArranger.shared.appliquerDerniere() } }
         }
         if let session = prefs.sessionHotKey {
             register(session) { WindowManager.shared.lancerSession() }

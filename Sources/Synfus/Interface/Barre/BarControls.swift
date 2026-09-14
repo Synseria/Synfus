@@ -79,6 +79,23 @@ struct ModeButton: View {
     }
 }
 
+/// Les entrées du menu de rangement — les mêmes sous le bouton de la barre et
+/// dans son menu contextuel, écrites une fois.
+struct ArrangementMenuItems: View {
+    var body: some View {
+        ForEach(Disposition.allCases) { disposition in
+            Button {
+                Task { await WindowArranger.shared.appliquer(disposition) }
+            } label: {
+                Label(disposition.label, systemImage: disposition.symbolName)
+            }
+        }
+        Divider()
+        Button("Tout en plein écran") { Task { await WindowArranger.shared.toutEnPleinEcran() } }
+        Button("Tout sortir du plein écran") { Task { await WindowArranger.shared.toutSortirDuPleinEcran() } }
+    }
+}
+
 /// Le menu de rangement des fenêtres, au gabarit des bascules de mode. Un menu
 /// et non une bascule : il propose des gestes, il ne porte pas d'état.
 struct ArrangeMenuButton: View {
@@ -86,16 +103,7 @@ struct ArrangeMenuButton: View {
 
     var body: some View {
         Menu {
-            ForEach(Disposition.allCases) { disposition in
-                Button {
-                    WindowArranger.shared.appliquer(disposition)
-                } label: {
-                    Label(disposition.label, systemImage: disposition.symbolName)
-                }
-            }
-            Divider()
-            Button("Tout en plein écran") { WindowArranger.shared.toutEnPleinEcran() }
-            Button("Tout sortir du plein écran") { WindowArranger.shared.toutSortirDuPleinEcran() }
+            ArrangementMenuItems()
             Divider()
             Button("Lancer la session") { WindowManager.shared.lancerSession() }
         } label: {

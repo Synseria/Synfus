@@ -77,6 +77,16 @@ final class WindowManager: ObservableObject {
     /// au gré des espaces.
     private var rememberedClients: [pid_t: [DofusClient]] = [:]
 
+    /// L'inventaire lui-même, hors main ; sa politique de lancement ; et ceux
+    /// qui attendent qu'une génération soit appliquée (`refreshed()`).
+    private let engine = ClientInventoryEngine()
+    private var scheduling = InventoryScheduling()
+    private var waiters: [Int: [CheckedContinuation<Void, Never>]] = [:]
+
+    /// Durée du dernier inventaire, côté acteur — c'est là qu'un client gelé
+    /// coûte sa seconde, et le Diagnostic la montre pour qu'on le voie.
+    @Published private(set) var lastInventoryDuration: TimeInterval = 0
+
     private init() {}
 
     func start() {
@@ -242,7 +252,35 @@ final class WindowManager: ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + wait, execute: item)
     }
 
+    /// Demande un inventaire. Ne bloque jamais : la lecture Accessibilité part
+    /// dans `ClientInventoryEngine`, et `apply` publie le résultat à son retour.
+    /// Un inventaire déjà en vol absorbe la demande — un tour de plus partira
+    /// à sa suite.
     func refresh() {
+        guard prepareRefresh() else { return }
+        if case .launch(let generation) = scheduling.request() {
+            launch(generation)
+        }
+    }
+
+    /// Demande un inventaire et rend la main quand un inventaire lancé après
+    /// cet appel a été appliqué — le geste « range ce qui est là, pas ce qu'on
+    /// croyait ». Sans Accessibilité, il n'y a rien à attendre.
+    func refreshed() async {
+        guard prepareRefresh() else { return }
+        if case .launch(let generation) = scheduling.request() {
+            launch(generation)
+        }
+        let target = scheduling.nextToApply
+        await withCheckedContinuation { continuation in
+            waiters[target, default: []].append(continuation)
+        }
+    }
+
+    /// Ce qu'un inventaire fait avant de partir : le premier plan et
+    /// l'autorisation, lus sur main. Rend `false` sans Accessibilité — il n'y a
+    /// alors rien à inventorier, et plus rien à afficher.
+    private func prepareRefresh() -> Bool {
         lastRefresh = Date()
         let granted = AXIsProcessTrusted()
         if granted != accessibilityGranted { accessibilityGranted = granted }
@@ -253,75 +291,63 @@ final class WindowManager: ObservableObject {
                 clients = []
                 PreviewPanelController.shared.reconcile(with: clients)
             }
-            return
+            return false
         }
+        return true
+    }
 
-        var found: [DofusClient] = []
-        var usedNames: [String: Int] = [:]
-        var livePIDs: Set<pid_t> = []
-        var talkativePIDs: Set<pid_t> = []
-        /// Clients qui ont laissé expirer la question `kAXWindows` : l'inventaire
-        /// est la seule sonde du veilleur de gel, c'est ici que le mutisme se
-        /// constate.
-        var mutePIDs: Set<pid_t> = []
+    /// Compose la requête sur main — avec l'état de cet instant — et l'envoie
+    /// à l'acteur. Le `Task` hérite du main actor : seul `engine.inventory`
+    /// saute sur l'exécuteur de l'acteur, `apply` revient ici.
+    private func launch(_ generation: Int) {
         let freezes = FreezeWatcher.shared
+        let pids = DofusProcesses.running().map(\.processIdentifier)
 
-        for app in DofusProcesses.running() {
-            let pid = app.processIdentifier
-            livePIDs.insert(pid)
-            // Un client en cours de fermeture n'est plus interrogé : sa mémoire
-            // le maintient dans la barre, avec l'indicateur, jusqu'à sa mort.
-            guard !closingPIDs.contains(pid) else { continue }
-            let axApp = AXHandle.application(pid)
+        // Un client en cours de fermeture n'est plus interrogé : sa mémoire le
+        // maintient dans la barre, avec l'indicateur, jusqu'à sa mort. Un
+        // client déjà pris en défaut n'est réinterrogé qu'à l'échéance de la
+        // sonde, mais avec la **même** borne d'une seconde que les autres :
+        // une borne plus courte lui ôterait tout moyen de se blanchir, et un
+        // client vivant mais lent — chargement, combat chargé — finirait
+        // abattu. Entre deux échéances, la mémoire l'affiche atténué.
+        let skipped = closingPIDs.union(freezes.suspects.filter { !freezes.shouldProbe($0) })
 
-            // Un client déjà pris en défaut n'est réinterrogé qu'à l'échéance
-            // de la sonde, mais avec la **même** borne d'une seconde que les
-            // autres : une borne plus courte lui ôterait tout moyen de se
-            // blanchir, et un client vivant mais lent — chargement, combat
-            // chargé — finirait abattu. Entre deux échéances, il reste dans
-            // `livePIDs` sans être bavard : la mémoire l'affiche atténué.
-            if freezes.suspects.contains(pid), !freezes.shouldProbe(pid) { continue }
-
-            let windows: [AXHandle]
-            switch AccessibilityReader.windows(of: axApp) {
-            case .windows(let list): windows = list
-            case .mute: mutePIDs.insert(pid); continue
-            case .failed: continue
-            }
-
-            // Un client qui rend au moins une fenêtre est joignable : s'il n'en
-            // ressort aucun perso, c'est qu'il est retourné à l'écran de
-            // connexion, et non qu'il se cache sur un autre bureau.
-            if !windows.isEmpty { talkativePIDs.insert(pid) }
-
-            for (index, window) in windows.enumerated() {
-                // Un seul aller-retour par fenêtre pour les trois attributs :
-                // chaque appel AX est un IPC, et l'inventaire passe toutes les 2 s.
-                let facts = AccessibilityReader.windowFacts(window)
-                guard AccessibilityReader.isGameWindow(subrole: facts.subrole, size: facts.size) else { continue }
-
-                let rawTitle = facts.title ?? ""
-                guard WindowTitle.isCharacterWindow(title: rawTitle) else { continue }
-
-                var name = WindowTitle.characterName(fromTitle: rawTitle)
-
-                // Deux persos peuvent porter un titre identique (ou vide) : on les
-                // distingue visuellement plutôt que de les laisser se confondre.
-                let seen = usedNames[name, default: 0] + 1
-                usedNames[name] = seen
-                if seen > 1 { name = "\(name) (\(seen))" }
-
-                found.append(DofusClient(
-                    pid: app.processIdentifier,
-                    slotKey: "\(app.processIdentifier)#\(index)",
-                    axWindow: window,
-                    rawTitle: rawTitle,
-                    name: name,
-                    characterClass: WindowTitle.characterClass(fromTitle: rawTitle),
-                    dormant: false
-                ))
-            }
+        // Un client déjà sur un espace inactif au démarrage de Synfus n'a
+        // jamais livré son titre à l'Accessibilité. Quand l'enregistrement de
+        // l'écran est accordé (celui des aperçus), CGWindowList voit à travers
+        // les espaces et lève cette limite ; la lecture n'a lieu que pour les
+        // pids sans aucune mémoire, puis la mémoire prend le relais. Un pid qui
+        // n'a rien livré — client au login sur un autre bureau — le resterait à
+        // chaque tour : on ne le relit qu'à l'échéance.
+        let now = Date()
+        let candidates = Set(pids).filter { pid in
+            guard rememberedClients[pid] == nil else { return false }
+            guard let checked = crossSpaceChecked[pid] else { return true }
+            return now.timeIntervalSince(checked) >= Self.crossSpaceInterval
         }
+
+        let request = InventoryRequest(generation: generation, pids: pids,
+                                       skippedPIDs: skipped, crossSpaceCandidates: candidates)
+        Task {
+            let result = await engine.inventory(request)
+            apply(result)
+        }
+    }
+
+    /// Le résultat revient sur main : mémoire, veilleur de gel, préférences et
+    /// publication se font ici, avec l'état **courant** — pas celui du départ.
+    private func apply(_ result: InventoryResult) {
+        guard case .apply(let relaunch) = scheduling.completed(generation: result.generation) else { return }
+        defer {
+            for continuation in waiters.removeValue(forKey: result.generation) ?? [] {
+                continuation.resume()
+            }
+            if let relaunch { launch(relaunch) }
+        }
+        lastInventoryDuration = result.duration
+        // L'autorisation a pu être retirée pendant le vol : le relevé est vide
+        // de sens, `prepareRefresh` a déjà vidé la barre.
+        guard accessibilityGranted else { return }
 
         // Un client dont l'espace plein écran n'est pas actif ne rend plus
         // *aucune* fenêtre à l'Accessibilité : il retire la sienne de l'ordre
@@ -329,41 +355,14 @@ final class WindowManager: ObservableObject {
         // mémoire, le perso disparaîtrait de la barre à chaque fois qu'on le
         // quitte — et son icône du Dock, elle, resterait, décalant l'appariement
         // de la détection d'attention.
-        remember(found)
-        forgetDeadProcesses(livePIDs: livePIDs)
-        if liveDofusPIDs != livePIDs { liveDofusPIDs = livePIDs }
-        let stillClosing = closingPIDs.intersection(livePIDs)
-        if stillClosing != closingPIDs { closingPIDs = stillClosing }
-        let silentPIDs = livePIDs.subtracting(talkativePIDs)
-        found = ClientMemory.withRemembered(
-            found: found,
-            remembered: rememberedClients,
-            silentPIDs: silentPIDs
+        let consolidated = ClientMemory.consolidate(
+            result, remembered: rememberedClients, crossSpaceChecked: crossSpaceChecked, now: Date()
         )
-
-        // Un client déjà sur un espace inactif au démarrage de Synfus n'a
-        // jamais livré son titre à l'Accessibilité. Quand l'enregistrement de
-        // l'écran est accordé (celui des aperçus), CGWindowList voit à travers
-        // les espaces et lève cette limite ; la lecture n'a lieu que pour les
-        // pids sans aucune mémoire, puis la mémoire prend le relais — le tour
-        // de toutes les fenêtres du système n'est pas payé à chaque inventaire.
-        // Un pid qui n'a rien livré — client au login sur un autre bureau — le
-        // resterait à chaque tour : on ne le relit qu'à l'échéance.
-        let now = Date()
-        let unknownPIDs = silentPIDs.subtracting(Set(found.map(\.pid))).filter { pid in
-            guard let checked = crossSpaceChecked[pid] else { return true }
-            return now.timeIntervalSince(checked) >= Self.crossSpaceInterval
-        }
-        if !unknownPIDs.isEmpty {
-            for pid in unknownPIDs { crossSpaceChecked[pid] = now }
-            let discovered = ClientMemory.discoveredAcrossSpaces(
-                titles: CrossSpaceTitles.read(pids: unknownPIDs),
-                existingNames: Set(found.map(\.name)),
-                appElement: AXHandle.application
-            )
-            found += discovered
-            remember(discovered)
-        }
+        rememberedClients = consolidated.remembered
+        crossSpaceChecked = consolidated.crossSpaceChecked
+        if liveDofusPIDs != result.livePIDs { liveDofusPIDs = result.livePIDs }
+        let stillClosing = closingPIDs.intersection(result.livePIDs)
+        if stillClosing != closingPIDs { closingPIDs = stillClosing }
 
         // Un processus vivant, sans fenêtre et muet à l'Accessibilité est un
         // client gelé à la fermeture : le veilleur l'achève, que la fermeture
@@ -374,13 +373,15 @@ final class WindowManager: ObservableObject {
             pid, list in list.first.map { (pid, $0.name) }
         })
         // Les fermetures en cours ont déjà leur escalade.
-        freezes.inspect(silentPIDs: silentPIDs.subtracting(closingPIDs),
-                        mutePIDs: mutePIDs,
-                        names: names,
-                        achever: prefs.killFrozenClients)
+        FreezeWatcher.shared.inspect(silentPIDs: consolidated.silentPIDs.subtracting(closingPIDs),
+                                     mutePIDs: result.mutePIDs,
+                                     probedPIDs: result.probedPIDs,
+                                     names: names,
+                                     achever: prefs.killFrozenClients)
 
         // Seuls les vrais noms de persos entrent dans la liste ; les clients au
         // login et les homonymes suffixés restent dans la barre sans s'y inscrire.
+        var found = consolidated.clients
         prefs.registerIfNeeded(names: found.map(\.name).filter(WindowTitle.isPersistableName))
 
         found = ClientMemory.sorted(found, by: prefs.characterOrder)
@@ -404,20 +405,7 @@ final class WindowManager: ObservableObject {
         if sorted != clients { clients = sorted }
     }
 
-    /// Retient les persos effectivement vus, par processus. Un pid dont on ne
-    /// voit plus rien garde sa dernière mémoire ; il ne sera oublié qu'à la
-    /// fermeture du client (voir `withRemembered`).
-    private func remember(_ found: [DofusClient]) {
-        for (pid, clients) in Dictionary(grouping: found, by: \.pid) {
-            rememberedClients[pid] = clients
-        }
-    }
 
-    /// Oublie les clients fermés — leur pid ne reviendra pas.
-    private func forgetDeadProcesses(livePIDs: Set<pid_t>) {
-        rememberedClients = rememberedClients.filter { livePIDs.contains($0.key) }
-        crossSpaceChecked = crossSpaceChecked.filter { livePIDs.contains($0.key) }
-    }
 
 
 
@@ -499,10 +487,12 @@ final class WindowManager: ObservableObject {
     /// le mode est disponible. Rien que des gestes existants, enchaînés — et
     /// toujours aucun évènement émis.
     func lancerSession() {
-        WindowArranger.shared.appliquerDerniere()
-        if !clients.isEmpty { focus(slot: 0) }
-        if prefs.advanceOnClick, !ClickAdvanceWatcher.shared.armed {
-            ClickAdvanceWatcher.shared.toggleArmed()
+        Task {
+            await WindowArranger.shared.appliquerDerniere()
+            if !clients.isEmpty { focus(slot: 0) }
+            if prefs.advanceOnClick, !ClickAdvanceWatcher.shared.armed {
+                ClickAdvanceWatcher.shared.toggleArmed()
+            }
         }
     }
 

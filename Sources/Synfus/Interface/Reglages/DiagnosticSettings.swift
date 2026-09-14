@@ -87,6 +87,12 @@ struct DiagnosticSettings: View {
             Spacer()
             HStack {
                 Button("Rafraîchir") { manager.refresh() }
+                // La seconde qu'un client gelé coûte se paie ici, hors main :
+                // si elle monte à ~1 s alors que la barre reste fluide, c'est
+                // que le déport fait son travail.
+                Text("dernier inventaire : \(Int(manager.lastInventoryDuration * 1000)) ms")
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(manager.lastInventoryDuration > 0.5 ? .orange : .secondary)
                 Spacer()
                 Text("Synfus — barre et raccourcis de fenêtres")
                     .font(.system(size: 10))

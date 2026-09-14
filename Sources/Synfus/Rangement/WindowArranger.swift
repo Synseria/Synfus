@@ -34,15 +34,18 @@ final class WindowArranger: ObservableObject {
     private init() {}
 
     /// Rejoue la dernière disposition choisie — c'est l'action du raccourci.
-    func appliquerDerniere() {
-        appliquer(Preferences.shared.lastArrangement ?? .mosaique)
+    func appliquerDerniere() async {
+        await appliquer(Preferences.shared.lastArrangement ?? .mosaique)
     }
 
-    func appliquer(_ disposition: Disposition) {
+    /// Asynchrone parce que l'inventaire l'est : on attend un relevé frais —
+    /// l'utilisateur vient peut-être de connecter ou fermer un client, et on
+    /// range ce qu'il voit, pas ce qu'on croyait. Un client fraîchement gelé
+    /// en ressort muet, donc dormant, donc écarté avant tout IPC. Les écritures
+    /// AX, elles, restent sur main : ce sont des gestes.
+    func appliquer(_ disposition: Disposition) async {
         let manager = WindowManager.shared
-        // L'inventaire d'abord : l'utilisateur vient peut-être de connecter ou
-        // fermer un client, et on range ce qu'il voit, pas ce qu'on croyait.
-        manager.refresh()
+        await manager.refreshed()
 
         var eligibles: [DofusClient] = []
         var ecartees: [Ecartee] = []
@@ -127,15 +130,15 @@ final class WindowArranger: ObservableObject {
     /// l'autre. L'attribut est tenté aussi sur les dormants : leur élément est
     /// périmé pour la géométrie, mais le basculement passe par l'objet fenêtre
     /// lui-même — hypothèse, rapportée au Diagnostic comme les autres.
-    func toutEnPleinEcran() { pleinEcran(true, titre: "Tout en plein écran") }
+    func toutEnPleinEcran() async { await pleinEcran(true, titre: "Tout en plein écran") }
 
     /// L'inverse : ramène toutes les fenêtres en mode fenêtré, chacune sur le
     /// bureau d'où elle était partie.
-    func toutSortirDuPleinEcran() { pleinEcran(false, titre: "Tout sortir du plein écran") }
+    func toutSortirDuPleinEcran() async { await pleinEcran(false, titre: "Tout sortir du plein écran") }
 
-    private func pleinEcran(_ actif: Bool, titre: String) {
+    private func pleinEcran(_ actif: Bool, titre: String) async {
         let manager = WindowManager.shared
-        manager.refresh()
+        await manager.refreshed()
 
         var rangees: [String] = []
         var ecartees: [Ecartee] = []
