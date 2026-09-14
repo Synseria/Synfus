@@ -16,6 +16,9 @@ enum DeckSource: Codable, Equatable, Hashable, Sendable {
     /// La page suivante / précédente / première — barre ou fenêtre selon le mode.
     case barreSuivante, barrePrecedente, barrePremiere
     case menu, finDeTour, corpsACorps
+    /// Relit la barre de sorts à l'écran et remet le profil à jour — pour les
+    /// variantes changées en jeu. En appui long sur « Menu » par défaut.
+    case reconnaitre
     /// Une commande du jeu, par son `GameCommand.id`.
     case commande(String)
     case vide
@@ -34,6 +37,7 @@ enum DeckSource: Codable, Equatable, Hashable, Sendable {
         case .menu: return "Menu"
         case .finDeTour: return "Fin de tour"
         case .corpsACorps: return "Corps à corps"
+        case .reconnaitre: return "Relire les sorts à l'écran"
         case .commande(let id): return "Commande « \(id) »"
         case .vide: return "Vide"
         }
@@ -54,6 +58,7 @@ enum DeckSource: Codable, Equatable, Hashable, Sendable {
         case .menu: return "menu"
         case .finDeTour: return "finDeTour"
         case .corpsACorps: return "corpsACorps"
+        case .reconnaitre: return "reconnaitre"
         case .commande(let id): return "commande:" + id
         case .vide: return nil
         }
@@ -122,14 +127,14 @@ struct DeckLayout: Codable, Equatable, Hashable, Sendable {
     }
 
     /// La rangée de navigation, la même dans toutes les dispositions générées :
-    /// barre ▶ (long : première) │ perso ▶ (long : ◀) │ menu │ suivi │ fin de
-    /// tour — **sans** action longue : une fin de tour ne doit partir que
+    /// barre ▶ (long : première) │ perso ▶ (long : ◀) │ menu (long : relire
+    /// les sorts) │ suivi │ fin de tour — **sans** action longue : une fin de tour ne doit partir que
     /// d'un geste voulu. Tronquée ou complétée à la largeur.
     static func navigationRow(colonnes: Int) -> [DeckTile] {
         let row: [DeckTile] = [
             DeckTile(.barreSuivante, long: .barrePremiere),
             DeckTile(.persoSuivant, long: .persoPrecedent),
-            DeckTile(.menu),
+            DeckTile(.menu, long: .reconnaitre),
             DeckTile(.commande(GameCommands.suiviID)),
             DeckTile(.finDeTour),
         ]

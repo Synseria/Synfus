@@ -65,6 +65,7 @@ final class StreamDeckLink: ObservableObject {
             prefs.$appuiLongMs.map { _ in () }.eraseToAnyPublisher(),
             prefs.$appuiTresLongMs.map { _ in () }.eraseToAnyPublisher(),
             prefs.$appuiProgressif.map { _ in () }.eraseToAnyPublisher(),
+            prefs.$deckTitres.map { _ in () }.eraseToAnyPublisher(),
             $page.map { _ in () }.eraseToAnyPublisher(),
             $menuOuvert.map { _ in () }.eraseToAnyPublisher(),
             $pageMenu.map { _ in () }.eraseToAnyPublisher(),
@@ -206,6 +207,9 @@ final class StreamDeckLink: ObservableObject {
         case .barrePremiere: page = 0
         case .menu: menuOuvert.toggle(); pageMenu = 0
         case .pageMenuSuivante: pageMenu += 1
+        case .reconnaitre:
+            guard let client = manager.clients.first(where: { manager.isFrontmost($0) }) else { return }
+            Task { status = await SpellProfileStore.shared.recognize(client) }
         case .activer:
             if let current = manager.clients.first(where: { manager.isFrontmost($0) }) ?? manager.clients.first {
                 manager.focus(current)
@@ -252,14 +256,21 @@ final class StreamDeckLink: ObservableObject {
         let clients = manager.clients
         let index = clients.firstIndex { manager.isFrontmost($0) }
         let client = index.map { clients[$0] }
-        var input = makeInput(grille: grille, mode: mode, perso: client?.name, classe: client?.characterClass)
+        // Plus aucun client ? On garde le dernier perso vu, atténué : mieux
+        // vaut ses sorts qu'un deck vide.
+        if let client { lastPerso = (client.name, client.characterClass) }
+        let shown = client.map { ($0.name, $0.characterClass) } ?? (clients.isEmpty ? lastPerso : nil)
+        var input = makeInput(grille: grille, mode: mode, perso: shown?.0, classe: shown?.1)
         // Les voisins dans l'ordre de la barre, en boucle — ce que « suivant »
         // et « précédent » feront.
         input.suivant = index.flatMap { clients.count > 1 ? deckPerso(clients[($0 + 1) % clients.count]) : nil }
         input.precedent = index.flatMap { clients.count > 1 ? deckPerso(clients[($0 + clients.count - 1) % clients.count]) : nil }
         input.dofusDevant = manager.frontmostIsDofus
-        return DeckComposer.compose(input) { [weak self] slot in self?.icon(of: slot, perso: client?.name) }
+        return DeckComposer.compose(input) { [weak self] slot in self?.icon(of: slot, perso: shown?.0) }
     }
+
+    /// Le dernier perso au premier plan — affiché quand il n'y a plus personne.
+    private var lastPerso: (String, String?)?
 
     /// La page telle que l'éditeur la montre : un perso et un mode choisis,
     /// Dofus supposé devant — pour voir ce qu'on règle, pas ce qui est affiché.
@@ -290,6 +301,7 @@ final class StreamDeckLink: ObservableObject {
         input.appuiLongMs = prefs.appuiLongMs
         input.appuiTresLongMs = prefs.appuiTresLongMs
         input.progressif = prefs.appuiProgressif
+        input.titresSorts = prefs.deckTitres
         return input
     }
 

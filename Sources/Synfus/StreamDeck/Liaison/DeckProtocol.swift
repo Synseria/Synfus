@@ -97,6 +97,8 @@ struct DeckCommand: Codable, Equatable, Sendable {
         case barreSuivante, barrePrecedente, barrePremiere
         /// Ouvre ou ferme le menu des commandes du jeu ; tourne ses pages.
         case menu, pageMenuSuivante
+        /// Relit la barre de sorts du perso devant (reconnaissance à l'écran).
+        case reconnaitre
         /// Ramène Dofus devant — le perso actif, ou le premier — sans changer de perso.
         case activer
         /// Le plugin annonce une grille : Synfus compose une page à sa taille.

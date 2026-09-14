@@ -170,47 +170,7 @@ struct SpellsSettings: View {
     private func recognize() {
         guard let client = manager.clients.first(where: { $0.name == perso }) else { return }
         message = "Capture en cours…"
-        Task {
-            guard let image = await WindowPreviewService.shared.capture(client),
-                  let luma = LumaBitmap(cgImage: image)
-            else { message = "Capture impossible : " + (WindowPreviewService.shared.lastCaptureError ?? "raison inconnue"); return }
-            let analysis = SpellRecognition.analyze(luma, classe: classe)
-            guard let found = analysis.bar else {
-                message = "Aucune barre de sorts trouvée dans la capture (voir Diagnostic pour les détails)."
-                return
-            }
-            guard analysis.candidateCount > 0 else {
-                message = "Aucune icône de sort connue pour cette classe — lancer Tools/fetch-ankama-assets.sh puis ./build.sh --install."
-                return
-            }
-            var p = profile
-            p.classe = classe ?? p.classe
-            var filled = 0, pictured = 0
-            for cell in analysis.cells where cell.row < SpellProfile.barCount && cell.position < SpellProfile.slotsPerBar {
-                if let match = cell.match, match.isConfident {
-                    p.set(SpellSlot(sortId: match.id, nom: match.nom), bar: cell.row, position: cell.position)
-                    filled += 1
-                } else if cell.match != nil {
-                    // Pas un sort connu — objet, emote, sort inconnu — mais pas
-                    // vide : on garde ce que l'écran montre, c'est ce que le
-                    // Stream Deck affichera. Un sort choisi à la main reste.
-                    let existing = p.slot(bar: cell.row, position: cell.position)
-                    guard existing?.sortId == nil,
-                          found.rows[cell.row].indices.contains(cell.position),
-                          let crop = image.cropping(to: found.rows[cell.row][cell.position]),
-                          let name = store.saveThumbnail(crop, perso: perso, bar: cell.row, position: cell.position)
-                    else { continue }
-                    p.set(SpellSlot(sortId: nil, nom: existing?.nom ?? "Case \(cell.position + 1)", vignette: name),
-                          bar: cell.row, position: cell.position)
-                    pictured += 1
-                } else if cell.match == nil {
-                    p.set(nil, bar: cell.row, position: cell.position)
-                }
-            }
-            store.save(p)
-            message = "\(found.rows.count) rangée(s) de \(found.rows.first?.count ?? 0) cases trouvées : \(filled) sorts reconnus, "
-                + "\(pictured) cases gardées en vignette d'écran (objets, emotes, inconnus). Le détail est dans Diagnostic."
-        }
+        Task { message = await store.recognize(client) }
     }
 
     private func modifiersBinding(_ bar: Int) -> Binding<UInt32> {
