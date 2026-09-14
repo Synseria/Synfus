@@ -54,7 +54,11 @@ final class WindowArranger: ObservableObject {
                     nom: client.name,
                     raison: "sur un autre bureau — bascule dessus puis relance le rangement"
                 ))
-            } else if boolAttribute(client.axWindow, "AXFullScreen") == true {
+            } else if !manager.isReachable(client) {
+                // En cours de fermeture, ou muet au veilleur de gel : lui poser
+                // une question, c'est payer la borne d'une seconde pour rien.
+                ecartees.append(Ecartee(nom: client.name, raison: "ne répond plus"))
+            } else if AccessibilityReader.boolAttribute(client.axWindow, "AXFullScreen") == true {
                 // On ne sort jamais personne du plein écran d'autorité.
                 ecartees.append(Ecartee(nom: client.name, raison: "en plein écran"))
             } else {
@@ -91,17 +95,16 @@ final class WindowArranger: ObservableObject {
             let fenetre = client.axWindow
             // Ranger, c'est vouloir tout voir : une fenêtre réduite est reposée.
             // C'est une opération de fenêtre, pas un évènement.
-            if boolAttribute(fenetre, kAXMinimizedAttribute) == true {
-                AXUIElementSetAttributeValue(fenetre, kAXMinimizedAttribute as CFString,
-                                             kCFBooleanFalse)
+            if AccessibilityReader.boolAttribute(fenetre, kAXMinimizedAttribute) == true {
+                AccessibilityReader.set(fenetre, kAXMinimizedAttribute, kCFBooleanFalse)
             }
             // Taille → position → taille : tant que la fenêtre chevauche son
             // ancien écran, certains clients plafonnent la taille demandée — le
             // second passage, fait une fois la fenêtre en place, corrige.
-            var erreur = poser(fenetre, taille: cadre.size)
-            let deplacement = poser(fenetre, position: cadre.origin)
+            var erreur = AccessibilityReader.set(fenetre, size: cadre.size)
+            let deplacement = AccessibilityReader.set(fenetre, position: cadre.origin)
             if erreur == .success { erreur = deplacement }
-            if erreur == .success { erreur = poser(fenetre, taille: cadre.size) }
+            if erreur == .success { erreur = AccessibilityReader.set(fenetre, size: cadre.size) }
 
             if erreur == .success {
                 rangees.append(client.name)
@@ -138,13 +141,16 @@ final class WindowArranger: ObservableObject {
         var ecartees: [Ecartee] = []
         for client in manager.clients {
             let fenetre = client.axWindow
-            if boolAttribute(fenetre, "AXFullScreen") == actif {
+            if !client.dormant, !manager.isReachable(client) {
+                ecartees.append(Ecartee(nom: client.name, raison: "ne répond plus"))
+                continue
+            }
+            if AccessibilityReader.boolAttribute(fenetre, "AXFullScreen") == actif {
                 rangees.append(client.name)
                 continue
             }
-            let erreur = AXUIElementSetAttributeValue(
-                fenetre, "AXFullScreen" as CFString,
-                actif ? kCFBooleanTrue : kCFBooleanFalse
+            let erreur = AccessibilityReader.set(
+                fenetre, "AXFullScreen", actif ? kCFBooleanTrue : kCFBooleanFalse
             )
             if erreur == .success {
                 rangees.append(client.name)
@@ -166,40 +172,9 @@ final class WindowArranger: ObservableObject {
     /// ramenée en coordonnées Cocoa. Un point légèrement rentré dans la
     /// fenêtre évite les litiges de bord entre écrans jointifs.
     private func ecran(de client: DofusClient, hauteurPrincipale: CGFloat) -> NSScreen? {
-        guard let position = pointAttribute(client.axWindow, kAXPositionAttribute)
+        guard let position = AccessibilityReader.pointAttribute(client.axWindow, kAXPositionAttribute)
         else { return nil }
         let cocoa = CGPoint(x: position.x + 10, y: hauteurPrincipale - (position.y + 10))
         return NSScreen.screens.first { $0.frame.contains(cocoa) }
-    }
-
-    // MARK: - Lectures et écritures AX
-
-    private func boolAttribute(_ element: AXUIElement, _ attribute: String) -> Bool? {
-        var value: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success
-        else { return nil }
-        return value as? Bool
-    }
-
-    private func pointAttribute(_ element: AXUIElement, _ attribute: String) -> CGPoint? {
-        var value: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success,
-              let raw = value, CFGetTypeID(raw) == AXValueGetTypeID()
-        else { return nil }
-        var point = CGPoint.zero
-        guard AXValueGetValue(raw as! AXValue, .cgPoint, &point) else { return nil }
-        return point
-    }
-
-    private func poser(_ element: AXUIElement, position: CGPoint) -> AXError {
-        var point = position
-        guard let value = AXValueCreate(.cgPoint, &point) else { return .failure }
-        return AXUIElementSetAttributeValue(element, kAXPositionAttribute as CFString, value)
-    }
-
-    private func poser(_ element: AXUIElement, taille: CGSize) -> AXError {
-        var size = taille
-        guard let value = AXValueCreate(.cgSize, &size) else { return .failure }
-        return AXUIElementSetAttributeValue(element, kAXSizeAttribute as CFString, value)
     }
 }

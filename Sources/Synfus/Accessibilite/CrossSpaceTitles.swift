@@ -30,7 +30,7 @@ enum CrossSpaceTitles {
                   let title = info[kCGWindowName as String] as? String, !title.isEmpty,
                   let boundsDict = info[kCGWindowBounds as String] as? NSDictionary,
                   let bounds = CGRect(dictionaryRepresentation: boundsDict),
-                  bounds.width > 200, bounds.height > 200
+                  AccessibilityReader.isGameWindow(subrole: nil, size: bounds.size)
             else { continue }
             titles[owner] = title
         }

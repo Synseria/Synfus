@@ -75,10 +75,10 @@ enum DockInspector {
     struct Structure {
         let dockPID: pid_t
         /// La liste qui héberge les icônes Dofus, quand elle a pu être lue.
-        let strip: AXUIElement?
+        let strip: AXHandle?
         /// Icônes des clients Dofus lancés, dans l'ordre d'abscisse à la
         /// découverte. L'ordre de rang est recalculé à chaque relevé.
-        let items: [(title: String, element: AXUIElement)]
+        let items: [(title: String, element: AXHandle)]
         let date: Date
     }
 
@@ -100,20 +100,20 @@ enum DockInspector {
             .runningApplications(withBundleIdentifier: "com.apple.dock").first
         else { return nil }
 
-        let axDock = AXUIElementCreateApplication(dock.processIdentifier)
-        var items: [(title: String, x: CGFloat, element: AXUIElement)] = []
-        var strip: AXUIElement?
+        let axDock = AXHandle.application(dock.processIdentifier)
+        var items: [(title: String, x: CGFloat, element: AXHandle)] = []
+        var strip: AXHandle?
 
-        for list in children(axDock) {
+        for list in AccessibilityReader.children(axDock) {
             var holdsDofus = false
-            for element in children(list) {
-                guard let title = value(element, kAXTitleAttribute) as? String,
+            for element in AccessibilityReader.children(list) {
+                guard let title = AccessibilityReader.stringAttribute(element, kAXTitleAttribute),
                       title.lowercased().contains("dofus"),
-                      value(element, kAXSubroleAttribute) as? String == applicationDockItem,
+                      AccessibilityReader.stringAttribute(element, kAXSubroleAttribute) == applicationDockItem,
                       // Une app seulement épinglée ou « récente » ne rebondit pas :
                       // la retenir décalerait les rangs sans jamais servir.
-                      value(element, "AXIsApplicationRunning") as? Bool == true,
-                      let position = point(element, kAXPositionAttribute)
+                      AccessibilityReader.boolAttribute(element, "AXIsApplicationRunning") == true,
+                      let position = AccessibilityReader.pointAttribute(element, kAXPositionAttribute)
                 else { continue }
                 items.append((title, position.x, element))
                 holdsDofus = true
@@ -137,12 +137,12 @@ enum DockInspector {
     static func geometry(of structure: Structure) -> Inventory? {
         var items: [(title: String, position: CGPoint, size: CGSize)] = []
         for item in structure.items {
-            guard let frame = frame(of: item.element) else { return nil }
+            guard let frame = AccessibilityReader.frame(of: item.element) else { return nil }
             items.append((item.title, frame.origin, frame.size))
         }
         var strip: CGRect?
         if let element = structure.strip {
-            guard let frame = frame(of: element) else { return nil }
+            guard let frame = AccessibilityReader.frame(of: element) else { return nil }
             strip = frame
         }
         return Inventory(
@@ -154,30 +154,6 @@ enum DockInspector {
         )
     }
 
-    /// Position et taille d'un élément en un seul appel Accessibilité, là où deux
-    /// `AXUIElementCopyAttributeValue` en coûtaient deux. Sans `stopOnError`, une
-    /// lecture ratée rend une `AXValue` de type `.axError` à la place de la
-    /// valeur, d'où le contrôle du type de chacune.
-    private static func frame(of element: AXUIElement) -> CGRect? {
-        var values: CFArray?
-        let attributes = [kAXPositionAttribute, kAXSizeAttribute] as CFArray
-        guard AXUIElementCopyMultipleAttributeValues(
-                element, attributes, AXCopyMultipleAttributeOptions(rawValue: 0), &values
-              ) == .success,
-              let list = values as? [AnyObject], list.count == 2,
-              CFGetTypeID(list[0]) == AXValueGetTypeID(),
-              CFGetTypeID(list[1]) == AXValueGetTypeID()
-        else { return nil }
-        let rawPosition = list[0] as! AXValue
-        let rawSize = list[1] as! AXValue
-        var position = CGPoint.zero
-        var size = CGSize.zero
-        guard AXValueGetType(rawPosition) == .cgPoint, AXValueGetValue(rawPosition, .cgPoint, &position),
-              AXValueGetType(rawSize) == .cgSize, AXValueGetValue(rawSize, .cgSize, &size)
-        else { return nil }
-        return CGRect(origin: position, size: size)
-    }
-
     /// Cadre couvrant les icônes, élargi de la place que prend la magnification :
     /// elle écarte les icônes voisines et les fait monter bien au-delà de leur
     /// cadre au repos. Sert à savoir si le curseur est sur le Dock.
@@ -187,51 +163,29 @@ enum DockInspector {
         return box.insetBy(dx: -60, dy: -80)
     }
 
-    private static func point(_ element: AXUIElement, _ attribute: String) -> CGPoint? {
-        guard let raw = value(element, attribute), CFGetTypeID(raw) == AXValueGetTypeID() else { return nil }
-        var result = CGPoint.zero
-        guard AXValueGetValue(raw as! AXValue, .cgPoint, &result) else { return nil }
-        return result
-    }
-
     static func snapshots(matching filter: String = "") -> [Snapshot] {
         guard let dock = NSRunningApplication
             .runningApplications(withBundleIdentifier: "com.apple.dock").first
         else { return [] }
 
-        let axDock = AXUIElementCreateApplication(dock.processIdentifier)
+        let axDock = AXHandle.application(dock.processIdentifier)
         let needle = filter.lowercased()
         var result: [Snapshot] = []
 
-        for list in children(axDock) {
-            for item in children(list) {
-                guard let title = value(item, kAXTitleAttribute) as? String else { continue }
+        for list in AccessibilityReader.children(axDock) {
+            for item in AccessibilityReader.children(list) {
+                guard let title = AccessibilityReader.stringAttribute(item, kAXTitleAttribute) else { continue }
                 if !needle.isEmpty && !title.lowercased().contains(needle) { continue }
 
-                var names: CFArray?
-                AXUIElementCopyAttributeNames(item, &names)
-                guard let attributeNames = names as? [String] else { continue }
-
                 var attributes: [String: String] = [:]
-                for name in attributeNames {
-                    guard let raw = value(item, name) else { continue }
+                for name in AccessibilityReader.attributeNames(item) {
+                    guard let raw = AccessibilityReader.value(item, name) else { continue }
                     attributes[name] = String(describing: raw)
                         .replacingOccurrences(of: "\n", with: " ")
                 }
                 result.append(Snapshot(title: title, attributes: attributes))
             }
         }
-        return result
-    }
-
-    private static func children(_ element: AXUIElement) -> [AXUIElement] {
-        guard let raw = value(element, kAXChildrenAttribute), let list = raw as? [AXUIElement] else { return [] }
-        return list
-    }
-
-    private static func value(_ element: AXUIElement, _ attribute: String) -> CFTypeRef? {
-        var result: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, attribute as CFString, &result) == .success else { return nil }
         return result
     }
 

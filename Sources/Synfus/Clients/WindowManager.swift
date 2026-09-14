@@ -20,6 +20,21 @@ final class WindowManager: ObservableObject {
     /// d'attente. Le pid en sort quand le processus meurt.
     @Published private(set) var closingPIDs: Set<pid_t> = []
 
+    /// Processus à qui l'on ne pose plus de question Accessibilité par un
+    /// **geste** : ceux qui se ferment, et ceux que le veilleur de gel tient
+    /// pour suspects. `focus()` se contente alors d'activer le processus, et
+    /// l'arrangeur les écarte. L'inventaire, lui, resonde un suspect à
+    /// l'échéance — c'est lui qui peut le blanchir — et applique donc sa
+    /// propre liste (voir `refresh`).
+    var unreachablePIDs: Set<pid_t> {
+        closingPIDs.union(FreezeWatcher.shared.suspects)
+    }
+
+    /// Un client sur lequel un geste AX a un sens : ni dormant, ni injoignable.
+    func isReachable(_ client: DofusClient) -> Bool {
+        !client.dormant && !unreachablePIDs.contains(client.pid)
+    }
+
     private var timer: Timer?
     private let prefs = Preferences.shared
 
@@ -173,7 +188,7 @@ final class WindowManager: ObservableObject {
     }
 
     private func setFrontmost(pid: pid_t?, bundleID: String?) {
-        setFrontmost(pid: pid, isDofus: Self.isDofusBundle(bundleID))
+        setFrontmost(pid: pid, isDofus: DofusProcesses.isDofusBundle(bundleID))
     }
 
     /// Ne republie que ce qui change : ces deux valeurs sont relues à chaque
@@ -251,14 +266,13 @@ final class WindowManager: ObservableObject {
         var mutePIDs: Set<pid_t> = []
         let freezes = FreezeWatcher.shared
 
-        for app in NSWorkspace.shared.runningApplications {
-            guard isDofus(app) else { continue }
+        for app in DofusProcesses.running() {
             let pid = app.processIdentifier
             livePIDs.insert(pid)
             // Un client en cours de fermeture n'est plus interrogé : sa mémoire
             // le maintient dans la barre, avec l'indicateur, jusqu'à sa mort.
             guard !closingPIDs.contains(pid) else { continue }
-            let axApp = AXUIElementCreateApplication(pid)
+            let axApp = AXHandle.application(pid)
 
             // Un client déjà pris en défaut n'est réinterrogé qu'à l'échéance
             // de la sonde, mais avec la **même** borne d'une seconde que les
@@ -268,13 +282,12 @@ final class WindowManager: ObservableObject {
             // `livePIDs` sans être bavard : la mémoire l'affiche atténué.
             if freezes.suspects.contains(pid), !freezes.shouldProbe(pid) { continue }
 
-            var value: CFTypeRef?
-            let error = AXUIElementCopyAttributeValue(axApp, kAXWindowsAttribute as CFString, &value)
-            if error == .cannotComplete {
-                mutePIDs.insert(pid)
-                continue
+            let windows: [AXHandle]
+            switch AccessibilityReader.windows(of: axApp) {
+            case .windows(let list): windows = list
+            case .mute: mutePIDs.insert(pid); continue
+            case .failed: continue
             }
-            guard error == .success, let windows = value as? [AXUIElement] else { continue }
 
             // Un client qui rend au moins une fenêtre est joignable : s'il n'en
             // ressort aucun perso, c'est qu'il est retourné à l'écran de
@@ -284,8 +297,8 @@ final class WindowManager: ObservableObject {
             for (index, window) in windows.enumerated() {
                 // Un seul aller-retour par fenêtre pour les trois attributs :
                 // chaque appel AX est un IPC, et l'inventaire passe toutes les 2 s.
-                let facts = windowFacts(window)
-                guard Self.isGameWindow(subrole: facts.subrole, size: facts.size) else { continue }
+                let facts = AccessibilityReader.windowFacts(window)
+                guard AccessibilityReader.isGameWindow(subrole: facts.subrole, size: facts.size) else { continue }
 
                 let rawTitle = facts.title ?? ""
                 guard WindowTitle.isCharacterWindow(title: rawTitle) else { continue }
@@ -346,7 +359,7 @@ final class WindowManager: ObservableObject {
             let discovered = ClientMemory.discoveredAcrossSpaces(
                 titles: CrossSpaceTitles.read(pids: unknownPIDs),
                 existingNames: Set(found.map(\.name)),
-                appElement: AXUIElementCreateApplication
+                appElement: AXHandle.application
             )
             found += discovered
             remember(discovered)
@@ -406,92 +419,7 @@ final class WindowManager: ObservableObject {
         crossSpaceChecked = crossSpaceChecked.filter { livePIDs.contains($0.key) }
     }
 
-    private func isDofus(_ app: NSRunningApplication) -> Bool {
-        Self.isDofusBundle(app.bundleIdentifier)
-    }
 
-    /// On teste le bundle ID en minuscules : l'Info.plist déclare
-    /// « com.Ankama.Dofus », mais mieux vaut ne pas dépendre de la casse. Le
-    /// launcher (com.ankama.zaap) ne contient pas « dofus », il est donc
-    /// naturellement exclu.
-    static func isDofusBundle(_ bundleID: String?) -> Bool {
-        guard let bundle = bundleID?.lowercased() else { return false }
-        return bundle.contains("dofus")
-    }
-
-    /// Ce que l'inventaire veut savoir d'une fenêtre, lu en un seul appel.
-    private struct WindowFacts {
-        var subrole: String?
-        var size: CGSize?
-        var title: String?
-    }
-
-    /// Sous-rôle, taille et titre en **un** IPC — `AXUIElementCopyMultipleAttributeValues`
-    /// — là où trois lectures séparées en coûtaient trois par fenêtre et par
-    /// tour. Sans `stopOnError`, un attribut absent arrive sous la forme d'un
-    /// `AXValue` de type `.axError` à sa place : la fenêtre reste lue pour le
-    /// reste, comme avant.
-    private func windowFacts(_ window: AXUIElement) -> WindowFacts {
-        let attributes = [kAXSubroleAttribute, kAXSizeAttribute, kAXTitleAttribute] as CFArray
-        var values: CFArray?
-        guard AXUIElementCopyMultipleAttributeValues(
-            window, attributes, AXCopyMultipleAttributeOptions(rawValue: 0), &values
-        ) == .success,
-            let raw = values as? [AnyObject], raw.count == 3
-        else { return windowFactsOneByOne(window) }
-
-        var facts = WindowFacts()
-        facts.subrole = raw[0] as? String
-        facts.title = raw[2] as? String
-        if CFGetTypeID(raw[1]) == AXValueGetTypeID() {
-            let value = raw[1] as! AXValue
-            var size = CGSize.zero
-            if AXValueGetType(value) == .cgSize, AXValueGetValue(value, .cgSize, &size) {
-                facts.size = size
-            }
-        }
-        return facts
-    }
-
-    /// Repli attribut par attribut si la lecture groupée échoue en bloc : un
-    /// client qui refuserait cet appel (ou une version d'AX qui le boude)
-    /// verrait sinon toutes ses fenêtres prises pour « sans titre », donc
-    /// écartées — le perso disparaîtrait de la barre sans explication.
-    private func windowFactsOneByOne(_ window: AXUIElement) -> WindowFacts {
-        var facts = WindowFacts()
-        var value: CFTypeRef?
-        if AXUIElementCopyAttributeValue(window, kAXSubroleAttribute as CFString, &value) == .success {
-            facts.subrole = value as? String
-        }
-        value = nil
-        if AXUIElementCopyAttributeValue(window, kAXTitleAttribute as CFString, &value) == .success {
-            facts.title = value as? String
-        }
-        value = nil
-        if AXUIElementCopyAttributeValue(window, kAXSizeAttribute as CFString, &value) == .success,
-           let value, CFGetTypeID(value) == AXValueGetTypeID() {
-            var size = CGSize.zero
-            if AXValueGetValue(value as! AXValue, .cgSize, &size) { facts.size = size }
-        }
-        return facts
-    }
-
-    /// Une fenêtre de jeu : sous-rôle standard (ou inconnu), et assez grande.
-    /// Écarte les palettes et fenêtres de service, qui sont toujours petites ;
-    /// une taille illisible ne condamne pas. `WindowPreviewService` applique le
-    /// même seuil de son côté.
-    static func isGameWindow(subrole: String?, size: CGSize?) -> Bool {
-        if let subrole, subrole != kAXStandardWindowSubrole as String {
-            return false
-        }
-        guard let size else { return true }
-        return size.width > 200 && size.height > 200
-    }
-
-    func isGameWindow(_ window: AXUIElement) -> Bool {
-        let facts = windowFacts(window)
-        return Self.isGameWindow(subrole: facts.subrole, size: facts.size)
-    }
 
     // MARK: - Focus
 
@@ -504,9 +432,10 @@ final class WindowManager: ObservableObject {
     }
 
     func focus(_ client: DofusClient) {
-        if !client.dormant,
-           let minimized = boolAttribute(client.axWindow, kAXMinimizedAttribute), minimized {
-            AXUIElementSetAttributeValue(client.axWindow, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
+        let reachable = isReachable(client)
+        if reachable,
+           AccessibilityReader.boolAttribute(client.axWindow, kAXMinimizedAttribute) == true {
+            AccessibilityReader.set(client.axWindow, kAXMinimizedAttribute, kCFBooleanFalse)
         }
 
         // L'activation vient en premier : c'est elle, et non `AXRaise`, qui fait
@@ -522,12 +451,12 @@ final class WindowManager: ObservableObject {
         // n'ajoutent que de la latence à la bascule. Sur un perso seulement
         // mémorisé, la référence de fenêtre est périmée — il n'y a rien à y poser.
         let siblings = clients.filter { $0.pid == client.pid && !$0.dormant }.count
-        if !client.dormant, siblings > 1 {
+        if reachable, siblings > 1 {
             let window = client.axWindow
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                 MainActor.assumeIsolated {
-                    AXUIElementSetAttributeValue(window, kAXMainAttribute as CFString, kCFBooleanTrue)
-                    AXUIElementPerformAction(window, kAXRaiseAction as CFString)
+                    AccessibilityReader.set(window, kAXMainAttribute, kCFBooleanTrue)
+                    AccessibilityReader.perform(window, action: kAXRaiseAction)
                 }
             }
         }
@@ -541,20 +470,10 @@ final class WindowManager: ObservableObject {
         AttentionWatcher.shared.clear(client)
     }
 
-    /// Délai de grâce entre la demande polie de fermeture et le coup de grâce.
-    /// Mesuré à l'usage : un client sain s'éteint bien avant 2 s, et un client
-    /// gelé ne changera pas d'avis — attendre 6 s ne faisait que ralentir le
-    /// geste.
-    private static let closeGracePeriod: TimeInterval = 2
-
-    /// Ferme un client — poliment d'abord, de force s'il ne répond plus.
+    /// Ferme un client — l'escalade de `ClientTerminator`.
     ///
     /// Le client gèle systématiquement à la fermeture chez certains joueurs, et
-    /// il faut alors passer par « Forcer à quitter ». On automatise ce geste :
-    /// un Quit Apple Event (`terminate()`), puis, si le processus est toujours
-    /// là après le délai de grâce — un client gelé ignore les Apple Events —,
-    /// un `forceTerminate()`. C'est une opération de **processus**, pas une
-    /// saisie : la règle « Synfus n'émet aucun évènement » reste entière.
+    /// il faut alors passer par « Forcer à quitter » : on automatise ce geste.
     func close(_ client: DofusClient) {
         let pid = client.pid
         guard NSRunningApplication(processIdentifier: pid) != nil else { return }
@@ -565,22 +484,7 @@ final class WindowManager: ObservableObject {
         // déjà consommé.
         PreviewPanelController.shared.reconcile(with: clients.filter { $0.pid != pid })
 
-        // L'envoi du Quit Apple Event peut bloquer plusieurs secondes quand le
-        // client est déjà gelé — c'est lui qui figeait Synfus au moment de
-        // fermer. Il part donc d'un fil secondaire ; le coup de grâce, lui,
-        // est un signal, il ne bloque jamais.
-        Task.detached(priority: .userInitiated) {
-            NSRunningApplication(processIdentifier: pid)?.terminate()
-        }
-        Timer.scheduledTimer(withTimeInterval: Self.closeGracePeriod, repeats: false) { _ in
-            MainActor.assumeIsolated {
-                if let survivant = NSRunningApplication(processIdentifier: pid),
-                   !survivant.isTerminated {
-                    survivant.forceTerminate()
-                }
-                WindowManager.shared.refreshSoon()
-            }
-        }
+        ClientTerminator.close(pid) { WindowManager.shared.refreshSoon() }
         refreshSoon()
     }
 
@@ -626,13 +530,6 @@ final class WindowManager: ObservableObject {
         client.pid == frontmostPID
     }
 
-    // MARK: - Lecture d'attributs Accessibilité
-
-    private func boolAttribute(_ element: AXUIElement, _ attribute: String) -> Bool? {
-        var value: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success else { return nil }
-        return (value as? Bool)
-    }
 
     /// Ouvre le panneau Accessibilité, en demandant d'abord à macOS d'afficher
     /// sa propre invite si l'app n'a jamais été autorisée.

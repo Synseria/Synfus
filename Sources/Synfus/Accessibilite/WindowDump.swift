@@ -41,9 +41,7 @@ enum WindowDump {
             exit(2)
         }
 
-        let apps = NSWorkspace.shared.runningApplications.filter {
-            WindowManager.isDofusBundle($0.bundleIdentifier)
-        }
+        let apps = DofusProcesses.running()
         say("\(apps.count) processus Dofus")
 
         for app in apps {
@@ -51,17 +49,17 @@ enum WindowDump {
             say("\n=== pid \(pid) — \(app.bundleIdentifier ?? "?") ===")
             say("  actif : \(app.isActive) | masqué : \(app.isHidden)")
 
-            let axApp = AXUIElementCreateApplication(pid)
+            let axApp = AXHandle.application(pid)
 
             // Un client dans un espace plein écran inactif peut être ralenti par
             // le système : sans marge, la requête expirerait avant sa réponse.
-            AXUIElementSetMessagingTimeout(axApp, 2)
+            AXUIElementSetMessagingTimeout(axApp.element, 2)
 
-            var raw: CFTypeRef?
-            let status = AXUIElementCopyAttributeValue(axApp, kAXWindowsAttribute as CFString, &raw)
-            guard status == .success, let windows = raw as? [AXUIElement] else {
-                say("  kAXWindows : ÉCHEC (code \(status.rawValue))")
-                continue
+            let windows: [AXHandle]
+            switch AccessibilityReader.windows(of: axApp) {
+            case .windows(let list): windows = list
+            case .mute: say("  kAXWindows : MUET (borne expirée)"); continue
+            case .failed(let status): say("  kAXWindows : ÉCHEC (code \(status.rawValue))"); continue
             }
             say("  kAXWindows : \(windows.count) fenêtre(s)")
 
@@ -75,17 +73,19 @@ enum WindowDump {
         exit(0)
     }
 
-    private static func describe(_ window: AXUIElement, index: Int) {
-        let title = string(window, kAXTitleAttribute)
-        let subrole = string(window, kAXSubroleAttribute)
-        let role = string(window, kAXRoleAttribute)
-        let minimized = bool(window, kAXMinimizedAttribute) ?? false
-        let fullScreen = bool(window, "AXFullScreen")
-        let dimension = size(window)
+    private static func describe(_ window: AXHandle, index: Int) {
+        let facts = AccessibilityReader.windowFacts(window)
+        let title = facts.title
+        let subrole = facts.subrole
+        let role = AccessibilityReader.stringAttribute(window, kAXRoleAttribute)
+        let minimized = AccessibilityReader.boolAttribute(window, kAXMinimizedAttribute) ?? false
+        let fullScreen = AccessibilityReader.boolAttribute(window, "AXFullScreen")
+        let dimension = facts.size
 
-        // Les deux filtres de `refresh()`, dans l'ordre où ils s'appliquent.
-        let subroleOK = subrole == nil || subrole == kAXStandardWindowSubrole as String
-        let sizeOK = dimension.map { $0.width > 200 && $0.height > 200 } ?? true
+        // Les deux filtres de `refresh()`, dans l'ordre où ils s'appliquent —
+        // le même seuil qu'eux, décomposé pour dire lequel a écarté la fenêtre.
+        let subroleOK = AccessibilityReader.isGameWindow(subrole: subrole, size: nil)
+        let sizeOK = AccessibilityReader.isGameWindow(subrole: nil, size: dimension)
         let characterOK = WindowTitle.isCharacterWindow(title: title ?? "")
 
         let verdict: String
@@ -104,28 +104,5 @@ enum WindowDump {
               + "réduite:\(minimized) plein écran:\(fullScreen.map(String.init) ?? "n/c")")
         say("       titre « \(title ?? "∅") »")
         say("       → \(verdict)")
-    }
-
-    // MARK: - Lecture d'attributs
-
-    private static func attribute(_ element: AXUIElement, _ name: String) -> CFTypeRef? {
-        var result: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, name as CFString, &result) == .success else { return nil }
-        return result
-    }
-
-    private static func string(_ element: AXUIElement, _ name: String) -> String? {
-        attribute(element, name) as? String
-    }
-
-    private static func bool(_ element: AXUIElement, _ name: String) -> Bool? {
-        attribute(element, name) as? Bool
-    }
-
-    private static func size(_ element: AXUIElement) -> CGSize? {
-        guard let raw = attribute(element, kAXSizeAttribute), CFGetTypeID(raw) == AXValueGetTypeID() else { return nil }
-        var result = CGSize.zero
-        guard AXValueGetValue(raw as! AXValue, .cgSize, &result) else { return nil }
-        return result
     }
 }

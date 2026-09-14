@@ -92,9 +92,9 @@ final class WindowPreviewService: ObservableObject {
         var size: CGSize = CGSize(width: 1280, height: 720)
 
         /// Un client de jeu occupe forcément une bonne part de l'écran. Le seuil
-        /// est celui de `WindowManager.isGameWindow`, pour que les deux côtés de
-        /// Synfus s'accordent sur ce qu'est une fenêtre de jeu.
-        var isGameSized: Bool { size.width > 200 && size.height > 200 }
+        /// est celui d'`AccessibilityReader.isGameWindow`, pour que les deux côtés
+        /// de Synfus s'accordent sur ce qu'est une fenêtre de jeu.
+        var isGameSized: Bool { AccessibilityReader.isGameWindow(subrole: nil, size: size) }
     }
 
     /// Retrouve la fenêtre d'un client parmi celles que le système expose.
