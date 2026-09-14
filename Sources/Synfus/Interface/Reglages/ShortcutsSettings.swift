@@ -57,9 +57,8 @@ struct ShortcutsSettings: View {
                     get: { prefs.advanceOnClick },
                     set: { prefs.advanceOnClick = $0; ClickAdvanceWatcher.shared.apply(); rebind() }
                 ))
-                ShortcutRow(label: "Activer / couper le mode", hotKey: hotKey(\.advanceArmHotKey))
-                    .disabled(!prefs.advanceOnClick)
                 if prefs.advanceOnClick {
+                    ShortcutRow(label: "Activer / couper le mode", hotKey: hotKey(\.advanceArmHotKey))
                     HStack {
                         Text("Clics captés : \(clicks.seenClicks)")
                             .font(.system(size: 11))

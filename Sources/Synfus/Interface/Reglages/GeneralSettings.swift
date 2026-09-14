@@ -40,17 +40,19 @@ struct GeneralSettings: View {
                     get: { prefs.barVisible },
                     set: { prefs.barVisible = $0; FloatingBarController.shared.apply() }
                 ))
-                Toggle("Seulement quand Dofus est devant", isOn: Binding(
-                    get: { prefs.barOnlyWithDofus },
-                    set: { prefs.barOnlyWithDofus = $0; FloatingBarController.shared.updateVisibility() }
-                ))
-                Toggle("Numéros des emplacements", isOn: $prefs.showNumbers)
-                Toggle("Classe sous le nom", isOn: $prefs.showClasses)
-                HStack {
-                    Text("Position")
-                    Spacer()
-                    Button("Recentrer en haut de l'écran") { FloatingBarController.shared.recenter() }
-                        .font(.system(size: 11))
+                if prefs.barVisible {
+                    Toggle("Seulement quand Dofus est devant", isOn: Binding(
+                        get: { prefs.barOnlyWithDofus },
+                        set: { prefs.barOnlyWithDofus = $0; FloatingBarController.shared.updateVisibility() }
+                    ))
+                    Toggle("Numéros des emplacements", isOn: $prefs.showNumbers)
+                    Toggle("Classe sous le nom", isOn: $prefs.showClasses)
+                    HStack {
+                        Text("Position")
+                        Spacer()
+                        Button("Recentrer en haut de l'écran") { FloatingBarController.shared.recenter() }
+                            .font(.system(size: 11))
+                    }
                 }
             } header: {
                 SectionTitle("Barre flottante", help: "La barre se déplace en saisissant les points à sa gauche. "

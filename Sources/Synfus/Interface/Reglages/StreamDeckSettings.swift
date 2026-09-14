@@ -31,10 +31,14 @@ struct StreamDeckSettings: View {
     var body: some View {
         Form {
             liaison
-            disposition
-            gestes
-            combatSection
-            installation
+            // Tant que la liaison est coupée, rien d'autre n'a de sens : ni
+            // disposition, ni gestes, ni combat — et l'onglet Sorts est masqué.
+            if prefs.streamDeckEnabled {
+                installation
+                disposition
+                gestes
+                combatSection
+            }
             if !message.isEmpty {
                 Text(message).font(.system(size: 11)).foregroundStyle(.secondary)
             }
@@ -46,7 +50,12 @@ struct StreamDeckSettings: View {
 
     private var liaison: some View {
         Section {
-            Toggle("Liaison active", isOn: $prefs.streamDeckEnabled)
+            Toggle("Utiliser un Stream Deck", isOn: $prefs.streamDeckEnabled)
+            if !prefs.streamDeckEnabled {
+                Text("Les sorts du perso devant sous les doigts, la frappe faite par le plugin Elgato. "
+                     + "Active pour voir les réglages, installer le plugin et remplir les profils de sorts (onglet Sorts).")
+                    .font(.system(size: 11)).foregroundStyle(.secondary)
+            }
             if prefs.streamDeckEnabled {
                 HStack {
                     Text(link.status).font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary)
@@ -56,7 +65,7 @@ struct StreamDeckSettings: View {
                 }
             }
         } header: {
-            SectionTitle("Liaison", help: "Ouvre un socket local, réservé à ton compte, sur lequel le plugin "
+            SectionTitle("Stream Deck (optionnel)", help: "Ouvre un socket local, réservé à ton compte, sur lequel le plugin "
                          + "SynfusDeck reçoit ce que chaque touche montre et fait. Il ne peut demander que ce que "
                          + "fait la barre : perso suivant, précédent, barre suivante, menu. C'est le plugin qui "
                          + "frappe la touche du jeu ; Synfus n'émet jamais rien.\n\n" + StreamDeckLink.socketURL.path)
