@@ -49,7 +49,8 @@ final class WindowPreviewService: ObservableObject {
         guard authorized else { return }
         let requests = clients
             .filter { !inFlight.contains($0.slotKey) }
-            .map { PreviewRequest(key: $0.slotKey, pid: $0.pid, title: $0.rawTitle) }
+            .map { PreviewRequest(key: $0.slotKey, pid: $0.pid, title: $0.rawTitle,
+                                  maxWidth: PreviewCaptureEngine.thumbnailWidth, region: nil) }
         guard !requests.isEmpty else { return }
 
         for request in requests { inFlight.insert(request.key) }
@@ -70,6 +71,21 @@ final class WindowPreviewService: ObservableObject {
 
     func refresh(_ client: DofusClient) {
         refresh([client])
+    }
+
+    /// Une capture à la demande, hors vignettes : pleine résolution, et
+    /// éventuellement limitée à une zone de la fenêtre — en fractions de sa
+    /// largeur et de sa hauteur, origine en haut à gauche. C'est la capture de
+    /// la reconnaissance des sorts et de la détection de combat : le même
+    /// moteur, le même appariement, un seul foyer.
+    func capture(_ client: DofusClient, region: CGRect? = nil) async -> CGImage? {
+        guard authorized else { return nil }
+        let request = PreviewRequest(key: client.slotKey, pid: client.pid, title: client.rawTitle,
+                                     maxWidth: nil, region: region)
+        guard let data = (await engine.capture([request]))[request.key],
+              let source = CGImageSourceCreateWithData(data as CFData, nil)
+        else { return nil }
+        return CGImageSourceCreateImageAtIndex(source, 0, nil)
     }
 
     /// Oublie les vignettes des persos qui ne sont plus connectés.
@@ -151,6 +167,11 @@ private struct PreviewRequest: Sendable {
     let key: String
     let pid: pid_t
     let title: String
+    /// Largeur maximale de l'image ; `nil` pour la résolution native.
+    let maxWidth: Int?
+    /// Zone de la fenêtre à capturer, en fractions (0…1) de sa largeur et de
+    /// sa hauteur, origine en haut à gauche ; `nil` pour la fenêtre entière.
+    let region: CGRect?
 }
 
 /// Inventaire ScreenCaptureKit et captures, hors du main actor.
@@ -174,7 +195,7 @@ private actor PreviewCaptureEngine {
     private static let maxAge: TimeInterval = 3
     /// Largeur maximale d'une vignette. Capturer en pleine résolution pour
     /// afficher 240 points coûterait cher sans rien apporter.
-    private static let maxWidth = 480
+    static let thumbnailWidth = 480
 
     /// Rend les PNG des persos retrouvés, par clé. Un perso absent du résultat
     /// n'a pas de fenêtre capturable — l'appariement est une hypothèse.
@@ -222,18 +243,31 @@ private actor PreviewCaptureEngine {
             guard let index = WindowPreviewService.match(
                 pid: request.pid, title: request.title, among: candidates
             ) else { continue }
-            if let data = await shot(of: content.windows[index]) {
+            if let data = await shot(of: content.windows[index], request: request) {
                 captured[request.key] = data
             }
         }
         return captured
     }
 
-    private func shot(of window: SCWindow) async -> Data? {
+    private func shot(of window: SCWindow, request: PreviewRequest) async -> Data? {
         let configuration = SCStreamConfiguration()
-        let scale = min(1, CGFloat(Self.maxWidth) / max(window.frame.width, 1))
-        configuration.width = Int((window.frame.width * scale).rounded())
-        configuration.height = Int((window.frame.height * scale).rounded())
+        // La zone demandée d'abord — en points de la fenêtre —, puis l'échelle :
+        // une capture de la seule barre de sorts pèse cent fois moins qu'une
+        // fenêtre entière, et c'est ce qui rend supportable une lecture répétée.
+        var size = window.frame.size
+        if let region = request.region {
+            let rect = CGRect(x: region.minX * size.width, y: region.minY * size.height,
+                              width: region.width * size.width, height: region.height * size.height)
+            configuration.sourceRect = rect
+            size = rect.size
+        }
+        // Résolution native : les écrans Retina rendent deux pixels par point,
+        // et la reconnaissance veut ces pixels-là.
+        let pixelsPerPoint = request.maxWidth == nil ? await Self.backingScale : 1
+        let scale = request.maxWidth.map { min(1, CGFloat($0) / max(size.width, 1)) } ?? pixelsPerPoint
+        configuration.width = Int((size.width * scale).rounded())
+        configuration.height = Int((size.height * scale).rounded())
         configuration.showsCursor = false
 
         guard let image = try? await SCScreenshotManager.captureImage(
@@ -245,5 +279,10 @@ private actor PreviewCaptureEngine {
 
     private static func png(from image: CGImage) -> Data? {
         NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:])
+    }
+
+    /// Le facteur Retina de l'écran principal — lu sur main, `NSScreen` y vit.
+    @MainActor private static var backingScale: CGFloat {
+        NSScreen.main?.backingScaleFactor ?? 2
     }
 }

@@ -104,6 +104,7 @@ de son domaine ; un fichier qui n'en a pas est le signe d'un domaine à créer.
 | `Classes/` | Classes du jeu et icônes fournies par l'utilisateur |
 | `Marque/` | La Couvée : `SynfusMark` (CoreGraphics pur) et `SynfusGlyph` |
 | `Interface/` | `MenuBarController` ; `Barre/` (barre flottante et ses contrôles) ; `Reglages/` (une vue par onglet + contrôleur de fenêtre) |
+| `StreamDeck/` | L'interface physique contextuelle : `Sorts/` (reconnaissance de la barre de sorts) ; à venir `Profils/`, `Liaison/` |
 
 Les logiques pures ont leur fichier propre (`WindowTitle`, `ClientMemory`,
 `LayoutComputer`, `BounceDetector`, `FreezeStrikes`…) : c'est ce qui les rend
@@ -691,6 +692,39 @@ l'œuf de tête détouré par un mince **jour transparent** — dans une image
 *template*, seule l'opacité compte, le détourage passe par un effacement de
 l'alpha (`.clear` / `.destinationOut`), jamais par un trait de couleur. Aucune
 peau n'y survit : la matière reste sur l'icône.
+
+### Stream Deck — reconnaissance des sorts
+
+Le Stream Deck doit afficher les sorts du perso actif ; encore faut-il savoir
+lesquels. Plutôt qu'une configuration à la main, [StreamDeck/Sorts/](Sources/Synfus/StreamDeck/Sorts/)
+lit la barre de sorts sur une capture de la fenêtre — **à la demande**, comme
+opération de configuration, jamais en continu.
+
+- [LumaBitmap.swift](Sources/Synfus/StreamDeck/Sorts/LumaBitmap.swift) : une
+  image en gris 8 bits, valeur `Sendable`, fabricable en test sans CoreGraphics.
+- [SpellBarLocator.swift](Sources/Synfus/StreamDeck/Sorts/SpellBarLocator.swift)
+  : pur. Cherche dans le tiers bas une rangée de cases carrées **par la
+  périodicité de leurs cadres** (profil de bords horizontaux → haut et bas des
+  cases ; profil de bords verticaux → pas par autocorrélation → phase et plus
+  longue suite de cases). Pas de coordonnées figées : la fenêtre et l'échelle
+  d'interface varient. Rend aussi la **zone relative** à mémoriser pour ne
+  capturer que cette bande ensuite (`region(in:)`). Ses hypothèses (`searchBand`,
+  `minCell`/`maxCell`, `minCells`) sont à confronter aux captures réelles ;
+  `SpellBarLocatorTests` les vérifie sur des images fabriquées.
+- [SpellRecognizer.swift](Sources/Synfus/StreamDeck/Sorts/SpellRecognizer.swift)
+  : pur. Compare chaque case aux icônes **de la classe du perso** (20-30
+  candidats, index `sorts.json` d'`AnkamaAssets`) par corrélation normalisée
+  sur 32 × 32 — insensible à la luminosité, donc à un sort grisé. La **marge**
+  entre le premier et le second candidat est la confiance (`isConfident`).
+  L'OCR est écarté : le nom d'un sort n'apparaît qu'au survol, et Synfus ne
+  déplace pas la souris.
+- [SpellRecognitionProbe.swift](Sources/Synfus/StreamDeck/Sorts/SpellRecognitionProbe.swift)
+  : le banc d'essai du Diagnostic — capture en résolution native (par
+  `WindowPreviewService.capture(_:region:)`, le **même** moteur que les
+  aperçus, étendu à une zone et à la résolution native), enregistrement dans
+  `~/Library/Logs/Synfus/captures/` (jamais dans le dépôt), analyse avec les
+  scores par case et les durées. C'est sur ce rapport que se prend la décision
+  go/no-go de la reconnaissance automatique.
 
 ## Publication
 
