@@ -14,7 +14,7 @@ et fait basculer d'un perso à l'autre sans passer par ⌘-Tab.
   glisser-déposer ou en remplissant `~/Library/Application Support/Synfus/Classes`
   (`iop.png`, `cra.png`…). Synfus n'embarque aucune image du jeu — celles
   d'Ankama n'ont pas à être redistribuées. Sans image, la pastille colorée reste.
-  Pour aller vite, `./Tools/fetch-class-icons.sh` remplit ce dossier avec les
+  Pour aller vite, `./Tools/fetch-ankama-assets.sh` remplit ce dossier avec les
   emblèmes des 19 classes : le dépôt ne transporte que des adresses, c'est ta
   machine qui télécharge, pour ton usage personnel.
 

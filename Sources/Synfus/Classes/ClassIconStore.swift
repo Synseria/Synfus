@@ -3,13 +3,16 @@ import SwiftUI
 
 /// Icônes de classe fournies par l'utilisateur.
 ///
-/// Synfus n'embarque aucune image de classe : les portraits du jeu appartiennent
-/// à Ankama et n'ont pas à être redistribués avec l'app. Chacun met les siennes,
-/// rangées dans un dossier ouvrable depuis les réglages.
+/// Le dépôt n'embarque aucune image de classe : les portraits du jeu
+/// appartiennent à Ankama et n'ont pas à être redistribués. Chacun met les
+/// siennes, rangées dans un dossier ouvrable depuis les réglages — ou les
+/// télécharge pour son build (`Tools/fetch-ankama-assets.sh`), auquel cas
+/// `AnkamaAssets` les trouve dans le bundle quand le dossier n'en a pas.
 ///
-/// Ce dossier est l'unique état : rien n'est dupliqué dans les préférences, et
-/// déposer un fichier à la main y suffit — le nom du fichier (`iop.png`) est la
-/// clé de la classe. `revision` sert seulement à redessiner les vues.
+/// Ce dossier est l'unique état modifiable : rien n'est dupliqué dans les
+/// préférences, et déposer un fichier à la main y suffit — le nom du fichier
+/// (`iop.png`) est la clé de la classe. `revision` sert seulement à redessiner
+/// les vues.
 @MainActor
 final class ClassIconStore: ObservableObject {
     static let shared = ClassIconStore()
@@ -24,9 +27,7 @@ final class ClassIconStore: ObservableObject {
     private var cache: [String: NSImage?] = [:]
 
     private init() {
-        let support = FileManager.default
-            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        directory = support.appendingPathComponent("Synfus/Classes", isDirectory: true)
+        directory = AnkamaAssets.classIconsDirectory
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     }
 
@@ -39,13 +40,22 @@ final class ClassIconStore: ObservableObject {
 
     func icon(forKey key: String) -> NSImage? {
         if let known = cache[key] { return known }
-        let image = NSImage(contentsOf: url(forKey: key))
+        let image = AnkamaAssets.classIconURL(key: key).flatMap { NSImage(contentsOf: $0) }
         cache[key] = image
         return image
     }
 
+    /// L'emplacement **modifiable** de l'icône — celui du dossier de
+    /// l'utilisateur, que la copie embarquée existe ou non.
     func url(forKey key: String) -> URL {
         directory.appendingPathComponent("\(key).png")
+    }
+
+    /// L'icône vient-elle du bundle plutôt que du dossier ? Retirer celle du
+    /// dossier fera alors réapparaître l'embarquée — les réglages le disent.
+    func isBundled(forKey key: String) -> Bool {
+        !FileManager.default.fileExists(atPath: url(forKey: key).path)
+            && AnkamaAssets.classIconURL(key: key) != nil
     }
 
     /// Variante à la taille d'un menu. `NSMenuItem` affiche l'image à sa taille

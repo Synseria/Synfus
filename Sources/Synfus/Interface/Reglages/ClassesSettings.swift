@@ -31,10 +31,12 @@ struct ClassesSettings: View {
             }
 
             Section("Emblèmes officiels") {
-                Text("Le script Tools/fetch-class-icons.sh du dépôt remplit ce dossier "
-                     + "avec les emblèmes des 19 classes. Synfus ne redistribue aucune "
-                     + "image du jeu : c'est ta machine qui les télécharge, pour ton "
-                     + "usage personnel.")
+                Text("Le script Tools/fetch-ankama-assets.sh du dépôt télécharge les "
+                     + "emblèmes des 19 classes et les icônes de sorts dans Resources/Ankama, "
+                     + "que build.sh embarque ensuite dans l'app. Synfus ne redistribue "
+                     + "aucune image du jeu : c'est ta machine qui les télécharge, pour ton "
+                     + "usage personnel. Une icône déposée ici garde la priorité sur "
+                     + "l'embarquée.")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                 Text("Certaines illustrations sont la propriété d'Ankama Studio et de "
@@ -76,7 +78,7 @@ struct ClassesSettings: View {
 
             Spacer()
 
-            if custom != nil {
+            if custom != nil, !icons.isBundled(forKey: breed.key) {
                 Button("Retirer") { icons.removeIcon(forKey: breed.key) }
                     .font(.system(size: 11))
             }
