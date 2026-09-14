@@ -9,6 +9,7 @@ struct DiagnosticSettings: View {
     @ObservedObject private var arranger = WindowArranger.shared
     @ObservedObject private var freezes = FreezeWatcher.shared
     @ObservedObject private var spells = SpellRecognitionProbe.shared
+    @State private var zoomCapture = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -164,9 +165,14 @@ struct DiagnosticSettings: View {
             }
             .font(.system(size: 11))
             if let picture = spells.lastPicture {
-                CaptureOverlay(picture: picture, bar: spells.lastBar, analysis: spells.lastAnalysis)
+                CaptureOverlay(picture: picture, bar: spells.lastBar, analysis: spells.lastAnalysis, zoomed: zoomCapture)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 300)
+                    .frame(height: zoomCapture ? 220 : 300)
+                HStack {
+                    Toggle("Zoomer sur la barre", isOn: $zoomCapture).font(.system(size: 11))
+                        .disabled(spells.lastBar == nil)
+                    Button("Ouvrir en grand") { spells.revealLastCapture() }.font(.system(size: 11))
+                }
             }
             if !spells.report.isEmpty {
                 Text(spells.report)
@@ -270,30 +276,48 @@ private struct CaptureOverlay: View {
     let picture: NSImage
     let bar: SpellBarLocator.Bar?
     let analysis: SpellRecognition.Analysis?
+    var zoomed = false
+
+    /// La partie de l'image montrée : tout, ou la barre avec une marge.
+    private var window: CGRect {
+        let full = CGRect(origin: .zero, size: picture.size)
+        guard zoomed, let bar else { return full }
+        let region = bar.region(in: picture.size, margin: 0.6)
+        return CGRect(x: region.minX * picture.size.width, y: region.minY * picture.size.height,
+                      width: region.width * picture.size.width, height: region.height * picture.size.height)
+    }
 
     var body: some View {
         GeometryReader { geometry in
-            let scale = min(geometry.size.width / picture.size.width, geometry.size.height / picture.size.height)
-            let drawn = CGSize(width: picture.size.width * scale, height: picture.size.height * scale)
+            let window = window
+            let scale = min(geometry.size.width / window.width, geometry.size.height / window.height)
+            let drawn = CGSize(width: window.width * scale, height: window.height * scale)
             ZStack(alignment: .topLeading) {
                 Image(nsImage: picture)
                     .resizable()
-                    .frame(width: drawn.width, height: drawn.height)
+                    .frame(width: picture.size.width * scale, height: picture.size.height * scale)
+                    .offset(x: -window.minX * scale, y: -window.minY * scale)
                 if let bar {
                     Canvas { context, _ in
                         for (row, rects) in bar.rows.enumerated() {
                             for (position, rect) in rects.enumerated() {
                                 let cell = analysis?.cells.first { $0.row == row && $0.position == position }
-                                let confident = cell?.match?.isConfident == true
-                                let scaled = CGRect(x: rect.minX * scale, y: rect.minY * scale,
+                                let color: Color = cell?.match == nil ? .gray : (cell?.match?.isConfident == true ? .green : .orange)
+                                let scaled = CGRect(x: (rect.minX - window.minX) * scale, y: (rect.minY - window.minY) * scale,
                                                     width: rect.width * scale, height: rect.height * scale)
-                                context.stroke(Path(scaled), with: .color(confident ? .green : .orange), lineWidth: 1.5)
+                                context.stroke(Path(scaled), with: .color(color), lineWidth: zoomed ? 2 : 1.5)
+                                if zoomed, let nom = cell?.match?.nom {
+                                    context.draw(Text(nom).font(.system(size: 8)).foregroundStyle(color),
+                                                 at: CGPoint(x: scaled.midX, y: scaled.maxY + 6))
+                                }
                             }
                         }
                     }
                     .frame(width: drawn.width, height: drawn.height)
                 }
             }
+            .frame(width: drawn.width, height: drawn.height)
+            .clipped()
             .frame(width: geometry.size.width, height: geometry.size.height, alignment: .center)
         }
         .background(RoundedRectangle(cornerRadius: 6).fill(Color.black.opacity(0.06)))

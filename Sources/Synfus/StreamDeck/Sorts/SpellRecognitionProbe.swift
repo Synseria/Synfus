@@ -122,6 +122,12 @@ final class SpellRecognitionProbe: ObservableObject {
 
     // MARK: - Disque
 
+    /// La dernière capture dans Aperçu, en pleine résolution.
+    func revealLastCapture() {
+        guard let url = lastCapture?.url else { return }
+        NSWorkspace.shared.open(url)
+    }
+
     func revealCaptures() {
         try? FileManager.default.createDirectory(at: Self.capturesDirectory, withIntermediateDirectories: true)
         NSWorkspace.shared.open(Self.capturesDirectory)

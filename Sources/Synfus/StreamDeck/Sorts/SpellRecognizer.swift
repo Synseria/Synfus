@@ -31,8 +31,12 @@ struct SpellIndex: Sendable {
     @MainActor private(set) static var shared: SpellIndex? = load()
     @MainActor static func reload() { shared = load() }
 
+    /// La clé des sorts communs à toutes les classes, telle que le script l'écrit.
+    static let commonKey = "communs"
+
+    /// Les sorts d'une classe **et** les communs : une barre porte les deux.
     func entries(forClass key: String) -> [Entry] {
-        entries.filter { $0.classe == key }
+        entries.filter { $0.classe == key || $0.classe == Self.commonKey }
     }
 
     func entry(id: Int) -> Entry? { byID[id] }
@@ -98,15 +102,32 @@ enum SpellRecognizer {
                                        height: CGFloat(cell.height) - 2 * dy)).resized(to: side)
     }
 
+    /// En deçà, la case est tenue pour **vide** : un aplat n'a pas de forme,
+    /// et corrélerait pourtant avec n'importe quel sort par ses seuls bords.
+    static let minContrast = 14.0
+
     static func identify(cell: LumaBitmap, among candidates: [Candidate]) -> Match? {
         guard !candidates.isEmpty else { return nil }
         let probe = thumbnail(ofCell: cell)
-        let ranked = candidates
-            .map { ($0, bestCorrelation(probe, $0.thumb)) }
+        guard standardDeviation(probe) >= minContrast else { return nil }
+        // Un premier tri sans décalage, puis le décalage n'est cherché que pour
+        // les meilleurs : vingt-cinq positions pour cinquante candidats et
+        // trente-six cases, c'était la seconde de trop.
+        let coarse = candidates.map { ($0, correlation(probe, $0.thumb)) }.sorted { $0.1 > $1.1 }
+        let ranked = coarse.prefix(6)
+            .map { ($0.0, bestCorrelation(probe, $0.0.thumb)) }
             .sorted { $0.1 > $1.1 }
         let best = ranked[0]
         let second = ranked.count > 1 ? ranked[1].1 : -1
         return Match(id: best.0.id, nom: best.0.nom, score: best.1, runnerUp: second)
+    }
+
+    static func standardDeviation(_ image: LumaBitmap) -> Double {
+        guard !image.pixels.isEmpty else { return 0 }
+        let n = Double(image.pixels.count)
+        let mean = image.pixels.reduce(0.0) { $0 + Double($1) } / n
+        let variance = image.pixels.reduce(0.0) { $0 + (Double($1) - mean) * (Double($1) - mean) } / n
+        return variance.squareRoot()
     }
 
     /// Décalage maximal, en pixels d'imagette, toléré entre la case et la
