@@ -120,7 +120,7 @@ struct SpellsSettings: View {
                 Text(profile.barres[bar].nom).font(.system(size: 12, weight: .semibold))
                 Text(SpellKeyMap.modifierChoices.first { $0.value == (prefs.spellKeyMap.barres[bar].first??.modifiers ?? 0) }?.label ?? "")
                     .font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary)
-                if link.mode.barreActive(page: link.page) == bar, link.mode.kind != .parRangee {
+                if link.mode.kind != .parRangee, link.mode.barreActive(page: link.page, colonnes: DeckLayout.defaultColumns, lignes: DeckLayout.defaultRows) == bar {
                     Text("sur le Stream Deck").font(.system(size: 10)).foregroundStyle(Color.accentColor)
                 }
                 Spacer()

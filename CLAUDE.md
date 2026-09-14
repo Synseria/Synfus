@@ -793,19 +793,29 @@ Trois règles tiennent l'ensemble :
   fenêtres de la largeur (1-5, 6-10, 11-12, puis les barres suivantes), et
   `pages` dit lesquelles et dans quel ordre ; `personnalisee` : n'importe
   quelle case de n'importe quelle barre, une commande — c'est là qu'on saute
-  et réordonne des sorts sans toucher au jeu. `sortLong` (vrai par défaut)
-  met en appui long le sort **d'en face** — même case de la barre suivante
-  (`sortBarreSuivante`) ou de la fenêtre suivante —, dessiné en vignette dans
-  le coin de la touche (`iconeLong`, `Images.framed(corner:)`) ; une case
-  d'en face vide n'a pas d'action longue, la touche joue alors dès
-  l'enfoncement. **La fin de tour n'a jamais d'action longue** : elle ne doit
+  et réordonne des sorts sans toucher au jeu. `pages` vaut pour les deux
+  modes générés : les barres (ou fenêtres) que « barre suivante » parcourt,
+  dans l'ordre. `sortLong` (`deuxNiveaux` par défaut) met en appui long le
+  sort **d'en face** — même case de la barre suivante (`sortBarreDecalee`,
+  décalage 1) ou de la fenêtre suivante — et en appui très long celui
+  d'après (décalage 2) : les trois barres sous dix touches, sans page. Les
+  vignettes sont dessinées en bas à gauche (long) et à droite (très long) de
+  la touche (`iconeLong`/`iconeTresLong`, `Images.framed(cornerLeft:cornerRight:)`) ;
+  une case d'en face vide n'a pas d'action à ce niveau. **La fin de tour n'a jamais d'action longue** : elle ne doit
   partir que d'un geste voulu. Rien n'est réimporté dans le logiciel Elgato :
   le profil livré ne contient que des touches Synfus, et le paquet comme le
   profil sont embarqués dans l'app (`Contents/Resources`), ouverts d'un
   bouton de l'onglet Stream Deck.
-- **Gestes** : le SDK ne livre qu'enfoncé / relâché, le plugin mesure. Appui
-  court = au relâchement ; maintenu au-delà de `appuiLongMs` (250 ms) =
-  action longue, relâchement ignoré ; une touche sans action longue joue à
+- **Gestes** : le SDK ne livre qu'enfoncé / relâché, le plugin mesure. Trois
+  niveaux : court, long (`appuiLongMs`, 150 ms), très long
+  (`appuiTresLongMs`, 300 ms). Une touche dont tous les niveaux sont des
+  sorts est **progressive** (`DeckTouche.progressif`, réglage
+  `appuiProgressif`) : chaque niveau joue **à son seuil** — sélectionner un
+  sort dans le jeu ne lance rien, le joueur voit la sélection changer
+  pendant qu'il tient et lâche sur la bonne ; le fond de la touche passe au
+  bleu puis à l'orange. Les autres touches jouent au relâchement le niveau
+  atteint (le dernier dès son seuil) : deux commandes d'affilée se
+  contrediraient. Une touche sans niveau au-delà du court joue à
   l'enfoncement. **Pas de double-clic**, décision : il retarderait chaque
   appui et empêcherait de lancer deux fois le même sort — deux appuis sont
   deux frappes, comme au clavier. Aucune répétition au maintien.

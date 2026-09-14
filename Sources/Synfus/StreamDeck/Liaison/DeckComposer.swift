@@ -22,7 +22,10 @@ enum DeckComposer {
         var commandes: [GameCommand] = []
         var dofusDevant = false
         var enCombat: Bool?
-        var appuiLongMs = 350
+        var appuiLongMs = 150
+        var appuiTresLongMs = 300
+        /// Les touches de sorts jouent chaque niveau à son seuil (voir `DeckTouche.progressif`).
+        var progressif = true
     }
 
     /// Ce qu'une source donne à voir et à faire.
@@ -39,12 +42,12 @@ enum DeckComposer {
     static func compose(_ input: Input, icone: (SpellSlot) -> String?) -> DeckPage {
         let layout = input.mode.layout(colonnes: input.colonnes, lignes: input.lignes, page: input.page)
         let pageCount = input.mode.pageCount(colonnes: input.colonnes, lignes: input.lignes)
-        let barreActive = input.mode.barreActive(page: input.page)
+        let barreActive = input.mode.barreActive(page: input.page, colonnes: input.colonnes, lignes: input.lignes)
         let dimmed = !input.dofusDevant
 
         // Les commandes que le menu pagine : celles qui n'ont pas déjà leur
         // touche dans la disposition, ni le havre-sac, posé sur « fin de tour ».
-        let placed = Set(layout.touches.flatMap { [$0.court, $0.long].compactMap { $0 } }
+        let placed = Set(layout.touches.flatMap(\.sources)
             .compactMap { if case .commande(let id) = $0 { return id } else { return nil } })
         let paged = input.commandes.filter { !placed.contains($0.id) && $0.id != GameCommands.havresacID }
         let sortIndices = layout.touches.indices.filter { layout.touches[$0].court.estUnSort }
@@ -78,7 +81,8 @@ enum DeckComposer {
             switch source {
             case .sort(let barre, let position): return sort(barre: barre, position: position)
             case .sortActif(let position): return sort(barre: barreActive, position: position)
-            case .sortBarreSuivante(let position): return sort(barre: (barreActive + 1) % SpellProfile.barCount, position: position)
+            case .sortBarreDecalee(let position, let decalage):
+                return sort(barre: (barreActive + decalage) % SpellProfile.barCount, position: position)
             case .persoSuivant: return perso(input.perso, titre: { $0 + " ▶" }, commande: .persoSuivant)
             case .persoPrecedent: return perso(input.perso, titre: { "◀ " + $0 }, commande: .persoPrecedent)
             case .persoActif: return perso(input.perso, titre: { $0 }, commande: .persoSuivant)
@@ -118,6 +122,7 @@ enum DeckComposer {
         for (index, tile) in layout.touches.enumerated() {
             var rendu: Rendu
             var long: Rendu?
+            var tresLong: Rendu?
             if input.menuOuvert, let rank = sortIndices.firstIndex(of: index) {
                 // Le menu recouvre les sorts : une commande par touche, par pages.
                 let absolute = pageMenu * perMenuPage + rank
@@ -125,17 +130,21 @@ enum DeckComposer {
             } else {
                 rendu = render(tile.court)
                 // Une case d'en face vide n'a rien à jouer : sans action longue,
-                // la touche joue dès l'enfoncement.
+                // la touche joue plus tôt.
                 long = tile.long.map(render).flatMap { $0.vide ? nil : $0 }
+                tresLong = tile.tresLong.map(render).flatMap { $0.vide ? nil : $0 }
             }
-            // La vignette du sort en appui long — seulement s'il y a bien un
-            // sort à jouer : une case vide d'en face ne mérite pas de coin.
-            let iconeLong = long?.action != nil ? long?.icone : nil
-            touches.append(DeckTouche(index: index, icone: rendu.icone, iconeLong: iconeLong, symbole: rendu.symbole,
-                                      titre: rendu.titre, attenuee: rendu.attenuee, court: rendu.action,
-                                      long: long?.action))
+            // Les vignettes — seulement s'il y a bien quelque chose à jouer.
+            touches.append(DeckTouche(index: index, icone: rendu.icone,
+                                      iconeLong: long?.action != nil ? long?.icone : nil,
+                                      iconeTresLong: tresLong?.action != nil ? tresLong?.icone : nil,
+                                      symbole: rendu.symbole, titre: rendu.titre, attenuee: rendu.attenuee,
+                                      court: rendu.action, long: long?.action, tresLong: tresLong?.action,
+                                      progressif: input.progressif && !input.menuOuvert && tile.sources.allSatisfy(\.estUnSort)
+                                          && (long != nil || tresLong != nil)))
         }
         return DeckPage(colonnes: input.colonnes, lignes: input.lignes, dofusDevant: input.dofusDevant,
-                        perso: input.perso, touches: touches, appuiLongMs: input.appuiLongMs)
+                        perso: input.perso, touches: touches, appuiLongMs: input.appuiLongMs,
+                        appuiTresLongMs: input.appuiTresLongMs)
     }
 }

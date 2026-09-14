@@ -54,15 +54,24 @@ final class StreamDeckLink: ObservableObject {
         // Tout ce qui change l'état publié. Un seul chemin de publication, qui
         // n'envoie que si le JSON diffère du précédent.
         let manager = WindowManager.shared
-        Publishers.Merge4(
-            manager.$clients.map { _ in () },
-            manager.$frontmostPID.map { _ in () },
-            manager.$frontmostIsDofus.map { _ in () },
-            SpellProfileStore.shared.$profiles.map { _ in () }
-        )
-        .merge(with: prefs.$spellKeyMap.map { _ in () }, $page.map { _ in () }, $enCombat.map { _ in () })
-        .merge(with: prefs.$gameCommands.map { _ in () }, $menuOuvert.map { _ in () }, $pageMenu.map { _ in () })
-        .merge(with: prefs.$deck.map { _ in () }, prefs.$appuiLongMs.map { _ in () }, $grilles.map { _ in () })
+        let triggers: [AnyPublisher<Void, Never>] = [
+            manager.$clients.map { _ in () }.eraseToAnyPublisher(),
+            manager.$frontmostPID.map { _ in () }.eraseToAnyPublisher(),
+            manager.$frontmostIsDofus.map { _ in () }.eraseToAnyPublisher(),
+            SpellProfileStore.shared.$profiles.map { _ in () }.eraseToAnyPublisher(),
+            prefs.$spellKeyMap.map { _ in () }.eraseToAnyPublisher(),
+            prefs.$gameCommands.map { _ in () }.eraseToAnyPublisher(),
+            prefs.$deck.map { _ in () }.eraseToAnyPublisher(),
+            prefs.$appuiLongMs.map { _ in () }.eraseToAnyPublisher(),
+            prefs.$appuiTresLongMs.map { _ in () }.eraseToAnyPublisher(),
+            prefs.$appuiProgressif.map { _ in () }.eraseToAnyPublisher(),
+            $page.map { _ in () }.eraseToAnyPublisher(),
+            $menuOuvert.map { _ in () }.eraseToAnyPublisher(),
+            $pageMenu.map { _ in () }.eraseToAnyPublisher(),
+            $enCombat.map { _ in () }.eraseToAnyPublisher(),
+            $grilles.map { _ in () }.eraseToAnyPublisher(),
+        ]
+        Publishers.MergeMany(triggers)
         .debounce(for: .milliseconds(50), scheduler: DispatchQueue.main)
         .sink { [weak self] in self?.publish() }
         .store(in: &subscriptions)
@@ -279,6 +288,8 @@ final class StreamDeckLink: ObservableObject {
         input.commandes = prefs.gameCommands
         input.enCombat = enCombat
         input.appuiLongMs = prefs.appuiLongMs
+        input.appuiTresLongMs = prefs.appuiTresLongMs
+        input.progressif = prefs.appuiProgressif
         return input
     }
 

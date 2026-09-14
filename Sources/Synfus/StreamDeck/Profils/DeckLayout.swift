@@ -9,9 +9,9 @@ enum DeckSource: Codable, Equatable, Hashable, Sendable {
     /// La case `position` de la barre **active** : ce que « barre suivante »
     /// fait tourner.
     case sortActif(position: Int)
-    /// La même case sur la barre **suivante** — le sort « d'en face », en
-    /// appui long sur une case de la barre active.
-    case sortBarreSuivante(position: Int)
+    /// La même case `decalage` barres plus loin que la barre active — le
+    /// sort « d'en face » (1) ou « d'après » (2), en appui long / très long.
+    case sortBarreDecalee(position: Int, decalage: Int)
     case persoSuivant, persoPrecedent, persoActif
     /// La page suivante / précédente / première — barre ou fenêtre selon le mode.
     case barreSuivante, barrePrecedente, barrePremiere
@@ -24,7 +24,7 @@ enum DeckSource: Codable, Equatable, Hashable, Sendable {
         switch self {
         case .sort(let barre, let position): return "Barre \(barre + 1), case \(position + 1)"
         case .sortActif(let position): return "Case \(position + 1) de la barre active"
-        case .sortBarreSuivante(let position): return "Case \(position + 1) de la barre suivante"
+        case .sortBarreDecalee(let position, let decalage): return "Case \(position + 1), \(decalage) barre\(decalage > 1 ? "s" : "") plus loin"
         case .persoSuivant: return "Perso suivant"
         case .persoPrecedent: return "Perso précédent"
         case .persoActif: return "Perso actif"
@@ -42,22 +42,26 @@ enum DeckSource: Codable, Equatable, Hashable, Sendable {
     /// Les sources qui affichent un sort — celles que le menu recouvre.
     var estUnSort: Bool {
         switch self {
-        case .sort, .sortActif, .sortBarreSuivante: return true
+        case .sort, .sortActif, .sortBarreDecalee: return true
         default: return false
         }
     }
 }
 
-/// Une touche : ce qu'un appui court fait, et ce qu'un appui long fait —
-/// rien, par défaut.
+/// Une touche : ce qu'un appui court fait, ce qu'un appui long fait, ce
+/// qu'un appui très long fait — rien, par défaut.
 struct DeckTile: Codable, Equatable, Hashable, Sendable {
     var court: DeckSource
     var long: DeckSource?
+    var tresLong: DeckSource?
 
-    init(_ court: DeckSource, long: DeckSource? = nil) {
+    init(_ court: DeckSource, long: DeckSource? = nil, tresLong: DeckSource? = nil) {
         self.court = court
         self.long = long
+        self.tresLong = tresLong
     }
+
+    var sources: [DeckSource] { [court, long, tresLong].compactMap { $0 } }
 
     static let vide = DeckTile(.vide)
 }
@@ -114,14 +118,17 @@ struct DeckLayout: Codable, Equatable, Hashable, Sendable {
 
     /// **Barre par barre** : la navigation en haut, puis les cases de la barre
     /// active dans l'ordre. Sur une grille d'une seule ligne, pas de navigation.
-    /// Avec `sortLong`, l'appui long d'une case joue la même case de la barre
-    /// suivante — le sort « d'en face », en vignette dans le coin.
-    static func parBarre(colonnes: Int, lignes: Int, sortLong: Bool = true) -> DeckLayout {
+    /// Selon `sortLong`, l'appui long d'une case joue la même case de la barre
+    /// suivante, et l'appui très long celle de la barre d'après — les trois
+    /// barres sous dix touches, sans page.
+    static func parBarre(colonnes: Int, lignes: Int, sortLong: SortLong = .deuxNiveaux) -> DeckLayout {
         let sortRows = lignes > 1 ? lignes - 1 : lignes
         var tiles: [DeckTile] = lignes > 1 ? navigationRow(colonnes: colonnes) : []
         for i in 0..<(sortRows * colonnes) {
-            tiles.append(i < SpellProfile.slotsPerBar
-                         ? DeckTile(.sortActif(position: i), long: sortLong ? .sortBarreSuivante(position: i) : nil) : .vide)
+            guard i < SpellProfile.slotsPerBar else { tiles.append(.vide); continue }
+            tiles.append(DeckTile(.sortActif(position: i),
+                                  long: sortLong.niveaux >= 1 ? .sortBarreDecalee(position: i, decalage: 1) : nil,
+                                  tresLong: sortLong.niveaux >= 2 ? .sortBarreDecalee(position: i, decalage: 2) : nil))
         }
         return DeckLayout(colonnes: colonnes, lignes: lignes, touches: tiles)
     }
@@ -130,9 +137,10 @@ struct DeckLayout: Codable, Equatable, Hashable, Sendable {
     /// montre une barre, par fenêtres de `colonnes` cases — 1-5 puis 6-10 puis
     /// 11-12 sur cinq colonnes. Deux rangées montrent les barres 1 et 2 ; la
     /// page suivante, une fois les fenêtres épuisées, passe aux barres suivantes.
-    /// Avec `sortLong`, l'appui long d'une case joue la case de la **fenêtre
-    /// suivante** de la même barre (1 → 6 sur cinq colonnes).
-    static func parRangee(colonnes: Int, lignes: Int, page: Int, sortLong: Bool = true) -> DeckLayout {
+    /// Selon `sortLong`, l'appui long d'une case joue la case de la **fenêtre
+    /// suivante** de la même barre (1 → 6 sur cinq colonnes), le très long
+    /// celle d'après (1 → 11).
+    static func parRangee(colonnes: Int, lignes: Int, page: Int, sortLong: SortLong = .deuxNiveaux) -> DeckLayout {
         let sortRows = lignes > 1 ? lignes - 1 : lignes
         let windows = pagesParRangee(colonnes: colonnes)
         let groups = max(1, (SpellProfile.barCount + sortRows - 1) / sortRows)
@@ -143,10 +151,12 @@ struct DeckLayout: Codable, Equatable, Hashable, Sendable {
             let barre = group * sortRows + row
             for column in 0..<colonnes {
                 let position = window * colonnes + column
-                let next = position + colonnes
                 guard barre < SpellProfile.barCount, position < SpellProfile.slotsPerBar else { tiles.append(.vide); continue }
-                tiles.append(DeckTile(.sort(barre: barre, position: position),
-                                      long: sortLong && next < SpellProfile.slotsPerBar ? .sort(barre: barre, position: next) : nil))
+                func decalee(_ n: Int) -> DeckSource? {
+                    let next = position + n * colonnes
+                    return sortLong.niveaux >= n && next < SpellProfile.slotsPerBar ? .sort(barre: barre, position: next) : nil
+                }
+                tiles.append(DeckTile(.sort(barre: barre, position: position), long: decalee(1), tresLong: decalee(2)))
             }
         }
         return DeckLayout(colonnes: colonnes, lignes: lignes, touches: tiles)
@@ -178,6 +188,19 @@ struct DeckLayout: Codable, Equatable, Hashable, Sendable {
     }
 }
 
+/// Ce que l'appui long — et très long — d'une case de sort joue.
+enum SortLong: String, Codable, CaseIterable, Identifiable, Sendable {
+    /// Rien : la touche joue dès l'enfoncement.
+    case aucun
+    /// Long = le sort d'en face (barre ou fenêtre suivante).
+    case unNiveau
+    /// Long = d'en face, très long = celui d'après : trois barres sous dix touches.
+    case deuxNiveaux
+
+    var id: String { rawValue }
+    var niveaux: Int { self == .aucun ? 0 : self == .unNiveau ? 1 : 2 }
+}
+
 /// Comment le Stream Deck montre les sorts : le mode, ses réglages, et la
 /// grille posée à la main s'il y en a une. Générique dans les préférences,
 /// remplaçable par perso dans son profil. Toujours `Optional` + défaut à la
@@ -202,49 +225,65 @@ struct DeckSettings: Codable, Equatable, Hashable, Sendable {
     }
 
     var kind: Kind = .parBarre
-    /// Mode par rangée : les pages retenues, **dans l'ordre** où « barre
-    /// suivante » les parcourt ; vide = toutes, dans l'ordre naturel.
+    /// Les pages retenues — barres en mode par barre, fenêtres en mode par
+    /// rangée —, **dans l'ordre** où « barre suivante » les parcourt ; vide =
+    /// toutes, dans l'ordre naturel.
     var pages: [Int] = []
-    /// Appui long sur un sort = le sort « d'en face » (barre suivante, ou
-    /// fenêtre suivante), affiché en vignette dans le coin de la touche.
-    var sortLong = true
+    /// Appui long / très long sur un sort : le sort d'en face, celui d'après.
+    var sortLong: SortLong = .deuxNiveaux
     /// La grille du mode personnalisé.
     var custom: DeckLayout?
 
-    init(kind: Kind = .parBarre, pages: [Int] = [], sortLong: Bool = true, custom: DeckLayout? = nil) {
+    init(kind: Kind = .parBarre, pages: [Int] = [], sortLong: SortLong = .deuxNiveaux, custom: DeckLayout? = nil) {
         self.kind = kind
         self.pages = pages
         self.sortLong = sortLong
         self.custom = custom
     }
 
-    /// Une sauvegarde à laquelle il manque des clés se relit avec les défauts.
+    /// Une sauvegarde à laquelle il manque des clés — ou qui les porte dans
+    /// une forme antérieure — se relit avec les défauts.
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        kind = try c.decodeIfPresent(Kind.self, forKey: .kind) ?? .parBarre
-        pages = try c.decodeIfPresent([Int].self, forKey: .pages) ?? []
-        sortLong = try c.decodeIfPresent(Bool.self, forKey: .sortLong) ?? true
-        custom = try c.decodeIfPresent(DeckLayout.self, forKey: .custom)
+        kind = (try? c.decodeIfPresent(Kind.self, forKey: .kind)) ?? nil ?? .parBarre
+        pages = (try? c.decodeIfPresent([Int].self, forKey: .pages)) ?? nil ?? []
+        sortLong = (try? c.decodeIfPresent(SortLong.self, forKey: .sortLong)) ?? nil ?? .deuxNiveaux
+        custom = (try? c.decodeIfPresent(DeckLayout.self, forKey: .custom)) ?? nil
     }
 
     static let parBarre = DeckSettings()
 
-    /// Les pages du mode par rangée effectivement parcourues, dans l'ordre.
-    func pagesParRangee(colonnes: Int, lignes: Int) -> [Int] {
-        let all = Array(0..<DeckLayout.pageCountParRangee(colonnes: colonnes, lignes: lignes))
+    /// Toutes les pages que le mode connaît, dans l'ordre naturel.
+    func allPages(colonnes: Int, lignes: Int) -> [Int] {
+        switch kind {
+        case .parBarre, .personnalisee: return Array(0..<SpellProfile.barCount)
+        case .parRangee: return Array(0..<DeckLayout.pageCountParRangee(colonnes: colonnes, lignes: lignes))
+        }
+    }
+
+    /// Les pages effectivement parcourues, dans l'ordre.
+    func pageOrder(colonnes: Int, lignes: Int) -> [Int] {
+        let all = allPages(colonnes: colonnes, lignes: lignes)
         let kept = pages.filter { all.contains($0) }
         return kept.isEmpty ? all : kept
     }
 
-    /// La grille à composer pour cet état de session — `page` est la barre
-    /// active ou le rang de fenêtre selon le mode ; une disposition
-    /// personnalisée est reprise telle quelle, ses `sortActif` suivant la
-    /// barre active.
+    /// Ce qu'une page montre, en clair.
+    func pageLabel(_ page: Int, colonnes: Int, lignes: Int) -> String {
+        switch kind {
+        case .parBarre, .personnalisee: return "Barre \(page + 1)"
+        case .parRangee: return DeckLayout.pageLabelParRangee(page, colonnes: colonnes, lignes: lignes)
+        }
+    }
+
+    /// La grille à composer pour cet état de session — `page` est le rang
+    /// dans l'ordre des pages ; une disposition personnalisée est reprise
+    /// telle quelle, ses `sortActif` suivant la barre active.
     func layout(colonnes: Int, lignes: Int, page: Int) -> DeckLayout {
         switch kind {
         case .parBarre: return .parBarre(colonnes: colonnes, lignes: lignes, sortLong: sortLong)
         case .parRangee:
-            let order = pagesParRangee(colonnes: colonnes, lignes: lignes)
+            let order = pageOrder(colonnes: colonnes, lignes: lignes)
             return .parRangee(colonnes: colonnes, lignes: lignes, page: order[page % order.count], sortLong: sortLong)
         case .personnalisee:
             return (custom ?? .parBarre(colonnes: colonnes, lignes: lignes, sortLong: sortLong)).fitted(colonnes: colonnes, lignes: lignes)
@@ -253,16 +292,15 @@ struct DeckSettings: Codable, Equatable, Hashable, Sendable {
 
     /// Le nombre de pages que « barre suivante » parcourt.
     func pageCount(colonnes: Int, lignes: Int) -> Int {
-        switch kind {
-        case .parBarre, .personnalisee: return SpellProfile.barCount
-        case .parRangee: return pagesParRangee(colonnes: colonnes, lignes: lignes).count
-        }
+        pageOrder(colonnes: colonnes, lignes: lignes).count
     }
 
     /// La barre que `sortActif` désigne pour cette page.
-    func barreActive(page: Int) -> Int {
+    func barreActive(page: Int, colonnes: Int, lignes: Int) -> Int {
         switch kind {
-        case .parBarre, .personnalisee: return page % SpellProfile.barCount
+        case .parBarre, .personnalisee:
+            let order = pageOrder(colonnes: colonnes, lignes: lignes)
+            return order[page % order.count]
         case .parRangee: return 0
         }
     }
