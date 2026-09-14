@@ -18,16 +18,26 @@ struct DeckCell: Codable, Equatable, Sendable {
     let touche: DeckKey?
 }
 
+struct DeckPerso: Codable, Equatable, Sendable {
+    let nom: String
+    let classe: String?
+    let icone: String?
+}
+
 struct DeckState: Codable, Equatable, Sendable {
     let type: String
     let version: Int
     let dofusDevant: Bool
     let perso: String?
     let classe: String?
+    let persoActif: DeckPerso?
+    let persoSuivant: DeckPerso?
+    let persoPrecedent: DeckPerso?
     let barre: Int
     let barres: Int
     let enCombat: Bool?
     let finDeTour: DeckKey?
+    let corpsACorps: DeckKey?
     let cases: [DeckCell]
 }
 
@@ -48,6 +58,12 @@ struct StreamDeckEvent: Decodable {
     let payload: Payload?
 }
 
+/// Le nom du profil livré avec le plugin (manifest `Profiles`), vers lequel
+/// on bascule quand Dofus passe devant.
+enum BundledProfile {
+    static let name = "Synfus"
+}
+
 enum ActionID {
     static let prefix = "fr.synseria.synfus."
     static let sort = prefix + "sort"
@@ -55,4 +71,6 @@ enum ActionID {
     static let persoPrecedent = prefix + "perso-precedent"
     static let barreSuivante = prefix + "barre-suivante"
     static let finDeTour = prefix + "fin-de-tour"
+    static let corpsACorps = prefix + "corps-a-corps"
+    static let persoActif = prefix + "perso-actif"
 }

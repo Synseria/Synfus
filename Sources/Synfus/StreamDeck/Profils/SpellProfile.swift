@@ -1,11 +1,22 @@
 import Carbon.HIToolbox
 import Foundation
 
-/// Un sort posé dans une case de la barre.
+/// Ce qu'une case de la barre contient : un sort connu, ou n'importe quoi
+/// d'autre — objet, emote, sort qu'on n'a pas su nommer — dont on garde la
+/// vignette lue à l'écran.
 struct SpellSlot: Codable, Equatable, Sendable {
-    /// Identifiant DofusDB — celui de `sorts.json` et du nom de fichier de l'icône.
-    var sortId: Int
+    /// Identifiant DofusDB — celui de `sorts.json` — quand le sort est connu.
+    var sortId: Int?
     var nom: String
+    /// Nom d'un PNG dans le dossier du profil, découpé dans la capture : l'icône
+    /// quand `sortId` est nul, ou quand on préfère celle de l'écran.
+    var vignette: String?
+
+    init(sortId: Int?, nom: String, vignette: String? = nil) {
+        self.sortId = sortId
+        self.nom = nom
+        self.vignette = vignette
+    }
 }
 
 /// Une barre de sorts du jeu : `SpellProfile.slotsPerBar` cases, vides ou non.
@@ -73,16 +84,22 @@ struct SpellKeyMap: Codable, Equatable, Sendable {
     /// La touche « fin de tour » du jeu ; sans défaut tant qu'elle n'a pas été
     /// confirmée en jeu — une touche fausse en combat coûte cher.
     var finDeTour: HotKey?
+    /// La touche « corps à corps » (l'arme équipée), même règle.
+    var corpsACorps: HotKey?
 
     static let defaults = SpellKeyMap(
         barres: [row(modifiers: 0), row(modifiers: UInt32(controlKey)), row(modifiers: UInt32(controlKey | shiftKey))],
-        finDeTour: nil
+        finDeTour: nil, corpsACorps: nil
     )
 
-    /// La rangée de chiffres avec un modificateur, complétée de cases sans touche.
+    /// La rangée du haut entière — les douze touches de `&` à `-` sur un AZERTY,
+    /// de `1` à `=` sur un ANSI — avec un modificateur. Le jeu numérote ses douze
+    /// cases sur ces douze touches.
+    static let topRow: [UInt32] = HotKey.digitRow + [27, 24]
+
     static func row(modifiers: UInt32) -> [HotKey?] {
-        let digits: [HotKey?] = HotKey.digitRow.map { HotKey(keyCode: $0, modifiers: modifiers) }
-        return digits + Array(repeating: nil, count: max(0, SpellProfile.slotsPerBar - digits.count))
+        let keys: [HotKey?] = topRow.map { HotKey(keyCode: $0, modifiers: modifiers) }
+        return keys + Array(repeating: nil, count: max(0, SpellProfile.slotsPerBar - keys.count))
     }
 
     func key(bar: Int, position: Int) -> HotKey? {

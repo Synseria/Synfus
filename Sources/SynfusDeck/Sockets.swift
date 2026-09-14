@@ -7,6 +7,7 @@ import Network
 final class ElgatoSocket {
     private let task: URLSessionWebSocketTask
     private let onEvent: @MainActor (StreamDeckEvent) -> Void
+    private var uuid = ""
 
     init(port: Int, onEvent: @escaping @MainActor (StreamDeckEvent) -> Void) {
         task = URLSession.shared.webSocketTask(with: URL(string: "ws://127.0.0.1:\(port)")!)
@@ -14,6 +15,7 @@ final class ElgatoSocket {
     }
 
     func connect(registerEvent: String, uuid: String) async {
+        self.uuid = uuid
         task.resume()
         send(["event": registerEvent, "uuid": uuid])
         Task { await listen() }
@@ -44,6 +46,14 @@ final class ElgatoSocket {
 
     func showAlert(_ context: String) {
         send(["event": "showAlert", "context": context])
+    }
+
+    /// Bascule vers un profil livré avec le plugin ; `nil` rend le profil
+    /// précédent.
+    func switchToProfile(device: String, profile: String?) {
+        var payload: [String: Any] = [:]
+        if let profile { payload["profile"] = profile }
+        send(["event": "switchToProfile", "context": uuid, "device": device, "payload": payload])
     }
 
     private func send(_ object: [String: Any]) {

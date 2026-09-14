@@ -1,4 +1,6 @@
 import Foundation
+import ImageIO
+import UniformTypeIdentifiers
 
 /// Les profils de sorts, un fichier JSON par perso dans
 /// `~/Library/Application Support/Synfus/Profils/<perso>.json`.
@@ -50,7 +52,30 @@ final class SpellProfileStore: ObservableObject {
     }
 
     func url(for perso: String) -> URL {
-        let safe = perso.replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: ":", with: "_")
-        return directory.appending(path: "\(safe).json")
+        directory.appending(path: "\(Self.safeName(perso)).json")
+    }
+
+    /// Le dossier des vignettes d'un perso — les cases lues à l'écran.
+    func thumbnailsDirectory(for perso: String) -> URL {
+        directory.appending(path: Self.safeName(perso), directoryHint: .isDirectory)
+    }
+
+    /// Enregistre une vignette et rend son nom de fichier, à mettre dans le `SpellSlot`.
+    func saveThumbnail(_ image: CGImage, perso: String, bar: Int, position: Int) -> String? {
+        let dir = thumbnailsDirectory(for: perso)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let name = "barre\(bar + 1)-case\(position + 1).png"
+        guard let destination = CGImageDestinationCreateWithURL(dir.appending(path: name) as CFURL, UTType.png.identifier as CFString, 1, nil)
+        else { return nil }
+        CGImageDestinationAddImage(destination, image, nil)
+        return CGImageDestinationFinalize(destination) ? name : nil
+    }
+
+    func thumbnailURL(perso: String, name: String) -> URL {
+        thumbnailsDirectory(for: perso).appending(path: name)
+    }
+
+    static func safeName(_ perso: String) -> String {
+        perso.replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: ":", with: "_")
     }
 }

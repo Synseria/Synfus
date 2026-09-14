@@ -111,6 +111,13 @@ sips -z 288 288 Resources/Synfus.png --out "$PLUGIN/icon@2x.png" >/dev/null
 cp "$PLUGIN/icon.png" "$PLUGIN/icon-dim.png"
 cp "$PLUGIN/icon@2x.png" "$PLUGIN/icon-dim@2x.png"
 sed -i '' "s/\"Version\": \"[^\"]*\"/\"Version\": \"$VERSION\"/" "$PLUGIN/manifest.json"
+./Plugin/make-profile.sh "$PLUGIN"
+# Le paquet que le logiciel Stream Deck installe par double-clic — et le seul
+# chemin qui enregistre le profil livré comme *appartenant au plugin*, ce que
+# `switchToProfile` exige.
+PACKAGE="dist/fr.synseria.synfus.streamDeckPlugin"
+rm -f "$PACKAGE"
+(cd dist && zip -qr "$(basename "$PACKAGE")" "$(basename "$PLUGIN")")
 if [ -n "$IDENTITY" ]; then
     codesign --force --sign "$IDENTITY" --identifier "fr.synseria.synfus.deck" "$PLUGIN/SynfusDeck"
 else
@@ -131,8 +138,10 @@ if [ "${1:-}" = "--install" ]; then
     # `.sdPlugin` ne s'installe pas par double-clic — c'est le format
     # empaqueté `.streamDeckPlugin` que le logiciel reconnaît.
     DECK_PLUGINS="$HOME/Library/Application Support/com.elgato.StreamDeck/Plugins"
-    if [ -d "$DECK_PLUGINS" ]; then
-        echo "==> Installation du plugin Stream Deck"
+    if [ -d "$DECK_PLUGINS/$(basename "$PLUGIN")" ]; then
+        # Déjà installé : on remplace le contenu et on relance le logiciel,
+        # qui ne charge les plugins qu'au lancement.
+        echo "==> Mise à jour du plugin Stream Deck"
         rm -rf "$DECK_PLUGINS/$(basename "$PLUGIN")"
         cp -R "$PLUGIN" "$DECK_PLUGINS/"
         if pkill -x "Stream Deck" 2>/dev/null; then
@@ -140,5 +149,10 @@ if [ "${1:-}" = "--install" ]; then
             open -a "Elgato Stream Deck"
             echo "==> Logiciel Stream Deck relancé"
         fi
+    elif [ -d "$DECK_PLUGINS" ]; then
+        # Première installation : par le paquet, pour que le logiciel
+        # enregistre le profil « Synfus » comme celui du plugin.
+        echo "==> Installation du plugin Stream Deck (le logiciel Stream Deck demande confirmation)"
+        open "$PACKAGE"
     fi
 fi

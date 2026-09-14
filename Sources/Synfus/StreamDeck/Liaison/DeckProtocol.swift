@@ -34,6 +34,14 @@ struct DeckCell: Codable, Equatable, Sendable {
     let touche: DeckKey?
 }
 
+/// Un perso, tel que le Stream Deck le montre : son nom, sa classe, l'emblème.
+struct DeckPerso: Codable, Equatable, Sendable {
+    let nom: String
+    let classe: String?
+    /// PNG en base64 de l'emblème de classe, s'il y en a un.
+    let icone: String?
+}
+
 /// Ce que le Stream Deck doit montrer, à cet instant.
 struct DeckState: Codable, Equatable, Sendable {
     var type = "etat"
@@ -42,12 +50,18 @@ struct DeckState: Codable, Equatable, Sendable {
     let dofusDevant: Bool
     let perso: String?
     let classe: String?
+    /// Le perso devant, et ceux vers lesquels « suivant » et « précédent »
+    /// mèneraient — une touche montre ce qu'elle fait.
+    let persoActif: DeckPerso?
+    let persoSuivant: DeckPerso?
+    let persoPrecedent: DeckPerso?
     /// Barre affichée, 1-based, et nombre de barres.
     let barre: Int
     let barres: Int
     /// `nil` tant que la détection de combat n'a pas de verdict.
     let enCombat: Bool?
     let finDeTour: DeckKey?
+    let corpsACorps: DeckKey?
     let cases: [DeckCell]
 }
 
