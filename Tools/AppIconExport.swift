@@ -4,7 +4,7 @@ import ImageIO
 import UniformTypeIdentifiers
 
 // Générateur des images de l'icône. Compilé par `Tools/generate-app-icons.sh`
-// AVEC la source réelle de l'app (`Sources/Synfus/SynfusMark.swift`) : le bundle
+// AVEC la source réelle de l'app (`Sources/Synfus/Marque/SynfusMark.swift`) : le bundle
 // et l'app dessinent donc rigoureusement la même marque, il n'y a pas de second
 // dessin à maintenir.
 

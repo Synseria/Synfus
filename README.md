@@ -14,7 +14,7 @@ et fait basculer d'un perso à l'autre sans passer par ⌘-Tab.
   glisser-déposer ou en remplissant `~/Library/Application Support/Synfus/Classes`
   (`iop.png`, `cra.png`…). Synfus n'embarque aucune image du jeu — celles
   d'Ankama n'ont pas à être redistribuées. Sans image, la pastille colorée reste.
-  Pour aller vite, `./Tools/fetch-class-icons.sh` remplit ce dossier avec les
+  Pour aller vite, `./Tools/fetch-ankama-assets.sh` remplit ce dossier avec les
   emblèmes des 19 classes : le dépôt ne transporte que des adresses, c'est ta
   machine qui télécharge, pour ton usage personnel.
 
@@ -53,6 +53,34 @@ et fait basculer d'un perso à l'autre sans passer par ⌘-Tab.
   passive et porte sur la souris seule ; le clavier reste hors de vue.
 
 - **Ordre des persos** réglable, mémorisé d'une session à l'autre.
+- **Fermeture des clients** qui gèlent en quittant : *Fermer* puis, s'il ne
+  répond plus, coup de grâce — plus de « Forcer à quitter » à chaque session.
+- **Rangement des fenêtres** : côte à côte, mosaïque, un grand + vignettes,
+  empilés, tout en plein écran.
+
+## Stream Deck (optionnel)
+
+Avec un Stream Deck Elgato, Synfus peut montrer **les sorts du perso devant**
+sous les doigts et frapper la touche que le jeu attend. Tout est désactivé par
+défaut ; ça s'active dans *Réglages → Stream Deck*, qui installe le plugin (un
+clic) et fait apparaître l'onglet *Sorts*.
+
+- Les sorts de chaque perso sont **reconnus à l'écran** (une capture de la
+  barre, comparée aux icônes de sa classe) ou choisis à la main ; un profil JSON
+  par perso.
+- Trois dispositions — barre par barre, une barre par rangée, personnalisée —,
+  générique ou propre à un perso, composées par Synfus : rien à réimporter dans
+  le logiciel Elgato quand on change quelque chose.
+- Trois niveaux d'appui sur une touche de sort : court, long, très long — les
+  trois barres du jeu sous dix touches, avec la **sélection visible dans le jeu
+  pendant qu'on tient**. Pas de double-clic : deux appuis sont deux frappes.
+- Menu des commandes du jeu (inventaire, carte, quêtes…), perso suivant, fin de
+  tour, corps à corps ; détection de combat calibrée par deux captures.
+
+La règle ne change pas : **Synfus n'émet aucun évènement**. C'est le plugin,
+comme n'importe quel périphérique d'entrée, qui frappe une touche par appui —
+rien n'est rejoué ni multiplié. La liaison entre les deux est un socket Unix
+réservé à ton compte, jamais un port réseau.
 
 ## Installation
 
@@ -102,7 +130,7 @@ n'apparaît que sur macOS 26 ; en deçà, la barre utilise un matériau transluc
 ## Compiler depuis les sources
 
 ```sh
-./build.sh            # produit ./Synfus.app
+./build.sh            # produit dist/Synfus.app
 ./build.sh --install  # installe dans /Applications et relance
 swift test            # suite de tests
 ```
@@ -114,14 +142,17 @@ Deux variables d'environnement pilotent le script :
 | `VERSION` | Numéro inscrit dans l'`Info.plist` (défaut : dernier tag du dépôt) |
 | `ARCH` | Architecture cible, `arm64` ou `x86_64` (défaut : celle de la machine) |
 
-Si un certificat *Apple Development* est présent dans le trousseau, `build.sh`
-s'en sert : l'identité vue par TCC reste alors stable d'un build à l'autre, et
-l'autorisation Accessibilité n'est pas à redonner à chaque fois.
+`build.sh` signe avec le certificat local « Synfus Dev » s'il existe —
+`./Tools/make-signing-identity.sh` le crée une fois — ou, à défaut, un
+certificat *Apple Development* : l'identité vue par TCC reste alors stable d'un
+build à l'autre, et l'autorisation Accessibilité n'est pas à redonner à chaque
+fois. Le plugin Stream Deck est construit et embarqué dans l'app, mais jamais
+installé par le script : c'est Synfus qui le propose.
 
 Le DMG se fabrique à part :
 
 ```sh
-./make-dmg.sh Synfus.app dist/Synfus-0.0.1-arm64.dmg
+./make-dmg.sh dist/Synfus.app dist/Synfus-0.0.1-arm64.dmg
 ```
 
 Les tests se lancent avec `swift test`. Ils portent sur la logique pure —
@@ -129,9 +160,8 @@ analyse des titres de fenêtres, classes, raccourcis, persistance — et ne
 touchent pas aux réglages de la machine.
 
 L'icône est **dessinée par le code** plutôt que stockée comme image : la marque
-est décrite une seule fois dans `Sources/Synfus/SynfusMark.swift`, d'où sont
-tirés l'icône du bundle, le symbole de la barre de menus et la poignée de la
-barre flottante. Après toute retouche :
+est décrite une seule fois dans `Sources/Synfus/Marque/SynfusMark.swift`, d'où
+sont tirés l'icône du bundle et le symbole de la barre de menus. Après toute retouche :
 
 ```sh
 ./Tools/generate-app-icons.sh   # régénère Resources/Synfus.{icns,png}
@@ -140,6 +170,14 @@ barre flottante. Après toute retouche :
 **La compilation exige le SDK macOS 26** (Xcode 26) : `BarView` appelle
 `glassEffect`, absent des SDK antérieurs. Le deployment target reste 14.0, donc
 le binaire produit couvre bien macOS 14 et suivants.
+
+## Licence
+
+Code sous licence [MIT](LICENSE). Les visuels du jeu ne font pas partie du
+dépôt et n'en feront jamais partie : ils sont la propriété d'Ankama Studio et
+de Dofus — Tous droits réservés —, et ne sont téléchargés que par l'utilisateur,
+pour son usage personnel (voir *Icône par classe*). Synfus n'est ni affilié à
+ni approuvé par Ankama.
 
 ## Publier une release
 

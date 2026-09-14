@@ -42,6 +42,23 @@ struct WindowPreviewMatchTests {
         #expect(WindowPreviewService.match(pid: 42, title: "Trois", among: candidats) == nil)
     }
 
+    @Test("Deux fenêtres de jeu du même processus : le nom du perso tranche quand le titre a dérivé")
+    func nomDuPerso() {
+        let candidats = [
+            Candidat(pid: 42, title: "Un - Feca - 3.6.7.8 - Release"),
+            Candidat(pid: 42, title: "Deux - Iop - 3.6.7.8 - Release"),
+        ]
+        #expect(WindowPreviewService.match(pid: 42, title: "Deux - Iop - 3.6.7.7 - Release", among: candidats) == 1)
+        // Deux fenêtres au même nom, toutes deux à l'écran : on renonce encore.
+        let doublon = [Candidat(pid: 42, title: "Un - Feca - 3.6.7.8 - Release"), Candidat(pid: 42, title: "Un - Feca - 3.6.7.8 - Release")]
+        #expect(WindowPreviewService.match(pid: 42, title: "Un - Feca - 3.6.7.7 - Release", among: doublon) == nil)
+        // La fantôme hors écran du même titre ne compte pas : c'est la visible.
+        let fantome = [Candidat(pid: 42, title: "Un - Feca - 3.6.7.8 - Release", onScreen: false),
+                       Candidat(pid: 42, title: "Un - Feca - 3.6.7.8 - Release")]
+        #expect(WindowPreviewService.match(pid: 42, title: "Un - Feca - 3.6.7.8 - Release", among: fantome) == 1)   // titre exact des deux : la visible
+        #expect(WindowPreviewService.match(pid: 42, title: "Un - Feca - 3.6.7.7 - Release", among: fantome) == 1)
+    }
+
     @Test("Aucune fenêtre du processus : aucun appariement")
     func aucunCandidat() {
         #expect(WindowPreviewService.match(

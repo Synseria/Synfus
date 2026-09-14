@@ -14,7 +14,7 @@ struct RememberedClientsTests {
             pid: pid,
             slotKey: "\(pid)#\(index)",
             // Une référence d'application suffit : rien n'est lu dans ces tests.
-            axWindow: AXUIElementCreateApplication(pid),
+            axWindow: .application(pid),
             rawTitle: "\(nom) - Feca - 3.6.8.8 - Release",
             name: nom,
             characterClass: "Feca",
@@ -28,7 +28,7 @@ struct RememberedClientsTests {
         let bram = client(pid: 20, nom: "Bram")
 
         // Bram est passé sur un autre bureau : l'Accessibilité ne le rend plus.
-        let resultat = WindowManager.withRemembered(
+        let resultat = ClientMemory.withRemembered(
             found: [amarine],
             remembered: [10: [amarine], 20: [bram]],
             silentPIDs: [20]
@@ -48,7 +48,7 @@ struct RememberedClientsTests {
 
         // Le processus 20 est mort : il n'est donc pas « silencieux », il n'est
         // plus là du tout.
-        let resultat = WindowManager.withRemembered(
+        let resultat = ClientMemory.withRemembered(
             found: [amarine],
             remembered: [10: [amarine], 20: [bram]],
             silentPIDs: []
@@ -65,7 +65,7 @@ struct RememberedClientsTests {
         // Bram s'est déconnecté : sa fenêtre s'intitule de nouveau « Dofus », donc
         // aucun perso n'en ressort — mais le client, lui, répond toujours. Le
         // ressusciter afficherait un perso qui n'est plus en jeu.
-        let resultat = WindowManager.withRemembered(
+        let resultat = ClientMemory.withRemembered(
             found: [amarine],
             remembered: [10: [amarine], 20: [bram]],
             silentPIDs: []
@@ -79,7 +79,7 @@ struct RememberedClientsTests {
         let amarine = client(pid: 10, nom: "Amarine")
         let bram = client(pid: 20, nom: "Bram")
 
-        let resultat = WindowManager.withRemembered(
+        let resultat = ClientMemory.withRemembered(
             found: [amarine, bram],
             remembered: [10: [amarine], 20: [bram]],
             silentPIDs: []
@@ -99,7 +99,7 @@ struct RememberedClientsTests {
             20: [client(pid: 20, nom: "Bram")],
         ]
         for _ in 0..<20 {
-            let resultat = WindowManager.withRemembered(
+            let resultat = ClientMemory.withRemembered(
                 found: [], remembered: memoire, silentPIDs: [10, 20, 30]
             )
             #expect(resultat.map(\.name) == ["Amarine", "Bram", "Cyb"])
@@ -111,7 +111,7 @@ struct RememberedClientsTests {
         let premiere = client(pid: 10, nom: "Amarine", index: 0)
         let seconde = client(pid: 10, nom: "Amarine (2)", index: 1)
 
-        let resultat = WindowManager.withRemembered(
+        let resultat = ClientMemory.withRemembered(
             found: [],
             remembered: [10: [premiere, seconde]],
             silentPIDs: [10]
@@ -125,10 +125,10 @@ struct RememberedClientsTests {
 
     private func decouverts(_ titles: [pid_t: String],
                             existants: Set<String> = []) -> [DofusClient] {
-        WindowManager.discoveredAcrossSpaces(
+        ClientMemory.discoveredAcrossSpaces(
             titles: titles,
             existingNames: existants,
-            appElement: AXUIElementCreateApplication
+            appElement: AXHandle.application
         )
     }
 

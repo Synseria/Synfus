@@ -14,7 +14,7 @@ struct PreviewSurvivalTests {
             pid: pid,
             slotKey: "\(pid)#0",
             // Une référence d'application suffit : rien n'est lu dans ces tests.
-            axWindow: AXUIElementCreateApplication(pid),
+            axWindow: .application(pid),
             rawTitle: "\(nom) - Feca - 3.6.8.8 - Release",
             name: nom,
             characterClass: "Feca",
