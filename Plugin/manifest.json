@@ -31,13 +31,13 @@
         {
           "Image": "icon",
           "TitleAlignment": "bottom",
-          "FontSize": "9",
+          "FontSize": 8,
           "ShowTitle": true
         },
         {
           "Image": "icon-dim",
           "TitleAlignment": "bottom",
-          "FontSize": "9",
+          "FontSize": 8,
           "ShowTitle": true
         }
       ]
@@ -52,7 +52,7 @@
         {
           "Image": "icon",
           "TitleAlignment": "bottom",
-          "FontSize": "9",
+          "FontSize": 8,
           "ShowTitle": true
         }
       ]
@@ -67,7 +67,7 @@
         {
           "Image": "icon",
           "TitleAlignment": "bottom",
-          "FontSize": "9",
+          "FontSize": 8,
           "ShowTitle": true
         }
       ]
@@ -82,7 +82,7 @@
         {
           "Image": "icon",
           "TitleAlignment": "bottom",
-          "FontSize": "9",
+          "FontSize": 8,
           "ShowTitle": true
         }
       ]
@@ -97,13 +97,13 @@
         {
           "Image": "icon",
           "TitleAlignment": "bottom",
-          "FontSize": "9",
+          "FontSize": 8,
           "ShowTitle": true
         },
         {
           "Image": "icon-dim",
           "TitleAlignment": "bottom",
-          "FontSize": "9",
+          "FontSize": 8,
           "ShowTitle": true
         }
       ]
@@ -118,13 +118,13 @@
         {
           "Image": "icon",
           "TitleAlignment": "bottom",
-          "FontSize": "9",
+          "FontSize": 8,
           "ShowTitle": true
         },
         {
           "Image": "icon-dim",
           "TitleAlignment": "bottom",
-          "FontSize": "9",
+          "FontSize": 8,
           "ShowTitle": true
         }
       ]
@@ -139,7 +139,7 @@
         {
           "Image": "icon",
           "TitleAlignment": "bottom",
-          "FontSize": "9",
+          "FontSize": 8,
           "ShowTitle": true
         }
       ]
@@ -154,7 +154,7 @@
         {
           "Image": "icon",
           "TitleAlignment": "bottom",
-          "FontSize": "9",
+          "FontSize": 8,
           "ShowTitle": true
         }
       ]
@@ -169,7 +169,7 @@
         {
           "Image": "icon",
           "TitleAlignment": "bottom",
-          "FontSize": "9",
+          "FontSize": 8,
           "ShowTitle": true
         }
       ]

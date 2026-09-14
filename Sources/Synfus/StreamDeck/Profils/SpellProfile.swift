@@ -135,19 +135,40 @@ struct GameCommand: Codable, Equatable, Sendable, Identifiable {
 enum GameCommands {
     static let suiviID = "suivi"
 
-    static let defaults: [GameCommand] = [
-        GameCommand(id: "inventaire", nom: "Inventaire", symbole: "bag", touche: HotKey(keyCode: 34, modifiers: 0)),         // I
-        GameCommand(id: "caracteristiques", nom: "Caractéristiques", symbole: "person.text.rectangle", touche: HotKey(keyCode: 8, modifiers: 0)), // C
-        GameCommand(id: "sorts", nom: "Sorts", symbole: "book", touche: HotKey(keyCode: 1, modifiers: 0)),                  // S
-        GameCommand(id: "quetes", nom: "Quêtes", symbole: "scroll", touche: HotKey(keyCode: 12, modifiers: 0)),             // Q
-        GameCommand(id: "carte", nom: "Carte", symbole: "map", touche: HotKey(keyCode: 46, modifiers: 0)),                  // M
-        GameCommand(id: "amis", nom: "Amis", symbole: "person.2", touche: HotKey(keyCode: 3, modifiers: 0)),                // F
-        GameCommand(id: "guilde", nom: "Guilde", symbole: "flag", touche: HotKey(keyCode: 5, modifiers: 0)),                // G
-        GameCommand(id: "metiers", nom: "Métiers", symbole: "hammer", touche: HotKey(keyCode: 38, modifiers: 0)),           // J
-        GameCommand(id: "bestiaire", nom: "Bestiaire", symbole: "pawprint", touche: HotKey(keyCode: 11, modifiers: 0)),     // B
-        GameCommand(id: "alliance", nom: "Alliance", symbole: "shield", touche: HotKey(keyCode: 0, modifiers: 0)),          // A
-        GameCommand(id: suiviID, nom: "Suivi du perso", symbole: "figure.walk", touche: HotKey(keyCode: 13, modifiers: UInt32(controlKey))), // ⌃W
-    ]
+    /// Les défauts sont définis par la **lettre** que le jeu attend, résolue en
+    /// touche dans la disposition active : « M » n'est pas au même endroit sur
+    /// AZERTY et sur ANSI, et Q/A y sont échangés — des keycodes ANSI codés
+    /// en dur ouvraient l'alliance à la place des quêtes.
+    static var defaults: [GameCommand] {
+        func key(_ letter: String, _ modifiers: UInt32 = 0) -> HotKey? {
+            HotKey.keyCode(typing: letter).map { HotKey(keyCode: $0, modifiers: modifiers) }
+        }
+        return [
+            GameCommand(id: "inventaire", nom: "Inventaire", symbole: "bag", touche: key("I")),
+            GameCommand(id: "caracteristiques", nom: "Caractéristiques", symbole: "person.text.rectangle", touche: key("C")),
+            GameCommand(id: "sorts", nom: "Sorts", symbole: "book", touche: key("S")),
+            GameCommand(id: "quetes", nom: "Quêtes", symbole: "scroll", touche: key("Q")),
+            GameCommand(id: "carte", nom: "Carte", symbole: "map", touche: key("M")),
+            GameCommand(id: "amis", nom: "Amis", symbole: "person.2", touche: key("F")),
+            GameCommand(id: "guilde", nom: "Guilde", symbole: "flag", touche: key("G")),
+            GameCommand(id: "metiers", nom: "Métiers", symbole: "hammer", touche: key("J")),
+            GameCommand(id: "bestiaire", nom: "Bestiaire", symbole: "pawprint", touche: key("B")),
+            GameCommand(id: "alliance", nom: "Alliance", symbole: "shield", touche: key("A")),
+            GameCommand(id: suiviID, nom: "Suivi du perso", symbole: "figure.walk", touche: key("W", UInt32(controlKey))),
+        ]
+    }
+
+    /// Les premiers défauts portaient des keycodes ANSI codés en dur : sur
+    /// AZERTY, « Carte » ne faisait rien et Quêtes/Alliance étaient échangés.
+    /// Une sauvegarde qui les porte encore tels quels est remise aux défauts
+    /// — un réglage modifié par l'utilisateur ne correspond plus à ce motif.
+    static func repaired(_ saved: [GameCommand]) -> [GameCommand] {
+        let ansiDefaults: [String: UInt32] = ["carte": 46, "quetes": 12, "alliance": 0, "inventaire": 34]
+        let untouched = ansiDefaults.allSatisfy { id, code in
+            saved.first { $0.id == id }?.touche == HotKey(keyCode: code, modifiers: 0)
+        }
+        return untouched ? defaults : saved
+    }
 
     /// Complète une liste enregistrée des commandes apparues depuis — sans
     /// toucher à celles qui existent.

@@ -25,7 +25,7 @@ DIR="$WORK/$UUID.sdProfile"
 mkdir -p "$DIR"
 
 action() { # colonne ligne uuid nom
-    printf '"%s,%s":{"Name":"%s","UUID":"fr.synseria.synfus.%s","Settings":{},"State":0,"States":[{"Image":"","Title":"","TitleAlignment":"bottom","FontSize":"9","ShowTitle":true}]}' "$1" "$2" "$4" "$3"
+    printf '"%s,%s":{"Name":"%s","UUID":"fr.synseria.synfus.%s","Settings":{},"State":0,"States":[{"Image":"","Title":"","TitleAlignment":"bottom","FontSize":8,"ShowTitle":true}]}' "$1" "$2" "$4" "$3"
 }
 {
     printf '{"Name":"Synfus","Version":"1.0","DeviceModel":"20GAA9901","DeviceUUID":"","Actions":{'

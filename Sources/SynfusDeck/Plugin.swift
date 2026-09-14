@@ -175,7 +175,7 @@ final class Plugin {
                 let index = sorts.firstIndex { $0.context == key.context } ?? 0
                 if let command = state.flatMap({ index < $0.commandes.count ? $0.commandes[index] : nil }) {
                     elgato.setImage(key.context, base64PNG: Images.symbol(command.symbole, dimmed: dimmed || command.touche == nil))
-                    elgato.setTitle(key.context, command.nom)
+                    elgato.setTitle(key.context, Images.title(command.nom))
                 } else {
                     elgato.setImage(key.context, base64PNG: Images.blank(dimmed: true))
                     elgato.setTitle(key.context, "")
@@ -191,8 +191,8 @@ final class Plugin {
                 let index = sorts.firstIndex { $0.context == key.context } ?? 0
                 let cell = state.flatMap { index < $0.cases.count ? $0.cases[index] : nil }
                 if let cell, let icone = cell.icone {
-                    elgato.setImage(key.context, base64PNG: dimmed ? Images.dimmed(icone) : icone)
-                    elgato.setTitle(key.context, cell.nom ?? "")
+                    elgato.setImage(key.context, base64PNG: Images.framed(icone, dimmed: dimmed))
+                    elgato.setTitle(key.context, Images.title(cell.nom ?? ""))
                 } else {
                     elgato.setImage(key.context, base64PNG: Images.blank(dimmed: dimmed))
                     elgato.setTitle(key.context, state == nil ? "Synfus\nabsent" : (cell?.nom ?? "\(index + 1)"))
@@ -201,10 +201,10 @@ final class Plugin {
                 let perso = key.action == ActionID.persoSuivant ? state?.persoSuivant
                     : key.action == ActionID.persoPrecedent ? state?.persoPrecedent : state?.persoActif
                 if let perso {
-                    let icon = perso.icone.map { dimmed ? Images.dimmed($0) : $0 }
+                    let icon = perso.icone.map { Images.framed($0, dimmed: dimmed) }
                     elgato.setImage(key.context, base64PNG: icon ?? Images.blank(dimmed: dimmed))
                     let arrow = key.action == ActionID.persoSuivant ? "▶ " : key.action == ActionID.persoPrecedent ? "◀ " : ""
-                    elgato.setTitle(key.context, arrow + perso.nom)
+                    elgato.setTitle(key.context, Images.title(arrow + perso.nom))
                 } else {
                     elgato.setImage(key.context, base64PNG: Images.blank(dimmed: dimmed))
                     elgato.setTitle(key.context, state == nil ? "Synfus\nabsent" : (state?.perso == nil ? "Aucun\nperso" : "—"))
@@ -286,21 +286,41 @@ enum Keystroke {
 /// devant, et une touche vide sobre — plutôt que le logo partout.
 @MainActor
 enum Images {
-    private static var dimCache: [String: String] = [:]
+    private static var frameCache: [String: String] = [:]
+    /// Marge autour de l'icône sur la touche : une image bord à bord bave
+    /// dès qu'on n'est pas pile en face de l'écran ; en retrait, avec des
+    /// coins arrondis, elle reste nette. La place du titre est laissée en bas.
+    static let margin: CGFloat = 16
 
-    static func dimmed(_ base64PNG: String) -> String {
-        if let cached = dimCache[base64PNG] { return cached }
+    /// L'icône posée sur la touche : en retrait sur fond sombre, assombrie
+    /// quand Dofus n'est pas devant.
+    static func framed(_ base64PNG: String, dimmed: Bool) -> String {
+        let key = "\(dimmed)/\(base64PNG.hashValue)"
+        if let cached = frameCache[key] { return cached }
         guard let data = Data(base64Encoded: base64PNG), let image = NSImage(data: data) else { return base64PNG }
         let size = NSSize(width: 144, height: 144)
         let out = NSImage(size: size, flipped: false) { rect in
             NSColor(white: 0.08, alpha: 1).setFill()
             rect.fill()
-            image.draw(in: rect, from: .zero, operation: .sourceOver, fraction: 0.55)
+            let target = rect.insetBy(dx: margin, dy: margin).offsetBy(dx: 0, dy: 6)
+            NSBezierPath(roundedRect: target, xRadius: 12, yRadius: 12).addClip()
+            image.draw(in: target, from: .zero, operation: .sourceOver, fraction: dimmed ? 0.55 : 1)
             return true
         }
         let result = png(out) ?? base64PNG
-        dimCache[base64PNG] = result
+        frameCache[key] = result
         return result
+    }
+
+    /// Un titre qui tient sur la touche : coupé en deux lignes à l'espace le
+    /// plus proche du milieu quand il est long, jamais plus de deux lignes.
+    static func title(_ text: String) -> String {
+        guard text.count > 9, !text.contains("\n") else { return text }
+        let spaces = text.indices.filter { text[$0] == " " }
+        guard let cut = spaces.min(by: { abs(text.distance(from: text.startIndex, to: $0) - text.count / 2)
+                                          < abs(text.distance(from: text.startIndex, to: $1) - text.count / 2) })
+        else { return text }
+        return String(text[..<cut]) + "\n" + String(text[text.index(after: cut)...])
     }
 
     static func blank(dimmed: Bool) -> String {

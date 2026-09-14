@@ -103,6 +103,8 @@ struct SpellsSettings: View {
                         ))
                     }
                 }
+                Button("Remettre les touches par défaut") { prefs.gameCommands = GameCommands.defaults }
+                    .font(.system(size: 11))
             } header: {
                 SectionTitle("Commandes du jeu", help: "Les raccourcis du jeu que la touche « Menu » du Stream Deck "
                              + "affiche à la place des sorts : inventaire, caractéristiques, suivi du perso… Les défauts "
