@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Sections des réglages, listées dans la barre latérale.
 private enum SettingsSection: String, CaseIterable, Identifiable {
-    case raccourcis, persos, classes, diagnostic
+    case raccourcis, persos, sorts, classes, diagnostic
 
     var id: String { rawValue }
 
@@ -10,6 +10,7 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
         switch self {
         case .raccourcis: return "Raccourcis"
         case .persos: return "Persos"
+        case .sorts: return "Sorts"
         case .classes: return "Classes"
         case .diagnostic: return "Diagnostic"
         }
@@ -19,6 +20,7 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
         switch self {
         case .raccourcis: return "keyboard"
         case .persos: return "person.3"
+        case .sorts: return "wand.and.stars"
         case .classes: return "paintpalette"
         case .diagnostic: return "stethoscope"
         }
@@ -85,6 +87,7 @@ struct SettingsView: View {
         switch section {
         case .raccourcis: ShortcutsSettings()
         case .persos: CharactersSettings()
+        case .sorts: SpellsSettings()
         case .classes: ClassesSettings()
         case .diagnostic: DiagnosticSettings()
         }

@@ -1,0 +1,62 @@
+import Foundation
+
+/// Le contrat entre Synfus et le plugin SynfusDeck : du JSON, une ligne par
+/// message, sur un socket Unix. Ce fichier est la référence — le plugin,
+/// binaire séparé, décode ces mêmes champs.
+///
+/// Tout est **descriptif**. Synfus pousse `DeckState` ; le plugin ne peut
+/// demander que ce que la barre flottante sait faire (`DeckCommand`). Aucune
+/// frappe, aucun chemin, aucune exécution ne passe par ici.
+enum DeckProtocol {
+    static let version = 1
+}
+
+/// Une touche à frapper, telle que le plugin la posera : keycode de position
+/// et modificateurs au format Carbon (`controlKey`, `shiftKey`…).
+struct DeckKey: Codable, Equatable, Sendable {
+    let keyCode: UInt32
+    let modifiers: UInt32
+
+    init(_ hotKey: HotKey) {
+        keyCode = hotKey.keyCode
+        modifiers = hotKey.modifiers
+    }
+}
+
+/// Une case de la barre affichée.
+struct DeckCell: Codable, Equatable, Sendable {
+    /// 1…10.
+    let position: Int
+    let sortId: Int?
+    let nom: String?
+    /// PNG en base64, ou rien si l'icône n'est pas connue.
+    let icone: String?
+    let touche: DeckKey?
+}
+
+/// Ce que le Stream Deck doit montrer, à cet instant.
+struct DeckState: Codable, Equatable, Sendable {
+    var type = "etat"
+    var version = DeckProtocol.version
+    /// Un client Dofus est-il au premier plan ? Sinon, les sorts sont grisés.
+    let dofusDevant: Bool
+    let perso: String?
+    let classe: String?
+    /// Barre affichée, 1-based, et nombre de barres.
+    let barre: Int
+    let barres: Int
+    /// `nil` tant que la détection de combat n'a pas de verdict.
+    let enCombat: Bool?
+    let finDeTour: DeckKey?
+    let cases: [DeckCell]
+}
+
+/// Ce que le plugin peut demander.
+struct DeckCommand: Codable, Equatable, Sendable {
+    enum Kind: String, Codable, Sendable {
+        case persoSuivant, persoPrecedent, perso, barreSuivante, barrePrecedente
+    }
+    let type: Kind
+    /// Pour `perso` : l'emplacement, 0-based.
+    let slot: Int?
+}
