@@ -1,0 +1,253 @@
+{
+  "Name": "Synfus",
+  "Version": "0.1.0",
+  "Author": "Synseria",
+  "Description": "Les sorts du perso Dofus actif, sous les doigts — Synfus compose chaque touche (sorts, perso, menu, fin de tour), le Stream Deck l'affiche et frappe la touche du jeu.",
+  "URL": "https://github.com/Synseria/Synfus",
+  "Icon": "icon",
+  "UUID": "fr.synseria.synfus",
+  "CodePathMac": "SynfusDeck",
+  "Category": "Synfus",
+  "CategoryIcon": "icon",
+  "SDKVersion": 2,
+  "Software": {
+    "MinimumVersion": "6.4"
+  },
+  "OS": [
+    {
+      "Platform": "mac",
+      "MinimumVersion": "14"
+    }
+  ],
+  "Actions": [
+    {
+      "Name": "Touche Synfus (dynamique)",
+      "UUID": "fr.synseria.synfus.touche",
+      "Icon": "icon",
+      "Tooltip": "Une touche dont Synfus décide le contenu — sort, perso, menu, fin de tour — selon la disposition choisie dans ses réglages (onglet Stream Deck). Sa position sur l'appareil est son identité : remplis la grille avec cette action.",
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": false,
+      "States": [
+        {
+          "Image": "icon",
+          "TitleAlignment": "bottom",
+          "FontSize": 8,
+          "ShowTitle": true
+        },
+        {
+          "Image": "icon-dim",
+          "TitleAlignment": "bottom",
+          "FontSize": 8,
+          "ShowTitle": true
+        }
+      ]
+    },
+    {
+      "Name": "Sort",
+      "UUID": "fr.synseria.synfus.sort",
+      "Icon": "icon",
+      "Tooltip": "Classique : la n-ième touche « Sort » de l'appareil (ligne par ligne) suit la n-ième case de sort de la disposition composée par Synfus — trois niveaux d'appui compris.",
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": false,
+      "States": [
+        {
+          "Image": "icon",
+          "TitleAlignment": "bottom",
+          "FontSize": 8,
+          "ShowTitle": true
+        },
+        {
+          "Image": "icon-dim",
+          "TitleAlignment": "bottom",
+          "FontSize": 8,
+          "ShowTitle": true
+        }
+      ]
+    },
+    {
+      "Name": "Perso suivant",
+      "UUID": "fr.synseria.synfus.perso-suivant",
+      "Icon": "icon",
+      "Tooltip": "Classique : le perso devant, appui = suivant, appui long = précédent.",
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": false,
+      "States": [
+        {
+          "Image": "icon",
+          "TitleAlignment": "bottom",
+          "FontSize": 8,
+          "ShowTitle": true
+        },
+        {
+          "Image": "icon-dim",
+          "TitleAlignment": "bottom",
+          "FontSize": 8,
+          "ShowTitle": true
+        }
+      ]
+    },
+    {
+      "Name": "Perso précédent",
+      "UUID": "fr.synseria.synfus.perso-precedent",
+      "Icon": "icon",
+      "Tooltip": "Classique : bascule sur le perso précédent.",
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": false,
+      "States": [
+        {
+          "Image": "icon",
+          "TitleAlignment": "bottom",
+          "FontSize": 8,
+          "ShowTitle": true
+        },
+        {
+          "Image": "icon-dim",
+          "TitleAlignment": "bottom",
+          "FontSize": 8,
+          "ShowTitle": true
+        }
+      ]
+    },
+    {
+      "Name": "Perso actif",
+      "UUID": "fr.synseria.synfus.perso-actif",
+      "Icon": "icon",
+      "Tooltip": "Classique : montre le perso devant et sa classe.",
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": false,
+      "States": [
+        {
+          "Image": "icon",
+          "TitleAlignment": "bottom",
+          "FontSize": 8,
+          "ShowTitle": true
+        },
+        {
+          "Image": "icon-dim",
+          "TitleAlignment": "bottom",
+          "FontSize": 8,
+          "ShowTitle": true
+        }
+      ]
+    },
+    {
+      "Name": "Barre suivante",
+      "UUID": "fr.synseria.synfus.barre-suivante",
+      "Icon": "icon",
+      "Tooltip": "Classique : la barre (ou page) suivante — rien n'est envoyé au jeu ; en mode Menu, la page suivante du menu.",
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": false,
+      "States": [
+        {
+          "Image": "icon",
+          "TitleAlignment": "bottom",
+          "FontSize": 8,
+          "ShowTitle": true
+        },
+        {
+          "Image": "icon-dim",
+          "TitleAlignment": "bottom",
+          "FontSize": 8,
+          "ShowTitle": true
+        }
+      ]
+    },
+    {
+      "Name": "Fin de tour",
+      "UUID": "fr.synseria.synfus.fin-de-tour",
+      "Icon": "icon",
+      "Tooltip": "Classique : frappe la touche « fin de tour » réglée dans Synfus ; havre-sac en mode Menu.",
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": false,
+      "States": [
+        {
+          "Image": "icon",
+          "TitleAlignment": "bottom",
+          "FontSize": 8,
+          "ShowTitle": true
+        },
+        {
+          "Image": "icon-dim",
+          "TitleAlignment": "bottom",
+          "FontSize": 8,
+          "ShowTitle": true
+        }
+      ]
+    },
+    {
+      "Name": "Corps à corps",
+      "UUID": "fr.synseria.synfus.corps-a-corps",
+      "Icon": "icon",
+      "Tooltip": "Classique : frappe la touche « corps à corps » réglée dans Synfus.",
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": false,
+      "States": [
+        {
+          "Image": "icon",
+          "TitleAlignment": "bottom",
+          "FontSize": 8,
+          "ShowTitle": true
+        },
+        {
+          "Image": "icon-dim",
+          "TitleAlignment": "bottom",
+          "FontSize": 8,
+          "ShowTitle": true
+        }
+      ]
+    },
+    {
+      "Name": "Menu",
+      "UUID": "fr.synseria.synfus.menu",
+      "Icon": "icon",
+      "Tooltip": "Classique : bascule les touches « Sort » entre les sorts et les commandes du jeu.",
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": false,
+      "States": [
+        {
+          "Image": "icon",
+          "TitleAlignment": "bottom",
+          "FontSize": 8,
+          "ShowTitle": true
+        },
+        {
+          "Image": "icon-dim",
+          "TitleAlignment": "bottom",
+          "FontSize": 8,
+          "ShowTitle": true
+        }
+      ]
+    },
+    {
+      "Name": "Suivi du perso",
+      "UUID": "fr.synseria.synfus.suivi",
+      "Icon": "icon",
+      "Tooltip": "Classique : frappe la touche « suivi du personnage » réglée dans Synfus.",
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": false,
+      "States": [
+        {
+          "Image": "icon",
+          "TitleAlignment": "bottom",
+          "FontSize": 8,
+          "ShowTitle": true
+        },
+        {
+          "Image": "icon-dim",
+          "TitleAlignment": "bottom",
+          "FontSize": 8,
+          "ShowTitle": true
+        }
+      ]
+    }
+  ],
+  "Profiles": [
+    {
+      "Name": "Synfus",
+      "DeviceType": 0,
+      "Readonly": false,
+      "DontAutoSwitchWhenInstalled": true,
+      "AutoInstall": true
+    }
+  ]
+}

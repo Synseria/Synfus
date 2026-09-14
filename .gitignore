@@ -27,3 +27,7 @@ Icon?
 ._*
 .Spotlight-V100
 .Trashes
+
+# Visuels Ankama téléchargés par Tools/fetch-ankama-assets.sh — usage
+# personnel, jamais reversés au dépôt (CGU Dofus, art. 13.2).
+Resources/Ankama/

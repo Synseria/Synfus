@@ -1,7 +1,8 @@
 #!/bin/bash
 # Compile Synfus et assemble le bundle .app.
-#   ./build.sh            -> construit ./Synfus.app
+#   ./build.sh            -> construit dist/Synfus.app (et le plugin Stream Deck)
 #   ./build.sh --install  -> construit puis installe dans /Applications et relance
+#                            (le plugin Stream Deck, optionnel, s'installe depuis Synfus)
 #
 # Deux variables d'environnement pilotent la CI sans changer l'usage local :
 #   VERSION=0.0.1   numéro inscrit dans l'Info.plist (défaut : dernier tag git)
@@ -26,7 +27,8 @@ VERSION="${VERSION:-0.0.1}"
 # HEAD s'en est écarté. `CFBundleShortVersionString` reste purement numérique,
 # comme Apple l'attend ; c'est ici que va le détail.
 BUILD="$(git describe --tags --always --dirty 2>/dev/null || echo "$VERSION")"
-APP="$NAME.app"
+# Tout ce qui est produit va dans dist/ — l'app comme le plugin.
+APP="dist/$NAME.app"
 
 BUILD_FLAGS=(-c release)
 [ -n "${ARCH:-}" ] && BUILD_FLAGS+=(--arch "$ARCH")
@@ -34,6 +36,49 @@ BUILD_FLAGS=(-c release)
 echo "==> Compilation (release${ARCH:+, $ARCH})"
 swift build "${BUILD_FLAGS[@]}"
 BINARY="$(swift build "${BUILD_FLAGS[@]}" --show-bin-path)/$NAME"
+
+# La signature détermine l'identité vue par TCC (l'autorisation Accessibilité).
+# Une identité stable d'un build à l'autre évite de réautoriser à chaque
+# rebuild : le certificat local « Synfus Dev » (Tools/make-signing-identity.sh)
+# d'abord, un certificat Apple Development sinon, ad-hoc en dernier recours —
+# et là, la case Accessibilité est à recocher après chaque build.
+IDENTITY="$(security find-identity -v -p codesigning 2>/dev/null \
+    | grep -o '"\(Synfus Dev\|Apple Development: [^"]*\)"' | head -1 | tr -d '"' || true)"
+
+# Le plugin Stream Deck : un dossier .sdPlugin à installer dans le logiciel
+# Elgato (double-clic, ou `streamdeck link dist/fr.synseria.synfus.sdPlugin`
+# avec le CLI d'Elgato pour développer). Le binaire est celui du target
+# SynfusDeck ; les icônes sont dérivées de la marque, jamais du jeu.
+PLUGIN="dist/fr.synseria.synfus.sdPlugin"
+echo "==> Assemblage du plugin Stream Deck"
+rm -rf "$PLUGIN"
+mkdir -p "$PLUGIN"
+cp "$(swift build "${BUILD_FLAGS[@]}" --show-bin-path)/SynfusDeck" "$PLUGIN/"
+cp Plugin/manifest.json "$PLUGIN/"
+sips -z 144 144 Resources/Synfus.png --out "$PLUGIN/icon.png" >/dev/null
+sips -z 288 288 Resources/Synfus.png --out "$PLUGIN/icon@2x.png" >/dev/null
+# L'état « grisé » (Dofus n'est pas devant) : la même marque pour l'instant —
+# le plugin pose son propre titre, c'est lui qui dit l'état.
+cp "$PLUGIN/icon.png" "$PLUGIN/icon-dim.png"
+cp "$PLUGIN/icon@2x.png" "$PLUGIN/icon-dim@2x.png"
+# Version du plugin : celle de l'app suivie du nombre de commits depuis le
+# tag — le logiciel Stream Deck n'installe un paquet que s'il est plus récent
+# que ce qu'il a, et deux builds d'une même version seraient « déjà installés ».
+PLUGIN_VERSION="$VERSION.$(git rev-list --count "v$VERSION..HEAD" 2>/dev/null || echo 0)"
+sed -i '' "s/\"Version\": \"[^\"]*\"/\"Version\": \"$PLUGIN_VERSION\"/" "$PLUGIN/manifest.json"
+./Plugin/make-profile.sh "$PLUGIN"
+# Le paquet que le logiciel Stream Deck installe par double-clic — et le seul
+# chemin qui enregistre le profil livré comme *appartenant au plugin*, ce que
+# `switchToProfile` exige.
+if [ -n "$IDENTITY" ]; then
+    codesign --force --sign "$IDENTITY" --identifier "fr.synseria.synfus.deck" "$PLUGIN/SynfusDeck"
+else
+    codesign --force --sign - --identifier "fr.synseria.synfus.deck" "$PLUGIN/SynfusDeck"
+fi
+PACKAGE="dist/fr.synseria.synfus.streamDeckPlugin"
+rm -f "$PACKAGE"
+(cd dist && zip -qr "$(basename "$PACKAGE")" "$(basename "$PLUGIN")")
+echo "==> $PLUGIN prêt"
 
 echo "==> Assemblage du bundle"
 rm -rf "$APP"
@@ -69,18 +114,24 @@ if [ -f "Resources/$NAME.icns" ]; then
     /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string $NAME" "$APP/Contents/Info.plist"
 fi
 
-# La signature détermine l'identité vue par TCC (l'autorisation Accessibilité).
-# Une identité de développement donne une identité stable d'un build à l'autre ;
-# à défaut, la signature ad-hoc oblige parfois à réautoriser après un rebuild.
-echo "==> Signature"
-IDENTITY="$(security find-identity -v -p codesigning 2>/dev/null \
-    | grep -o '"Apple Development: [^"]*"' | head -1 | tr -d '"' || true)"
+# Les visuels Ankama, s'ils ont été téléchargés (Tools/fetch-ankama-assets.sh) :
+# embarqués dans ce build-ci, pour cette machine — le dossier est ignoré par
+# Git et la CI ne l'a pas, les releases restent sans visuel du jeu.
+if [ -d "Resources/Ankama" ]; then
+    cp -R "Resources/Ankama" "$APP/Contents/Resources/Ankama"
+fi
 
+# Le paquet du plugin et le profil livré, embarqués : l'onglet Stream Deck
+# les ouvre dans le logiciel Elgato d'un clic, sans passer par dist/.
+cp "$PACKAGE" "$APP/Contents/Resources/"
+cp "$PLUGIN/Synfus.streamDeckProfile" "$APP/Contents/Resources/"
+
+echo "==> Signature"
 if [ -n "$IDENTITY" ]; then
     echo "    identité : $IDENTITY"
     codesign --force --deep --sign "$IDENTITY" --identifier "$BUNDLE_ID" "$APP"
 else
-    echo "    identité : ad-hoc (aucun certificat de développement trouvé)"
+    echo "    identité : ad-hoc — ./Tools/make-signing-identity.sh pour ne plus réautoriser l'Accessibilité à chaque build"
     codesign --force --deep --sign - --identifier "$BUNDLE_ID" "$APP"
 fi
 
@@ -89,8 +140,12 @@ echo "==> $APP prêt"
 if [ "${1:-}" = "--install" ]; then
     echo "==> Installation dans /Applications"
     pkill -x "$NAME" 2>/dev/null || true
-    rm -rf "/Applications/$APP"
+    rm -rf "/Applications/$NAME.app"
     cp -R "$APP" /Applications/
-    open "/Applications/$APP"
-    echo "==> Lancé depuis /Applications/$APP"
+    open "/Applications/$NAME.app"
+    echo "==> Lancé depuis /Applications/$NAME.app"
+
+    # Le plugin Stream Deck n'est **pas** installé ici : c'est optionnel, et
+    # tout passe par Synfus — Réglages → Stream Deck → « Installer le plugin »
+    # ouvre le paquet embarqué dans l'app.
 fi

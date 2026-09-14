@@ -11,7 +11,7 @@ struct TitreDeFenetreTests {
 
     @Test("Un perso connecté est reconnu")
     func persoConnecte() {
-        #expect(WindowManager.isCharacterWindow(title: "Syn-App - Feca - 3.6.7.7 - Release"))
+        #expect(WindowTitle.isCharacterWindow(title: "Syn-App - Feca - 3.6.7.7 - Release"))
     }
 
     /// Le cas qui compte le plus : un client resté au login prendrait un
@@ -20,12 +20,12 @@ struct TitreDeFenetreTests {
         "Dofus", "dofus", "  Dofus  ", "DOFUS", "",
     ])
     func clientSansPerso(titre: String) {
-        #expect(!WindowManager.isCharacterWindow(title: titre))
+        #expect(!WindowTitle.isCharacterWindow(title: titre))
     }
 
     @Test("Un titre sans séparateur n'est pas un perso")
     func titreSansSeparateur() {
-        #expect(!WindowManager.isCharacterWindow(title: "Chargement en cours"))
+        #expect(!WindowTitle.isCharacterWindow(title: "Chargement en cours"))
     }
 
     // MARK: - Nom du perso
@@ -38,32 +38,32 @@ struct TitreDeFenetreTests {
         ("Milo • Xélor • Release", "Milo"),
     ])
     func nomExtrait(titre: String, attendu: String) {
-        #expect(WindowManager.characterName(fromTitle: titre) == attendu)
+        #expect(WindowTitle.characterName(fromTitle: titre) == attendu)
     }
 
     /// Un nom composé garde ses tirets : le séparateur est « - » entouré
     /// d'espaces, pas le tiret nu.
     @Test("Un tiret dans le nom n'est pas un séparateur")
     func nomAvecTiret() {
-        #expect(WindowManager.characterName(fromTitle: "Jean-Michel - Iop - Release") == "Jean-Michel")
+        #expect(WindowTitle.characterName(fromTitle: "Jean-Michel - Iop - Release") == "Jean-Michel")
     }
 
     @Test("Un titre vide donne un libellé de repli")
     func nomDeRepli() {
-        #expect(WindowManager.characterName(fromTitle: "   ") == "Sans titre")
+        #expect(WindowTitle.characterName(fromTitle: "   ") == "Sans titre")
     }
 
     /// Si le premier segment est « Dofus », ce n'est pas un nom de perso : on
     /// continue à chercher plutôt que de renvoyer une évidence inutile.
     @Test("Un premier segment « Dofus » est ignoré")
     func premierSegmentDofus() {
-        let nom = WindowManager.characterName(fromTitle: "Dofus - Feca - Release")
+        let nom = WindowTitle.characterName(fromTitle: "Dofus - Feca - Release")
         #expect(nom != "Dofus")
     }
 
     @Test("Un titre sans séparateur est renvoyé tel quel")
     func titreEntier() {
-        #expect(WindowManager.characterName(fromTitle: "Bidule") == "Bidule")
+        #expect(WindowTitle.characterName(fromTitle: "Bidule") == "Bidule")
     }
 
     // MARK: - Ce qui mérite d'être mémorisé
@@ -81,7 +81,7 @@ struct TitreDeFenetreTests {
         "   ",
     ])
     func versionNonMemorisee(nom: String) {
-        #expect(!WindowManager.isPersistableName(nom))
+        #expect(!WindowTitle.isPersistableName(nom))
     }
 
     /// Le suffixe est ajouté par `refresh()` selon l'ordre de découverte : il ne
@@ -90,52 +90,52 @@ struct TitreDeFenetreTests {
         "Syn-App (2)", "Nova (3)", "Dofus 3.3.4.9 (2)",
     ])
     func homonymeNonMemorise(nom: String) {
-        #expect(!WindowManager.isPersistableName(nom))
+        #expect(!WindowTitle.isPersistableName(nom))
     }
 
     @Test("Un vrai nom de perso est mémorisé", arguments: [
         "Syn-App", "Jean-Michel", "Nova", "Kaeli", "Milo",
     ])
     func nomMemorise(nom: String) {
-        #expect(WindowManager.isPersistableName(nom))
+        #expect(WindowTitle.isPersistableName(nom))
     }
 
     /// Une parenthèse non numérique n'est pas un suffixe de doublon — et rien
     /// n'interdit à un nom de contenir un chiffre.
     @Test("Une parenthèse quelconque ne fait pas un doublon")
     func parentheseNonNumerique() {
-        #expect(WindowManager.isPersistableName("Machin (bis)"))
-        #expect(WindowManager.isPersistableName("Nova2"))
+        #expect(WindowTitle.isPersistableName("Machin (bis)"))
+        #expect(WindowTitle.isPersistableName("Nova2"))
     }
 
     // MARK: - Classe du perso
 
     @Test("La classe est le deuxième segment")
     func classeExtraite() {
-        #expect(WindowManager.characterClass(fromTitle: "Syn-App - Feca - 3.6.7.7 - Release") == "Feca")
+        #expect(WindowTitle.characterClass(fromTitle: "Syn-App - Feca - 3.6.7.7 - Release") == "Feca")
     }
 
     @Test("Un accent est conservé tel quel dans la classe")
     func classeAccentuee() {
-        #expect(WindowManager.characterClass(fromTitle: "Nova - Crâ - 2.70 - Release") == "Crâ")
+        #expect(WindowTitle.characterClass(fromTitle: "Nova - Crâ - 2.70 - Release") == "Crâ")
     }
 
     /// Certains titres placent la version en deuxième position : la prendre pour
     /// une classe donnerait une pastille colorée absurde.
     @Test("Un numéro de version n'est pas pris pour une classe")
     func versionEnDeuxiemePosition() {
-        #expect(WindowManager.characterClass(fromTitle: "Syn-App - 3.6.7.7 - Release") == nil)
+        #expect(WindowTitle.characterClass(fromTitle: "Syn-App - 3.6.7.7 - Release") == nil)
     }
 
     @Test("Un titre à un seul segment n'a pas de classe")
     func pasDeClasse() {
-        #expect(WindowManager.characterClass(fromTitle: "Syn-App") == nil)
+        #expect(WindowTitle.characterClass(fromTitle: "Syn-App") == nil)
     }
 
     /// La classe n'est cherchée que sur « - » ; les autres séparateurs suffisent
     /// à identifier un perso mais pas à en déduire la classe.
     @Test("Un séparateur exotique ne donne pas de classe")
     func separateurExotique() {
-        #expect(WindowManager.characterClass(fromTitle: "Kaeli | Sram | Release") == nil)
+        #expect(WindowTitle.characterClass(fromTitle: "Kaeli | Sram | Release") == nil)
     }
 }
