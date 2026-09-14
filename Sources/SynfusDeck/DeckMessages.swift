@@ -26,6 +26,7 @@ struct DeckAction: Codable, Equatable, Sendable {
 
 struct DeckTouche: Codable, Equatable, Sendable {
     let index: Int
+    let role: String?
     let icone: String?
     let iconeLong: String?
     let iconeTresLong: String?
@@ -79,6 +80,23 @@ enum BundledProfile {
 }
 
 enum ActionID {
-    /// L'unique action : une touche dont Synfus décide le contenu.
-    static let touche = "fr.synseria.synfus.touche"
+    static let prefix = "fr.synseria.synfus."
+    /// La touche **dynamique** : sa position est son identité, Synfus décide
+    /// de tout ce qu'elle montre et fait.
+    static let touche = prefix + "touche"
+
+    /// Les actions **classiques**, posées par rôle n'importe où sur n'importe
+    /// quel profil : chacune suit la touche de ce rôle dans la page composée
+    /// — les « Sort » dans leur ordre de lecture, les autres par leur nom.
+    static let roles: [String: String] = [
+        prefix + "sort": "sort",
+        prefix + "perso-suivant": "persoSuivant",
+        prefix + "perso-precedent": "persoPrecedent",
+        prefix + "perso-actif": "persoActif",
+        prefix + "barre-suivante": "barreSuivante",
+        prefix + "fin-de-tour": "finDeTour",
+        prefix + "corps-a-corps": "corpsACorps",
+        prefix + "menu": "menu",
+        prefix + "suivi": "commande:suivi",
+    ]
 }
