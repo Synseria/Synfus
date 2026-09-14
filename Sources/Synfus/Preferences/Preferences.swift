@@ -102,8 +102,11 @@ final class Preferences: ObservableObject {
 
     /// Durées d'appui, en ms, à partir desquelles une touche du Stream Deck
     /// joue son action longue, puis très longue.
-    @Published var appuiLongMs: Int = 150 { didSet { save() } }
-    @Published var appuiTresLongMs: Int = 300 { didSet { save() } }
+    @Published var appuiLongMs: Int = 100 { didSet { save() } }
+    @Published var appuiTresLongMs: Int = 200 { didSet { save() } }
+    /// Le nom des sorts sous leur icône sur le Stream Deck ; sinon il n'y
+    /// apparaît que pendant l'appui.
+    @Published var deckTitres: Bool = false { didSet { save() } }
     /// Sélection progressive des sorts : chaque niveau d'appui joue à son
     /// seuil, le jeu montre le sort sélectionné pendant qu'on tient.
     @Published var appuiProgressif: Bool = true { didSet { save() } }
@@ -229,6 +232,7 @@ final class Preferences: ObservableObject {
         var appuiLongMs: Int?
         var appuiTresLongMs: Int?
         var appuiProgressif: Bool?
+        var deckTitres: Bool?
         /// Génération du jeu de raccourcis par défaut appliqué à cette
         /// sauvegarde. Absente des sauvegardes d'avant la refonte, d'où le repli
         /// sur 1 à la lecture.
@@ -359,6 +363,7 @@ final class Preferences: ObservableObject {
             appuiLongMs: appuiLongMs,
             appuiTresLongMs: appuiTresLongMs,
             appuiProgressif: appuiProgressif,
+            deckTitres: deckTitres,
             defaultsVersion: Self.defaultsVersion
         )
         if let data = try? JSONEncoder().encode(stored) {
@@ -413,9 +418,10 @@ final class Preferences: ObservableObject {
         streamDeckEnabled = stored.streamDeckEnabled ?? false
         gameCommands = GameCommands.normalized(GameCommands.repaired(stored.gameCommands ?? GameCommands.defaults))
         deck = stored.deck ?? .parBarre
-        appuiLongMs = stored.appuiLongMs ?? 150
-        appuiTresLongMs = stored.appuiTresLongMs ?? 300
+        appuiLongMs = stored.appuiLongMs ?? 100
+        appuiTresLongMs = stored.appuiTresLongMs ?? 200
         appuiProgressif = stored.appuiProgressif ?? true
+        deckTitres = stored.deckTitres ?? false
         if let x = stored.barOriginX, let y = stored.barOriginY {
             barOrigin = CGPoint(x: x, y: y)
         }

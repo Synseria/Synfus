@@ -814,9 +814,16 @@ Trois règles tiennent l'ensemble :
   le profil livré ne contient que des touches Synfus, et le paquet comme le
   profil sont embarqués dans l'app (`Contents/Resources`), ouverts d'un
   bouton de l'onglet Stream Deck.
+- **Sans client**, la page garde le dernier perso vu, atténué ; les noms des
+  sorts ne s'affichent que pendant l'appui (réglage `deckTitres`) ; à une
+  seule page, « barre suivante » devient le corps à corps ; l'appui long sur
+  « Menu » relit la barre à l'écran (`.reconnaitre` →
+  `SpellProfileStore.recognize`, le même foyer que l'onglet Sorts).
 - **Gestes** : le SDK ne livre qu'enfoncé / relâché, le plugin mesure. Trois
-  niveaux : court, long (`appuiLongMs`, 150 ms), très long
-  (`appuiTresLongMs`, 300 ms). Une touche dont tous les niveaux sont des
+  niveaux : court, long (`appuiLongMs`, 100 ms), très long
+  (`appuiTresLongMs`, 200 ms) — ces seuils valent pour les sorts ; une
+  touche ordinaire (menu, perso, relecture des sorts) exige au moins
+  350 / 700 ms, un appui long y est un geste voulu. Une touche dont tous les niveaux sont des
   sorts est **progressive** (`DeckTouche.progressif`, réglage
   `appuiProgressif`) : chaque niveau joue **à son seuil** — sélectionner un
   sort dans le jeu ne lance rien, le joueur voit la sélection changer

@@ -165,6 +165,7 @@ struct StreamDeckSettings: View {
                     .onChange(of: prefs.appuiTresLongMs) { _, v in if prefs.appuiLongMs >= v { prefs.appuiLongMs = max(80, v - 100) } }
             }
             Toggle("Sélection progressive des sorts", isOn: $prefs.appuiProgressif)
+            Toggle("Nom des sorts sous les icônes", isOn: $prefs.deckTitres)
         } header: {
             SectionTitle("Gestes", help: "Trois niveaux : court, long, très long. En sélection progressive, une "
                          + "touche de sort joue chaque niveau à son seuil, sans attendre le relâchement : le jeu "
@@ -485,7 +486,7 @@ private struct SourcePicker: View {
     let commands: [GameCommand]
 
     private static let navigation: [DeckSource] = [.persoSuivant, .persoPrecedent, .persoActif, .barreSuivante,
-                                                   .barrePrecedente, .barrePremiere, .menu, .finDeTour, .corpsACorps]
+                                                   .barrePrecedente, .barrePremiere, .menu, .finDeTour, .corpsACorps, .reconnaitre]
 
     var body: some View {
         Picker(label, selection: $selection) {

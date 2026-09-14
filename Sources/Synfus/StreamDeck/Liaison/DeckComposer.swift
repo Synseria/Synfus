@@ -22,10 +22,12 @@ enum DeckComposer {
         var commandes: [GameCommand] = []
         var dofusDevant = false
         var enCombat: Bool?
-        var appuiLongMs = 150
-        var appuiTresLongMs = 300
+        var appuiLongMs = 100
+        var appuiTresLongMs = 200
         /// Les touches de sorts jouent chaque niveau à son seuil (voir `DeckTouche.progressif`).
         var progressif = true
+        /// Le nom des sorts sous leur icône ; sinon il n'apparaît que pendant l'appui.
+        var titresSorts = false
     }
 
     /// Ce qu'une source donne à voir et à faire.
@@ -60,8 +62,9 @@ enum DeckComposer {
         func sort(barre: Int, position: Int) -> Rendu {
             let slot = input.profile?.slot(bar: barre, position: position)
             let key = input.keyMap.key(bar: barre, position: position)
-            return Rendu(icone: slot.flatMap(icone), titre: slot?.nom ?? "\(position + 1)", attenuee: dimmed,
-                         action: frappe(key, nom: slot?.nom ?? "Case \(position + 1)"))
+            let nom = slot?.nom ?? "\(position + 1)"
+            return Rendu(icone: slot.flatMap(icone), titre: input.titresSorts || slot == nil ? nom : "", attenuee: dimmed,
+                         action: frappe(key, nom: nom))
         }
 
         func perso(_ p: DeckPerso?, titre: (String) -> String, commande: DeckCommand.Kind) -> Rendu {
@@ -87,6 +90,9 @@ enum DeckComposer {
             case .barreSuivante where input.menuOuvert:
                 return Rendu(symbole: "arrow.right.to.line", titre: "Menu \(pageMenu + 1)/\(menuPages)",
                              attenuee: dimmed || menuPages == 1, action: .commande(.pageMenuSuivante, nom: "Page suivante du menu"))
+            case .barreSuivante where pageCount == 1:
+                // Une seule page : rien à tourner, la touche sert au corps à corps.
+                return render(.corpsACorps)
             case .barreSuivante:
                 let label = input.mode.kind == .parRangee ? "Page" : "Barre"
                 return Rendu(symbole: "arrow.turn.down.right", titre: "\(label) \(input.page % pageCount + 1)/\(pageCount)",
@@ -111,6 +117,9 @@ enum DeckComposer {
                 let key = input.keyMap.corpsACorps
                 return Rendu(symbole: "figure.fencing", titre: key == nil ? "CàC\n(à régler)" : "Corps à corps",
                              attenuee: dimmed || key == nil, action: frappe(key, nom: "Corps à corps"))
+            case .reconnaitre:
+                return Rendu(symbole: "wand.and.stars", titre: "Relire les sorts", attenuee: dimmed,
+                             action: .commande(.reconnaitre, nom: "Relire les sorts à l'écran"))
             case .commande(let id): return gameCommand(id)
             case .vide: return Rendu(attenuee: true)
             }

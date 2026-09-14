@@ -158,7 +158,11 @@ final class Plugin {
         guard last > 0 else { perform(touche.court, context: context); return }
         var hold = Hold(start: .now)
         if touche.progressif { perform(touche.court, context: context) }
-        let thresholds = [0, page.appuiLongMs, page.appuiTresLongMs]
+        // Les seuils réglés valent pour la sélection progressive des sorts,
+        // sans conséquence. Une touche ordinaire — menu, perso, relecture des
+        // sorts — n'agit en appui long que sur un geste voulu : au moins 350 ms.
+        let floor = touche.progressif ? 0 : 350
+        let thresholds = [0, max(page.appuiLongMs, floor), max(page.appuiTresLongMs, floor * 2)]
         hold.task = Task { [weak self] in
             for stage in 1...last {
                 let wait = thresholds[stage] - (stage > 1 ? thresholds[stage - 1] : 0)
@@ -265,20 +269,24 @@ final class Plugin {
         }
         // Pendant un appui, la touche montre **en grand** le seul sort du
         // niveau atteint — au repos, le sort principal et ses vignettes.
+        let levels = [touche.court, touche.long, touche.tresLong]
         let stageIcon = highlight == 1 ? touche.iconeLong : highlight == 2 ? touche.iconeTresLong : nil
         if let icone = stageIcon {
             elgato.setImage(context, base64PNG: Images.framed(icone, dimmed: touche.attenuee, highlight: highlight))
         } else if let icone = touche.icone {
-            let corners = highlight > 0
-            elgato.setImage(context, base64PNG: Images.framed(icone, cornerLeft: corners ? nil : touche.iconeLong,
-                                                              cornerRight: corners ? nil : touche.iconeTresLong,
+            let pressed = highlight >= 0
+            elgato.setImage(context, base64PNG: Images.framed(icone, cornerLeft: pressed ? nil : touche.iconeLong,
+                                                              cornerRight: pressed ? nil : touche.iconeTresLong,
                                                               dimmed: touche.attenuee, highlight: highlight))
         } else if let symbole = touche.symbole {
             elgato.setImage(context, base64PNG: Images.symbol(symbole, dimmed: touche.attenuee, highlight: highlight))
         } else {
             elgato.setImage(context, base64PNG: Images.blank(dimmed: touche.attenuee))
         }
-        elgato.setTitle(context, Images.title(touche.titre))
+        // Le titre : celui de la touche au repos ; pendant l'appui, le nom de
+        // ce que le niveau atteint joue — c'est là qu'on veut le lire.
+        let title = highlight >= 0 && highlight < levels.count ? (levels[highlight]?.nom ?? touche.titre) : touche.titre
+        elgato.setTitle(context, Images.title(title))
     }
 
     /// Un éclair sur la touche pressée : l'appareil n'anime rien de lui-même.
