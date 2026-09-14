@@ -9,7 +9,7 @@ enum DeckComposer {
     struct Input: Sendable {
         var colonnes = DeckLayout.defaultColumns
         var lignes = DeckLayout.defaultRows
-        var mode: DeckMode = .parBarre
+        var mode: DeckSettings = .parBarre
         /// La page courante — barre active ou fenêtre selon le mode.
         var page = 0
         var menuOuvert = false
@@ -32,6 +32,8 @@ enum DeckComposer {
         var titre = ""
         var attenuee = false
         var action: DeckAction?
+        /// Une case de sort sans sort : rien à jouer en appui long.
+        var vide = false
     }
 
     static func compose(_ input: Input, icone: (SpellSlot) -> String?) -> DeckPage {
@@ -58,7 +60,7 @@ enum DeckComposer {
             let slot = input.profile?.slot(bar: barre, position: position)
             let key = input.keyMap.key(bar: barre, position: position)
             return Rendu(icone: slot.flatMap(icone), titre: slot?.nom ?? "\(position + 1)", attenuee: dimmed,
-                         action: frappe(key, nom: slot?.nom ?? "Case \(position + 1)"))
+                         action: frappe(key, nom: slot?.nom ?? "Case \(position + 1)"), vide: slot == nil)
         }
 
         func perso(_ p: DeckPerso?, titre: (String) -> String, commande: DeckCommand.Kind) -> Rendu {
@@ -76,6 +78,7 @@ enum DeckComposer {
             switch source {
             case .sort(let barre, let position): return sort(barre: barre, position: position)
             case .sortActif(let position): return sort(barre: barreActive, position: position)
+            case .sortBarreSuivante(let position): return sort(barre: (barreActive + 1) % SpellProfile.barCount, position: position)
             case .persoSuivant: return perso(input.perso, titre: { $0 + " ▶" }, commande: .persoSuivant)
             case .persoPrecedent: return perso(input.perso, titre: { "◀ " + $0 }, commande: .persoPrecedent)
             case .persoActif: return perso(input.perso, titre: { $0 }, commande: .persoSuivant)
@@ -83,7 +86,7 @@ enum DeckComposer {
                 return Rendu(symbole: "arrow.right.to.line", titre: "Menu \(pageMenu + 1)/\(menuPages)",
                              attenuee: dimmed || menuPages == 1, action: .commande(.pageMenuSuivante, nom: "Page suivante du menu"))
             case .barreSuivante:
-                let label = input.mode == .parRangee ? "Page" : "Barre"
+                let label = input.mode.kind == .parRangee ? "Page" : "Barre"
                 return Rendu(symbole: "arrow.turn.down.right", titre: "\(label) \(input.page % pageCount + 1)/\(pageCount)",
                              attenuee: dimmed, action: .commande(.barreSuivante, nom: "\(label) suivante"))
             case .barrePrecedente:
@@ -114,17 +117,23 @@ enum DeckComposer {
         var touches: [DeckTouche] = []
         for (index, tile) in layout.touches.enumerated() {
             var rendu: Rendu
-            var long: DeckAction?
+            var long: Rendu?
             if input.menuOuvert, let rank = sortIndices.firstIndex(of: index) {
                 // Le menu recouvre les sorts : une commande par touche, par pages.
                 let absolute = pageMenu * perMenuPage + rank
                 rendu = absolute < paged.count ? gameCommand(paged[absolute].id) : Rendu(attenuee: true)
             } else {
                 rendu = render(tile.court)
-                long = tile.long.flatMap { render($0).action }
+                // Une case d'en face vide n'a rien à jouer : sans action longue,
+                // la touche joue dès l'enfoncement.
+                long = tile.long.map(render).flatMap { $0.vide ? nil : $0 }
             }
-            touches.append(DeckTouche(index: index, icone: rendu.icone, symbole: rendu.symbole, titre: rendu.titre,
-                                      attenuee: rendu.attenuee, court: rendu.action, long: long))
+            // La vignette du sort en appui long — seulement s'il y a bien un
+            // sort à jouer : une case vide d'en face ne mérite pas de coin.
+            let iconeLong = long?.action != nil ? long?.icone : nil
+            touches.append(DeckTouche(index: index, icone: rendu.icone, iconeLong: iconeLong, symbole: rendu.symbole,
+                                      titre: rendu.titre, attenuee: rendu.attenuee, court: rendu.action,
+                                      long: long?.action))
         }
         return DeckPage(colonnes: input.colonnes, lignes: input.lignes, dofusDevant: input.dofusDevant,
                         perso: input.perso, touches: touches, appuiLongMs: input.appuiLongMs)

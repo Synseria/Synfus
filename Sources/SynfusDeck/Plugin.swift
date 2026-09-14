@@ -220,7 +220,7 @@ final class Plugin {
             return
         }
         if let icone = touche.icone {
-            elgato.setImage(context, base64PNG: Images.framed(icone, dimmed: touche.attenuee, highlight: highlight))
+            elgato.setImage(context, base64PNG: Images.framed(icone, corner: touche.iconeLong, dimmed: touche.attenuee, highlight: highlight))
         } else if let symbole = touche.symbole {
             elgato.setImage(context, base64PNG: Images.symbol(symbole, dimmed: touche.attenuee, highlight: highlight))
         } else {
@@ -305,18 +305,30 @@ enum Images {
     static let margin: CGFloat = 16
 
     /// L'icône posée sur la touche : en retrait sur fond sombre, assombrie
-    /// quand Dofus n'est pas devant.
-    static func framed(_ base64PNG: String, dimmed: Bool, highlight: Bool = false) -> String {
-        let key = "\(dimmed)/\(highlight)/\(base64PNG.hashValue)"
+    /// quand Dofus n'est pas devant ; en `corner`, le sort de l'appui long,
+    /// en vignette en bas à droite — on sait d'un coup d'œil ce qu'on tient.
+    static func framed(_ base64PNG: String, corner: String? = nil, dimmed: Bool, highlight: Bool = false) -> String {
+        let key = "\(dimmed)/\(highlight)/\(base64PNG.hashValue)/\(corner?.hashValue ?? 0)"
         if let cached = frameCache[key] { return cached }
         guard let data = Data(base64Encoded: base64PNG), let image = NSImage(data: data) else { return base64PNG }
+        let small = corner.flatMap { Data(base64Encoded: $0) }.flatMap { NSImage(data: $0) }
         let size = NSSize(width: 144, height: 144)
         let out = NSImage(size: size, flipped: false) { rect in
             NSColor(white: highlight ? 0.45 : 0.08, alpha: 1).setFill()
             rect.fill()
             let target = rect.insetBy(dx: margin, dy: margin).offsetBy(dx: 0, dy: 6)
+            NSGraphicsContext.saveGraphicsState()
             NSBezierPath(roundedRect: target, xRadius: 12, yRadius: 12).addClip()
             image.draw(in: target, from: .zero, operation: .sourceOver, fraction: dimmed ? 0.55 : 1)
+            NSGraphicsContext.restoreGraphicsState()
+            if let small {
+                let side = target.width * 0.42
+                let box = NSRect(x: target.maxX - side + 4, y: target.minY - 4, width: side, height: side)
+                NSColor(white: 0.08, alpha: 1).setFill()
+                NSBezierPath(roundedRect: box.insetBy(dx: -3, dy: -3), xRadius: 9, yRadius: 9).fill()
+                NSBezierPath(roundedRect: box, xRadius: 7, yRadius: 7).addClip()
+                small.draw(in: box, from: .zero, operation: .sourceOver, fraction: dimmed ? 0.55 : 1)
+            }
             return true
         }
         let result = png(out) ?? base64PNG

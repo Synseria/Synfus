@@ -43,13 +43,13 @@ struct SpellProfile: Codable, Equatable, Sendable {
     /// Classe au moment de la création — sert à choisir les candidats.
     var classe: String?
     var barres: [SpellBar]
-    /// Le mode d'affichage propre à ce perso sur le Stream Deck ; `nil`, le
-    /// mode générique des préférences s'applique.
-    var disposition: DeckMode?
+    /// Le réglage Stream Deck propre à ce perso ; `nil`, le générique des
+    /// préférences s'applique.
+    var deck: DeckSettings?
 
     static func empty(perso: String, classe: String?) -> SpellProfile {
         SpellProfile(perso: perso, classe: classe,
-                     barres: (1...barCount).map { SpellBar.empty(nom: "Barre \($0)") }, disposition: nil)
+                     barres: (1...barCount).map { SpellBar.empty(nom: "Barre \($0)") }, deck: nil)
     }
 
     /// Une case, par barre et position (0-based). `nil` hors limites.
