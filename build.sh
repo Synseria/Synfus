@@ -140,7 +140,14 @@ if [ "${1:-}" = "--install" ]; then
     # `.sdPlugin` ne s'installe pas par double-clic — c'est le format
     # empaqueté `.streamDeckPlugin` que le logiciel reconnaît.
     DECK_PLUGINS="$HOME/Library/Application Support/com.elgato.StreamDeck/Plugins"
-    if [ -d "$DECK_PLUGINS/$(basename "$PLUGIN")" ]; then
+    INSTALLED="$DECK_PLUGINS/$(basename "$PLUGIN")"
+    if [ -d "$INSTALLED" ] && ! diff -q <(grep -v '"Version"' "$INSTALLED/manifest.json") \
+                                      <(grep -v '"Version"' "$PLUGIN/manifest.json") >/dev/null; then
+        # Le manifeste a changé (actions, profils) : seul le paquet fait
+        # réenregistrer le profil livré — le logiciel demande confirmation.
+        echo "==> Le manifeste du plugin a changé : réinstallation par le paquet"
+        open "$PACKAGE"
+    elif [ -d "$INSTALLED" ]; then
         # Déjà installé : on remplace le contenu et on relance le logiciel,
         # qui ne charge les plugins qu'au lancement.
         echo "==> Mise à jour du plugin Stream Deck"

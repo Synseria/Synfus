@@ -16,16 +16,29 @@ final class StreamDeckLink: ObservableObject {
     static let socketURL: URL = AnkamaAssets.supportDirectory.appending(path: "streamdeck.sock")
 
     @Published private(set) var status = "inactive"
-    /// Barre affichée sur le Stream Deck, 0-based. Vit ici, pas dans les
-    /// préférences : c'est un état de session, comme le perso au premier plan.
-    @Published private(set) var barreActive = 0
+    /// La page affichée — barre active ou fenêtre selon le mode —, le menu et
+    /// sa page : des états de session, comme le perso au premier plan, pas des
+    /// préférences.
+    @Published private(set) var page = 0
+    @Published private(set) var menuOuvert = false
+    @Published private(set) var pageMenu = 0
     /// Verdict de la détection de combat, posé par `CombatWatcher`.
     @Published var enCombat: Bool?
+    /// Les grilles annoncées par les plugins connectés ; celle de l'utilisateur
+    /// à défaut, pour le miroir des réglages.
+    @Published private(set) var grilles: Set<Grille> = [.defaut]
+
+    struct Grille: Hashable, Sendable {
+        let colonnes: Int
+        let lignes: Int
+        static let defaut = Grille(colonnes: DeckLayout.defaultColumns, lignes: DeckLayout.defaultRows)
+    }
 
     private var listener: NWListener?
     private var connections: [ObjectIdentifier: NWConnection] = [:]
     private var buffers: [ObjectIdentifier: Data] = [:]
-    private var lastPayload: Data?
+    /// Ce qui a été envoyé, par grille — rien n'est renvoyé à l'identique.
+    private var lastPayloads: [Grille: Data] = [:]
     private var iconCache: [Int: String] = [:]
     private var subscriptions: Set<AnyCancellable> = []
 
@@ -47,8 +60,9 @@ final class StreamDeckLink: ObservableObject {
             manager.$frontmostIsDofus.map { _ in () },
             SpellProfileStore.shared.$profiles.map { _ in () }
         )
-        .merge(with: prefs.$spellKeyMap.map { _ in () }, $barreActive.map { _ in () }, $enCombat.map { _ in () })
-        .merge(with: prefs.$gameCommands.map { _ in () })
+        .merge(with: prefs.$spellKeyMap.map { _ in () }, $page.map { _ in () }, $enCombat.map { _ in () })
+        .merge(with: prefs.$gameCommands.map { _ in () }, $menuOuvert.map { _ in () }, $pageMenu.map { _ in () })
+        .merge(with: prefs.$deckMode.map { _ in () }, prefs.$appuiLongMs.map { _ in () }, $grilles.map { _ in () })
         .debounce(for: .milliseconds(50), scheduler: DispatchQueue.main)
         .sink { [weak self] in self?.publish() }
         .store(in: &subscriptions)
@@ -99,7 +113,7 @@ final class StreamDeckLink: ObservableObject {
         buffers.removeAll()
         listener?.cancel()
         listener = nil
-        lastPayload = nil
+        lastPayloads.removeAll()
         try? FileManager.default.removeItem(at: Self.socketURL)
         status = "inactive"
     }
@@ -114,8 +128,8 @@ final class StreamDeckLink: ObservableObject {
                 switch state {
                 case .ready:
                     self.updateStatus()
-                    // Un nouveau venu reçoit l'état tout de suite.
-                    if let payload = self.lastPayload ?? self.encodedState() { self.send(payload, to: connection) }
+                    // Un nouveau venu reçoit les pages tout de suite.
+                    for grille in self.grilles { if let payload = self.encodedPage(grille) { self.send(payload, to: connection) } }
                 case .failed, .cancelled:
                     self.connections[id] = nil
                     self.buffers[id] = nil
@@ -165,79 +179,107 @@ final class StreamDeckLink: ObservableObject {
             NSLog("Synfus: commande Stream Deck ignorée — %@", String(decoding: line.prefix(200), as: UTF8.self))
             return
         }
+        execute(command)
+    }
+
+    /// Ce que le plugin demande — et ce que le miroir des réglages demande
+    /// aussi, par les mêmes commandes : un seul chemin.
+    func execute(_ command: DeckCommand) {
         let manager = WindowManager.shared
+        let grille = grilles.first ?? .defaut
+        let pageCount = mode.pageCount(colonnes: grille.colonnes, lignes: grille.lignes)
         switch command.type {
         case .persoSuivant: manager.cycle(by: 1)
         case .persoPrecedent: manager.cycle(by: -1)
         case .perso: if let slot = command.slot { manager.focus(slot: slot) }
-        case .barreSuivante: barreActive = (barreActive + 1) % SpellProfile.barCount
-        case .barrePrecedente: barreActive = (barreActive + SpellProfile.barCount - 1) % SpellProfile.barCount
+        case .barreSuivante: page = (page + 1) % pageCount
+        case .barrePrecedente: page = (page + pageCount - 1) % pageCount
+        case .barrePremiere: page = 0
+        case .menu: menuOuvert.toggle(); pageMenu = 0
+        case .pageMenuSuivante: pageMenu += 1
         case .activer:
             if let current = manager.clients.first(where: { manager.isFrontmost($0) }) ?? manager.clients.first {
                 manager.focus(current)
             }
+        case .appareil:
+            if let colonnes = command.colonnes, let lignes = command.lignes, colonnes > 0, lignes > 0 {
+                grilles.insert(Grille(colonnes: colonnes, lignes: lignes))
+            }
         }
     }
 
-    // MARK: - État
+    // MARK: - Pages
 
-    /// L'état courant, encodé — `nil` si rien ne le distingue du précédent.
+    /// Le mode d'affichage en vigueur : celui du profil du perso devant s'il
+    /// en a un, le générique sinon.
+    var mode: DeckMode {
+        let manager = WindowManager.shared
+        let client = manager.clients.first { manager.isFrontmost($0) }
+        return client.flatMap { SpellProfileStore.shared.profiles[$0.name]?.disposition } ?? Preferences.shared.deckMode
+    }
+
+    /// Une page par grille, envoyée seulement si elle diffère de la précédente.
     private func publish() {
-        guard listener != nil, let payload = encodedState(), payload != lastPayload else { return }
-        lastPayload = payload
-        for connection in connections.values { send(payload, to: connection) }
+        guard listener != nil else { return }
+        for grille in grilles {
+            guard let payload = encodedPage(grille), payload != lastPayloads[grille] else { continue }
+            lastPayloads[grille] = payload
+            for connection in connections.values { send(payload, to: connection) }
+        }
     }
 
     private func send(_ payload: Data, to connection: NWConnection) {
         connection.send(content: payload + Data([0x0A]), completion: .contentProcessed { _ in })
     }
 
-    private func encodedState() -> Data? {
-        try? JSONEncoder().encode(currentState())
+    private func encodedPage(_ grille: Grille) -> Data? {
+        try? JSONEncoder().encode(currentPage(grille))
     }
 
-    /// Le perso au premier plan, ses sorts sur la barre active, les touches.
-    /// Pure quant à ses entrées : `state(for:)` est ce que l'on teste.
-    func currentState() -> DeckState {
+    /// La page pour une grille, composée de l'état courant — le miroir des
+    /// réglages l'appelle aussi : même code, même image que l'appareil.
+    func currentPage(_ grille: Grille) -> DeckPage {
         let manager = WindowManager.shared
         let clients = manager.clients
         let index = clients.firstIndex { manager.isFrontmost($0) }
         let client = index.map { clients[$0] }
-        let profile = client.map { SpellProfileStore.shared.profile(for: $0.name, classe: $0.characterClass) }
+        var input = makeInput(grille: grille, mode: mode, perso: client?.name, classe: client?.characterClass)
         // Les voisins dans l'ordre de la barre, en boucle — ce que « suivant »
         // et « précédent » feront.
-        let next = index.flatMap { clients.count > 1 ? clients[($0 + 1) % clients.count] : nil }
-        let previous = index.flatMap { clients.count > 1 ? clients[($0 + clients.count - 1) % clients.count] : nil }
-        return Self.state(client: client, next: next, previous: previous, profile: profile,
-                          dofusDevant: manager.frontmostIsDofus, barre: barreActive,
-                          keyMap: Preferences.shared.spellKeyMap, enCombat: enCombat,
-                          commands: Preferences.shared.gameCommands,
-                          icon: { [weak self] slot in self?.icon(of: slot, perso: client?.name) },
-                          classIcon: { [weak self] classe in self?.classIcon(classe) })
+        input.suivant = index.flatMap { clients.count > 1 ? deckPerso(clients[($0 + 1) % clients.count]) : nil }
+        input.precedent = index.flatMap { clients.count > 1 ? deckPerso(clients[($0 + clients.count - 1) % clients.count]) : nil }
+        input.dofusDevant = manager.frontmostIsDofus
+        return DeckComposer.compose(input) { [weak self] slot in self?.icon(of: slot, perso: client?.name) }
     }
 
-    static func state(client: DofusClient?, next: DofusClient? = nil, previous: DofusClient? = nil,
-                      profile: SpellProfile?, dofusDevant: Bool, barre: Int,
-                      keyMap: SpellKeyMap, enCombat: Bool?, commands: [GameCommand] = [],
-                      icon: (SpellSlot) -> String?, classIcon: (String?) -> String? = { _ in nil }) -> DeckState {
-        let bar = profile.flatMap { $0.barres.indices.contains(barre) ? $0.barres[barre] : nil }
-        let cases = (0..<SpellProfile.slotsPerBar).map { position -> DeckCell in
-            let slot = bar?.cases[position]
-            return DeckCell(position: position + 1,
-                            sortId: slot?.sortId,
-                            nom: slot?.nom,
-                            icone: slot.flatMap(icon),
-                            touche: keyMap.key(bar: barre, position: position).map(DeckKey.init))
+    /// La page telle que l'éditeur la montre : un perso et un mode choisis,
+    /// Dofus supposé devant — pour voir ce qu'on règle, pas ce qui est affiché.
+    func previewPage(grille: Grille, mode: DeckMode, perso: String?, classe: String?) -> DeckPage {
+        var input = makeInput(grille: grille, mode: mode, perso: perso, classe: classe)
+        input.dofusDevant = true
+        return DeckComposer.compose(input) { [weak self] slot in self?.icon(of: slot, perso: perso) }
+    }
+
+    private func deckPerso(_ client: DofusClient) -> DeckPerso {
+        DeckPerso(nom: client.name, classe: client.characterClass, icone: classIcon(client.characterClass))
+    }
+
+    private func makeInput(grille: Grille, mode: DeckMode, perso: String?, classe: String?) -> DeckComposer.Input {
+        let prefs = Preferences.shared
+        var input = DeckComposer.Input(colonnes: grille.colonnes, lignes: grille.lignes, mode: mode)
+        input.page = page
+        input.menuOuvert = menuOuvert
+        input.pageMenu = pageMenu
+        if let perso {
+            let profile = SpellProfileStore.shared.profile(for: perso, classe: classe)
+            input.perso = DeckPerso(nom: perso, classe: classe ?? profile.classe, icone: classIcon(classe ?? profile.classe))
+            input.profile = profile
         }
-        func perso(_ c: DofusClient?) -> DeckPerso? {
-            c.map { DeckPerso(nom: $0.name, classe: $0.characterClass, icone: classIcon($0.characterClass)) }
-        }
-        return DeckState(dofusDevant: dofusDevant, perso: client?.name, classe: client?.characterClass,
-                         persoActif: perso(client), persoSuivant: perso(next), persoPrecedent: perso(previous),
-                         barre: barre + 1, barres: SpellProfile.barCount, enCombat: enCombat,
-                         finDeTour: keyMap.finDeTour.map(DeckKey.init), corpsACorps: keyMap.corpsACorps.map(DeckKey.init),
-                         cases: cases,
-                         commandes: commands.map { DeckGameCommand(id: $0.id, nom: $0.nom, symbole: $0.symbole, touche: $0.touche.map(DeckKey.init)) })
+        input.keyMap = prefs.spellKeyMap
+        input.commandes = prefs.gameCommands
+        input.enCombat = enCombat
+        input.appuiLongMs = prefs.appuiLongMs
+        return input
     }
 
     /// L'icône d'une case : celle du sort connu, sinon la vignette lue à

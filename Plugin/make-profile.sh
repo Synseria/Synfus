@@ -1,15 +1,10 @@
 #!/bin/bash
 # Fabrique Synfus.streamDeckProfile — le profil livré avec le plugin, vers
-# lequel SynfusDeck bascule quand Dofus passe devant. Disposition 5 × 3 :
-#
-#   barre ▶ │ perso ▶ │ menu   │ suivi  │ fin de tour
-#   sort 1  │ sort 2  │ sort 3 │ sort 4 │ sort 5
-#   sort 6  │ sort 7  │ sort 8 │ sort 9 │ sort 10
-#
-# Les cases 11 et 12 de chaque barre ne tiennent pas sur 15 touches. « Menu »
-# remplace les dix sorts par les commandes du jeu (inventaire, carte…). Un `.streamDeckProfile` est un zip d'un
-# dossier `<uuid>.sdProfile/manifest.json` dont les actions sont indexées par
-# « colonne,ligne ».
+# lequel SynfusDeck bascule quand Dofus passe devant. Les quinze touches
+# portent la même action, « Touche Synfus » : c'est Synfus qui décide de ce
+# que chacune montre et fait (onglet Stream Deck), sans rien réimporter.
+# Un `.streamDeckProfile` est un zip d'un dossier `<uuid>.sdProfile/manifest.json`
+# dont les actions sont indexées par « colonne,ligne ».
 #
 # Appelé par build.sh ; à la main, sans argument, il vise dist/ :
 #   ./Plugin/make-profile.sh [dossier .sdPlugin]
@@ -29,12 +24,11 @@ action() { # colonne ligne uuid nom
 }
 {
     printf '{"Name":"Synfus","Version":"1.0","DeviceModel":"20GAA9901","DeviceUUID":"","Actions":{'
-    action 0 0 barre-suivante "Barre suivante"; printf ','
-    action 1 0 perso-suivant "Perso suivant"; printf ','
-    action 2 0 menu "Menu"; printf ','
-    action 3 0 suivi "Suivi du perso"; printf ','
-    action 4 0 fin-de-tour "Fin de tour"
-    for row in 1 2; do for col in 0 1 2 3 4; do printf ','; action "$col" "$row" sort "Sort"; done; done
+    first=1
+    for row in 0 1 2; do for col in 0 1 2 3 4; do
+        [ $first = 1 ] && first=0 || printf ','
+        action "$col" "$row" touche "Touche Synfus"
+    done; done
     printf '}}'
 } > "$DIR/manifest.json"
 rm -f "$PLUGIN/Synfus.streamDeckProfile"

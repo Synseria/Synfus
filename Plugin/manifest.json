@@ -2,7 +2,7 @@
   "Name": "Synfus",
   "Version": "0.1.0",
   "Author": "Synseria",
-  "Description": "Les sorts du perso Dofus actif, sous les doigts — Synfus dit lequel est devant, le Stream Deck affiche ses sorts et frappe la touche du jeu.",
+  "Description": "Les sorts du perso Dofus actif, sous les doigts — Synfus compose chaque touche (sorts, perso, menu, fin de tour), le Stream Deck l'affiche et frappe la touche du jeu.",
   "URL": "https://github.com/Synseria/Synfus",
   "Icon": "icon",
   "UUID": "fr.synseria.synfus",
@@ -21,10 +21,10 @@
   ],
   "Actions": [
     {
-      "Name": "Sort",
-      "UUID": "fr.synseria.synfus.sort",
+      "Name": "Touche Synfus",
+      "UUID": "fr.synseria.synfus.touche",
       "Icon": "icon",
-      "Tooltip": "Une case de la barre de sorts du perso actif — la position suit l'ordre des touches « Sort » sur l'appareil (ligne par ligne, de gauche à droite).",
+      "Tooltip": "Une touche dont Synfus décide le contenu — sort, perso, menu, fin de tour — selon la disposition choisie dans ses réglages (onglet Stream Deck). Sa position sur l'appareil est son identité : remplis la grille avec cette action.",
       "UserTitleEnabled": false,
       "SupportedInMultiActions": false,
       "States": [
@@ -36,138 +36,6 @@
         },
         {
           "Image": "icon-dim",
-          "TitleAlignment": "bottom",
-          "FontSize": 8,
-          "ShowTitle": true
-        }
-      ]
-    },
-    {
-      "Name": "Perso suivant",
-      "UUID": "fr.synseria.synfus.perso-suivant",
-      "Icon": "icon",
-      "Tooltip": "Bascule sur le perso suivant de la barre Synfus.",
-      "UserTitleEnabled": false,
-      "States": [
-        {
-          "Image": "icon",
-          "TitleAlignment": "bottom",
-          "FontSize": 8,
-          "ShowTitle": true
-        }
-      ]
-    },
-    {
-      "Name": "Perso précédent",
-      "UUID": "fr.synseria.synfus.perso-precedent",
-      "Icon": "icon",
-      "Tooltip": "Bascule sur le perso précédent de la barre Synfus.",
-      "UserTitleEnabled": false,
-      "States": [
-        {
-          "Image": "icon",
-          "TitleAlignment": "bottom",
-          "FontSize": 8,
-          "ShowTitle": true
-        }
-      ]
-    },
-    {
-      "Name": "Barre suivante",
-      "UUID": "fr.synseria.synfus.barre-suivante",
-      "Icon": "icon",
-      "Tooltip": "Affiche la barre de sorts suivante — rien n'est envoyé au jeu.",
-      "UserTitleEnabled": false,
-      "States": [
-        {
-          "Image": "icon",
-          "TitleAlignment": "bottom",
-          "FontSize": 8,
-          "ShowTitle": true
-        }
-      ]
-    },
-    {
-      "Name": "Fin de tour",
-      "UUID": "fr.synseria.synfus.fin-de-tour",
-      "Icon": "icon",
-      "Tooltip": "Frappe la touche « fin de tour » réglée dans Synfus (onglet Sorts).",
-      "UserTitleEnabled": false,
-      "States": [
-        {
-          "Image": "icon",
-          "TitleAlignment": "bottom",
-          "FontSize": 8,
-          "ShowTitle": true
-        },
-        {
-          "Image": "icon-dim",
-          "TitleAlignment": "bottom",
-          "FontSize": 8,
-          "ShowTitle": true
-        }
-      ]
-    },
-    {
-      "Name": "Corps à corps",
-      "UUID": "fr.synseria.synfus.corps-a-corps",
-      "Icon": "icon",
-      "Tooltip": "Frappe la touche « corps à corps » réglée dans Synfus (onglet Sorts).",
-      "UserTitleEnabled": false,
-      "States": [
-        {
-          "Image": "icon",
-          "TitleAlignment": "bottom",
-          "FontSize": 8,
-          "ShowTitle": true
-        },
-        {
-          "Image": "icon-dim",
-          "TitleAlignment": "bottom",
-          "FontSize": 8,
-          "ShowTitle": true
-        }
-      ]
-    },
-    {
-      "Name": "Perso actif",
-      "UUID": "fr.synseria.synfus.perso-actif",
-      "Icon": "icon",
-      "Tooltip": "Montre le perso devant et sa classe ; appuyer passe à la barre suivante.",
-      "UserTitleEnabled": false,
-      "States": [
-        {
-          "Image": "icon",
-          "TitleAlignment": "bottom",
-          "FontSize": 8,
-          "ShowTitle": true
-        }
-      ]
-    },
-    {
-      "Name": "Menu",
-      "UUID": "fr.synseria.synfus.menu",
-      "Icon": "icon",
-      "Tooltip": "Bascule les touches « Sort » entre les sorts et les commandes du jeu (inventaire, caractéristiques…).",
-      "UserTitleEnabled": false,
-      "States": [
-        {
-          "Image": "icon",
-          "TitleAlignment": "bottom",
-          "FontSize": 8,
-          "ShowTitle": true
-        }
-      ]
-    },
-    {
-      "Name": "Suivi du perso",
-      "UUID": "fr.synseria.synfus.suivi",
-      "Icon": "icon",
-      "Tooltip": "Frappe la touche « suivi du personnage » réglée dans Synfus (⌃W par défaut).",
-      "UserTitleEnabled": false,
-      "States": [
-        {
-          "Image": "icon",
           "TitleAlignment": "bottom",
           "FontSize": 8,
           "ShowTitle": true

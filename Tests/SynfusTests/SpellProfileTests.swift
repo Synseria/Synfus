@@ -51,26 +51,6 @@ struct SpellProfileTests {
         #expect(map.finDeTour == nil)
     }
 
-    @Test("L'état envoyé au Stream Deck porte la barre active, ses sorts et leurs touches")
-    func etatStreamDeck() {
-        var p = SpellProfile.empty(perso: "Aeryn", classe: "Feca")
-        p.set(SpellSlot(sortId: 7, nom: "Bouclier"), bar: 1, position: 0)
-        let client = DofusClient(pid: 10, slotKey: "10#0", axWindow: .application(10),
-                                 rawTitle: "Aeryn - Feca - 3.6 - Release", name: "Aeryn",
-                                 characterClass: "Feca", dormant: false)
-        let state = StreamDeckLink.state(client: client, profile: p, dofusDevant: true, barre: 1,
-                                         keyMap: .defaults, enCombat: nil) { slot in slot.sortId == 7 ? "PNG" : nil }
-        #expect(state.perso == "Aeryn")
-        #expect(state.barre == 2 && state.barres == 3)
-        #expect(state.cases.count == 12)
-        #expect(state.cases[0].nom == "Bouclier" && state.cases[0].icone == "PNG")
-        #expect(state.cases[0].touche == DeckKey(HotKey(keyCode: 18, modifiers: UInt32(controlKey))))
-        #expect(state.cases[1].sortId == nil && state.cases[1].touche != nil)
-        #expect(state.persoActif?.nom == "Aeryn" && state.persoSuivant == nil)
-        #expect(state.commandes.isEmpty)
-        #expect(state.enCombat == nil)
-    }
-
     @Test("Les commandes du jeu ont un défaut, et une sauvegarde ancienne reçoit les nouvelles")
     func commandesDuJeu() {
         let defaults = GameCommands.defaults
@@ -80,12 +60,19 @@ struct SpellProfileTests {
         #expect(completed[0].nom == "Inv" && completed[0].touche == nil)
     }
 
-    @Test("Sans perso devant, l'état reste complet mais vide de sorts")
-    func etatSansPerso() {
-        let state = StreamDeckLink.state(client: nil, profile: nil, dofusDevant: false, barre: 0,
-                                         keyMap: .defaults, enCombat: nil) { _ in nil }
-        #expect(state.perso == nil && !state.dofusDevant)
-        #expect(state.cases.allSatisfy { $0.sortId == nil })
+    @Test("Un profil sans disposition se relit, et une disposition personnalisée fait l'aller-retour")
+    func disposition() throws {
+        let json = """
+        {"version":1,"perso":"Brok","barres":[]}
+        """
+        let p = try JSONDecoder().decode(SpellProfile.self, from: Data(json.utf8))
+        #expect(p.disposition == nil)
+        var custom = DeckLayout.parBarre(colonnes: 5, lignes: 3)
+        custom[1, 0] = DeckTile(.sort(barre: 2, position: 11), long: .commande("inventaire"))
+        var q = SpellProfile.empty(perso: "Brok", classe: nil)
+        q.disposition = .personnalisee(custom)
+        let back = try JSONDecoder().decode(SpellProfile.self, from: JSONEncoder().encode(q))
+        #expect(back.disposition == .personnalisee(custom))
     }
 
     @Test("Une commande du plugin se décode, une inconnue non")
@@ -93,5 +80,7 @@ struct SpellProfileTests {
         let ok = try JSONDecoder().decode(DeckCommand.self, from: Data(#"{"type":"perso","slot":2}"#.utf8))
         #expect(ok.type == .perso && ok.slot == 2)
         #expect((try? JSONDecoder().decode(DeckCommand.self, from: Data(#"{"type":"frappe","keyCode":1}"#.utf8))) == nil)
+        let grid = try JSONDecoder().decode(DeckCommand.self, from: Data(#"{"type":"appareil","colonnes":8,"lignes":4}"#.utf8))
+        #expect(grid.type == .appareil && grid.colonnes == 8 && grid.lignes == 4)
     }
 }

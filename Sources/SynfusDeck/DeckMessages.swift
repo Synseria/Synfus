@@ -1,7 +1,8 @@
 import Foundation
 
 // Le contrat avec Synfus — miroir de DeckProtocol.swift côté app. Les deux
-// binaires ne partagent pas de code : ce JSON est l'interface.
+// binaires ne partagent pas de code : ce JSON est l'interface. Synfus
+// compose ; le plugin reçoit une page par taille de grille et la rend.
 
 struct DeckKey: Codable, Equatable, Sendable {
     let keyCode: UInt32
@@ -10,48 +11,45 @@ struct DeckKey: Codable, Equatable, Sendable {
     let modifiers: UInt32
 }
 
-struct DeckCell: Codable, Equatable, Sendable {
-    let position: Int
-    let sortId: Int?
-    let nom: String?
-    let icone: String?
-    let touche: DeckKey?
-}
-
 struct DeckPerso: Codable, Equatable, Sendable {
     let nom: String
     let classe: String?
     let icone: String?
 }
 
-struct DeckState: Codable, Equatable, Sendable {
-    let type: String
-    let version: Int
-    let dofusDevant: Bool
-    let perso: String?
-    let classe: String?
-    let persoActif: DeckPerso?
-    let persoSuivant: DeckPerso?
-    let persoPrecedent: DeckPerso?
-    let barre: Int
-    let barres: Int
-    let enCombat: Bool?
-    let finDeTour: DeckKey?
-    let corpsACorps: DeckKey?
-    let cases: [DeckCell]
-    let commandes: [DeckGameCommand]
+/// Une touche du jeu à frapper **ou** une commande à renvoyer à Synfus.
+struct DeckAction: Codable, Equatable, Sendable {
+    let touche: DeckKey?
+    let commande: String?
+    let nom: String
 }
 
-struct DeckGameCommand: Codable, Equatable, Sendable {
-    let id: String
-    let nom: String
-    let symbole: String
-    let touche: DeckKey?
+struct DeckTouche: Codable, Equatable, Sendable {
+    let index: Int
+    let icone: String?
+    let symbole: String?
+    let titre: String
+    let attenuee: Bool
+    let court: DeckAction?
+    let long: DeckAction?
+}
+
+struct DeckPage: Codable, Equatable, Sendable {
+    let type: String
+    let version: Int
+    let colonnes: Int
+    let lignes: Int
+    let dofusDevant: Bool
+    let perso: DeckPerso?
+    let touches: [DeckTouche]
+    let appuiLongMs: Int
 }
 
 struct DeckCommand: Codable, Sendable {
     let type: String
-    let slot: Int?
+    var slot: Int? = nil
+    var colonnes: Int? = nil
+    var lignes: Int? = nil
 }
 
 // Ce que le logiciel Stream Deck envoie et reçoit — le sous-ensemble utile.
@@ -59,11 +57,14 @@ struct DeckCommand: Codable, Sendable {
 struct StreamDeckEvent: Decodable {
     struct Coordinates: Decodable { let column: Int; let row: Int }
     struct Payload: Decodable { let coordinates: Coordinates? }
+    struct Size: Decodable { let columns: Int; let rows: Int }
+    struct DeviceInfo: Decodable { let size: Size? }
     let event: String
     let action: String?
     let context: String?
     let device: String?
     let payload: Payload?
+    let deviceInfo: DeviceInfo?
 }
 
 /// Le nom du profil livré avec le plugin (manifest `Profiles`), vers lequel
@@ -73,14 +74,6 @@ enum BundledProfile {
 }
 
 enum ActionID {
-    static let prefix = "fr.synseria.synfus."
-    static let sort = prefix + "sort"
-    static let persoSuivant = prefix + "perso-suivant"
-    static let persoPrecedent = prefix + "perso-precedent"
-    static let barreSuivante = prefix + "barre-suivante"
-    static let finDeTour = prefix + "fin-de-tour"
-    static let corpsACorps = prefix + "corps-a-corps"
-    static let persoActif = prefix + "perso-actif"
-    static let menu = prefix + "menu"
-    static let suivi = prefix + "suivi"
+    /// L'unique action : une touche dont Synfus décide le contenu.
+    static let touche = "fr.synseria.synfus.touche"
 }

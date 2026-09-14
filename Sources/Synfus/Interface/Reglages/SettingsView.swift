@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Sections des réglages, listées dans la barre latérale.
 private enum SettingsSection: String, CaseIterable, Identifiable {
-    case general, raccourcis, persos, sorts, classes, diagnostic
+    case general, raccourcis, persos, sorts, streamDeck, classes, diagnostic
 
     var id: String { rawValue }
 
@@ -12,6 +12,7 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
         case .raccourcis: return "Raccourcis"
         case .persos: return "Persos"
         case .sorts: return "Sorts"
+        case .streamDeck: return "Stream Deck"
         case .classes: return "Classes"
         case .diagnostic: return "Diagnostic"
         }
@@ -23,6 +24,7 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
         case .raccourcis: return "keyboard"
         case .persos: return "person.3"
         case .sorts: return "wand.and.stars"
+        case .streamDeck: return "rectangle.grid.3x2"
         case .classes: return "paintpalette"
         case .diagnostic: return "stethoscope"
         }
@@ -42,7 +44,7 @@ struct SettingsView: View {
             detail
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(width: 780, height: 600)
+        .frame(width: 920, height: 640)
     }
 
     private var sidebar: some View {
@@ -83,6 +85,7 @@ struct SettingsView: View {
         case .raccourcis: ShortcutsSettings()
         case .persos: CharactersSettings()
         case .sorts: SpellsSettings()
+        case .streamDeck: StreamDeckSettings()
         case .classes: ClassesSettings()
         case .diagnostic: DiagnosticSettings()
         }

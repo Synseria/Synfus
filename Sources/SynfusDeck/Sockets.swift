@@ -69,17 +69,19 @@ final class ElgatoSocket {
 @MainActor
 final class SynfusSocket {
     private let path: String
-    private let onState: @MainActor (DeckState) -> Void
+    private let onPage: @MainActor (DeckPage) -> Void
     private let onDisconnect: @MainActor () -> Void
+    /// Appelé à chaque connexion réussie — le plugin y annonce ses grilles.
+    var onConnect: @MainActor () -> Void = {}
     private var connection: NWConnection?
     private var buffer = Data()
     private var retryDelay: TimeInterval = 1
     private(set) var isConnected = false
 
-    init(path: String, onState: @escaping @MainActor (DeckState) -> Void,
+    init(path: String, onPage: @escaping @MainActor (DeckPage) -> Void,
          onDisconnect: @escaping @MainActor () -> Void) {
         self.path = path
-        self.onState = onState
+        self.onPage = onPage
         self.onDisconnect = onDisconnect
     }
 
@@ -94,6 +96,7 @@ final class SynfusSocket {
                     self.isConnected = true
                     self.retryDelay = 1
                     self.receive(on: connection)
+                    self.onConnect()
                 case .failed, .cancelled:
                     self.dropped()
                 case .waiting:
@@ -138,8 +141,8 @@ final class SynfusSocket {
         while let newline = buffer.firstIndex(of: 0x0A) {
             let line = Data(buffer[buffer.startIndex..<newline])
             buffer = Data(buffer[buffer.index(after: newline)...])
-            if let state = try? JSONDecoder().decode(DeckState.self, from: line), state.type == "etat" {
-                onState(state)
+            if let page = try? JSONDecoder().decode(DeckPage.self, from: line), page.type == "page" {
+                onPage(page)
             }
         }
     }
