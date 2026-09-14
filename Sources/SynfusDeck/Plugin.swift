@@ -3,9 +3,11 @@ import CoreGraphics
 import Foundation
 import Network
 
-/// L'état du plugin : les touches présentes sur le Stream Deck, l'état reçu de
-/// Synfus, et les deux liaisons. Tout sur le main actor — c'est un petit
-/// programme, un seul fil suffit.
+/// Le plugin est un **terminal** : Synfus compose les pages, une par taille de
+/// grille ; ici on rend chaque touche et, à l'appui, on frappe la touche du
+/// jeu qu'elle porte ou on renvoie la commande qu'elle nomme. Aucune
+/// disposition n'est décidée de ce côté. Tout sur le main actor — c'est un
+/// petit programme, un seul fil suffit.
 @MainActor
 final class Plugin {
     static let shared = Plugin()
@@ -13,36 +15,28 @@ final class Plugin {
     /// Une touche visible sur l'appareil.
     struct Key {
         let context: String
-        let action: String
         let device: String
         let column: Int
         let row: Int
     }
 
+    struct Grid: Hashable { let columns: Int; let rows: Int }
+
     private var keys: [String: Key] = [:]
-    private var state: DeckState?
+    /// Les pages reçues, par grille.
+    private var pages: [Grid: DeckPage] = [:]
+    private var connected = false
     private var elgato: ElgatoSocket?
     private var synfus: SynfusSocket?
     /// Appareils sur lesquels on a basculé vers le profil Synfus — pour en
     /// revenir quand Dofus n'est plus devant.
     private var switchedDevices: Set<String> = []
-    private var devices: Set<String> = []
-    /// « Menu » enfoncé : les touches de sorts montrent les commandes du jeu,
-    /// par pages de la taille de la grille — et « barre suivante » y devient
-    /// « page suivante » : la touche suit le contexte.
-    private var menuOpen = false
-    private var menuPage = 0
-
-    private var menuPageCount: Int {
-        let perPage = max(1, sortKeys.count)
-        return max(1, (pagedCommands.count + perPage - 1) / perPage)
-    }
-
-    /// Les commandes des pages du menu — celles qui ont leur propre touche
-    /// (suivi, havre-sac) n'y sont pas répétées.
-    private var pagedCommands: [DeckGameCommand] {
-        (state?.commandes ?? []).filter { $0.id != "suivi" && $0.id != "havresac" }
-    }
+    /// Les appareils et leur grille ; 5 × 3 quand le logiciel ne la dit pas.
+    private var devices: [String: Grid] = [:]
+    /// Appuis en cours : la tâche qui attend l'échéance de l'appui long, et
+    /// si elle a déjà joué.
+    private var holds: [String: Task<Void, Never>] = [:]
+    private var longFired: Set<String> = []
 
     private static let socketPath = FileManager.default
         .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -52,18 +46,23 @@ final class Plugin {
         if let info, let data = info.data(using: .utf8),
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
            let list = json["devices"] as? [[String: Any]] {
-            for device in list { if let id = device["id"] as? String { devices.insert(id) } }
+            for device in list {
+                guard let id = device["id"] as? String else { continue }
+                let size = device["size"] as? [String: Any]
+                devices[id] = Grid(columns: size?["columns"] as? Int ?? 5, rows: size?["rows"] as? Int ?? 3)
+            }
             Log.write("appareils : \(list)")
         }
         let elgato = ElgatoSocket(port: port) { [weak self] event in self?.handle(event) }
         self.elgato = elgato
         await elgato.connect(registerEvent: registerEvent, uuid: pluginUUID)
 
-        let synfus = SynfusSocket(path: Self.socketPath) { [weak self] state in
-            self?.apply(state)
+        let synfus = SynfusSocket(path: Self.socketPath) { [weak self] page in
+            self?.apply(page)
         } onDisconnect: { [weak self] in
-            self?.apply(nil)
+            self?.disconnected()
         }
+        synfus.onConnect = { [weak self] in self?.announceDevices() }
         self.synfus = synfus
         synfus.connect()
     }
@@ -73,92 +72,99 @@ final class Plugin {
     private func handle(_ event: StreamDeckEvent) {
         switch event.event {
         case "deviceDidConnect":
-            if let device = event.device { devices.insert(device) }
+            if let device = event.device {
+                let size = event.deviceInfo?.size
+                devices[device] = Grid(columns: size?.columns ?? 5, rows: size?.rows ?? 3)
+                announceDevices()
+            }
         case "deviceDidDisconnect":
-            if let device = event.device { devices.remove(device); switchedDevices.remove(device) }
+            if let device = event.device { devices[device] = nil; switchedDevices.remove(device) }
         default: break
         }
-        guard let context = event.context, let action = event.action else { return }
+        guard let context = event.context else { return }
         switch event.event {
         case "willAppear":
             let c = event.payload?.coordinates
-            keys[context] = Key(context: context, action: action, device: event.device ?? "",
-                                column: c?.column ?? 0, row: c?.row ?? 0)
-            render()
+            keys[context] = Key(context: context, device: event.device ?? "", column: c?.column ?? 0, row: c?.row ?? 0)
+            render(context)
         case "willDisappear":
             keys[context] = nil
         case "keyDown":
-            press(context)
+            keyDown(context)
+        case "keyUp":
+            keyUp(context)
         default:
             break
         }
     }
 
-    /// Les touches « sort », dans l'ordre de lecture (ligne puis colonne) :
-    /// la première est la case 1, la suivante la case 2… Aucune configuration :
-    /// la disposition physique dit tout.
-    private var sortKeys: [Key] {
-        keys.values.filter { $0.action == ActionID.sort }.sorted { ($0.row, $0.column) < ($1.row, $1.column) }
+    /// Synfus compose une page par grille : il faut qu'il les connaisse.
+    private func announceDevices() {
+        guard let synfus, synfus.isConnected else { return }
+        for grid in Set(devices.values) {
+            synfus.send(DeckCommand(type: "appareil", colonnes: grid.columns, lignes: grid.rows))
+        }
     }
 
-    private func press(_ context: String) {
+    private func grid(of key: Key) -> Grid { devices[key.device] ?? Grid(columns: 5, rows: 3) }
+
+    /// La touche telle que Synfus l'a composée pour cette position.
+    private func touche(_ key: Key) -> DeckTouche? {
+        let grid = grid(of: key)
+        guard let page = pages[grid] else { return nil }
+        let index = key.row * grid.columns + key.column
+        return page.touches.first { $0.index == index }
+    }
+
+    // MARK: - Appuis
+
+    /// Appui court = au relâchement ; maintenu jusqu'à l'échéance = action
+    /// longue, et le relâchement ne fait plus rien. Une touche sans action
+    /// longue joue à l'enfoncement, sans attendre.
+    private func keyDown(_ context: String) {
         guard let key = keys[context] else { return }
+        flash(context)
         // Sans Synfus, n'importe quelle touche le lance : c'est ce qu'on veut
         // quand « Synfus absent » s'affiche.
-        guard let state else { launchSynfus(); return }
-        // Dofus derrière une autre app : une touche ne frappe rien, elle
-        // ramène Dofus devant — la suivante fera ce qu'elle dit.
-        if !state.dofusDevant, key.action != ActionID.persoSuivant, key.action != ActionID.persoPrecedent {
-            send("activer")
-            return
+        guard connected, let touche = touche(key) else { launchSynfus(); return }
+        guard let long = touche.long else { perform(touche.court, context: context); return }
+        longFired.remove(context)
+        let delay = pages[grid(of: key)]?.appuiLongMs ?? 350
+        holds[context] = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(delay))
+            guard !Task.isCancelled, let self else { return }
+            self.holds[context] = nil
+            self.longFired.insert(context)
+            self.perform(long, context: context)
         }
-        switch key.action {
-        case ActionID.menu:
-            menuOpen.toggle()
-            menuPage = 0
-            render()
-        case ActionID.barreSuivante where menuOpen:
-            menuPage = (menuPage + 1) % menuPageCount
-            render()
-        case ActionID.sort:
-            guard let index = sortKeys.firstIndex(where: { $0.context == context }) else { return }
-            if menuOpen {
-                let absolute = menuPage * max(1, sortKeys.count) + index
-                let commands = pagedCommands
-                guard absolute < commands.count, let touche = commands[absolute].touche
-                else { elgato?.showAlert(context); return }
-                Keystroke.press(touche)
-                return
-            }
-            guard index < state.cases.count, let touche = state.cases[index].touche
-            else { elgato?.showAlert(context); return }
+    }
+
+    private func keyUp(_ context: String) {
+        if let hold = holds.removeValue(forKey: context) {
+            hold.cancel()
+            guard let key = keys[context], let touche = touche(key) else { return }
+            perform(touche.court, context: context)
+        }
+        longFired.remove(context)
+    }
+
+    private func perform(_ action: DeckAction?, context: String) {
+        guard let action else { elgato?.showAlert(context); return }
+        if let commande = action.commande {
+            send(commande)
+        } else if let touche = action.touche {
+            // Dofus derrière une autre app : une touche ne frappe rien, elle
+            // ramène Dofus devant — la suivante fera ce qu'elle dit.
+            guard let key = keys[context], pages[grid(of: key)]?.dofusDevant == true else { send("activer"); return }
             Keystroke.press(touche)
-        case ActionID.suivi:
-            guard let touche = state.commandes.first(where: { $0.id == "suivi" })?.touche
-            else { elgato?.showAlert(context); return }
-            Keystroke.press(touche)
-        case ActionID.finDeTour where menuOpen:
-            // En mode menu, la touche de fin de tour ouvre le havre-sac.
-            guard let touche = state.commandes.first(where: { $0.id == "havresac" })?.touche
-            else { elgato?.showAlert(context); return }
-            Keystroke.press(touche)
-        case ActionID.finDeTour:
-            guard state.dofusDevant, let touche = state.finDeTour else { elgato?.showAlert(context); return }
-            Keystroke.press(touche)
-        case ActionID.corpsACorps:
-            guard state.dofusDevant, let touche = state.corpsACorps else { elgato?.showAlert(context); return }
-            Keystroke.press(touche)
-        case ActionID.persoSuivant: send("persoSuivant")
-        case ActionID.persoPrecedent: send("persoPrecedent")
-        case ActionID.barreSuivante: send("barreSuivante")
-        case ActionID.persoActif: send("barreSuivante")
-        default: break
+        } else {
+            elgato?.showAlert(context)
         }
     }
 
     private func send(_ type: String) {
         guard let synfus, synfus.isConnected else { launchSynfus(); return }
-        synfus.send(DeckCommand(type: type, slot: nil))
+        synfus.send(DeckCommand(type: type))
     }
 
     private func launchSynfus() {
@@ -168,95 +174,67 @@ final class Plugin {
 
     // MARK: - Affichage
 
-    private func apply(_ new: DeckState?) {
-        let wasFront = state?.dofusDevant == true
-        state = new
+    private func apply(_ page: DeckPage) {
+        let grid = Grid(columns: page.colonnes, rows: page.lignes)
+        let wasFront = pages[grid]?.dofusDevant == true
+        connected = true
+        pages[grid] = page
         render()
         // Le profil Synfus suit Dofus : on y bascule quand il passe devant, on
         // rend la main quand il n'y est plus — le logiciel Stream Deck revient
         // alors au profil d'avant.
-        let isFront = new?.dofusDevant == true
+        let isFront = page.dofusDevant
         if isFront, !wasFront {
-            for device in devices where !switchedDevices.contains(device) {
+            for (device, deviceGrid) in devices where deviceGrid == grid && !switchedDevices.contains(device) {
                 elgato?.switchToProfile(device: device, profile: BundledProfile.name)
                 switchedDevices.insert(device)
             }
         } else if !isFront, wasFront {
-            for device in switchedDevices { elgato?.switchToProfile(device: device, profile: nil) }
-            switchedDevices.removeAll()
+            for device in switchedDevices where devices[device] == grid { elgato?.switchToProfile(device: device, profile: nil) }
+            switchedDevices = switchedDevices.filter { devices[$0] != grid }
         }
     }
 
-    /// Redessine toutes les touches d'après l'état courant. Sans Synfus, les
-    /// touches le disent ; Dofus derrière une autre app, les icônes restent
-    /// mais s'assombrissent — on voit toujours où on en est.
-    private func render() {
-        guard let elgato else { return }
-        let sorts = sortKeys
-        let dimmed = state?.dofusDevant != true
-        for key in keys.values {
-            switch key.action {
-            case ActionID.sort where menuOpen && state != nil:
-                let index = (sorts.firstIndex { $0.context == key.context } ?? 0) + menuPage * max(1, sorts.count)
-                let commands = pagedCommands
-                if index < commands.count {
-                    let command = commands[index]
-                    elgato.setImage(key.context, base64PNG: Images.symbol(command.symbole, dimmed: dimmed || command.touche == nil))
-                    elgato.setTitle(key.context, Images.title(command.nom))
-                } else {
-                    elgato.setImage(key.context, base64PNG: Images.blank(dimmed: true))
-                    elgato.setTitle(key.context, "")
-                }
-            case ActionID.menu:
-                elgato.setImage(key.context, base64PNG: Images.symbol("square.grid.2x2", dimmed: dimmed))
-                elgato.setTitle(key.context, menuOpen ? "Sorts" : "Menu")
-            case ActionID.finDeTour where menuOpen && state != nil:
-                let ready = state?.commandes.contains { $0.id == "havresac" && $0.touche != nil } == true
-                elgato.setImage(key.context, base64PNG: Images.symbol("house", dimmed: dimmed || !ready))
-                elgato.setTitle(key.context, "Havre-sac")
-            case ActionID.suivi:
-                let ready = state?.commandes.contains { $0.id == "suivi" && $0.touche != nil } == true
-                elgato.setImage(key.context, base64PNG: Images.symbol("figure.walk", dimmed: dimmed || !ready))
-                elgato.setTitle(key.context, "Suivi")
-            case ActionID.sort:
-                let index = sorts.firstIndex { $0.context == key.context } ?? 0
-                let cell = state.flatMap { index < $0.cases.count ? $0.cases[index] : nil }
-                if let cell, let icone = cell.icone {
-                    elgato.setImage(key.context, base64PNG: Images.framed(icone, dimmed: dimmed))
-                    elgato.setTitle(key.context, Images.title(cell.nom ?? ""))
-                } else {
-                    elgato.setImage(key.context, base64PNG: Images.blank(dimmed: dimmed))
-                    elgato.setTitle(key.context, state == nil ? "Synfus\nabsent" : (cell?.nom ?? "\(index + 1)"))
-                }
-            case ActionID.persoSuivant, ActionID.persoPrecedent, ActionID.persoActif:
-                // La touche montre le perso **devant** — c'est ce qu'on veut
-                // savoir d'un coup d'œil — et la flèche dit ce qu'elle fait.
-                if let perso = state?.persoActif {
-                    let icon = perso.icone.map { Images.framed($0, dimmed: dimmed) }
-                    elgato.setImage(key.context, base64PNG: icon ?? Images.blank(dimmed: dimmed))
-                    let arrow = key.action == ActionID.persoSuivant ? " ▶" : key.action == ActionID.persoPrecedent ? "◀ " : ""
-                    elgato.setTitle(key.context, Images.title(key.action == ActionID.persoPrecedent ? arrow + perso.nom : perso.nom + arrow))
-                } else {
-                    elgato.setImage(key.context, base64PNG: Images.blank(dimmed: dimmed))
-                    elgato.setTitle(key.context, state == nil ? "Synfus\nabsent" : (state?.perso == nil ? "Aucun\nperso" : "—"))
-                }
-            case ActionID.barreSuivante where menuOpen && state != nil:
-                elgato.setImage(key.context, base64PNG: Images.symbol("arrow.right.to.line", dimmed: dimmed || menuPageCount == 1))
-                elgato.setTitle(key.context, "Menu \(menuPage + 1)/\(menuPageCount)")
-            case ActionID.barreSuivante:
-                elgato.setImage(key.context, base64PNG: Images.symbol("arrow.turn.down.right", dimmed: dimmed))
-                elgato.setTitle(key.context, state.map { "Barre \($0.barre)/\($0.barres)" } ?? "Synfus\nabsent")
-            case ActionID.finDeTour:
-                // En combat, la touche s'allume ; hors combat (ou sans verdict), elle reste discrète.
-                let armed = state?.finDeTour != nil && state?.enCombat != false
-                elgato.setImage(key.context, base64PNG: Images.symbol("flag.checkered", dimmed: dimmed || !armed))
-                elgato.setTitle(key.context, state?.finDeTour == nil ? "Fin de tour\n(à régler)" : "Fin de tour")
-            case ActionID.corpsACorps:
-                elgato.setImage(key.context, base64PNG: Images.symbol("figure.fencing", dimmed: dimmed || state?.corpsACorps == nil))
-                elgato.setTitle(key.context, state?.corpsACorps == nil ? "CàC\n(à régler)" : "Corps à corps")
-            default:
-                break
-            }
+    private func disconnected() {
+        connected = false
+        pages.removeAll()
+        render()
+        for device in switchedDevices { elgato?.switchToProfile(device: device, profile: nil) }
+        switchedDevices.removeAll()
+    }
+
+    private func render() { for context in keys.keys { render(context) } }
+
+    /// Une touche, d'après la page de sa grille. Sans Synfus, les touches le
+    /// disent ; Dofus derrière une autre app, Synfus les a atténuées.
+    private func render(_ context: String, highlight: Bool = false) {
+        guard let elgato, let key = keys[context] else { return }
+        guard connected else {
+            elgato.setImage(context, base64PNG: Images.blank(dimmed: true))
+            elgato.setTitle(context, "Synfus\nabsent")
+            return
+        }
+        guard let touche = touche(key) else {
+            elgato.setImage(context, base64PNG: Images.blank(dimmed: true))
+            elgato.setTitle(context, "")
+            return
+        }
+        if let icone = touche.icone {
+            elgato.setImage(context, base64PNG: Images.framed(icone, dimmed: touche.attenuee, highlight: highlight))
+        } else if let symbole = touche.symbole {
+            elgato.setImage(context, base64PNG: Images.symbol(symbole, dimmed: touche.attenuee, highlight: highlight))
+        } else {
+            elgato.setImage(context, base64PNG: Images.blank(dimmed: touche.attenuee))
+        }
+        elgato.setTitle(context, Images.title(touche.titre))
+    }
+
+    /// Un éclair sur la touche pressée : l'appareil n'anime rien de lui-même.
+    private func flash(_ context: String) {
+        render(context, highlight: true)
+        Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(120))
+            self?.render(context)
         }
     }
 }
@@ -328,13 +306,13 @@ enum Images {
 
     /// L'icône posée sur la touche : en retrait sur fond sombre, assombrie
     /// quand Dofus n'est pas devant.
-    static func framed(_ base64PNG: String, dimmed: Bool) -> String {
-        let key = "\(dimmed)/\(base64PNG.hashValue)"
+    static func framed(_ base64PNG: String, dimmed: Bool, highlight: Bool = false) -> String {
+        let key = "\(dimmed)/\(highlight)/\(base64PNG.hashValue)"
         if let cached = frameCache[key] { return cached }
         guard let data = Data(base64Encoded: base64PNG), let image = NSImage(data: data) else { return base64PNG }
         let size = NSSize(width: 144, height: 144)
         let out = NSImage(size: size, flipped: false) { rect in
-            NSColor(white: 0.08, alpha: 1).setFill()
+            NSColor(white: highlight ? 0.45 : 0.08, alpha: 1).setFill()
             rect.fill()
             let target = rect.insetBy(dx: margin, dy: margin).offsetBy(dx: 0, dy: 6)
             NSBezierPath(roundedRect: target, xRadius: 12, yRadius: 12).addClip()
@@ -370,8 +348,8 @@ enum Images {
     private static var symbolCache: [String: String] = [:]
 
     /// Un symbole SF, blanc sur fond sombre — les touches de commande.
-    static func symbol(_ name: String, dimmed: Bool) -> String {
-        let key = "\(name)/\(dimmed)"
+    static func symbol(_ name: String, dimmed: Bool, highlight: Bool = false) -> String {
+        let key = "\(name)/\(dimmed)/\(highlight)"
         if let cached = symbolCache[key] { return cached }
         let size = NSSize(width: 144, height: 144)
         // Le glyphe est teinté à part, sur fond transparent — `sourceAtop`
@@ -387,7 +365,7 @@ enum Images {
                 }
             }
         let out = NSImage(size: size, flipped: false) { rect in
-            NSColor(white: dimmed ? 0.08 : 0.16, alpha: 1).setFill()
+            NSColor(white: highlight ? 0.45 : dimmed ? 0.08 : 0.16, alpha: 1).setFill()
             NSBezierPath(roundedRect: rect.insetBy(dx: 6, dy: 6), xRadius: 18, yRadius: 18).fill()
             if let glyph {
                 let target = NSRect(x: (size.width - glyph.size.width) / 2, y: (size.height - glyph.size.height) / 2 + 10,

@@ -4,16 +4,19 @@ import Foundation
 /// message, sur un socket Unix. Ce fichier est la référence — le plugin,
 /// binaire séparé, décode ces mêmes champs.
 ///
-/// Tout est **descriptif**. Synfus pousse `DeckState` ; le plugin ne peut
-/// demander que ce que la barre flottante sait faire (`DeckCommand`). Aucune
-/// frappe, aucun chemin, aucune exécution ne passe par ici.
+/// Tout est **descriptif**, et **Synfus compose** : il pousse une `DeckPage`
+/// par taille de grille — pour chaque touche, l'image, le titre, ce qu'un
+/// appui court et un appui long font. Le plugin ne décide de rien : il rend,
+/// frappe la touche qu'on lui a donnée, ou renvoie la commande nommée. Il ne
+/// peut demander que ce que la barre flottante sait faire (`DeckCommand`).
+/// Aucune frappe, aucun chemin, aucune exécution ne passe par ici.
 enum DeckProtocol {
-    static let version = 1
+    static let version = 2
 }
 
 /// Une touche à frapper, telle que le plugin la posera : keycode de position
 /// et modificateurs au format Carbon (`controlKey`, `shiftKey`…).
-struct DeckKey: Codable, Equatable, Sendable {
+struct DeckKey: Codable, Equatable, Hashable, Sendable {
     let keyCode: UInt32
     let modifiers: UInt32
 
@@ -21,17 +24,6 @@ struct DeckKey: Codable, Equatable, Sendable {
         keyCode = hotKey.keyCode
         modifiers = hotKey.modifiers
     }
-}
-
-/// Une case de la barre affichée.
-struct DeckCell: Codable, Equatable, Sendable {
-    /// 1…10.
-    let position: Int
-    let sortId: Int?
-    let nom: String?
-    /// PNG en base64, ou rien si l'icône n'est pas connue.
-    let icone: String?
-    let touche: DeckKey?
 }
 
 /// Un perso, tel que le Stream Deck le montre : son nom, sa classe, l'emblème.
@@ -42,47 +34,63 @@ struct DeckPerso: Codable, Equatable, Sendable {
     let icone: String?
 }
 
-/// Ce que le Stream Deck doit montrer, à cet instant.
-struct DeckState: Codable, Equatable, Sendable {
-    var type = "etat"
-    var version = DeckProtocol.version
-    /// Un client Dofus est-il au premier plan ? Sinon, les sorts sont grisés.
-    let dofusDevant: Bool
-    let perso: String?
-    let classe: String?
-    /// Le perso devant, et ceux vers lesquels « suivant » et « précédent »
-    /// mèneraient — une touche montre ce qu'elle fait.
-    let persoActif: DeckPerso?
-    let persoSuivant: DeckPerso?
-    let persoPrecedent: DeckPerso?
-    /// Barre affichée, 1-based, et nombre de barres.
-    let barre: Int
-    let barres: Int
-    /// `nil` tant que la détection de combat n'a pas de verdict.
-    let enCombat: Bool?
-    let finDeTour: DeckKey?
-    let corpsACorps: DeckKey?
-    let cases: [DeckCell]
-    /// Les commandes du jeu derrière la touche « Menu », dans l'ordre.
-    let commandes: [DeckGameCommand]
-}
-
-/// Une commande du jeu telle que le plugin la dessine : nom, symbole SF, touche.
-struct DeckGameCommand: Codable, Equatable, Sendable {
-    let id: String
-    let nom: String
-    let symbole: String
+/// Ce qu'un appui fait : une touche du jeu **ou** une commande pour Synfus.
+struct DeckAction: Codable, Equatable, Sendable {
     let touche: DeckKey?
+    let commande: DeckCommand.Kind?
+    /// Ce que c'est, en clair — pour le miroir des réglages.
+    let nom: String
+
+    static func frappe(_ key: HotKey, nom: String) -> DeckAction { DeckAction(touche: DeckKey(key), commande: nil, nom: nom) }
+    static func commande(_ kind: DeckCommand.Kind, nom: String) -> DeckAction { DeckAction(touche: nil, commande: kind, nom: nom) }
 }
 
-/// Ce que le plugin peut demander.
+/// Une touche de la grille, prête à dessiner.
+struct DeckTouche: Codable, Equatable, Sendable {
+    /// Ordre de lecture : ligne puis colonne, 0-based.
+    let index: Int
+    /// PNG en base64 — l'icône d'un sort, l'emblème d'un perso.
+    let icone: String?
+    /// À défaut d'icône, un symbole SF.
+    let symbole: String?
+    let titre: String
+    /// Atténuée : Dofus n'est pas devant, ou la touche n'a rien à faire.
+    let attenuee: Bool
+    let court: DeckAction?
+    let long: DeckAction?
+}
+
+/// Ce que le Stream Deck doit montrer, à cet instant, sur une grille donnée.
+struct DeckPage: Codable, Equatable, Sendable {
+    var type = "page"
+    var version = DeckProtocol.version
+    let colonnes: Int
+    let lignes: Int
+    /// Un client Dofus est-il au premier plan ? Sinon, rien n'est frappé :
+    /// une pression ramène Dofus devant.
+    let dofusDevant: Bool
+    let perso: DeckPerso?
+    let touches: [DeckTouche]
+    /// Durée d'appui à partir de laquelle l'action longue part, en ms.
+    let appuiLongMs: Int
+}
+
+/// Ce que le plugin peut envoyer.
 struct DeckCommand: Codable, Equatable, Sendable {
     enum Kind: String, Codable, Sendable {
-        case persoSuivant, persoPrecedent, perso, barreSuivante, barrePrecedente
+        case persoSuivant, persoPrecedent, perso
+        case barreSuivante, barrePrecedente, barrePremiere
+        /// Ouvre ou ferme le menu des commandes du jeu ; tourne ses pages.
+        case menu, pageMenuSuivante
         /// Ramène Dofus devant — le perso actif, ou le premier — sans changer de perso.
         case activer
+        /// Le plugin annonce une grille : Synfus compose une page à sa taille.
+        case appareil
     }
     let type: Kind
     /// Pour `perso` : l'emplacement, 0-based.
-    let slot: Int?
+    var slot: Int?
+    /// Pour `appareil`.
+    var colonnes: Int?
+    var lignes: Int?
 }

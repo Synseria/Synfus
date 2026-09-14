@@ -112,3 +112,28 @@ struct CopiableCommand: View {
         .background(RoundedRectangle(cornerRadius: 5).fill(Color.primary.opacity(0.06)))
     }
 }
+
+/// Le sélecteur de perso des onglets Sorts et Stream Deck : les persos de
+/// l'ordre enregistré, plus ceux connectés — écrit une fois.
+struct PersoPicker: View {
+    @Binding var perso: String
+    @ObservedObject private var prefs = Preferences.shared
+    @ObservedObject private var manager = WindowManager.shared
+
+    static func persos(prefs: Preferences, manager: WindowManager) -> [String] {
+        var names = prefs.characterOrder
+        for client in manager.clients
+        where WindowTitle.isPersistableName(client.name) && !names.contains(client.name) {
+            names.append(client.name)
+        }
+        return names
+    }
+
+    var body: some View {
+        let persos = Self.persos(prefs: prefs, manager: manager)
+        Picker("Perso", selection: $perso) {
+            ForEach(persos, id: \.self) { Text($0).tag($0) }
+        }
+        .onAppear { if perso.isEmpty || !persos.contains(perso) { perso = persos.first ?? "" } }
+    }
+}

@@ -64,7 +64,7 @@ Deux mécanismes, indépendants :
 fr.synseria.synfus.sdPlugin/
 ├── manifest.json            actions, Profiles: [{Name: "Synfus", DeviceType: 0}]
 ├── SynfusDeck               binaire Swift lancé par le logiciel (-port -pluginUUID -registerEvent -info)
-├── Synfus.streamDeckProfile profil 5 × 3 livré (make-profile.sh)
+├── Synfus.streamDeckProfile profil 5 × 3 livré (make-profile.sh) — quinze fois la même action « Touche Synfus » : c'est Synfus qui compose, rien à réimporter quand la disposition change
 └── icon*.png
 ```
 

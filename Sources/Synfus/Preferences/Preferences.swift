@@ -96,6 +96,14 @@ final class Preferences: ObservableObject {
     /// touche « Menu » du Stream Deck.
     @Published var gameCommands: [GameCommand] = GameCommands.defaults { didSet { save() } }
 
+    /// Le mode d'affichage du Stream Deck — générique ; un profil de perso
+    /// peut le remplacer par le sien.
+    @Published var deckMode: DeckMode = .parBarre { didSet { save() } }
+
+    /// Durée d'appui, en ms, à partir de laquelle une touche du Stream Deck
+    /// joue son action longue.
+    @Published var appuiLongMs: Int = 350 { didSet { save() } }
+
     /// Nombre de slots exposés (et donc de raccourcis potentiels).
     ///
     /// Le garde-fou `clamping` n'est pas décoratif : `@Published` remplace la
@@ -213,6 +221,8 @@ final class Preferences: ObservableObject {
         var spellKeyMap: SpellKeyMap?
         var streamDeckEnabled: Bool?
         var gameCommands: [GameCommand]?
+        var deckMode: DeckMode?
+        var appuiLongMs: Int?
         /// Génération du jeu de raccourcis par défaut appliqué à cette
         /// sauvegarde. Absente des sauvegardes d'avant la refonte, d'où le repli
         /// sur 1 à la lecture.
@@ -339,6 +349,8 @@ final class Preferences: ObservableObject {
             spellKeyMap: spellKeyMap,
             streamDeckEnabled: streamDeckEnabled,
             gameCommands: gameCommands,
+            deckMode: deckMode,
+            appuiLongMs: appuiLongMs,
             defaultsVersion: Self.defaultsVersion
         )
         if let data = try? JSONEncoder().encode(stored) {
@@ -392,6 +404,8 @@ final class Preferences: ObservableObject {
         spellKeyMap = stored.spellKeyMap ?? .defaults
         streamDeckEnabled = stored.streamDeckEnabled ?? false
         gameCommands = GameCommands.normalized(GameCommands.repaired(stored.gameCommands ?? GameCommands.defaults))
+        deckMode = stored.deckMode ?? .parBarre
+        appuiLongMs = stored.appuiLongMs ?? 350
         if let x = stored.barOriginX, let y = stored.barOriginY {
             barOrigin = CGPoint(x: x, y: y)
         }

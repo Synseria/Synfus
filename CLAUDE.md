@@ -761,38 +761,67 @@ Trois règles tiennent l'ensemble :
   écoute sur un socket Unix `~/Library/Application Support/Synfus/streamdeck.sock`,
   `chmod 0600` dès qu'il existe, et seulement si `streamDeckEnabled` (faux par
   défaut). Le protocole, [DeckProtocol.swift](Sources/Synfus/StreamDeck/Liaison/DeckProtocol.swift),
-  est du JSON par ligne, **descriptif** : Synfus pousse `DeckState` (perso,
-  classe, barre active, dix `DeckCell` avec icône en base64 et touche, fin de
-  tour, `enCombat`), et n'accepte que `DeckCommand` — `persoSuivant`,
-  `persoPrecedent`, `perso(slot)`, `barreSuivante`, `barrePrecedente`, tout
-  ce que la barre flottante sait déjà faire. Une commande inconnue est
-  journalisée et ignorée. `StreamDeckLink.state(client:profile:…)` est pure et
-  testée (`SpellProfileTests`). La barre active est un état de session, pas
-  une préférence.
+  est du JSON par ligne, **descriptif** : Synfus pousse des `DeckPage` (une
+  par grille : les touches composées, icônes en base64, actions), et
+  n'accepte que `DeckCommand` — `persoSuivant`, `persoPrecedent`,
+  `perso(slot)`, `barreSuivante`, `barrePrecedente`, `barrePremiere`, `menu`,
+  `pageMenuSuivante`, `activer`, `appareil` — tout ce que la barre flottante
+  sait déjà faire, plus l'état de page du deck. Une commande inconnue est
+  journalisée et ignorée. La barre active est un état de session, pas une
+  préférence.
+- **Synfus compose, le plugin rend.** Une seule action Elgato, « Touche
+  Synfus », sur toutes les touches ; la position d'une touche (ligne puis
+  colonne) est son index, et c'est tout ce que le plugin sait d'elle.
+  [DeckComposer.swift](Sources/Synfus/StreamDeck/Liaison/DeckComposer.swift)
+  — **pur, testé** (`DeckComposerTests`) — produit une `DeckPage` par taille
+  de grille annoncée (`appareil`) : pour chaque index, l'icône ou le symbole,
+  le titre, l'atténuation, et ce qu'un appui court et un appui long font
+  (`DeckAction` : une touche du jeu **ou** une commande). Le menu, sa
+  pagination, la barre active sont des états de session de `StreamDeckLink`
+  (`page`, `menuOuvert`, `pageMenu`), changés par les commandes du plugin —
+  et par les boutons du miroir des réglages, par `execute`, le même chemin.
+  Le miroir de l'onglet Stream Deck dessine la même `DeckPage` que
+  l'appareil : ce qu'on y voit est ce qu'il montre. Toute logique de
+  disposition qui apparaîtrait dans le plugin est au mauvais endroit.
+- **Les dispositions** ([DeckLayout.swift](Sources/Synfus/StreamDeck/Profils/DeckLayout.swift),
+  pur) : une grille de `DeckTile` (source courte, source longue) ; `DeckMode`
+  est **générique** (`Preferences.deckMode`) ou **propre au perso**
+  (`SpellProfile.disposition`, prioritaire). `parBarre` : la barre active sur
+  les touches, « barre suivante » tourne les barres ; `parRangee` : une barre
+  par rangée, par fenêtres de la largeur (1-5, 6-10, 11-12, puis les barres
+  suivantes) ; `personnalisee` : n'importe quelle case de n'importe quelle
+  barre, un second sort en appui long, une commande — c'est là qu'on saute et
+  réordonne des sorts sans toucher au jeu. Rien n'est réimporté dans le
+  logiciel Elgato : le profil livré ne contient que des touches Synfus.
+- **Gestes** : le SDK ne livre qu'enfoncé / relâché, le plugin mesure. Appui
+  court = au relâchement ; maintenu au-delà de `appuiLongMs` (350 ms) =
+  action longue, relâchement ignoré ; une touche sans action longue joue à
+  l'enfoncement. **Pas de double-clic**, décision : il retarderait chaque
+  appui et empêcherait de lancer deux fois le même sort — deux appuis sont
+  deux frappes, comme au clavier. Aucune répétition au maintien.
 - **Le plugin est en Swift, pas en TypeScript.** Le logiciel Elgato lance
   n'importe quel exécutable déclaré en `CodePathMac` avec
   `-port -pluginUUID -registerEvent -info` ; [Sources/SynfusDeck/](Sources/SynfusDeck/)
   s'enregistre sur son WebSocket (`URLSessionWebSocketTask`), se connecte au
   socket de Synfus (reconnexion à délai croissant : il peut être lancé avant
-  Synfus) et redessine les touches à chaque `etat`. Il ne partage **aucun
-  code** avec l'app — `DeckMessages.swift` est le miroir du protocole, et
-  c'est voulu : pas de target commun à maintenir pour cinq structs. Les
-  touches « sort » n'ont aucune configuration : leur position est leur ordre
-  de lecture sur l'appareil (ligne puis colonne) — n'importe quelle
-  disposition marche, 2 × 4 comme 8 × 4. Les **modificateurs sont pressés
-  comme des touches** (`Keystroke`), pas seulement posés en drapeau : le
-  client Unity lit l'état des touches, et ⌃1 en drapeau jouait la touche 1
-  nue. Sans Dofus devant, les icônes restent, assombries (`Images.dimmed`) ;
-  sans Synfus, les touches le disent et une pression le lance. Le plugin
-  bascule vers son profil livré (`Plugin/make-profile.sh` →
-  `Synfus.streamDeckProfile`, 5 × 3 : navigation en haut, dix sorts) quand
-  Dofus passe devant, et le rend quand il s'en va — `switchToProfile` n'accepte
-  qu'un profil **installé avec le plugin**, d'où le paquet
-  `dist/fr.synseria.synfus.streamDeckPlugin` que `build.sh --install` ouvre à
-  la première installation (un `.sdPlugin` copié à la main ne l'enregistre
-  pas) ; les mises à jour suivantes copient le dossier et relancent le
-  logiciel. `build.sh` assemble le tout depuis [Plugin/](Plugin/). Le plugin
-  journalise dans `~/Library/Logs/Synfus/synfusdeck.log`.
+  Synfus), annonce ses grilles, et redessine à chaque `page`. Il ne partage
+  **aucun code** avec l'app — `DeckMessages.swift` est le miroir du
+  protocole, et c'est voulu : pas de target commun à maintenir pour cinq
+  structs. Les **modificateurs sont pressés comme des touches**
+  (`Keystroke`), pas seulement posés en drapeau : le client Unity lit l'état
+  des touches, et ⌃1 en drapeau jouait la touche 1 nue. Sans Dofus devant,
+  Synfus atténue tout et une touche du jeu ramène Dofus (`activer`) ; sans
+  Synfus, les touches le disent et une pression le lance. Le plugin bascule
+  vers son profil livré (`Plugin/make-profile.sh` → `Synfus.streamDeckProfile`,
+  quinze touches Synfus) quand Dofus passe devant, et le rend quand il s'en
+  va — `switchToProfile` n'accepte qu'un profil **installé avec le plugin**,
+  d'où le paquet `dist/fr.synseria.synfus.streamDeckPlugin` que
+  `build.sh --install` ouvre à la première installation (un `.sdPlugin` copié
+  à la main ne l'enregistre pas) ; les mises à jour suivantes copient le
+  dossier et relancent le logiciel. Changer les actions du manifeste impose
+  de réinstaller le paquet une fois. `build.sh` assemble le tout depuis
+  [Plugin/](Plugin/). Le plugin journalise dans
+  `~/Library/Logs/Synfus/synfusdeck.log`.
 
 [Profils/](Sources/Synfus/StreamDeck/Profils/) : `SpellProfile` (perso →
 3 barres × 10 cases, `sortId` DofusDB + nom, `normalize()` complète une

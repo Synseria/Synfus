@@ -1,26 +1,15 @@
 import SwiftUI
 
-/// Onglet Sorts : le profil de chaque perso — ses barres, ses cases —, les
-/// touches que le jeu attend, et la liaison Stream Deck.
+/// Onglet Sorts : le profil de chaque perso — ses barres, comme dans le jeu,
+/// douze cases sur une ligne — et les touches que le jeu attend.
 struct SpellsSettings: View {
     @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var manager = WindowManager.shared
     @ObservedObject private var store = SpellProfileStore.shared
     @ObservedObject private var previews = WindowPreviewService.shared
     @ObservedObject private var link = StreamDeckLink.shared
-    @ObservedObject private var combat = CombatWatcher.shared
     @State private var perso: String = ""
     @State private var message = ""
-
-    /// Persos connus : ceux de l'ordre enregistré, plus ceux connectés.
-    private var persos: [String] {
-        var names = prefs.characterOrder
-        for client in manager.clients
-        where WindowTitle.isPersistableName(client.name) && !names.contains(client.name) {
-            names.append(client.name)
-        }
-        return names
-    }
 
     private var classe: String? {
         manager.clients.first { $0.name == perso }?.characterClass ?? store.profiles[perso]?.classe
@@ -32,10 +21,7 @@ struct SpellsSettings: View {
         Form {
             Section {
                 HStack {
-                    Picker("Perso", selection: $perso) {
-                        ForEach(persos, id: \.self) { Text($0).tag($0) }
-                    }
-                    .onAppear { if perso.isEmpty { perso = persos.first ?? "" } }
+                    PersoPicker(perso: $perso)
                     if !perso.isEmpty {
                         Text(classe ?? "classe inconnue")
                             .font(.system(size: 11)).foregroundStyle(.secondary)
@@ -49,7 +35,7 @@ struct SpellsSettings: View {
                               : "Autorise d'abord l'enregistrement de l'écran (onglet Général)")
                 }
             } header: {
-                SectionTitle("Profil de sorts", help: "Un profil par perso : trois barres de dix cases, "
+                SectionTitle("Profil de sorts", help: "Un profil par perso : trois barres de douze cases, "
                              + "enregistré dans Application Support/Synfus/Profils/<perso>.json. Clique une case "
                              + "pour y mettre un sort de la classe, ou laisse « Reconnaître » lire la barre affichée "
                              + "à l'écran — le perso doit être connecté et sa fenêtre visible. La classe se lit sur "
@@ -111,41 +97,6 @@ struct SpellsSettings: View {
                              + "sont ceux du jeu tels qu'on les connaît — vérifie-les dans Options → Raccourcis.")
             }
 
-            Section {
-                Toggle("Liaison active", isOn: $prefs.streamDeckEnabled)
-                if prefs.streamDeckEnabled {
-                    Text(link.status)
-                        .font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary)
-                }
-            } header: {
-                SectionTitle("Stream Deck", help: "Ouvre un socket local, réservé à ton compte, sur lequel le "
-                             + "plugin SynfusDeck lit le perso actif et ses sorts. Il ne peut demander que ce que "
-                             + "fait la barre : perso suivant, précédent, barre suivante. Le plugin s'installe en "
-                             + "ouvrant dist/fr.synseria.synfus.sdPlugin.\n\n" + StreamDeckLink.socketURL.path)
-            }
-
-            Section {
-                HStack {
-                    Button("Référence en combat") { calibrate(true) }
-                    Button("Référence hors combat") { calibrate(false) }
-                    Spacer()
-                    Text(combat.calibrated ? combat.status : "non calibrée")
-                        .font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary)
-                }
-                .font(.system(size: 11))
-                .disabled(!previews.authorized)
-                if let reading = combat.lastReading {
-                    Text(String(format: "dernier relevé : combat %.2f · hors combat %.2f · %d ms",
-                                reading.correlationCombat, reading.correlationHors, Int(combat.lastDuration * 1000)))
-                        .font(.system(size: 10, design: .monospaced)).foregroundStyle(.tertiary)
-                }
-            } header: {
-                SectionTitle("Détection de combat", help: "Le Stream Deck peut changer de page à l'entrée en "
-                             + "combat. Le jeu ne le dit pas : Synfus compare, une fois par seconde, la bande basse "
-                             + "de la fenêtre à deux références que tu captures toi-même — une fois en combat, une "
-                             + "fois hors combat, perso devant. Le coût du relevé s'affiche ici.")
-            }
-
             if !message.isEmpty {
                 Text(message).font(.system(size: 11)).foregroundStyle(.secondary)
             }
@@ -157,7 +108,8 @@ struct SpellsSettings: View {
 
     private func barSection(_ bar: Int) -> some View {
         Section {
-            LazyVGrid(columns: Array(repeating: GridItem(.fixed(58), spacing: 6), count: 6), alignment: .leading, spacing: 8) {
+            // Les douze cases sur une ligne, comme la barre du jeu.
+            HStack(spacing: 4) {
                 ForEach(0..<SpellProfile.slotsPerBar, id: \.self) { position in
                     slotView(bar: bar, position: position)
                 }
@@ -168,6 +120,9 @@ struct SpellsSettings: View {
                 Text(profile.barres[bar].nom).font(.system(size: 12, weight: .semibold))
                 Text(SpellKeyMap.modifierChoices.first { $0.value == (prefs.spellKeyMap.barres[bar].first??.modifiers ?? 0) }?.label ?? "")
                     .font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary)
+                if link.mode.barreActive(page: link.page) == bar, link.mode != .parRangee {
+                    Text("sur le Stream Deck").font(.system(size: 10)).foregroundStyle(Color.accentColor)
+                }
                 Spacer()
                 Button { var p = profile; p.barres[bar] = .empty(nom: p.barres[bar].nom); store.save(p) } label: {
                     Image(systemName: "trash")
@@ -258,10 +213,6 @@ struct SpellsSettings: View {
         }
     }
 
-    private func calibrate(_ enCombat: Bool) {
-        Task { message = await CombatWatcher.shared.calibrate(enCombat: enCombat) }
-    }
-
     private func modifiersBinding(_ bar: Int) -> Binding<UInt32> {
         Binding(
             get: { prefs.spellKeyMap.barres[bar].first??.modifiers ?? 0 },
@@ -298,7 +249,7 @@ private struct SpellSlotCell: View {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
                         .strokeBorder(Color.primary.opacity(0.15), lineWidth: 0.5)
                 }
-                .frame(width: 48, height: 48)
+                .frame(width: 44, height: 44)
                 .overlay(alignment: .topLeading) {
                     Text("\(position + 1)")
                         .font(.system(size: 8, weight: .semibold, design: .rounded))
@@ -307,8 +258,8 @@ private struct SpellSlotCell: View {
                         .foregroundStyle(.white)
                         .padding(2)
                 }
-                Text(slot?.nom ?? "—").font(.system(size: 9)).lineLimit(1).frame(width: 56)
-                Text(keyLabel ?? " ").font(.system(size: 9, design: .monospaced)).foregroundStyle(.tertiary)
+                Text(slot?.nom ?? "—").font(.system(size: 8)).lineLimit(1).frame(width: 50)
+                Text(keyLabel ?? " ").font(.system(size: 8, design: .monospaced)).foregroundStyle(.tertiary)
             }
         }
         .buttonStyle(.plain)
