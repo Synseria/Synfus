@@ -42,6 +42,18 @@ struct WindowPreviewMatchTests {
         #expect(WindowPreviewService.match(pid: 42, title: "Trois", among: candidats) == nil)
     }
 
+    @Test("Deux fenêtres de jeu du même processus : le nom du perso tranche quand le titre a dérivé")
+    func nomDuPerso() {
+        let candidats = [
+            Candidat(pid: 42, title: "Un - Feca - 3.6.7.8 - Release"),
+            Candidat(pid: 42, title: "Deux - Iop - 3.6.7.8 - Release"),
+        ]
+        #expect(WindowPreviewService.match(pid: 42, title: "Deux - Iop - 3.6.7.7 - Release", among: candidats) == 1)
+        // Deux fenêtres au même nom : on renonce encore.
+        let doublon = [Candidat(pid: 42, title: "Un - Feca - 3.6.7.8 - Release"), Candidat(pid: 42, title: "Un - Feca - 3.6.7.8 - Release")]
+        #expect(WindowPreviewService.match(pid: 42, title: "Un - Feca - 3.6.7.7 - Release", among: doublon) == nil)
+    }
+
     @Test("Aucune fenêtre du processus : aucun appariement")
     func aucunCandidat() {
         #expect(WindowPreviewService.match(
