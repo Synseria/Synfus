@@ -28,11 +28,14 @@ struct DeckTouche: Codable, Equatable, Sendable {
     let index: Int
     let icone: String?
     let iconeLong: String?
+    let iconeTresLong: String?
     let symbole: String?
     let titre: String
     let attenuee: Bool
     let court: DeckAction?
     let long: DeckAction?
+    let tresLong: DeckAction?
+    let progressif: Bool
 }
 
 struct DeckPage: Codable, Equatable, Sendable {
@@ -44,6 +47,7 @@ struct DeckPage: Codable, Equatable, Sendable {
     let perso: DeckPerso?
     let touches: [DeckTouche]
     let appuiLongMs: Int
+    let appuiTresLongMs: Int
 }
 
 struct DeckCommand: Codable, Sendable {

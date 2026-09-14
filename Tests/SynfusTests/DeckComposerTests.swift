@@ -49,7 +49,9 @@ struct DeckComposerTests {
         #expect(page.touches[4].long == nil)   // jamais d'action longue sur la fin de tour : trop dangereux
         // Appui long sur la case 1 : la case 1 de la barre 2, en vignette ; case 2 d'en face vide → rien.
         #expect(page.touches[5].long?.touche == DeckKey(HotKey(keyCode: 18, modifiers: UInt32(controlKey))))
-        #expect(page.touches[5].iconeLong == nil && page.touches[6].long == nil)
+        #expect(page.touches[5].tresLong?.touche == DeckKey(HotKey(keyCode: 18, modifiers: UInt32(controlKey | shiftKey))))
+        #expect(page.touches[5].iconeLong == nil && page.touches[6].long == nil && page.touches[6].tresLong == nil)
+        #expect(page.touches[5].progressif && !page.touches[1].progressif && !page.touches[6].progressif)
         #expect(page.touches[5].titre == "Bouclier" && page.touches[5].icone == "PNG")
         #expect(page.touches[5].court?.touche == DeckKey(HotKey(keyCode: 18, modifiers: 0)))
         #expect(page.touches[6].icone == nil && page.touches[6].titre == "2" && page.touches[6].court?.touche != nil)
@@ -64,8 +66,15 @@ struct DeckComposerTests {
         #expect(page.touches[5].court?.touche?.modifiers == UInt32(controlKey))
         #expect(DeckSettings.parBarre.pageCount(colonnes: 5, lignes: 3) == 3)
         var off = DeckSettings.parBarre
-        off.sortLong = false
+        off.sortLong = .aucun
         #expect(compose(input(off)).touches[5].long == nil)
+        off.sortLong = .unNiveau
+        #expect(compose(input(off)).touches[5].long != nil && compose(input(off)).touches[5].tresLong == nil)
+        // Les barres retenues, dans l'ordre : barre 3 puis barre 1.
+        let ordre = DeckSettings(kind: .parBarre, pages: [2, 0])
+        #expect(ordre.pageCount(colonnes: 5, lignes: 3) == 2)
+        #expect(compose(input(ordre)).touches[5].titre == "Trois")
+        #expect(compose(input(ordre, page: 1)).touches[5].titre == "Bouclier")
     }
 
     @Test("Une barre par rangée : L1 1-5 / L2 1-5, puis 6-10, puis 11-12, puis la barre 3 ; appui long = fenêtre suivante")
@@ -75,6 +84,8 @@ struct DeckComposerTests {
         let p0 = compose(input(rangee))
         #expect(p0.touches[5].long?.touche == DeckKey(HotKey(keyCode: 22, modifiers: 0)))   // case 6
         #expect(p0.touches[5].iconeLong == "PNG" && p0.touches[6].long == nil)   // case 7 vide : rien en appui long
+        #expect(p0.touches[5].tresLong == nil)   // case 11 vide : rien en très long
+        #expect(p0.touches[6].tresLong?.touche == DeckKey(HotKey(keyCode: 24, modifiers: 0)))   // case 2 → très long = case 12
         #expect(DeckLayout.pageLabelParRangee(0, colonnes: 5, lignes: 3) == "Barres 1-2 · cases 1-5")
         #expect(DeckLayout.pageLabelParRangee(5, colonnes: 5, lignes: 3) == "Barre 3 · cases 11-12")
         #expect(p0.touches[0].titre == "Page 1/6")
@@ -115,11 +126,12 @@ struct DeckComposerTests {
     @Test("Disposition personnalisée : un second sort en appui long, une commande posée n'est plus dans le menu")
     func personnalisee() {
         var layout = DeckLayout.parBarre(colonnes: 5, lignes: 3)
-        layout[1, 0] = DeckTile(.sort(barre: 0, position: 0), long: .sort(barre: 1, position: 0))
+        layout[1, 0] = DeckTile(.sort(barre: 0, position: 0), long: .sort(barre: 1, position: 0), tresLong: .commande("inventaire"))
         layout[1, 1] = DeckTile(.commande("inventaire"))
         let page = compose(input(DeckSettings(kind: .personnalisee, custom: layout)))
         #expect(page.touches[5].titre == "Bouclier")
         #expect(page.touches[5].long?.touche == DeckKey(HotKey(keyCode: 18, modifiers: UInt32(controlKey))))
+        #expect(page.touches[5].tresLong?.nom == "Inventaire" && !page.touches[5].progressif)   // une commande dans les niveaux : pas progressif
         #expect(page.touches[6].titre == "Inventaire")
         let menu = compose(input(DeckSettings(kind: .personnalisee, custom: layout), menu: true))
         #expect(!menu.touches.contains { $0.titre == "Inventaire" && $0.index != 6 })

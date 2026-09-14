@@ -100,9 +100,13 @@ final class Preferences: ObservableObject {
     /// peut le remplacer par le sien.
     @Published var deck: DeckSettings = .parBarre { didSet { save() } }
 
-    /// Durée d'appui, en ms, à partir de laquelle une touche du Stream Deck
-    /// joue son action longue.
-    @Published var appuiLongMs: Int = 250 { didSet { save() } }
+    /// Durées d'appui, en ms, à partir desquelles une touche du Stream Deck
+    /// joue son action longue, puis très longue.
+    @Published var appuiLongMs: Int = 150 { didSet { save() } }
+    @Published var appuiTresLongMs: Int = 300 { didSet { save() } }
+    /// Sélection progressive des sorts : chaque niveau d'appui joue à son
+    /// seuil, le jeu montre le sort sélectionné pendant qu'on tient.
+    @Published var appuiProgressif: Bool = true { didSet { save() } }
 
     /// Nombre de slots exposés (et donc de raccourcis potentiels).
     ///
@@ -223,6 +227,8 @@ final class Preferences: ObservableObject {
         var gameCommands: [GameCommand]?
         var deck: DeckSettings?
         var appuiLongMs: Int?
+        var appuiTresLongMs: Int?
+        var appuiProgressif: Bool?
         /// Génération du jeu de raccourcis par défaut appliqué à cette
         /// sauvegarde. Absente des sauvegardes d'avant la refonte, d'où le repli
         /// sur 1 à la lecture.
@@ -351,6 +357,8 @@ final class Preferences: ObservableObject {
             gameCommands: gameCommands,
             deck: deck,
             appuiLongMs: appuiLongMs,
+            appuiTresLongMs: appuiTresLongMs,
+            appuiProgressif: appuiProgressif,
             defaultsVersion: Self.defaultsVersion
         )
         if let data = try? JSONEncoder().encode(stored) {
@@ -405,7 +413,9 @@ final class Preferences: ObservableObject {
         streamDeckEnabled = stored.streamDeckEnabled ?? false
         gameCommands = GameCommands.normalized(GameCommands.repaired(stored.gameCommands ?? GameCommands.defaults))
         deck = stored.deck ?? .parBarre
-        appuiLongMs = stored.appuiLongMs ?? 250
+        appuiLongMs = stored.appuiLongMs ?? 150
+        appuiTresLongMs = stored.appuiTresLongMs ?? 300
+        appuiProgressif = stored.appuiProgressif ?? true
         if let x = stored.barOriginX, let y = stored.barOriginY {
             barOrigin = CGPoint(x: x, y: y)
         }

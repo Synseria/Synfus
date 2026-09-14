@@ -70,12 +70,12 @@ struct SpellProfileTests {
         var custom = DeckLayout.parBarre(colonnes: 5, lignes: 3)
         custom[1, 0] = DeckTile(.sort(barre: 2, position: 11), long: .commande("inventaire"))
         var q = SpellProfile.empty(perso: "Brok", classe: nil)
-        q.deck = DeckSettings(kind: .personnalisee, pages: [1, 0], sortLong: false, custom: custom)
+        q.deck = DeckSettings(kind: .personnalisee, pages: [1, 0], sortLong: .aucun, custom: custom)
         let back = try JSONDecoder().decode(SpellProfile.self, from: JSONEncoder().encode(q))
         #expect(back.deck == q.deck)
         // Un réglage amputé de ses clés récentes se relit avec les défauts.
-        let old = try JSONDecoder().decode(DeckSettings.self, from: Data(#"{"kind":"parRangee"}"#.utf8))
-        #expect(old.kind == .parRangee && old.sortLong && old.pages.isEmpty && old.custom == nil)
+        let old = try JSONDecoder().decode(DeckSettings.self, from: Data(#"{"kind":"parRangee","sortLong":true}"#.utf8))
+        #expect(old.kind == .parRangee && old.sortLong == .deuxNiveaux && old.pages.isEmpty && old.custom == nil)
     }
 
     @Test("Une commande du plugin se décode, une inconnue non")

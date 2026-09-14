@@ -33,10 +33,6 @@ final class Plugin {
     private var switchedDevices: Set<String> = []
     /// Les appareils et leur grille ; 5 × 3 quand le logiciel ne la dit pas.
     private var devices: [String: Grid] = [:]
-    /// Appuis en cours : la tâche qui attend l'échéance de l'appui long, et
-    /// si elle a déjà joué.
-    private var holds: [String: Task<Void, Never>] = [:]
-    private var longFired: Set<String> = []
 
     private static let socketPath = FileManager.default
         .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -118,34 +114,63 @@ final class Plugin {
 
     // MARK: - Appuis
 
-    /// Appui court = au relâchement ; maintenu jusqu'à l'échéance = action
-    /// longue, et le relâchement ne fait plus rien. Une touche sans action
-    /// longue joue à l'enfoncement, sans attendre.
+    /// Un appui en cours : depuis quand, jusqu'où il est allé.
+    private struct Hold {
+        let start: ContinuousClock.Instant
+        var stage = 0          // 0 court, 1 long, 2 très long
+        var done = false       // le dernier niveau a joué : le relâchement ne fait plus rien
+        var task: Task<Void, Never>?
+    }
+    private var holdsInProgress: [String: Hold] = [:]
+
+    /// Trois niveaux : court, long (≥ `appuiLongMs`), très long
+    /// (≥ `appuiTresLongMs`). Une touche **progressive** — des sorts à tous
+    /// les niveaux — joue chaque niveau à son seuil : le jeu montre le sort
+    /// sélectionné pendant qu'on tient, on lâche quand c'est le bon. Une
+    /// touche ordinaire joue au relâchement le niveau atteint, et son dernier
+    /// niveau dès le seuil ; sans niveau au-delà du court, elle joue à
+    /// l'enfoncement.
     private func keyDown(_ context: String) {
         guard let key = keys[context] else { return }
-        flash(context)
         // Sans Synfus, n'importe quelle touche le lance : c'est ce qu'on veut
         // quand « Synfus absent » s'affiche.
-        guard connected, let touche = touche(key) else { launchSynfus(); return }
-        guard let long = touche.long else { perform(touche.court, context: context); return }
-        longFired.remove(context)
-        let delay = pages[grid(of: key)]?.appuiLongMs ?? 350
-        holds[context] = Task { [weak self] in
-            try? await Task.sleep(for: .milliseconds(delay))
-            guard !Task.isCancelled, let self else { return }
-            self.holds[context] = nil
-            self.longFired.insert(context)
-            self.perform(long, context: context)
+        guard connected, let touche = touche(key), let page = pages[grid(of: key)] else { launchSynfus(); return }
+        let levels: [DeckAction?] = [touche.court, touche.long, touche.tresLong]
+        let last = levels.lastIndex { $0 != nil } ?? 0
+        flash(context, stage: 0)
+        guard last > 0 else { perform(touche.court, context: context); return }
+        var hold = Hold(start: .now)
+        if touche.progressif { perform(touche.court, context: context) }
+        let thresholds = [0, page.appuiLongMs, page.appuiTresLongMs]
+        hold.task = Task { [weak self] in
+            for stage in 1...last {
+                let wait = thresholds[stage] - (stage > 1 ? thresholds[stage - 1] : 0)
+                try? await Task.sleep(for: .milliseconds(max(0, wait)))
+                guard !Task.isCancelled, let self, var hold = self.holdsInProgress[context] else { return }
+                hold.stage = stage
+                self.render(context, highlight: stage)
+                // Progressive : chaque niveau renseigné joue à son seuil. Sinon
+                // seul le dernier joue ici, les autres attendent le relâchement.
+                if touche.progressif || stage == last, let action = levels[stage] {
+                    self.perform(action, context: context)
+                }
+                hold.done = stage == last
+                self.holdsInProgress[context] = hold
+            }
         }
+        holdsInProgress[context] = hold
     }
 
     private func keyUp(_ context: String) {
-        if let hold = holds.removeValue(forKey: context) {
-            hold.cancel()
-            guard let key = keys[context], let touche = touche(key) else { return }
-            perform(touche.court, context: context)
-        }
-        longFired.remove(context)
+        guard let hold = holdsInProgress.removeValue(forKey: context) else { return }
+        hold.task?.cancel()
+        render(context)
+        guard !hold.done, let key = keys[context], let touche = touche(key) else { return }
+        if touche.progressif { return }   // tout est déjà joué à mesure
+        let levels: [DeckAction?] = [touche.court, touche.long, touche.tresLong]
+        // Le niveau atteint, ou le premier renseigné en deçà.
+        let action = (0...hold.stage).reversed().compactMap { levels[$0] }.first
+        perform(action, context: context)
     }
 
     private func perform(_ action: DeckAction?, context: String) {
@@ -207,7 +232,7 @@ final class Plugin {
 
     /// Une touche, d'après la page de sa grille. Sans Synfus, les touches le
     /// disent ; Dofus derrière une autre app, Synfus les a atténuées.
-    private func render(_ context: String, highlight: Bool = false) {
+    private func render(_ context: String, highlight: Int = -1) {
         guard let elgato, let key = keys[context] else { return }
         guard connected else {
             elgato.setImage(context, base64PNG: Images.blank(dimmed: true))
@@ -220,7 +245,8 @@ final class Plugin {
             return
         }
         if let icone = touche.icone {
-            elgato.setImage(context, base64PNG: Images.framed(icone, corner: touche.iconeLong, dimmed: touche.attenuee, highlight: highlight))
+            elgato.setImage(context, base64PNG: Images.framed(icone, cornerLeft: touche.iconeLong, cornerRight: touche.iconeTresLong,
+                                                              dimmed: touche.attenuee, highlight: highlight))
         } else if let symbole = touche.symbole {
             elgato.setImage(context, base64PNG: Images.symbol(symbole, dimmed: touche.attenuee, highlight: highlight))
         } else {
@@ -230,11 +256,13 @@ final class Plugin {
     }
 
     /// Un éclair sur la touche pressée : l'appareil n'anime rien de lui-même.
-    private func flash(_ context: String) {
-        render(context, highlight: true)
+    /// Les niveaux suivants sont marqués par `keyDown` à leur seuil.
+    private func flash(_ context: String, stage: Int) {
+        render(context, highlight: stage)
         Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(120))
-            self?.render(context)
+            guard let self, self.holdsInProgress[context] == nil else { return }
+            self.render(context)
         }
     }
 }
@@ -304,30 +332,47 @@ enum Images {
     /// coins arrondis, elle reste nette. La place du titre est laissée en bas.
     static let margin: CGFloat = 16
 
+    /// Le fond selon le niveau d'appui : -1 au repos, 0 l'éclair de
+    /// l'enfoncement, 1 le seuil long, 2 le seuil très long.
+    private static func background(dimmed: Bool, highlight: Int) -> NSColor {
+        switch highlight {
+        case 0: return NSColor(white: 0.4, alpha: 1)
+        case 1: return NSColor(calibratedRed: 0.15, green: 0.35, blue: 0.7, alpha: 1)
+        case 2: return NSColor(calibratedRed: 0.75, green: 0.45, blue: 0.1, alpha: 1)
+        default: return NSColor(white: dimmed ? 0.08 : 0.16, alpha: 1)
+        }
+    }
+
     /// L'icône posée sur la touche : en retrait sur fond sombre, assombrie
-    /// quand Dofus n'est pas devant ; en `corner`, le sort de l'appui long,
-    /// en vignette en bas à droite — on sait d'un coup d'œil ce qu'on tient.
-    static func framed(_ base64PNG: String, corner: String? = nil, dimmed: Bool, highlight: Bool = false) -> String {
-        let key = "\(dimmed)/\(highlight)/\(base64PNG.hashValue)/\(corner?.hashValue ?? 0)"
+    /// quand Dofus n'est pas devant ; en bas à gauche le sort de l'appui
+    /// long, en bas à droite celui du très long — on sait d'un coup d'œil ce
+    /// qu'on tient. Le fond dit le niveau atteint pendant l'appui.
+    static func framed(_ base64PNG: String, cornerLeft: String? = nil, cornerRight: String? = nil,
+                       dimmed: Bool, highlight: Int = -1) -> String {
+        let key = "\(dimmed)/\(highlight)/\(base64PNG.hashValue)/\(cornerLeft?.hashValue ?? 0)/\(cornerRight?.hashValue ?? 0)"
         if let cached = frameCache[key] { return cached }
         guard let data = Data(base64Encoded: base64PNG), let image = NSImage(data: data) else { return base64PNG }
-        let small = corner.flatMap { Data(base64Encoded: $0) }.flatMap { NSImage(data: $0) }
+        let left = cornerLeft.flatMap { Data(base64Encoded: $0) }.flatMap { NSImage(data: $0) }
+        let right = cornerRight.flatMap { Data(base64Encoded: $0) }.flatMap { NSImage(data: $0) }
         let size = NSSize(width: 144, height: 144)
         let out = NSImage(size: size, flipped: false) { rect in
-            NSColor(white: highlight ? 0.45 : 0.08, alpha: 1).setFill()
+            (highlight >= 0 ? background(dimmed: dimmed, highlight: highlight) : NSColor(white: 0.08, alpha: 1)).setFill()
             rect.fill()
             let target = rect.insetBy(dx: margin, dy: margin).offsetBy(dx: 0, dy: 6)
             NSGraphicsContext.saveGraphicsState()
             NSBezierPath(roundedRect: target, xRadius: 12, yRadius: 12).addClip()
             image.draw(in: target, from: .zero, operation: .sourceOver, fraction: dimmed ? 0.55 : 1)
             NSGraphicsContext.restoreGraphicsState()
-            if let small {
-                let side = target.width * 0.42
-                let box = NSRect(x: target.maxX - side + 4, y: target.minY - 4, width: side, height: side)
+            let side = target.width * 0.4
+            for (small, x) in [(left, target.minX - 4), (right, target.maxX - side + 4)] {
+                guard let small else { continue }
+                let box = NSRect(x: x, y: target.minY - 4, width: side, height: side)
+                NSGraphicsContext.saveGraphicsState()
                 NSColor(white: 0.08, alpha: 1).setFill()
                 NSBezierPath(roundedRect: box.insetBy(dx: -3, dy: -3), xRadius: 9, yRadius: 9).fill()
                 NSBezierPath(roundedRect: box, xRadius: 7, yRadius: 7).addClip()
                 small.draw(in: box, from: .zero, operation: .sourceOver, fraction: dimmed ? 0.55 : 1)
+                NSGraphicsContext.restoreGraphicsState()
             }
             return true
         }
@@ -360,7 +405,7 @@ enum Images {
     private static var symbolCache: [String: String] = [:]
 
     /// Un symbole SF, blanc sur fond sombre — les touches de commande.
-    static func symbol(_ name: String, dimmed: Bool, highlight: Bool = false) -> String {
+    static func symbol(_ name: String, dimmed: Bool, highlight: Int = -1) -> String {
         let key = "\(name)/\(dimmed)/\(highlight)"
         if let cached = symbolCache[key] { return cached }
         let size = NSSize(width: 144, height: 144)
@@ -377,7 +422,7 @@ enum Images {
                 }
             }
         let out = NSImage(size: size, flipped: false) { rect in
-            NSColor(white: highlight ? 0.45 : dimmed ? 0.08 : 0.16, alpha: 1).setFill()
+            background(dimmed: dimmed, highlight: highlight).setFill()
             NSBezierPath(roundedRect: rect.insetBy(dx: 6, dy: 6), xRadius: 18, yRadius: 18).fill()
             if let glyph {
                 let target = NSRect(x: (size.width - glyph.size.width) / 2, y: (size.height - glyph.size.height) / 2 + 10,

@@ -51,8 +51,10 @@ struct DeckTouche: Codable, Equatable, Sendable {
     let index: Int
     /// PNG en base64 — l'icône d'un sort, l'emblème d'un perso.
     let icone: String?
-    /// L'icône du sort joué en appui long, à poser en vignette dans le coin.
+    /// L'icône du sort joué en appui long (vignette en bas à gauche) et en
+    /// appui très long (en bas à droite).
     let iconeLong: String?
+    let iconeTresLong: String?
     /// À défaut d'icône, un symbole SF.
     let symbole: String?
     let titre: String
@@ -60,6 +62,12 @@ struct DeckTouche: Codable, Equatable, Sendable {
     let attenuee: Bool
     let court: DeckAction?
     let long: DeckAction?
+    let tresLong: DeckAction?
+    /// Progressive : chaque niveau joue **à son seuil**, sans attendre le
+    /// relâchement — le jeu montre la sélection du sort pendant qu'on tient,
+    /// on lâche quand c'est le bon. Réservé aux touches dont tous les niveaux
+    /// sélectionnent un sort : ailleurs, deux actions d'affilée se contrediraient.
+    let progressif: Bool
 }
 
 /// Ce que le Stream Deck doit montrer, à cet instant, sur une grille donnée.
@@ -73,8 +81,10 @@ struct DeckPage: Codable, Equatable, Sendable {
     let dofusDevant: Bool
     let perso: DeckPerso?
     let touches: [DeckTouche]
-    /// Durée d'appui à partir de laquelle l'action longue part, en ms.
+    /// Durées d'appui, en ms, à partir desquelles l'action longue puis la
+    /// très longue s'appliquent.
     let appuiLongMs: Int
+    let appuiTresLongMs: Int
 }
 
 /// Ce que le plugin peut envoyer.
