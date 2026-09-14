@@ -1,40 +1,6 @@
 import AppKit
 import ApplicationServices
 
-/// Une fenêtre de client Dofus, c'est-à-dire un perso connecté.
-struct DofusClient: Identifiable, Hashable {
-    let pid: pid_t
-    let slotKey: String
-    let axWindow: AXUIElement
-    let rawTitle: String
-    let name: String
-    /// Classe du perso, lue dans le titre de la fenêtre
-    /// (« Syn-App - Feca - 3.6.7.7 - Release » → « Feca »).
-    let characterClass: String?
-    /// Perso connu de mémoire, dont l'Accessibilité ne rend plus la fenêtre —
-    /// en pratique, un client dans un espace plein écran qui n'est pas actif.
-    /// Il reste cliquable : l'activation du processus suffit à y basculer.
-    let dormant: Bool
-
-    var id: String { slotKey }
-
-    /// Le même perso, tel qu'on se le rappelle une fois sa fenêtre hors de vue.
-    func remembered() -> DofusClient {
-        DofusClient(
-            pid: pid, slotKey: slotKey, axWindow: axWindow, rawTitle: rawTitle,
-            name: name, characterClass: characterClass, dormant: true
-        )
-    }
-
-    static func == (lhs: DofusClient, rhs: DofusClient) -> Bool {
-        lhs.slotKey == rhs.slotKey && lhs.name == rhs.name && lhs.dormant == rhs.dormant
-    }
-
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(slotKey)
-    }
-}
-
 @MainActor
 final class WindowManager: ObservableObject {
     static let shared = WindowManager()
@@ -109,7 +75,7 @@ final class WindowManager: ObservableObject {
 
         // Les versions du client et les homonymes suffixés ont pu s'enregistrer
         // avant que le filtre n'existe : ils encombreraient la liste indéfiniment.
-        prefs.purgeOrder(keeping: Self.isPersistableName)
+        prefs.purgeOrder(keeping: WindowTitle.isPersistableName)
 
         let center = NSWorkspace.shared.notificationCenter
 
@@ -322,9 +288,9 @@ final class WindowManager: ObservableObject {
                 guard Self.isGameWindow(subrole: facts.subrole, size: facts.size) else { continue }
 
                 let rawTitle = facts.title ?? ""
-                guard Self.isCharacterWindow(title: rawTitle) else { continue }
+                guard WindowTitle.isCharacterWindow(title: rawTitle) else { continue }
 
-                var name = Self.characterName(fromTitle: rawTitle)
+                var name = WindowTitle.characterName(fromTitle: rawTitle)
 
                 // Deux persos peuvent porter un titre identique (ou vide) : on les
                 // distingue visuellement plutôt que de les laisser se confondre.
@@ -338,7 +304,7 @@ final class WindowManager: ObservableObject {
                     axWindow: window,
                     rawTitle: rawTitle,
                     name: name,
-                    characterClass: Self.characterClass(fromTitle: rawTitle),
+                    characterClass: WindowTitle.characterClass(fromTitle: rawTitle),
                     dormant: false
                 ))
             }
@@ -356,7 +322,7 @@ final class WindowManager: ObservableObject {
         let stillClosing = closingPIDs.intersection(livePIDs)
         if stillClosing != closingPIDs { closingPIDs = stillClosing }
         let silentPIDs = livePIDs.subtracting(talkativePIDs)
-        found = Self.withRemembered(
+        found = ClientMemory.withRemembered(
             found: found,
             remembered: rememberedClients,
             silentPIDs: silentPIDs
@@ -377,7 +343,7 @@ final class WindowManager: ObservableObject {
         }
         if !unknownPIDs.isEmpty {
             for pid in unknownPIDs { crossSpaceChecked[pid] = now }
-            let discovered = Self.discoveredAcrossSpaces(
+            let discovered = ClientMemory.discoveredAcrossSpaces(
                 titles: CrossSpaceTitles.read(pids: unknownPIDs),
                 existingNames: Set(found.map(\.name)),
                 appElement: AXUIElementCreateApplication
@@ -402,9 +368,9 @@ final class WindowManager: ObservableObject {
 
         // Seuls les vrais noms de persos entrent dans la liste ; les clients au
         // login et les homonymes suffixés restent dans la barre sans s'y inscrire.
-        prefs.registerIfNeeded(names: found.map(\.name).filter(Self.isPersistableName))
+        prefs.registerIfNeeded(names: found.map(\.name).filter(WindowTitle.isPersistableName))
 
-        found = Self.sorted(found, by: prefs.characterOrder)
+        found = ClientMemory.sorted(found, by: prefs.characterOrder)
 
         if found != clients {
             clients = found
@@ -421,26 +387,8 @@ final class WindowManager: ObservableObject {
     /// qui est connecté : refaire le tour de l'Accessibilité à chaque
     /// permutation, c'était payer un inventaire complet pour un tri.
     func resort() {
-        let sorted = Self.sorted(clients, by: prefs.characterOrder)
+        let sorted = ClientMemory.sorted(clients, by: prefs.characterOrder)
         if sorted != clients { clients = sorted }
-    }
-
-    /// L'ordre de la barre : rang dans `characterOrder`, les inconnus en fin —
-    /// c'est ce qui laisse les clients au login et les homonymes suffixés
-    /// derrière sans décaler personne —, puis pid croissant, l'ordre de
-    /// lancement, pour que deux inconnus ne s'échangent pas d'un tour à l'autre.
-    static func sorted(_ clients: [DofusClient], by order: [String]) -> [DofusClient] {
-        // Premier rang en cas de doublon : `firstIndex` faisait de même.
-        var rank: [String: Int] = [:]
-        for (index, name) in order.enumerated() where rank[name] == nil {
-            rank[name] = index
-        }
-        return clients.sorted { lhs, rhs in
-            let li = rank[lhs.name] ?? Int.max
-            let ri = rank[rhs.name] ?? Int.max
-            if li != ri { return li < ri }
-            return lhs.pid < rhs.pid
-        }
     }
 
     /// Retient les persos effectivement vus, par processus. Un pid dont on ne
@@ -449,63 +397,6 @@ final class WindowManager: ObservableObject {
     private func remember(_ found: [DofusClient]) {
         for (pid, clients) in Dictionary(grouping: found, by: \.pid) {
             rememberedClients[pid] = clients
-        }
-    }
-
-    /// Complète les persos trouvés de ceux dont le processus vit encore mais ne
-    /// rend plus aucune fenêtre — `silentPIDs`. Isolée et pure : c'est la règle
-    /// qui décide ce que la barre affiche, elle mérite d'être testée.
-    ///
-    /// Un client rendu à l'écran de connexion n'en fait délibérément pas partie :
-    /// il rend bien une fenêtre, simplement sans perso. Le ressusciter afficherait
-    /// un perso qui n'est plus en jeu.
-    static func withRemembered(
-        found: [DofusClient],
-        remembered: [pid_t: [DofusClient]],
-        silentPIDs: Set<pid_t>
-    ) -> [DofusClient] {
-        let visible = Set(found.map(\.pid))
-        let dormant = remembered
-            .filter { silentPIDs.contains($0.key) && !visible.contains($0.key) }
-            // Tri par pid : le dictionnaire n'a pas d'ordre, et la barre ne doit
-            // pas se réorganiser d'un rafraîchissement à l'autre.
-            .sorted { $0.key < $1.key }
-            .flatMap(\.value)
-            .map { $0.remembered() }
-        return found + dormant
-    }
-
-    /// Persos découverts à travers les espaces par CGWindowList : les pids
-    /// vivants, muets pour l'Accessibilité et sans aucune mémoire. Pure, comme
-    /// `withRemembered` : c'est une règle d'affichage, elle se teste.
-    ///
-    /// L'élément AX fourni est celui de l'application, pas d'une fenêtre — pour
-    /// un perso dormant il ne sert à rien, l'activation du processus fait tout.
-    /// Les homonymes sont suffixés comme ceux de l'inventaire, en comptant les
-    /// noms déjà pris.
-    static func discoveredAcrossSpaces(
-        titles: [pid_t: String],
-        existingNames: Set<String>,
-        appElement: (pid_t) -> AXUIElement
-    ) -> [DofusClient] {
-        var taken = existingNames
-        // Tri par pid : l'ordre d'un dictionnaire changerait d'un inventaire à
-        // l'autre, et les suffixes d'homonymes avec lui.
-        return titles.sorted { $0.key < $1.key }.compactMap { pid, title in
-            guard isCharacterWindow(title: title) else { return nil }
-            let base = characterName(fromTitle: title)
-            var name = base
-            var seen = 1
-            while taken.contains(name) {
-                seen += 1
-                name = "\(base) (\(seen))"
-            }
-            taken.insert(name)
-            return DofusClient(
-                pid: pid, slotKey: "\(pid)#cg", axWindow: appElement(pid),
-                rawTitle: title, name: name,
-                characterClass: characterClass(fromTitle: title), dormant: true
-            )
         }
     }
 
@@ -600,104 +491,6 @@ final class WindowManager: ObservableObject {
     func isGameWindow(_ window: AXUIElement) -> Bool {
         let facts = windowFacts(window)
         return Self.isGameWindow(subrole: facts.subrole, size: facts.size)
-    }
-
-    /// Séparateurs rencontrés dans les titres du client selon les versions.
-    private static let separators = [" - ", " – ", " — ", " | ", " • "]
-
-    /// Un client qui n'a pas encore de perso en jeu — écran de connexion,
-    /// sélection de personnage, chargement — s'intitule simplement « Dofus ».
-    /// Ce n'est pas un perso : il n'a rien à faire dans la barre, et lui donner
-    /// un emplacement décalerait les raccourcis des vrais persos.
-    ///
-    /// Un perso connecté porte toujours « Nom - Classe - version - Release ».
-    static func isCharacterWindow(title: String) -> Bool {
-        let cleaned = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !cleaned.isEmpty, cleaned.lowercased() != "dofus" else { return false }
-        return separators.contains { cleaned.contains($0) }
-    }
-
-    /// Extrait le nom du perso du titre de la fenêtre. Le client Dofus n'a pas de
-    /// format garanti : on prend ce qui précède le premier séparateur, et à défaut
-    /// le titre entier. Le panneau de diagnostic affiche les titres bruts pour
-    /// vérifier ce que ça donne réellement.
-    static func characterName(fromTitle title: String) -> String {
-        let cleaned = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !cleaned.isEmpty else { return "Sans titre" }
-
-        for separator in separators {
-            guard let range = cleaned.range(of: separator) else { continue }
-            let head = String(cleaned[..<range.lowerBound])
-                .trimmingCharacters(in: .whitespaces)
-            if !head.isEmpty && head.lowercased() != "dofus" {
-                return head
-            }
-        }
-        return cleaned
-    }
-
-    /// Mots que le client affiche quand il n'a encore personne en jeu. Ils ne
-    /// nomment aucun perso, et un nom qui n'est fait que de ceux-là ne mérite
-    /// pas d'entrer dans la liste des persos connus.
-    private static let clientOnlyWords: Set<String> = ["dofus", "release", "beta", "alpha", "retail"]
-
-    /// Un nom digne d'être mémorisé dans l'ordre des persos.
-    ///
-    /// Deux formes doivent rester visibles dans la barre — on veut pouvoir
-    /// cliquer dessus — sans pour autant s'inscrire à demeure dans les réglages :
-    ///
-    /// - « Dofus 3.3.4.9 » : un client resté à l'écran de connexion, dont le
-    ///   titre n'annonce que la version. Le perso qui s'y connectera portera son
-    ///   vrai nom, et cette entrée-là resterait à jamais dans la liste, à changer
-    ///   à chaque mise à jour du jeu.
-    /// - « Machin (2) » : le suffixe de désambiguïsation ajouté par `refresh()`,
-    ///   qui dépend de l'ordre de découverte et ne désigne donc aucun perso en
-    ///   propre.
-    ///
-    /// Non mémorisés, ces clients se retrouvent simplement en fin de barre : le
-    /// tri les relègue derrière tous les noms connus, sans décaler personne.
-    static func isPersistableName(_ name: String) -> Bool {
-        let cleaned = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !cleaned.isEmpty, !hasDuplicateSuffix(cleaned) else { return false }
-
-        // Découpé sur les espaces et les séparateurs : un titre peut être repris
-        // en entier faute de segment exploitable (« Dofus - 3.3.4.9 - Release »).
-        let words = cleaned
-            .components(separatedBy: CharacterSet(charactersIn: " -–—|•"))
-            .map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
-            .filter { !$0.isEmpty }
-
-        return words.contains { !clientOnlyWords.contains($0) && !isVersionNumber($0) }
-    }
-
-    /// « Machin (2) » — le suffixe que `refresh()` ajoute lui-même aux homonymes.
-    static func hasDuplicateSuffix(_ name: String) -> Bool {
-        guard name.hasSuffix(")"), let open = name.lastIndex(of: "(") else { return false }
-        let digits = name[name.index(after: open)..<name.index(before: name.endIndex)]
-        return !digits.isEmpty && digits.allSatisfy(\.isNumber)
-    }
-
-    /// « 3.3.4.9 », « 2.70 » — des chiffres et des points, rien d'autre.
-    static func isVersionNumber(_ word: String) -> Bool {
-        !word.isEmpty
-            && word.contains(where: \.isNumber)
-            && word.allSatisfy { $0.isNumber || $0 == "." }
-    }
-
-    /// Deuxième segment du titre. Le client Dofus y place la classe, juste après
-    /// le nom du perso — plus fiable que l'icône du Dock, identique pour tous les
-    /// clients puisqu'ils partagent le même bundle.
-    static func characterClass(fromTitle title: String) -> String? {
-        let parts = title.components(separatedBy: " - ")
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-        guard parts.count >= 2 else { return nil }
-        let candidate = parts[1]
-        // Écarte un numéro de version qui occuperait cette position.
-        guard !candidate.isEmpty,
-              candidate.rangeOfCharacter(from: .letters) != nil,
-              !candidate.allSatisfy({ $0.isNumber || $0 == "." })
-        else { return nil }
-        return candidate
     }
 
     // MARK: - Focus

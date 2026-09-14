@@ -18,7 +18,7 @@ struct ClientOrderTests {
 
     @Test("Les persos suivent l'ordre de préférence, les absents de la liste sont sautés")
     func suitLOrdreDePreference() {
-        let trie = WindowManager.sorted(
+        let trie = ClientMemory.sorted(
             [client(pid: 30, nom: "Cid"), client(pid: 10, nom: "Aeryn"), client(pid: 20, nom: "Brok")],
             by: ["Brok", "Zoé", "Cid", "Aeryn"]
         )
@@ -27,7 +27,7 @@ struct ClientOrderTests {
 
     @Test("Les noms inconnus de la liste vont en fin, par pid croissant")
     func inconnusEnFinParPid() {
-        let trie = WindowManager.sorted(
+        let trie = ClientMemory.sorted(
             [client(pid: 50, nom: "Dofus 3.3.4.9"), client(pid: 40, nom: "Brok (2)"),
              client(pid: 10, nom: "Aeryn")],
             by: ["Aeryn"]
@@ -37,7 +37,7 @@ struct ClientOrderTests {
 
     @Test("Un ordre vide trie par pid, c'est-à-dire par ordre de lancement")
     func ordreVideTrieParPid() {
-        let trie = WindowManager.sorted(
+        let trie = ClientMemory.sorted(
             [client(pid: 3, nom: "C"), client(pid: 1, nom: "A"), client(pid: 2, nom: "B")],
             by: []
         )
@@ -46,7 +46,7 @@ struct ClientOrderTests {
 
     @Test("Deux homonymes dans la liste : c'est le premier rang qui compte")
     func doublonDansLaListePremierRang() {
-        let trie = WindowManager.sorted(
+        let trie = ClientMemory.sorted(
             [client(pid: 2, nom: "Brok"), client(pid: 1, nom: "Aeryn")],
             by: ["Brok", "Aeryn", "Brok"]
         )

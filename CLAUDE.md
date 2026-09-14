@@ -68,15 +68,39 @@ l'autorisation Accessibilité est liée à l'identité de code signée.
 ## Architecture
 
 App AppKit `LSUIElement` (barre de menus, pas de Dock), point d'entrée
-`SynfusMain` dans [App.swift](Sources/Synfus/App.swift). Tous les composants sont
+`SynfusMain` dans [App.swift](Sources/Synfus/App/App.swift). Tous les composants sont
 des singletons `@MainActor` (`.shared`), la plupart `ObservableObject` observés
 par les vues SwiftUI. `applicationDidFinishLaunching` les démarre dans cet ordre :
 `WindowManager` → `HotKeyManager` → `MenuBarController` → `AttentionWatcher` →
 `FloatingBarController`.
 
+### Arborescence
+
+`Sources/Synfus/` est rangé par domaine — SwiftPM compile les sous-dossiers
+sans rien déclarer dans `Package.swift`. Un nouveau fichier va dans le dossier
+de son domaine ; un fichier qui n'en a pas est le signe d'un domaine à créer.
+
+| Dossier | Contenu |
+| --- | --- |
+| `App/` | Point d'entrée, intégrité du bundle, démarrage automatique |
+| `Accessibilite/` | Lecture AX partagée, `--dump-windows`, titres à travers les espaces |
+| `Clients/` | `DofusClient`, `WindowTitle` (titres, pur), `ClientMemory` (mémoire et tri, pur), `WindowManager`, `FreezeWatcher` |
+| `Attention/` | Détection du rebond du Dock |
+| `Raccourcis/` | Raccourcis globaux, enregistreur, enchaînement au clic |
+| `Rangement/` | Dispositions de fenêtres, `LayoutComputer` (pur) |
+| `Apercus/` | Captures ScreenCaptureKit et panneau d'aperçu |
+| `Preferences/` | `Preferences` et son protocole de stockage |
+| `Classes/` | Classes du jeu et icônes fournies par l'utilisateur |
+| `Marque/` | La Couvée : `SynfusMark` (CoreGraphics pur) et `SynfusGlyph` |
+| `Interface/` | `MenuBarController` ; `Barre/` (barre flottante et ses contrôles) ; `Reglages/` (une vue par onglet + contrôleur de fenêtre) |
+
+Les logiques pures ont leur fichier propre (`WindowTitle`, `ClientMemory`,
+`LayoutComputer`, `BounceDetector`, `FreezeStrikes`…) : c'est ce qui les rend
+testables sans écran, et c'est là que les tests pointent.
+
 ### Découverte des persos — le point central
 
-[WindowManager.swift](Sources/Synfus/WindowManager.swift) est le cœur. Il énumère
+[WindowManager.swift](Sources/Synfus/Clients/WindowManager.swift) est le cœur. Il énumère
 toutes les fenêtres AX des processus dont le bundle ID contient `dofus`, puis
 **dérive tout du titre de la fenêtre** (`« Nom - Classe - version - Release »`) :
 
@@ -84,6 +108,8 @@ toutes les fenêtres AX des processus dont le bundle ID contient `dofus`, puis
   « Dofus » seul). C'est essentiel : les inclure décalerait la numérotation des
   slots, donc les raccourcis.
 - `characterName` = premier segment, `characterClass` = deuxième segment.
+  Tout le décodage du titre vit dans `WindowTitle` (Clients/), pur et testé
+  (`TitreDeFenetreTests`).
 - L'icône du Dock **ne peut pas** servir de repère : tous les clients partagent
   le même bundle `Dofus.app`, donc la même icône. C'est la raison d'être de
   toute l'approche par titre.
@@ -123,14 +149,14 @@ perso mémorisé reste affiché, atténué, et reste cliquable — `activate()` 
 processus suffit à basculer vers son espace, l'élément AX ne sert qu'à départager
 plusieurs fenêtres d'un même client, et celui d'un perso mémorisé est périmé.
 
-La règle de fusion, `withRemembered`, est pure et testée. Elle ne ressuscite que
+La règle de fusion, `ClientMemory.withRemembered`, est pure et testée. Elle ne ressuscite que
 les processus **silencieux** — ceux qui ne rendent aucune fenêtre. Un client
 revenu à l'écran de connexion en rend une, simplement sans perso : le
 ressusciter afficherait un perso qui n'est plus en jeu.
 
 Un client déjà sur un espace inactif au démarrage de Synfus n'a jamais livré son
 titre à l'Accessibilité. Quand l'enregistrement de l'écran est accordé (celui
-des aperçus), [CrossSpaceTitles.swift](Sources/Synfus/CrossSpaceTitles.swift)
+des aperçus), [CrossSpaceTitles.swift](Sources/Synfus/Accessibilite/CrossSpaceTitles.swift)
 lève cette limite : `CGWindowListCopyWindowInfo` voit à travers les espaces, et
 `discoveredAcrossSpaces` — pure, testée — fabrique le dormant à partir du titre
 lu. La lecture n'a lieu que pour les pids sans aucune mémoire, et au plus une
@@ -161,11 +187,11 @@ ce filtre n'existe.
 ### Détection d'attention
 
 Aucune API publique ne dit qu'une *autre* app réclame l'attention.
-[AttentionWatcher.swift](Sources/Synfus/AttentionWatcher.swift) contourne en
-observant, via [DockInspector.swift](Sources/Synfus/DockInspector.swift), la
+[AttentionWatcher.swift](Sources/Synfus/Attention/AttentionWatcher.swift) contourne en
+observant, via [DockInspector.swift](Sources/Synfus/Attention/DockInspector.swift), la
 géométrie AX des icônes du Dock : `AXPosition.y` chute pendant le rebond. La
 décision elle-même est isolée dans
-[BounceDetector.swift](Sources/Synfus/BounceDetector.swift), une struct pure —
+[BounceDetector.swift](Sources/Synfus/Attention/BounceDetector.swift), une struct pure —
 elle ne lit rien, on la nourrit d'un relevé par tour — donc testable sans Dock ni
 écran ([BounceDetectorTests.swift](Tests/SynfusTests/BounceDetectorTests.swift)).
 
@@ -211,7 +237,7 @@ Deux mesures en découlent :
 - **Cache de structure.** Retrouver les icônes Dofus — enfants du Dock, titre
   de chaque icône, sous-rôle, état de lancement — coûtait trente à cinquante
   allers-retours Accessibilité par tour, alors que seules position et taille
-  varient. [DockGeometryReader.swift](Sources/Synfus/DockGeometryReader.swift)
+  varient. [DockGeometryReader.swift](Sources/Synfus/Attention/DockGeometryReader.swift)
   garde les éléments AX (`DockInspector.Structure`) et, en régime permanent,
   ne lit que la géométrie, en **un** IPC par élément
   (`AXUIElementCopyMultipleAttributeValues`). Le tour complet ne revient qu'au
@@ -238,13 +264,13 @@ L'identité d'une icône est son **rang**, jamais son abscisse — la magnificat
 écarte les icônes sous le curseur, et chaque survol créait sinon une identité
 neuve. C'est pour cette raison que l'appariement est exposé dans l'onglet
 Diagnostic.
-[AttentionProbe.swift](Sources/Synfus/AttentionProbe.swift) est l'outil
+[AttentionProbe.swift](Sources/Synfus/Attention/AttentionProbe.swift) est l'outil
 d'exploration qui a servi à établir ce mécanisme ; il journalise tout changement
 d'attribut dans `~/Library/Logs/Synfus/attention.log`.
 
 ### Raccourcis globaux
 
-[HotKeyManager.swift](Sources/Synfus/HotKeyManager.swift) utilise Carbon
+[HotKeyManager.swift](Sources/Synfus/Raccourcis/HotKeyManager.swift) utilise Carbon
 `RegisterEventHotKey`, délibérément et non un `CGEventTap` : cela réserve une
 combinaison auprès du système au lieu d'observer la frappe, donc aucune
 permission de saisie et aucune visibilité sur ce qui est tapé ailleurs. Le
@@ -257,7 +283,7 @@ relâchement. Un modificateur seul reste hors de portée : `RegisterEventHotKey`
 exige une touche, et l'observer demanderait un moniteur d'évènements, c'est-à-dire
 exactement ce que l'on refuse de faire.
 
-[HotKey.swift](Sources/Synfus/HotKey.swift) stocke des **keycodes de position
+[HotKey.swift](Sources/Synfus/Raccourcis/HotKey.swift) stocke des **keycodes de position
 ANSI** et non des caractères : sur AZERTY la rangée du haut tape `& é " '`, mais
 tout le monde l'appelle « 1 2 3 4 5 ». `rebind()` réenregistre tout après chaque
 modification de préférence.
@@ -297,7 +323,7 @@ distinguer « jamais eu ce réglage » de « effacé exprès ».
 
 ### Enchaîner les persos au clic
 
-[ClickAdvanceWatcher.swift](Sources/Synfus/ClickAdvanceWatcher.swift) : un clic
+[ClickAdvanceWatcher.swift](Sources/Synfus/Raccourcis/ClickAdvanceWatcher.swift) : un clic
 modifié sur un client de jeu passe au perso suivant, une fois le clic délivré.
 
 La limite est nette et ne doit pas bouger. **Synfus n'émet, ne rejoue et ne
@@ -366,7 +392,7 @@ d'un mourant, c'est payer la borne d'une seconde à chaque tour), `FreezeWatcher
 ne le sonde pas, et sa pastille — maintenue par la mémoire — porte un indicateur
 d'attente jusqu'à la mort du processus.
 
-[FreezeWatcher.swift](Sources/Synfus/FreezeWatcher.swift) rattrape en plus les
+[FreezeWatcher.swift](Sources/Synfus/Clients/FreezeWatcher.swift) rattrape en plus les
 fermetures qui ne sont **pas** passées par Synfus. Un client gelé après
 fermeture est, vu d'ici, un processus vivant sans aucune fenêtre — exactement
 comme un dormant sain sur un espace plein écran inactif. Ce qui les distingue
@@ -393,11 +419,11 @@ même quand `killFrozenClients` est désactivé, seul le coup de grâce en dépe
 
 ### Rangement des fenêtres
 
-[WindowArranger.swift](Sources/Synfus/WindowArranger.swift) applique une
+[WindowArranger.swift](Sources/Synfus/Rangement/WindowArranger.swift) applique une
 disposition — côte à côte, mosaïque, un grand + vignettes — aux fenêtres des
 clients en posant `kAXPosition`/`kAXSize`, et rien d'autre : la règle « aucun
 évènement synthétisé » vaut ici aussi. Le calcul des cadres est isolé dans
-[LayoutComputer.swift](Sources/Synfus/LayoutComputer.swift), une logique pure
+[LayoutComputer.swift](Sources/Synfus/Rangement/LayoutComputer.swift), une logique pure
 (zone + nombre → cadres, repère AX y vers le bas) testée dans
 [LayoutComputerTests.swift](Tests/SynfusTests/LayoutComputerTests.swift) — la
 conversion Cocoa → AX (`zoneAX`) comprise, multi-écrans inclus.
@@ -431,7 +457,7 @@ défaut (`sessionHotKey`).
 
 ### Préférences
 
-[Preferences.swift](Sources/Synfus/Preferences.swift) sérialise l'ensemble en
+[Preferences.swift](Sources/Synfus/Preferences/Preferences.swift) sérialise l'ensemble en
 JSON sous une clé unique, `fr.synseria.synfus.preferences`, dans le stockage
 fourni à l'initialisation (`UserDefaults.standard` en production).
 
@@ -454,9 +480,9 @@ propriété calculée, donc s'y réassigner relance le `didSet` — d'où le dra
 
 ### Interface
 
-- [BarView.swift](Sources/Synfus/BarView.swift) — barre flottante, hébergée dans
+- [BarView.swift](Sources/Synfus/Interface/Barre/BarView.swift) — barre flottante, hébergée dans
   un `NSPanel` non activable (`canBecomeKey = false`) par
-  [FloatingBarController.swift](Sources/Synfus/FloatingBarController.swift) :
+  [FloatingBarController.swift](Sources/Synfus/Interface/Barre/FloatingBarController.swift) :
   un overlay de jeu ne doit jamais capter le clavier. Le déplacement passe par
   `performDrag(with:)` d'AppKit (`WindowDragArea`), pas par un `DragGesture` —
   ce dernier reste toujours un cran derrière la souris. `didMove` arrive en
@@ -480,7 +506,7 @@ propriété calculée, donc s'y réassigner relance le `didSet` — d'où le dra
   **avant** `refresh()` — l'inventaire AX peut bloquer des centaines de
   millisecondes sur un client occupé —, et le timer de 2 s la réévalue en filet.
   La règle est isolée en fonction pure, `computeVisibility`, donc testée.
-- [SettingsView.swift](Sources/Synfus/SettingsView.swift) — barre latérale à
+- [SettingsView.swift](Sources/Synfus/Interface/Reglages/SettingsView.swift) — barre latérale à
   gauche, quatre sections (Raccourcis, Persos, Classes, Diagnostic) à droite +
   `SettingsWindowController`, qui doit appeler `NSApp.activate(ignoringOtherApps:)`
   car l'app est en mode accessory. À l'ouverture, la fenêtre se place centrée
@@ -488,11 +514,11 @@ propriété calculée, donc s'y réassigner relance le `didSet` — d'où le dra
 - Le réordonnancement des persos dans la barre passe par un `DragGesture` en
   espace de coordonnées nommé, pas par `.onDrag`/`.onDrop` : le drag & drop
   système ne démarre pas de façon fiable depuis un `NSPanel` non activable.
-- [MenuBarController.swift](Sources/Synfus/MenuBarController.swift) — le menu est
+- [MenuBarController.swift](Sources/Synfus/Interface/MenuBarController.swift) — le menu est
   reconstruit à chaque ouverture (`menuNeedsUpdate`). Les raccourcis y sont
   affichés en texte attribué, à titre indicatif : ce sont de vrais raccourcis
   globaux Carbon, pas des key equivalents de menu.
-- [PreviewPanelController.swift](Sources/Synfus/PreviewPanelController.swift) —
+- [PreviewPanelController.swift](Sources/Synfus/Apercus/PreviewPanelController.swift) —
   aperçus des fenêtres, dans un `NSPanel` **distinct** de la barre : celle-ci se
   dimensionne sur son contenu (`fixedSize` + `preferredContentSize`) et se
   recentre à chaque changement de taille, donc y greffer un aperçu la ferait
@@ -500,7 +526,7 @@ propriété calculée, donc s'y réassigner relance le `didSet` — d'où le dra
 
 ### Aperçus des fenêtres
 
-[WindowPreviewService.swift](Sources/Synfus/WindowPreviewService.swift) capture
+[WindowPreviewService.swift](Sources/Synfus/Apercus/WindowPreviewService.swift) capture
 via **ScreenCaptureKit** — `CGWindowListCreateImage` est déprécié depuis
 macOS 14. Aucune API publique ne relie un `AXUIElement` à une fenêtre capturable :
 l'appariement se fait sur `(pid, titre)`, avec repli sur le pid quand le processus
@@ -546,12 +572,12 @@ capturable, mais macOS ne la redessine pas — l'image peut dater.
 
 ### Classes et icônes
 
-[DofusClass.swift](Sources/Synfus/DofusClass.swift) est la **source unique** des
+[DofusClass.swift](Sources/Synfus/Classes/DofusClass.swift) est la **source unique** des
 19 classes (clé sans accent, libellé, couleur) : y ajouter une entrée la fait
 apparaître d'office dans la barre et les réglages. Une classe inconnue reçoit une
 teinte dérivée par hachage du nom plutôt que du gris.
 
-[ClassIconStore.swift](Sources/Synfus/ClassIconStore.swift) : Synfus **n'embarque
+[ClassIconStore.swift](Sources/Synfus/Classes/ClassIconStore.swift) : Synfus **n'embarque
 aucune image du jeu** — celles d'Ankama n'ont pas à être redistribuées. Les icônes
 sont fournies par l'utilisateur dans
 `~/Library/Application Support/Synfus/Classes/<clé>.png`. Ce dossier est l'unique
@@ -571,7 +597,7 @@ constante des sites communautaires tolérés.
 La marque — **la Couvée** : trois œufs de dragon, l'émeraude écaillé devant, la
 turquoise mouchetée et le pourpre ondé qui dépassent derrière ; un œuf par
 compte, le perso actif au premier plan — est décrite **une seule fois**, dans
-[SynfusMark.swift](Sources/Synfus/SynfusMark.swift) : un moteur pur
+[SynfusMark.swift](Sources/Synfus/Marque/SynfusMark.swift) : un moteur pur
 CoreGraphics, sans AppKit ni SwiftUI, pour rester compilable hors de l'app. Le
 dessin suit la grammaire visuelle d'Ankama (contour unique sombre, volume par
 dégradé, détails ton sur ton, brillance en croissant) sans reprendre aucun
