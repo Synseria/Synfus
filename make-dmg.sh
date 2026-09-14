@@ -1,6 +1,6 @@
 #!/bin/bash
 # Emballe un bundle .app dans une image disque prête à distribuer.
-#   ./make-dmg.sh Synfus.app dist/Synfus-0.0.1-arm64.dmg
+#   ./make-dmg.sh dist/Synfus.app dist/Synfus-0.0.1-arm64.dmg
 #
 # Le DMG contient l'app et un alias vers /Applications : l'utilisateur monte
 # l'image et glisse l'une sur l'autre.

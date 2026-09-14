@@ -41,7 +41,8 @@ final class SpellRecognitionProbe: ObservableObject {
             defer { busy = false }
             let start = Date()
             guard let image = await WindowPreviewService.shared.capture(client) else {
-                report = "Capture impossible pour « \(client.name) » — fenêtre introuvable côté ScreenCaptureKit."
+                report = "Capture impossible pour « \(client.name) » : "
+                    + (WindowPreviewService.shared.lastCaptureError ?? "raison inconnue")
                 return
             }
             let name = "\(Self.stamp())-\(client.name.replacingOccurrences(of: "/", with: "_")).png"

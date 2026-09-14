@@ -199,7 +199,7 @@ final class StreamDeckLink: ObservableObject {
         let profile = client.map { SpellProfileStore.shared.profile(for: $0.name, classe: $0.characterClass) }
         return Self.state(client: client, profile: profile, dofusDevant: manager.frontmostIsDofus,
                           barre: barreActive, keyMap: Preferences.shared.spellKeyMap, enCombat: enCombat,
-                          icon: { [weak self] id in self?.icon(id, classe: profile?.classe) })
+                          icon: { [weak self] id in self?.icon(id) })
     }
 
     static func state(client: DofusClient?, profile: SpellProfile?, dofusDevant: Bool, barre: Int,
@@ -218,10 +218,9 @@ final class StreamDeckLink: ObservableObject {
                          finDeTour: keyMap.finDeTour.map(DeckKey.init), cases: cases)
     }
 
-    private func icon(_ id: Int, classe: String?) -> String? {
+    private func icon(_ id: Int) -> String? {
         if let cached = iconCache[id] { return cached }
-        guard let key = DofusClass.key(for: classe),
-              let url = AnkamaAssets.spellIconURL(classe: key, id: id),
+        guard let url = SpellIndex.shared?.iconURL(id: id),
               let data = try? Data(contentsOf: url)
         else { return nil }
         let encoded = data.base64EncodedString()

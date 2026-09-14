@@ -7,12 +7,12 @@ struct CharactersSettings: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("L'ordre ci-dessous décide de la numérotation. Les persos non connectés "
-                 + "sont simplement sautés : tu peux en garder autant que tu veux dans la liste. "
-                 + "Glisse une ligne, ou utilise les flèches, pour réordonner.")
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
-                .padding(12)
+            HStack(spacing: 6) {
+                Text("Ordre des persos").font(.system(size: 12, weight: .semibold))
+                HelpTip("L'ordre décide de la numérotation des emplacements. Les persos non connectés "
+                        + "sont sautés : garde-en autant que tu veux. Glisse une ligne, ou utilise les flèches.")
+            }
+            .padding(12)
 
             List {
                 ForEach(Array(prefs.characterOrder.enumerated()), id: \.element) { index, name in
@@ -40,14 +40,11 @@ struct CharactersSettings: View {
 
             Divider()
 
-            VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
                 Toggle("Achever les clients gelés à la fermeture", isOn: $prefs.killFrozenClients)
-                Text("Un client qui gèle en se fermant reste en mémoire sans aucune fenêtre. "
-                     + "Synfus le sonde et, muet trois fois de suite (~15 s), le force à "
-                     + "quitter — que la fermeture soit passée par Synfus ou par le jeu. "
-                     + "Les abattages sont consignés dans le Diagnostic.")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.tertiary)
+                HelpTip("Un client qui gèle en se fermant reste vivant sans aucune fenêtre. Synfus le sonde "
+                        + "et, muet trois fois de suite (~15 s), le force à quitter — que la fermeture soit "
+                        + "passée par Synfus ou par le jeu. Les abattages sont consignés dans le Diagnostic.")
             }
             .padding(12)
         }

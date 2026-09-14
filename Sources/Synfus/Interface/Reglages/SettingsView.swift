@@ -2,12 +2,13 @@ import SwiftUI
 
 /// Sections des réglages, listées dans la barre latérale.
 private enum SettingsSection: String, CaseIterable, Identifiable {
-    case raccourcis, persos, sorts, classes, diagnostic
+    case general, raccourcis, persos, sorts, classes, diagnostic
 
     var id: String { rawValue }
 
     var label: String {
         switch self {
+        case .general: return "Général"
         case .raccourcis: return "Raccourcis"
         case .persos: return "Persos"
         case .sorts: return "Sorts"
@@ -18,6 +19,7 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
 
     var icon: String {
         switch self {
+        case .general: return "gearshape"
         case .raccourcis: return "keyboard"
         case .persos: return "person.3"
         case .sorts: return "wand.and.stars"
@@ -28,7 +30,7 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
 }
 
 struct SettingsView: View {
-    @State private var section: SettingsSection = .raccourcis
+    @State private var section: SettingsSection = .general
 
     /// Barre latérale à gauche, contenu à droite : les quatre sections en
     /// onglets faisaient défiler des formulaires interminables — le menu
@@ -49,14 +51,6 @@ struct SettingsView: View {
                 sidebarRow(item)
             }
             Spacer()
-            // Sélectionnable : les binaires publiés sont signés ad-hoc, il faut
-            // réautoriser l'Accessibilité à chaque version, et c'est donc la
-            // première chose à savoir sur un rapport de bug.
-            Text(AppIntegrity.displayName)
-                .font(.system(size: 10))
-                .foregroundStyle(.tertiary)
-                .textSelection(.enabled)
-                .padding(.horizontal, 8)
         }
         .padding(8)
         .frame(width: 150)
@@ -85,6 +79,7 @@ struct SettingsView: View {
     @ViewBuilder
     private var detail: some View {
         switch section {
+        case .general: GeneralSettings()
         case .raccourcis: ShortcutsSettings()
         case .persos: CharactersSettings()
         case .sorts: SpellsSettings()

@@ -38,11 +38,12 @@ enum AnkamaAssets {
         )
     }
 
-    /// L'icône d'un sort, par identifiant DofusDB.
-    static func spellIconURL(classe: String, id: Int) -> URL? {
+    /// L'icône d'un sort, par le chemin relatif que donne `sorts.json`
+    /// (`Sorts/<classe>/<Nom>.png`).
+    static func spellIconURL(fichier: String) -> URL? {
         firstExisting(
-            supportDirectory.appending(path: "Sorts/\(classe)/\(id).png"),
-            bundledDirectory?.appending(path: "Sorts/\(classe)/\(id).png")
+            supportDirectory.appending(path: fichier),
+            bundledDirectory?.appending(path: fichier)
         )
     }
 

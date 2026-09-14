@@ -12,14 +12,12 @@ struct DiagnosticSettings: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Titres bruts des fenêtres détectées")
-                .font(.system(size: 12, weight: .semibold))
-            Text("Si le nom affiché ne correspond pas à ton perso, c'est que le client Dofus "
-                 + "n'expose pas le nom dans le titre de sa fenêtre. Dans ce cas la "
-                 + "numérotation suit l'ordre de lancement, que tu peux réorganiser dans "
-                 + "l'onglet Persos.")
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
+            HStack(spacing: 6) {
+                Text("Fenêtres détectées").font(.system(size: 12, weight: .semibold))
+                HelpTip("Les titres bruts des fenêtres Dofus. Si le nom affiché ne correspond pas à ton perso, "
+                        + "c'est que le client n'expose pas le nom dans son titre ; la numérotation suit alors "
+                        + "l'ordre de lancement, à réorganiser dans l'onglet Persos.")
+            }
 
             if manager.clients.isEmpty {
                 Text(manager.accessibilityGranted
@@ -27,7 +25,7 @@ struct DiagnosticSettings: View {
                      : AppIntegrity.isQuarantined
                        ? "Autorisation Accessibilité manquante — et cette copie est "
                          + "en quarantaine, ce qui l'empêchera de prendre effet. "
-                         + "Voir l'onglet Raccourcis."
+                         + "Voir l'onglet Général."
                        : "Autorisation Accessibilité manquante.")
                     .font(.system(size: 11))
                     .foregroundStyle(.orange)
@@ -111,8 +109,11 @@ struct DiagnosticSettings: View {
     /// fenêtres de côté par principe : tout cela doit se lire quelque part.
     private var arrangementSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Dernier rangement des fenêtres")
-                .font(.system(size: 12, weight: .semibold))
+            HStack(spacing: 6) {
+                Text("Dernier rangement").font(.system(size: 12, weight: .semibold))
+                HelpTip("Une fenêtre en plein écran n'est jamais déplacée, et un perso d'un autre bureau est "
+                        + "hors de portée de l'Accessibilité — bascule dessus, puis relance le rangement.")
+            }
 
             if let rapport = arranger.dernierRapport {
                 Text("\(rapport.titre) — écran « \(rapport.ecran) » — "
@@ -130,17 +131,10 @@ struct DiagnosticSettings: View {
                         .foregroundStyle(.orange)
                 }
             } else {
-                Text("Aucun rangement pour l'instant — menu « Ranger les fenêtres » "
-                     + "de la barre de menus, ou clic droit sur la barre.")
+                Text("Aucun rangement pour l'instant.")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }
-
-            Text("Une fenêtre en plein écran n'est jamais déplacée, et un perso d'un "
-                 + "autre bureau est hors de portée de l'Accessibilité — bascule dessus, "
-                 + "puis relance le rangement.")
-                .font(.system(size: 10))
-                .foregroundStyle(.tertiary)
         }
     }
 
@@ -148,20 +142,20 @@ struct DiagnosticSettings: View {
     /// lire les scores. Rien n'est configuré ici — c'est le banc d'essai.
     private var spellRecognitionSection: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Reconnaissance des sorts (exploration)")
-                .font(.system(size: 12, weight: .semibold))
-            Text("Capture la fenêtre du perso actif en résolution native, puis cherche la "
-                 + "barre de sorts et compare chaque case aux icônes de sa classe. Les "
-                 + "captures restent dans ~/Library/Logs/Synfus/captures — jamais dans le dépôt.")
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
-            HStack {
-                Button("Capturer le perso actif") { spells.captureActive() }
+            HStack(spacing: 6) {
+                Text("Reconnaissance des sorts").font(.system(size: 12, weight: .semibold))
+                HelpTip("Capture la fenêtre du perso actif en résolution native, cherche la barre de sorts et "
+                        + "compare chaque case aux icônes de sa classe. Les captures restent dans "
+                        + "~/Library/Logs/Synfus/captures. « Capturer » puis « Analyser » ; le rapport dit ce qui "
+                        + "a été trouvé et avec quelle confiance.")
+                Spacer()
+                Button("Capturer") { spells.captureActive() }
                     .disabled(spells.busy || !previews.authorized)
-                Button("Analyser la dernière capture") { spells.analyzeLast() }
-                    .disabled(spells.busy)
-                Button("Analyser un fichier…") { spells.analyzeFile() }
-                Button("Ouvrir le dossier") { spells.revealCaptures() }
+                    .help(previews.authorized ? "Capture la fenêtre du perso actif" : "Autorise l'enregistrement de l'écran (onglet Général)")
+                Button("Analyser") { spells.analyzeLast() }.disabled(spells.busy)
+                Button("Fichier…") { spells.analyzeFile() }.help("Analyser un PNG existant")
+                Button { spells.revealCaptures() } label: { Image(systemName: "folder") }
+                    .help("Ouvrir le dossier des captures")
             }
             .font(.system(size: 11))
             if !spells.report.isEmpty {
@@ -181,18 +175,17 @@ struct DiagnosticSettings: View {
     private var attentionProbeSection: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text("Appels d'attention")
-                    .font(.system(size: 12, weight: .semibold))
+                Text("Appels d'attention").font(.system(size: 12, weight: .semibold))
+                HelpTip("Surveille les deux seuls signaux qu'une app émet vers l'extérieur : le titre de sa "
+                        + "fenêtre et son icône du Dock. Démarre la sonde, joue un combat, et regarde si quelque "
+                        + "chose bouge quand ton tour arrive. L'appariement icône → perso suppose que l'ordre des "
+                        + "icônes suit l'ordre de lancement : vérifie que le bon perso est signalé. Un rebond "
+                        + "éloigne une icône de son bandeau ; au repos, les écarts ne doivent pas bouger.")
                 Spacer()
                 Button(probe.running ? "Arrêter" : "Démarrer la sonde") { probe.toggle() }
                     .font(.system(size: 11))
             }
 
-            Text("Surveille les deux seuls signaux qu'une app peut émettre vers l'extérieur : "
-                 + "le titre de sa fenêtre et la pastille de son icône du Dock. Démarre la sonde, "
-                 + "joue un combat, et regarde si quelque chose bouge quand ton tour arrive.")
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
 
             if !attention.pairing.isEmpty {
                 VStack(alignment: .leading, spacing: 2) {
@@ -203,11 +196,6 @@ struct DiagnosticSettings: View {
                             .font(.system(size: 10, design: .monospaced))
                             .foregroundStyle(.secondary)
                     }
-                    Text("Tes clients s'intitulent tous « Dofus » dans le Dock : l'appariement "
-                         + "suppose que l'ordre des icônes suit l'ordre de lancement. Vérifie "
-                         + "ici que le bon perso est signalé.")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.tertiary)
                 }
                 .padding(.bottom, 4)
             }
@@ -219,13 +207,6 @@ struct DiagnosticSettings: View {
                     Text(lecture)
                         .font(.system(size: 10, design: .monospaced))
                         .foregroundStyle(.secondary)
-                    Text("Un rebond éloigne une icône de son bandeau ; un Dock qui se masque ou "
-                         + "se dévoile les emporte ensemble. C'est ce qui les distingue, et c'est "
-                         + "pourquoi la mesure se fait sur l'écart et non sur l'ordonnée à "
-                         + "l'écran — avec le masquage automatique, les icônes reposent sous le "
-                         + "bord de l'écran. Au repos, ces écarts ne doivent pas bouger.")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.tertiary)
                 }
                 .padding(.bottom, 4)
             }
