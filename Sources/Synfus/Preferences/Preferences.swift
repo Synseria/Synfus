@@ -391,7 +391,7 @@ final class Preferences: ObservableObject {
         sessionHotKey = stored.sessionHotKey
         spellKeyMap = stored.spellKeyMap ?? .defaults
         streamDeckEnabled = stored.streamDeckEnabled ?? false
-        gameCommands = GameCommands.normalized(stored.gameCommands ?? GameCommands.defaults)
+        gameCommands = GameCommands.normalized(GameCommands.repaired(stored.gameCommands ?? GameCommands.defaults))
         if let x = stored.barOriginX, let y = stored.barOriginY {
             barOrigin = CGPoint(x: x, y: y)
         }

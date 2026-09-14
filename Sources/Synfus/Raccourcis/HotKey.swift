@@ -66,6 +66,17 @@ struct HotKey: Codable, Equatable, Hashable {
         return "#\(code)"
     }
 
+    /// La touche qui tape ce caractère dans la disposition active — l'inverse
+    /// de `layoutCharacter`. C'est ainsi qu'un raccourci du jeu défini par sa
+    /// **lettre** (« M » ouvre la carte) trouve sa touche : sur AZERTY, M est à
+    /// la place du `;` d'un ANSI, et Q et A sont échangés. `nil` si la
+    /// disposition ne tape pas ce caractère.
+    static func keyCode(typing character: String) -> UInt32? {
+        let wanted = character.uppercased()
+        // Le plus petit keycode : la lettre principale avant une touche du pavé.
+        return layoutCharacters.filter { $0.value == wanted }.keys.min()
+    }
+
     /// Ce que la touche tape réellement dans la disposition active, en majuscule.
     /// `nil` si la touche ne tape rien, ou si la disposition n'est pas une
     /// disposition de clavier — une méthode de saisie idéographique n'expose
