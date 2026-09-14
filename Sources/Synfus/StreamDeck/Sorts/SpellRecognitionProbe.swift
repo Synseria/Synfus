@@ -77,52 +77,32 @@ final class SpellRecognitionProbe: ObservableObject {
 
     func analyzeLast() {
         guard let capture = lastCapture else { report = "Aucune capture à analyser."; return }
-        let start = Date()
+        let analysis = SpellRecognition.analyze(capture.image, classe: capture.classe)
         var lines = ["Analyse de \(capture.url.lastPathComponent) (\(capture.image.width) × \(capture.image.height))"]
 
-        guard let bar = SpellBarLocator.locate(in: capture.image) else {
-            lines.append("✗ Aucune barre de sorts trouvée en \(Self.ms(since: start)) — regarder la capture : la barre est-elle dans le tiers bas ? les cases ont-elles un cadre net ?")
+        guard let bar = analysis.bar else {
+            lines.append("✗ Aucune barre de sorts trouvée en \(Self.ms(analysis.locateDuration)) — regarder la capture : la barre est-elle dans le tiers bas ? les cases ont-elles un cadre net ?")
             report = lines.joined(separator: "\n")
             return
         }
         let region = bar.region(in: CGSize(width: capture.image.width, height: capture.image.height))
-        lines.append("✓ Barre : \(bar.cells.count) cases de \(bar.side) px, pas \(bar.pitch) px, en \(Self.ms(since: start))")
+        lines.append("✓ Barre : \(bar.cells.count) cases de \(bar.side) px, pas \(bar.pitch) px, en \(Self.ms(analysis.locateDuration))")
         lines.append(String(format: "  zone relative x %.3f y %.3f l %.3f h %.3f", region.minX, region.minY, region.width, region.height))
 
-        let candidates = Self.candidates(forClass: capture.classe)
-        guard !candidates.isEmpty else {
+        guard analysis.candidateCount > 0 else {
             lines.append("✗ Aucune icône de sort connue" + (capture.classe.map { " pour « \($0) »" } ?? "")
                          + " — lancer Tools/fetch-ankama-assets.sh puis ./build.sh --install.")
             report = lines.joined(separator: "\n")
             return
         }
-        lines.append("Candidats : \(candidates.count)" + (capture.classe.map { " (\($0))" } ?? " (toutes classes)"))
-
-        let matching = Date()
-        var confident = 0
-        for (index, cell) in bar.cells.enumerated() {
-            let crop = capture.image.cropped(to: cell)
-            guard let match = SpellRecognizer.identify(cell: crop, among: candidates) else { continue }
-            if match.isConfident { confident += 1 }
+        lines.append("Candidats : \(analysis.candidateCount)" + (capture.classe.map { " (\($0))" } ?? " (toutes classes)"))
+        for cell in analysis.cells {
+            guard let match = cell.match else { continue }
             lines.append(String(format: "  case %2d : %@ %-28@ score %.2f  marge %.2f",
-                                index + 1, match.isConfident ? "✓" : "?", match.nom, match.score, match.margin))
+                                cell.position + 1, match.isConfident ? "✓" : "?", match.nom, match.score, match.margin))
         }
-        lines.append("\(confident)/\(bar.cells.count) cases sûres, comparaison en \(Self.ms(since: matching)), total \(Self.ms(since: start))")
+        lines.append("\(analysis.confidentCount)/\(bar.cells.count) cases sûres, comparaison en \(Self.ms(analysis.matchDuration))")
         report = lines.joined(separator: "\n")
-    }
-
-    /// Les icônes de la classe, réduites — ou de toutes les classes si elle
-    /// est inconnue.
-    private static func candidates(forClass classe: String?) -> [SpellRecognizer.Candidate] {
-        guard let index = SpellIndex.load() else { return [] }
-        let key = classe.flatMap(DofusClass.key(for:))
-        let entries = key.map { index.entries(forClass: $0) } ?? index.entries
-        return entries.compactMap { entry in
-            guard let url = AnkamaAssets.spellIconURL(classe: entry.classe, id: entry.id),
-                  let icon = LumaBitmap(contentsOf: url)
-            else { return nil }
-            return SpellRecognizer.candidate(id: entry.id, nom: entry.nom, icon: icon)
-        }
     }
 
     // MARK: - Disque
@@ -146,7 +126,6 @@ final class SpellRecognitionProbe: ObservableObject {
         return formatter.string(from: Date())
     }
 
-    private static func ms(since start: Date) -> String {
-        "\(Int(Date().timeIntervalSince(start) * 1000)) ms"
-    }
+    private static func ms(since start: Date) -> String { ms(Date().timeIntervalSince(start)) }
+    private static func ms(_ interval: TimeInterval) -> String { "\(Int(interval * 1000)) ms" }
 }

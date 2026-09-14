@@ -85,6 +85,13 @@ final class Preferences: ObservableObject {
     /// Raccourci du geste « lancer la session ». Sans défaut, même règle.
     @Published var sessionHotKey: HotKey? { didSet { save() } }
 
+    /// Les touches des barres de sorts du jeu, pour le Stream Deck.
+    @Published var spellKeyMap: SpellKeyMap = .defaults { didSet { save() } }
+
+    /// La liaison Stream Deck — désactivée par défaut : un socket ne s'ouvre
+    /// que si on l'a demandé.
+    @Published var streamDeckEnabled: Bool = false { didSet { save() } }
+
     /// Nombre de slots exposés (et donc de raccourcis potentiels).
     ///
     /// Le garde-fou `clamping` n'est pas décoratif : `@Published` remplace la
@@ -199,6 +206,8 @@ final class Preferences: ObservableObject {
         var lastArrangement: Disposition?
         var arrangeHotKey: HotKey?
         var sessionHotKey: HotKey?
+        var spellKeyMap: SpellKeyMap?
+        var streamDeckEnabled: Bool?
         /// Génération du jeu de raccourcis par défaut appliqué à cette
         /// sauvegarde. Absente des sauvegardes d'avant la refonte, d'où le repli
         /// sur 1 à la lecture.
@@ -322,6 +331,8 @@ final class Preferences: ObservableObject {
             lastArrangement: lastArrangement,
             arrangeHotKey: arrangeHotKey,
             sessionHotKey: sessionHotKey,
+            spellKeyMap: spellKeyMap,
+            streamDeckEnabled: streamDeckEnabled,
             defaultsVersion: Self.defaultsVersion
         )
         if let data = try? JSONEncoder().encode(stored) {
@@ -372,6 +383,8 @@ final class Preferences: ObservableObject {
         lastArrangement = stored.lastArrangement
         arrangeHotKey = stored.arrangeHotKey
         sessionHotKey = stored.sessionHotKey
+        spellKeyMap = stored.spellKeyMap ?? .defaults
+        streamDeckEnabled = stored.streamDeckEnabled ?? false
         if let x = stored.barOriginX, let y = stored.barOriginY {
             barOrigin = CGPoint(x: x, y: y)
         }

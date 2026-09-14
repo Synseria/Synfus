@@ -1,0 +1,58 @@
+{
+  "Name": "Synfus",
+  "Version": "0.1.0",
+  "Author": "Synseria",
+  "Description": "Les sorts du perso Dofus actif, sous les doigts — Synfus dit lequel est devant, le Stream Deck affiche ses sorts et frappe la touche du jeu.",
+  "URL": "https://github.com/Synseria/Synfus",
+  "Icon": "icon",
+  "UUID": "fr.synseria.synfus",
+  "CodePathMac": "SynfusDeck",
+  "Category": "Synfus",
+  "CategoryIcon": "icon",
+  "SDKVersion": 2,
+  "Software": { "MinimumVersion": "6.4" },
+  "OS": [ { "Platform": "mac", "MinimumVersion": "14" } ],
+  "Actions": [
+    {
+      "Name": "Sort",
+      "UUID": "fr.synseria.synfus.sort",
+      "Icon": "icon",
+      "Tooltip": "Une case de la barre de sorts du perso actif — la position suit l'ordre des touches sur l'appareil.",
+      "UserTitleEnabled": false,
+      "SupportedInMultiActions": false,
+      "States": [ { "Image": "icon", "TitleAlignment": "bottom" }, { "Image": "icon-dim", "TitleAlignment": "bottom" } ]
+    },
+    {
+      "Name": "Perso suivant",
+      "UUID": "fr.synseria.synfus.perso-suivant",
+      "Icon": "icon",
+      "Tooltip": "Bascule sur le perso suivant de la barre Synfus.",
+      "UserTitleEnabled": false,
+      "States": [ { "Image": "icon", "TitleAlignment": "bottom" } ]
+    },
+    {
+      "Name": "Perso précédent",
+      "UUID": "fr.synseria.synfus.perso-precedent",
+      "Icon": "icon",
+      "Tooltip": "Bascule sur le perso précédent de la barre Synfus.",
+      "UserTitleEnabled": false,
+      "States": [ { "Image": "icon", "TitleAlignment": "bottom" } ]
+    },
+    {
+      "Name": "Barre suivante",
+      "UUID": "fr.synseria.synfus.barre-suivante",
+      "Icon": "icon",
+      "Tooltip": "Affiche la barre de sorts suivante — rien n'est envoyé au jeu.",
+      "UserTitleEnabled": false,
+      "States": [ { "Image": "icon", "TitleAlignment": "bottom" } ]
+    },
+    {
+      "Name": "Fin de tour",
+      "UUID": "fr.synseria.synfus.fin-de-tour",
+      "Icon": "icon",
+      "Tooltip": "Frappe la touche « fin de tour » réglée dans Synfus (onglet Sorts).",
+      "UserTitleEnabled": false,
+      "States": [ { "Image": "icon", "TitleAlignment": "bottom" }, { "Image": "icon-dim", "TitleAlignment": "bottom" } ]
+    }
+  ]
+}

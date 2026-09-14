@@ -93,6 +93,30 @@ fi
 
 echo "==> $APP prêt"
 
+# Le plugin Stream Deck : un dossier .sdPlugin à installer dans le logiciel
+# Elgato (double-clic, ou `streamdeck link dist/fr.synseria.synfus.sdPlugin`
+# avec le CLI d'Elgato pour développer). Le binaire est celui du target
+# SynfusDeck ; les icônes sont dérivées de la marque, jamais du jeu.
+PLUGIN="dist/fr.synseria.synfus.sdPlugin"
+echo "==> Assemblage du plugin Stream Deck"
+rm -rf "$PLUGIN"
+mkdir -p "$PLUGIN"
+cp "$(swift build "${BUILD_FLAGS[@]}" --show-bin-path)/SynfusDeck" "$PLUGIN/"
+cp Plugin/manifest.json "$PLUGIN/"
+sips -z 144 144 Resources/Synfus.png --out "$PLUGIN/icon.png" >/dev/null
+sips -z 288 288 Resources/Synfus.png --out "$PLUGIN/icon@2x.png" >/dev/null
+# L'état « grisé » (Dofus n'est pas devant) : la même marque pour l'instant —
+# le plugin pose son propre titre, c'est lui qui dit l'état.
+cp "$PLUGIN/icon.png" "$PLUGIN/icon-dim.png"
+cp "$PLUGIN/icon@2x.png" "$PLUGIN/icon-dim@2x.png"
+sed -i '' "s/\"Version\": \"[^\"]*\"/\"Version\": \"$VERSION\"/" "$PLUGIN/manifest.json"
+if [ -n "$IDENTITY" ]; then
+    codesign --force --sign "$IDENTITY" --identifier "fr.synseria.synfus.deck" "$PLUGIN/SynfusDeck"
+else
+    codesign --force --sign - --identifier "fr.synseria.synfus.deck" "$PLUGIN/SynfusDeck"
+fi
+echo "==> $PLUGIN prêt"
+
 if [ "${1:-}" = "--install" ]; then
     echo "==> Installation dans /Applications"
     pkill -x "$NAME" 2>/dev/null || true
