@@ -74,6 +74,12 @@ struct SpellsSettings: View {
                             .font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary)
                     }
                 }
+                ShortcutRow(label: "Corps à corps", help: "La touche qui attaque avec l'arme équipée. Sans défaut : "
+                            + "à relever dans les raccourcis du jeu.",
+                            hotKey: Binding(
+                                get: { prefs.spellKeyMap.corpsACorps },
+                                set: { prefs.spellKeyMap.corpsACorps = $0 }
+                            ))
                 ShortcutRow(label: "Fin de tour", help: "La touche « fin de tour » du jeu (Options → Raccourcis). "
                             + "Sans défaut tant que tu ne l'as pas confirmée : une touche fausse en combat coûte cher.",
                             hotKey: Binding(
@@ -161,10 +167,15 @@ struct SpellsSettings: View {
         let slot = profile.slot(bar: bar, position: position)
         let key = prefs.spellKeyMap.key(bar: bar, position: position)
         return SpellSlotCell(slot: slot, keyLabel: key?.displayString, position: position,
-                             icon: slot.flatMap { SpellIndex.shared?.iconURL(id: $0.sortId) }.flatMap { NSImage(contentsOf: $0) },
+                             icon: slot.flatMap { slotIconURL($0) }.flatMap { NSImage(contentsOf: $0) },
                              choices: classSpells,
                              iconFor: { SpellIndex.shared?.iconURL(id: $0).flatMap { NSImage(contentsOf: $0) } },
                              onSelect: { entry in set(entry.map { SpellSlot(sortId: $0.id, nom: $0.nom) }, bar: bar, position: position) })
+    }
+
+    private func slotIconURL(_ slot: SpellSlot) -> URL? {
+        if let id = slot.sortId, let url = SpellIndex.shared?.iconURL(id: id) { return url }
+        return slot.vignette.map { store.thumbnailURL(perso: perso, name: $0) }
     }
 
     private var classSpells: [SpellIndex.Entry] {
@@ -200,15 +211,31 @@ struct SpellsSettings: View {
             }
             var p = profile
             p.classe = classe ?? p.classe
-            var filled = 0
+            var filled = 0, pictured = 0
             for cell in analysis.cells where cell.row < SpellProfile.barCount && cell.position < SpellProfile.slotsPerBar {
-                guard let match = cell.match, match.isConfident else { continue }
-                p.set(SpellSlot(sortId: match.id, nom: match.nom), bar: cell.row, position: cell.position)
-                filled += 1
+                if let match = cell.match, match.isConfident {
+                    p.set(SpellSlot(sortId: match.id, nom: match.nom), bar: cell.row, position: cell.position)
+                    filled += 1
+                } else if cell.match != nil {
+                    // Pas un sort connu — objet, emote, sort inconnu — mais pas
+                    // vide : on garde ce que l'écran montre, c'est ce que le
+                    // Stream Deck affichera. Un sort choisi à la main reste.
+                    let existing = p.slot(bar: cell.row, position: cell.position)
+                    guard existing?.sortId == nil,
+                          found.rows[cell.row].indices.contains(cell.position),
+                          let crop = image.cropping(to: found.rows[cell.row][cell.position]),
+                          let name = store.saveThumbnail(crop, perso: perso, bar: cell.row, position: cell.position)
+                    else { continue }
+                    p.set(SpellSlot(sortId: nil, nom: existing?.nom ?? "Case \(cell.position + 1)", vignette: name),
+                          bar: cell.row, position: cell.position)
+                    pictured += 1
+                } else if cell.match == nil {
+                    p.set(nil, bar: cell.row, position: cell.position)
+                }
             }
             store.save(p)
-            message = "\(found.rows.count) rangée(s) de \(found.rows.first?.count ?? 0) cases trouvées, \(filled) sorts reconnus avec certitude. "
-                + "Les autres se choisissent au clic ; le détail est dans Diagnostic."
+            message = "\(found.rows.count) rangée(s) de \(found.rows.first?.count ?? 0) cases trouvées : \(filled) sorts reconnus, "
+                + "\(pictured) cases gardées en vignette d'écran (objets, emotes, inconnus). Le détail est dans Diagnostic."
         }
     }
 

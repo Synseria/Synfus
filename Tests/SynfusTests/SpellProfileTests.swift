@@ -46,7 +46,8 @@ struct SpellProfileTests {
         #expect(map.key(bar: 1, position: 9) == HotKey(keyCode: 29, modifiers: UInt32(controlKey)))
         #expect(map.key(bar: 2, position: 0)?.modifiers == UInt32(controlKey | shiftKey))
         #expect(map.barres.flatMap { $0 }.compactMap { $0 }.allSatisfy { $0.modifiers & UInt32(cmdKey) == 0 })
-        #expect(map.key(bar: 0, position: 11) == nil)
+        #expect(map.key(bar: 0, position: 10) == HotKey(keyCode: 27, modifiers: 0))
+        #expect(map.key(bar: 0, position: 11) == HotKey(keyCode: 24, modifiers: 0))
         #expect(map.finDeTour == nil)
     }
 
@@ -58,13 +59,14 @@ struct SpellProfileTests {
                                  rawTitle: "Aeryn - Feca - 3.6 - Release", name: "Aeryn",
                                  characterClass: "Feca", dormant: false)
         let state = StreamDeckLink.state(client: client, profile: p, dofusDevant: true, barre: 1,
-                                         keyMap: .defaults, enCombat: nil) { id in id == 7 ? "PNG" : nil }
+                                         keyMap: .defaults, enCombat: nil) { slot in slot.sortId == 7 ? "PNG" : nil }
         #expect(state.perso == "Aeryn")
         #expect(state.barre == 2 && state.barres == 3)
         #expect(state.cases.count == 12)
         #expect(state.cases[0].nom == "Bouclier" && state.cases[0].icone == "PNG")
         #expect(state.cases[0].touche == DeckKey(HotKey(keyCode: 18, modifiers: UInt32(controlKey))))
         #expect(state.cases[1].sortId == nil && state.cases[1].touche != nil)
+        #expect(state.persoActif?.nom == "Aeryn" && state.persoSuivant == nil)
         #expect(state.enCombat == nil)
     }
 

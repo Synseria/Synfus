@@ -20,7 +20,8 @@ struct SynfusDeck {
             FileHandle.standardError.write(Data("SynfusDeck : à lancer par le logiciel Stream Deck.\n".utf8))
             exit(2)
         }
-        await Plugin.shared.start(port: port, pluginUUID: pluginUUID, registerEvent: registerEvent)
+        await Plugin.shared.start(port: port, pluginUUID: pluginUUID, registerEvent: registerEvent,
+                                  info: arguments["-info"])
         // Le processus vit tant que le logiciel Stream Deck le garde.
         while true { try? await Task.sleep(for: .seconds(3600)) }
     }

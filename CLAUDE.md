@@ -774,18 +774,34 @@ Trois règles tiennent l'ensemble :
   code** avec l'app — `DeckMessages.swift` est le miroir du protocole, et
   c'est voulu : pas de target commun à maintenir pour cinq structs. Les
   touches « sort » n'ont aucune configuration : leur position est leur ordre
-  de lecture sur l'appareil (ligne puis colonne). `build.sh` assemble
-  `dist/fr.synseria.synfus.sdPlugin/` (manifest de [Plugin/](Plugin/), binaire,
-  icônes tirées de la marque).
+  de lecture sur l'appareil (ligne puis colonne) — n'importe quelle
+  disposition marche, 2 × 4 comme 8 × 4. Les **modificateurs sont pressés
+  comme des touches** (`Keystroke`), pas seulement posés en drapeau : le
+  client Unity lit l'état des touches, et ⌃1 en drapeau jouait la touche 1
+  nue. Sans Dofus devant, les icônes restent, assombries (`Images.dimmed`) ;
+  sans Synfus, les touches le disent et une pression le lance. Le plugin
+  bascule vers son profil livré (`Plugin/make-profile.sh` →
+  `Synfus.streamDeckProfile`, 5 × 3 : navigation en haut, dix sorts) quand
+  Dofus passe devant, et le rend quand il s'en va — `switchToProfile` n'accepte
+  qu'un profil **installé avec le plugin**, d'où le paquet
+  `dist/fr.synseria.synfus.streamDeckPlugin` que `build.sh --install` ouvre à
+  la première installation (un `.sdPlugin` copié à la main ne l'enregistre
+  pas) ; les mises à jour suivantes copient le dossier et relancent le
+  logiciel. `build.sh` assemble le tout depuis [Plugin/](Plugin/). Le plugin
+  journalise dans `~/Library/Logs/Synfus/synfusdeck.log`.
 
 [Profils/](Sources/Synfus/StreamDeck/Profils/) : `SpellProfile` (perso →
 3 barres × 10 cases, `sortId` DofusDB + nom, `normalize()` complète une
 sauvegarde ancienne sans la tronquer), un fichier JSON par perso dans
 `Application Support/Synfus/Profils/` (`SpellProfileStore`, exportable,
 versionnable par l'utilisateur). `SpellKeyMap` (dans `Preferences`) porte les
-touches du jeu par barre — des keycodes de position, défaut `1…0` / `⌃` /
-`⌃⇧`, **jamais ⌘**, réservé aux emplacements de Synfus — et `finDeTour`,
-sans défaut tant qu'elle n'est pas confirmée en jeu. L'onglet **Sorts** remplit
+touches du jeu par barre — des keycodes de position, la rangée du haut
+entière (douze touches, `&…-` sur AZERTY) nue / `⌃` / `⌃⇧`, **jamais ⌘**,
+réservé aux emplacements de Synfus — plus `finDeTour` et `corpsACorps`, sans
+défaut tant qu'ils ne sont pas confirmés en jeu. Une case qui n'est pas un
+sort connu — objet, emote, sort inconnu — garde sa **vignette d'écran**
+(`SpellSlot.vignette`, PNG découpé dans la capture, rangé avec le profil) :
+c'est ce que le Stream Deck affiche. Une case vide reste vide. L'onglet **Sorts** remplit
 un profil au clic, ou par « Reconnaître la barre affichée », qui passe par
 `SpellRecognition` — le même foyer que le banc d'essai du Diagnostic — et ne
 retient que les cases `isConfident`.

@@ -195,36 +195,71 @@ final class StreamDeckLink: ObservableObject {
     /// Pure quant à ses entrées : `state(for:)` est ce que l'on teste.
     func currentState() -> DeckState {
         let manager = WindowManager.shared
-        let client = manager.clients.first { manager.isFrontmost($0) }
+        let clients = manager.clients
+        let index = clients.firstIndex { manager.isFrontmost($0) }
+        let client = index.map { clients[$0] }
         let profile = client.map { SpellProfileStore.shared.profile(for: $0.name, classe: $0.characterClass) }
-        return Self.state(client: client, profile: profile, dofusDevant: manager.frontmostIsDofus,
-                          barre: barreActive, keyMap: Preferences.shared.spellKeyMap, enCombat: enCombat,
-                          icon: { [weak self] id in self?.icon(id) })
+        // Les voisins dans l'ordre de la barre, en boucle — ce que « suivant »
+        // et « précédent » feront.
+        let next = index.flatMap { clients.count > 1 ? clients[($0 + 1) % clients.count] : nil }
+        let previous = index.flatMap { clients.count > 1 ? clients[($0 + clients.count - 1) % clients.count] : nil }
+        return Self.state(client: client, next: next, previous: previous, profile: profile,
+                          dofusDevant: manager.frontmostIsDofus, barre: barreActive,
+                          keyMap: Preferences.shared.spellKeyMap, enCombat: enCombat,
+                          icon: { [weak self] slot in self?.icon(of: slot, perso: client?.name) },
+                          classIcon: { [weak self] classe in self?.classIcon(classe) })
     }
 
-    static func state(client: DofusClient?, profile: SpellProfile?, dofusDevant: Bool, barre: Int,
-                      keyMap: SpellKeyMap, enCombat: Bool?, icon: (Int) -> String?) -> DeckState {
+    static func state(client: DofusClient?, next: DofusClient? = nil, previous: DofusClient? = nil,
+                      profile: SpellProfile?, dofusDevant: Bool, barre: Int,
+                      keyMap: SpellKeyMap, enCombat: Bool?,
+                      icon: (SpellSlot) -> String?, classIcon: (String?) -> String? = { _ in nil }) -> DeckState {
         let bar = profile.flatMap { $0.barres.indices.contains(barre) ? $0.barres[barre] : nil }
         let cases = (0..<SpellProfile.slotsPerBar).map { position -> DeckCell in
             let slot = bar?.cases[position]
             return DeckCell(position: position + 1,
                             sortId: slot?.sortId,
                             nom: slot?.nom,
-                            icone: slot.flatMap { icon($0.sortId) },
+                            icone: slot.flatMap(icon),
                             touche: keyMap.key(bar: barre, position: position).map(DeckKey.init))
         }
+        func perso(_ c: DofusClient?) -> DeckPerso? {
+            c.map { DeckPerso(nom: $0.name, classe: $0.characterClass, icone: classIcon($0.characterClass)) }
+        }
         return DeckState(dofusDevant: dofusDevant, perso: client?.name, classe: client?.characterClass,
+                         persoActif: perso(client), persoSuivant: perso(next), persoPrecedent: perso(previous),
                          barre: barre + 1, barres: SpellProfile.barCount, enCombat: enCombat,
-                         finDeTour: keyMap.finDeTour.map(DeckKey.init), cases: cases)
+                         finDeTour: keyMap.finDeTour.map(DeckKey.init), corpsACorps: keyMap.corpsACorps.map(DeckKey.init),
+                         cases: cases)
     }
 
-    private func icon(_ id: Int) -> String? {
-        if let cached = iconCache[id] { return cached }
-        guard let url = SpellIndex.shared?.iconURL(id: id),
-              let data = try? Data(contentsOf: url)
-        else { return nil }
+    /// L'icône d'une case : celle du sort connu, sinon la vignette lue à
+    /// l'écran, rangée avec le profil.
+    private func icon(of slot: SpellSlot, perso: String?) -> String? {
+        if let id = slot.sortId, let cached = iconCache[id] { return cached }
+        let url: URL?
+        if let id = slot.sortId, let known = SpellIndex.shared?.iconURL(id: id) {
+            url = known
+        } else if let vignette = slot.vignette, let perso {
+            url = SpellProfileStore.shared.thumbnailURL(perso: perso, name: vignette)
+        } else {
+            url = nil
+        }
+        guard let url, let data = try? Data(contentsOf: url) else { return nil }
         let encoded = data.base64EncodedString()
-        iconCache[id] = encoded
+        if let id = slot.sortId { iconCache[id] = encoded }
         return encoded
     }
+
+    private var classIconCache: [String: String] = [:]
+
+    private func classIcon(_ classe: String?) -> String? {
+        guard let key = DofusClass.key(for: classe) else { return nil }
+        if let cached = classIconCache[key] { return cached }
+        guard let url = AnkamaAssets.classIconURL(key: key), let data = try? Data(contentsOf: url) else { return nil }
+        let encoded = data.base64EncodedString()
+        classIconCache[key] = encoded
+        return encoded
+    }
+
 }
