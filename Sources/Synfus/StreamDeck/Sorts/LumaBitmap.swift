@@ -5,7 +5,7 @@ import ImageIO
 /// Une image en niveaux de gris, en mémoire, ligne par ligne — la matière
 /// première de la reconnaissance. Une struct de valeurs : elle traverse les
 /// frontières d'isolation et se fabrique en test sans CoreGraphics.
-struct LumaBitmap: Sendable, Equatable {
+struct LumaBitmap: Sendable, Equatable, Codable {
     let width: Int
     let height: Int
     /// `height` lignes de `width` octets, 0 = noir.
@@ -72,19 +72,21 @@ struct LumaBitmap: Sendable, Equatable {
 
     /// Redimensionnée par moyenne de zones — ce qu'il faut pour comparer deux
     /// imagettes de tailles différentes, sans dépendre de CoreGraphics.
-    func resized(to side: Int) -> LumaBitmap {
-        guard width > 0, height > 0, side > 0 else { return LumaBitmap(width: 0, height: 0, pixels: []) }
-        var out = [UInt8](repeating: 0, count: side * side)
-        for ty in 0..<side {
-            let y0 = ty * height / side, y1 = max(y0 + 1, (ty + 1) * height / side)
-            for tx in 0..<side {
-                let x0 = tx * width / side, x1 = max(x0 + 1, (tx + 1) * width / side)
+    func resized(to side: Int) -> LumaBitmap { resized(width: side, height: side) }
+
+    func resized(width newWidth: Int, height newHeight: Int) -> LumaBitmap {
+        guard width > 0, height > 0, newWidth > 0, newHeight > 0 else { return LumaBitmap(width: 0, height: 0, pixels: []) }
+        var out = [UInt8](repeating: 0, count: newWidth * newHeight)
+        for ty in 0..<newHeight {
+            let y0 = ty * height / newHeight, y1 = max(y0 + 1, (ty + 1) * height / newHeight)
+            for tx in 0..<newWidth {
+                let x0 = tx * width / newWidth, x1 = max(x0 + 1, (tx + 1) * width / newWidth)
                 var sum = 0
                 for y in y0..<y1 { for x in x0..<x1 { sum += Int(pixels[y * width + x]) } }
-                out[ty * side + tx] = UInt8(sum / ((y1 - y0) * (x1 - x0)))
+                out[ty * newWidth + tx] = UInt8(sum / ((y1 - y0) * (x1 - x0)))
             }
         }
-        return LumaBitmap(width: side, height: side, pixels: out)
+        return LumaBitmap(width: newWidth, height: newHeight, pixels: out)
     }
 
     /// Dessine un rectangle plein — pour fabriquer des images de test.
