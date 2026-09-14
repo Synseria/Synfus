@@ -75,13 +75,14 @@ struct SpellsSettings: View {
                     }
                 }
                 ShortcutRow(label: "Corps à corps", help: "La touche qui attaque avec l'arme équipée. Sans défaut : "
-                            + "à relever dans les raccourcis du jeu.",
+                            + "à relever dans les raccourcis du jeu.", allowsBareKeys: true,
                             hotKey: Binding(
                                 get: { prefs.spellKeyMap.corpsACorps },
                                 set: { prefs.spellKeyMap.corpsACorps = $0 }
                             ))
                 ShortcutRow(label: "Fin de tour", help: "La touche « fin de tour » du jeu (Options → Raccourcis). "
                             + "Sans défaut tant que tu ne l'as pas confirmée : une touche fausse en combat coûte cher.",
+                            allowsBareKeys: true,
                             hotKey: Binding(
                                 get: { prefs.spellKeyMap.finDeTour },
                                 set: { prefs.spellKeyMap.finDeTour = $0 }
@@ -90,6 +91,22 @@ struct SpellsSettings: View {
                 SectionTitle("Touches du jeu", help: "Ce que le Stream Deck frappe pour chaque case : la rangée "
                              + "de chiffres, avec le modificateur de la barre. Ce sont des positions de touches, pas "
                              + "des caractères — sur AZERTY la touche « 1 » tape &, c'est bien elle qui est frappée.")
+            }
+
+            Section {
+                ForEach(prefs.gameCommands.indices, id: \.self) { i in
+                    HStack {
+                        Image(systemName: prefs.gameCommands[i].symbole).frame(width: 18)
+                        ShortcutRow(label: prefs.gameCommands[i].nom, allowsBareKeys: true, hotKey: Binding(
+                            get: { prefs.gameCommands[i].touche },
+                            set: { prefs.gameCommands[i].touche = $0 }
+                        ))
+                    }
+                }
+            } header: {
+                SectionTitle("Commandes du jeu", help: "Les raccourcis du jeu que la touche « Menu » du Stream Deck "
+                             + "affiche à la place des sorts : inventaire, caractéristiques, suivi du perso… Les défauts "
+                             + "sont ceux du jeu tels qu'on les connaît — vérifie-les dans Options → Raccourcis.")
             }
 
             Section {

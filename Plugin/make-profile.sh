@@ -2,12 +2,12 @@
 # Fabrique Synfus.streamDeckProfile — le profil livré avec le plugin, vers
 # lequel SynfusDeck bascule quand Dofus passe devant. Disposition 5 × 3 :
 #
-#   ◀ perso │ perso actif │ perso ▶ │ corps à corps │ fin de tour
-#   sort 1  │ sort 2      │ sort 3  │ sort 4        │ sort 5
-#   sort 6  │ sort 7      │ sort 8  │ sort 9        │ sort 10
+#   barre ▶ │ perso ▶ │ menu   │ suivi  │ fin de tour
+#   sort 1  │ sort 2  │ sort 3 │ sort 4 │ sort 5
+#   sort 6  │ sort 7  │ sort 8 │ sort 9 │ sort 10
 #
-# Les cases 11 et 12 de chaque barre ne tiennent pas sur 15 touches : « perso
-# actif » passe à la barre suivante. Un `.streamDeckProfile` est un zip d'un
+# Les cases 11 et 12 de chaque barre ne tiennent pas sur 15 touches. « Menu »
+# remplace les dix sorts par les commandes du jeu (inventaire, carte…). Un `.streamDeckProfile` est un zip d'un
 # dossier `<uuid>.sdProfile/manifest.json` dont les actions sont indexées par
 # « colonne,ligne ».
 #
@@ -25,10 +25,10 @@ action() { # colonne ligne uuid nom
 }
 {
     printf '{"Name":"Synfus","Version":"1.0","DeviceModel":"20GAA9901","DeviceUUID":"","Actions":{'
-    action 0 0 perso-precedent "Perso précédent"; printf ','
-    action 1 0 perso-actif "Perso actif"; printf ','
-    action 2 0 perso-suivant "Perso suivant"; printf ','
-    action 3 0 corps-a-corps "Corps à corps"; printf ','
+    action 0 0 barre-suivante "Barre suivante"; printf ','
+    action 1 0 perso-suivant "Perso suivant"; printf ','
+    action 2 0 menu "Menu"; printf ','
+    action 3 0 suivi "Suivi du perso"; printf ','
     action 4 0 fin-de-tour "Fin de tour"
     for row in 1 2; do for col in 0 1 2 3 4; do printf ','; action "$col" "$row" sort "Sort"; done; done
     printf '}}'

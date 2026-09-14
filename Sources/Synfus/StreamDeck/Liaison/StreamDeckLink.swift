@@ -48,6 +48,7 @@ final class StreamDeckLink: ObservableObject {
             SpellProfileStore.shared.$profiles.map { _ in () }
         )
         .merge(with: prefs.$spellKeyMap.map { _ in () }, $barreActive.map { _ in () }, $enCombat.map { _ in () })
+        .merge(with: prefs.$gameCommands.map { _ in () })
         .debounce(for: .milliseconds(50), scheduler: DispatchQueue.main)
         .sink { [weak self] in self?.publish() }
         .store(in: &subscriptions)
@@ -171,6 +172,10 @@ final class StreamDeckLink: ObservableObject {
         case .perso: if let slot = command.slot { manager.focus(slot: slot) }
         case .barreSuivante: barreActive = (barreActive + 1) % SpellProfile.barCount
         case .barrePrecedente: barreActive = (barreActive + SpellProfile.barCount - 1) % SpellProfile.barCount
+        case .activer:
+            if let current = manager.clients.first(where: { manager.isFrontmost($0) }) ?? manager.clients.first {
+                manager.focus(current)
+            }
         }
     }
 
@@ -206,13 +211,14 @@ final class StreamDeckLink: ObservableObject {
         return Self.state(client: client, next: next, previous: previous, profile: profile,
                           dofusDevant: manager.frontmostIsDofus, barre: barreActive,
                           keyMap: Preferences.shared.spellKeyMap, enCombat: enCombat,
+                          commands: Preferences.shared.gameCommands,
                           icon: { [weak self] slot in self?.icon(of: slot, perso: client?.name) },
                           classIcon: { [weak self] classe in self?.classIcon(classe) })
     }
 
     static func state(client: DofusClient?, next: DofusClient? = nil, previous: DofusClient? = nil,
                       profile: SpellProfile?, dofusDevant: Bool, barre: Int,
-                      keyMap: SpellKeyMap, enCombat: Bool?,
+                      keyMap: SpellKeyMap, enCombat: Bool?, commands: [GameCommand] = [],
                       icon: (SpellSlot) -> String?, classIcon: (String?) -> String? = { _ in nil }) -> DeckState {
         let bar = profile.flatMap { $0.barres.indices.contains(barre) ? $0.barres[barre] : nil }
         let cases = (0..<SpellProfile.slotsPerBar).map { position -> DeckCell in
@@ -230,7 +236,8 @@ final class StreamDeckLink: ObservableObject {
                          persoActif: perso(client), persoSuivant: perso(next), persoPrecedent: perso(previous),
                          barre: barre + 1, barres: SpellProfile.barCount, enCombat: enCombat,
                          finDeTour: keyMap.finDeTour.map(DeckKey.init), corpsACorps: keyMap.corpsACorps.map(DeckKey.init),
-                         cases: cases)
+                         cases: cases,
+                         commandes: commands.map { DeckGameCommand(id: $0.id, nom: $0.nom, symbole: $0.symbole, touche: $0.touche.map(DeckKey.init)) })
     }
 
     /// L'icône d'une case : celle du sort connu, sinon la vignette lue à

@@ -119,3 +119,41 @@ struct SpellKeyMap: Codable, Equatable, Sendable {
         ("⌥⇧", UInt32(optionKey | shiftKey)),
     ]
 }
+
+/// Une commande du jeu hors sorts — ouvrir l'inventaire, suivre le perso… :
+/// un nom, un symbole SF pour la touche, et la touche du jeu, réglable.
+struct GameCommand: Codable, Equatable, Sendable, Identifiable {
+    var id: String
+    var nom: String
+    var symbole: String
+    var touche: HotKey?
+}
+
+/// Les commandes proposées sur le Stream Deck derrière la touche « Menu ».
+/// Les défauts sont les raccourcis du jeu tels qu'on les connaît — à
+/// vérifier dans Options → Raccourcis, et modifiables ici.
+enum GameCommands {
+    static let suiviID = "suivi"
+
+    static let defaults: [GameCommand] = [
+        GameCommand(id: "inventaire", nom: "Inventaire", symbole: "bag", touche: HotKey(keyCode: 34, modifiers: 0)),         // I
+        GameCommand(id: "caracteristiques", nom: "Caractéristiques", symbole: "person.text.rectangle", touche: HotKey(keyCode: 8, modifiers: 0)), // C
+        GameCommand(id: "sorts", nom: "Sorts", symbole: "book", touche: HotKey(keyCode: 1, modifiers: 0)),                  // S
+        GameCommand(id: "quetes", nom: "Quêtes", symbole: "scroll", touche: HotKey(keyCode: 12, modifiers: 0)),             // Q
+        GameCommand(id: "carte", nom: "Carte", symbole: "map", touche: HotKey(keyCode: 46, modifiers: 0)),                  // M
+        GameCommand(id: "amis", nom: "Amis", symbole: "person.2", touche: HotKey(keyCode: 3, modifiers: 0)),                // F
+        GameCommand(id: "guilde", nom: "Guilde", symbole: "flag", touche: HotKey(keyCode: 5, modifiers: 0)),                // G
+        GameCommand(id: "metiers", nom: "Métiers", symbole: "hammer", touche: HotKey(keyCode: 38, modifiers: 0)),           // J
+        GameCommand(id: "bestiaire", nom: "Bestiaire", symbole: "pawprint", touche: HotKey(keyCode: 11, modifiers: 0)),     // B
+        GameCommand(id: "alliance", nom: "Alliance", symbole: "shield", touche: HotKey(keyCode: 0, modifiers: 0)),          // A
+        GameCommand(id: suiviID, nom: "Suivi du perso", symbole: "figure.walk", touche: HotKey(keyCode: 13, modifiers: UInt32(controlKey))), // ⌃W
+    ]
+
+    /// Complète une liste enregistrée des commandes apparues depuis — sans
+    /// toucher à celles qui existent.
+    static func normalized(_ saved: [GameCommand]) -> [GameCommand] {
+        var list = saved
+        for command in defaults where !list.contains(where: { $0.id == command.id }) { list.append(command) }
+        return list
+    }
+}

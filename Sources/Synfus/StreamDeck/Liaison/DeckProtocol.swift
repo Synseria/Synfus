@@ -63,12 +63,24 @@ struct DeckState: Codable, Equatable, Sendable {
     let finDeTour: DeckKey?
     let corpsACorps: DeckKey?
     let cases: [DeckCell]
+    /// Les commandes du jeu derrière la touche « Menu », dans l'ordre.
+    let commandes: [DeckGameCommand]
+}
+
+/// Une commande du jeu telle que le plugin la dessine : nom, symbole SF, touche.
+struct DeckGameCommand: Codable, Equatable, Sendable {
+    let id: String
+    let nom: String
+    let symbole: String
+    let touche: DeckKey?
 }
 
 /// Ce que le plugin peut demander.
 struct DeckCommand: Codable, Equatable, Sendable {
     enum Kind: String, Codable, Sendable {
         case persoSuivant, persoPrecedent, perso, barreSuivante, barrePrecedente
+        /// Ramène Dofus devant — le perso actif, ou le premier — sans changer de perso.
+        case activer
     }
     let type: Kind
     /// Pour `perso` : l'emplacement, 0-based.

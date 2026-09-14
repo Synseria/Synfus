@@ -67,7 +67,17 @@ struct SpellProfileTests {
         #expect(state.cases[0].touche == DeckKey(HotKey(keyCode: 18, modifiers: UInt32(controlKey))))
         #expect(state.cases[1].sortId == nil && state.cases[1].touche != nil)
         #expect(state.persoActif?.nom == "Aeryn" && state.persoSuivant == nil)
+        #expect(state.commandes.isEmpty)
         #expect(state.enCombat == nil)
+    }
+
+    @Test("Les commandes du jeu ont un défaut, et une sauvegarde ancienne reçoit les nouvelles")
+    func commandesDuJeu() {
+        let defaults = GameCommands.defaults
+        #expect(defaults.contains { $0.id == GameCommands.suiviID && $0.touche?.modifiers == UInt32(controlKey) })
+        let completed = GameCommands.normalized([GameCommand(id: "inventaire", nom: "Inv", symbole: "bag", touche: nil)])
+        #expect(completed.count == defaults.count)
+        #expect(completed[0].nom == "Inv" && completed[0].touche == nil)
     }
 
     @Test("Sans perso devant, l'état reste complet mais vide de sorts")

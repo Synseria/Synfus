@@ -6,6 +6,9 @@ import SwiftUI
 struct ShortcutRecorder: View {
     @Binding var hotKey: HotKey?
     var placeholder = "Aucun"
+    /// Les touches du **jeu** peuvent être nues — `I` ouvre l'inventaire. Un
+    /// raccourci global de Synfus, lui, exige un modificateur.
+    var allowsBareKeys = false
 
     @State private var recording = false
     @State private var monitor: Any?
@@ -66,6 +69,9 @@ struct ShortcutRecorder: View {
             }
             if let captured = HotKey(event: event) {
                 hotKey = captured
+                stop()
+            } else if allowsBareKeys, event.modifierFlags.intersection([.command, .option, .control, .shift]).isEmpty {
+                hotKey = HotKey(keyCode: UInt32(event.keyCode), modifiers: 0)
                 stop()
             }
             return nil  // on avale la frappe dans tous les cas
