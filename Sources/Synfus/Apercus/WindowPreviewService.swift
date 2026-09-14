@@ -139,6 +139,12 @@ final class WindowPreviewService: ObservableObject {
     /// l'inventaire des fenêtres AX. Deux vrais persos dans un même processus
     /// restent, eux, un cas où l'on renonce : mieux vaut aucun aperçu que celui
     /// du mauvais perso.
+    ///
+    /// Entre les deux, le **nom du perso** : le titre change de version ou de
+    /// suffixe au fil d'une session, mais son premier segment reste le perso.
+    /// Un client dont la fenêtre principale est doublée d'une seconde de
+    /// taille de jeu (mesuré : le jeu en garde parfois une hors écran) était
+    /// « ambigu » et son aperçu restait vide, alors que le nom tranchait.
     nonisolated static func match(pid: pid_t, title: String, among candidates: [Candidate]) -> Int? {
         if let exact = candidates.firstIndex(where: { $0.pid == pid && $0.title == title }) {
             return exact
@@ -146,7 +152,13 @@ final class WindowPreviewService: ObservableObject {
         let sameProcess = candidates.indices.filter {
             candidates[$0].pid == pid && candidates[$0].isGameSized
         }
-        return sameProcess.count == 1 ? sameProcess[0] : nil
+        if sameProcess.count == 1 { return sameProcess[0] }
+        let name = WindowTitle.characterName(fromTitle: title)
+        if !name.isEmpty {
+            let byName = sameProcess.filter { WindowTitle.characterName(fromTitle: candidates[$0].title ?? "") == name }
+            if byName.count == 1 { return byName[0] }
+        }
+        return nil
     }
 
     // MARK: - Autorisation

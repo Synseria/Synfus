@@ -60,7 +60,11 @@ sips -z 288 288 Resources/Synfus.png --out "$PLUGIN/icon@2x.png" >/dev/null
 # le plugin pose son propre titre, c'est lui qui dit l'état.
 cp "$PLUGIN/icon.png" "$PLUGIN/icon-dim.png"
 cp "$PLUGIN/icon@2x.png" "$PLUGIN/icon-dim@2x.png"
-sed -i '' "s/\"Version\": \"[^\"]*\"/\"Version\": \"$VERSION\"/" "$PLUGIN/manifest.json"
+# Version du plugin : celle de l'app suivie du nombre de commits depuis le
+# tag — le logiciel Stream Deck n'installe un paquet que s'il est plus récent
+# que ce qu'il a, et deux builds d'une même version seraient « déjà installés ».
+PLUGIN_VERSION="$VERSION.$(git rev-list --count "v$VERSION..HEAD" 2>/dev/null || echo 0)"
+sed -i '' "s/\"Version\": \"[^\"]*\"/\"Version\": \"$PLUGIN_VERSION\"/" "$PLUGIN/manifest.json"
 ./Plugin/make-profile.sh "$PLUGIN"
 # Le paquet que le logiciel Stream Deck installe par double-clic — et le seul
 # chemin qui enregistre le profil livré comme *appartenant au plugin*, ce que
@@ -148,15 +152,18 @@ if [ "${1:-}" = "--install" ]; then
     INSTALLED="$DECK_PLUGINS/$(basename "$PLUGIN")"
     if [ -d "$INSTALLED" ] && ! diff -q <(grep -v '"Version"' "$INSTALLED/manifest.json") \
                                       <(grep -v '"Version"' "$PLUGIN/manifest.json") >/dev/null; then
-        # Le manifeste a changé (actions, profils) : seul le paquet fait
-        # réenregistrer le profil livré — le logiciel demande confirmation.
-        echo "==> Le manifeste du plugin a changé : réinstallation par le paquet"
+        # Les actions ou le profil livré ont changé : le profil « Synfus »
+        # enregistré par le logiciel porte encore les anciennes actions, et
+        # seul le paquet le réenregistre. Le logiciel n'accepte un paquet que
+        # plus récent que l'installé (sinon « AlreadyInstalled », mesuré dans
+        # StreamDeck.log) — d'où la version de build — et demande confirmation.
+        echo "==> Le manifeste du plugin a changé : mise à jour par le paquet (confirmer dans le logiciel Stream Deck)"
         open "$PACKAGE"
     elif [ -d "$INSTALLED" ]; then
         # Déjà installé : on remplace le contenu et on relance le logiciel,
         # qui ne charge les plugins qu'au lancement.
         echo "==> Mise à jour du plugin Stream Deck"
-        rm -rf "$DECK_PLUGINS/$(basename "$PLUGIN")"
+        rm -rf "$INSTALLED"
         cp -R "$PLUGIN" "$DECK_PLUGINS/"
         if pkill -x "Stream Deck" 2>/dev/null; then
             sleep 1
