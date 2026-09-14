@@ -8,6 +8,7 @@ struct DiagnosticSettings: View {
     @ObservedObject private var previews = WindowPreviewService.shared
     @ObservedObject private var arranger = WindowArranger.shared
     @ObservedObject private var freezes = FreezeWatcher.shared
+    @ObservedObject private var spells = SpellRecognitionProbe.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -82,6 +83,9 @@ struct DiagnosticSettings: View {
             }
 
             Divider().padding(.vertical, 4)
+            spellRecognitionSection
+
+            Divider().padding(.vertical, 4)
             attentionProbeSection
 
             Spacer()
@@ -137,6 +141,40 @@ struct DiagnosticSettings: View {
                  + "puis relance le rangement.")
                 .font(.system(size: 10))
                 .foregroundStyle(.tertiary)
+        }
+    }
+
+    /// L'exploration de la reconnaissance des sorts : capturer, analyser,
+    /// lire les scores. Rien n'est configuré ici — c'est le banc d'essai.
+    private var spellRecognitionSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Reconnaissance des sorts (exploration)")
+                .font(.system(size: 12, weight: .semibold))
+            Text("Capture la fenêtre du perso actif en résolution native, puis cherche la "
+                 + "barre de sorts et compare chaque case aux icônes de sa classe. Les "
+                 + "captures restent dans ~/Library/Logs/Synfus/captures — jamais dans le dépôt.")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+            HStack {
+                Button("Capturer le perso actif") { spells.captureActive() }
+                    .disabled(spells.busy || !previews.authorized)
+                Button("Analyser la dernière capture") { spells.analyzeLast() }
+                    .disabled(spells.busy)
+                Button("Analyser un fichier…") { spells.analyzeFile() }
+                Button("Ouvrir le dossier") { spells.revealCaptures() }
+            }
+            .font(.system(size: 11))
+            if !spells.report.isEmpty {
+                ScrollView {
+                    Text(spells.report)
+                        .font(.system(size: 10, design: .monospaced))
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .frame(maxHeight: 160)
+                .padding(6)
+                .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.04)))
+            }
         }
     }
 
