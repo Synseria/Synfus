@@ -39,6 +39,14 @@ struct DeckState: Codable, Equatable, Sendable {
     let finDeTour: DeckKey?
     let corpsACorps: DeckKey?
     let cases: [DeckCell]
+    let commandes: [DeckGameCommand]
+}
+
+struct DeckGameCommand: Codable, Equatable, Sendable {
+    let id: String
+    let nom: String
+    let symbole: String
+    let touche: DeckKey?
 }
 
 struct DeckCommand: Codable, Sendable {
@@ -73,4 +81,6 @@ enum ActionID {
     static let finDeTour = prefix + "fin-de-tour"
     static let corpsACorps = prefix + "corps-a-corps"
     static let persoActif = prefix + "perso-actif"
+    static let menu = prefix + "menu"
+    static let suivi = prefix + "suivi"
 }

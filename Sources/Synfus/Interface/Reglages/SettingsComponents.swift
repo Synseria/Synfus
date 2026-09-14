@@ -50,6 +50,7 @@ struct ShortcutRow: View {
     let label: String
     var detail: String? = nil
     var help: String? = nil
+    var allowsBareKeys = false
     let hotKey: Binding<HotKey?>
 
     var body: some View {
@@ -60,7 +61,7 @@ struct ShortcutRow: View {
             if let detail {
                 Text(detail).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
             }
-            ShortcutRecorder(hotKey: hotKey)
+            ShortcutRecorder(hotKey: hotKey, allowsBareKeys: allowsBareKeys)
         }
     }
 }

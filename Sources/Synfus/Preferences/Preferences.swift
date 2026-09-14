@@ -92,6 +92,10 @@ final class Preferences: ObservableObject {
     /// que si on l'a demandé.
     @Published var streamDeckEnabled: Bool = false { didSet { save() } }
 
+    /// Les commandes du jeu (inventaire, suivi…) et leurs touches, pour la
+    /// touche « Menu » du Stream Deck.
+    @Published var gameCommands: [GameCommand] = GameCommands.defaults { didSet { save() } }
+
     /// Nombre de slots exposés (et donc de raccourcis potentiels).
     ///
     /// Le garde-fou `clamping` n'est pas décoratif : `@Published` remplace la
@@ -208,6 +212,7 @@ final class Preferences: ObservableObject {
         var sessionHotKey: HotKey?
         var spellKeyMap: SpellKeyMap?
         var streamDeckEnabled: Bool?
+        var gameCommands: [GameCommand]?
         /// Génération du jeu de raccourcis par défaut appliqué à cette
         /// sauvegarde. Absente des sauvegardes d'avant la refonte, d'où le repli
         /// sur 1 à la lecture.
@@ -333,6 +338,7 @@ final class Preferences: ObservableObject {
             sessionHotKey: sessionHotKey,
             spellKeyMap: spellKeyMap,
             streamDeckEnabled: streamDeckEnabled,
+            gameCommands: gameCommands,
             defaultsVersion: Self.defaultsVersion
         )
         if let data = try? JSONEncoder().encode(stored) {
@@ -385,6 +391,7 @@ final class Preferences: ObservableObject {
         sessionHotKey = stored.sessionHotKey
         spellKeyMap = stored.spellKeyMap ?? .defaults
         streamDeckEnabled = stored.streamDeckEnabled ?? false
+        gameCommands = GameCommands.normalized(stored.gameCommands ?? GameCommands.defaults)
         if let x = stored.barOriginX, let y = stored.barOriginY {
             barOrigin = CGPoint(x: x, y: y)
         }

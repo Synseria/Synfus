@@ -27,6 +27,8 @@ final class Plugin {
     /// revenir quand Dofus n'est plus devant.
     private var switchedDevices: Set<String> = []
     private var devices: Set<String> = []
+    /// « Menu » enfoncé : les touches de sorts montrent les commandes du jeu.
+    private var menuOpen = false
 
     private static let socketPath = FileManager.default
         .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -90,12 +92,29 @@ final class Plugin {
         // Sans Synfus, n'importe quelle touche le lance : c'est ce qu'on veut
         // quand « Synfus absent » s'affiche.
         guard let state else { launchSynfus(); return }
+        // Dofus derrière une autre app : une touche ne frappe rien, elle
+        // ramène Dofus devant — la suivante fera ce qu'elle dit.
+        if !state.dofusDevant, key.action != ActionID.persoSuivant, key.action != ActionID.persoPrecedent {
+            send("activer")
+            return
+        }
         switch key.action {
+        case ActionID.menu:
+            menuOpen.toggle()
+            render()
         case ActionID.sort:
-            guard state.dofusDevant,
-                  let index = sortKeys.firstIndex(where: { $0.context == context }),
-                  index < state.cases.count,
-                  let touche = state.cases[index].touche
+            guard let index = sortKeys.firstIndex(where: { $0.context == context }) else { return }
+            if menuOpen {
+                guard index < state.commandes.count, let touche = state.commandes[index].touche
+                else { elgato?.showAlert(context); return }
+                Keystroke.press(touche)
+                return
+            }
+            guard index < state.cases.count, let touche = state.cases[index].touche
+            else { elgato?.showAlert(context); return }
+            Keystroke.press(touche)
+        case ActionID.suivi:
+            guard let touche = state.commandes.first(where: { $0.id == "suivi" })?.touche
             else { elgato?.showAlert(context); return }
             Keystroke.press(touche)
         case ActionID.finDeTour:
@@ -152,6 +171,22 @@ final class Plugin {
         let dimmed = state?.dofusDevant != true
         for key in keys.values {
             switch key.action {
+            case ActionID.sort where menuOpen && state != nil:
+                let index = sorts.firstIndex { $0.context == key.context } ?? 0
+                if let command = state.flatMap({ index < $0.commandes.count ? $0.commandes[index] : nil }) {
+                    elgato.setImage(key.context, base64PNG: Images.symbol(command.symbole, dimmed: dimmed || command.touche == nil))
+                    elgato.setTitle(key.context, command.nom)
+                } else {
+                    elgato.setImage(key.context, base64PNG: Images.blank(dimmed: true))
+                    elgato.setTitle(key.context, "")
+                }
+            case ActionID.menu:
+                elgato.setImage(key.context, base64PNG: Images.symbol(menuOpen ? "xmark" : "square.grid.2x2", dimmed: dimmed))
+                elgato.setTitle(key.context, menuOpen ? "Sorts" : "Menu")
+            case ActionID.suivi:
+                let ready = state?.commandes.contains { $0.id == "suivi" && $0.touche != nil } == true
+                elgato.setImage(key.context, base64PNG: Images.symbol("figure.walk", dimmed: dimmed || !ready))
+                elgato.setTitle(key.context, "Suivi")
             case ActionID.sort:
                 let index = sorts.firstIndex { $0.context == key.context } ?? 0
                 let cell = state.flatMap { index < $0.cases.count ? $0.cases[index] : nil }
@@ -175,14 +210,16 @@ final class Plugin {
                     elgato.setTitle(key.context, state == nil ? "Synfus\nabsent" : (state?.perso == nil ? "Aucun\nperso" : "—"))
                 }
             case ActionID.barreSuivante:
-                elgato.setImage(key.context, base64PNG: Images.blank(dimmed: dimmed))
-                elgato.setTitle(key.context, state.map { "Barre\n\($0.barre)/\($0.barres)" } ?? "Synfus\nabsent")
+                elgato.setImage(key.context, base64PNG: Images.symbol("arrow.turn.down.right", dimmed: dimmed))
+                elgato.setTitle(key.context, state.map { "Barre \($0.barre)/\($0.barres)" } ?? "Synfus\nabsent")
             case ActionID.finDeTour:
-                elgato.setImage(key.context, base64PNG: Images.blank(dimmed: dimmed || state?.finDeTour == nil))
-                elgato.setTitle(key.context, state?.finDeTour == nil ? "Fin de tour\n(à régler)" : "Fin de\ntour")
+                // En combat, la touche s'allume ; hors combat (ou sans verdict), elle reste discrète.
+                let armed = state?.finDeTour != nil && state?.enCombat != false
+                elgato.setImage(key.context, base64PNG: Images.symbol("flag.checkered", dimmed: dimmed || !armed))
+                elgato.setTitle(key.context, state?.finDeTour == nil ? "Fin de tour\n(à régler)" : "Fin de tour")
             case ActionID.corpsACorps:
-                elgato.setImage(key.context, base64PNG: Images.blank(dimmed: dimmed || state?.corpsACorps == nil))
-                elgato.setTitle(key.context, state?.corpsACorps == nil ? "CàC\n(à régler)" : "Corps à\ncorps")
+                elgato.setImage(key.context, base64PNG: Images.symbol("figure.fencing", dimmed: dimmed || state?.corpsACorps == nil))
+                elgato.setTitle(key.context, state?.corpsACorps == nil ? "CàC\n(à régler)" : "Corps à corps")
             default:
                 break
             }
@@ -258,7 +295,7 @@ enum Images {
         let out = NSImage(size: size, flipped: false) { rect in
             NSColor(white: 0.08, alpha: 1).setFill()
             rect.fill()
-            image.draw(in: rect, from: .zero, operation: .sourceOver, fraction: 0.3)
+            image.draw(in: rect, from: .zero, operation: .sourceOver, fraction: 0.55)
             return true
         }
         let result = png(out) ?? base64PNG
@@ -274,6 +311,40 @@ enum Images {
             return true
         }
         return png(out) ?? ""
+    }
+
+    private static var symbolCache: [String: String] = [:]
+
+    /// Un symbole SF, blanc sur fond sombre — les touches de commande.
+    static func symbol(_ name: String, dimmed: Bool) -> String {
+        let key = "\(name)/\(dimmed)"
+        if let cached = symbolCache[key] { return cached }
+        let size = NSSize(width: 144, height: 144)
+        // Le glyphe est teinté à part, sur fond transparent — `sourceAtop`
+        // ne peint que là où il y a déjà du dessin —, puis posé sur le fond.
+        let glyph: NSImage? = NSImage(systemSymbolName: name, accessibilityDescription: nil)?
+            .withSymbolConfiguration(.init(pointSize: 60, weight: .regular))
+            .map { symbol in
+                NSImage(size: symbol.size, flipped: false) { rect in
+                    symbol.draw(in: rect, from: .zero, operation: .sourceOver, fraction: 1)
+                    NSColor.white.setFill()
+                    rect.fill(using: .sourceAtop)
+                    return true
+                }
+            }
+        let out = NSImage(size: size, flipped: false) { rect in
+            NSColor(white: dimmed ? 0.08 : 0.16, alpha: 1).setFill()
+            NSBezierPath(roundedRect: rect.insetBy(dx: 6, dy: 6), xRadius: 18, yRadius: 18).fill()
+            if let glyph {
+                let target = NSRect(x: (size.width - glyph.size.width) / 2, y: (size.height - glyph.size.height) / 2 + 10,
+                                    width: glyph.size.width, height: glyph.size.height)
+                glyph.draw(in: target, from: .zero, operation: .sourceOver, fraction: dimmed ? 0.35 : 0.95)
+            }
+            return true
+        }
+        let result = png(out) ?? ""
+        symbolCache[key] = result
+        return result
     }
 
     private static func png(_ image: NSImage) -> String? {

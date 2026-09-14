@@ -143,6 +143,36 @@
           "ShowTitle": true
         }
       ]
+    },
+    {
+      "Name": "Menu",
+      "UUID": "fr.synseria.synfus.menu",
+      "Icon": "icon",
+      "Tooltip": "Bascule les touches « Sort » entre les sorts et les commandes du jeu (inventaire, caractéristiques…).",
+      "UserTitleEnabled": false,
+      "States": [
+        {
+          "Image": "icon",
+          "TitleAlignment": "bottom",
+          "FontSize": "9",
+          "ShowTitle": true
+        }
+      ]
+    },
+    {
+      "Name": "Suivi du perso",
+      "UUID": "fr.synseria.synfus.suivi",
+      "Icon": "icon",
+      "Tooltip": "Frappe la touche « suivi du personnage » réglée dans Synfus (⌃W par défaut).",
+      "UserTitleEnabled": false,
+      "States": [
+        {
+          "Image": "icon",
+          "TitleAlignment": "bottom",
+          "FontSize": "9",
+          "ShowTitle": true
+        }
+      ]
     }
   ],
   "Profiles": [
