@@ -20,7 +20,7 @@ swift test --filter "migration"                 # un test par son nom
 VERSION=0.0.3 ARCH=x86_64 ./build.sh
 ./make-dmg.sh Synfus.app dist/Synfus-0.0.3-arm64.dmg
 ./Tools/generate-app-icons.sh      # régénère Resources/Synfus.{icns,png}
-./Tools/fetch-class-icons.sh       # remplit le dossier d'icônes de classes
+./Tools/fetch-ankama-assets.sh     # télécharge emblèmes et icônes de sorts dans Resources/Ankama (gitignoré)
 ```
 
 Les tests portent sur la logique pure — analyse des titres de fenêtres, classes,
@@ -618,16 +618,27 @@ capturable, mais macOS ne la redessine pas — l'image peut dater.
 apparaître d'office dans la barre et les réglages. Une classe inconnue reçoit une
 teinte dérivée par hachage du nom plutôt que du gris.
 
-[ClassIconStore.swift](Sources/Synfus/Classes/ClassIconStore.swift) : Synfus **n'embarque
-aucune image du jeu** — celles d'Ankama n'ont pas à être redistribuées. Les icônes
-sont fournies par l'utilisateur dans
-`~/Library/Application Support/Synfus/Classes/<clé>.png`. Ce dossier est l'unique
-état ; les images importées sont réencodées en PNG 128 px. Ne pas ajouter d'assets
-de classe au dépôt.
+[ClassIconStore.swift](Sources/Synfus/Classes/ClassIconStore.swift) : le dépôt
+**n'embarque aucune image du jeu** — celles d'Ankama n'ont pas à être
+redistribuées. Les icônes sont fournies par l'utilisateur dans
+`~/Library/Application Support/Synfus/Classes/<clé>.png` (l'unique état
+modifiable ; les images importées sont réencodées en PNG 128 px), ou
+téléchargées pour son propre build — voir ci-dessous. Ne jamais ajouter
+d'assets de classe au dépôt.
 
-[Tools/fetch-class-icons.sh](Tools/fetch-class-icons.sh) automatise le
-remplissage de ce dossier depuis l'API communautaire DofusDB (le CDN d'Ankama
-répond 403). C'est **la seule forme acceptable** : l'article 13.2 des CGU de
+[Tools/fetch-ankama-assets.sh](Tools/fetch-ankama-assets.sh) — un wrapper qui
+compile [Tools/FetchAnkamaAssets.swift](Tools/FetchAnkamaAssets.swift) avec
+`DofusClass.swift`, pour que les clés soient celles de l'app — télécharge
+depuis l'API communautaire DofusDB (le CDN d'Ankama répond 403) les emblèmes
+des classes **et** les icônes de sorts, dans `Resources/Ankama/` :
+`Classes/<clé>.png`, `Sorts/<clé>/<id>.png` et un index `sorts.json`
+(`{id, nom, classe, fichier}`). Ce dossier est **ignoré par Git** ; `build.sh`
+l'embarque dans `Contents/Resources/Ankama` s'il existe, et
+[AnkamaAssets.swift](Sources/Synfus/Classes/AnkamaAssets.swift) le résout —
+**Application Support d'abord, bundle ensuite** : ce que l'utilisateur dépose
+garde la priorité. La CI n'a pas le dossier, les releases restent sans visuel
+du jeu. Un pare-feu applicatif (LuLu) demandera l'accès réseau au programme
+compilé, une fois. C'est **la seule forme acceptable** : l'article 13.2 des CGU de
 Dofus interdit de distribuer les visuels du jeu sans accord écrit d'Ankama, donc
 le dépôt ne transporte que des URL — la copie est faite par l'utilisateur, sur
 sa machine, pour son usage personnel. Ne jamais convertir ce script en assets

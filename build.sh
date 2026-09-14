@@ -69,6 +69,13 @@ if [ -f "Resources/$NAME.icns" ]; then
     /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string $NAME" "$APP/Contents/Info.plist"
 fi
 
+# Les visuels Ankama, s'ils ont été téléchargés (Tools/fetch-ankama-assets.sh) :
+# embarqués dans ce build-ci, pour cette machine — le dossier est ignoré par
+# Git et la CI ne l'a pas, les releases restent sans visuel du jeu.
+if [ -d "Resources/Ankama" ]; then
+    cp -R "Resources/Ankama" "$APP/Contents/Resources/Ankama"
+fi
+
 # La signature détermine l'identité vue par TCC (l'autorisation Accessibilité).
 # Une identité de développement donne une identité stable d'un build à l'autre ;
 # à défaut, la signature ad-hoc oblige parfois à réautoriser après un rebuild.

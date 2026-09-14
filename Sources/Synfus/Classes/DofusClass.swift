@@ -50,6 +50,9 @@ enum DofusClass {
         uniqueKeysWithValues: breeds.map { ($0.key, $0) }
     )
 
+    /// La classe connue sous cette clé, s'il y en a une.
+    static func breed(forKey key: String) -> Breed? { index[key] }
+
     /// Retire les accents pour que « Crâ » retrouve son entrée « cra ».
     static func key(for className: String?) -> String? {
         guard let className else { return nil }
