@@ -21,12 +21,14 @@ import ApplicationServices
 /// Le veilleur ne sonde rien lui-même : **la sonde, c'est l'inventaire.**
 /// `WindowManager.refresh` interroge déjà `kAXWindows` sur chaque client, et
 /// c'est lui qui constate le mutisme (`.cannotComplete`). Sonder une seconde
-/// fois le même pid, c'était payer deux fois l'expiration — 1 s de borne
-/// globale puis 0,3 s — toutes les 2 s pendant quinze secondes. L'inventaire
-/// consulte donc `suspects` et `shouldProbe(_:)` pour ne réinterroger un pid
-/// déjà pris en défaut qu'à l'échéance — avec la borne ordinaire d'une
-/// seconde, pour qu'un vivant lent puisse toujours se blanchir. Entre deux
-/// échéances, le perso reste affiché, atténué, par la mémoire.
+/// fois le même pid, c'était payer deux fois l'expiration toutes les 2 s
+/// pendant quinze secondes. L'inventaire consulte donc `suspects` et
+/// `shouldProbe(_:)` pour ne réinterroger un pid déjà pris en défaut qu'à
+/// l'échéance — avec la borne ordinaire d'une seconde, pour qu'un vivant lent
+/// puisse toujours se blanchir. Entre deux échéances, le perso reste affiché,
+/// atténué, par la mémoire. Un condamné que le réglage interdit d'achever
+/// n'est plus resondé qu'à `condemnedInterval` : il ne changera pas d'avis,
+/// et chaque sonde est une seconde perdue.
 @MainActor
 final class FreezeWatcher: ObservableObject {
     static let shared = FreezeWatcher()
@@ -44,16 +46,19 @@ final class FreezeWatcher: ObservableObject {
 
     /// Espacement minimal entre deux sondes d'un même processus.
     static let probeInterval: TimeInterval = 5
+    /// Espacement des sondes d'un condamné qu'on n'achève pas.
+    static let condemnedInterval: TimeInterval = 30
     /// Sondes muettes consécutives avant le coup de grâce.
     static let strikesRequired = 3
 
     private var strikes = FreezeStrikes(probeInterval: probeInterval,
-                                        strikesRequired: strikesRequired)
+                                        strikesRequired: strikesRequired,
+                                        condemnedInterval: condemnedInterval)
 
     private init() {}
 
     /// Processus déjà pris en défaut au moins une fois : l'inventaire ne les
-    /// réinterroge qu'à l'échéance, et avec la borne courte.
+    /// réinterroge qu'à l'échéance, et les gestes ne les questionnent plus.
     var suspects: Set<pid_t> { strikes.suspects }
 
     /// Une sonde de ce processus est-elle due ?
@@ -78,7 +83,7 @@ final class FreezeWatcher: ObservableObject {
                   achever
             else { continue }
 
-            NSRunningApplication(processIdentifier: pid)?.forceTerminate()
+            ClientTerminator.kill(pid)
             journal.append(Abattu(date: now, pid: pid, nom: names[pid] ?? "pid \(pid)"))
             strikes.forget(pid)
         }
@@ -102,13 +107,18 @@ struct FreezeStrikes: Equatable {
 
     let probeInterval: TimeInterval
     let strikesRequired: Int
+    /// Espacement des sondes une fois le pid condamné : sans coup de grâce, il
+    /// resterait sondé — et muet — toutes les `probeInterval` jusqu'à sa mort.
+    let condemnedInterval: TimeInterval
 
     private(set) var strikes: [pid_t: Int] = [:]
     private(set) var lastProbe: [pid_t: Date] = [:]
 
-    init(probeInterval: TimeInterval, strikesRequired: Int) {
+    init(probeInterval: TimeInterval, strikesRequired: Int,
+         condemnedInterval: TimeInterval? = nil) {
         self.probeInterval = probeInterval
         self.strikesRequired = strikesRequired
+        self.condemnedInterval = condemnedInterval ?? probeInterval
     }
 
     var suspects: Set<pid_t> {
@@ -119,7 +129,8 @@ struct FreezeStrikes: Equatable {
     /// s'est écoulé depuis la dernière.
     func shouldProbe(_ pid: pid_t, now: Date) -> Bool {
         guard let derniere = lastProbe[pid] else { return true }
-        return now.timeIntervalSince(derniere) >= probeInterval
+        let interval = strikes[pid, default: 0] >= strikesRequired ? condemnedInterval : probeInterval
+        return now.timeIntervalSince(derniere) >= interval
     }
 
     /// Un processus redevenu bavard ou disparu repart de zéro.

@@ -14,7 +14,7 @@ struct RememberedClientsTests {
             pid: pid,
             slotKey: "\(pid)#\(index)",
             // Une référence d'application suffit : rien n'est lu dans ces tests.
-            axWindow: AXUIElementCreateApplication(pid),
+            axWindow: .application(pid),
             rawTitle: "\(nom) - Feca - 3.6.8.8 - Release",
             name: nom,
             characterClass: "Feca",
@@ -128,7 +128,7 @@ struct RememberedClientsTests {
         ClientMemory.discoveredAcrossSpaces(
             titles: titles,
             existingNames: existants,
-            appElement: AXUIElementCreateApplication
+            appElement: AXHandle.application
         )
     }
 

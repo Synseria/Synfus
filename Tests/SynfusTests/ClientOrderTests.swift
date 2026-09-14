@@ -10,7 +10,7 @@ struct ClientOrderTests {
     private func client(pid: pid_t, nom: String) -> DofusClient {
         DofusClient(
             pid: pid, slotKey: "\(pid)#0",
-            axWindow: AXUIElementCreateApplication(pid),
+            axWindow: .application(pid),
             rawTitle: "\(nom) - Feca - 3.6.8.8 - Release",
             name: nom, characterClass: "Feca", dormant: false
         )

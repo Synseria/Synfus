@@ -55,7 +55,7 @@ enum ClientMemory {
     static func discoveredAcrossSpaces(
         titles: [pid_t: String],
         existingNames: Set<String>,
-        appElement: (pid_t) -> AXUIElement
+        appElement: (pid_t) -> AXHandle
     ) -> [DofusClient] {
         var taken = existingNames
         // Tri par pid : l'ordre d'un dictionnaire changerait d'un inventaire à

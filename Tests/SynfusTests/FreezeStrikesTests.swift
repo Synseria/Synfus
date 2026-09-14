@@ -76,4 +76,18 @@ struct FreezeStrikesTests {
         #expect(r.record(7, mute: false, now: apres(2)) == .ignore)
         #expect(r.suspects.isEmpty)
     }
+
+    @Test("Un condamné qu'on n'achève pas n'est resondé qu'à l'échéance longue")
+    func condamneResondeMoinsSouvent() {
+        var r = FreezeStrikes(probeInterval: 5, strikesRequired: 3, condemnedInterval: 30)
+        _ = r.record(7, mute: true, now: t0)
+        _ = r.record(7, mute: true, now: apres(5))
+        #expect(r.record(7, mute: true, now: apres(10)) == .condamne)
+        // À 5 s de la condamnation, un suspect ordinaire serait à sonder ;
+        // le condamné, non — chaque sonde est une seconde de borne perdue.
+        #expect(!r.shouldProbe(7, now: apres(15)))
+        #expect(r.shouldProbe(7, now: apres(40)))
+        // Et il reste suspect, donc injoignable pour les gestes.
+        #expect(r.suspects == [7])
+    }
 }

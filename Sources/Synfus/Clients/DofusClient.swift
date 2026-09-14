@@ -1,10 +1,12 @@
 import ApplicationServices
 
 /// Une fenêtre de client Dofus, c'est-à-dire un perso connecté.
-struct DofusClient: Identifiable, Hashable {
+struct DofusClient: Identifiable, Hashable, Sendable {
     let pid: pid_t
     let slotKey: String
-    let axWindow: AXUIElement
+    /// Poignée de la fenêtre — ou de l'application pour un dormant. Traverse
+    /// la frontière de l'acteur d'inventaire, d'où `AXHandle`.
+    let axWindow: AXHandle
     let rawTitle: String
     let name: String
     /// Classe du perso, lue dans le titre de la fenêtre
