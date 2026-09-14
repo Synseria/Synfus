@@ -98,11 +98,11 @@ final class Preferences: ObservableObject {
 
     /// Le mode d'affichage du Stream Deck — générique ; un profil de perso
     /// peut le remplacer par le sien.
-    @Published var deckMode: DeckMode = .parBarre { didSet { save() } }
+    @Published var deck: DeckSettings = .parBarre { didSet { save() } }
 
     /// Durée d'appui, en ms, à partir de laquelle une touche du Stream Deck
     /// joue son action longue.
-    @Published var appuiLongMs: Int = 350 { didSet { save() } }
+    @Published var appuiLongMs: Int = 250 { didSet { save() } }
 
     /// Nombre de slots exposés (et donc de raccourcis potentiels).
     ///
@@ -221,7 +221,7 @@ final class Preferences: ObservableObject {
         var spellKeyMap: SpellKeyMap?
         var streamDeckEnabled: Bool?
         var gameCommands: [GameCommand]?
-        var deckMode: DeckMode?
+        var deck: DeckSettings?
         var appuiLongMs: Int?
         /// Génération du jeu de raccourcis par défaut appliqué à cette
         /// sauvegarde. Absente des sauvegardes d'avant la refonte, d'où le repli
@@ -349,7 +349,7 @@ final class Preferences: ObservableObject {
             spellKeyMap: spellKeyMap,
             streamDeckEnabled: streamDeckEnabled,
             gameCommands: gameCommands,
-            deckMode: deckMode,
+            deck: deck,
             appuiLongMs: appuiLongMs,
             defaultsVersion: Self.defaultsVersion
         )
@@ -404,8 +404,8 @@ final class Preferences: ObservableObject {
         spellKeyMap = stored.spellKeyMap ?? .defaults
         streamDeckEnabled = stored.streamDeckEnabled ?? false
         gameCommands = GameCommands.normalized(GameCommands.repaired(stored.gameCommands ?? GameCommands.defaults))
-        deckMode = stored.deckMode ?? .parBarre
-        appuiLongMs = stored.appuiLongMs ?? 350
+        deck = stored.deck ?? .parBarre
+        appuiLongMs = stored.appuiLongMs ?? 250
         if let x = stored.barOriginX, let y = stored.barOriginY {
             barOrigin = CGPoint(x: x, y: y)
         }

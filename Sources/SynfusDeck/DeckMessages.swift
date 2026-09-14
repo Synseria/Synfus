@@ -27,6 +27,7 @@ struct DeckAction: Codable, Equatable, Sendable {
 struct DeckTouche: Codable, Equatable, Sendable {
     let index: Int
     let icone: String?
+    let iconeLong: String?
     let symbole: String?
     let titre: String
     let attenuee: Bool

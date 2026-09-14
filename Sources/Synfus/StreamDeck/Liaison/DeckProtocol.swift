@@ -51,6 +51,8 @@ struct DeckTouche: Codable, Equatable, Sendable {
     let index: Int
     /// PNG en base64 — l'icône d'un sort, l'emblème d'un perso.
     let icone: String?
+    /// L'icône du sort joué en appui long, à poser en vignette dans le coin.
+    let iconeLong: String?
     /// À défaut d'icône, un symbole SF.
     let symbole: String?
     let titre: String

@@ -36,6 +36,45 @@ echo "==> Compilation (release${ARCH:+, $ARCH})"
 swift build "${BUILD_FLAGS[@]}"
 BINARY="$(swift build "${BUILD_FLAGS[@]}" --show-bin-path)/$NAME"
 
+# La signature détermine l'identité vue par TCC (l'autorisation Accessibilité).
+# Une identité stable d'un build à l'autre évite de réautoriser à chaque
+# rebuild : le certificat local « Synfus Dev » (Tools/make-signing-identity.sh)
+# d'abord, un certificat Apple Development sinon, ad-hoc en dernier recours —
+# et là, la case Accessibilité est à recocher après chaque build.
+IDENTITY="$(security find-identity -v -p codesigning 2>/dev/null \
+    | grep -o '"\(Synfus Dev\|Apple Development: [^"]*\)"' | head -1 | tr -d '"' || true)"
+
+# Le plugin Stream Deck : un dossier .sdPlugin à installer dans le logiciel
+# Elgato (double-clic, ou `streamdeck link dist/fr.synseria.synfus.sdPlugin`
+# avec le CLI d'Elgato pour développer). Le binaire est celui du target
+# SynfusDeck ; les icônes sont dérivées de la marque, jamais du jeu.
+PLUGIN="dist/fr.synseria.synfus.sdPlugin"
+echo "==> Assemblage du plugin Stream Deck"
+rm -rf "$PLUGIN"
+mkdir -p "$PLUGIN"
+cp "$(swift build "${BUILD_FLAGS[@]}" --show-bin-path)/SynfusDeck" "$PLUGIN/"
+cp Plugin/manifest.json "$PLUGIN/"
+sips -z 144 144 Resources/Synfus.png --out "$PLUGIN/icon.png" >/dev/null
+sips -z 288 288 Resources/Synfus.png --out "$PLUGIN/icon@2x.png" >/dev/null
+# L'état « grisé » (Dofus n'est pas devant) : la même marque pour l'instant —
+# le plugin pose son propre titre, c'est lui qui dit l'état.
+cp "$PLUGIN/icon.png" "$PLUGIN/icon-dim.png"
+cp "$PLUGIN/icon@2x.png" "$PLUGIN/icon-dim@2x.png"
+sed -i '' "s/\"Version\": \"[^\"]*\"/\"Version\": \"$VERSION\"/" "$PLUGIN/manifest.json"
+./Plugin/make-profile.sh "$PLUGIN"
+# Le paquet que le logiciel Stream Deck installe par double-clic — et le seul
+# chemin qui enregistre le profil livré comme *appartenant au plugin*, ce que
+# `switchToProfile` exige.
+if [ -n "$IDENTITY" ]; then
+    codesign --force --sign "$IDENTITY" --identifier "fr.synseria.synfus.deck" "$PLUGIN/SynfusDeck"
+else
+    codesign --force --sign - --identifier "fr.synseria.synfus.deck" "$PLUGIN/SynfusDeck"
+fi
+PACKAGE="dist/fr.synseria.synfus.streamDeckPlugin"
+rm -f "$PACKAGE"
+(cd dist && zip -qr "$(basename "$PACKAGE")" "$(basename "$PLUGIN")")
+echo "==> $PLUGIN prêt"
+
 echo "==> Assemblage du bundle"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
@@ -77,15 +116,12 @@ if [ -d "Resources/Ankama" ]; then
     cp -R "Resources/Ankama" "$APP/Contents/Resources/Ankama"
 fi
 
-# La signature détermine l'identité vue par TCC (l'autorisation Accessibilité).
-# Une identité stable d'un build à l'autre évite de réautoriser à chaque
-# rebuild : le certificat local « Synfus Dev » (Tools/make-signing-identity.sh)
-# d'abord, un certificat Apple Development sinon, ad-hoc en dernier recours —
-# et là, la case Accessibilité est à recocher après chaque build.
-echo "==> Signature"
-IDENTITY="$(security find-identity -v -p codesigning 2>/dev/null \
-    | grep -o '"\(Synfus Dev\|Apple Development: [^"]*\)"' | head -1 | tr -d '"' || true)"
+# Le paquet du plugin et le profil livré, embarqués : l'onglet Stream Deck
+# les ouvre dans le logiciel Elgato d'un clic, sans passer par dist/.
+cp "$PACKAGE" "$APP/Contents/Resources/"
+cp "$PLUGIN/Synfus.streamDeckProfile" "$APP/Contents/Resources/"
 
+echo "==> Signature"
 if [ -n "$IDENTITY" ]; then
     echo "    identité : $IDENTITY"
     codesign --force --deep --sign "$IDENTITY" --identifier "$BUNDLE_ID" "$APP"
@@ -95,37 +131,6 @@ else
 fi
 
 echo "==> $APP prêt"
-
-# Le plugin Stream Deck : un dossier .sdPlugin à installer dans le logiciel
-# Elgato (double-clic, ou `streamdeck link dist/fr.synseria.synfus.sdPlugin`
-# avec le CLI d'Elgato pour développer). Le binaire est celui du target
-# SynfusDeck ; les icônes sont dérivées de la marque, jamais du jeu.
-PLUGIN="dist/fr.synseria.synfus.sdPlugin"
-echo "==> Assemblage du plugin Stream Deck"
-rm -rf "$PLUGIN"
-mkdir -p "$PLUGIN"
-cp "$(swift build "${BUILD_FLAGS[@]}" --show-bin-path)/SynfusDeck" "$PLUGIN/"
-cp Plugin/manifest.json "$PLUGIN/"
-sips -z 144 144 Resources/Synfus.png --out "$PLUGIN/icon.png" >/dev/null
-sips -z 288 288 Resources/Synfus.png --out "$PLUGIN/icon@2x.png" >/dev/null
-# L'état « grisé » (Dofus n'est pas devant) : la même marque pour l'instant —
-# le plugin pose son propre titre, c'est lui qui dit l'état.
-cp "$PLUGIN/icon.png" "$PLUGIN/icon-dim.png"
-cp "$PLUGIN/icon@2x.png" "$PLUGIN/icon-dim@2x.png"
-sed -i '' "s/\"Version\": \"[^\"]*\"/\"Version\": \"$VERSION\"/" "$PLUGIN/manifest.json"
-./Plugin/make-profile.sh "$PLUGIN"
-# Le paquet que le logiciel Stream Deck installe par double-clic — et le seul
-# chemin qui enregistre le profil livré comme *appartenant au plugin*, ce que
-# `switchToProfile` exige.
-PACKAGE="dist/fr.synseria.synfus.streamDeckPlugin"
-rm -f "$PACKAGE"
-(cd dist && zip -qr "$(basename "$PACKAGE")" "$(basename "$PLUGIN")")
-if [ -n "$IDENTITY" ]; then
-    codesign --force --sign "$IDENTITY" --identifier "fr.synseria.synfus.deck" "$PLUGIN/SynfusDeck"
-else
-    codesign --force --sign - --identifier "fr.synseria.synfus.deck" "$PLUGIN/SynfusDeck"
-fi
-echo "==> $PLUGIN prêt"
 
 if [ "${1:-}" = "--install" ]; then
     echo "==> Installation dans /Applications"

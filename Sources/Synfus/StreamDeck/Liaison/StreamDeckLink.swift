@@ -62,7 +62,7 @@ final class StreamDeckLink: ObservableObject {
         )
         .merge(with: prefs.$spellKeyMap.map { _ in () }, $page.map { _ in () }, $enCombat.map { _ in () })
         .merge(with: prefs.$gameCommands.map { _ in () }, $menuOuvert.map { _ in () }, $pageMenu.map { _ in () })
-        .merge(with: prefs.$deckMode.map { _ in () }, prefs.$appuiLongMs.map { _ in () }, $grilles.map { _ in () })
+        .merge(with: prefs.$deck.map { _ in () }, prefs.$appuiLongMs.map { _ in () }, $grilles.map { _ in () })
         .debounce(for: .milliseconds(50), scheduler: DispatchQueue.main)
         .sink { [weak self] in self?.publish() }
         .store(in: &subscriptions)
@@ -212,10 +212,10 @@ final class StreamDeckLink: ObservableObject {
 
     /// Le mode d'affichage en vigueur : celui du profil du perso devant s'il
     /// en a un, le générique sinon.
-    var mode: DeckMode {
+    var mode: DeckSettings {
         let manager = WindowManager.shared
         let client = manager.clients.first { manager.isFrontmost($0) }
-        return client.flatMap { SpellProfileStore.shared.profiles[$0.name]?.disposition } ?? Preferences.shared.deckMode
+        return client.flatMap { SpellProfileStore.shared.profiles[$0.name]?.deck } ?? Preferences.shared.deck
     }
 
     /// Une page par grille, envoyée seulement si elle diffère de la précédente.
@@ -254,7 +254,7 @@ final class StreamDeckLink: ObservableObject {
 
     /// La page telle que l'éditeur la montre : un perso et un mode choisis,
     /// Dofus supposé devant — pour voir ce qu'on règle, pas ce qui est affiché.
-    func previewPage(grille: Grille, mode: DeckMode, perso: String?, classe: String?) -> DeckPage {
+    func previewPage(grille: Grille, mode: DeckSettings, perso: String?, classe: String?) -> DeckPage {
         var input = makeInput(grille: grille, mode: mode, perso: perso, classe: classe)
         input.dofusDevant = true
         return DeckComposer.compose(input) { [weak self] slot in self?.icon(of: slot, perso: perso) }
@@ -264,7 +264,7 @@ final class StreamDeckLink: ObservableObject {
         DeckPerso(nom: client.name, classe: client.characterClass, icone: classIcon(client.characterClass))
     }
 
-    private func makeInput(grille: Grille, mode: DeckMode, perso: String?, classe: String?) -> DeckComposer.Input {
+    private func makeInput(grille: Grille, mode: DeckSettings, perso: String?, classe: String?) -> DeckComposer.Input {
         let prefs = Preferences.shared
         var input = DeckComposer.Input(colonnes: grille.colonnes, lignes: grille.lignes, mode: mode)
         input.page = page

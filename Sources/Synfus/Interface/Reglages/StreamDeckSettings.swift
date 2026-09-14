@@ -16,14 +16,14 @@ struct StreamDeckSettings: View {
     private var grille: StreamDeckLink.Grille { link.grilles.sorted { $0.colonnes * $0.lignes > $1.colonnes * $1.lignes }.first ?? .defaut }
     private var classe: String? { manager.clients.first { $0.name == perso }?.characterClass ?? store.profiles[perso]?.classe }
     private var profile: SpellProfile { store.profile(for: perso, classe: classe) }
-    private var specifique: Bool { store.profiles[perso]?.disposition != nil }
+    private var specifique: Bool { store.profiles[perso]?.deck != nil }
 
-    /// Le mode en cours d'édition : celui du perso s'il en a un, le générique sinon.
-    private var mode: Binding<DeckMode> {
+    /// Le réglage en cours d'édition : celui du perso s'il en a un, le générique sinon.
+    private var deck: Binding<DeckSettings> {
         Binding(
-            get: { store.profiles[perso]?.disposition ?? prefs.deckMode },
+            get: { store.profiles[perso]?.deck ?? prefs.deck },
             set: { new in
-                if specifique { var p = profile; p.disposition = new; store.save(p) } else { prefs.deckMode = new }
+                if specifique { var p = profile; p.deck = new; store.save(p) } else { prefs.deck = new }
             }
         )
     }
@@ -50,40 +50,45 @@ struct StreamDeckSettings: View {
             Section {
                 HStack {
                     PersoPicker(perso: $perso)
-                    Toggle("Disposition propre à ce perso", isOn: Binding(
+                    Toggle("Réglage propre à ce perso", isOn: Binding(
                         get: { specifique },
-                        set: { on in var p = profile; p.disposition = on ? prefs.deckMode : nil; store.save(p) }
+                        set: { on in var p = profile; p.deck = on ? prefs.deck : nil; store.save(p) }
                     ))
                     .disabled(perso.isEmpty)
                     Spacer()
                 }
                 Picker("Mode", selection: Binding(
-                    get: { mode.wrappedValue.kind },
+                    get: { deck.wrappedValue.kind },
                     set: { kind in
-                        switch kind {
-                        case .parBarre: mode.wrappedValue = .parBarre
-                        case .parRangee: mode.wrappedValue = .parRangee
-                        case .personnalisee:
-                            if case .personnalisee = mode.wrappedValue { return }
-                            mode.wrappedValue = .personnalisee(mode.wrappedValue.layout(colonnes: grille.colonnes, lignes: grille.lignes, page: 0))
+                        var d = deck.wrappedValue
+                        if kind == .personnalisee, d.custom == nil {
+                            d.custom = d.layout(colonnes: grille.colonnes, lignes: grille.lignes, page: 0)
                         }
+                        d.kind = kind
+                        deck.wrappedValue = d
                     }
                 )) {
-                    ForEach(DeckMode.Kind.allCases) { Text($0.label).tag($0) }
+                    ForEach(DeckSettings.Kind.allCases) { Text($0.label).tag($0) }
                 }
                 .pickerStyle(.segmented)
-                if case .personnalisee = mode.wrappedValue {
+                Toggle("Appui long sur un sort : le sort d'en face, en vignette dans le coin", isOn: Binding(
+                    get: { deck.wrappedValue.sortLong },
+                    set: { var d = deck.wrappedValue; d.sortLong = $0; deck.wrappedValue = d }
+                ))
+                .disabled(deck.wrappedValue.kind == .personnalisee)
+                if deck.wrappedValue.kind == .parRangee { pagesEditor }
+                if deck.wrappedValue.kind == .personnalisee {
                     HStack(spacing: 8) {
                         Text("Repartir de :").font(.system(size: 11)).foregroundStyle(.secondary)
-                        Button("barre par barre") { mode.wrappedValue = .personnalisee(.parBarre(colonnes: grille.colonnes, lignes: grille.lignes)) }
-                        Button("une barre par rangée") { mode.wrappedValue = .personnalisee(.parRangee(colonnes: grille.colonnes, lignes: grille.lignes, page: 0)) }
+                        Button("barre par barre") { setCustom(.parBarre(colonnes: grille.colonnes, lignes: grille.lignes, sortLong: deck.wrappedValue.sortLong)) }
+                        Button("une barre par rangée") { setCustom(.parRangee(colonnes: grille.colonnes, lignes: grille.lignes, page: 0, sortLong: deck.wrappedValue.sortLong)) }
                         Spacer()
                         Text("Clique une touche pour la régler, glisse-la pour la déplacer.")
                             .font(.system(size: 10)).foregroundStyle(.tertiary)
                     }
                     .font(.system(size: 11))
                 }
-                DeckMirror(page: link.previewPage(grille: grille, mode: mode.wrappedValue, perso: perso.isEmpty ? nil : perso, classe: classe),
+                DeckMirror(page: link.previewPage(grille: grille, mode: deck.wrappedValue, perso: perso.isEmpty ? nil : perso, classe: classe),
                            layout: layoutBinding, profile: profile, commands: prefs.gameCommands)
                 HStack(spacing: 8) {
                     Button("Barre suivante") { link.execute(DeckCommand(type: .barreSuivante)) }
@@ -98,11 +103,12 @@ struct StreamDeckSettings: View {
             } header: {
                 SectionTitle("Disposition", help: "Ce que le Stream Deck montre, composé par Synfus — aucun profil à "
                              + "réimporter, le changement est immédiat. « Barre par barre » : la barre active sur les "
-                             + "touches, « barre suivante » passe à l'autre. « Une barre par rangée » : la barre 1 sur "
-                             + "la première rangée, la 2 sur la seconde, par fenêtres de cinq cases. « Personnalisée » : "
-                             + "n'importe quelle case de n'importe quelle barre sur n'importe quelle touche — pour sauter "
-                             + "des sorts, les réordonner, ou en mettre un second en appui long. Générique pour tous les "
-                             + "persos, ou propre à un perso (dans son profil).")
+                             + "touches, « barre suivante » passe à l'autre ; en appui long, la même case de la barre "
+                             + "suivante. « Une barre par rangée » : la barre 1 sur la première rangée, la 2 sur la "
+                             + "seconde, par fenêtres de cinq cases — choisis les pages et leur ordre ; en appui long, "
+                             + "la case de la fenêtre suivante (1 → 6). « Personnalisée » : n'importe quelle case de "
+                             + "n'importe quelle barre sur n'importe quelle touche, un second sort en appui long, une "
+                             + "commande. Générique pour tous les persos, ou propre à un perso (dans son profil).")
             }
 
             Section {
@@ -138,12 +144,25 @@ struct StreamDeckSettings: View {
             }
 
             Section {
-                CopiableCommand(command: "./build.sh --install")
+                HStack(spacing: 8) {
+                    Button("Installer le plugin et son profil…") { openBundled("fr.synseria.synfus", "streamDeckPlugin") }
+                        .disabled(bundled("fr.synseria.synfus", "streamDeckPlugin") == nil)
+                    Button("Importer le profil 5 × 3 seul…") { openBundled("Synfus", "streamDeckProfile") }
+                        .disabled(bundled("Synfus", "streamDeckProfile") == nil)
+                    Spacer()
+                }
+                .font(.system(size: 11))
+                if bundled("fr.synseria.synfus", "streamDeckPlugin") == nil {
+                    Text("Ce build n'embarque pas le plugin — relance ./build.sh --install.")
+                        .font(.system(size: 10)).foregroundStyle(.orange)
+                }
             } header: {
-                SectionTitle("Installation", help: "Construit l'app et le plugin, installe l'un dans /Applications et "
-                             + "l'autre dans le logiciel Stream Deck. La première fois, le paquet "
-                             + "dist/fr.synseria.synfus.streamDeckPlugin s'ouvre : accepte, le profil « Synfus » (quinze "
-                             + "touches Synfus) s'installe avec. Ensuite, Synfus compose tout : rien à réimporter.")
+                SectionTitle("Installation", help: "Le plugin et le profil « Synfus » (quinze touches Synfus, 5 × 3) "
+                             + "sont embarqués dans l'app. « Installer » ouvre le paquet dans le logiciel Stream Deck, "
+                             + "qui demande confirmation et enregistre le profil avec le plugin — c'est ce qui permet "
+                             + "d'y basculer quand Dofus passe devant. « Importer le profil seul » l'ajoute à tes "
+                             + "profils, à lier à Dofus dans le logiciel si tu préfères ne pas laisser Synfus basculer. "
+                             + "Ensuite, Synfus compose tout : rien à réimporter.")
             }
 
             if !message.isEmpty {
@@ -155,34 +174,64 @@ struct StreamDeckSettings: View {
 
     /// La grille éditable — `nil` tant que le mode n'est pas personnalisé.
     private var layoutBinding: Binding<DeckLayout>? {
-        guard case .personnalisee(let layout) = mode.wrappedValue else { return nil }
-        return Binding(get: { layout }, set: { mode.wrappedValue = .personnalisee($0) })
+        guard deck.wrappedValue.kind == .personnalisee else { return nil }
+        return Binding(
+            get: { deck.wrappedValue.custom ?? .parBarre(colonnes: grille.colonnes, lignes: grille.lignes) },
+            set: { setCustom($0) }
+        )
     }
 
-    private func calibrate(_ enCombat: Bool) {
-        Task { message = await CombatWatcher.shared.calibrate(enCombat: enCombat) }
+    private func setCustom(_ layout: DeckLayout) {
+        var d = deck.wrappedValue
+        d.custom = layout
+        deck.wrappedValue = d
     }
-}
 
-extension DeckMode {
-    enum Kind: String, CaseIterable, Identifiable {
-        case parBarre, parRangee, personnalisee
-        var id: String { rawValue }
-        var label: String {
-            switch self {
-            case .parBarre: return "Barre par barre"
-            case .parRangee: return "Une barre par rangée"
-            case .personnalisee: return "Personnalisée"
+    /// Les pages du mode par rangée : lesquelles, dans quel ordre.
+    private var pagesEditor: some View {
+        let all = 0..<DeckLayout.pageCountParRangee(colonnes: grille.colonnes, lignes: grille.lignes)
+        let order = deck.wrappedValue.pagesParRangee(colonnes: grille.colonnes, lignes: grille.lignes)
+        return VStack(alignment: .leading, spacing: 3) {
+            ForEach(Array(order.enumerated()), id: \.element) { rank, page in
+                HStack(spacing: 6) {
+                    Toggle("", isOn: Binding(get: { true }, set: { _ in setPages(order.filter { $0 != page }) }))
+                        .labelsHidden().disabled(order.count == 1)
+                    Text("\(rank + 1). " + DeckLayout.pageLabelParRangee(page, colonnes: grille.colonnes, lignes: grille.lignes))
+                        .font(.system(size: 11))
+                    Button { var o = order; o.swapAt(rank, rank - 1); setPages(o) } label: { Image(systemName: "chevron.up") }
+                        .disabled(rank == 0)
+                    Button { var o = order; o.swapAt(rank, rank + 1); setPages(o) } label: { Image(systemName: "chevron.down") }
+                        .disabled(rank == order.count - 1)
+                }
+                .buttonStyle(.borderless)
+            }
+            ForEach(all.filter { !order.contains($0) }, id: \.self) { page in
+                HStack(spacing: 6) {
+                    Toggle("", isOn: Binding(get: { false }, set: { _ in setPages(order + [page]) })).labelsHidden()
+                    Text(DeckLayout.pageLabelParRangee(page, colonnes: grille.colonnes, lignes: grille.lignes))
+                        .font(.system(size: 11)).foregroundStyle(.secondary)
+                }
             }
         }
     }
 
-    var kind: Kind {
-        switch self {
-        case .parBarre: return .parBarre
-        case .parRangee: return .parRangee
-        case .personnalisee: return .personnalisee
-        }
+    private func setPages(_ pages: [Int]) {
+        var d = deck.wrappedValue
+        let all = Array(0..<DeckLayout.pageCountParRangee(colonnes: grille.colonnes, lignes: grille.lignes))
+        d.pages = pages == all ? [] : pages
+        deck.wrappedValue = d
+        link.execute(DeckCommand(type: .barrePremiere))
+    }
+
+    private func bundled(_ name: String, _ ext: String) -> URL? { Bundle.main.url(forResource: name, withExtension: ext) }
+
+    private func openBundled(_ name: String, _ ext: String) {
+        guard let url = bundled(name, ext) else { return }
+        NSWorkspace.shared.open(url)
+    }
+
+    private func calibrate(_ enCombat: Bool) {
+        Task { message = await CombatWatcher.shared.calibrate(enCombat: enCombat) }
     }
 }
 
@@ -265,6 +314,15 @@ struct DeckKeyView: View {
                     if let icone = touche?.icone, let data = Data(base64Encoded: icone), let image = NSImage(data: data) {
                         Image(nsImage: image).resizable().aspectRatio(contentMode: .fit)
                             .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                            .overlay(alignment: .bottomTrailing) {
+                                if let corner = touche?.iconeLong, let d = Data(base64Encoded: corner), let small = NSImage(data: d) {
+                                    Image(nsImage: small).resizable().aspectRatio(contentMode: .fit)
+                                        .frame(width: size * 0.24, height: size * 0.24)
+                                        .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+                                        .padding(2).background(RoundedRectangle(cornerRadius: 5).fill(Color(white: 0.08)))
+                                        .offset(x: 4, y: 4)
+                                }
+                            }
                     } else if let symbole = touche?.symbole {
                         Image(systemName: symbole).font(.system(size: size * 0.32)).foregroundStyle(.white)
                     } else {

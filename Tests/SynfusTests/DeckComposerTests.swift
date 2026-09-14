@@ -14,10 +14,11 @@ struct DeckComposerTests {
         p.set(SpellSlot(sortId: 8, nom: "Glyphe"), bar: 1, position: 0)
         p.set(SpellSlot(sortId: 9, nom: "Douze"), bar: 0, position: 11)
         p.set(SpellSlot(sortId: 10, nom: "Trois"), bar: 2, position: 0)
+        p.set(SpellSlot(sortId: 7, nom: "Six"), bar: 0, position: 5)
         return p
     }
 
-    private func input(_ mode: DeckMode = .parBarre, page: Int = 0, menu: Bool = false, pageMenu: Int = 0) -> DeckComposer.Input {
+    private func input(_ mode: DeckSettings = .parBarre, page: Int = 0, menu: Bool = false, pageMenu: Int = 0) -> DeckComposer.Input {
         var i = DeckComposer.Input()
         i.mode = mode
         i.page = page
@@ -45,6 +46,10 @@ struct DeckComposerTests {
         #expect(page.touches[2].court?.commande == .menu && page.touches[2].titre == "Menu")
         #expect(page.touches[3].court?.touche == DeckKey(HotKey(keyCode: HotKey.keyCode(typing: "W")!, modifiers: UInt32(controlKey))))
         #expect(page.touches[4].court == nil && page.touches[4].attenuee)   // fin de tour sans touche réglée
+        #expect(page.touches[4].long == nil)   // jamais d'action longue sur la fin de tour : trop dangereux
+        // Appui long sur la case 1 : la case 1 de la barre 2, en vignette ; case 2 d'en face vide → rien.
+        #expect(page.touches[5].long?.touche == DeckKey(HotKey(keyCode: 18, modifiers: UInt32(controlKey))))
+        #expect(page.touches[5].iconeLong == nil && page.touches[6].long == nil)
         #expect(page.touches[5].titre == "Bouclier" && page.touches[5].icone == "PNG")
         #expect(page.touches[5].court?.touche == DeckKey(HotKey(keyCode: 18, modifiers: 0)))
         #expect(page.touches[6].icone == nil && page.touches[6].titre == "2" && page.touches[6].court?.touche != nil)
@@ -57,20 +62,40 @@ struct DeckComposerTests {
         #expect(page.touches[0].titre == "Barre 2/3")
         #expect(page.touches[5].titre == "Glyphe")
         #expect(page.touches[5].court?.touche?.modifiers == UInt32(controlKey))
-        #expect(DeckMode.parBarre.pageCount(colonnes: 5, lignes: 3) == 3)
+        #expect(DeckSettings.parBarre.pageCount(colonnes: 5, lignes: 3) == 3)
+        var off = DeckSettings.parBarre
+        off.sortLong = false
+        #expect(compose(input(off)).touches[5].long == nil)
     }
 
-    @Test("Une barre par rangée : L1 1-5 / L2 1-5, puis 6-10, puis 11-12, puis la barre 3")
+    @Test("Une barre par rangée : L1 1-5 / L2 1-5, puis 6-10, puis 11-12, puis la barre 3 ; appui long = fenêtre suivante")
     func parRangee() {
-        #expect(DeckMode.parRangee.pageCount(colonnes: 5, lignes: 3) == 6)
-        let p0 = compose(input(.parRangee))
+        let rangee = DeckSettings(kind: .parRangee)
+        #expect(rangee.pageCount(colonnes: 5, lignes: 3) == 6)
+        let p0 = compose(input(rangee))
+        #expect(p0.touches[5].long?.touche == DeckKey(HotKey(keyCode: 22, modifiers: 0)))   // case 6
+        #expect(p0.touches[5].iconeLong == "PNG" && p0.touches[6].long == nil)   // case 7 vide : rien en appui long
+        #expect(DeckLayout.pageLabelParRangee(0, colonnes: 5, lignes: 3) == "Barres 1-2 · cases 1-5")
+        #expect(DeckLayout.pageLabelParRangee(5, colonnes: 5, lignes: 3) == "Barre 3 · cases 11-12")
         #expect(p0.touches[0].titre == "Page 1/6")
         #expect(p0.touches[5].titre == "Bouclier" && p0.touches[10].titre == "Glyphe")
         #expect(p0.touches[10].court?.touche?.modifiers == UInt32(controlKey))
-        let p2 = compose(input(.parRangee, page: 2))
+        let p2 = compose(input(rangee, page: 2))
         #expect(p2.touches[6].titre == "Douze" && p2.touches[7].court == nil && p2.touches[7].titre == "")
-        let p3 = compose(input(.parRangee, page: 3))
+        let p3 = compose(input(rangee, page: 3))
         #expect(p3.touches[5].titre == "Trois" && p3.touches[10].court == nil)
+    }
+
+    @Test("Les pages retenues, dans l'ordre choisi : deux pages, la seconde d'abord")
+    func pagesChoisies() {
+        let bridee = DeckSettings(kind: .parRangee, pages: [1, 0])
+        #expect(bridee.pageCount(colonnes: 5, lignes: 3) == 2)
+        let p0 = compose(input(bridee))
+        #expect(p0.touches[0].titre == "Page 1/2" && p0.touches[5].titre == "Six")
+        let p1 = compose(input(bridee, page: 1))
+        #expect(p1.touches[5].titre == "Bouclier")
+        // Une page hors grille est ignorée ; toutes ignorées = toutes.
+        #expect(DeckSettings(kind: .parRangee, pages: [42]).pageCount(colonnes: 5, lignes: 3) == 6)
     }
 
     @Test("Menu ouvert : les commandes paginées sur les touches de sorts, havre-sac sur fin de tour, suivi non répété")
@@ -92,11 +117,11 @@ struct DeckComposerTests {
         var layout = DeckLayout.parBarre(colonnes: 5, lignes: 3)
         layout[1, 0] = DeckTile(.sort(barre: 0, position: 0), long: .sort(barre: 1, position: 0))
         layout[1, 1] = DeckTile(.commande("inventaire"))
-        let page = compose(input(.personnalisee(layout)))
+        let page = compose(input(DeckSettings(kind: .personnalisee, custom: layout)))
         #expect(page.touches[5].titre == "Bouclier")
         #expect(page.touches[5].long?.touche == DeckKey(HotKey(keyCode: 18, modifiers: UInt32(controlKey))))
         #expect(page.touches[6].titre == "Inventaire")
-        let menu = compose(input(.personnalisee(layout), menu: true))
+        let menu = compose(input(DeckSettings(kind: .personnalisee, custom: layout), menu: true))
         #expect(!menu.touches.contains { $0.titre == "Inventaire" && $0.index != 6 })
         // Ramenée sur une grille plus petite, chaque touche garde sa ligne et sa colonne.
         let small = layout.fitted(colonnes: 3, lignes: 2)
@@ -122,7 +147,6 @@ struct DeckComposerTests {
         #expect(compose(i).touches[4].attenuee == false)
         i.enCombat = false
         #expect(compose(i).touches[4].attenuee == true)
-        #expect(compose(i).touches[4].long?.nom == "Corps à corps" || compose(i).touches[4].long == nil)
     }
 
     @Test("Une page se relit à l'identique après encodage — c'est le contrat du plugin")

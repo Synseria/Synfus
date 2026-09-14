@@ -15,7 +15,7 @@ swift build                        # compilation debug rapide (pas de bundle)
 swift test                         # suite complète (Swift Testing)
 swift test --filter PreferencesTests            # une suite
 swift test --filter "migration"                 # un test par son nom
-./build.sh                         # produit dist/Synfus.app + dist/fr.synseria.synfus.sdPlugin (release + signature)
+./build.sh                         # produit dist/Synfus.app (plugin et profil embarqués) + dist/fr.synseria.synfus.sdPlugin
 ./build.sh --install               # installe dans /Applications et relance
 VERSION=0.0.3 ARCH=x86_64 ./build.sh
 ./make-dmg.sh dist/Synfus.app dist/Synfus-0.0.3-arm64.dmg
@@ -784,17 +784,27 @@ Trois règles tiennent l'ensemble :
   l'appareil : ce qu'on y voit est ce qu'il montre. Toute logique de
   disposition qui apparaîtrait dans le plugin est au mauvais endroit.
 - **Les dispositions** ([DeckLayout.swift](Sources/Synfus/StreamDeck/Profils/DeckLayout.swift),
-  pur) : une grille de `DeckTile` (source courte, source longue) ; `DeckMode`
-  est **générique** (`Preferences.deckMode`) ou **propre au perso**
-  (`SpellProfile.disposition`, prioritaire). `parBarre` : la barre active sur
-  les touches, « barre suivante » tourne les barres ; `parRangee` : une barre
-  par rangée, par fenêtres de la largeur (1-5, 6-10, 11-12, puis les barres
-  suivantes) ; `personnalisee` : n'importe quelle case de n'importe quelle
-  barre, un second sort en appui long, une commande — c'est là qu'on saute et
-  réordonne des sorts sans toucher au jeu. Rien n'est réimporté dans le
-  logiciel Elgato : le profil livré ne contient que des touches Synfus.
+  pur) : une grille de `DeckTile` (source courte, source longue) ;
+  `DeckSettings` (mode, pages retenues, `sortLong`, grille personnalisée —
+  décodage tolérant, chaque clé a son défaut) est **générique**
+  (`Preferences.deck`) ou **propre au perso** (`SpellProfile.deck`,
+  prioritaire). `parBarre` : la barre active sur les touches, « barre
+  suivante » tourne les barres ; `parRangee` : une barre par rangée, par
+  fenêtres de la largeur (1-5, 6-10, 11-12, puis les barres suivantes), et
+  `pages` dit lesquelles et dans quel ordre ; `personnalisee` : n'importe
+  quelle case de n'importe quelle barre, une commande — c'est là qu'on saute
+  et réordonne des sorts sans toucher au jeu. `sortLong` (vrai par défaut)
+  met en appui long le sort **d'en face** — même case de la barre suivante
+  (`sortBarreSuivante`) ou de la fenêtre suivante —, dessiné en vignette dans
+  le coin de la touche (`iconeLong`, `Images.framed(corner:)`) ; une case
+  d'en face vide n'a pas d'action longue, la touche joue alors dès
+  l'enfoncement. **La fin de tour n'a jamais d'action longue** : elle ne doit
+  partir que d'un geste voulu. Rien n'est réimporté dans le logiciel Elgato :
+  le profil livré ne contient que des touches Synfus, et le paquet comme le
+  profil sont embarqués dans l'app (`Contents/Resources`), ouverts d'un
+  bouton de l'onglet Stream Deck.
 - **Gestes** : le SDK ne livre qu'enfoncé / relâché, le plugin mesure. Appui
-  court = au relâchement ; maintenu au-delà de `appuiLongMs` (350 ms) =
+  court = au relâchement ; maintenu au-delà de `appuiLongMs` (250 ms) =
   action longue, relâchement ignoré ; une touche sans action longue joue à
   l'enfoncement. **Pas de double-clic**, décision : il retarderait chaque
   appui et empêcherait de lancer deux fois le même sort — deux appuis sont
