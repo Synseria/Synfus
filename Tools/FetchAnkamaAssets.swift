@@ -40,6 +40,19 @@ private struct Spell: Decodable {
 
 private struct Page<T: Decodable>: Decodable { let data: [T] }
 
+/// Une variante : deux sorts interchangeables d'une classe. Le jeu en affiche
+/// l'un ou l'autre — la barre d'un perso peut porter les deux dessins.
+private struct Variant: Decodable {
+    let breedId: Int
+    let spellIds: [Int]
+}
+
+/// Les sorts « communs » (type 21 chez DofusDB) : ceux que tout joueur peut
+/// poser dans sa barre — Libération, Cawotte, invocations… Pas ceux des
+/// monstres, ni les sorts déclenchés.
+private let commonSpellsType = 21
+private let commonKey = "communs"
+
 /// Une entrée de l'index `sorts.json`, celui que liront la reconnaissance des
 /// sorts et le Stream Deck.
 private struct SpellEntry: Encodable {
@@ -123,21 +136,30 @@ struct FetchAnkamaAssets {
             .appending(queryItems: [URLQueryItem(name: "$limit", value: "50")]), session: session).data
 
         // La clé de fichier est celle de l'app — même pliage que `DofusClass.key(for:)`.
-        var classes: [(breed: Breed, key: String)] = []
+        // Les sorts d'une classe : ceux de la fiche de classe **et** leurs
+        // variantes — le jeu affiche l'un ou l'autre dessin selon le choix du
+        // joueur, la reconnaissance doit connaître les deux.
+        print("Récupération des variantes et des sorts communs…")
+        let variants = try await fetchAll(Variant.self, from: api.appending(path: "spell-variants"), session: session)
+        let commons = try await fetchAll(Spell.self, from: api.appending(path: "spells")
+            .appending(queryItems: [URLQueryItem(name: "typeId", value: "\(commonSpellsType)")]), session: session)
+        var classes: [(key: String, breedId: Int, spellIds: [Int])] = []
         for breed in breeds {
             guard let key = DofusClass.key(for: breed.shortName.fr), DofusClass.breed(forKey: key) != nil
             else { throw Erreur.classeInconnue(breed.shortName.fr) }
-            classes.append((breed, key))
+            let ids = Set(breed.breedSpellsId + variants.filter { $0.breedId == breed.id }.flatMap(\.spellIds))
+            classes.append((key, breed.id, ids.sorted()))
         }
-        let spellIDs = Array(Set(breeds.flatMap(\.breedSpellsId))).sorted()
-        print("Classes : \(classes.count) — sorts uniques : \(spellIDs.count)\n")
+        classes.append((commonKey, 0, commons.map(\.id).sorted()))
+        let spellIDs = Array(Set(classes.flatMap(\.spellIds))).sorted()
+        print("Classes : \(classes.count - 1) (+ communs) — sorts uniques : \(spellIDs.count)\n")
 
         var compteur = Compteur()
 
         print("Emblèmes des classes…")
         let classesDir = options.destination.appending(path: "Classes", directoryHint: .isDirectory)
-        try await batches(classes) { classe in
-            let url = api.appending(path: "img/breeds/symbol_\(classe.breed.id).png")
+        try await batches(classes.filter { $0.breedId > 0 }) { classe in
+            let url = api.appending(path: "img/breeds/symbol_\(classe.breedId).png")
             return try await download(url, to: classesDir.appending(path: "\(classe.key).png"),
                                       options: options, session: session)
         } progress: { done, total, results in
@@ -162,7 +184,7 @@ struct FetchAnkamaAssets {
             // Le nom du sort fait le nom du fichier — on veut pouvoir s'y retrouver
             // dans le dossier. Deux sorts de même nom dans une classe (ça arrive :
             // variantes) se distinguent par leur identifiant.
-            let named = classe.breed.breedSpellsId.compactMap { id -> (Spell, String)? in
+            let named = classe.spellIds.compactMap { id -> (Spell, String)? in
                 guard let spell = spells[id], let img = spell.img, !img.isEmpty else { return nil }
                 return (spell, cleanName(spell.name.fr))
             }
@@ -242,6 +264,23 @@ struct FetchAnkamaAssets {
             return .echec
         }
     }
+
+    /// Toutes les pages d'une liste : l'API plafonne à 50 par réponse.
+    private static func fetchAll<T: Decodable>(_ type: T.Type, from url: URL, session: URLSession) async throws -> [T] {
+        var all: [T] = []
+        var skip = 0
+        while true {
+            let page = try await fetchJSON(PagedList<T>.self, from: url.appending(queryItems: [
+                URLQueryItem(name: "$limit", value: "50"), URLQueryItem(name: "$skip", value: "\(skip)"),
+            ]), session: session)
+            all += page.data
+            skip += page.data.count
+            if page.data.isEmpty || skip >= page.total { break }
+        }
+        return all
+    }
+
+    private struct PagedList<T: Decodable>: Decodable { let total: Int; let data: [T] }
 
     private static func fetchJSON<T: Decodable>(_ type: T.Type, from url: URL,
                                                 session: URLSession) async throws -> T {

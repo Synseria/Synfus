@@ -35,7 +35,7 @@ struct RealCaptureTests {
         let analysis = SpellRecognition.analyze(image, classe: classe)
         print("candidats : \(analysis.candidateCount), localisation \(Int(analysis.locateDuration * 1000)) ms, comparaison \(Int(analysis.matchDuration * 1000)) ms")
         for cell in analysis.cells {
-            guard let m = cell.match else { continue }
+            guard let m = cell.match else { print("  barre \(cell.row + 1) case \(cell.position + 1) : vide"); continue }
             print(String(format: "  barre %d case %2d : %@ %-26@ score %.2f marge %.2f", cell.row + 1, cell.position + 1, m.isConfident ? "✓" : "?", m.nom, m.score, m.margin))
         }
         print("sûres : \(analysis.confidentCount)/\(analysis.cells.count)")

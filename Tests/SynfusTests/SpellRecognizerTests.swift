@@ -47,11 +47,10 @@ struct SpellRecognizerTests {
         #expect(match.isConfident)
     }
 
-    @Test("Une case vide n'a pas de forme : aucune confiance")
-    func caseVide() throws {
+    @Test("Une case vide n'a pas de forme : aucun sort proposé")
+    func caseVide() {
         let empty = LumaBitmap(width: 64, height: 64, fill: 50)
-        let match = try #require(SpellRecognizer.identify(cell: empty, among: candidates))
-        #expect(!match.isConfident)
+        #expect(SpellRecognizer.identify(cell: empty, among: candidates) == nil)
     }
 
     @Test("La corrélation d'une image avec elle-même vaut 1, avec son négatif −1")

@@ -26,14 +26,18 @@ struct WindowDragArea: NSViewRepresentable {
         override func updateTrackingAreas() {
             super.updateTrackingAreas()
             for area in trackingAreas { removeTrackingArea(area) }
-            addTrackingArea(NSTrackingArea(rect: bounds, options: [.cursorUpdate, .activeAlways, .inVisibleRect],
+            addTrackingArea(NSTrackingArea(rect: bounds,
+                                           options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
                                            owner: self, userInfo: nil))
         }
-        override func cursorUpdate(with event: NSEvent) { NSCursor.openHand.set() }
+        // `cursorUpdate` n'est pas livré à un panneau qui n'est jamais clé :
+        // on pose le curseur nous-mêmes à l'entrée, et on le rend à la sortie.
+        override func mouseEntered(with event: NSEvent) { NSCursor.openHand.set() }
+        override func mouseExited(with event: NSEvent) { NSCursor.arrow.set() }
         override func mouseDown(with event: NSEvent) {
-            NSCursor.closedHand.push()
+            NSCursor.closedHand.set()
             window?.performDrag(with: event)
-            NSCursor.pop()
+            NSCursor.openHand.set()
         }
     }
 }

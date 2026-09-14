@@ -125,4 +125,20 @@ if [ "${1:-}" = "--install" ]; then
     cp -R "$APP" /Applications/
     open "/Applications/$NAME.app"
     echo "==> Lancé depuis /Applications/$NAME.app"
+
+    # Le plugin va dans le dossier des plugins du logiciel Stream Deck, qui
+    # ne le charge qu'au lancement : on le relance s'il tournait. Un
+    # `.sdPlugin` ne s'installe pas par double-clic — c'est le format
+    # empaqueté `.streamDeckPlugin` que le logiciel reconnaît.
+    DECK_PLUGINS="$HOME/Library/Application Support/com.elgato.StreamDeck/Plugins"
+    if [ -d "$DECK_PLUGINS" ]; then
+        echo "==> Installation du plugin Stream Deck"
+        rm -rf "$DECK_PLUGINS/$(basename "$PLUGIN")"
+        cp -R "$PLUGIN" "$DECK_PLUGINS/"
+        if pkill -x "Stream Deck" 2>/dev/null; then
+            sleep 1
+            open -a "Elgato Stream Deck"
+            echo "==> Logiciel Stream Deck relancé"
+        fi
+    fi
 fi

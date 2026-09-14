@@ -21,7 +21,8 @@ VERSION=0.0.3 ARCH=x86_64 ./build.sh
 ./make-dmg.sh dist/Synfus.app dist/Synfus-0.0.3-arm64.dmg
 ./Tools/generate-app-icons.sh      # régénère Resources/Synfus.{icns,png}
 ./Tools/fetch-ankama-assets.sh     # télécharge emblèmes et icônes de sorts dans Resources/Ankama (gitignoré)
-open dist/fr.synseria.synfus.sdPlugin   # installe le plugin Stream Deck produit par build.sh
+./build.sh --install               # installe aussi le plugin dans ~/Library/Application Support/com.elgato.StreamDeck/Plugins et relance Stream Deck
+SYNFUS_ANKAMA_DIR=$PWD/Resources/Ankama SYNFUS_CAPTURE=~/Library/Logs/Synfus/captures/x.png swift test --filter RealCapture   # calibrage sur une vraie capture
 nc -U ~/Library/Application\ Support/Synfus/streamdeck.sock   # lire l'état poussé au plugin
 ```
 
@@ -634,7 +635,10 @@ d'assets de classe au dépôt.
 compile [Tools/FetchAnkamaAssets.swift](Tools/FetchAnkamaAssets.swift) avec
 `DofusClass.swift`, pour que les clés soient celles de l'app — télécharge
 depuis l'API communautaire DofusDB (le CDN d'Ankama répond 403) les emblèmes
-des classes **et** les icônes de sorts, dans `Resources/Ankama/` :
+des classes **et** les icônes de sorts — ceux de la fiche de classe, leurs
+**variantes** (`spell-variants`, le jeu affiche l'un ou l'autre dessin) et les
+**sorts communs** (type 21 : Libération, Cawotte, invocations…) sous la clé
+`communs` —, dans `Resources/Ankama/` :
 `Classes/<clé>.png`, `Sorts/<clé>/<Nom>.png` (le nom du sort, l'id seulement en cas d'homonymie) et un index `sorts.json`
 (`{id, nom, classe, fichier}`). Ce dossier est **ignoré par Git** ; `build.sh`
 l'embarque dans `Contents/Resources/Ankama` s'il existe, et
@@ -706,19 +710,28 @@ opération de configuration, jamais en continu.
 - [LumaBitmap.swift](Sources/Synfus/StreamDeck/Sorts/LumaBitmap.swift) : une
   image en gris 8 bits, valeur `Sendable`, fabricable en test sans CoreGraphics.
 - [SpellBarLocator.swift](Sources/Synfus/StreamDeck/Sorts/SpellBarLocator.swift)
-  : pur. Cherche dans le tiers bas une rangée de cases carrées **par la
-  périodicité de leurs cadres** (profil de bords horizontaux → haut et bas des
-  cases ; profil de bords verticaux → pas par autocorrélation → phase et plus
-  longue suite de cases). Pas de coordonnées figées : la fenêtre et l'échelle
-  d'interface varient. Rend aussi la **zone relative** à mémoriser pour ne
-  capturer que cette bande ensuite (`region(in:)`). Ses hypothèses (`searchBand`,
-  `minCell`/`maxCell`, `minCells`) sont à confronter aux captures réelles ;
-  `SpellBarLocatorTests` les vérifie sur des images fabriquées.
+  : pur. Cherche dans le tiers bas la grille des cases par un **réseau de
+  pics** : sur chaque bande horizontale, les bords verticaux font des pics, et
+  une rangée est une suite « gauche, droite, gauche, droite… » au même pas —
+  le pas est estimé en **fraction** (83,4 px sur la capture de calibrage) et
+  chaque case est cherchée à sa place à `tolerance` près, sans dérive. Un
+  interstice minimal (`minGap`) écarte les lettres du tchat. Les rangées se
+  trouvent de même à la verticale, ancrées sur la bande où les colonnes ont été
+  vues, sur les seuls bords nets. Mesuré : 3 × 12 cases au pixel. Ce qui a
+  été essayé et écarté : la ligne horizontale la plus forte (c'est le tchat),
+  l'autocorrélation sur toute la largeur (noyée), la luminance (le décor est
+  clair). `SpellBarLocatorTests` sur images fabriquées ; `RealCaptureTests`
+  sur une capture locale via `SYNFUS_CAPTURE`.
 - [SpellRecognizer.swift](Sources/Synfus/StreamDeck/Sorts/SpellRecognizer.swift)
-  : pur. Compare chaque case aux icônes **de la classe du perso** (20-30
-  candidats, index `sorts.json` d'`AnkamaAssets`) par corrélation normalisée
-  sur 32 × 32 — insensible à la luminosité, donc à un sort grisé. La **marge**
-  entre le premier et le second candidat est la confiance (`isConfident`).
+  : pur. Compare chaque case aux icônes **de la classe du perso et communes**
+  (~57 candidats, index `sorts.json` d'`AnkamaAssets`) par corrélation
+  normalisée sur le **picto seul** (`inset` 22 % — le cadre est commun à toute
+  la classe, le garder c'était comparer des cadres), à 40 × 40, en tolérant un
+  décalage de 2 px (`bestCorrelation`, sur les six meilleurs candidats du tri
+  sans décalage). Une case sans contraste est **vide**, pas un sort. Mesuré
+  sur la capture de calibrage : 30/36 sûres à 0,85-0,97, 2 vides, 4 objets.
+  La **marge** entre le premier et le second candidat est la confiance
+  (`isConfident`, seuils 0,7 / 0,12).
   L'OCR est écarté : le nom d'un sort n'apparaît qu'au survol, et Synfus ne
   déplace pas la souris.
 - [SpellRecognitionProbe.swift](Sources/Synfus/StreamDeck/Sorts/SpellRecognitionProbe.swift)
