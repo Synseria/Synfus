@@ -21,7 +21,6 @@ VERSION=0.0.3 ARCH=x86_64 ./build.sh
 ./make-dmg.sh dist/Synfus.app dist/Synfus-0.0.3-arm64.dmg
 ./Tools/generate-app-icons.sh      # régénère Resources/Synfus.{icns,png}
 ./Tools/fetch-ankama-assets.sh     # télécharge emblèmes et icônes de sorts dans Resources/Ankama (gitignoré)
-./build.sh --install               # installe aussi le plugin dans ~/Library/Application Support/com.elgato.StreamDeck/Plugins et relance Stream Deck
 SYNFUS_ANKAMA_DIR=$PWD/Resources/Ankama SYNFUS_CAPTURE=~/Library/Logs/Synfus/captures/x.png swift test --filter RealCapture   # calibrage sur une vraie capture
 nc -U ~/Library/Application\ Support/Synfus/streamdeck.sock   # lire l'état poussé au plugin
 ```
@@ -530,6 +529,11 @@ propriété calculée, donc s'y réassigner relance le `didSet` — d'où le dra
 
 ### Interface
 
+- **Un réglage n'apparaît que s'il sert.** Les options d'une fonction coupée
+  sont masquées, pas grisées : l'onglet Sorts n'existe qu'avec le Stream Deck
+  activé, l'onglet Stream Deck se réduit à sa bascule tant qu'elle est
+  fausse, les options de la barre à « Afficher la barre », le raccourci
+  d'enchaînement au mode disponible. Une nouvelle option suit la règle.
 - [BarView.swift](Sources/Synfus/Interface/Barre/BarView.swift) — barre flottante, hébergée dans
   un `NSPanel` non activable (`canBecomeKey = false`) par
   [FloatingBarController.swift](Sources/Synfus/Interface/Barre/FloatingBarController.swift) :
@@ -850,11 +854,14 @@ Trois règles tiennent l'ensemble :
   vers son profil livré (`Plugin/make-profile.sh` → `Synfus.streamDeckProfile`,
   quinze touches Synfus) quand Dofus passe devant, et le rend quand il s'en
   va — `switchToProfile` n'accepte qu'un profil **installé avec le plugin**,
-  d'où le paquet `dist/fr.synseria.synfus.streamDeckPlugin` que
-  `build.sh --install` ouvre à la première installation (un `.sdPlugin` copié
-  à la main ne l'enregistre pas) ; les mises à jour suivantes copient le
-  dossier et relancent le logiciel. Changer les actions du manifeste impose
-  de réinstaller le paquet une fois. `build.sh` assemble le tout depuis
+  d'où le paquet `dist/fr.synseria.synfus.streamDeckPlugin`, **embarqué dans
+  l'app** et ouvert par le bouton « Installer » de l'onglet Stream Deck — un
+  `.sdPlugin` copié à la main ne l'enregistre pas, et `build.sh --install`
+  n'installe jamais le plugin : le Stream Deck est optionnel, tout passe par
+  Synfus. Le logiciel Elgato n'accepte un paquet que plus récent que
+  l'installé (sinon « AlreadyInstalled », rien n'est touché — mesuré dans
+  `StreamDeck.log`), d'où la version de build `VERSION.<commits>` dans le
+  manifeste. `build.sh` assemble le tout depuis
   [Plugin/](Plugin/). Le plugin journalise dans
   `~/Library/Logs/Synfus/synfusdeck.log`.
 

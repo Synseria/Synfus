@@ -2,6 +2,7 @@
 # Compile Synfus et assemble le bundle .app.
 #   ./build.sh            -> construit dist/Synfus.app (et le plugin Stream Deck)
 #   ./build.sh --install  -> construit puis installe dans /Applications et relance
+#                            (le plugin Stream Deck, optionnel, s'installe depuis Synfus)
 #
 # Deux variables d'environnement pilotent la CI sans changer l'usage local :
 #   VERSION=0.0.1   numéro inscrit dans l'Info.plist (défaut : dernier tag git)
@@ -144,36 +145,7 @@ if [ "${1:-}" = "--install" ]; then
     open "/Applications/$NAME.app"
     echo "==> Lancé depuis /Applications/$NAME.app"
 
-    # Le plugin va dans le dossier des plugins du logiciel Stream Deck, qui
-    # ne le charge qu'au lancement : on le relance s'il tournait. Un
-    # `.sdPlugin` ne s'installe pas par double-clic — c'est le format
-    # empaqueté `.streamDeckPlugin` que le logiciel reconnaît.
-    DECK_PLUGINS="$HOME/Library/Application Support/com.elgato.StreamDeck/Plugins"
-    INSTALLED="$DECK_PLUGINS/$(basename "$PLUGIN")"
-    if [ -d "$INSTALLED" ] && ! diff -q <(grep -v '"Version"' "$INSTALLED/manifest.json") \
-                                      <(grep -v '"Version"' "$PLUGIN/manifest.json") >/dev/null; then
-        # Les actions ou le profil livré ont changé : le profil « Synfus »
-        # enregistré par le logiciel porte encore les anciennes actions, et
-        # seul le paquet le réenregistre. Le logiciel n'accepte un paquet que
-        # plus récent que l'installé (sinon « AlreadyInstalled », mesuré dans
-        # StreamDeck.log) — d'où la version de build — et demande confirmation.
-        echo "==> Le manifeste du plugin a changé : mise à jour par le paquet (confirmer dans le logiciel Stream Deck)"
-        open "$PACKAGE"
-    elif [ -d "$INSTALLED" ]; then
-        # Déjà installé : on remplace le contenu et on relance le logiciel,
-        # qui ne charge les plugins qu'au lancement.
-        echo "==> Mise à jour du plugin Stream Deck"
-        rm -rf "$INSTALLED"
-        cp -R "$PLUGIN" "$DECK_PLUGINS/"
-        if pkill -x "Stream Deck" 2>/dev/null; then
-            sleep 1
-            open -a "Elgato Stream Deck"
-            echo "==> Logiciel Stream Deck relancé"
-        fi
-    elif [ -d "$DECK_PLUGINS" ]; then
-        # Première installation : par le paquet, pour que le logiciel
-        # enregistre le profil « Synfus » comme celui du plugin.
-        echo "==> Installation du plugin Stream Deck (le logiciel Stream Deck demande confirmation)"
-        open "$PACKAGE"
-    fi
+    # Le plugin Stream Deck n'est **pas** installé ici : c'est optionnel, et
+    # tout passe par Synfus — Réglages → Stream Deck → « Installer le plugin »
+    # ouvre le paquet embarqué dans l'app.
 fi

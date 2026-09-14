@@ -33,6 +33,14 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
 
 struct SettingsView: View {
     @State private var section: SettingsSection = .general
+    @ObservedObject private var prefs = Preferences.shared
+
+    /// Les sections visibles : ce qui ne sert à rien tant qu'une fonction est
+    /// coupée n'est pas montré — les profils de sorts n'existent que pour le
+    /// Stream Deck.
+    private var sections: [SettingsSection] {
+        SettingsSection.allCases.filter { $0 != .sorts || prefs.streamDeckEnabled }
+    }
 
     /// Barre latérale à gauche, contenu à droite : les quatre sections en
     /// onglets faisaient défiler des formulaires interminables — le menu
@@ -45,11 +53,12 @@ struct SettingsView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(width: 920, height: 640)
+        .onChange(of: sections) { _, visible in if !visible.contains(section) { section = .general } }
     }
 
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 2) {
-            ForEach(SettingsSection.allCases) { item in
+            ForEach(sections) { item in
                 sidebarRow(item)
             }
             Spacer()
