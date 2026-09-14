@@ -39,6 +39,26 @@ enum DeckSource: Codable, Equatable, Hashable, Sendable {
         }
     }
 
+    /// Le rôle de la touche, pour les actions « classiques » du plugin qui
+    /// se placent par rôle et non par position : les n-ièmes « sort », le
+    /// « perso suivant », etc. `nil` pour une case vide.
+    var role: String? {
+        switch self {
+        case .sort, .sortActif, .sortBarreDecalee: return "sort"
+        case .persoSuivant: return "persoSuivant"
+        case .persoPrecedent: return "persoPrecedent"
+        case .persoActif: return "persoActif"
+        case .barreSuivante: return "barreSuivante"
+        case .barrePrecedente: return "barrePrecedente"
+        case .barrePremiere: return "barrePremiere"
+        case .menu: return "menu"
+        case .finDeTour: return "finDeTour"
+        case .corpsACorps: return "corpsACorps"
+        case .commande(let id): return "commande:" + id
+        case .vide: return nil
+        }
+    }
+
     /// Les sources qui affichent un sort — celles que le menu recouvre.
     var estUnSort: Bool {
         switch self {

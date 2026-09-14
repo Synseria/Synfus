@@ -135,7 +135,7 @@ enum DeckComposer {
                 tresLong = tile.tresLong.map(render).flatMap { $0.vide ? nil : $0 }
             }
             // Les vignettes — seulement s'il y a bien quelque chose à jouer.
-            touches.append(DeckTouche(index: index, icone: rendu.icone,
+            touches.append(DeckTouche(index: index, role: tile.court.role, icone: rendu.icone,
                                       iconeLong: long?.action != nil ? long?.icone : nil,
                                       iconeTresLong: tresLong?.action != nil ? tresLong?.icone : nil,
                                       symbole: rendu.symbole, titre: rendu.titre, attenuee: rendu.attenuee,

@@ -49,6 +49,9 @@ struct DeckAction: Codable, Equatable, Sendable {
 struct DeckTouche: Codable, Equatable, Sendable {
     /// Ordre de lecture : ligne puis colonne, 0-based.
     let index: Int
+    /// Ce que la touche est (`sort`, `persoSuivant`, `commande:suivi`…) :
+    /// les actions classiques du plugin, posées par rôle, la retrouvent par là.
+    let role: String?
     /// PNG en base64 — l'icône d'un sort, l'emblème d'un perso.
     let icone: String?
     /// L'icône du sort joué en appui long (vignette en bas à gauche) et en

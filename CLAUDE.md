@@ -769,9 +769,15 @@ Trois règles tiennent l'ensemble :
   sait déjà faire, plus l'état de page du deck. Une commande inconnue est
   journalisée et ignorée. La barre active est un état de session, pas une
   préférence.
-- **Synfus compose, le plugin rend.** Une seule action Elgato, « Touche
-  Synfus », sur toutes les touches ; la position d'une touche (ligne puis
-  colonne) est son index, et c'est tout ce que le plugin sait d'elle.
+- **Synfus compose, le plugin rend.** L'action « Touche Synfus »
+  (**dynamique**) se place sur toutes les touches ; sa position (ligne puis
+  colonne) est son index, et c'est tout ce que le plugin sait d'elle. Les
+  actions **classiques** (Sort, Perso suivant, Barre suivante, Menu, Fin de
+  tour…) cohabitent : posées n'importe où sur n'importe quel profil, elles
+  suivent la touche de leur **rôle** (`DeckTouche.role`, `ActionID.roles`)
+  dans la même page composée — le n-ième « Sort » de l'appareil est la
+  n-ième case de sort de la page. Deux façons de poser, une seule
+  composition.
   [DeckComposer.swift](Sources/Synfus/StreamDeck/Liaison/DeckComposer.swift)
   — **pur, testé** (`DeckComposerTests`) — produit une `DeckPage` par taille
   de grille annoncée (`appareil`) : pour chaque index, l'icône ou le symbole,

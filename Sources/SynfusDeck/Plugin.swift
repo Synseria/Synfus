@@ -15,6 +15,7 @@ final class Plugin {
     /// Une touche visible sur l'appareil.
     struct Key {
         let context: String
+        let action: String
         let device: String
         let column: Int
         let row: Int
@@ -81,7 +82,8 @@ final class Plugin {
         switch event.event {
         case "willAppear":
             let c = event.payload?.coordinates
-            keys[context] = Key(context: context, device: event.device ?? "", column: c?.column ?? 0, row: c?.row ?? 0)
+            keys[context] = Key(context: context, action: event.action ?? ActionID.touche, device: event.device ?? "",
+                                column: c?.column ?? 0, row: c?.row ?? 0)
             render(context)
         case "willDisappear":
             keys[context] = nil
@@ -104,12 +106,26 @@ final class Plugin {
 
     private func grid(of key: Key) -> Grid { devices[key.device] ?? Grid(columns: 5, rows: 3) }
 
-    /// La touche telle que Synfus l'a composée pour cette position.
+    /// La touche telle que Synfus l'a composée : par **position** pour la
+    /// touche dynamique ; par **rôle** pour une action classique — le n-ième
+    /// « Sort » de l'appareil suit la n-ième touche de sort de la page, les
+    /// autres suivent la touche de leur nom. Les deux cohabitent sur un même
+    /// profil, la composition reste celle de Synfus.
     private func touche(_ key: Key) -> DeckTouche? {
         let grid = grid(of: key)
         guard let page = pages[grid] else { return nil }
-        let index = key.row * grid.columns + key.column
-        return page.touches.first { $0.index == index }
+        guard let role = ActionID.roles[key.action] else {
+            let index = key.row * grid.columns + key.column
+            return page.touches.first { $0.index == index }
+        }
+        if role == "sort" {
+            let sortKeys = keys.values.filter { $0.device == key.device && ActionID.roles[$0.action] == "sort" }
+                .sorted { ($0.row, $0.column) < ($1.row, $1.column) }
+            guard let rank = sortKeys.firstIndex(where: { $0.context == key.context }) else { return nil }
+            let sorts = page.touches.filter { $0.role == "sort" }
+            return rank < sorts.count ? sorts[rank] : nil
+        }
+        return page.touches.first { $0.role == role }
     }
 
     // MARK: - Appuis
@@ -137,6 +153,7 @@ final class Plugin {
         guard connected, let touche = touche(key), let page = pages[grid(of: key)] else { launchSynfus(); return }
         let levels: [DeckAction?] = [touche.court, touche.long, touche.tresLong]
         let last = levels.lastIndex { $0 != nil } ?? 0
+        Log.write("appui \(key.row),\(key.column) niveaux=\(last + 1) progressif=\(touche.progressif) seuils=\(page.appuiLongMs)/\(page.appuiTresLongMs)")
         flash(context, stage: 0)
         guard last > 0 else { perform(touche.court, context: context); return }
         var hold = Hold(start: .now)
@@ -148,6 +165,7 @@ final class Plugin {
                 try? await Task.sleep(for: .milliseconds(max(0, wait)))
                 guard !Task.isCancelled, let self, var hold = self.holdsInProgress[context] else { return }
                 hold.stage = stage
+                Log.write("  niveau \(stage) atteint")
                 self.render(context, highlight: stage)
                 // Progressive : chaque niveau renseigné joue à son seuil. Sinon
                 // seul le dernier joue ici, les autres attendent le relâchement.
@@ -164,6 +182,7 @@ final class Plugin {
     private func keyUp(_ context: String) {
         guard let hold = holdsInProgress.removeValue(forKey: context) else { return }
         hold.task?.cancel()
+        Log.write("  relâché au niveau \(hold.stage)\(hold.done ? " (joué)" : "")")
         render(context)
         guard !hold.done, let key = keys[context], let touche = touche(key) else { return }
         if touche.progressif { return }   // tout est déjà joué à mesure

@@ -117,6 +117,9 @@ final class WindowPreviewService: ObservableObject {
         /// choisir entre deux persos. La valeur par défaut est celle d'une
         /// fenêtre de jeu : un test qui ne parle pas de taille n'en parle pas.
         var size: CGSize = CGSize(width: 1280, height: 720)
+        /// À l'écran (sur un espace visible) ou non. Un client garde parfois
+        /// une fenêtre de jeu fantôme hors écran, du même titre que la vraie.
+        var onScreen = true
 
         /// Un client de jeu occupe forcément une bonne part de l'écran. Le seuil
         /// est celui d'`AccessibilityReader.isGameWindow`, pour que les deux côtés
@@ -146,19 +149,28 @@ final class WindowPreviewService: ObservableObject {
     /// taille de jeu (mesuré : le jeu en garde parfois une hors écran) était
     /// « ambigu » et son aperçu restait vide, alors que le nom tranchait.
     nonisolated static func match(pid: pid_t, title: String, among candidates: [Candidate]) -> Int? {
-        if let exact = candidates.firstIndex(where: { $0.pid == pid && $0.title == title }) {
-            return exact
+        let exact = candidates.indices.filter { candidates[$0].pid == pid && candidates[$0].title == title }
+        if exact.count == 1 { return exact[0] }
+        if exact.count > 1 {
+            let visible = exact.filter { candidates[$0].onScreen }
+            return visible.count == 1 ? visible[0] : exact[0]
         }
         let sameProcess = candidates.indices.filter {
             candidates[$0].pid == pid && candidates[$0].isGameSized
         }
         if sameProcess.count == 1 { return sameProcess[0] }
         let name = WindowTitle.characterName(fromTitle: title)
+        var byName = sameProcess
         if !name.isEmpty {
-            let byName = sameProcess.filter { WindowTitle.characterName(fromTitle: candidates[$0].title ?? "") == name }
+            byName = sameProcess.filter { WindowTitle.characterName(fromTitle: candidates[$0].title ?? "") == name }
             if byName.count == 1 { return byName[0] }
         }
-        return nil
+        // Même nom, plusieurs fenêtres : celle qui est à l'écran. Mesuré : une
+        // fenêtre de jeu peut survivre hors écran dans le processus, du même
+        // titre — la capture visait l'une ou l'autre, d'où un aperçu tantôt
+        // bon, tantôt cassé, réparé en fermant la fenêtre.
+        let visible = byName.filter { candidates[$0].onScreen }
+        return visible.count == 1 ? visible[0] : nil
     }
 
     // MARK: - Autorisation
@@ -277,7 +289,7 @@ private actor PreviewCaptureEngine {
         inventoriedAt = Date()
         let candidates = fresh.windows.map {
             WindowPreviewService.Candidate(pid: $0.owningApplication?.processID ?? -1,
-                                           title: $0.title, size: $0.frame.size)
+                                           title: $0.title, size: $0.frame.size, onScreen: $0.isOnScreen)
         }
         guard let index = WindowPreviewService.match(pid: request.pid, title: request.title, among: candidates)
         else {
@@ -300,7 +312,8 @@ private actor PreviewCaptureEngine {
             WindowPreviewService.Candidate(
                 pid: $0.owningApplication?.processID ?? -1,
                 title: $0.title,
-                size: $0.frame.size
+                size: $0.frame.size,
+                onScreen: $0.isOnScreen
             )
         }
 
