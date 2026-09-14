@@ -27,8 +27,16 @@ final class Plugin {
     /// revenir quand Dofus n'est plus devant.
     private var switchedDevices: Set<String> = []
     private var devices: Set<String> = []
-    /// « Menu » enfoncé : les touches de sorts montrent les commandes du jeu.
+    /// « Menu » enfoncé : les touches de sorts montrent les commandes du jeu,
+    /// par pages de la taille de la grille — et « barre suivante » y devient
+    /// « page suivante » : la touche suit le contexte.
     private var menuOpen = false
+    private var menuPage = 0
+
+    private var menuPageCount: Int {
+        let perPage = max(1, sortKeys.count)
+        return max(1, ((state?.commandes.count ?? 0) + perPage - 1) / perPage)
+    }
 
     private static let socketPath = FileManager.default
         .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -101,11 +109,16 @@ final class Plugin {
         switch key.action {
         case ActionID.menu:
             menuOpen.toggle()
+            menuPage = 0
+            render()
+        case ActionID.barreSuivante where menuOpen:
+            menuPage = (menuPage + 1) % menuPageCount
             render()
         case ActionID.sort:
             guard let index = sortKeys.firstIndex(where: { $0.context == context }) else { return }
             if menuOpen {
-                guard index < state.commandes.count, let touche = state.commandes[index].touche
+                let absolute = menuPage * max(1, sortKeys.count) + index
+                guard absolute < state.commandes.count, let touche = state.commandes[absolute].touche
                 else { elgato?.showAlert(context); return }
                 Keystroke.press(touche)
                 return
@@ -172,7 +185,7 @@ final class Plugin {
         for key in keys.values {
             switch key.action {
             case ActionID.sort where menuOpen && state != nil:
-                let index = sorts.firstIndex { $0.context == key.context } ?? 0
+                let index = (sorts.firstIndex { $0.context == key.context } ?? 0) + menuPage * max(1, sorts.count)
                 if let command = state.flatMap({ index < $0.commandes.count ? $0.commandes[index] : nil }) {
                     elgato.setImage(key.context, base64PNG: Images.symbol(command.symbole, dimmed: dimmed || command.touche == nil))
                     elgato.setTitle(key.context, Images.title(command.nom))
@@ -198,17 +211,20 @@ final class Plugin {
                     elgato.setTitle(key.context, state == nil ? "Synfus\nabsent" : (cell?.nom ?? "\(index + 1)"))
                 }
             case ActionID.persoSuivant, ActionID.persoPrecedent, ActionID.persoActif:
-                let perso = key.action == ActionID.persoSuivant ? state?.persoSuivant
-                    : key.action == ActionID.persoPrecedent ? state?.persoPrecedent : state?.persoActif
-                if let perso {
+                // La touche montre le perso **devant** — c'est ce qu'on veut
+                // savoir d'un coup d'œil — et la flèche dit ce qu'elle fait.
+                if let perso = state?.persoActif {
                     let icon = perso.icone.map { Images.framed($0, dimmed: dimmed) }
                     elgato.setImage(key.context, base64PNG: icon ?? Images.blank(dimmed: dimmed))
-                    let arrow = key.action == ActionID.persoSuivant ? "▶ " : key.action == ActionID.persoPrecedent ? "◀ " : ""
-                    elgato.setTitle(key.context, Images.title(arrow + perso.nom))
+                    let arrow = key.action == ActionID.persoSuivant ? " ▶" : key.action == ActionID.persoPrecedent ? "◀ " : ""
+                    elgato.setTitle(key.context, Images.title(key.action == ActionID.persoPrecedent ? arrow + perso.nom : perso.nom + arrow))
                 } else {
                     elgato.setImage(key.context, base64PNG: Images.blank(dimmed: dimmed))
                     elgato.setTitle(key.context, state == nil ? "Synfus\nabsent" : (state?.perso == nil ? "Aucun\nperso" : "—"))
                 }
+            case ActionID.barreSuivante where menuOpen && state != nil:
+                elgato.setImage(key.context, base64PNG: Images.symbol("arrow.right.to.line", dimmed: dimmed || menuPageCount == 1))
+                elgato.setTitle(key.context, "Menu \(menuPage + 1)/\(menuPageCount)")
             case ActionID.barreSuivante:
                 elgato.setImage(key.context, base64PNG: Images.symbol("arrow.turn.down.right", dimmed: dimmed))
                 elgato.setTitle(key.context, state.map { "Barre \($0.barre)/\($0.barres)" } ?? "Synfus\nabsent")
