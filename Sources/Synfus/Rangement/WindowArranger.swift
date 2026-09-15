@@ -49,7 +49,10 @@ final class WindowArranger: ObservableObject {
 
         var eligibles: [DofusClient] = []
         var ecartees: [Ecartee] = []
-        for client in manager.clients {
+        // L'effectif, pas tous les clients : ranger, c'est ranger l'équipe
+        // qu'on joue. Le rapport dit laquelle.
+        let titre = titreAvecEquipe(disposition.label)
+        for client in manager.effectif {
             if client.dormant {
                 // Son élément AX est périmé — la fenêtre vit sur un espace
                 // inactif, hors de portée. Le remède est dans le Diagnostic.
@@ -72,7 +75,7 @@ final class WindowArranger: ObservableObject {
         guard !eligibles.isEmpty, let hauteurPrincipale = NSScreen.screens.first?.frame.height
         else {
             NSSound.beep()
-            dernierRapport = Rapport(date: Date(), titre: disposition.label,
+            dernierRapport = Rapport(date: Date(), titre: titre,
                                      ecran: "—", rangees: [], ecartees: ecartees)
             return
         }
@@ -117,7 +120,7 @@ final class WindowArranger: ObservableObject {
             }
         }
 
-        dernierRapport = Rapport(date: Date(), titre: disposition.label,
+        dernierRapport = Rapport(date: Date(), titre: titre,
                                  ecran: ecran.localizedName, rangees: rangees,
                                  ecartees: ecartees)
         Preferences.shared.lastArrangement = disposition
@@ -142,7 +145,7 @@ final class WindowArranger: ObservableObject {
 
         var rangees: [String] = []
         var ecartees: [Ecartee] = []
-        for client in manager.clients {
+        for client in manager.effectif {
             let fenetre = client.axWindow
             if !client.dormant, !manager.isReachable(client) {
                 ecartees.append(Ecartee(nom: client.name, raison: "ne répond plus"))
@@ -165,8 +168,15 @@ final class WindowArranger: ObservableObject {
         }
 
         if rangees.isEmpty { NSSound.beep() }
-        dernierRapport = Rapport(date: Date(), titre: titre, ecran: "—",
+        dernierRapport = Rapport(date: Date(), titre: titreAvecEquipe(titre), ecran: "—",
                                  rangees: rangees, ecartees: ecartees)
+    }
+
+    /// Le geste a porté sur une équipe : le Diagnostic doit le dire, sinon les
+    /// persos hors équipe passeraient pour oubliés.
+    private func titreAvecEquipe(_ titre: String) -> String {
+        guard let equipe = WindowManager.shared.equipeActive else { return titre }
+        return "\(titre) — équipe \(equipe + 1)"
     }
 
     // MARK: - Écran

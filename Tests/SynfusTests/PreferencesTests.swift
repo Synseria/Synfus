@@ -54,6 +54,9 @@ struct PreferencesTests {
         // Masquer la barre reste sans défaut : on ne confisque pas une
         // combinaison que personne n'a demandée.
         #expect(prefs.toggleBar == nil)
+        // L'invitation, elle, a son ⌘: — hors de la rangée de chiffres.
+        #expect(prefs.inviteHotKey == HotKey.defaultInvite)
+        #expect(!HotKey.digitRow.contains(HotKey.defaultInvite.keyCode))
     }
 
     // MARK: - Reprise des anciens défauts
@@ -276,6 +279,73 @@ struct PreferencesTests {
         // rejouer tant qu'aucune disposition n'a été choisie.
         #expect(prefs.arrangeHotKey == nil)
         #expect(prefs.lastArrangement == nil)
+        // Les équipes et les invitations : vides, sans raccourci d'équipe,
+        // format standard — et ⌘: posé à la reprise, comme l'aperçu.
+        #expect(prefs.equipes.isEmpty)
+        #expect(prefs.equipeSuivanteHotKey == nil)
+        #expect(prefs.inviteHotKey == HotKey.defaultInvite)
+        #expect(prefs.inviteFormat == "/invite %nom")
+    }
+
+    @Test("Une invitation effacée exprès reste effacée à la reprise")
+    func invitationEffacee() {
+        let (prefs, store) = neuves()
+        prefs.inviteHotKey = nil
+        let relues = Preferences.forTesting(store: store)
+        #expect(relues.inviteHotKey == nil)
+    }
+
+    @Test("Rétablir les défauts remet chaque raccourci, efface ceux sans défaut, garde les emplacements")
+    func retablirLesDefauts() {
+        let (prefs, _) = neuves()
+        prefs.slotCount = 7
+        prefs.hotKeys[0] = nil
+        prefs.cycleNext = HotKey(keyCode: 48, modifiers: UInt32(cmdKey))
+        prefs.toggleBar = HotKey(keyCode: 40, modifiers: UInt32(cmdKey))
+        prefs.inviteHotKey = nil
+
+        prefs.resetShortcuts()
+        #expect(prefs.slotCount == 7)
+        #expect(prefs.hotKeys.count == 7)
+        #expect(prefs.hotKeys[0] == HotKey.defaultHotKey(slot: 0))
+        #expect(prefs.cycleNext == HotKey.defaultCycleNext)
+        #expect(prefs.toggleBar == nil)
+        #expect(prefs.inviteHotKey == HotKey.defaultInvite)
+    }
+
+    @Test("Les équipes et l'invitation se relisent après un redémarrage")
+    func equipesPersistent() {
+        let (prefs, store) = neuves()
+        prefs.equipes = [Equipe(membres: ["Aeryn", "Nova"]), Equipe(membres: ["Kaeli"])]
+        prefs.inviteFormat = "/w %nom go"
+        prefs.inviteHotKey = HotKey(keyCode: 34, modifiers: UInt32(cmdKey))
+
+        let relues = Preferences.forTesting(store: store)
+        #expect(relues.equipes == [Equipe(membres: ["Aeryn", "Nova"]), Equipe(membres: ["Kaeli"])])
+        #expect(relues.inviteFormat == "/w %nom go")
+        #expect(relues.inviteHotKey == HotKey(keyCode: 34, modifiers: UInt32(cmdKey)))
+    }
+
+    @Test("Oublier ou purger un perso le retire de ses équipes")
+    func equipesSuiventLOrdre() {
+        let (prefs, _) = neuves()
+        prefs.characterOrder = ["Aeryn", "Nova", "Kaeli"]
+        prefs.equipes = [Equipe(membres: ["Aeryn", "Nova"]), Equipe(membres: ["Kaeli"])]
+        prefs.forget(name: "Kaeli")
+        #expect(prefs.equipes == [Equipe(membres: ["Aeryn", "Nova"])])
+        prefs.purgeOrder { $0 != "Aeryn" }
+        #expect(prefs.equipes == [Equipe(membres: ["Nova"])])
+    }
+
+    @Test("Réaffecter un perso à la même équipe n'écrit pas")
+    func affectationInerte() {
+        let (prefs, store) = neuves()
+        prefs.equipes = [Equipe(membres: ["Aeryn"])]
+        let avant = store.donnees(pour: Preferences.key)
+        prefs.affecter("Aeryn", aEquipe: 0)
+        #expect(store.donnees(pour: Preferences.key) == avant)
+        prefs.affecter("Nova", aEquipe: 1)
+        #expect(prefs.equipes == [Equipe(membres: ["Aeryn"]), Equipe(membres: ["Nova"])])
     }
 
     @Test("Le rangement des fenêtres se relit après un redémarrage")

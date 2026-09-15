@@ -167,7 +167,7 @@ final class FloatingBarController: NSObject {
         if Preferences.shared.autoCenterBar {
             centerAtTop()
         } else if let origin = Preferences.shared.barOrigin, isOnScreen(origin) {
-            panel?.setFrameOrigin(origin)
+            reposition(to: origin)
         } else {
             centerAtTop()
         }
@@ -211,6 +211,7 @@ final class FloatingBarController: NSObject {
     private func reposition(to origin: CGPoint) {
         repositioning = true
         panel?.setFrameOrigin(origin)
+        topEdge = panel?.frame.maxY
         // `didMove` peut arriver au tour de boucle suivant : on ne relâche le
         // drapeau qu'une fois la notification passée.
         DispatchQueue.main.async { self.repositioning = false }
@@ -227,6 +228,7 @@ final class FloatingBarController: NSObject {
         // chaque évènement, la réaffectation d'une valeur identique passant
         // quand même par `save()`.
         if Preferences.shared.autoCenterBar { Preferences.shared.autoCenterBar = false }
+        topEdge = panel.frame.maxY
         // La position, elle, attend que le geste s'achève.
         pendingOrigin = panel.frame.origin
         originWriter?.cancel()
@@ -247,9 +249,19 @@ final class FloatingBarController: NSObject {
         Preferences.shared.barOrigin = origin
     }
 
+    /// Le bord haut de la barre, tenu à jour à chaque pose. Quand la barre
+    /// change de hauteur — la rangée des équipes apparaît pendant un glisser —,
+    /// c'est lui qui reste en place : AppKit garde l'origine, en bas à gauche,
+    /// et la rangée des pastilles descendrait sous la souris en plein geste.
+    private var topEdge: CGFloat?
+
     @objc private func panelResized() {
-        guard Preferences.shared.autoCenterBar else { return }
-        centerAtTop()
+        guard let panel else { return }
+        if Preferences.shared.autoCenterBar {
+            centerAtTop()
+        } else if let top = topEdge {
+            reposition(to: CGPoint(x: panel.frame.minX, y: (top - panel.frame.height).rounded()))
+        }
     }
 
     /// Remet la barre au centre et réactive le suivi automatique.

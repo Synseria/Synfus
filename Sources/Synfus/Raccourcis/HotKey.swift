@@ -220,4 +220,10 @@ struct HotKey: Codable, Equatable, Hashable {
             ? HotKey(keyCode: ansiGraveKey, modifiers: UInt32(cmdKey))
             : HotKey(keyCode: 48, modifiers: UInt32(cmdKey) | UInt32(optionKey))
     }
+    /// ⌘: — copier l'invitation suivante. Le keycode 47 est la touche « : »
+    /// d'un AZERTY (« . » sur un QWERTY). Un seul modificateur : on le presse
+    /// une fois par invité, entre deux collages.
+    static var defaultInvite: HotKey {
+        HotKey(keyCode: 47, modifiers: UInt32(cmdKey))
+    }
 }

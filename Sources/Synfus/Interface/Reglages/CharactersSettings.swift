@@ -11,6 +11,13 @@ struct CharactersSettings: View {
                 Text("Ordre des persos").font(.system(size: 12, weight: .semibold))
                 HelpTip("L'ordre décide de la numérotation des emplacements. Les persos non connectés "
                         + "sont sautés : garde-en autant que tu veux. Glisse une ligne, ou utilise les flèches.")
+                Text("·").foregroundStyle(.tertiary)
+                Text("Équipes").font(.system(size: 12, weight: .semibold))
+                HelpTip("Jusqu'à quatre équipes, composées ici ou en glissant une pastille sur la rangée "
+                        + "qui apparaît sous la barre — sur « + » pour en créer une, sur « Tous » pour en "
+                        + "sortir. L'équipe active restreint la barre, ⌘1…⌘n, suivant/précédent, le rangement "
+                        + "et l'aperçu d'ensemble ; les autres persos restent sous « Tous ». Synfus démarre "
+                        + "toujours sur « Tous ».")
             }
             .padding(12)
 
@@ -63,6 +70,7 @@ struct CharactersSettings: View {
                 .frame(width: 7, height: 7)
             Text(name)
             Spacer()
+            teamPicker(for: name)
             if let slot = slotOf(name) {
                 Text("\(slot + 1)")
                     .font(.system(size: 10, weight: .bold, design: .rounded))
@@ -95,6 +103,24 @@ struct CharactersSettings: View {
         }
     }
 
+    /// « — » ou le numéro de l'équipe ; une entrée de plus tant qu'une équipe
+    /// peut encore être créée. Tag 0 = aucune, n = équipe n.
+    private func teamPicker(for name: String) -> some View {
+        let count = prefs.equipes.count
+        let choix = count < Equipes.maximum ? count + 1 : count
+        return Picker("Équipe", selection: Binding(
+            get: { (Equipes.indexEquipe(de: name, dans: prefs.equipes) ?? -1) + 1 },
+            set: { prefs.affecter(name, aEquipe: $0 == 0 ? nil : $0 - 1) }
+        )) {
+            Text("—").tag(0)
+            ForEach(1...max(choix, 1), id: \.self) { Text("Équipe \($0)").tag($0) }
+        }
+        .labelsHidden()
+        .fixedSize()
+        .font(.system(size: 10))
+        .help("Équipe du perso")
+    }
+
     private func moveCharacter(at index: Int, by delta: Int) {
         let target = index + delta
         guard target >= 0, target < prefs.characterOrder.count else { return }
@@ -106,8 +132,9 @@ struct CharactersSettings: View {
 
     // MARK: - Utilitaires
 
+    /// Le numéro affiché dans la barre : celui de l'effectif.
     private func slotOf(_ name: String) -> Int? {
-        manager.clients.firstIndex { $0.name == name }
+        manager.effectif.firstIndex { $0.name == name }
     }
 
     private func isOnline(_ name: String) -> Bool {

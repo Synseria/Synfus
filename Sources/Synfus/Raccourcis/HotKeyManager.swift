@@ -75,10 +75,16 @@ final class HotKeyManager {
         }
         if let preview = prefs.previewHotKey {
             register(preview) {
-                PreviewPanelController.shared.showGrid(WindowManager.shared.clients)
+                PreviewPanelController.shared.showGrid(WindowManager.shared.effectif)
             } onRelease: {
                 PreviewPanelController.shared.hide()
             }
+        }
+        if let suivante = prefs.equipeSuivanteHotKey {
+            register(suivante) { WindowManager.shared.equipeSuivante() }
+        }
+        if let invite = prefs.inviteHotKey {
+            register(invite) { InvitationClipboard.shared.copierSuivante() }
         }
     }
 

@@ -6,8 +6,14 @@ struct BarView: View {
     @ObservedObject private var watcher = AttentionWatcher.shared
     @ObservedObject private var icons = ClassIconStore.shared
     @ObservedObject private var clicks = ClickAdvanceWatcher.shared
+    @ObservedObject private var invitations = InvitationClipboard.shared
     @State private var dragging: String?
     @State private var chipFrames: [String: CGRect] = [:]
+    /// Cadres des secteurs de la rangée des équipes, dans le même repère que
+    /// les pastilles : c'est ce qui permet de déposer un perso sur l'un d'eux.
+    @State private var sectorFrames: [TeamSector: CGRect] = [:]
+    /// Le secteur survolé pendant un glisser — surligné, et affecté au dépôt.
+    @State private var dropTarget: TeamSector?
     /// Ouverture différée de l'aperçu, annulée dès que le curseur ressort.
     @State private var hoverTask: Task<Void, Never>?
     /// Perso pour lequel cette attente a été lancée. Cf. `hover(_:inside:)`.
@@ -17,19 +23,74 @@ struct BarView: View {
     private static let barSpace = "synfusBar"
 
     var body: some View {
-        HStack(spacing: 4) {
-            handle
-            content
-            settingsButton
+        VStack(spacing: 3) {
+            HStack(spacing: 4) {
+                handle
+                content
+                settingsButton
+            }
+            // La rangée des équipes, sous les pastilles, dans le même panneau.
+            // Elle n'existe que s'il y a des équipes — ou le temps d'un
+            // glisser, pour en créer une : sans équipe, rien à montrer.
+            if manager.accessibilityGranted, !manager.clients.isEmpty,
+               !prefs.equipes.isEmpty || dragging != nil {
+                teamRow.frame(maxWidth: .infinity)
+            }
         }
         .padding(.horizontal, 6)
         .padding(.vertical, 4)
+        // Sur les deux rangées : les cadres des secteurs et des pastilles
+        // doivent se comparer dans un seul repère.
         .coordinateSpace(name: Self.barSpace)
         .background(WindowDragArea())   // tout le fond libre déplace la barre
         .modifier(BarBackground())
         .fixedSize()
+        .animation(.easeOut(duration: 0.15), value: dragging != nil)
         .contextMenu { contextMenu }
-        .onChange(of: manager.clients) { _, clients in pruneChipFrames(clients) }
+        .onChange(of: manager.effectif) { _, effectif in pruneChipFrames(effectif) }
+        .onChange(of: prefs.equipes.count) { _, _ in pruneSectorFrames() }
+    }
+
+    /// « Tous », une case par équipe, et « + » tant qu'on peut en créer une.
+    private var teamRow: some View {
+        HStack(spacing: 3) {
+            sector(.tous)
+            ForEach(prefs.equipes.indices, id: \.self) { index in
+                sector(.equipe(index))
+            }
+            if prefs.equipes.count < Equipes.maximum {
+                sector(.nouvelle)
+            }
+        }
+    }
+
+    private func sector(_ secteur: TeamSector) -> some View {
+        let membres: [TeamSectorView.TeamMember]
+        let actif: Bool
+        switch secteur {
+        case .tous:
+            membres = []
+            actif = manager.equipeActive == nil
+        case .equipe(let index):
+            membres = prefs.equipes[index].membres.map { nom in
+                let client = manager.clients.first { $0.name == nom }
+                return TeamSectorView.TeamMember(nom: nom, classe: client?.characterClass,
+                                                 connecte: client != nil)
+            }
+            actif = manager.equipeActive == index
+        case .nouvelle:
+            membres = []
+            actif = false
+        }
+        return TeamSectorView(secteur: secteur, membres: membres, actif: actif,
+                              cible: dropTarget == secteur, agrandi: dragging != nil) {
+            if case .equipe(let index) = secteur {
+                manager.activerEquipe(index)
+            } else {
+                manager.activerEquipe(nil)
+            }
+        }
+        .background(sectorFrameReader(for: secteur))
     }
 
     /// Poignée de déplacement : le grip de points, affordance universelle du
@@ -91,7 +152,16 @@ struct BarView: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 5)
         } else {
-            ForEach(Array(manager.clients.enumerated()), id: \.element.id) { index, client in
+            // L'effectif — l'équipe active, ou tous. Une équipe sans personne
+            // de connecté le dit, et la rangée reste là pour revenir à « Tous ».
+            if manager.effectif.isEmpty {
+                Text("Aucun perso de l'équipe")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+            }
+            ForEach(Array(manager.effectif.enumerated()), id: \.element.id) { index, client in
                 chip(index: index, client: client)
             }
             separator
@@ -240,9 +310,17 @@ struct BarView: View {
             if closing {
                 Button("Fermeture en cours…") {}.disabled(true)
             } else {
+                // L'invitation de ce perso-là, dans le presse-papiers — Synfus
+                // n'envoie rien au jeu, c'est le joueur qui colle.
+                if WindowTitle.isPersistableName(client.name) {
+                    Button("Copier « \(invitations.commande(pour: client)) »") {
+                        invitations.copier(client)
+                    }
+                }
                 Button("Fermer « \(client.name) »") { manager.close(client) }
             }
         }
+        .overlay { if invitations.copieRecente == client.slotKey { CopiedBadge() } }
         .help(tooltip(index: index, client: client))
         // Un perso sur un autre espace reste cliquable, mais on ne le donne pas
         // pour présent : sa vignette et son titre datent de sa dernière visite.
@@ -265,7 +343,9 @@ struct BarView: View {
     /// d'ouvrir — le premier aperçu s'affichait, les suivants jamais. D'où
     /// `hoverTarget` : une sortie n'annule que sa propre attente.
     private func hover(_ client: DofusClient, inside: Bool) {
-        guard prefs.showPreviewOnHover else { return }
+        // Pendant un glisser, le curseur traverse les pastilles : aucun aperçu
+        // ne doit s'ouvrir, il cacherait la rangée qu'on vise.
+        guard prefs.showPreviewOnHover, dragging == nil else { return }
 
         guard inside else {
             if hoverTarget == client.slotKey {
@@ -323,16 +403,58 @@ struct BarView: View {
         chipFrames = chipFrames.filter { alive.contains($0.key) }
     }
 
+    /// Le pendant de `chipFrameReader` pour les secteurs — deux dictionnaires,
+    /// deux lecteurs : la généricité coûterait plus qu'elle ne rend.
+    private func sectorFrameReader(for secteur: TeamSector) -> some View {
+        GeometryReader { geo in
+            let frame = geo.frame(in: .named(Self.barSpace))
+            Color.clear
+                .onAppear { sectorFrames[secteur] = frame }
+                .onChange(of: frame) { _, new in sectorFrames[secteur] = new }
+        }
+    }
+
+    private func pruneSectorFrames() {
+        let count = prefs.equipes.count
+        sectorFrames = sectorFrames.filter { entry in
+            switch entry.key {
+            case .tous: return true
+            case .equipe(let index): return index < count
+            case .nouvelle: return count < Equipes.maximum
+            }
+        }
+    }
+
     /// Réordonnancement au glisser, sans passer par le drag & drop système :
     /// une session `.onDrag` ne démarre pas de façon fiable depuis un panneau
     /// non activable, et sa vignette volante n'apporte rien ici. Un simple
     /// `DragGesture` suit la souris au plus près — dès que le curseur entre
     /// dans une autre pastille, les deux persos sont permutés. Le geste est
     /// simultané au bouton : un clic sans mouvement active toujours le perso.
+    ///
+    /// Le même geste sert au dépôt sur la rangée des équipes : au-dessus d'un
+    /// secteur, on surligne sans permuter, et l'affectation se fait au
+    /// relâchement — jamais en cours de geste, chaque écriture de préférence
+    /// étant un JSON et un redessin. Un nom non persistable (client au login,
+    /// homonyme suffixé) n'a pas d'équipe : aucun secteur ne s'allume pour lui.
     private func reorderGesture(for client: DofusClient) -> some Gesture {
         DragGesture(minimumDistance: 6, coordinateSpace: .named(Self.barSpace))
             .onChanged { value in
-                dragging = client.name
+                if dragging == nil {
+                    // Le glisser commence : l'aperçu en attente ou ouvert
+                    // cacherait la rangée des équipes.
+                    hoverTask?.cancel()
+                    hoverTask = nil
+                    hoverTarget = nil
+                    PreviewPanelController.shared.hideAnchored()
+                    dragging = client.name
+                }
+                if WindowTitle.isPersistableName(client.name),
+                   let secteur = sectorFrames.first(where: { $0.value.contains(value.location) })?.key {
+                    if dropTarget != secteur { dropTarget = secteur }
+                    return
+                }
+                if dropTarget != nil { dropTarget = nil }
                 guard let target = chipFrames.first(where: { entry in
                     entry.key != client.name && entry.value.contains(value.location)
                 })?.key else { return }
@@ -342,7 +464,18 @@ struct BarView: View {
                     WindowManager.shared.resort()
                 }
             }
-            .onEnded { _ in dragging = nil }
+            .onEnded { _ in
+                if let secteur = dropTarget {
+                    let prefs = Preferences.shared
+                    switch secteur {
+                    case .tous: prefs.affecter(client.name, aEquipe: nil)
+                    case .equipe(let index): prefs.affecter(client.name, aEquipe: index)
+                    case .nouvelle: prefs.affecter(client.name, aEquipe: prefs.equipes.count)
+                    }
+                }
+                dragging = nil
+                dropTarget = nil
+            }
     }
 
     private func tooltip(index: Int, client: DofusClient) -> String {

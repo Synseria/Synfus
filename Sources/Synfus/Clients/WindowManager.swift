@@ -1,12 +1,24 @@
 import AppKit
 import ApplicationServices
+import Combine
 
 @MainActor
 final class WindowManager: ObservableObject {
     static let shared = WindowManager()
 
-    /// Persos connectés, déjà triés selon l'ordre de préférence.
+    /// Persos connectés, déjà triés selon l'ordre de préférence — **tous**.
+    /// C'est la liste de l'inventaire, de la fermeture et de l'attention.
     @Published private(set) var clients: [DofusClient] = []
+
+    /// Ce que la barre, les raccourcis, le rangement et l'aperçu voient :
+    /// `clients` restreint à l'équipe active, dans le même ordre. Sans équipe,
+    /// c'est `clients` tel quel. Recalculé à chaque publication de `clients`
+    /// et à chaque changement d'équipe — jamais republié sans avoir changé.
+    @Published private(set) var effectif: [DofusClient] = []
+
+    /// L'équipe active — un état de session, jamais persisté : Synfus démarre
+    /// toujours sur « Tous » (`nil`).
+    @Published private(set) var equipeActive: Int?
     @Published private(set) var frontmostPID: pid_t?
     /// L'app au premier plan est-elle un client Dofus ? Tenu à jour en même temps
     /// que `frontmostPID`, pour que la barre puisse décider de sa visibilité sans
@@ -37,6 +49,7 @@ final class WindowManager: ObservableObject {
 
     private var timer: Timer?
     private let prefs = Preferences.shared
+    private var equipesSubscription: AnyCancellable?
 
     /// Fin du dernier inventaire, et inventaire différé en attente, avec son
     /// échéance. Cf. `refreshSoon(after:)`.
@@ -101,6 +114,15 @@ final class WindowManager: ObservableObject {
         // Les versions du client et les homonymes suffixés ont pu s'enregistrer
         // avant que le filtre n'existe : ils encombreraient la liste indéfiniment.
         prefs.purgeOrder(keeping: WindowTitle.isPersistableName)
+
+        // Une composition change : l'effectif suit. La valeur est prise sur
+        // l'émission — `@Published` publie **avant** d'affecter,
+        // `prefs.equipes` serait encore l'ancienne.
+        equipesSubscription = prefs.$equipes
+            .dropFirst()
+            .sink { [weak self] equipes in
+                MainActor.assumeIsolated { self?.republierEffectif(equipes: equipes) }
+            }
 
         let center = NSWorkspace.shared.notificationCenter
 
@@ -289,6 +311,7 @@ final class WindowManager: ObservableObject {
         guard granted else {
             if !clients.isEmpty {
                 clients = []
+                republierEffectif()
                 PreviewPanelController.shared.reconcile(with: clients)
             }
             return false
@@ -388,6 +411,7 @@ final class WindowManager: ObservableObject {
 
         if found != clients {
             clients = found
+            republierEffectif()
             // Les vignettes des persos déconnectés n'ont plus de sens, et leur
             // `slotKey` sera repris par un autre client au prochain lancement.
             WindowPreviewService.shared.prune(keeping: found)
@@ -402,21 +426,47 @@ final class WindowManager: ObservableObject {
     /// permutation, c'était payer un inventaire complet pour un tri.
     func resort() {
         let sorted = ClientMemory.sorted(clients, by: prefs.characterOrder)
-        if sorted != clients { clients = sorted }
+        if sorted != clients {
+            clients = sorted
+            republierEffectif()
+        }
     }
 
+    // MARK: - Équipes
 
+    /// Le seul foyer de calcul de l'effectif. Les équipes sont passées
+    /// explicitement par l'abonnement aux préférences — qui les reçoit avant
+    /// qu'elles soient affectées — et lues sinon. Un index d'équipe devenu
+    /// orphelin ramène à « Tous ».
+    private func republierEffectif(equipes: [Equipe]? = nil) {
+        let equipes = equipes ?? prefs.equipes
+        let active = Equipes.activeValide(equipeActive, nombre: equipes.count)
+        if active != equipeActive { equipeActive = active }
+        let nouveau = Equipes.filtre(clients, equipe: active.map { equipes[$0] })
+        if nouveau != effectif { effectif = nouveau }
+    }
 
+    /// Active une équipe — `nil` pour « Tous ». Sans effet si l'index n'existe pas.
+    func activerEquipe(_ index: Int?) {
+        let borne = Equipes.activeValide(index, nombre: prefs.equipes.count)
+        guard borne == index else { return }
+        equipeActive = index
+        republierEffectif()
+    }
 
+    /// Tous → 1 → … → Tous, le geste du raccourci.
+    func equipeSuivante() {
+        activerEquipe(Equipes.suivante(apres: equipeActive, nombre: prefs.equipes.count))
+    }
 
     // MARK: - Focus
 
     func focus(slot: Int) {
-        guard slot >= 0, slot < clients.count else {
+        guard slot >= 0, slot < effectif.count else {
             NSSound.beep()
             return
         }
-        focus(clients[slot])
+        focus(effectif[slot])
     }
 
     func focus(_ client: DofusClient) {
@@ -489,31 +539,35 @@ final class WindowManager: ObservableObject {
     func lancerSession() {
         Task {
             await WindowArranger.shared.appliquerDerniere()
-            if !clients.isEmpty { focus(slot: 0) }
+            if !effectif.isEmpty { focus(slot: 0) }
             if prefs.advanceOnClick, !ClickAdvanceWatcher.shared.armed {
                 ClickAdvanceWatcher.shared.toggleArmed()
             }
         }
     }
 
+    /// Tourne dans l'effectif — l'équipe active, ou tous.
     func cycle(by step: Int) {
-        guard !clients.isEmpty else {
+        guard !effectif.isEmpty else {
             NSSound.beep()
             return
         }
-        // Depuis Chrome ou Discord, on ne « cycle » pas : on revient au premier perso.
+        // Depuis Chrome ou Discord — ou depuis un perso hors de l'équipe —, on
+        // ne « cycle » pas : on revient au premier perso.
         guard let current = currentIndex else {
-            focus(clients[0])
+            focus(effectif[0])
             return
         }
-        let count = clients.count
+        let count = effectif.count
         let next = ((current + step) % count + count) % count
-        focus(clients[next])
+        focus(effectif[next])
     }
 
+    /// Rang du perso au premier plan dans l'effectif ; `nil` s'il n'en fait
+    /// pas partie.
     var currentIndex: Int? {
         guard let pid = frontmostPID else { return nil }
-        return clients.firstIndex { $0.pid == pid }
+        return effectif.firstIndex { $0.pid == pid }
     }
 
     func isFrontmost(_ client: DofusClient) -> Bool {

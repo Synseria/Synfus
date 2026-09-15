@@ -85,6 +85,23 @@ final class Preferences: ObservableObject {
     /// Raccourci du geste « lancer la session ». Sans défaut, même règle.
     @Published var sessionHotKey: HotKey? { didSet { save() } }
 
+    /// Les équipes — leurs compositions, persistées. Pas de bascule : la
+    /// fonction n'existe que par ses équipes, et la rangée de la barre
+    /// n'apparaît que s'il y en a, ou le temps d'un glisser pour en créer une.
+    /// L'équipe **active**, elle, est un état de session de `WindowManager` —
+    /// Synfus démarre toujours sur « Tous ».
+    @Published var equipes: [Equipe] = [] { didSet { save() } }
+
+    /// Raccourci « équipe suivante ». Sans défaut.
+    @Published var equipeSuivanteHotKey: HotKey? { didSet { save() } }
+
+    /// Raccourci « copier l'invitation suivante ». ⌘: par défaut — un choix de
+    /// l'utilisateur, posé par `adoptDefaults` sur les sauvegardes antérieures.
+    @Published var inviteHotKey: HotKey? { didSet { save() } }
+
+    /// Le texte posé dans le presse-papiers, `%nom` remplacé par le perso.
+    @Published var inviteFormat: String = InvitationComposer.formatParDefaut { didSet { save() } }
+
     /// Les touches des barres de sorts du jeu, pour le Stream Deck.
     @Published var spellKeyMap: SpellKeyMap = .defaults { didSet { save() } }
 
@@ -184,6 +201,7 @@ final class Preferences: ObservableObject {
 
     func forget(name: String) {
         characterOrder.removeAll { $0 == name }
+        restreindreEquipes()
     }
 
     /// Ne conserve dans l'ordre que les noms retenus par `isKept`.
@@ -196,6 +214,22 @@ final class Preferences: ObservableObject {
         let filtered = characterOrder.filter(isKept)
         guard filtered.count != characterOrder.count else { return }
         characterOrder = filtered
+        restreindreEquipes()
+    }
+
+    /// Change un perso d'équipe — ou l'en retire, avec `nil`. Le pendant de
+    /// `swapOrder` : la règle est dans `Equipes`, et rien n'est écrit si rien
+    /// ne change.
+    func affecter(_ nom: String, aEquipe index: Int?) {
+        let nouvelles = Equipes.affecter(nom, a: index, dans: equipes)
+        if nouvelles != equipes { equipes = nouvelles }
+    }
+
+    /// Les équipes restent un sous-ensemble de `characterOrder` : un perso
+    /// oublié ou purgé en sort aussi.
+    private func restreindreEquipes() {
+        let restreintes = Equipes.restreintes(equipes, aux: Set(characterOrder))
+        if restreintes != equipes { equipes = restreintes }
     }
 
     // MARK: - Persistance
@@ -233,6 +267,10 @@ final class Preferences: ObservableObject {
         var appuiTresLongMs: Int?
         var appuiProgressif: Bool?
         var deckTitres: Bool?
+        var equipes: [Equipe]?
+        var equipeSuivanteHotKey: HotKey?
+        var inviteHotKey: HotKey?
+        var inviteFormat: String?
         /// Génération du jeu de raccourcis par défaut appliqué à cette
         /// sauvegarde. Absente des sauvegardes d'avant la refonte, d'où le repli
         /// sur 1 à la lecture.
@@ -243,7 +281,7 @@ final class Preferences: ObservableObject {
     /// reprise correspondante dans `adoptDefaults` — chaque fois que les défauts
     /// changent, sans quoi les installations existantes resteraient sur les
     /// anciens à jamais.
-    static let defaultsVersion = 5
+    static let defaultsVersion = 6
 
     /// Les défauts de la génération 1, ceux qu'une installation existante peut
     /// encore porter sans que l'utilisateur les ait choisis. Seules ces
@@ -304,7 +342,28 @@ final class Preferences: ObservableObject {
         if from < 5, advanceArmHotKey == Self.legacyAdvanceArm {
             advanceArmHotKey = .defaultAdvanceArm
         }
+
+        // L'invitation par presse-papiers est arrivée avec la génération 6 :
+        // une sauvegarde plus ancienne ne l'a jamais eue.
+        if from < 6, inviteHotKey == nil { inviteHotKey = .defaultInvite }
         return true
+    }
+
+    /// Remet tous les raccourcis à leur défaut — ceux qui n'en ont pas sont
+    /// effacés. Le nombre d'emplacements est conservé : c'est un choix, pas un
+    /// raccourci. L'appelant réenregistre (`HotKeyManager.rebind`).
+    func resetShortcuts() {
+        hotKeys = (0..<slotCount).map { HotKey.defaultHotKey(slot: $0) }
+        cycleNext = .defaultCycleNext
+        cyclePrevious = .defaultCyclePrevious
+        toggleAutoFocus = .defaultToggleAutoFocus
+        previewHotKey = .defaultPreview
+        advanceArmHotKey = .defaultAdvanceArm
+        inviteHotKey = .defaultInvite
+        toggleBar = nil
+        arrangeHotKey = nil
+        sessionHotKey = nil
+        equipeSuivanteHotKey = nil
     }
 
     private static var legacyAdvanceArm: HotKey {
@@ -364,6 +423,10 @@ final class Preferences: ObservableObject {
             appuiTresLongMs: appuiTresLongMs,
             appuiProgressif: appuiProgressif,
             deckTitres: deckTitres,
+            equipes: equipes,
+            equipeSuivanteHotKey: equipeSuivanteHotKey,
+            inviteHotKey: inviteHotKey,
+            inviteFormat: inviteFormat,
             defaultsVersion: Self.defaultsVersion
         )
         if let data = try? JSONEncoder().encode(stored) {
@@ -385,6 +448,7 @@ final class Preferences: ObservableObject {
             cyclePrevious = .defaultCyclePrevious
             toggleAutoFocus = .defaultToggleAutoFocus
             previewHotKey = .defaultPreview
+            inviteHotKey = .defaultInvite
             loading = false
             resizeHotKeys()
             return
@@ -422,6 +486,10 @@ final class Preferences: ObservableObject {
         appuiTresLongMs = stored.appuiTresLongMs ?? 200
         appuiProgressif = stored.appuiProgressif ?? true
         deckTitres = stored.deckTitres ?? false
+        equipes = stored.equipes ?? []
+        equipeSuivanteHotKey = stored.equipeSuivanteHotKey
+        inviteHotKey = stored.inviteHotKey
+        inviteFormat = stored.inviteFormat ?? InvitationComposer.formatParDefaut
         if let x = stored.barOriginX, let y = stored.barOriginY {
             barOrigin = CGPoint(x: x, y: y)
         }

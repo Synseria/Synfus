@@ -191,3 +191,23 @@ struct AlertPulse: View {
     }
 }
 
+
+/// Le témoin d'une invitation copiée : un presse-papiers en coin de pastille,
+/// le temps que `InvitationClipboard` l'efface. En overlay, il ne change rien
+/// à la taille de la barre.
+struct CopiedBadge: View {
+    var body: some View {
+        RoundedRectangle(cornerRadius: 8, style: .continuous)
+            .strokeBorder(Color.accentColor, lineWidth: 1.5)
+            .overlay(alignment: .topTrailing) {
+                Image(systemName: "doc.on.clipboard.fill")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(.white)
+                    .padding(2)
+                    .background(Circle().fill(Color.accentColor))
+                    .offset(x: 4, y: -4)
+            }
+            .transition(.opacity)
+            .allowsHitTesting(false)
+    }
+}

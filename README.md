@@ -24,6 +24,13 @@ connectés et permet de passer de l'un à l'autre, d'un clic ou au clavier.
   l'ordre — un clic par personnage, toujours.
 - **Gestion des fenêtres** : côte à côte, mosaïque, un grand + vignettes,
   plein écran, « lancer la session ».
+- **Équipes** (optionnel) : à huit comptes, on joue rarement tout le monde
+  d'un coup. Jusqu'à quatre équipes, composées en glissant une pastille sur
+  la seconde rangée de la barre ; l'équipe active restreint la barre, les
+  raccourcis et le rangement, « Tous » reste à un clic.
+- **Invitations** : ⌘: copie `/invite Nom` pour le prochain personnage de
+  l'équipe, tu colles dans le tchat (⌘V ↩), et ainsi de suite. Synfus
+  n'envoie rien au jeu — c'est toi qui colles.
 - **Fermeture propre des clients** : certains clients restent bloqués en
   quittant, Synfus s'en occupe.
 - **Aperçu** d'une fenêtre au survol, ou de tous les personnages en maintenant
