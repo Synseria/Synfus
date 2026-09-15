@@ -100,8 +100,7 @@ struct CopiableCommand: View {
                 .lineLimit(2)
                 .truncationMode(.middle)
             Button {
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(command, forType: .string)
+                PressePapiers.copier(command)
             } label: {
                 Image(systemName: "doc.on.doc")
             }

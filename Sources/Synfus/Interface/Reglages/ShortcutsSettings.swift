@@ -48,8 +48,35 @@ struct ShortcutsSettings: View {
                 ShortcutRow(label: "Lancer la session", help: "Le geste du matin : range selon la dernière "
                             + "disposition, bascule sur le perso 1, arme l'enchaînement si le mode est disponible.",
                             hotKey: hotKey(\.sessionHotKey))
+                if !prefs.equipes.isEmpty {
+                    ShortcutRow(label: "Équipe suivante", help: "Tourne : tous les persos, équipe 1, équipe 2… "
+                                + "puis tous. Les équipes se composent dans l'onglet Persos ou en glissant "
+                                + "une pastille sur la seconde rangée de la barre.",
+                                hotKey: hotKey(\.equipeSuivanteHotKey))
+                }
             } header: {
                 SectionTitle("Fenêtres")
+            }
+
+            Section {
+                ShortcutRow(label: "Copier l'invitation suivante", help: "Pose « /invite Nom » dans le "
+                            + "presse-papiers, un perso à chaque appui, en tournant sur l'équipe active. Le chef "
+                            + "est le perso devant au premier appui, et le reste jusqu'à la fin du tour — même si "
+                            + "le passage automatique bascule entre-temps. Colle-le dans le tchat (⌘V ↩) : "
+                            + "Synfus n'envoie rien au jeu.",
+                            hotKey: hotKey(\.inviteHotKey))
+                HStack {
+                    Text("Format")
+                    HelpTip("%nom est remplacé par le nom du perso, tel que le jeu l'affiche dans le titre de "
+                            + "la fenêtre. Le clic droit sur une pastille copie l'invitation de ce perso-là.")
+                    Spacer()
+                    TextField("", text: $prefs.inviteFormat)
+                        .font(.system(size: 11, design: .monospaced))
+                        .frame(width: 180)
+                }
+            } header: {
+                SectionTitle("Inviter", help: "Synfus n'émet aucun évènement : il compose la commande, tu la colles. "
+                             + "Un geste par invité, comme un clic par perso.")
             }
 
             Section {
@@ -89,6 +116,14 @@ struct ShortcutsSettings: View {
                              + "vers l'extérieur ; Synfus ne lit rien du jeu lui-même.")
             }
 
+            Section {
+                Button("Rétablir les raccourcis par défaut") {
+                    prefs.resetShortcuts()
+                    rebind()
+                }
+                .font(.system(size: 11))
+            }
+
             if !HotKeyManager.shared.rejected.isEmpty {
                 Section {
                     Label("Refusées par le système (déjà prises par une autre app) : "
@@ -121,6 +156,6 @@ struct ShortcutsSettings: View {
     private func rebind() { HotKeyManager.shared.rebind() }
 
     private func nameForSlot(_ slot: Int) -> String {
-        slot < manager.clients.count ? manager.clients[slot].name : "—"
+        slot < manager.effectif.count ? manager.effectif[slot].name : "—"
     }
 }

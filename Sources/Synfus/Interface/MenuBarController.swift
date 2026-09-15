@@ -60,7 +60,9 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             menu.addItem(.separator())
         } else {
             let prefs = Preferences.shared
-            for (index, client) in manager.clients.enumerated() {
+            // L'effectif : les numéros sont ceux de la barre, et `focus(slot:)`
+            // compte de la même façon.
+            for (index, client) in manager.effectif.enumerated() {
                 let item = add(to: menu, title: client.name, action: #selector(focusClient(_:)))
                 item.tag = index
                 item.image = ClassIconStore.shared.menuIcon(for: client.characterClass)
@@ -73,6 +75,12 @@ final class MenuBarController: NSObject, NSMenuDelegate {
                     item.attributedTitle = attributed(name: client.name, shortcut: hotKey.displayString)
                 }
             }
+            if manager.effectif.isEmpty {
+                let empty = NSMenuItem(title: "Aucun perso de l'équipe connecté", action: nil, keyEquivalent: "")
+                empty.isEnabled = false
+                menu.addItem(empty)
+            }
+            if !prefs.equipes.isEmpty { menu.addItem(teamSubmenu()) }
             menu.addItem(.separator())
         }
 
@@ -133,6 +141,33 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         return parent
     }
 
+    /// Sous-menu « Équipe » : « Tous » puis chaque équipe avec ses membres.
+    /// Le tag vaut l'index + 1, 0 pour « Tous ».
+    private func teamSubmenu() -> NSMenuItem {
+        let manager = WindowManager.shared
+        let prefs = Preferences.shared
+        let parent = NSMenuItem(title: "Équipe", action: nil, keyEquivalent: "")
+        if let hotKey = prefs.equipeSuivanteHotKey {
+            parent.attributedTitle = attributed(name: "Équipe", shortcut: hotKey.displayString)
+        }
+        let submenu = NSMenu()
+        let tous = NSMenuItem(title: "Tous", action: #selector(selectTeam(_:)), keyEquivalent: "")
+        tous.target = self
+        tous.tag = 0
+        if manager.equipeActive == nil { tous.state = .on }
+        submenu.addItem(tous)
+        for (index, equipe) in prefs.equipes.enumerated() {
+            let item = NSMenuItem(title: "Équipe \(index + 1) — " + equipe.membres.joined(separator: ", "),
+                                  action: #selector(selectTeam(_:)), keyEquivalent: "")
+            item.target = self
+            item.tag = index + 1
+            if manager.equipeActive == index { item.state = .on }
+            submenu.addItem(item)
+        }
+        parent.submenu = submenu
+        return parent
+    }
+
     @discardableResult
     private func add(to menu: NSMenu, title: String, action: Selector) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
@@ -160,6 +195,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
     @objc private func focusClient(_ sender: NSMenuItem) {
         WindowManager.shared.focus(slot: sender.tag)
+    }
+
+    @objc private func selectTeam(_ sender: NSMenuItem) {
+        WindowManager.shared.activerEquipe(sender.tag == 0 ? nil : sender.tag - 1)
     }
 
     @objc private func arrange(_ sender: NSMenuItem) {

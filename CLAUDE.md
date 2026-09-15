@@ -99,9 +99,10 @@ de son domaine ; un fichier qui n'en a pas est le signe d'un domaine à créer.
 
 | Dossier | Contenu |
 | --- | --- |
-| `App/` | Point d'entrée, intégrité du bundle, démarrage automatique |
+| `App/` | Point d'entrée, intégrité du bundle, démarrage automatique, `PressePapiers` (l'unique écriture presse-papiers) |
 | `Accessibilite/` | Lecture AX partagée, `--dump-windows`, titres à travers les espaces |
-| `Clients/` | `DofusClient`, `WindowTitle` (titres, pur), `ClientMemory` (mémoire et tri, pur), `WindowManager`, `FreezeWatcher` |
+| `Clients/` | `DofusClient`, `WindowTitle` (titres, pur), `ClientMemory` (mémoire et tri, pur), `Equipes` (équipes, pur), `WindowManager`, `FreezeWatcher` |
+| `Invitations/` | `/invite Nom` par presse-papiers : `InvitationComposer` (pur) et `InvitationClipboard` |
 | `Attention/` | Détection du rebond du Dock |
 | `Raccourcis/` | Raccourcis globaux, enregistreur, enchaînement au clic |
 | `Rangement/` | Dispositions de fenêtres, `LayoutComputer` (pur) |
@@ -504,6 +505,84 @@ gestes existants : ranger selon la dernière disposition, basculer sur le
 perso 1, armer l'enchaînement si `advanceOnClick` — raccourci optionnel sans
 défaut (`sessionHotKey`).
 
+### Équipes
+
+À huit comptes, on joue rarement tout le monde d'un coup. Les équipes
+([Equipes.swift](Sources/Synfus/Clients/Equipes.swift), pur, testé dans
+`EquipesTests`) sont une **appartenance, pas un ordre** : une `Equipe` est
+une liste de noms, sous-ensemble de `characterOrder`, et l'effectif garde
+l'ordre de la barre. Jusqu'à `Equipes.maximum` (4). Ni nom ni couleur : un
+secteur montre son numéro et un point par membre à la couleur de sa classe.
+
+`WindowManager` publie deux listes. `clients`, **tous** les persos — c'est
+la liste de l'inventaire, de « Fermer tous les persos », de la détection
+d'attention (appariement Dock par pid) et des réglages. `effectif`,
+`clients` restreint à l'équipe active — c'est ce que voient la barre (pastilles
+et numéros), `focus(slot:)` (⌘1 = premier de l'équipe), `cycle(by:)` (donc
+suivant/précédent et l'enchaînement au clic), `lancerSession`, le rangement
+des fenêtres (le rapport dit l'équipe), l'aperçu d'ensemble et le menu de la
+barre de menus. Un seul foyer de calcul, `republierEffectif`, appelé à chaque
+publication de `clients` et par un abonnement `CombineLatest` aux préférences
+— qui reçoit les valeurs émises, car `@Published` publie **avant**
+d'affecter. Rien n'est republié sans avoir changé.
+
+L'équipe active (`equipeActive`) est un **état de session**, jamais
+persisté : Synfus démarre toujours sur « Tous ». Les compositions, elles,
+sont dans `Preferences.equipes`, gardées ⊆ `characterOrder` par `forget` et
+`purgeOrder`. Un index d'équipe devenu orphelin ramène à « Tous »
+(`activeValide`). Un perso au premier plan hors de l'équipe n'a pas de
+`currentIndex` : `cycle` va au premier de l'effectif. Les noms non
+persistables (« Dofus 3.3.4.9 », « Nom (2) ») n'ont jamais d'équipe et
+n'apparaissent que sous « Tous ».
+
+Il n'y a **pas de bascule** : la fonction n'existe que par ses équipes. La
+seconde rangée de la barre ([TeamRow.swift](Sources/Synfus/Interface/Barre/TeamRow.swift))
+n'apparaît que s'il y a une équipe — ou le temps d'un glisser, pour en créer
+une : « Tous », un secteur par équipe, et « + » tant qu'on peut en créer une.
+Une équipe naît d'un dépôt sur « + » et disparaît quand elle se vide, rien à
+configurer. Pendant le glisser les secteurs **s'agrandissent** (`agrandi`) :
+une cible se vise, un onglet se lit. Le **même** `DragGesture` que le
+réordonnancement sert au dépôt : au-dessus d'un secteur, on surligne sans
+permuter (`dropTarget`), et l'affectation se fait au relâchement — jamais en
+cours de geste, chaque écriture de préférence étant un JSON et un redessin.
+Le début du glisser ferme l'aperçu au survol et `hover` l'ignore tant que
+`dragging` est posé : il cachait la rangée visée. `coordinateSpace` est posé
+sur le `VStack` pour que cadres de pastilles et de secteurs se comparent dans
+un seul repère. L'onglet Persos offre le même geste par un `Picker` par ligne.
+Le raccourci « Équipe suivante » est sans défaut et n'apparaît qu'avec une
+équipe. La rangée change la hauteur du panneau en plein geste : AppKit
+gardant l'origine en bas à gauche, `FloatingBarController.topEdge` tient le
+**bord haut** en place — sinon les pastilles descendaient sous la souris.
+
+### Invitations par presse-papiers
+
+Inviter sept persos à la main, c'est sept `/invite Nom` tapés. Synfus les
+**compose**, il ne les envoie pas : la règle « aucun évènement émis » reste
+entière, [PressePapiers.swift](Sources/Synfus/App/PressePapiers.swift) est
+l'unique écriture dans `NSPasteboard`, et le joueur colle lui-même (⌘V ↩) —
+un geste par invité, comme un clic par perso dans le mode « enchaîner ».
+Envoyer la commande au tchat serait exactement la saisie synthétisée que le
+dépôt refuse.
+
+[InvitationComposer.swift](Sources/Synfus/Invitations/InvitationComposer.swift)
+(pur, `InvitationComposerTests`) choisit qui : l'effectif sans le **chef** —
+le perso devant, par pid —, les noms **du titre** (`characterName(fromTitle:)`,
+jamais « Nom (2) », que le jeu ne connaît pas), dédoublonnés, clients au
+login exclus, dormants inclus. Le raccourci `inviteHotKey` — **⌘: par
+défaut** (keycode 47, la touche « : » d'un AZERTY ; c'est aussi
+« Orthographe et grammaire » dans les apps de texte, un choix de
+l'utilisateur, posé à la génération 6 des défauts) tourne en boucle. Le
+**chef est fixé au premier appui** et le reste jusqu'au dernier invité
+(`tourTermine`) ou s'il quitte l'effectif : avec le passage automatique,
+l'invité rebondit et Synfus bascule dessus — sans cela, le tour reprendrait du
+point de vue du nouveau perso et réinviterait le chef. Le clic droit d'une
+pastille copie l'invitation de ce perso-là sans toucher au tour.
+`inviteFormat` (`/invite %nom`) est un réglage texte : le jour où la commande
+change, personne ne recompile. La pastille copiée porte `CopiedBadge` 1,2 s,
+en overlay — la barre ne change pas de taille. « Rétablir les raccourcis par
+défaut » (`Preferences.resetShortcuts`) remet chaque raccourci à son défaut,
+efface ceux qui n'en ont pas, garde le nombre d'emplacements.
+
 ### Préférences
 
 [Preferences.swift](Sources/Synfus/Preferences/Preferences.swift) sérialise l'ensemble en
@@ -751,6 +830,11 @@ opération de configuration, jamais en continu.
   go/no-go de la reconnaissance automatique.
 
 ### Stream Deck — profils, liaison, plugin, combat
+
+**En pause depuis le 15/09/2026** : l'appareil a été renvoyé, plus aucun
+développement n'y est fait, le code reste pour la communauté. Il doit
+continuer de compiler ; il suit l'équipe active de fait, par `cycle` et
+`focus(slot:)`, sans avoir été touché.
 
 Le Stream Deck est une **interface physique contextuelle** : il montre les
 sorts du perso que Synfus voit devant, et frappe la touche que le jeu attend.
