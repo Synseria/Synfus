@@ -5,7 +5,7 @@ import Foundation
 ///
 /// La limite est celle du dépôt : Synfus n'envoie rien au jeu. Il compose
 /// `/invite Nom`, le joueur colle (⌘V ↩) dans le tchat — un geste par invité,
-/// comme un clic par perso dans le mode « enchaîner ».
+/// comme un clic par perso dans l'enchaînement au clic.
 ///
 /// Le **chef** est fixé au premier appui d'un tour et le reste jusqu'au
 /// dernier invité : avec le passage automatique, l'invité rebondit dans le

@@ -372,41 +372,39 @@ struct PreferencesTests {
         #expect(relues.toggleBar == HotKey(keyCode: 11, modifiers: UInt32(cmdKey) | UInt32(shiftKey)))
     }
 
-    /// Le mode « enchaîner » installe un moniteur global de souris : il ne doit
-    /// jamais s'activer tout seul à la faveur d'une mise à jour, pas plus que
-    /// les aperçus.
-    @Test("Le mode « enchaîner » est éteint par défaut et se relit")
+    /// L'enchaînement au clic installe un moniteur global de souris : il ne
+    /// doit jamais s'activer tout seul à la faveur d'une mise à jour, pas plus
+    /// que les aperçus. Et la touche à tenir est `fn`, la seule que le jeu
+    /// ignore sur un clic.
+    @Test("L'enchaînement au clic est éteint par défaut, sur fn, et se relit")
     func enchainementAuClic() {
         let (prefs, store) = neuves()
         #expect(prefs.advanceOnClick == false)
-
-        // Sa bascule a un défaut, elle : ce raccourci n'est réservé auprès du
-        // système que lorsque la fonction est active.
-        #expect(prefs.advanceArmHotKey == HotKey.defaultAdvanceArm)
-        #expect(!HotKey.digitRow.contains(HotKey.defaultAdvanceArm.keyCode))
+        #expect(prefs.advanceModifier == .fn)
 
         prefs.advanceOnClick = true
-        prefs.advanceArmHotKey = HotKey(keyCode: 96, modifiers: 0)   // F5
+        prefs.advanceModifier = .option
 
         let relues = Preferences.forTesting(store: store)
         #expect(relues.advanceOnClick == true)
-        #expect(relues.advanceArmHotKey == HotKey(keyCode: 96, modifiers: 0))
+        #expect(relues.advanceModifier == .option)
     }
 
-    /// Une installation antérieure à la bascule ne l'a jamais eue : elle doit la
-    /// recevoir, sans que cela confisque quoi que ce soit — la fonction reste
-    /// éteinte, et le raccourci n'est réservé qu'avec elle.
-    @Test("La bascule du mode arrive aux installations qui ne l'avaient pas")
-    func repriseDeLaBascule() {
+    /// Le mode « enchaîner » d'avant était une bascule armée par un raccourci,
+    /// `advanceArmHotKey`. Une sauvegarde qui porte encore cette clé se relit
+    /// sans broncher, la fonction sur son nouveau défaut.
+    @Test("Une sauvegarde de l'ancien mode « enchaîner » se relit")
+    func ancienModeEnchainer() {
         let ancien = """
         {"characterOrder":[],"hotKeys":[],"barVisible":true,"showNumbers":true,
-         "slotCount":5,"defaultsVersion":3}
+         "slotCount":5,"defaultsVersion":6,"advanceOnClick":true,
+         "advanceArmHotKey":{"keyCode":50,"modifiers":256}}
         """
         let store = StockageMemoire([Preferences.key: Data(ancien.utf8)])
 
         let prefs = Preferences.forTesting(store: store)
-        #expect(prefs.advanceArmHotKey == HotKey.defaultAdvanceArm)
-        #expect(prefs.advanceOnClick == false)
+        #expect(prefs.advanceOnClick == true)
+        #expect(prefs.advanceModifier == .fn)
     }
 
     @Test("Une sauvegarde illisible ramène aux valeurs par défaut")

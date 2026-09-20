@@ -46,7 +46,7 @@ struct ShortcutsSettings: View {
                             + "de la barre, la barre de menus ou le clic droit. Sans défaut : à toi de choisir.",
                             hotKey: hotKey(\.arrangeHotKey))
                 ShortcutRow(label: "Lancer la session", help: "Le geste du matin : range selon la dernière "
-                            + "disposition, bascule sur le perso 1, arme l'enchaînement si le mode est disponible.",
+                            + "disposition, puis bascule sur le perso 1.",
                             hotKey: hotKey(\.sessionHotKey))
                 if !prefs.equipes.isEmpty {
                     ShortcutRow(label: "Équipe suivante", help: "Tourne : tous les persos, équipe 1, équipe 2… "
@@ -80,28 +80,45 @@ struct ShortcutsSettings: View {
             }
 
             Section {
-                Toggle("Mode « enchaîner » disponible", isOn: Binding(
+                Toggle("Passer au perso suivant après un clic avec la touche tenue", isOn: Binding(
                     get: { prefs.advanceOnClick },
-                    set: { prefs.advanceOnClick = $0; ClickAdvanceWatcher.shared.apply(); rebind() }
+                    set: { prefs.advanceOnClick = $0; ClickAdvanceWatcher.shared.apply() }
                 ))
                 if prefs.advanceOnClick {
-                    ShortcutRow(label: "Activer / couper le mode", hotKey: hotKey(\.advanceArmHotKey))
                     HStack {
-                        Text("Clics captés : \(clicks.seenClicks)")
+                        Text("Touche à tenir")
+                        HelpTip("Le jeu reçoit le clic avec la touche dessus, Synfus ne la retire pas. fn est la "
+                                + "seule que le jeu ignore ; ⇧ et ⌥ ont un sens dans Dofus, ⌃-clic est un clic droit "
+                                + "pour macOS, et un ⌘-clic ne parle plus aux PNJ. Si relâcher fn ouvre les émojis, "
+                                + "règle « Appuyer sur la touche 🌐 pour » sur « Ne rien faire » dans "
+                                + "Réglages Système → Clavier.")
+                        Spacer()
+                        Picker("", selection: $prefs.advanceModifier) {
+                            ForEach(ClickModifier.allCases) { Text($0.label).tag($0) }
+                        }
+                        .labelsHidden()
+                        .frame(width: 150)
+                    }
+                    HStack {
+                        Text("Clics captés sur le jeu : \(clicks.seenClicks)")
                             .font(.system(size: 11))
                             .foregroundStyle(clicks.seenClicks == 0 ? Color.orange : Color.secondary)
                         if clicks.seenClicks == 0 {
                             HelpTip("S'il reste à zéro après avoir cliqué dans le jeu, macOS ne livre pas les "
                                     + "évènements : Réglages Système → Confidentialité et sécurité → Surveillance de la saisie.")
                         }
+                        if let dernier = clicks.lastModifiers {
+                            Text("· touches au dernier clic : \(dernier)")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
             } header: {
-                SectionTitle("Enchaîner les persos", help: "Mode actif — par le raccourci ou la flèche verte de la "
-                             + "barre —, chaque clic sur un client part normalement, puis Synfus bascule sur le perso "
-                             + "suivant. Le clic est nu : le jeu reçoit exactement ce qu'il attend. Tu cliques toujours "
-                             + "une fois par perso ; seul le changement de fenêtre est automatique. Synfus n'émet ni ne "
-                             + "rejoue aucun clic. Le mode reste actif jusqu'à ce que tu le coupes.")
+                SectionTitle("Enchaîner les persos au clic", help: "Tiens la touche, clique sur le jeu : le clic part "
+                             + "normalement, puis Synfus bascule sur le perso suivant — comme « Perso suivant » au "
+                             + "clavier. Un clic sans la touche reste un clic. Tu cliques toujours une fois par perso ; "
+                             + "seul le changement de fenêtre est automatique. Synfus n'émet ni ne rejoue aucun clic.")
             }
 
             Section {

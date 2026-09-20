@@ -533,16 +533,12 @@ final class WindowManager: ObservableObject {
     }
 
     /// Le geste « lancer la session » : ranger les fenêtres selon la dernière
-    /// disposition, basculer sur le premier perso, et armer l'enchaînement si
-    /// le mode est disponible. Rien que des gestes existants, enchaînés — et
-    /// toujours aucun évènement émis.
+    /// disposition, puis basculer sur le premier perso. Rien que des gestes
+    /// existants, enchaînés — et toujours aucun évènement émis.
     func lancerSession() {
         Task {
             await WindowArranger.shared.appliquerDerniere()
             if !effectif.isEmpty { focus(slot: 0) }
-            if prefs.advanceOnClick, !ClickAdvanceWatcher.shared.armed {
-                ClickAdvanceWatcher.shared.toggleArmed()
-            }
         }
     }
 

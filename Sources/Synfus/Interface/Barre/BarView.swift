@@ -5,7 +5,6 @@ struct BarView: View {
     @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var watcher = AttentionWatcher.shared
     @ObservedObject private var icons = ClassIconStore.shared
-    @ObservedObject private var clicks = ClickAdvanceWatcher.shared
     @ObservedObject private var invitations = InvitationClipboard.shared
     @State private var dragging: String?
     @State private var chipFrames: [String: CGRect] = [:]
@@ -166,7 +165,6 @@ struct BarView: View {
             }
             separator
             arrangeMenu
-            if prefs.advanceOnClick { armToggle }
             autoFocusToggle
         }
     }
@@ -176,29 +174,6 @@ struct BarView: View {
     /// introuvables.
     private var arrangeMenu: some View {
         ArrangeMenuButton()
-    }
-
-    /// Bascule du mode « enchaîner » : tant qu'il est actif, un clic **nu** sur
-    /// un client de jeu passe au perso suivant. C'est aussi le seul témoin d'un
-    /// mode qui ne s'éteint pas tout seul — d'où la couleur franche.
-    private var armToggle: some View {
-        let on = clicks.armed
-        return ModeButton(
-            icone: on ? "arrow.right.circle.fill" : "arrow.right.circle",
-            teinte: .green,
-            actif: on,
-            aide: on
-                ? "Enchaînement actif — chaque clic sur le jeu passe au perso suivant, "
-                  + "jusqu'à ce que tu le coupes (\(armShortcut))"
-                : "Activer l'enchaînement : chaque clic sur le jeu passera au perso "
-                  + "suivant (\(armShortcut))"
-        ) {
-            ClickAdvanceWatcher.shared.toggleArmed()
-        }
-    }
-
-    private var armShortcut: String {
-        prefs.advanceArmHotKey?.displayString ?? "aucun raccourci"
     }
 
     /// Bascule du passage automatique. Doublé par un raccourci global, pour
@@ -285,7 +260,7 @@ struct BarView: View {
                         .foregroundStyle(active ? Color.white.opacity(0.7) : Color.secondary.opacity(0.8))
                 }
 
-                // Rien de plus : le mode « enchaîner » suit l'ordre de la barre,
+                // Rien de plus : l'enchaînement au clic suit l'ordre de la barre,
                 // et le surlignage du perso courant dit déjà où l'on en est. Une
                 // coche « déjà passé » n'ajoutait qu'un clignotement de plus.
             }

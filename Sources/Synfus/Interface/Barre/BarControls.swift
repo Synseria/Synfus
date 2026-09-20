@@ -62,8 +62,8 @@ struct BarBackground: ViewModifier {
     }
 }
 
-/// Gabarit commun des bascules de mode — flèche d'enchaînement, éclair du
-/// passage automatique. Au repos le bouton est nu : le fond n'apparaît qu'au
+/// Gabarit commun des bascules de mode — éclair du passage automatique, menu
+/// de rangement. Au repos le bouton est nu : le fond n'apparaît qu'au
 /// survol ou quand le mode est actif, la barre ne montre plus une rangée de
 /// carrés gris en permanence.
 struct ModeButton: View {
