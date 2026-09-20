@@ -98,6 +98,12 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>CFBundleShortVersionString</key><string>$VERSION</string>
     <key>CFBundleVersion</key>           <string>$BUILD</string>
     <key>LSMinimumSystemVersion</key>    <string>14.0</string>
+    <!-- Les langues de l'interface (Resources/Localisation/<code>.json) : les
+         déclarer fait apparaître Synfus dans Réglages Système › Langue et
+         région › Applications, et Locale.preferredLanguages suit ce choix. -->
+    <key>CFBundleDevelopmentRegion</key> <string>fr</string>
+    <key>CFBundleLocalizations</key>
+    <array><string>fr</string><string>en</string><string>es</string></array>
     <!-- Accessory : pas d'icône dans le Dock, l'app vit dans la barre de menus. -->
     <key>LSUIElement</key>               <true/>
     <!-- Motif affiché par macOS lors de la demande d'autorisation, pour les
@@ -113,6 +119,9 @@ if [ -f "Resources/$NAME.icns" ]; then
     cp "Resources/$NAME.icns" "$APP/Contents/Resources/"
     /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string $NAME" "$APP/Contents/Info.plist"
 fi
+
+# Les libellés de l'interface, une table JSON par langue.
+cp -R "Resources/Localisation" "$APP/Contents/Resources/Localisation"
 
 # Les visuels Ankama, s'ils ont été téléchargés (Tools/fetch-ankama-assets.sh) :
 # embarqués dans ce build-ci, pour cette machine — le dossier est ignoré par

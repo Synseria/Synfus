@@ -22,11 +22,11 @@ struct DiagnosticSettings: View {
             }
             Divider()
             HStack {
-                Button("Rafraîchir") { manager.refresh() }
+                Button(L("commun.rafraichir")) { manager.refresh() }
                 // La seconde qu'un client gelé coûte se paie ici, hors main :
                 // si elle monte à ~1 s alors que la barre reste fluide, c'est
                 // que le déport fait son travail.
-                Text("dernier inventaire : \(Int(manager.lastInventoryDuration * 1000)) ms")
+                Text(L("diagnostic.dernierInventaire", Int(manager.lastInventoryDuration * 1000)))
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(manager.lastInventoryDuration > 0.5 ? .orange : .secondary)
                 Spacer()
@@ -38,20 +38,16 @@ struct DiagnosticSettings: View {
     @ViewBuilder
     private var content: some View {
             HStack(spacing: 6) {
-                Text("Fenêtres détectées").font(.system(size: 12, weight: .semibold))
-                HelpTip("Les titres bruts des fenêtres Dofus. Si le nom affiché ne correspond pas à ton perso, "
-                        + "c'est que le client n'expose pas le nom dans son titre ; la numérotation suit alors "
-                        + "l'ordre de lancement, à réorganiser dans l'onglet Persos.")
+                Text(L("diagnostic.fenetres")).font(.system(size: 12, weight: .semibold))
+                HelpTip(L("diagnostic.fenetres.aide"))
             }
 
             if manager.clients.isEmpty {
                 Text(manager.accessibilityGranted
-                     ? "Aucune fenêtre Dofus détectée. Le jeu est-il lancé ?"
+                     ? L("diagnostic.aucuneFenetre")
                      : AppIntegrity.isQuarantined
-                       ? "Autorisation Accessibilité manquante — et cette copie est "
-                         + "en quarantaine, ce qui l'empêchera de prendre effet. "
-                         + "Voir l'onglet Général."
-                       : "Autorisation Accessibilité manquante.")
+                       ? L("diagnostic.accessibiliteManquanteQuarantaine")
+                       : L("diagnostic.accessibiliteManquante"))
                     .font(.system(size: 11))
                     .foregroundStyle(.orange)
                     .padding(.top, 6)
@@ -61,7 +57,7 @@ struct DiagnosticSettings: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(client.name)
                                     .font(.system(size: 12, weight: .medium))
-                                Text("titre : \"\(client.rawTitle)\"")
+                                Text(L("diagnostic.titre", client.rawTitle))
                                     .font(.system(size: 10, design: .monospaced))
                                     .foregroundStyle(.secondary)
                                     .textSelection(.enabled)
@@ -70,10 +66,10 @@ struct DiagnosticSettings: View {
                                     .foregroundStyle(.tertiary)
                                 if previews.authorized {
                                     Text(previews.unmatched.contains(client.slotKey)
-                                         ? "aperçu : fenêtre introuvable à la capture"
+                                         ? L("diagnostic.apercu.introuvable")
                                          : previews.previews[client.slotKey] != nil
-                                           ? "aperçu : capturé"
-                                           : "aperçu : pas encore demandé")
+                                           ? L("diagnostic.apercu.capture")
+                                           : L("diagnostic.apercu.pasDemande"))
                                         .font(.system(size: 10, design: .monospaced))
                                         .foregroundStyle(.tertiary)
                                 }
@@ -91,12 +87,11 @@ struct DiagnosticSettings: View {
             if !freezes.journal.isEmpty {
                 Divider().padding(.vertical, 4)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Clients gelés achevés")
+                    Text(L("diagnostic.gelesAcheves"))
                         .font(.system(size: 12, weight: .semibold))
                     ForEach(freezes.journal.suffix(5)) { abattu in
-                        Text("\(abattu.date.formatted(date: .omitted, time: .standard))  "
-                             + "\(abattu.nom) (pid \(abattu.pid)) — sans fenêtre et muet "
-                             + "à trois sondes, forcé à quitter")
+                        Text(abattu.date.formatted(date: .omitted, time: .standard) + "  "
+                             + L("diagnostic.gelesAcheves.ligne", abattu.nom, Int(abattu.pid)))
                             .font(.system(size: 10, design: .monospaced))
                             .foregroundStyle(.secondary)
                     }
@@ -116,28 +111,27 @@ struct DiagnosticSettings: View {
     private var arrangementSection: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
-                Text("Dernier rangement").font(.system(size: 12, weight: .semibold))
-                HelpTip("Une fenêtre en plein écran n'est jamais déplacée, et un perso d'un autre bureau est "
-                        + "hors de portée de l'Accessibilité — bascule dessus, puis relance le rangement.")
+                Text(L("diagnostic.rangement")).font(.system(size: 12, weight: .semibold))
+                HelpTip(L("diagnostic.rangement.aide"))
             }
 
             if let rapport = arranger.dernierRapport {
-                Text("\(rapport.titre) — écran « \(rapport.ecran) » — "
-                     + rapport.date.formatted(date: .omitted, time: .standard))
+                Text(L("diagnostic.rangement.entete", rapport.titre, rapport.ecran)
+                     + " — " + rapport.date.formatted(date: .omitted, time: .standard))
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(.secondary)
                 if !rapport.rangees.isEmpty {
-                    Text("Rangés : \(rapport.rangees.joined(separator: ", "))")
+                    Text(L("diagnostic.rangement.ranges", rapport.rangees.joined(separator: ", ")))
                         .font(.system(size: 10, design: .monospaced))
                         .foregroundStyle(.secondary)
                 }
                 ForEach(rapport.ecartees) { ecartee in
-                    Text("Écarté : \(ecartee.nom) — \(ecartee.raison)")
+                    Text(L("diagnostic.rangement.ecarte", ecartee.nom, ecartee.raison))
                         .font(.system(size: 10, design: .monospaced))
                         .foregroundStyle(.orange)
                 }
             } else {
-                Text("Aucun rangement pour l'instant.")
+                Text(L("diagnostic.rangement.aucun"))
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }
@@ -149,19 +143,16 @@ struct DiagnosticSettings: View {
     private var spellRecognitionSection: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
-                Text("Reconnaissance des sorts").font(.system(size: 12, weight: .semibold))
-                HelpTip("Capture la fenêtre du perso actif en résolution native, cherche la barre de sorts et "
-                        + "compare chaque case aux icônes de sa classe. Les captures restent dans "
-                        + "~/Library/Logs/Synfus/captures. « Capturer » puis « Analyser » ; le rapport dit ce qui "
-                        + "a été trouvé et avec quelle confiance.")
+                Text(L("diagnostic.sorts")).font(.system(size: 12, weight: .semibold))
+                HelpTip(L("diagnostic.sorts.aide"))
                 Spacer()
-                Button("Capturer") { spells.captureActive() }
+                Button(L("diagnostic.sorts.capturer")) { spells.captureActive() }
                     .disabled(spells.busy || !previews.authorized)
-                    .help(previews.authorized ? "Capture la fenêtre du perso actif" : "Autorise l'enregistrement de l'écran (onglet Général)")
-                Button("Analyser") { spells.analyzeLast() }.disabled(spells.busy)
-                Button("Fichier…") { spells.analyzeFile() }.help("Analyser un PNG existant")
+                    .help(previews.authorized ? L("diagnostic.sorts.capturer.aide") : L("diagnostic.sorts.capturer.nonAutorise"))
+                Button(L("diagnostic.sorts.analyser")) { spells.analyzeLast() }.disabled(spells.busy)
+                Button(L("diagnostic.sorts.fichier")) { spells.analyzeFile() }.help(L("diagnostic.sorts.fichier.aide"))
                 Button { spells.revealCaptures() } label: { Image(systemName: "folder") }
-                    .help("Ouvrir le dossier des captures")
+                    .help(L("diagnostic.sorts.dossier"))
             }
             .font(.system(size: 11))
             if let picture = spells.lastPicture {
@@ -169,9 +160,9 @@ struct DiagnosticSettings: View {
                     .frame(maxWidth: .infinity)
                     .frame(height: zoomCapture ? 220 : 300)
                 HStack {
-                    Toggle("Zoomer sur la barre", isOn: $zoomCapture).font(.system(size: 11))
+                    Toggle(L("diagnostic.sorts.zoomer"), isOn: $zoomCapture).font(.system(size: 11))
                         .disabled(spells.lastBar == nil)
-                    Button("Ouvrir en grand") { spells.revealLastCapture() }.font(.system(size: 11))
+                    Button(L("diagnostic.sorts.ouvrirEnGrand")) { spells.revealLastCapture() }.font(.system(size: 11))
                 }
             }
             if !spells.report.isEmpty {
@@ -188,21 +179,17 @@ struct DiagnosticSettings: View {
     private var attentionProbeSection: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text("Appels d'attention").font(.system(size: 12, weight: .semibold))
-                HelpTip("Surveille les deux seuls signaux qu'une app émet vers l'extérieur : le titre de sa "
-                        + "fenêtre et son icône du Dock. Démarre la sonde, joue un combat, et regarde si quelque "
-                        + "chose bouge quand ton tour arrive. L'appariement icône → perso suppose que l'ordre des "
-                        + "icônes suit l'ordre de lancement : vérifie que le bon perso est signalé. Un rebond "
-                        + "éloigne une icône de son bandeau ; au repos, les écarts ne doivent pas bouger.")
+                Text(L("diagnostic.attention")).font(.system(size: 12, weight: .semibold))
+                HelpTip(L("diagnostic.attention.aide"))
                 Spacer()
-                Button(probe.running ? "Arrêter" : "Démarrer la sonde") { probe.toggle() }
+                Button(probe.running ? L("diagnostic.attention.arreter") : L("diagnostic.attention.demarrer")) { probe.toggle() }
                     .font(.system(size: 11))
             }
 
 
             if !attention.pairing.isEmpty {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Appariement icône du Dock → perso")
+                    Text(L("diagnostic.attention.appariement"))
                         .font(.system(size: 11, weight: .medium))
                     ForEach(Array(attention.pairing.enumerated()), id: \.offset) { _, pair in
                         Text("\(pair.dock)  →  \(pair.character)")
@@ -215,7 +202,7 @@ struct DiagnosticSettings: View {
 
             if let lecture = attention.dockReading {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Relevé du Dock")
+                    Text(L("diagnostic.attention.releve"))
                         .font(.system(size: 11, weight: .medium))
                     Text(lecture)
                         .font(.system(size: 10, design: .monospaced))
@@ -225,13 +212,13 @@ struct DiagnosticSettings: View {
             }
 
             if !probe.watchedItems.isEmpty {
-                Text("Icônes surveillées : " + probe.watchedItems.joined(separator: ", "))
+                Text(L("diagnostic.attention.iconesSurveillees", probe.watchedItems.joined(separator: ", ")))
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(.secondary)
             }
 
             HStack(spacing: 10) {
-                Button("Ouvrir le journal") { probe.revealLog() }
+                Button(L("diagnostic.attention.journal")) { probe.revealLog() }
                     .font(.system(size: 11))
                 Text(AttentionProbe.logURL.path)
                     .font(.system(size: 9, design: .monospaced))
@@ -243,7 +230,7 @@ struct DiagnosticSettings: View {
 
             if probe.events.isEmpty {
                 if probe.running {
-                    Text("En écoute…")
+                    Text(L("diagnostic.attention.enEcoute"))
                         .font(.system(size: 11))
                         .foregroundStyle(.tertiary)
                 }

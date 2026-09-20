@@ -291,8 +291,8 @@ private struct PreviewPanelView: View {
     /// fixe qui commande, l'attente s'y loge.
     private var placeholder: some View {
         Text(service.authorized
-             ? "Capture en cours…"
-             : "Autorisation « Enregistrement de l'écran » requise")
+             ? L("apercu.captureEnCours")
+             : L("apercu.autorisationRequise"))
             .font(.system(size: 10))
             .foregroundStyle(.secondary)
             .multilineTextAlignment(.center)

@@ -12,10 +12,10 @@ struct ClassesSettings: View {
         Form {
             Section {
                 HStack {
-                    Button("Ouvrir le dossier") { NSWorkspace.shared.open(icons.directory) }
-                    Button("Recharger") { icons.reloadAll() }
+                    Button(L("classes.ouvrirDossier")) { NSWorkspace.shared.open(icons.directory) }
+                    Button(L("classes.recharger")) { icons.reloadAll() }
                     Spacer()
-                    Text("Certaines illustrations sont la propriété d'Ankama Studio et de Dofus — Tous droits réservés.")
+                    Text(L("classes.mentionAnkama"))
                         .font(.system(size: 9)).foregroundStyle(.tertiary).lineLimit(2)
                 }
                 .font(.system(size: 11))
@@ -23,13 +23,7 @@ struct ClassesSettings: View {
                     classRow(breed)
                 }
             } header: {
-                SectionTitle("Icônes de classe", help: "Chaque classe peut recevoir l'image de ton choix : un "
-                             + "portrait, une capture, n'importe quel PNG ou JPEG — par « Choisir… », par glisser-"
-                             + "déposer, ou en déposant iop.png, cra.png… dans le dossier puis « Recharger ». Sans "
-                             + "image, Synfus affiche la pastille colorée.\n\nLes emblèmes officiels viennent de "
-                             + "Tools/fetch-ankama-assets.sh, qui les télécharge pour ton usage personnel dans "
-                             + "Resources/Ankama, embarqué par build.sh. Synfus ne redistribue aucune image du jeu. "
-                             + "Une icône déposée ici garde la priorité sur l'embarquée.")
+                SectionTitle(L("classes.icones"), help: L("classes.icones.aide"))
             }
         }
         .formStyle(.grouped)
@@ -55,15 +49,15 @@ struct ClassesSettings: View {
             }
             .frame(width: 24, height: 24)
 
-            Text(breed.label)
+            Text(breed.nomLocalise)
 
             Spacer()
 
             if custom != nil, !icons.isBundled(forKey: breed.key) {
-                Button("Retirer") { icons.removeIcon(forKey: breed.key) }
+                Button(L("classes.retirer")) { icons.removeIcon(forKey: breed.key) }
                     .font(.system(size: 11))
             }
-            Button(custom == nil ? "Choisir…" : "Remplacer…") { chooseIcon(for: breed) }
+            Button(custom == nil ? L("classes.choisir") : L("classes.remplacer")) { chooseIcon(for: breed) }
                 .font(.system(size: 11))
         }
         .padding(.vertical, 1)
@@ -74,7 +68,7 @@ struct ClassesSettings: View {
 
     private func chooseIcon(for breed: DofusClass.Breed) {
         let panel = NSOpenPanel()
-        panel.title = "Icône pour \(breed.label)"
+        panel.title = L("classes.iconePour", breed.nomLocalise)
         panel.allowedContentTypes = [.image]
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false

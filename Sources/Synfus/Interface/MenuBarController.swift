@@ -51,10 +51,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         manager.refreshSoon(after: 0.05)
 
         if !manager.accessibilityGranted {
-            add(to: menu, title: "Autoriser Synfus…", action: #selector(requestAccess))
+            add(to: menu, title: L("menu.autoriser"), action: #selector(requestAccess))
             menu.addItem(.separator())
         } else if manager.clients.isEmpty {
-            let empty = NSMenuItem(title: "Aucun perso connecté", action: nil, keyEquivalent: "")
+            let empty = NSMenuItem(title: L("barre.aucunPerso"), action: nil, keyEquivalent: "")
             empty.isEnabled = false
             menu.addItem(empty)
             menu.addItem(.separator())
@@ -76,7 +76,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
                 }
             }
             if manager.effectif.isEmpty {
-                let empty = NSMenuItem(title: "Aucun perso de l'équipe connecté", action: nil, keyEquivalent: "")
+                let empty = NSMenuItem(title: L("menu.aucunPersoEquipe"), action: nil, keyEquivalent: "")
                 empty.isEnabled = false
                 menu.addItem(empty)
             }
@@ -84,33 +84,33 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             menu.addItem(.separator())
         }
 
-        let barTitle = Preferences.shared.barVisible ? "Masquer la barre" : "Afficher la barre"
+        let barTitle = Preferences.shared.barVisible ? L("menu.masquerBarre") : L("menu.afficherBarre")
         add(to: menu, title: barTitle, action: #selector(toggleBar))
-        add(to: menu, title: "Recentrer la barre", action: #selector(recenterBar))
+        add(to: menu, title: L("menu.recentrerBarre"), action: #selector(recenterBar))
         menu.addItem(arrangeSubmenu(enabled: manager.accessibilityGranted
                                              && !manager.clients.isEmpty))
         if !manager.clients.isEmpty {
-            let session = add(to: menu, title: "Lancer la session", action: #selector(launchSession))
+            let session = add(to: menu, title: L("menu.lancerSession"), action: #selector(launchSession))
             if let hotKey = Preferences.shared.sessionHotKey {
-                session.attributedTitle = attributed(name: "Lancer la session",
+                session.attributedTitle = attributed(name: L("menu.lancerSession"),
                                                      shortcut: hotKey.displayString)
             }
         }
-        add(to: menu, title: "Réglages…", action: #selector(openSettings))
+        add(to: menu, title: L("menu.reglages"), action: #selector(openSettings))
         menu.addItem(.separator())
         // Reconstruit à chaque ouverture : l'item n'apparaît que s'il y a
         // quelqu'un à fermer, inutile de jouer avec `isEnabled`.
         if !manager.clients.isEmpty {
-            add(to: menu, title: "Fermer tous les persos", action: #selector(closeAllClients))
+            add(to: menu, title: L("menu.fermerTous"), action: #selector(closeAllClients))
         }
-        add(to: menu, title: "Quitter Synfus", action: #selector(quit))
+        add(to: menu, title: L("menu.quitter"), action: #selector(quit))
     }
 
     /// Sous-menu « Ranger les fenêtres » : une entrée par disposition. Le
     /// raccourci, s'il existe, est montré sur la dernière disposition employée —
     /// c'est elle qu'il rejoue.
     private func arrangeSubmenu(enabled: Bool) -> NSMenuItem {
-        let parent = NSMenuItem(title: "Ranger les fenêtres", action: nil, keyEquivalent: "")
+        let parent = NSMenuItem(title: L("menu.rangerFenetres"), action: nil, keyEquivalent: "")
         let submenu = NSMenu()
         let prefs = Preferences.shared
         for (index, disposition) in Disposition.allCases.enumerated() {
@@ -129,8 +129,8 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             submenu.addItem(item)
         }
         submenu.addItem(.separator())
-        for (titre, action) in [("Tout en plein écran", #selector(fullscreenAll)),
-                                ("Tout sortir du plein écran", #selector(unfullscreenAll))] {
+        for (titre, action) in [(L("rangement.toutPleinEcran"), #selector(fullscreenAll)),
+                                (L("rangement.toutSortirPleinEcran"), #selector(unfullscreenAll))] {
             let item = NSMenuItem(title: titre, action: enabled ? action : nil,
                                   keyEquivalent: "")
             item.target = self
@@ -146,18 +146,18 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     private func teamSubmenu() -> NSMenuItem {
         let manager = WindowManager.shared
         let prefs = Preferences.shared
-        let parent = NSMenuItem(title: "Équipe", action: nil, keyEquivalent: "")
+        let parent = NSMenuItem(title: L("equipes.equipe"), action: nil, keyEquivalent: "")
         if let hotKey = prefs.equipeSuivanteHotKey {
-            parent.attributedTitle = attributed(name: "Équipe", shortcut: hotKey.displayString)
+            parent.attributedTitle = attributed(name: L("equipes.equipe"), shortcut: hotKey.displayString)
         }
         let submenu = NSMenu()
-        let tous = NSMenuItem(title: "Tous", action: #selector(selectTeam(_:)), keyEquivalent: "")
+        let tous = NSMenuItem(title: L("equipes.tous"), action: #selector(selectTeam(_:)), keyEquivalent: "")
         tous.target = self
         tous.tag = 0
         if manager.equipeActive == nil { tous.state = .on }
         submenu.addItem(tous)
         for (index, equipe) in prefs.equipes.enumerated() {
-            let item = NSMenuItem(title: "Équipe \(index + 1) — " + equipe.membres.joined(separator: ", "),
+            let item = NSMenuItem(title: L("equipes.equipeMembres", index + 1, equipe.membres.joined(separator: ", ")),
                                   action: #selector(selectTeam(_:)), keyEquivalent: "")
             item.target = self
             item.tag = index + 1

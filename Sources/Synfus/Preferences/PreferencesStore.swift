@@ -29,8 +29,8 @@ enum MenuBarIcon: String, Codable, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .logo: return "Logo Synfus"
-        case .symbole: return "Symbole système"
+        case .logo: return L("general.icone.logo")
+        case .symbole: return L("general.icone.symbole")
         }
     }
 }

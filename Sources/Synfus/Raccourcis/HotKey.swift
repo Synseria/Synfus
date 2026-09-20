@@ -60,6 +60,7 @@ struct HotKey: Codable, Equatable, Hashable {
     /// déclenchait pas.
     static func keyName(_ code: UInt32) -> String {
         if let name = functionKeyNames[code] { return name }
+        if code == spaceKey { return L("touche.espace") }
         if let name = namedKeys[code] { return name }
         if let name = positionalKeys[code] { return name }
         if let typed = layoutCharacter(code) { return typed }
@@ -141,9 +142,12 @@ struct HotKey: Codable, Equatable, Hashable {
         88: "num6", 89: "num7", 91: "num8", 92: "num9", 82: "num0",
     ]
 
+    /// La barre d'espace : nommée, mais dans la langue de l'interface.
+    private static let spaceKey: UInt32 = 49
+
     /// Touches qui ne tapent rien : la disposition n'a rien à en dire.
     private static let namedKeys: [UInt32: String] = [
-        48: "⇥", 49: "espace", 36: "↩", 51: "⌫", 53: "⎋",
+        48: "⇥", 36: "↩", 51: "⌫", 53: "⎋",
         123: "←", 124: "→", 125: "↓", 126: "↑",
         115: "⇱", 119: "⇲", 116: "⇞", 121: "⇟",
     ]

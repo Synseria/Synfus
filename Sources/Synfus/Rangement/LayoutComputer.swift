@@ -19,10 +19,10 @@ enum Disposition: String, Codable, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .coteACote: "Côte à côte"
-        case .mosaique: "Mosaïque"
-        case .principale: "Un grand + vignettes"
-        case .empilee: "Plein cadre, empilés"
+        case .coteACote: L("rangement.coteACote")
+        case .mosaique: L("rangement.mosaique")
+        case .principale: L("rangement.principale")
+        case .empilee: L("rangement.empilee")
         }
     }
 

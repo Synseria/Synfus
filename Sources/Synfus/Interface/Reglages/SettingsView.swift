@@ -8,13 +8,13 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .general: return "Général"
-        case .raccourcis: return "Raccourcis"
-        case .persos: return "Persos"
-        case .sorts: return "Sorts"
+        case .general: return L("reglages.general")
+        case .raccourcis: return L("reglages.raccourcis")
+        case .persos: return L("reglages.persos")
+        case .sorts: return L("reglages.sorts")
         case .streamDeck: return "Stream Deck"
-        case .classes: return "Classes"
-        case .diagnostic: return "Diagnostic"
+        case .classes: return L("reglages.classes")
+        case .diagnostic: return L("reglages.diagnostic")
         }
     }
 

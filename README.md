@@ -24,6 +24,10 @@ connectés et permet de passer de l'un à l'autre, d'un clic ou au clavier.
   la team dans l'ordre — un clic par personnage, toujours.
 - **Gestion des fenêtres** : côte à côte, mosaïque, un grand + vignettes,
   plein écran, « lancer la session ».
+- **En français, anglais ou espagnol** : Synfus suit la langue de macOS, ou
+  celle choisie dans ses réglages. Les traductions sont dans
+  `Resources/Localisation/` — un fichier JSON par langue, à corriger ou
+  compléter d'une pull request.
 - **Équipes** (optionnel) : à huit comptes, on joue rarement tout le monde
   d'un coup. Jusqu'à quatre équipes, composées en glissant une pastille sur
   la seconde rangée de la barre ; l'équipe active restreint la barre, les

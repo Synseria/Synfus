@@ -4,9 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Langue
 
-Le dépôt est intégralement en français : commentaires, libellés d'interface,
-messages des scripts, documentation. Toute contribution doit s'y tenir, accents
-compris.
+Le dépôt est intégralement en français : commentaires, clés et textes source
+de l'interface, messages des scripts, documentation. Toute contribution doit
+s'y tenir, accents compris. L'interface est traduite en anglais et en espagnol
+— voir « Localisation » : un libellé n'est jamais écrit en dur dans une vue,
+il passe par `L("clé")` et `Resources/Localisation/fr.json`.
 
 ## Commandes
 
@@ -110,6 +112,7 @@ de son domaine ; un fichier qui n'en a pas est le signe d'un domaine à créer.
 | `Preferences/` | `Preferences` et son protocole de stockage |
 | `Classes/` | Classes du jeu et icônes fournies par l'utilisateur |
 | `Marque/` | La Couvée : `SynfusMark` (CoreGraphics pur) et `SynfusGlyph` |
+| `Localisation/` | `L()`, les tables JSON par langue, le choix de langue |
 | `Interface/` | `MenuBarController` ; `Barre/` (barre flottante et ses contrôles) ; `Reglages/` (une vue par onglet + contrôleur de fenêtre) |
 | `StreamDeck/` | L'interface physique contextuelle : `Sorts/` (reconnaissance de la barre), `Profils/` (sorts par perso, touches), `Liaison/` (protocole et socket), `Combat/` (détection combat) |
 | `../SynfusDeck/` | Le plugin Elgato — second target, binaire séparé, sans code partagé : le protocole JSON est le contrat |
@@ -587,6 +590,53 @@ change, personne ne recompile. La pastille copiée porte `CopiedBadge` 1,2 s,
 en overlay — la barre ne change pas de taille. « Rétablir les raccourcis par
 défaut » (`Preferences.resetShortcuts`) remet chaque raccourci à son défaut,
 efface ceux qui n'en ont pas, garde le nombre d'emplacements.
+
+### Localisation
+
+L'interface parle français, anglais ou espagnol — les trois langues des
+joueurs de Dofus. [Localisation.swift](Sources/Synfus/Localisation/Localisation.swift)
+tient tout : le code ne porte que des **clés** (`L("barre.aucunPerso")`,
+`L("raccourcis.perso", slot + 1)`), et les textes vivent dans
+[Resources/Localisation/](Resources/Localisation/) — `fr.json`, `en.json`,
+`es.json`, un objet plat trié, lisible par qui veut traduire. Le français est
+la langue source et le repli : une clé absente d'une traduction s'affiche en
+français, une clé absente de tout s'affiche telle quelle — visible, donc
+corrigeable. Les arguments suivent `String(format:)` : `%@` pour un texte,
+`%lld` pour un entier (jamais un `Int32` — `pid_t` se convertit en `Int`).
+
+Pas de `.lproj` ni de `Bundle.module`, et c'est un choix : `build.sh` copie
+le dossier dans `Contents/Resources/Localisation`, et sans bundle — `swift
+run`, les tests — `L10n.dossier` retombe sur celui du dépôt via `#filePath`.
+La table est chargée **une fois**, dans un `static let` (sûr quel que soit
+le fil qui appelle `L()` en premier) : changer de langue veut dire relancer.
+La langue vient de `Locale.preferredLanguages` (`Langue.choisir`, pure,
+testée : première préférence reconnue, français à défaut), qui reflète aussi
+le choix par application de Réglages Système › Langue et région — possible
+parce que `build.sh` déclare `CFBundleLocalizations` dans l'Info.plist. Le
+réglage « Langue » de l'onglet Général écrit la même clé, `AppleLanguages`,
+dans le domaine de l'app (`LangueReglage`), et propose de relancer.
+
+Ce qui est traduit : les réglages, la barre, les menus, les rapports du
+Diagnostic. Ce qui reste en français : les journaux, `--dump-*`, les onglets
+Sorts et Stream Deck au-delà de leur bascule (fonction en pause), et le
+plugin `SynfusDeck`. `LocalisationTests` verrouille l'ensemble : mêmes clés
+dans les trois tables, mêmes spécificateurs de format, et **chaque clé du
+code existe dans `fr.json` et réciproquement** — une clé morte ou une faute
+de frappe casse la suite. Les tests qui touchent un libellé comparent à
+`L("clé")`, jamais à un mot : ils tiennent quelle que soit la langue de la
+machine.
+
+Deux règles pour une nouvelle vue : une seule chaîne par libellé (une aide
+composée en `"…" + "…"` se traduit mal et casse l'ordre des arguments), et
+les types que `Tools/` compile seuls — `DofusClass`, `SynfusMark` — n'appellent
+pas `L()` ; leur nom localisé vit dans une extension du dossier
+`Localisation/` (`DofusClass+Localisation.swift`).
+
+Le titre de fenêtre, lui, est dans la langue du **jeu** : un client anglais
+annonce « Rogue », un espagnol « Tymador ». `DofusClass.Breed` porte donc
+les noms `en` et `es` de chaque classe, et `key(for:)` les ramène à la clé
+française — même icône, même couleur, testé dans `DofusClassTests`. Sans ces
+alias, tout joueur non francophone voyait ses persos en classe inconnue.
 
 ### Préférences
 

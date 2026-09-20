@@ -50,10 +50,9 @@ struct StreamDeckSettings: View {
 
     private var liaison: some View {
         Section {
-            Toggle("Utiliser un Stream Deck", isOn: $prefs.streamDeckEnabled)
+            Toggle(L("streamDeck.utiliser"), isOn: $prefs.streamDeckEnabled)
             if !prefs.streamDeckEnabled {
-                Text("Les sorts du perso devant sous les doigts, la frappe faite par le plugin Elgato. "
-                     + "Active pour voir les réglages, installer le plugin et remplir les profils de sorts (onglet Sorts).")
+                Text(L("streamDeck.utiliser.aide"))
                     .font(.system(size: 11)).foregroundStyle(.secondary)
             }
             if prefs.streamDeckEnabled {
@@ -65,10 +64,7 @@ struct StreamDeckSettings: View {
                 }
             }
         } header: {
-            SectionTitle("Stream Deck (optionnel)", help: "Ouvre un socket local, réservé à ton compte, sur lequel le plugin "
-                         + "SynfusDeck reçoit ce que chaque touche montre et fait. Il ne peut demander que ce que "
-                         + "fait la barre : perso suivant, précédent, barre suivante, menu. C'est le plugin qui "
-                         + "frappe la touche du jeu ; Synfus n'émet jamais rien.\n\n" + StreamDeckLink.socketURL.path)
+            SectionTitle(L("streamDeck.titre"), help: L("streamDeck.titre.aide") + "\n\n" + StreamDeckLink.socketURL.path)
         }
     }
 

@@ -40,20 +40,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let appMenuItem = NSMenuItem()
         let appMenu = NSMenu()
         let settingsItem = appMenu.addItem(
-            withTitle: "Réglages…",
+            withTitle: L("menu.reglages"),
             action: #selector(MenuBarController.openSettingsFromMenu),
             keyEquivalent: ","
         )
         settingsItem.target = MenuBarController.shared
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: "Masquer Synfus", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
-        appMenu.addItem(withTitle: "Quitter Synfus", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appMenu.addItem(withTitle: L("menu.masquerSynfus"), action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+        appMenu.addItem(withTitle: L("menu.quitter"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appMenuItem.submenu = appMenu
         mainMenu.addItem(appMenuItem)
 
         let windowMenuItem = NSMenuItem()
-        let windowMenu = NSMenu(title: "Fenêtre")
-        windowMenu.addItem(withTitle: "Fermer", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+        let windowMenu = NSMenu(title: L("menu.fenetre"))
+        windowMenu.addItem(withTitle: L("menu.fermer"), action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
         windowMenuItem.submenu = windowMenu
         mainMenu.addItem(windowMenuItem)
 

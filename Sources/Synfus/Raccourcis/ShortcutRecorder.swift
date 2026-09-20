@@ -5,7 +5,7 @@ import SwiftUI
 /// n'atteignent ni les menus ni les champs texte de la fenêtre.
 struct ShortcutRecorder: View {
     @Binding var hotKey: HotKey?
-    var placeholder = "Aucun"
+    var placeholder = L("raccourci.aucun")
     /// Les touches du **jeu** peuvent être nues — `I` ouvre l'inventaire. Un
     /// raccourci global de Synfus, lui, exige un modificateur.
     var allowsBareKeys = false
@@ -46,13 +46,13 @@ struct ShortcutRecorder: View {
             .buttonStyle(.plain)
             .opacity(hotKey == nil ? 0 : 1)
             .disabled(hotKey == nil)
-            .help("Supprimer ce raccourci")
+            .help(L("raccourci.supprimer"))
         }
         .onDisappear(perform: stop)
     }
 
     private var label: String {
-        if recording { return "Pressez…" }
+        if recording { return L("raccourci.pressez") }
         return hotKey?.displayString ?? placeholder
     }
 

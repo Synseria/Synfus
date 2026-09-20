@@ -58,15 +58,15 @@ final class WindowArranger: ObservableObject {
                 // inactif, hors de portée. Le remède est dans le Diagnostic.
                 ecartees.append(Ecartee(
                     nom: client.name,
-                    raison: "sur un autre bureau — bascule dessus puis relance le rangement"
+                    raison: L("rangement.raison.autreBureau")
                 ))
             } else if !manager.isReachable(client) {
                 // En cours de fermeture, ou muet au veilleur de gel : lui poser
                 // une question, c'est payer la borne d'une seconde pour rien.
-                ecartees.append(Ecartee(nom: client.name, raison: "ne répond plus"))
+                ecartees.append(Ecartee(nom: client.name, raison: L("rangement.raison.muet")))
             } else if AccessibilityReader.boolAttribute(client.axWindow, "AXFullScreen") == true {
                 // On ne sort jamais personne du plein écran d'autorité.
-                ecartees.append(Ecartee(nom: client.name, raison: "en plein écran"))
+                ecartees.append(Ecartee(nom: client.name, raison: L("rangement.raison.pleinEcran")))
             } else {
                 eligibles.append(client)
             }
@@ -116,7 +116,7 @@ final class WindowArranger: ObservableObject {
                 rangees.append(client.name)
             } else {
                 ecartees.append(Ecartee(nom: client.name,
-                                        raison: "le client a refusé (AXError \(erreur.rawValue))"))
+                                        raison: L("rangement.raison.refus", Int(erreur.rawValue))))
             }
         }
 
@@ -133,11 +133,11 @@ final class WindowArranger: ObservableObject {
     /// l'autre. L'attribut est tenté aussi sur les dormants : leur élément est
     /// périmé pour la géométrie, mais le basculement passe par l'objet fenêtre
     /// lui-même — hypothèse, rapportée au Diagnostic comme les autres.
-    func toutEnPleinEcran() async { await pleinEcran(true, titre: "Tout en plein écran") }
+    func toutEnPleinEcran() async { await pleinEcran(true, titre: L("rangement.toutPleinEcran")) }
 
     /// L'inverse : ramène toutes les fenêtres en mode fenêtré, chacune sur le
     /// bureau d'où elle était partie.
-    func toutSortirDuPleinEcran() async { await pleinEcran(false, titre: "Tout sortir du plein écran") }
+    func toutSortirDuPleinEcran() async { await pleinEcran(false, titre: L("rangement.toutSortirPleinEcran")) }
 
     private func pleinEcran(_ actif: Bool, titre: String) async {
         let manager = WindowManager.shared
@@ -148,7 +148,7 @@ final class WindowArranger: ObservableObject {
         for client in manager.effectif {
             let fenetre = client.axWindow
             if !client.dormant, !manager.isReachable(client) {
-                ecartees.append(Ecartee(nom: client.name, raison: "ne répond plus"))
+                ecartees.append(Ecartee(nom: client.name, raison: L("rangement.raison.muet")))
                 continue
             }
             if AccessibilityReader.boolAttribute(fenetre, "AXFullScreen") == actif {
@@ -162,8 +162,8 @@ final class WindowArranger: ObservableObject {
                 rangees.append(client.name)
             } else {
                 ecartees.append(Ecartee(nom: client.name, raison: client.dormant
-                    ? "sur un autre bureau — bascule dessus puis relance"
-                    : "le client a refusé (AXError \(erreur.rawValue))"))
+                    ? L("rangement.raison.autreBureau")
+                    : L("rangement.raison.refus", Int(erreur.rawValue))))
             }
         }
 
@@ -176,7 +176,7 @@ final class WindowArranger: ObservableObject {
     /// persos hors équipe passeraient pour oubliés.
     private func titreAvecEquipe(_ titre: String) -> String {
         guard let equipe = WindowManager.shared.equipeActive else { return titre }
-        return "\(titre) — équipe \(equipe + 1)"
+        return L("rangement.titreEquipe", titre, equipe + 1)
     }
 
     // MARK: - Écran
