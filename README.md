@@ -19,9 +19,9 @@ connectés et permet de passer de l'un à l'autre, d'un clic ou au clavier.
   (« @ » est simplement la touche sous Échap d'un clavier Mac français).
 - **Détection du tour** : quand un personnage réclame la main, sa pastille
   clignote. On peut aussi choisir de basculer automatiquement dessus.
-- **Mode « enchaîner »** : je clique sur un personnage, je fais mon action,
-  puis Synfus passe au suivant. Pratique pour parcourir toute la team dans
-  l'ordre — un clic par personnage, toujours.
+- **Enchaîner au clic** : je tiens fn, je clique dans le jeu, et Synfus passe
+  au personnage suivant une fois le clic parti. Pratique pour parcourir toute
+  la team dans l'ordre — un clic par personnage, toujours.
 - **Gestion des fenêtres** : côte à côte, mosaïque, un grand + vignettes,
   plein écran, « lancer la session ».
 - **Équipes** (optionnel) : à huit comptes, on joue rarement tout le monde

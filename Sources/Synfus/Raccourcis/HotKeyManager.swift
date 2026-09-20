@@ -68,11 +68,6 @@ final class HotKeyManager {
         if let session = prefs.sessionHotKey {
             register(session) { WindowManager.shared.lancerSession() }
         }
-        // Réservée seulement quand la fonction est active : lui donner un défaut
-        // ne confisque ainsi aucune combinaison à qui ne s'en sert pas.
-        if prefs.advanceOnClick, let arm = prefs.advanceArmHotKey {
-            register(arm) { ClickAdvanceWatcher.shared.toggleArmed() }
-        }
         if let preview = prefs.previewHotKey {
             register(preview) {
                 PreviewPanelController.shared.showGrid(WindowManager.shared.effectif)

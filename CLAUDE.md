@@ -368,7 +368,9 @@ distinguer « jamais eu ce réglage » de « effacé exprès ».
 ### Enchaîner les persos au clic
 
 [ClickAdvanceWatcher.swift](Sources/Synfus/Raccourcis/ClickAdvanceWatcher.swift) : un clic
-modifié sur un client de jeu passe au perso suivant, une fois le clic délivré.
+sur un client de jeu avec une touche tenue — `Preferences.advanceModifier`,
+**`fn` par défaut** — passe au perso suivant une fois le clic relâché, comme
+« Perso suivant » au clavier. Un clic sans la touche reste un clic.
 
 La limite est nette et ne doit pas bouger. **Synfus n'émet, ne rejoue et ne
 duplique aucun évènement.** Un clic reste un clic, et il en faut toujours autant
@@ -380,41 +382,45 @@ qu'il refuse d'embarquer les visuels d'Ankama. Aucun délai n'est randomisé :
 `settleDelay` est fixe et n'existe que pour laisser le client traiter le clic
 avant de perdre le focus.
 
-**Le clic est nu, et c'est le résultat d'une correction.** La première version
-demandait un clic modifié — ⌘-clic — pour n'agir que sur ces clics-là. Mesuré en
-jeu : le client reçoit bien ces clics, mais avec le drapeau dessus, et ne les
-traite pas comme des clics ordinaires. Déplacer un perso passait, parler à un
-PNJ non. Synfus ne peut rien y faire — il observe, il ne réécrit pas ; retirer
-le modificateur de l'évènement demanderait exactement le `CGEventTap` que le
-projet refuse. D'où l'inversion : c'est le **mode** qui porte l'intention, et le
-jeu reçoit le clic qu'il attend.
-
-La bascule est franche : le mode reste ce qu'on en a fait jusqu'à ce qu'on le
-rebascule, par `advanceArmHotKey` ou par la flèche de la barre. Pas de
-désactivation automatique en fin de tour — c'est une bascule, pas une amorce à
-usage unique. La flèche verte est ce qui empêche de l'oublier.
-
-Son raccourci a un défaut (⌘< sur un clavier ISO) alors que `toggleBar` n'en a
-pas, et ce n'est
-pas une incohérence : il n'est **réservé auprès du système que lorsque
-`advanceOnClick` est vrai**, donc il ne confisque rien à qui n'utilise pas la
-fonction.
+**C'est la touche qui porte l'intention, et c'est la troisième version.** La
+première demandait un ⌘-clic ; mesuré en jeu, le client reçoit ces clics avec
+le drapeau dessus et ne les traite pas comme des clics ordinaires — déplacer
+un perso passait, parler à un PNJ non. Synfus ne peut rien y faire : il
+observe, il ne réécrit pas, et retirer le modificateur de l'évènement
+demanderait exactement le `CGEventTap` que le projet refuse. La deuxième
+était un **mode** à bascule : armé, chaque clic nu enchaînait, jusqu'à ce
+qu'on le coupe — raccourci, flèche verte dans la barre. Personne ne s'en est
+servi (retour du 20/09/2026) : on oubliait de l'armer, on oubliait de le
+couper, et un clic anodin changeait de fenêtre ; un joueur avait fini par
+programmer sur son clavier « clic gauche puis perso suivant ». D'où ce
+retour au clic modifié, avec la touche que ni le jeu ni macOS n'interprètent :
+`fn`. [ClickModifier.swift](Sources/Synfus/Raccourcis/ClickModifier.swift)
+— pur, testé dans `ClickModifierTests` — tient la règle : la touche choisie,
+**et elle seule** (`isHeldAlone`), le verrouillage des majuscules ignoré ;
+⇧fn-clic ou ⌥-clic gardent le sens que le jeu leur donne. ⌃ ⌥ ⇧ ⌘ restent
+proposés (clavier sans `fn`, habitude) avec leur avertissement dans les
+réglages ; sur les claviers Apple récents, relâcher 🌐/fn seule peut ouvrir
+les émojis — réglage système, documenté dans l'aide. Le diagnostic affiche les
+touches vues au dernier clic (`lastModifiers`) : c'est ainsi qu'on vérifie
+que ce clavier-là fait bien voir `fn` à macOS. Il n'y a plus ni mode, ni
+raccourci d'armement, ni témoin dans la barre ; la clé `advanceArmHotKey`
+d'une sauvegarde ancienne est ignorée à la lecture (testé).
 
 L'observation passe par `addGlobalMonitorForEvents`, **passif** — rien n'est
 intercepté ni modifié —, et sur `.leftMouseUp` plutôt que `.leftMouseDown` : à
 l'appui, le relâchement n'est pas encore parti, et prendre le focus entre les
 deux laisse le client avec un bouton jamais relâché. Elle porte sur la souris
 seule, ce qui préserve la règle posée pour les raccourcis : l'app ne voit pas ce
-qui est tapé. Reste une inconnue que la documentation d'Apple ne tranche pas —
-un moniteur de souris réclame-t-il « Surveillance de la saisie » ? — d'où le
-compteur `seenClicks` affiché dans les réglages : à zéro après un clic, c'est
-que macOS ne livre rien.
+qui est tapé — la touche tenue est lue sur les drapeaux du clic lui-même.
+Reste une inconnue que la documentation d'Apple ne tranche pas — un moniteur
+de souris réclame-t-il « Surveillance de la saisie » ? — d'où le compteur
+`seenClicks` affiché dans les réglages : à zéro après un clic, c'est que
+macOS ne livre rien.
 
-Aucun repère « déjà passé » n'est affiché, et c'est un choix après essai : le
-mode suit l'ordre de la barre et le surlignage du perso courant dit déjà où l'on
-en est. Une coche par perso visité n'ajoutait qu'un clignotement de plus dans un
-mode où l'on clique en continu. Le seul témoin est la flèche de la barre, qui
-dit si le mode est actif — et il le faut, puisqu'il ne s'éteint pas tout seul.
+Aucun repère « déjà passé » n'est affiché, et c'est un choix après essai :
+l'enchaînement suit l'ordre de la barre et le surlignage du perso courant dit
+déjà où l'on en est. Une coche par perso visité n'ajoutait qu'un clignotement
+de plus quand on clique en continu.
 
 ### Fermer les clients
 
@@ -501,9 +507,8 @@ sous-menu de la barre de menus, le clic droit, et un raccourci optionnel
 **sans défaut** (modèle `toggleBar`) qui rejoue `Preferences.lastArrangement`.
 
 Le geste **« Lancer la session »** (`WindowManager.lancerSession`) compose des
-gestes existants : ranger selon la dernière disposition, basculer sur le
-perso 1, armer l'enchaînement si `advanceOnClick` — raccourci optionnel sans
-défaut (`sessionHotKey`).
+gestes existants : ranger selon la dernière disposition, puis basculer sur le
+perso 1 — raccourci optionnel sans défaut (`sessionHotKey`).
 
 ### Équipes
 
@@ -560,7 +565,7 @@ Inviter sept persos à la main, c'est sept `/invite Nom` tapés. Synfus les
 **compose**, il ne les envoie pas : la règle « aucun évènement émis » reste
 entière, [PressePapiers.swift](Sources/Synfus/App/PressePapiers.swift) est
 l'unique écriture dans `NSPasteboard`, et le joueur colle lui-même (⌘V ↩) —
-un geste par invité, comme un clic par perso dans le mode « enchaîner ».
+un geste par invité, comme un clic par perso dans l'enchaînement au clic.
 Envoyer la commande au tchat serait exactement la saisie synthétisée que le
 dépôt refuse.
 
@@ -611,8 +616,8 @@ propriété calculée, donc s'y réassigner relance le `didSet` — d'où le dra
 - **Un réglage n'apparaît que s'il sert.** Les options d'une fonction coupée
   sont masquées, pas grisées : l'onglet Sorts n'existe qu'avec le Stream Deck
   activé, l'onglet Stream Deck se réduit à sa bascule tant qu'elle est
-  fausse, les options de la barre à « Afficher la barre », le raccourci
-  d'enchaînement au mode disponible. Une nouvelle option suit la règle.
+  fausse, les options de la barre à « Afficher la barre », la touche de
+  l'enchaînement au clic à sa bascule. Une nouvelle option suit la règle.
 - [BarView.swift](Sources/Synfus/Interface/Barre/BarView.swift) — barre flottante, hébergée dans
   un `NSPanel` non activable (`canBecomeKey = false`) par
   [FloatingBarController.swift](Sources/Synfus/Interface/Barre/FloatingBarController.swift) :

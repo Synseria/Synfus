@@ -52,16 +52,15 @@ final class Preferences: ObservableObject {
     /// à la main.
     @Published var autoCenterBar: Bool = true { didSet { save() } }
 
-    /// Rendre disponible le mode « enchaîner » : chaque clic sur un client de
-    /// jeu passe au perso suivant tant que le mode est actif. Éteint par défaut
-    /// — il installe un moniteur global de souris, et personne n'a demandé ça en
+    /// Enchaîner les persos au clic : un clic sur un client de jeu avec
+    /// `advanceModifier` tenue passe au perso suivant. Éteint par défaut — il
+    /// installe un moniteur global de souris, et personne n'a demandé ça en
     /// installant l'app.
     @Published var advanceOnClick: Bool = false { didSet { save() } }
 
-    /// Raccourci qui active ou coupe le mode. Il n'est réservé auprès du système
-    /// que lorsque `advanceOnClick` est vrai : lui donner un défaut ne confisque
-    /// donc rien à qui n'utilise pas la fonction.
-    @Published var advanceArmHotKey: HotKey? = .defaultAdvanceArm { didSet { save() } }
+    /// La touche à tenir pendant le clic. `fn` : la seule que ni le jeu ni
+    /// macOS n'interprètent sur un clic (voir `ClickModifier`).
+    @Published var advanceModifier: ClickModifier = .fn { didSet { save() } }
 
     /// Icône du `NSStatusItem`. Le rafraîchissement est à la charge de l'appelant
     /// (`MenuBarController.refreshIcon()`) : les préférences ne pilotent pas l'UI.
@@ -254,7 +253,7 @@ final class Preferences: ObservableObject {
         var showPreviewOnHover: Bool?
         var previewHotKey: HotKey?
         var advanceOnClick: Bool?
-        var advanceArmHotKey: HotKey?
+        var advanceModifier: ClickModifier?
         var killFrozenClients: Bool?
         var lastArrangement: Disposition?
         var arrangeHotKey: HotKey?
@@ -330,18 +329,10 @@ final class Preferences: ObservableObject {
         // personne n'allait chercher — muets, en pratique.
         if from < 3 { moveToEscapeRow() }
 
-        // La bascule du mode « enchaîner » est arrivée après coup : une
-        // sauvegarde plus ancienne que la clé ne l'a jamais eue. Rien n'est
-        // confisqué pour autant — ce raccourci n'est réservé auprès du système
-        // que lorsque la fonction est activée, et elle est éteinte par défaut.
-        if from < 4, advanceArmHotKey == nil { advanceArmHotKey = .defaultAdvanceArm }
-
-        // La génération 4 la posait sur ⌃⌥⌘@ — trois modificateurs pour une
-        // bascule que l'on presse deux fois par session. C'était la première
-        // combinaison libre trouvée, pas la plus simple.
-        if from < 5, advanceArmHotKey == Self.legacyAdvanceArm {
-            advanceArmHotKey = .defaultAdvanceArm
-        }
+        // Les générations 4 et 5 donnaient et déplaçaient le raccourci qui
+        // armait le mode « enchaîner ». Le mode a disparu au profit du clic
+        // modifié (`ClickModifier`) : la clé `advanceArmHotKey` d'une
+        // sauvegarde ancienne est simplement ignorée à la lecture.
 
         // L'invitation par presse-papiers est arrivée avec la génération 6 :
         // une sauvegarde plus ancienne ne l'a jamais eue.
@@ -358,19 +349,11 @@ final class Preferences: ObservableObject {
         cyclePrevious = .defaultCyclePrevious
         toggleAutoFocus = .defaultToggleAutoFocus
         previewHotKey = .defaultPreview
-        advanceArmHotKey = .defaultAdvanceArm
         inviteHotKey = .defaultInvite
         toggleBar = nil
         arrangeHotKey = nil
         sessionHotKey = nil
         equipeSuivanteHotKey = nil
-    }
-
-    private static var legacyAdvanceArm: HotKey {
-        HotKey(
-            keyCode: HotKey.escapeRowKey,
-            modifiers: UInt32(cmdKey) | UInt32(controlKey) | UInt32(optionKey)
-        )
     }
 
     /// Reporte sur la touche sous Échap les raccourcis restés sur le keycode 50.
@@ -410,7 +393,7 @@ final class Preferences: ObservableObject {
             showPreviewOnHover: showPreviewOnHover,
             previewHotKey: previewHotKey,
             advanceOnClick: advanceOnClick,
-            advanceArmHotKey: advanceArmHotKey,
+            advanceModifier: advanceModifier,
             killFrozenClients: killFrozenClients,
             lastArrangement: lastArrangement,
             arrangeHotKey: arrangeHotKey,
@@ -473,7 +456,7 @@ final class Preferences: ObservableObject {
         showPreviewOnHover = stored.showPreviewOnHover ?? false
         previewHotKey = stored.previewHotKey
         advanceOnClick = stored.advanceOnClick ?? false
-        advanceArmHotKey = stored.advanceArmHotKey
+        advanceModifier = stored.advanceModifier ?? .fn
         killFrozenClients = stored.killFrozenClients ?? true
         lastArrangement = stored.lastArrangement
         arrangeHotKey = stored.arrangeHotKey
