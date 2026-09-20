@@ -112,8 +112,8 @@ struct ArrangementMenuItems: View {
             }
         }
         Divider()
-        Button("Tout en plein écran") { Task { await WindowArranger.shared.toutEnPleinEcran() } }
-        Button("Tout sortir du plein écran") { Task { await WindowArranger.shared.toutSortirDuPleinEcran() } }
+        Button(L("rangement.toutPleinEcran")) { Task { await WindowArranger.shared.toutEnPleinEcran() } }
+        Button(L("rangement.toutSortirPleinEcran")) { Task { await WindowArranger.shared.toutSortirDuPleinEcran() } }
     }
 }
 
@@ -126,7 +126,7 @@ struct ArrangeMenuButton: View {
         Menu {
             ArrangementMenuItems()
             Divider()
-            Button("Lancer la session") { WindowManager.shared.lancerSession() }
+            Button(L("menu.lancerSession")) { WindowManager.shared.lancerSession() }
         } label: {
             Image(systemName: "rectangle.3.group")
                 .font(.system(size: 12, weight: .medium))
@@ -143,7 +143,7 @@ struct ArrangeMenuButton: View {
         .fixedSize()
         .onHover { survole = $0 }
         .animation(.easeOut(duration: 0.15), value: survole)
-        .help("Ranger les fenêtres — dispositions, plein écran, lancer la session")
+        .help(L("barre.rangerAide"))
     }
 }
 
@@ -164,7 +164,7 @@ struct GearButton: View {
         }
         .buttonStyle(.plain)
         .onHover { survole = $0 }
-        .help("Réglages de Synfus")
+        .help(L("barre.reglagesAide"))
     }
 }
 

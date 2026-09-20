@@ -79,9 +79,9 @@ struct PermissionRow: View {
             Text(name)
             HelpTip(help)
             Spacer()
-            Text(granted ? "accordée" : "manquante")
+            Text(granted ? L("commun.accordee") : L("commun.manquante"))
                 .font(.system(size: 11)).foregroundStyle(granted ? Color.secondary : Color.orange)
-            Button("Ouvrir les Réglages Système…", action: open)
+            Button(L("commun.ouvrirReglagesSysteme"), action: open)
                 .font(.system(size: 11))
         }
     }
@@ -105,7 +105,7 @@ struct CopiableCommand: View {
                 Image(systemName: "doc.on.doc")
             }
             .buttonStyle(.borderless)
-            .help("Copier la commande")
+            .help(L("commun.copierCommande"))
         }
         .padding(6)
         .background(RoundedRectangle(cornerRadius: 5).fill(Color.primary.opacity(0.06)))
@@ -130,7 +130,7 @@ struct PersoPicker: View {
 
     var body: some View {
         let persos = Self.persos(prefs: prefs, manager: manager)
-        Picker("Perso", selection: $perso) {
+        Picker(L("commun.perso"), selection: $perso) {
             ForEach(persos, id: \.self) { Text($0).tag($0) }
         }
         .onAppear { if perso.isEmpty || !persos.contains(perso) { perso = persos.first ?? "" } }

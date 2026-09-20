@@ -104,10 +104,10 @@ struct TeamSectorView: View {
 
     private var aide: String {
         switch secteur {
-        case .tous: return "Tous les persos"
+        case .tous: return L("equipes.tousLesPersos")
         case .equipe(let index):
-            return "Équipe \(index + 1) : " + membres.map(\.nom).joined(separator: ", ")
-        case .nouvelle: return "Glisse un perso ici pour créer une équipe"
+            return L("equipes.equipeMembres", index + 1, membres.map(\.nom).joined(separator: ", "))
+        case .nouvelle: return L("equipes.glisserPourCreer")
         }
     }
 }

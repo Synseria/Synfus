@@ -41,11 +41,13 @@ struct ClickModifierTests {
         #expect(ClickModifier.fn.isHeldAlone(in: [.function, .numericPad, .help]))
     }
 
+    /// « aucune » est localisé : on compare à la table, pas à un mot, pour que
+    /// le test tienne quelle que soit la langue de la machine.
     @Test("Le diagnostic nomme les touches tenues")
     func diagnostic() {
-        #expect(ClickModifier.describe([]) == "aucune")
+        #expect(ClickModifier.describe([]) == L("touche.aucune"))
         #expect(ClickModifier.describe([.function]) == "fn")
         #expect(ClickModifier.describe([.shift, .command]) == "⇧⌘")
-        #expect(ClickModifier.describe([.capsLock]) == "aucune")
+        #expect(ClickModifier.describe([.capsLock]) == L("touche.aucune"))
     }
 }

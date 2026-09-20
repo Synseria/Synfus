@@ -111,7 +111,7 @@ struct BarView: View {
         }
         .frame(width: 15, height: 26)
         .overlay(WindowDragArea())
-        .help("Glisser pour déplacer la barre")
+        .help(L("barre.glisser"))
     }
 
     /// Trait qui sépare le territoire des persos de celui des modes : sans lui,
@@ -143,9 +143,9 @@ struct BarView: View {
                     .padding(.vertical, 5)
             }
             .buttonStyle(.plain)
-            .help("Synfus a besoin de l'accès Accessibilité pour lister et activer les fenêtres")
+            .help(L("barre.accessibiliteRequise"))
         } else if manager.clients.isEmpty {
-            Text("Aucun perso connecté")
+            Text(L("barre.aucunPerso"))
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 8)
@@ -154,7 +154,7 @@ struct BarView: View {
             // L'effectif — l'équipe active, ou tous. Une équipe sans personne
             // de connecté le dit, et la rangée reste là pour revenir à « Tous ».
             if manager.effectif.isEmpty {
-                Text("Aucun perso de l'équipe")
+                Text(L("barre.aucunPersoEquipe"))
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 8)
@@ -185,8 +185,8 @@ struct BarView: View {
             teinte: .orange,
             actif: on,
             aide: on
-                ? "Passage automatique activé — Synfus bascule sur le perso dont l'icône rebondit (\(toggleShortcut))"
-                : "Passage automatique désactivé — le perso est seulement signalé (\(toggleShortcut))"
+                ? L("barre.passageAuto.actif", toggleShortcut)
+                : L("barre.passageAuto.inactif", toggleShortcut)
         ) {
             let prefs = Preferences.shared
             prefs.attentionAction = prefs.attentionAction == .focus ? .highlight : .focus
@@ -194,7 +194,7 @@ struct BarView: View {
     }
 
     private var toggleShortcut: String {
-        prefs.toggleAutoFocus?.displayString ?? "aucun raccourci"
+        prefs.toggleAutoFocus?.displayString ?? L("barre.aucunRaccourci")
     }
 
     /// Repère de classe : l'icône choisie dans les réglages, à défaut une
@@ -283,16 +283,16 @@ struct BarView: View {
         // plus (cf. `WindowManager.close`).
         .contextMenu {
             if closing {
-                Button("Fermeture en cours…") {}.disabled(true)
+                Button(L("barre.fermetureEnCours")) {}.disabled(true)
             } else {
                 // L'invitation de ce perso-là, dans le presse-papiers — Synfus
                 // n'envoie rien au jeu, c'est le joueur qui colle.
                 if WindowTitle.isPersistableName(client.name) {
-                    Button("Copier « \(invitations.commande(pour: client)) »") {
+                    Button(L("barre.copier", invitations.commande(pour: client))) {
                         invitations.copier(client)
                     }
                 }
-                Button("Fermer « \(client.name) »") { manager.close(client) }
+                Button(L("barre.fermer", client.name)) { manager.close(client) }
             }
         }
         .overlay { if invitations.copieRecente == client.slotKey { CopiedBadge() } }
@@ -456,29 +456,29 @@ struct BarView: View {
     private func tooltip(index: Int, client: DofusClient) -> String {
         var lines = [client.name]
         if client.dormant {
-            lines.append("Sur un autre bureau — cliquer pour y basculer")
+            lines.append(L("barre.autreBureau"))
         }
         if index < prefs.hotKeys.count, let hotKey = prefs.hotKeys[index] {
-            lines.append("Raccourci : \(hotKey.displayString)")
+            lines.append(L("barre.raccourci", hotKey.displayString))
         }
         if !client.rawTitle.isEmpty, client.rawTitle != client.name {
-            lines.append("Fenêtre : \(client.rawTitle)")
+            lines.append(L("barre.fenetre", client.rawTitle))
         }
         return lines.joined(separator: "\n")
     }
 
     @ViewBuilder
     private var contextMenu: some View {
-        Button("Réglages…") { SettingsWindowController.shared.show() }
-        Button("Recentrer la barre") { FloatingBarController.shared.recenter() }
-        Button("Masquer la barre") { FloatingBarController.shared.toggle() }
-        Menu("Ranger les fenêtres") { ArrangementMenuItems() }
-        Button("Lancer la session") { manager.lancerSession() }
+        Button(L("menu.reglages")) { SettingsWindowController.shared.show() }
+        Button(L("menu.recentrerBarre")) { FloatingBarController.shared.recenter() }
+        Button(L("menu.masquerBarre")) { FloatingBarController.shared.toggle() }
+        Menu(L("menu.rangerFenetres")) { ArrangementMenuItems() }
+        Button(L("menu.lancerSession")) { manager.lancerSession() }
         Divider()
-        Button("Rafraîchir") { manager.refresh() }
+        Button(L("commun.rafraichir")) { manager.refresh() }
         Divider()
-        Button("Fermer tous les persos") { manager.closeAll() }
+        Button(L("menu.fermerTous")) { manager.closeAll() }
             .disabled(manager.clients.isEmpty)
-        Button("Quitter Synfus") { NSApp.terminate(nil) }
+        Button(L("menu.quitter")) { NSApp.terminate(nil) }
     }
 }

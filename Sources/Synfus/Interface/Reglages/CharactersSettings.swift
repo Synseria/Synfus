@@ -8,16 +8,11 @@ struct CharactersSettings: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 6) {
-                Text("Ordre des persos").font(.system(size: 12, weight: .semibold))
-                HelpTip("L'ordre décide de la numérotation des emplacements. Les persos non connectés "
-                        + "sont sautés : garde-en autant que tu veux. Glisse une ligne, ou utilise les flèches.")
+                Text(L("persos.ordre")).font(.system(size: 12, weight: .semibold))
+                HelpTip(L("persos.ordre.aide"))
                 Text("·").foregroundStyle(.tertiary)
-                Text("Équipes").font(.system(size: 12, weight: .semibold))
-                HelpTip("Jusqu'à quatre équipes, composées ici ou en glissant une pastille sur la rangée "
-                        + "qui apparaît sous la barre — sur « + » pour en créer une, sur « Tous » pour en "
-                        + "sortir. L'équipe active restreint la barre, ⌘1…⌘n, suivant/précédent, le rangement "
-                        + "et l'aperçu d'ensemble ; les autres persos restent sous « Tous ». Synfus démarre "
-                        + "toujours sur « Tous ».")
+                Text(L("persos.equipes")).font(.system(size: 12, weight: .semibold))
+                HelpTip(L("persos.equipes.aide"))
             }
             .padding(12)
 
@@ -32,11 +27,11 @@ struct CharactersSettings: View {
             }
 
             HStack {
-                Text("\(manager.clients.count) connecté(s) sur \(prefs.characterOrder.count) connu(s)")
+                Text(L("persos.connectesSurConnus", manager.clients.count, prefs.characterOrder.count))
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                 Spacer()
-                Button("Oublier les hors ligne") {
+                Button(L("persos.oublierHorsLigne")) {
                     for name in prefs.characterOrder where !isOnline(name) {
                         prefs.forget(name: name)
                     }
@@ -48,10 +43,8 @@ struct CharactersSettings: View {
             Divider()
 
             HStack(spacing: 6) {
-                Toggle("Achever les clients gelés à la fermeture", isOn: $prefs.killFrozenClients)
-                HelpTip("Un client qui gèle en se fermant reste vivant sans aucune fenêtre. Synfus le sonde "
-                        + "et, muet trois fois de suite (~15 s), le force à quitter — que la fermeture soit "
-                        + "passée par Synfus ou par le jeu. Les abattages sont consignés dans le Diagnostic.")
+                Toggle(L("persos.acheverGeles"), isOn: $prefs.killFrozenClients)
+                HelpTip(L("persos.acheverGeles.aide"))
             }
             .padding(12)
         }
@@ -76,7 +69,7 @@ struct CharactersSettings: View {
                     .font(.system(size: 10, weight: .bold, design: .rounded))
                     .foregroundStyle(.secondary)
             }
-            Text(isOnline(name) ? "connecté" : "hors ligne")
+            Text(isOnline(name) ? L("persos.connecte") : L("persos.horsLigne"))
                 .font(.system(size: 10))
                 .foregroundStyle(.tertiary)
 
@@ -85,13 +78,13 @@ struct CharactersSettings: View {
                     Image(systemName: "chevron.up")
                 }
                 .disabled(index == 0)
-                .help("Monter dans l'ordre")
+                .help(L("persos.monter"))
 
                 Button { moveCharacter(at: index, by: 1) } label: {
                     Image(systemName: "chevron.down")
                 }
                 .disabled(index == prefs.characterOrder.count - 1)
-                .help("Descendre dans l'ordre")
+                .help(L("persos.descendre"))
             }
             .buttonStyle(.borderless)
             .font(.system(size: 10, weight: .semibold))
@@ -99,7 +92,7 @@ struct CharactersSettings: View {
         .padding(.vertical, 4)
         .contentShape(Rectangle())
         .contextMenu {
-            Button("Retirer de la liste") { prefs.forget(name: name) }
+            Button(L("persos.retirer")) { prefs.forget(name: name) }
         }
     }
 
@@ -108,17 +101,17 @@ struct CharactersSettings: View {
     private func teamPicker(for name: String) -> some View {
         let count = prefs.equipes.count
         let choix = count < Equipes.maximum ? count + 1 : count
-        return Picker("Équipe", selection: Binding(
+        return Picker(L("persos.equipe"), selection: Binding(
             get: { (Equipes.indexEquipe(de: name, dans: prefs.equipes) ?? -1) + 1 },
             set: { prefs.affecter(name, aEquipe: $0 == 0 ? nil : $0 - 1) }
         )) {
             Text("—").tag(0)
-            ForEach(1...max(choix, 1), id: \.self) { Text("Équipe \($0)").tag($0) }
+            ForEach(1...max(choix, 1), id: \.self) { Text(L("persos.equipeN", $0)).tag($0) }
         }
         .labelsHidden()
         .fixedSize()
         .font(.system(size: 10))
-        .help("Équipe du perso")
+        .help(L("persos.equipeDuPerso"))
     }
 
     private func moveCharacter(at index: Int, by delta: Int) {

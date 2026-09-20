@@ -37,6 +37,23 @@ struct DofusClassTests {
         }
     }
 
+    /// Le titre de la fenêtre est dans la langue du **jeu** : un client
+    /// anglais annonce « Rogue », un espagnol « Tymador », et l'un comme
+    /// l'autre est le Roublard — même clé, même icône, même couleur.
+    @Test("Les noms anglais et espagnols retrouvent la clé française")
+    func aliasEtrangers() {
+        for breed in DofusClass.breeds {
+            #expect(DofusClass.key(for: breed.en) == breed.key, "« \(breed.en) » (en)")
+            #expect(DofusClass.key(for: breed.es) == breed.key, "« \(breed.es) » (es)")
+        }
+        #expect(DofusClass.key(for: "Rogue") == "roublard")
+        #expect(DofusClass.key(for: "Masqueraider") == "zobal")
+        #expect(DofusClass.key(for: "Zurcarák") == "ecaflip")
+        #expect(DofusClass.key(for: "Yopuka") == "iop")
+        #expect(DofusClass.breed(forKey: "roublard")?.nom(langue: "es") == "Tymador")
+        #expect(DofusClass.breed(forKey: "roublard")?.nom(langue: "de") == "Roublard")
+    }
+
     /// Une future classe ne doit pas s'afficher en gris : la teinte est dérivée
     /// du nom, donc stable d'un lancement à l'autre.
     @Test("Une classe inconnue reçoit une couleur stable")

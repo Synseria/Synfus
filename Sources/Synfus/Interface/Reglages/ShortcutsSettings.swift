@@ -10,23 +10,20 @@ struct ShortcutsSettings: View {
         Form {
             Section {
                 ForEach(0..<prefs.slotCount, id: \.self) { slot in
-                    ShortcutRow(label: "Perso \(slot + 1)", detail: nameForSlot(slot), hotKey: binding(forSlot: slot))
+                    ShortcutRow(label: L("raccourcis.perso", slot + 1), detail: nameForSlot(slot), hotKey: binding(forSlot: slot))
                 }
-                Stepper("Emplacements : \(prefs.slotCount)",
+                Stepper(L("raccourcis.emplacements", prefs.slotCount),
                         value: Binding(get: { prefs.slotCount }, set: { prefs.slotCount = $0; rebind() }),
                         in: 1...10)
             } header: {
-                SectionTitle("Aller à un perso", help: "Les emplacements suivent l'ordre de l'onglet Persos ; "
-                             + "les persos non connectés sont sautés, les numéros restent stables.")
+                SectionTitle(L("raccourcis.allerAUnPerso"), help: L("raccourcis.allerAUnPerso.aide"))
             }
 
             Section {
-                ShortcutRow(label: "Perso suivant", hotKey: hotKey(\.cycleNext))
-                ShortcutRow(label: "Perso précédent", hotKey: hotKey(\.cyclePrevious))
-                ShortcutRow(label: "Afficher / masquer la barre", hotKey: hotKey(\.toggleBar))
-                ShortcutRow(label: "Voir tous les persos", help: "Les aperçus restent affichés tant que la "
-                            + "combinaison est maintenue. Elle doit comporter un modificateur, et demande "
-                            + "l'autorisation d'enregistrement de l'écran.",
+                ShortcutRow(label: L("raccourcis.persoSuivant"), hotKey: hotKey(\.cycleNext))
+                ShortcutRow(label: L("raccourcis.persoPrecedent"), hotKey: hotKey(\.cyclePrevious))
+                ShortcutRow(label: L("raccourcis.afficherMasquerBarre"), hotKey: hotKey(\.toggleBar))
+                ShortcutRow(label: L("raccourcis.voirTous"), help: L("raccourcis.voirTous.aide"),
                             hotKey: Binding(
                                 get: { prefs.previewHotKey },
                                 set: { value in
@@ -37,61 +34,46 @@ struct ShortcutsSettings: View {
                                     }
                                 }))
             } header: {
-                SectionTitle("Naviguer")
+                SectionTitle(L("raccourcis.naviguer"))
             }
 
             Section {
-                ShortcutRow(label: "Ranger les fenêtres", help: "Rejoue la dernière disposition employée — "
-                            + "côte à côte, mosaïque, un grand + vignettes, empilés — choisie depuis le bouton "
-                            + "de la barre, la barre de menus ou le clic droit. Sans défaut : à toi de choisir.",
+                ShortcutRow(label: L("raccourcis.ranger"), help: L("raccourcis.ranger.aide"),
                             hotKey: hotKey(\.arrangeHotKey))
-                ShortcutRow(label: "Lancer la session", help: "Le geste du matin : range selon la dernière "
-                            + "disposition, puis bascule sur le perso 1.",
+                ShortcutRow(label: L("raccourcis.lancerSession"), help: L("raccourcis.lancerSession.aide"),
                             hotKey: hotKey(\.sessionHotKey))
                 if !prefs.equipes.isEmpty {
-                    ShortcutRow(label: "Équipe suivante", help: "Tourne : tous les persos, équipe 1, équipe 2… "
-                                + "puis tous. Les équipes se composent dans l'onglet Persos ou en glissant "
-                                + "une pastille sur la seconde rangée de la barre.",
+                    ShortcutRow(label: L("raccourcis.equipeSuivante"), help: L("raccourcis.equipeSuivante.aide"),
                                 hotKey: hotKey(\.equipeSuivanteHotKey))
                 }
             } header: {
-                SectionTitle("Fenêtres")
+                SectionTitle(L("raccourcis.fenetres"))
             }
 
             Section {
-                ShortcutRow(label: "Copier l'invitation suivante", help: "Pose « /invite Nom » dans le "
-                            + "presse-papiers, un perso à chaque appui, en tournant sur l'équipe active. Le chef "
-                            + "est le perso devant au premier appui, et le reste jusqu'à la fin du tour — même si "
-                            + "le passage automatique bascule entre-temps. Colle-le dans le tchat (⌘V ↩) : "
-                            + "Synfus n'envoie rien au jeu.",
+                ShortcutRow(label: L("raccourcis.invitation"), help: L("raccourcis.invitation.aide"),
                             hotKey: hotKey(\.inviteHotKey))
                 HStack {
-                    Text("Format")
-                    HelpTip("%nom est remplacé par le nom du perso, tel que le jeu l'affiche dans le titre de "
-                            + "la fenêtre. Le clic droit sur une pastille copie l'invitation de ce perso-là.")
+                    Text(L("raccourcis.invitation.format"))
+                    HelpTip(L("raccourcis.invitation.format.aide"))
                     Spacer()
                     TextField("", text: $prefs.inviteFormat)
                         .font(.system(size: 11, design: .monospaced))
                         .frame(width: 180)
                 }
             } header: {
-                SectionTitle("Inviter", help: "Synfus n'émet aucun évènement : il compose la commande, tu la colles. "
-                             + "Un geste par invité, comme un clic par perso.")
+                SectionTitle(L("raccourcis.inviter"), help: L("raccourcis.inviter.aide"))
             }
 
             Section {
-                Toggle("Passer au perso suivant après un clic avec la touche tenue", isOn: Binding(
+                Toggle(L("raccourcis.enchainer.bascule"), isOn: Binding(
                     get: { prefs.advanceOnClick },
                     set: { prefs.advanceOnClick = $0; ClickAdvanceWatcher.shared.apply() }
                 ))
                 if prefs.advanceOnClick {
                     HStack {
-                        Text("Touche à tenir")
-                        HelpTip("Le jeu reçoit le clic avec la touche dessus, Synfus ne la retire pas. fn est la "
-                                + "seule que le jeu ignore ; ⇧ et ⌥ ont un sens dans Dofus, ⌃-clic est un clic droit "
-                                + "pour macOS, et un ⌘-clic ne parle plus aux PNJ. Si relâcher fn ouvre les émojis, "
-                                + "règle « Appuyer sur la touche 🌐 pour » sur « Ne rien faire » dans "
-                                + "Réglages Système → Clavier.")
+                        Text(L("raccourcis.enchainer.touche"))
+                        HelpTip(L("raccourcis.enchainer.touche.aide"))
                         Spacer()
                         Picker("", selection: $prefs.advanceModifier) {
                             ForEach(ClickModifier.allCases) { Text($0.label).tag($0) }
@@ -100,41 +82,36 @@ struct ShortcutsSettings: View {
                         .frame(width: 150)
                     }
                     HStack {
-                        Text("Clics captés sur le jeu : \(clicks.seenClicks)")
+                        Text(L("raccourcis.enchainer.clicsCaptes", clicks.seenClicks))
                             .font(.system(size: 11))
                             .foregroundStyle(clicks.seenClicks == 0 ? Color.orange : Color.secondary)
                         if clicks.seenClicks == 0 {
-                            HelpTip("S'il reste à zéro après avoir cliqué dans le jeu, macOS ne livre pas les "
-                                    + "évènements : Réglages Système → Confidentialité et sécurité → Surveillance de la saisie.")
+                            HelpTip(L("raccourcis.enchainer.clicsCaptes.aide"))
                         }
                         if let dernier = clicks.lastModifiers {
-                            Text("· touches au dernier clic : \(dernier)")
+                            Text(L("raccourcis.enchainer.dernierClic", dernier))
                                 .font(.system(size: 11))
                                 .foregroundStyle(.secondary)
                         }
                     }
                 }
             } header: {
-                SectionTitle("Enchaîner les persos au clic", help: "Tiens la touche, clique sur le jeu : le clic part "
-                             + "normalement, puis Synfus bascule sur le perso suivant — comme « Perso suivant » au "
-                             + "clavier. Un clic sans la touche reste un clic. Tu cliques toujours une fois par perso ; "
-                             + "seul le changement de fenêtre est automatique. Synfus n'émet ni ne rejoue aucun clic.")
+                SectionTitle(L("raccourcis.enchainer"), help: L("raccourcis.enchainer.aide"))
             }
 
             Section {
-                Picker("Réaction", selection: $prefs.attentionAction) {
+                Picker(L("raccourcis.attention.reaction"), selection: $prefs.attentionAction) {
                     ForEach(AttentionAction.allCases) { Text($0.label).tag($0) }
                 }
                 .pickerStyle(.radioGroup)
-                ShortcutRow(label: "Activer / désactiver le passage auto", hotKey: hotKey(\.toggleAutoFocus))
+                ShortcutRow(label: L("raccourcis.attention.bascule"), hotKey: hotKey(\.toggleAutoFocus))
             } header: {
-                SectionTitle("Quand un perso réclame l'attention", help: prefs.attentionAction.explanation
-                             + " Détecté au rebond de l'icône dans le Dock, le seul signal qu'une app peut émettre "
-                             + "vers l'extérieur ; Synfus ne lit rien du jeu lui-même.")
+                SectionTitle(L("raccourcis.attention"), help: prefs.attentionAction.explanation
+                             + " " + L("raccourcis.attention.aide"))
             }
 
             Section {
-                Button("Rétablir les raccourcis par défaut") {
+                Button(L("raccourcis.retablir")) {
                     prefs.resetShortcuts()
                     rebind()
                 }
@@ -143,8 +120,8 @@ struct ShortcutsSettings: View {
 
             if !HotKeyManager.shared.rejected.isEmpty {
                 Section {
-                    Label("Refusées par le système (déjà prises par une autre app) : "
-                          + HotKeyManager.shared.rejected.map(\.displayString).joined(separator: ", "),
+                    Label(L("raccourcis.refusees",
+                            HotKeyManager.shared.rejected.map(\.displayString).joined(separator: ", ")),
                           systemImage: "exclamationmark.triangle")
                     .font(.system(size: 11)).foregroundStyle(.orange)
                 }

@@ -25,10 +25,10 @@ enum ClickModifier: String, Codable, CaseIterable, Identifiable {
     var label: String {
         switch self {
         case .fn: return "fn (🌐)"
-        case .control: return "⌃ contrôle"
-        case .option: return "⌥ option"
-        case .shift: return "⇧ majuscule"
-        case .command: return "⌘ commande"
+        case .control: return "⌃ " + L("touche.controle")
+        case .option: return "⌥ " + L("touche.option")
+        case .shift: return "⇧ " + L("touche.majuscule")
+        case .command: return "⌘ " + L("touche.commande")
         }
     }
 
@@ -69,6 +69,6 @@ enum ClickModifier: String, Codable, CaseIterable, Identifiable {
     /// c'est ainsi qu'on vérifie que macOS voit bien `fn` sur ce clavier-là.
     static func describe(_ flags: NSEvent.ModifierFlags) -> String {
         let held = allCases.filter { flags.contains($0.flag) }
-        return held.isEmpty ? "aucune" : held.map(\.symbol).joined()
+        return held.isEmpty ? L("touche.aucune") : held.map(\.symbol).joined()
     }
 }

@@ -11,21 +11,20 @@ enum AttentionAction: String, Codable, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .ignore: return "Ne rien faire"
-        case .highlight: return "Le signaler dans la barre"
-        case .focus: return "Basculer automatiquement dessus"
+        case .ignore: return L("attention.ignorer")
+        case .highlight: return L("attention.signaler")
+        case .focus: return L("attention.basculer")
         }
     }
 
     var explanation: String {
         switch self {
         case .ignore:
-            return "La détection reste inactive."
+            return L("attention.ignorer.aide")
         case .highlight:
-            return "Le perso concerné clignote dans la barre. Tu vois où aller sans être déplacé de force."
+            return L("attention.signaler.aide")
         case .focus:
-            return "Synfus met le perso au premier plan de lui-même. Pratique en combat, "
-                 + "déroutant si tu es en train d'écrire ailleurs."
+            return L("attention.basculer.aide")
         }
     }
 }
@@ -153,13 +152,13 @@ final class AttentionWatcher: ObservableObject {
     /// l'icône qui saute — et lui seul — se creuse.
     private static func describe(_ inventory: DockInspector.Inventory) -> String {
         guard let strip = inventory.strip else {
-            return "bandeau illisible — mesure sur l'ordonnée écran"
+            return L("attention.releve.sansBandeau")
         }
         let ecarts = inventory.items
             .map { String(format: "%+.0f", $0.position.y - strip.minY) }
             .joined(separator: ", ")
-        return String(format: "bandeau y=%.0f h=%.0f · écarts des icônes : ", strip.minY, strip.height)
-            + (ecarts.isEmpty ? "aucune" : ecarts)
+        return L("attention.releve.bandeau", strip.minY, strip.height)
+            + (ecarts.isEmpty ? L("attention.releve.aucune") : ecarts)
     }
 
     /// Le curseur survole-t-il le Dock ?

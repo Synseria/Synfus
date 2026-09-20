@@ -7,60 +7,56 @@ struct GeneralSettings: View {
     @ObservedObject private var manager = WindowManager.shared
     @ObservedObject private var previews = WindowPreviewService.shared
     @State private var launchAtLogin = LaunchAtLogin.isEnabled
+    /// `""` = suivre le système, sinon le code de la langue imposée.
+    @State private var langue = LangueReglage.choisie?.rawValue ?? ""
 
     var body: some View {
         Form {
             Section {
                 PermissionRow(
-                    name: "Accessibilité",
+                    name: L("general.accessibilite"),
                     granted: manager.accessibilityGranted,
-                    help: "Indispensable : c'est ce qui permet de lister les fenêtres de Dofus, "
-                        + "de lire le nom du perso et d'activer un client. Sans elle, aucun perso "
-                        + "n'apparaît. Réglages Système → Confidentialité et sécurité → Accessibilité."
+                    help: L("general.accessibilite.aide")
                 ) { manager.requestAccessibility() }
 
                 PermissionRow(
-                    name: "Enregistrement de l'écran",
+                    name: L("general.enregistrementEcran"),
                     granted: previews.authorized,
-                    help: "Sert aux aperçus des fenêtres, à la reconnaissance des sorts et à la "
-                        + "détection de combat. Autorisation distincte de l'Accessibilité ; macOS "
-                        + "demande souvent de relancer Synfus après l'avoir accordée. Réglages Système "
-                        + "→ Confidentialité et sécurité → Enregistrement de l'écran."
+                    help: L("general.enregistrementEcran.aide")
                 ) { previews.requestAuthorization() }
 
                 if AppIntegrity.isQuarantined {
                     quarantineWarning
                 }
             } header: {
-                SectionTitle("Autorisations")
+                SectionTitle(L("general.autorisations"))
             }
 
             Section {
-                Toggle("Afficher la barre", isOn: Binding(
+                Toggle(L("general.barre.afficher"), isOn: Binding(
                     get: { prefs.barVisible },
                     set: { prefs.barVisible = $0; FloatingBarController.shared.apply() }
                 ))
                 if prefs.barVisible {
-                    Toggle("Seulement quand Dofus est devant", isOn: Binding(
+                    Toggle(L("general.barre.seulementDofus"), isOn: Binding(
                         get: { prefs.barOnlyWithDofus },
                         set: { prefs.barOnlyWithDofus = $0; FloatingBarController.shared.updateVisibility() }
                     ))
-                    Toggle("Numéros des emplacements", isOn: $prefs.showNumbers)
-                    Toggle("Classe sous le nom", isOn: $prefs.showClasses)
+                    Toggle(L("general.barre.numeros"), isOn: $prefs.showNumbers)
+                    Toggle(L("general.barre.classes"), isOn: $prefs.showClasses)
                     HStack {
-                        Text("Position")
+                        Text(L("general.barre.position"))
                         Spacer()
-                        Button("Recentrer en haut de l'écran") { FloatingBarController.shared.recenter() }
+                        Button(L("general.barre.recentrer")) { FloatingBarController.shared.recenter() }
                             .font(.system(size: 11))
                     }
                 }
             } header: {
-                SectionTitle("Barre flottante", help: "La barre se déplace en saisissant les points à sa gauche. "
-                             + "Elle ne prend jamais le clavier : c'est un overlay de jeu.")
+                SectionTitle(L("general.barre"), help: L("general.barre.aide"))
             }
 
             Section {
-                Toggle("Aperçu au survol d'un perso", isOn: Binding(
+                Toggle(L("general.apercus.survol"), isOn: Binding(
                     get: { prefs.showPreviewOnHover },
                     set: { value in
                         prefs.showPreviewOnHover = value
@@ -68,31 +64,53 @@ struct GeneralSettings: View {
                     }
                 ))
             } header: {
-                SectionTitle("Aperçus", help: "Une vignette de la fenêtre du perso au survol de sa pastille. "
-                             + "Un perso sur un autre bureau ou en plein écran ailleurs est capturable, "
-                             + "mais son image peut dater : macOS ne redessine pas une fenêtre qu'il ne montre pas.")
+                SectionTitle(L("general.apercus"), help: L("general.apercus.aide"))
             }
 
             Section {
-                Picker("Icône dans la barre de menus", selection: Binding(
+                Picker(L("general.icone"), selection: Binding(
                     get: { prefs.menuBarIcon },
                     set: { prefs.menuBarIcon = $0; MenuBarController.shared.refreshIcon() }
                 )) {
                     ForEach(MenuBarIcon.allCases) { Text($0.label).tag($0) }
                 }
-                Toggle("Démarrer Synfus avec la session", isOn: $launchAtLogin)
+                Toggle(L("general.demarrerAvecSession"), isOn: $launchAtLogin)
                     .onChange(of: launchAtLogin) { _, value in LaunchAtLogin.set(value) }
+                languageRow
                 HStack {
-                    Text("Version")
+                    Text(L("general.version"))
                     Spacer()
                     Text(AppIntegrity.displayName).font(.system(size: 11)).foregroundStyle(.secondary)
                         .textSelection(.enabled)
                 }
             } header: {
-                SectionTitle("Système")
+                SectionTitle(L("general.systeme"))
             }
         }
         .formStyle(.grouped)
+    }
+
+    /// La langue de l'interface. La table est chargée au lancement : le choix
+    /// ne prend effet qu'en relançant, et le bouton n'apparaît que si le
+    /// prochain lancement parlerait une autre langue que celui-ci.
+    private var languageRow: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Picker(L("general.langue"), selection: $langue) {
+                    Text(L("general.langue.systeme")).tag("")
+                    ForEach(Langue.allCases) { Text($0.nom).tag($0.rawValue) }
+                }
+                .onChange(of: langue) { _, value in LangueReglage.choisie = Langue(rawValue: value) }
+                HelpTip(L("general.langue.aide"))
+            }
+            if LangueReglage.auProchainLancement != L10n.courante.langue {
+                HStack {
+                    Spacer()
+                    Button(L("general.langue.relancer")) { LangueReglage.relancer() }
+                        .font(.system(size: 11))
+                }
+            }
+        }
     }
 
     /// Sans cet avertissement, l'utilisateur coche la case dans les Réglages,
@@ -103,12 +121,9 @@ struct GeneralSettings: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 Image(systemName: "exclamationmark.triangle").foregroundStyle(.orange)
-                Text("Cette copie est en quarantaine : l'autorisation Accessibilité restera sans effet")
+                Text(L("general.quarantaine"))
                     .font(.system(size: 11, weight: .semibold))
-                HelpTip("Elle a été téléchargée, et macOS la marque comme non vérifiée. Tant que cette "
-                        + "marque est là, cocher Synfus dans les Réglages reste sans effet. Exécute la "
-                        + "première commande dans le Terminal puis relance Synfus ; la seconde réinitialise "
-                        + "l'entrée si Synfus avait déjà été autorisé avant.")
+                HelpTip(L("general.quarantaine.aide"))
             }
             CopiableCommand(command: AppIntegrity.quarantineFix)
             CopiableCommand(command: AppIntegrity.resetCommand)
