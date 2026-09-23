@@ -107,6 +107,7 @@ final class AttentionWatcher: ObservableObject {
         let clients = sortedClients
         guard !clients.isEmpty else {
             diagnostics.update(pairing: [])
+            diagnostics.update(pairingReliable: true)
             if !alerting.isEmpty { alerting.removeAll() }
             return
         }
@@ -121,14 +122,22 @@ final class AttentionWatcher: ObservableObject {
 
         // Les icônes du Dock s'ajoutent dans l'ordre de lancement des apps, tout
         // comme les pid croissent dans cet ordre : on apparie donc rang à rang.
-        // C'est une hypothèse, d'où son affichage dans l'onglet Diagnostic.
+        // C'est une hypothèse, d'où son affichage dans l'onglet Diagnostic — et
+        // elle porte sur les **processus**, pas sur les persos : un client resté
+        // à l'écran de connexion a son icône sans avoir de perso, et zipper les
+        // deux listes décalait tous les rangs suivants (cf. `DockPairing`).
         //
         // Ce tour de boucle passe dix fois par seconde : rien n'est republié
         // sans avoir changé, et les chaînes du Diagnostic ne sont même pas
         // recomposées tant que le relevé est numériquement le même.
-        diagnostics.update(pairing: zip(items, clients).map {
-            AttentionDiagnostics.Pair(dock: $0.key, character: $1.name)
+        let pids = WindowManager.shared.liveDofusPIDs
+        let apparies = DockPairing.apparier(nombreIcones: items.count,
+                                            pidsVivants: pids, clients: clients)
+        diagnostics.update(pairing: zip(items, apparies).map {
+            AttentionDiagnostics.Pair(dock: $0.key, character: $1?.name ?? L("attention.appariement.sansPerso"))
         })
+        diagnostics.update(pairingReliable: DockPairing.fiable(nombreIcones: items.count,
+                                                               pidsVivants: pids))
         if inventory != lastInventory {
             lastInventory = inventory
             diagnostics.update(reading: Self.describe(inventory))
@@ -142,8 +151,16 @@ final class AttentionWatcher: ObservableObject {
             mouseInDock: isMouseOverDock(inventory)
         )
 
+        // Les clés des icônes disparues n'ont plus de délai de garde à porter :
+        // sans cette purge, `lastTrigger` grossissait à chaque relance du Dock.
+        let vivantes = Set(items.map(\.key))
+        if lastTrigger.keys.contains(where: { !vivantes.contains($0) }) {
+            lastTrigger = lastTrigger.filter { vivantes.contains($0.key) }
+        }
+
         for rank in detector.ingest(snapshot) where rank < items.count {
-            trigger(index: rank, clients: clients, action: action, key: items[rank].key)
+            guard let client = apparies[rank] else { continue }
+            trigger(client, action: action, key: items[rank].key)
         }
     }
 
@@ -174,12 +191,9 @@ final class AttentionWatcher: ObservableObject {
         return box.contains(CGPoint(x: mouse.x, y: reference.frame.maxY - mouse.y))
     }
 
-    private func trigger(index: Int, clients: [DofusClient], action: AttentionAction, key: String) {
+    private func trigger(_ client: DofusClient, action: AttentionAction, key: String) {
         if let last = lastTrigger[key], Date().timeIntervalSince(last) < cooldown { return }
         lastTrigger[key] = Date()
-
-        guard index < clients.count else { return }
-        let client = clients[index]
 
         // Inutile de signaler le perso qu'on est déjà en train de regarder.
         guard !WindowManager.shared.isFrontmost(client) else { return }

@@ -218,6 +218,22 @@ struct PreferencesTests {
         #expect(prefs.characterOrder == ["Nelo"])
     }
 
+    @Test("Plusieurs persos s'oublient en une seule écriture")
+    func oubliEnLot() {
+        let (prefs, store) = neuves()
+        prefs.characterOrder = ["Amarine", "Nelo", "Kirel"]
+        prefs.equipes = [Equipe(membres: ["Amarine", "Kirel"])]
+        prefs.forget(names: ["Amarine", "Kirel"])
+        #expect(prefs.characterOrder == ["Nelo"])
+        // Les équipes suivent, comme pour un oubli unitaire.
+        #expect(prefs.equipes.isEmpty)
+
+        // Rien à retirer : rien n'est écrit — l'égalité des données le dit.
+        let avant = store.donnees(pour: Preferences.key)
+        prefs.forget(names: ["Inconnu"])
+        #expect(store.donnees(pour: Preferences.key) == avant)
+    }
+
     // MARK: - Persistance
 
     @Test("Les réglages survivent à un redémarrage")

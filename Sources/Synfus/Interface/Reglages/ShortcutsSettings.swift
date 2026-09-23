@@ -5,12 +5,29 @@ struct ShortcutsSettings: View {
     @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var manager = WindowManager.shared
     @ObservedObject private var clicks = ClickAdvanceWatcher.shared
+    @ObservedObject private var hotKeys = HotKeyManager.shared
+
+    /// Les combinaisons données deux fois : le système n'en enregistre qu'une,
+    /// et l'autre ligne restait affichée comme si elle marchait.
+    private var doublons: Set<HotKey> {
+        HotKeyConflicts.doublons(prefs.hotKeys + [
+            prefs.cycleNext, prefs.cyclePrevious, prefs.toggleBar, prefs.previewHotKey,
+            prefs.arrangeHotKey, prefs.sessionHotKey, prefs.equipeSuivanteHotKey,
+            prefs.inviteHotKey, prefs.toggleAutoFocus,
+        ])
+    }
+
+    private func enConflit(_ hotKey: HotKey?) -> Bool {
+        hotKey.map(doublons.contains) ?? false
+    }
 
     var body: some View {
         Form {
             Section {
                 ForEach(0..<prefs.slotCount, id: \.self) { slot in
-                    ShortcutRow(label: L("raccourcis.perso", slot + 1), detail: nameForSlot(slot), hotKey: binding(forSlot: slot))
+                    ShortcutRow(label: L("raccourcis.perso", slot + 1), detail: nameForSlot(slot),
+                                conflit: enConflit(slot < prefs.hotKeys.count ? prefs.hotKeys[slot] : nil),
+                                hotKey: binding(forSlot: slot))
                 }
                 Stepper(L("raccourcis.emplacements", prefs.slotCount),
                         value: Binding(get: { prefs.slotCount }, set: { prefs.slotCount = $0; rebind() }),
@@ -20,10 +37,11 @@ struct ShortcutsSettings: View {
             }
 
             Section {
-                ShortcutRow(label: L("raccourcis.persoSuivant"), hotKey: hotKey(\.cycleNext))
-                ShortcutRow(label: L("raccourcis.persoPrecedent"), hotKey: hotKey(\.cyclePrevious))
-                ShortcutRow(label: L("raccourcis.afficherMasquerBarre"), hotKey: hotKey(\.toggleBar))
+                ShortcutRow(label: L("raccourcis.persoSuivant"), conflit: enConflit(prefs.cycleNext), hotKey: hotKey(\.cycleNext))
+                ShortcutRow(label: L("raccourcis.persoPrecedent"), conflit: enConflit(prefs.cyclePrevious), hotKey: hotKey(\.cyclePrevious))
+                ShortcutRow(label: L("raccourcis.afficherMasquerBarre"), conflit: enConflit(prefs.toggleBar), hotKey: hotKey(\.toggleBar))
                 ShortcutRow(label: L("raccourcis.voirTous"), help: L("raccourcis.voirTous.aide"),
+                            conflit: enConflit(prefs.previewHotKey),
                             hotKey: Binding(
                                 get: { prefs.previewHotKey },
                                 set: { value in
@@ -39,12 +57,12 @@ struct ShortcutsSettings: View {
 
             Section {
                 ShortcutRow(label: L("raccourcis.ranger"), help: L("raccourcis.ranger.aide"),
-                            hotKey: hotKey(\.arrangeHotKey))
+                            conflit: enConflit(prefs.arrangeHotKey), hotKey: hotKey(\.arrangeHotKey))
                 ShortcutRow(label: L("raccourcis.lancerSession"), help: L("raccourcis.lancerSession.aide"),
-                            hotKey: hotKey(\.sessionHotKey))
+                            conflit: enConflit(prefs.sessionHotKey), hotKey: hotKey(\.sessionHotKey))
                 if !prefs.equipes.isEmpty {
                     ShortcutRow(label: L("raccourcis.equipeSuivante"), help: L("raccourcis.equipeSuivante.aide"),
-                                hotKey: hotKey(\.equipeSuivanteHotKey))
+                                conflit: enConflit(prefs.equipeSuivanteHotKey), hotKey: hotKey(\.equipeSuivanteHotKey))
                 }
             } header: {
                 SectionTitle(L("raccourcis.fenetres"))
@@ -52,7 +70,7 @@ struct ShortcutsSettings: View {
 
             Section {
                 ShortcutRow(label: L("raccourcis.invitation"), help: L("raccourcis.invitation.aide"),
-                            hotKey: hotKey(\.inviteHotKey))
+                            conflit: enConflit(prefs.inviteHotKey), hotKey: hotKey(\.inviteHotKey))
                 HStack {
                     Text(L("raccourcis.invitation.format"))
                     HelpTip(L("raccourcis.invitation.format.aide"))
@@ -104,7 +122,7 @@ struct ShortcutsSettings: View {
                     ForEach(AttentionAction.allCases) { Text($0.label).tag($0) }
                 }
                 .pickerStyle(.radioGroup)
-                ShortcutRow(label: L("raccourcis.attention.bascule"), hotKey: hotKey(\.toggleAutoFocus))
+                ShortcutRow(label: L("raccourcis.attention.bascule"), conflit: enConflit(prefs.toggleAutoFocus), hotKey: hotKey(\.toggleAutoFocus))
             } header: {
                 SectionTitle(L("raccourcis.attention"), help: prefs.attentionAction.explanation
                              + " " + L("raccourcis.attention.aide"))
@@ -118,10 +136,10 @@ struct ShortcutsSettings: View {
                 .font(.system(size: 11))
             }
 
-            if !HotKeyManager.shared.rejected.isEmpty {
+            if !hotKeys.rejected.isEmpty {
                 Section {
                     Label(L("raccourcis.refusees",
-                            HotKeyManager.shared.rejected.map(\.displayString).joined(separator: ", ")),
+                            hotKeys.rejected.map(\.displayString).joined(separator: ", ")),
                           systemImage: "exclamationmark.triangle")
                     .font(.system(size: 11)).foregroundStyle(.orange)
                 }

@@ -4,6 +4,12 @@ import SwiftUI
 struct CharactersSettings: View {
     @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var manager = WindowManager.shared
+    @State private var confirmerOubli = false
+
+    /// Les persos connus qu'aucun client ne porte en ce moment.
+    private var horsLigne: [String] {
+        prefs.characterOrder.filter { !isOnline($0) }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -31,12 +37,22 @@ struct CharactersSettings: View {
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                 Spacer()
-                Button(L("persos.oublierHorsLigne")) {
-                    for name in prefs.characterOrder where !isOnline(name) {
-                        prefs.forget(name: name)
+                // Une seule écriture pour toute la fournée, et un dernier mot
+                // avant : la liste des persos est ce qui fixe la numérotation
+                // des emplacements, la vider par mégarde décale tous les
+                // raccourcis.
+                Button(L("persos.oublierHorsLigne")) { confirmerOubli = true }
+                    .font(.system(size: 11))
+                    .disabled(horsLigne.isEmpty)
+                    .confirmationDialog(
+                        L("persos.oublierHorsLigne.confirmation", horsLigne.count),
+                        isPresented: $confirmerOubli, titleVisibility: .visible
+                    ) {
+                        Button(L("persos.oublierHorsLigne"), role: .destructive) {
+                            prefs.forget(names: horsLigne)
+                        }
+                        Button(L("commun.annuler"), role: .cancel) {}
                     }
-                }
-                .font(.system(size: 11))
             }
             .padding(12)
 
