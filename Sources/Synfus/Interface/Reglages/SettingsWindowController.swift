@@ -20,7 +20,7 @@ final class SettingsWindowController: NSObject {
         if window == nil {
             let hosting = NSHostingController(rootView: SettingsView())
             let window = NSWindow(contentViewController: hosting)
-            window.title = "Réglages Synfus"
+            window.title = L("reglages.titre")
             window.styleMask = [.titled, .closable, .miniaturizable]
             window.isReleasedWhenClosed = false
             self.window = window

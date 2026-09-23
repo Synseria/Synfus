@@ -311,6 +311,19 @@ L'identité d'une icône est son **rang**, jamais son abscisse — la magnificat
 écarte les icônes sous le curseur, et chaque survol créait sinon une identité
 neuve. C'est pour cette raison que l'appariement est exposé dans l'onglet
 Diagnostic.
+
+L'appariement porte sur les **processus**, jamais sur les persos, et c'est
+[DockPairing.swift](Sources/Synfus/Attention/DockPairing.swift) — pur, testé —
+qui le tient. Une icône du Dock appartient à un processus ; `clients` porte un
+perso par **fenêtre**. Zipper les deux listes ne tenait qu'à longueurs égales,
+et un client resté à l'écran de connexion la rompait : icône sans perso, tous
+les rangs suivants décalés d'un cran, un rebond signalant le voisin et le
+passage automatique basculant sur le mauvais perso. On apparie donc rang ↔ pid
+croissant (`WindowManager.liveDofusPIDs`, le compte qui périme déjà le cache de
+structure), puis pid → perso. `DockPairing.fiable` dit si le compte d'icônes
+est bien celui des processus ; sinon le Diagnostic prévient plutôt que de
+laisser lire une correspondance fausse.
+
 [AttentionProbe.swift](Sources/Synfus/Attention/AttentionProbe.swift) est l'outil
 d'exploration qui a servi à établir ce mécanisme ; il journalise tout changement
 d'attribut dans `~/Library/Logs/Synfus/attention.log`.
@@ -367,6 +380,23 @@ et `adoptDefaults(from:)`, qui ne réécrit que les valeurs **encore identiques 
 l'ancien défaut** — un raccourci personnalisé est un choix. La génération est
 inscrite dans la sauvegarde, ce qui donne au passage la seule façon de
 distinguer « jamais eu ce réglage » de « effacé exprès ».
+
+**Un seul champ enregistre à la fois.** `ShortcutRecording` (dans
+[ShortcutRecorder.swift](Sources/Synfus/Raccourcis/ShortcutRecorder.swift))
+tient l'unique moniteur local et l'identité du champ qui a la parole ; prendre
+la parole la retire à qui l'avait. Chaque champ posait auparavant le sien :
+cliquer un second sans terminer le premier laissait deux moniteurs en place, le
+premier restait sur « Pressez… » indéfiniment, son moniteur survivait à la
+fenêtre, et une frappe pouvait être attribuée aux deux — dont l'un se faisait
+ensuite refuser pour doublon.
+
+Ce doublon-là, justement, se voit désormais **ligne par ligne** :
+[HotKeyConflicts.swift](Sources/Synfus/Raccourcis/HotKeyConflicts.swift) — pur,
+testé — rend les combinaisons données deux fois, et la ligne concernée porte un
+avertissement. `HotKeyManager.rejected` ne disait que la combinaison refusée,
+pas le geste : le raccourci s'affichait, bien en place, et restait sans effet.
+La liste est `@Published` pour que cet avertissement apparaisse et disparaisse
+au rythme des modifications.
 
 ### Enchaîner les persos au clic
 
@@ -435,6 +465,13 @@ C'est une opération de **processus**, pas une saisie — la règle « Synfus n'
 aucun évènement » reste entière. Points d'entrée : clic droit sur une pastille
 (« Fermer “Nom” »), « Fermer tous les persos » dans le menu contextuel de la
 barre et la barre de menus.
+
+`closeAll` ferme **un processus à la fois** — `clients` porte un perso par
+fenêtre, et deux persos d'un même client donnaient deux escalades sur le même
+pid : deux Apple Events, deux échéances, deux coups de grâce. Et c'est le seul
+geste de l'app qui demande un dernier mot : irréversible, il vit dans les menus
+juste au-dessus de « Quitter », et une session de huit comptes ne doit pas
+tomber sur un clic de travers.
 
 **L'envoi du Quit Apple Event peut bloquer plusieurs secondes** quand le client
 est déjà gelé — c'est ce qui figeait Synfus au moment de fermer. `terminate()`

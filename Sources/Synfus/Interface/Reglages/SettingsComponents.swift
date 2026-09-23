@@ -51,6 +51,9 @@ struct ShortcutRow: View {
     var detail: String? = nil
     var help: String? = nil
     var allowsBareKeys = false
+    /// Cette combinaison est donnée à un autre geste : le système n'en
+    /// enregistre qu'une, et rien ne le disait ligne par ligne.
+    var conflit = false
     let hotKey: Binding<HotKey?>
 
     var body: some View {
@@ -60,6 +63,12 @@ struct ShortcutRow: View {
             Spacer()
             if let detail {
                 Text(detail).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
+            }
+            if conflit {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.orange)
+                    .help(L("raccourcis.conflit"))
             }
             ShortcutRecorder(hotKey: hotKey, allowsBareKeys: allowsBareKeys)
         }

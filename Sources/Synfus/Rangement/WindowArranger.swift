@@ -86,7 +86,16 @@ final class WindowArranger: ObservableObject {
         let repere = eligibles.first { $0.pid == manager.frontmostPID } ?? eligibles[0]
         let ecran = ecran(de: repere, hauteurPrincipale: hauteurPrincipale) ?? NSScreen.main
         guard let ecran else {
+            // Aucun écran : rien n'a bougé, et le Diagnostic doit le dire —
+            // sans rapport, il continuait d'afficher celui du rangement
+            // précédent, qui avait, lui, parfaitement marché.
             NSSound.beep()
+            dernierRapport = Rapport(
+                date: Date(), titre: titre, ecran: "—", rangees: [],
+                ecartees: ecartees + eligibles.map {
+                    Ecartee(nom: $0.name, raison: L("rangement.raison.sansEcran"))
+                }
+            )
             return
         }
 

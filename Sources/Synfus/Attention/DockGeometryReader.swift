@@ -85,6 +85,11 @@ final class AttentionDiagnostics: ObservableObject {
     /// l'appariement rang ↔ pid est une hypothèse.
     @Published private(set) var pairing: [Pair] = []
 
+    /// Y a-t-il exactement une icône par processus Dofus vivant ? Sinon
+    /// l'appariement rang ↔ processus n'est plus fondé, et le Diagnostic doit
+    /// le dire plutôt que d'afficher une correspondance à laquelle se fier.
+    @Published private(set) var pairingReliable = true
+
     /// Dernier relevé du bandeau du Dock et des icônes. Toute la détection repose
     /// sur l'idée qu'un rebond éloigne l'icône de son bandeau alors qu'un Dock
     /// qui glisse les emporte ensemble : c'est une hypothèse, elle doit pouvoir
@@ -95,6 +100,10 @@ final class AttentionDiagnostics: ObservableObject {
 
     func update(pairing paired: [Pair]) {
         if paired != pairing { pairing = paired }
+    }
+
+    func update(pairingReliable fiable: Bool) {
+        if fiable != pairingReliable { pairingReliable = fiable }
     }
 
     func update(reading: String?) {

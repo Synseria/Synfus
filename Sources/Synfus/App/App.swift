@@ -82,8 +82,15 @@ enum SynfusMain {
         }
 
         let application = NSApplication.shared
-        let delegate = AppDelegate()
+        // `NSApplication.delegate` est une référence **faible** : un délégué
+        // gardé dans une variable locale peut être libéré dès son dernier usage
+        // une fois l'optimiseur passé, et l'app ne reçoit alors plus aucun
+        // évènement de cycle de vie. Il vit donc aussi longtemps que le
+        // processus.
         application.delegate = delegate
         application.run()
     }
+
+    /// Le délégué, tenu pour la durée du processus (cf. `main`).
+    @MainActor private static let delegate = AppDelegate()
 }

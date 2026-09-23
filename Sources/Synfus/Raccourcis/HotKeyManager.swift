@@ -8,7 +8,7 @@ import Carbon.HIToolbox
 /// jamais ce que l'utilisateur tape ailleurs, et aucune permission de saisie
 /// n'est requise.
 @MainActor
-final class HotKeyManager {
+final class HotKeyManager: ObservableObject {
     static let shared = HotKeyManager()
 
     private struct Entry {
@@ -30,7 +30,12 @@ final class HotKeyManager {
 
     /// Combinaisons refusées par le système, en général parce qu'une autre app
     /// les a déjà réservées. On les remonte à l'UI pour le signaler.
-    private(set) var rejected: [HotKey] = []
+    ///
+    /// `@Published` et non un simple stockage : l'avertissement des réglages se
+    /// lit sur cette liste, et sans publication il n'apparaissait — ou ne
+    /// disparaissait — qu'au prochain redessin que quelque chose d'autre
+    /// provoquait.
+    @Published private(set) var rejected: [HotKey] = []
 
     private init() {}
 

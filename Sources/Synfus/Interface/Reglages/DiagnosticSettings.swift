@@ -196,6 +196,15 @@ struct DiagnosticSettings: View {
                             .font(.system(size: 10, design: .monospaced))
                             .foregroundStyle(.secondary)
                     }
+                    // Une icône de plus (ou de moins) que de processus Dofus, et
+                    // l'appariement rang ↔ processus ne vaut plus rien : mieux
+                    // vaut le dire que laisser lire une correspondance fausse.
+                    if !attention.pairingReliable {
+                        Label(L("diagnostic.attention.appariementDouteux"),
+                              systemImage: "exclamationmark.triangle")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.orange)
+                    }
                 }
                 .padding(.bottom, 4)
             }

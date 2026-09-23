@@ -137,7 +137,7 @@ struct BarView: View {
             Button {
                 manager.requestAccessibility()
             } label: {
-                Label("Autoriser Synfus", systemImage: "lock.shield")
+                Label(L("barre.autoriser"), systemImage: "lock.shield")
                     .font(.system(size: 11, weight: .medium))
                     .padding(.horizontal, 8)
                     .padding(.vertical, 5)
@@ -318,10 +318,9 @@ struct BarView: View {
     /// d'ouvrir — le premier aperçu s'affichait, les suivants jamais. D'où
     /// `hoverTarget` : une sortie n'annule que sa propre attente.
     private func hover(_ client: DofusClient, inside: Bool) {
-        // Pendant un glisser, le curseur traverse les pastilles : aucun aperçu
-        // ne doit s'ouvrir, il cacherait la rangée qu'on vise.
-        guard prefs.showPreviewOnHover, dragging == nil else { return }
-
+        // Une sortie referme toujours, quel que soit l'état du réglage : couper
+        // l'aperçu au survol pendant qu'un aperçu est ouvert laissait sinon la
+        // vignette à l'écran, sans plus rien pour la fermer.
         guard inside else {
             if hoverTarget == client.slotKey {
                 hoverTask?.cancel()
@@ -331,6 +330,10 @@ struct BarView: View {
             PreviewPanelController.shared.hide(ifShowing: client)
             return
         }
+
+        // Pendant un glisser, le curseur traverse les pastilles : aucun aperçu
+        // ne doit s'ouvrir, il cacherait la rangée qu'on vise.
+        guard prefs.showPreviewOnHover, dragging == nil else { return }
 
         // Préchauffage : la capture part tout de suite, en parallèle de
         // l'attente, pour que l'aperçu s'ouvre avec son image plutôt que sur

@@ -199,7 +199,17 @@ final class Preferences: ObservableObject {
     }
 
     func forget(name: String) {
-        characterOrder.removeAll { $0 == name }
+        forget(names: [name])
+    }
+
+    /// Oublie plusieurs persos d'un coup. Une écriture, pas une par nom :
+    /// chaque affectation de `characterOrder` sérialise le JSON et réveille
+    /// toutes les vues qui observent les préférences — « oublier les hors
+    /// ligne » sur une liste de trente persos en faisait autant de tours.
+    func forget(names: [String]) {
+        let aRetirer = Set(names)
+        guard characterOrder.contains(where: aRetirer.contains) else { return }
+        characterOrder.removeAll(where: aRetirer.contains)
         restreindreEquipes()
     }
 
