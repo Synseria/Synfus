@@ -5,6 +5,7 @@ struct BarView: View {
     @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var watcher = AttentionWatcher.shared
     @ObservedObject private var icons = ClassIconStore.shared
+    @ObservedObject private var lecteur = LecteurEcran.shared
     @ObservedObject private var invitations = InvitationClipboard.shared
     @State private var dragging: String?
     @State private var chipFrames: [String: CGRect] = [:]
@@ -275,6 +276,13 @@ struct BarView: View {
             )
             .overlay { if alerting { AlertPulse() } }
             .overlay { if manager.basculeSignalee == client.slotKey { SwitchBlink() } }
+            // L'état de combat lu à l'écran : contour rose et décompte quand
+            // c'est son tour, une épée quand il est en combat.
+            .overlay(alignment: .topTrailing) {
+                if prefs.lireCombat, let etat = lecteur.combats[client.name], etat.enCombat {
+                    CombatBadge(etat: etat)
+                }
+            }
             .foregroundStyle(active ? Color.white : Color.primary)
             .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
@@ -339,7 +347,7 @@ struct BarView: View {
         // la lecture de la position ouvre à la place une simple étiquette.
         let apercu = prefs.showPreviewOnHover
         guard apercu || prefs.lirePosition, dragging == nil else { return }
-        if prefs.lirePosition { LecteurPosition.shared.lireAuSurvol(client) }
+        if prefs.lirePosition { LecteurEcran.shared.lireAuSurvol(client) }
 
         // Préchauffage : la capture part tout de suite, en parallèle de
         // l'attente, pour que l'aperçu s'ouvre avec son image plutôt que sur

@@ -92,20 +92,25 @@ enum AccessibilityReader {
         var subrole: String?
         var size: CGSize?
         var title: String?
+        /// Attribut littéral `"AXFullScreen"` : la fenêtre occupe son propre
+        /// espace plein écran, sans barre de titre — ce que la lecture de
+        /// l'écran doit savoir pour placer ses zones dans le contenu.
+        var fullScreen: Bool?
     }
 
-    /// Sous-rôle, taille et titre en **un** IPC — `AXUIElementCopyMultipleAttributeValues`
+    /// Sous-rôle, taille, titre et plein écran en **un** IPC — `AXUIElementCopyMultipleAttributeValues`
     /// — là où trois lectures séparées en coûtaient trois par fenêtre et par
     /// tour. Sans `stopOnError`, un attribut absent arrive sous la forme d'un
     /// `AXValue` de type `.axError` à sa place : la fenêtre reste lue pour le
     /// reste, comme avant.
     static func windowFacts(_ window: AXHandle) -> WindowFacts {
-        guard let raw = multiple(window, [kAXSubroleAttribute, kAXSizeAttribute, kAXTitleAttribute])
+        guard let raw = multiple(window, [kAXSubroleAttribute, kAXSizeAttribute, kAXTitleAttribute, "AXFullScreen"])
         else { return windowFactsOneByOne(window) }
         var facts = WindowFacts()
         facts.subrole = raw[0] as? String
         facts.size = size(raw[1])
         facts.title = raw[2] as? String
+        facts.fullScreen = raw[3] as? Bool
         return facts
     }
 
@@ -117,7 +122,8 @@ enum AccessibilityReader {
         WindowFacts(
             subrole: stringAttribute(window, kAXSubroleAttribute),
             size: sizeAttribute(window, kAXSizeAttribute),
-            title: stringAttribute(window, kAXTitleAttribute)
+            title: stringAttribute(window, kAXTitleAttribute),
+            fullScreen: boolAttribute(window, "AXFullScreen")
         )
     }
 

@@ -125,7 +125,7 @@ de son domaine ; un fichier qui n'en a pas est le signe d'un domaine à créer.
 | `Marque/` | La Couvée : `SynfusMark` (CoreGraphics pur) et `SynfusGlyph` |
 | `Localisation/` | `L()`, les tables JSON par langue, le choix de langue |
 | `Interface/` | `MenuBarController` ; `Barre/` (barre flottante et ses contrôles) ; `Reglages/` (une vue par onglet + contrôleur de fenêtre) |
-| `Position/` | Lecture OCR des coordonnées de carte : `PositionCarte` et `EmpreinteTexte` (purs), `LecteurPosition`, `DiagnosticPosition` et `MoteurOCR` |
+| `Lecture/` | Lecture de l'écran par OCR — position et combat : `ZoneEcran`, `PositionCarte`, `EmpreinteTexte`, `LectureCombat` (purs), `LecteurEcran`, `DiagnosticLecture` et `MoteurOCR` |
 | `StreamDeck/` | L'interface physique contextuelle : `Sorts/` (reconnaissance de la barre), `Profils/` (sorts par perso, touches), `Liaison/` (protocole et socket), `Combat/` (détection combat) |
 | `../SynfusDeck/` | Le plugin Elgato — second target, binaire séparé, sans code partagé : le protocole JSON est le contrat |
 
@@ -182,7 +182,8 @@ leur épargne les processus en fermeture ou suspects. Cette séparation —
 inventaire hors main, gestes sur main — est une décision, pas un oubli.
 
 Chaque fenêtre est lue en **un seul IPC** (`AXUIElementCopyMultipleAttributeValues`
-pour sous-rôle, taille et titre), et rien n'est republié sans avoir changé :
+pour sous-rôle, taille, titre et `"AXFullScreen"` — ce dernier porté par
+`DofusClient.pleinEcran`, pour la lecture de l'écran), et rien n'est republié sans avoir changé :
 `frontmostPID`, `frontmostIsDofus` et `clients` ne sont réaffectés qu'en cas
 de différence. Réordonner les persos passe par `resort()`, un simple retri de
 `clients` selon `characterOrder` — pas un inventaire —, avec le même
@@ -467,31 +468,64 @@ la mémoire ; la rotation s'y posait, activait un processus sans fenêtre, et
 un appui sur deux ne montrait rien. L'accès direct (⌘1…, pastille) n'y passe
 pas.
 
-### Lecture de la position (OCR)
+### Lecture de l'écran (OCR)
 
-[LecteurPosition.swift](Sources/Synfus/Position/LecteurPosition.swift) lit à
-1 Hz les coordonnées de carte du perso au premier plan, en haut à gauche de la
-fenêtre (`PositionCarte.region`). Mesuré sur de vraies captures : Vision en
-`.fast` ne lit rien de la police du jeu ; `.accurate` à **un pixel par point**
-lit juste en ~50 ms (en Retina, « →16 » pour « -16 » et plus lent). L'OCR ne
-repasse que si l'`EmpreinteTexte` (pixels clairs réduits à une grille) a
-changé — la position ne bouge qu'au changement de carte —, et la capture
-réutilise l'inventaire ScreenCaptureKit gardé (`captureData(…,
-inventaireGarde: true)`). Le **premier** OCR `accurate` charge le modèle :
-~28 s mesurées à froid — `MoteurOCR.prechauffer()` le paie à l'activation,
-état « préparation » au Diagnostic.
+[LecteurEcran.swift](Sources/Synfus/Lecture/LecteurEcran.swift) lit, dans la
+fenêtre du perso au premier plan, une fois par seconde, deux zones : la
+**position** (nom de la zone et coordonnées, en haut à gauche) et le
+**combat** (bouton « Fin de tour » et son décompte, en bas à droite par
+défaut). Deux réglages, `lirePosition` et `lireCombat`, éteints par défaut —
+seconde autorisation TCC, demandée seulement par leur bascule, dans le
+Diagnostic.
 
-Les autres persos sont lus **au survol** de leur pastille (relevé de plus de
-10 s) et par « Tout lire » du Diagnostic : réglages ouverts, Synfus est
-devant et le tour régulier n'a rien à lire — ce qui faisait croire la
-lecture en panne. Au survol, la position s'affiche sous la pastille : dans
-l'aperçu s'il est actif, sinon dans une **étiquette** (`PreviewPanelController`,
-mode `.etiquette`, sans capture de fenêtre). Les info-bulles `.help` ne
-sont pas fiables pour une app inactive, ce que Synfus est toujours. Les compteurs
-et la dernière zone lue vivent dans `DiagnosticPosition`, observé par les
-seuls réglages — la barre n'observe que les relevés, qui ne changent qu'au
-changement de carte. Réglage `lirePosition`, éteint par défaut (seconde
-autorisation TCC). `RealCaptureTests` rejoue la chaîne sur une capture.
+Le coût, mesuré sur de vraies captures :
+
+- **Zones serrées, en fractions du contenu** ([ZoneEcran.swift](Sources/Synfus/Lecture/ZoneEcran.swift),
+  pur) : l'interface du jeu suit la taille de la fenêtre, la zone aussi. Du
+  *contenu* et non de la fenêtre : en fenêtré la barre de titre (hauteur
+  d'AppKit, `NSWindow.frameRect(…, .titled)`) décale tout ; le plein écran se
+  sait par `DofusClient.pleinEcran`, lu par l'inventaire dans le même IPC que
+  le titre. La position par défaut fait ~ 530 × 70 px, trois fois moins que
+  la première version.
+- **Échelle fixe** : le contenu est ramené à 1080 px de haut
+  (`ZoneEcran.hauteurReference`, plafonné au natif) — le texte a toujours la
+  même taille, une grande fenêtre ne coûte pas plus. Vision `.fast` ne lit
+  rien de la police du jeu ; `.accurate` lit juste en ~50 ms, sur l'image
+  posée sur une **marge noire** (`encadree`) : un glyphe collé au bord se lit
+  mal — « a16 » pour « -16 », mesuré.
+- **L'OCR ne repasse que si la zone a changé** (`SignatureZone`) : pixels
+  clairs réduits à une grille (`EmpreinteTexte`), et pour le combat la part
+  de rose. Le décompte est vert, sous le seuil des pixels clairs : il ne
+  relance pas l'OCR chaque seconde ; il est lu au changement d'état, et
+  l'échéance tenue localement (`EtatCombat.monTour(fin:)`).
+- **L'inventaire ScreenCaptureKit gardé** (`captureData(…, inventaireGarde:)`).
+- Le premier OCR `.accurate` charge le modèle (~28 s à froid) :
+  `MoteurOCR.prechauffer()` le paie à l'activation.
+
+Le combat ([LectureCombat.swift](Sources/Synfus/Lecture/LectureCombat.swift),
+pur) : « Fin de tour » (fr, en, es, tolérant à l'OCR) sur fond **rose** —
+`ratioRose`, teinte 280°–340°, ~21 % de la zone mesurés — c'est son tour ;
+sans rose, celui d'un autre ; « Prêt », le placement ; rien, hors combat. La
+pastille le montre (`CombatBadge`) : contour rose et décompte à son tour, une
+épée en combat. En plein écran, seul le perso devant est lisible : l'état
+des autres date de leur dernier passage devant. La détection calibrée de
+`StreamDeck/Combat/` (en pause) fait doublon : à la reprise du Stream Deck,
+`CombatWatcher` doit passer par `LecteurEcran.combats`.
+
+Les zones se **calibrent** d'un tracé (`CalibrationZonesView`, depuis le
+Diagnostic) : le joueur déplace son interface une fois pour toutes, chercher
+le bouton partout à chaque lecture coûterait pour rien. `nil` dans les
+préférences = la valeur par défaut, qui suit ainsi ses corrections futures.
+
+Les autres persos sont lus **au survol** de leur pastille (position, relevé
+de plus de 10 s) et par « Tout lire » : réglages ouverts, Synfus est devant.
+Au survol, la position s'affiche sous la pastille — dans l'aperçu s'il est
+actif, sinon dans une **étiquette** (`PreviewPanelController`, mode
+`.etiquette`, sans capture de fenêtre) ; les info-bulles `.help` ne sont pas
+fiables pour une app inactive. Les compteurs et les zones lues vivent dans
+`DiagnosticLecture`, observé par les seuls réglages. `RealCaptureTests`
+rejoue la chaîne sur une capture (`SYNFUS_CAPTURE`, `SYNFUS_PLEIN_ECRAN=1`,
+`SYNFUS_COMBAT_ATTENDU=monTour`).
 
 ### Fermer les clients
 
