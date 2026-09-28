@@ -571,20 +571,22 @@ final class WindowManager: ObservableObject {
         }
     }
 
-    /// Tourne dans l'effectif — l'équipe active, ou tous.
+    /// Tourne dans l'effectif — l'équipe active, ou tous — en sautant les
+    /// clients injoignables : un client qui se ferme ou gèle reste affiché le
+    /// temps de mourir, mais s'y poser ne montrerait rien (cf. `Rotation`).
     func cycle(by step: Int) {
         guard !effectif.isEmpty else {
             NSSound.beep()
             return
         }
         // Depuis Chrome ou Discord — ou depuis un perso hors de l'équipe —, on
-        // ne « cycle » pas : on revient au premier perso.
-        guard let current = currentIndex else {
-            focus(effectif[0])
+        // ne « cycle » pas : on revient au premier perso joignable.
+        let injoignables = unreachablePIDs
+        let joignables = effectif.map { !injoignables.contains($0.pid) }
+        guard let next = Rotation.suivant(depuis: currentIndex, pas: step, joignables: joignables) else {
+            NSSound.beep()
             return
         }
-        let count = effectif.count
-        let next = ((current + step) % count + count) % count
         focus(effectif[next])
     }
 
