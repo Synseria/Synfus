@@ -9,10 +9,11 @@ struct DiagnosticSettings: View {
     @ObservedObject private var arranger = WindowArranger.shared
     @ObservedObject private var freezes = FreezeWatcher.shared
     @ObservedObject private var spells = SpellRecognitionProbe.shared
-    @ObservedObject private var lecteur = LecteurPosition.shared
-    @ObservedObject private var lecture = DiagnosticPosition.shared
+    @ObservedObject private var lecteur = LecteurEcran.shared
+    @ObservedObject private var lecture = DiagnosticLecture.shared
     @ObservedObject private var prefs = Preferences.shared
     @State private var zoomCapture = false
+    @State private var calibrer = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -70,6 +71,11 @@ struct DiagnosticSettings: View {
                                 if prefs.lirePosition {
                                     positionLine(for: client)
                                 }
+                                if prefs.lireCombat {
+                                    Text(L("diagnostic.combat.ligne", libelleCombat(lecteur.combats[client.name])))
+                                        .font(.system(size: 10, design: .monospaced))
+                                        .foregroundStyle(.secondary)
+                                }
                                 if previews.authorized {
                                     Text(previews.unmatched.contains(client.slotKey)
                                          ? L("diagnostic.apercu.introuvable")
@@ -88,7 +94,7 @@ struct DiagnosticSettings: View {
             }
 
             Divider().padding(.vertical, 4)
-            positionSection
+            lectureSection
 
             Divider().padding(.vertical, 4)
             arrangementSection
@@ -136,35 +142,29 @@ struct DiagnosticSettings: View {
         }
     }
 
-    /// Lecture de la position : la bascule, et ce qu'elle coûte. Les compteurs
-    /// sont là pour le prouver — une lecture par changement de carte, pas
-    /// une par seconde.
-    private var positionSection: some View {
+    /// Lecture de l'écran : les bascules, les zones, et ce que ça coûte. Les
+    /// compteurs sont là pour le prouver — une lecture par changement de carte
+    /// ou de tour, pas une par seconde.
+    private var lectureSection: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
-                Text(L("diagnostic.position")).font(.system(size: 12, weight: .semibold))
-                HelpTip(L("diagnostic.position.aide"))
+                Text(L("diagnostic.lecture")).font(.system(size: 12, weight: .semibold))
+                HelpTip(L("diagnostic.lecture.aide"))
                 Spacer()
-                Toggle(L("diagnostic.position.activer"), isOn: Binding(
-                    get: { prefs.lirePosition },
-                    set: { value in
-                        prefs.lirePosition = value
-                        // Le geste de l'utilisateur est la demande : c'est le
-                        // seul endroit où cette lecture la fait.
-                        if value, !previews.authorized { previews.requestAuthorization() }
-                    }))
-                    .toggleStyle(.switch)
-                    .controlSize(.mini)
-                    .font(.system(size: 11))
+                bascule(L("diagnostic.lecture.position"), \.lirePosition)
+                bascule(L("diagnostic.lecture.combat"), \.lireCombat)
             }
-            if prefs.lirePosition {
+            if prefs.lirePosition || prefs.lireCombat {
                 HStack(spacing: 8) {
                     Text(etatLecture)
                         .font(.system(size: 11))
                         .foregroundStyle(etatEnDefaut ? Color.orange : Color.secondary)
                         .textSelection(.enabled)
                     Spacer()
-                    Button(L("diagnostic.position.toutLire")) { LecteurPosition.shared.toutLire() }
+                    Button(L("diagnostic.lecture.calibrer")) { calibrer = true }
+                        .font(.system(size: 11))
+                        .disabled(!previews.authorized || manager.clients.isEmpty)
+                    Button(L("diagnostic.position.toutLire")) { LecteurEcran.shared.toutLire() }
                         .font(.system(size: 11))
                         .disabled(!previews.authorized || manager.clients.isEmpty)
                         .help(L("diagnostic.position.toutLire.aide"))
@@ -173,22 +173,66 @@ struct DiagnosticSettings: View {
                        Int(lecture.derniereDuree * 1000), lecture.sautes))
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(.secondary)
-                if let image = lecture.derniereCapture {
-                    // Ce que l'OCR a reçu : si les coordonnées n'y sont pas,
-                    // c'est la zone qui est en cause, pas la reconnaissance.
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(L("diagnostic.position.zoneVue", lecture.dernierPerso ?? "?"))
-                            .font(.system(size: 10))
-                            .foregroundStyle(.tertiary)
-                        Image(nsImage: image)
-                            .resizable()
-                            .interpolation(.medium)
-                            .aspectRatio(contentMode: .fit)
-                            .frame(maxWidth: 360, maxHeight: 110, alignment: .leading)
-                            .clipShape(RoundedRectangle(cornerRadius: 4))
+                ForEach(GenreLecture.allCases) { genre in
+                    if let image = lecture.captures[genre] {
+                        zoneLue(genre, image)
                     }
                 }
             }
+        }
+        .sheet(isPresented: $calibrer) { CalibrationZonesView() }
+    }
+
+    /// Ce que l'OCR a reçu : si le texte n'y est pas, c'est la zone qui est en
+    /// cause — à recalibrer —, pas la reconnaissance.
+    private func zoneLue(_ genre: GenreLecture, _ image: NSImage) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(L("diagnostic.lecture.zoneVue", genre.libelle, lecture.dernierPerso ?? "?"))
+                .font(.system(size: 10))
+                .foregroundStyle(.tertiary)
+            Image(nsImage: image)
+                .resizable()
+                .interpolation(.medium)
+                .aspectRatio(contentMode: .fit)
+                .frame(maxWidth: 360, maxHeight: 80, alignment: .leading)
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+            if let lignes = lecture.lignes[genre] {
+                Text(L("diagnostic.position.brut", lignes.joined(separator: " ⏎ ")))
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(.tertiary)
+                    .textSelection(.enabled)
+            }
+            if genre == .combat, let rose = lecture.rose {
+                Text(L("diagnostic.lecture.rose", Int(rose * 100)))
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(.tertiary)
+            }
+        }
+    }
+
+    /// Une bascule de lecture. L'activer est la demande d'autorisation : c'est
+    /// le seul endroit où la lecture de l'écran la fait.
+    private func bascule(_ titre: String, _ chemin: ReferenceWritableKeyPath<Preferences, Bool>) -> some View {
+        Toggle(titre, isOn: Binding(
+            get: { prefs[keyPath: chemin] },
+            set: { value in
+                prefs[keyPath: chemin] = value
+                if value, !previews.authorized { previews.requestAuthorization() }
+            }))
+            .toggleStyle(.switch)
+            .controlSize(.mini)
+            .font(.system(size: 11))
+    }
+
+    private func libelleCombat(_ etat: EtatCombat?) -> String {
+        switch etat {
+        case nil: return L("combat.pasEncore")
+        case .horsCombat: return L("combat.horsCombat")
+        case .placement: return L("combat.placement")
+        case .pasMonTour: return L("combat.pasMonTour")
+        case .monTour(let fin):
+            guard let fin else { return L("combat.monTour") }
+            return L("combat.monTourSecondes", max(0, Int(fin.timeIntervalSinceNow.rounded())))
         }
     }
 

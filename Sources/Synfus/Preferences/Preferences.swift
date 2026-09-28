@@ -72,6 +72,16 @@ final class Preferences: ObservableObject {
     /// « Enregistrement de l'écran », jamais demandée d'office.
     @Published var lirePosition: Bool = false { didSet { save() } }
 
+    /// Détecter le combat — bouton « Fin de tour » rose, gris ou absent — par
+    /// la même lecture de l'écran. Désactivé par défaut, pour la même raison.
+    @Published var lireCombat: Bool = false { didSet { save() } }
+
+    /// Zones de lecture calibrées dans le Diagnostic ; `nil` : la valeur par
+    /// défaut (`ZoneEcran.positionParDefaut`, `.combatParDefaut`), qui suit
+    /// ainsi ses corrections futures tant qu'on ne l'a pas remplacée.
+    @Published var zonePosition: ZoneEcran? { didSet { save() } }
+    @Published var zoneCombat: ZoneEcran? { didSet { save() } }
+
     /// Icône du `NSStatusItem`. Le rafraîchissement est à la charge de l'appelant
     /// (`MenuBarController.refreshIcon()`) : les préférences ne pilotent pas l'UI.
     @Published var menuBarIcon: MenuBarIcon = .logo { didSet { save() } }
@@ -276,6 +286,9 @@ final class Preferences: ObservableObject {
         var advanceModifier: ClickModifier?
         var signalerBascule: Bool?
         var lirePosition: Bool?
+        var lireCombat: Bool?
+        var zonePosition: ZoneEcran?
+        var zoneCombat: ZoneEcran?
         var killFrozenClients: Bool?
         var lastArrangement: Disposition?
         var arrangeHotKey: HotKey?
@@ -418,6 +431,9 @@ final class Preferences: ObservableObject {
             advanceModifier: advanceModifier,
             signalerBascule: signalerBascule,
             lirePosition: lirePosition,
+            lireCombat: lireCombat,
+            zonePosition: zonePosition,
+            zoneCombat: zoneCombat,
             killFrozenClients: killFrozenClients,
             lastArrangement: lastArrangement,
             arrangeHotKey: arrangeHotKey,
@@ -483,6 +499,9 @@ final class Preferences: ObservableObject {
         advanceModifier = stored.advanceModifier ?? .fn
         signalerBascule = stored.signalerBascule ?? true
         lirePosition = stored.lirePosition ?? false
+        lireCombat = stored.lireCombat ?? false
+        zonePosition = stored.zonePosition
+        zoneCombat = stored.zoneCombat
         killFrozenClients = stored.killFrozenClients ?? true
         lastArrangement = stored.lastArrangement
         arrangeHotKey = stored.arrangeHotKey

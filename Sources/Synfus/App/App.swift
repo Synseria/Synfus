@@ -17,7 +17,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         FloatingBarController.shared.apply()
         StreamDeckLink.shared.start()
         CombatWatcher.shared.start()
-        LecteurPosition.shared.start()
+        LecteurEcran.shared.start()
 
         if !AXIsProcessTrusted() {
             WindowManager.shared.requestAccessibility()

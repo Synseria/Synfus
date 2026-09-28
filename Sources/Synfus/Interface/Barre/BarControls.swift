@@ -273,3 +273,59 @@ struct SwitchBlink: View {
             }
     }
 }
+
+/// L'état de combat d'un perso sur sa pastille, en overlay — la barre ne
+/// change pas de taille. À son tour : un contour au rose du bouton « Fin de
+/// tour » et le décompte, tenu localement à partir de l'échéance lue une fois
+/// (`EtatCombat.monTour`). En combat sans que ce soit son tour : une épée.
+///
+/// Le `TimelineView` n'existe que pendant le tour du perso : rien ne se
+/// redessine chaque seconde en dehors.
+struct CombatBadge: View {
+    let etat: EtatCombat
+
+    static let rose = Color(red: 0.76, green: 0.44, blue: 0.73)
+
+    var body: some View {
+        switch etat {
+        case .monTour(let fin):
+            ZStack(alignment: .topTrailing) {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .strokeBorder(Self.rose, lineWidth: 2)
+                TimelineView(.periodic(from: .now, by: 1)) { contexte in
+                    pastille(fin.map { "\(max(0, Int($0.timeIntervalSince(contexte.date).rounded())))" })
+                        .help(L("barre.combat.monTour",
+                                fin.map { max(0, Int($0.timeIntervalSince(contexte.date).rounded())) } ?? 0))
+                }
+            }
+            .allowsHitTesting(false)
+        case .placement, .pasMonTour:
+            pastille(nil)
+                .opacity(0.8)
+                .help(L("barre.combat.enCombat"))
+                .allowsHitTesting(false)
+        case .horsCombat:
+            EmptyView()
+        }
+    }
+
+    /// Le décompte s'il est connu, l'épée sinon.
+    @ViewBuilder
+    private func pastille(_ texte: String?) -> some View {
+        Group {
+            if let texte {
+                Text(texte)
+                    .font(.system(size: 8, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .padding(.horizontal, 3)
+            } else {
+                Image(systemName: "figure.fencing")
+                    .font(.system(size: 7, weight: .bold))
+                    .padding(2)
+            }
+        }
+        .foregroundStyle(.white)
+        .background(Capsule().fill(etat.enCombat && etat != .pasMonTour && etat != .placement ? Self.rose : Color.gray))
+        .offset(x: 4, y: -4)
+    }
+}

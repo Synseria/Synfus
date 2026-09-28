@@ -125,7 +125,7 @@ actor ClientInventoryEngine {
             if !windows.isEmpty { talkativePIDs.insert(pid) }
 
             for (index, window) in windows.enumerated() {
-                // Un seul aller-retour par fenêtre pour les trois attributs.
+                // Un seul aller-retour par fenêtre pour les quatre attributs.
                 let facts = AccessibilityReader.windowFacts(window)
                 guard AccessibilityReader.isGameWindow(subrole: facts.subrole, size: facts.size) else { continue }
 
@@ -147,7 +147,8 @@ actor ClientInventoryEngine {
                     rawTitle: rawTitle,
                     name: name,
                     characterClass: WindowTitle.characterClass(fromTitle: rawTitle),
-                    dormant: false
+                    dormant: false,
+                    pleinEcran: facts.fullScreen == true
                 ))
             }
         }

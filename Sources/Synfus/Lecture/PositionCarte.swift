@@ -21,11 +21,6 @@ struct PositionCarte: Equatable, Sendable {
 
     var coordonnees: String { "\(x), \(y)" }
 
-    /// Zone de la fenêtre où vit l'affichage, en fractions, origine en haut à
-    /// gauche. Généreuse à dessein : elle tient avec ou sans barre de titre
-    /// (plein écran), et quel que soit le rapport largeur / hauteur.
-    static let region = CGRect(x: 0, y: 0, width: 0.35, height: 0.16)
-
     /// Au-delà, ce n'est pas une coordonnée de carte mais une erreur de lecture.
     static let borne = 200
 
