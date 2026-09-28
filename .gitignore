@@ -31,3 +31,6 @@ Icon?
 # Visuels Ankama téléchargés par Tools/fetch-ankama-assets.sh — usage
 # personnel, jamais reversés au dépôt (CGU Dofus, art. 13.2).
 Resources/Ankama/
+
+# Worktrees des lots (skill livraison)
+.claude/worktrees/

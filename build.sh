@@ -1,15 +1,60 @@
 #!/bin/bash
-# Compile Synfus et assemble le bundle .app.
-#   ./build.sh            -> construit dist/Synfus.app (et le plugin Stream Deck)
-#   ./build.sh --install  -> construit puis installe dans /Applications et relance
-#                            (le plugin Stream Deck, optionnel, s'installe depuis Synfus)
+# build.sh — build Release signé de Synfus.
+#   sh build.sh                    → dist/Synfus.app (et le plugin Stream Deck)
+#   sh build.sh --release [X.Y.Z]  → + dist/Synfus-X.Y.Z-<arch>.dmg
+#   sh build.sh --publish X.Y.Z    → depuis main propre : tag vX.Y.Z poussé,
+#                                    la release est construite par la CI
+#   sh build.sh --help
+# Installer et lancer, c'est `sh run.sh --install [--start]`.
 #
 # Deux variables d'environnement pilotent la CI sans changer l'usage local :
 #   VERSION=0.0.1   numéro inscrit dans l'Info.plist (défaut : dernier tag git)
 #   ARCH=x86_64     architecture cible (défaut : celle de la machine)
+[ -n "${BASH_VERSION:-}" ] || exec /bin/bash "$0" "$@"
+case ":${SHELLOPTS:-}:" in *:posix:*) exec /bin/bash "$0" "$@" ;; esac
 set -euo pipefail
 
 cd "$(dirname "$0")"
+
+# Où la release se construit : 1 → le tag poussé déclenche release.yml (le
+# runner macos-26 a le SDK de Liquid Glass) ; 0 → construite et publiée
+# depuis ce Mac.
+PUBLICATION_PAR_CI=1
+
+aide() { sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; }
+
+MODE="app"; CONFIG="release"; DIST="dist"; VERSION_DEMANDEE=""
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --release) MODE="release"; if [ -n "${2:-}" ] && [ "${2#-}" = "$2" ]; then VERSION_DEMANDEE="$2"; shift; fi ;;
+        --publish) MODE="publish"; VERSION_DEMANDEE="${2:?--publish attend une version X.Y.Z}"; shift ;;
+        # Interne : le build de développement de `run.sh`, hors de dist/.
+        --debug) CONFIG="debug"; DIST=".build/dev" ;;
+        -h|--help) aide; exit 0 ;;
+        --install) echo "build.sh : --install a déménagé — sh run.sh --install [--start]" >&2; exit 2 ;;
+        *) echo "build.sh : option inconnue « $1 »" >&2; aide >&2; exit 2 ;;
+    esac
+    shift
+done
+if [ -n "$VERSION_DEMANDEE" ] && [[ ! "$VERSION_DEMANDEE" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+    echo "build.sh : version « $VERSION_DEMANDEE » mal formée — attendu X.Y.Z" >&2; exit 2
+fi
+
+if [ "$MODE" = "publish" ]; then
+    TAG="v$VERSION_DEMANDEE"
+    [ "$PUBLICATION_PAR_CI" = "1" ] || { echo "build.sh : publication locale non prévue pour Synfus" >&2; exit 1; }
+    [ "$(git rev-parse --abbrev-ref HEAD)" = "main" ] || { echo "build.sh : --publish se lance depuis main" >&2; exit 1; }
+    [ -z "$(git status --porcelain)" ] || { echo "build.sh : l'arbre n'est pas propre" >&2; exit 1; }
+    git fetch -q origin main --tags
+    [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] \
+        || { echo "build.sh : main n'est pas à jour d'origin/main" >&2; exit 1; }
+    ! git rev-parse -q --verify "refs/tags/$TAG" >/dev/null || { echo "build.sh : le tag $TAG existe déjà" >&2; exit 1; }
+    git tag -a "$TAG" -m "Synfus $VERSION_DEMANDEE"
+    git push origin "$TAG"
+    echo "==> $TAG poussé : la release se construit sur la CI"
+    echo "    https://github.com/Synseria/Synfus/actions/workflows/release.yml"
+    exit 0
+fi
 
 NAME="Synfus"
 # Reverse-DNS du domaine réellement détenu : synseria.fr. Cet identifiant est
@@ -21,39 +66,37 @@ BUNDLE_ID="fr.synseria.Synfus"
 # n'est pas un détail. À défaut de VERSION fournie (c'est la CI qui la donne,
 # tirée du tag), on prend le dernier tag du dépôt plutôt qu'un 0.0.1 qui
 # mentirait à chaque build local.
-VERSION="${VERSION:-$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//')}"
+VERSION="${VERSION_DEMANDEE:-${VERSION:-$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null | sed 's/^v//')}}"
 VERSION="${VERSION:-0.0.1}"
-# Numéro de build : le tag suivi du nombre de commits et de l'empreinte quand
-# HEAD s'en est écarté. `CFBundleShortVersionString` reste purement numérique,
-# comme Apple l'attend ; c'est ici que va le détail.
-BUILD="$(git describe --tags --always --dirty 2>/dev/null || echo "$VERSION")"
-# Tout ce qui est produit va dans dist/ — l'app comme le plugin.
-APP="dist/$NAME.app"
+# Numéro de build : le nombre de commits. `CFBundleShortVersionString` reste
+# le tag, purement numérique, comme Apple l'attend.
+BUILD="$(git rev-list --count HEAD 2>/dev/null || echo 1)"
+# Tout ce qui est produit va dans dist/ — l'app comme le plugin ; le build de
+# développement de run.sh dans .build/dev/.
+APP="$DIST/$NAME.app"
+mkdir -p "$DIST"
 
-BUILD_FLAGS=(-c release)
+BUILD_FLAGS=(-c "$CONFIG")
 [ -n "${ARCH:-}" ] && BUILD_FLAGS+=(--arch "$ARCH")
 
-echo "==> Compilation (release${ARCH:+, $ARCH})"
+echo "==> Compilation ($CONFIG${ARCH:+, $ARCH})"
 swift build "${BUILD_FLAGS[@]}"
-BINARY="$(swift build "${BUILD_FLAGS[@]}" --show-bin-path)/$NAME"
+BIN_PATH="$(swift build "${BUILD_FLAGS[@]}" --show-bin-path)"
+BINARY="$BIN_PATH/$NAME"
 
-# La signature détermine l'identité vue par TCC (l'autorisation Accessibilité).
-# Une identité stable d'un build à l'autre évite de réautoriser à chaque
-# rebuild : le certificat local « Synfus Dev » (Tools/make-signing-identity.sh)
-# d'abord, un certificat Apple Development sinon, ad-hoc en dernier recours —
-# et là, la case Accessibilité est à recocher après chaque build.
-IDENTITY="$(security find-identity -v -p codesigning 2>/dev/null \
-    | grep -o '"\(Synfus Dev\|Apple Development: [^"]*\)"' | head -1 | tr -d '"' || true)"
+# La signature détermine l'identité vue par TCC (l'autorisation
+# Accessibilité) : signature.sh la choisit, la même pour tous les builds.
+source ./signature.sh
 
 # Le plugin Stream Deck : un dossier .sdPlugin à installer dans le logiciel
 # Elgato (double-clic, ou `streamdeck link dist/fr.synseria.synfus.sdPlugin`
 # avec le CLI d'Elgato pour développer). Le binaire est celui du target
 # SynfusDeck ; les icônes sont dérivées de la marque, jamais du jeu.
-PLUGIN="dist/fr.synseria.synfus.sdPlugin"
+PLUGIN="$DIST/fr.synseria.synfus.sdPlugin"
 echo "==> Assemblage du plugin Stream Deck"
 rm -rf "$PLUGIN"
 mkdir -p "$PLUGIN"
-cp "$(swift build "${BUILD_FLAGS[@]}" --show-bin-path)/SynfusDeck" "$PLUGIN/"
+cp "$BIN_PATH/SynfusDeck" "$PLUGIN/"
 cp Plugin/manifest.json "$PLUGIN/"
 sips -z 144 144 Resources/Synfus.png --out "$PLUGIN/icon.png" >/dev/null
 sips -z 288 288 Resources/Synfus.png --out "$PLUGIN/icon@2x.png" >/dev/null
@@ -70,14 +113,10 @@ sed -i '' "s/\"Version\": \"[^\"]*\"/\"Version\": \"$PLUGIN_VERSION\"/" "$PLUGIN
 # Le paquet que le logiciel Stream Deck installe par double-clic — et le seul
 # chemin qui enregistre le profil livré comme *appartenant au plugin*, ce que
 # `switchToProfile` exige.
-if [ -n "$IDENTITY" ]; then
-    codesign --force --sign "$IDENTITY" --identifier "fr.synseria.synfus.deck" "$PLUGIN/SynfusDeck"
-else
-    codesign --force --sign - --identifier "fr.synseria.synfus.deck" "$PLUGIN/SynfusDeck"
-fi
-PACKAGE="dist/fr.synseria.synfus.streamDeckPlugin"
+signer "$PLUGIN/SynfusDeck" "fr.synseria.synfus.deck"
+PACKAGE="$DIST/fr.synseria.synfus.streamDeckPlugin"
 rm -f "$PACKAGE"
-(cd dist && zip -qr "$(basename "$PACKAGE")" "$(basename "$PLUGIN")")
+(cd "$DIST" && zip -qr "$(basename "$PACKAGE")" "$(basename "$PLUGIN")")
 echo "==> $PLUGIN prêt"
 
 echo "==> Assemblage du bundle"
@@ -136,25 +175,11 @@ cp "$PACKAGE" "$APP/Contents/Resources/"
 cp "$PLUGIN/Synfus.streamDeckProfile" "$APP/Contents/Resources/"
 
 echo "==> Signature"
-if [ -n "$IDENTITY" ]; then
-    echo "    identité : $IDENTITY"
-    codesign --force --deep --sign "$IDENTITY" --identifier "$BUNDLE_ID" "$APP"
-else
-    echo "    identité : ad-hoc — ./Tools/make-signing-identity.sh pour ne plus réautoriser l'Accessibilité à chaque build"
-    codesign --force --deep --sign - --identifier "$BUNDLE_ID" "$APP"
-fi
+signer "$APP" "$BUNDLE_ID" --deep
 
 echo "==> $APP prêt"
 
-if [ "${1:-}" = "--install" ]; then
-    echo "==> Installation dans /Applications"
-    pkill -x "$NAME" 2>/dev/null || true
-    rm -rf "/Applications/$NAME.app"
-    cp -R "$APP" /Applications/
-    open "/Applications/$NAME.app"
-    echo "==> Lancé depuis /Applications/$NAME.app"
-
-    # Le plugin Stream Deck n'est **pas** installé ici : c'est optionnel, et
-    # tout passe par Synfus — Réglages → Stream Deck → « Installer le plugin »
-    # ouvre le paquet embarqué dans l'app.
+if [ "$MODE" = "release" ]; then
+    DMG="$DIST/$NAME-$VERSION-${ARCH:-$(uname -m)}.dmg"
+    ./Tools/make-dmg.sh "$APP" "$DMG"
 fi

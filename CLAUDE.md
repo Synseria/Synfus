@@ -14,23 +14,30 @@ il passe par `L("clé")` et `Resources/Localisation/fr.json`.
 
 ```sh
 swift build                        # compilation debug rapide (pas de bundle)
-swift test                         # suite complète (Swift Testing)
-swift test --filter PreferencesTests            # une suite
-swift test --filter "migration"                 # un test par son nom
-./build.sh                         # produit dist/Synfus.app (plugin et profil embarqués) + dist/fr.synseria.synfus.sdPlugin
-./build.sh --install               # installe dans /Applications et relance
-VERSION=0.0.3 ARCH=x86_64 ./build.sh
-./make-dmg.sh dist/Synfus.app dist/Synfus-0.0.3-arm64.dmg
+sh test.sh                         # suite complète (Swift Testing), sortie filtrée
+sh test.sh PreferencesTests        # une suite, ou un test par son nom ; plusieurs filtres = l'un ou l'autre
+sh run.sh                          # build Debug signé → .build/dev/Synfus.app
+sh run.sh --start                  # … puis le lance (l'instance en cours est quittée)
+sh run.sh --install [--start]      # build Release, installé dans /Applications ; --start le relance
+sh build.sh                        # build Release → dist/Synfus.app (plugin et profil embarqués) + dist/fr.synseria.synfus.sdPlugin
+sh build.sh --release [X.Y.Z]      # + dist/Synfus-X.Y.Z-<arch>.dmg (Tools/make-dmg.sh)
+sh build.sh --publish X.Y.Z        # depuis main propre et à jour : tag vX.Y.Z poussé → release.yml
+VERSION=0.0.3 ARCH=x86_64 sh build.sh
 ./Tools/generate-app-icons.sh      # régénère Resources/Synfus.{icns,png}
 ./Tools/fetch-ankama-assets.sh     # télécharge emblèmes et icônes de sorts dans Resources/Ankama (gitignoré)
-SYNFUS_ANKAMA_DIR=$PWD/Resources/Ankama SYNFUS_CAPTURE=~/Library/Logs/Synfus/captures/x.png swift test --filter RealCapture   # calibrage sur une vraie capture
+SYNFUS_ANKAMA_DIR=$PWD/Resources/Ankama SYNFUS_CAPTURE=~/Library/Logs/Synfus/captures/x.png sh test.sh RealCapture   # calibrage sur une vraie capture
 nc -U ~/Library/Application\ Support/Synfus/streamdeck.sock   # lire l'état poussé au plugin
 ```
+
+Les scripts suivent la convention commune des apps Synseria (skill
+`livraison`) : lancés par `sh`, ils se relancent en bash plein, répondent à
+`--help`, et les scripts internes vivent dans `Tools/`. Version = dernier tag
+`vX.Y.Z`, numéro de build = nombre de commits.
 
 Les tests portent sur la logique pure — analyse des titres de fenêtres, classes,
 raccourcis, persistance. Tout ce qui dépend de l'API Accessibilité, du Dock ou
 d'AppKit exige un environnement graphique et un client Dofus lancé : cela se
-vérifie par un lancement réel (`./build.sh --install`) et l'onglet Diagnostic.
+vérifie par un lancement réel (`sh run.sh --install --start`) et l'onglet Diagnostic.
 
 Les préférences se testent sur un stockage **en mémoire**
 (`Preferences.forTesting(store:)`), jamais sur un `UserDefaults(suiteName:)` :
@@ -74,13 +81,17 @@ l'autorisation Accessibilité est liée à l'identité de code signée.
 - Les constantes `extern CFStringRef` de l'API Accessibilité (par ex.
   `kAXTrustedCheckOptionPrompt`) sont vues comme des `var` globales et refusées
   par la concurrence stricte : leur valeur littérale est citée directement.
-- `build.sh` signe avec le certificat local **« Synfus Dev »** s'il existe
+- La signature est choisie par **`signature.sh`**, sourcé par `build.sh` (donc
+  par `run.sh`, build de développement compris) — le même ordre dans toutes
+  les apps Synseria : *Developer ID Application*, sinon *Apple Development*
+  de l'équipe personnelle `339WUY8TXY` (compte gratuit : ni notarisation ni
+  Mac App Store), sinon le certificat local **« Synfus Dev »**
   (`./Tools/make-signing-identity.sh` le crée une fois : auto-signé, approuvé
   pour la signature de code dans le trousseau de session — macOS demande le
-  mot de passe à cette étape, sans elle `codesign` refuse l'identité), sinon
-  avec un certificat *Apple Development*, sinon ad-hoc — et là, l'identité
-  change à chaque build et l'Accessibilité est à réautoriser à chaque fois. Toucher à la signature ou au `BUNDLE_ID` change
-  l'identité vue par TCC et **oblige à réautoriser l'Accessibilité** — et, le
+  mot de passe), sinon ad hoc — le cas de la CI, et là l'identité change à
+  chaque build et l'Accessibilité est à réautoriser à chaque fois. Toucher à
+  la signature ou au `BUNDLE_ID` change l'identité vue par TCC et **oblige à
+  réautoriser l'Accessibilité** (et l'enregistrement de l'écran) — et, le
   `BUNDLE_ID` nommant aussi le fichier de préférences, remet les réglages à zéro.
   Il vaut `fr.synseria.Synfus` : le reverse-DNS d'un domaine réellement détenu.
 
@@ -916,7 +927,8 @@ l'équipe active de fait, par `cycle` et `focus(slot:)`. Mécanismes détaillés
 
 ## Publication
 
-Un tag `v*` poussé déclenche
+`sh build.sh --publish X.Y.Z` (depuis `main` propre et à jour d'`origin`)
+pose et pousse le tag `vX.Y.Z` — `PUBLICATION_PAR_CI=1` dans le script —, qui déclenche
 [release.yml](.github/workflows/release.yml) : runner `macos-26`, compilation
 arm64 + x86_64, DMG et release GitHub. Les builds de CI sont signés ad-hoc et non
 notarisés, d'où le `xattr -dr com.apple.quarantine` documenté dans le README.

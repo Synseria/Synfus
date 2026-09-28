@@ -6,7 +6,7 @@
 #
 # Pourquoi : l'autorisation Accessibilité (TCC) est liée à l'identité de
 # code. Signée ad-hoc, l'app change d'identité à chaque build — d'où la case
-# à recocher à chaque `./build.sh --install`. Signée avec ce certificat,
+# à recocher à chaque `sh run.sh --install --start`. Signée avec ce certificat,
 # l'identité est stable : on autorise une dernière fois, et c'est fini.
 # Le certificat est auto-signé et ne sert qu'à cette machine ; il n'a rien à
 # voir avec un compte développeur Apple, et n'est jamais reversé au dépôt.
@@ -52,4 +52,4 @@ security import "$WORK/identity.p12" -k "$KEYCHAIN" -P synfus -T /usr/bin/codesi
 echo "▸ Confiance pour la signature de code (macOS demande ton mot de passe)…"
 security add-trusted-cert -r trustRoot -p codeSign -k "$KEYCHAIN" "$WORK/cert.pem"
 
-echo "✓ Certificat « $NAME » prêt. Prochain ./build.sh --install : réautoriser l'Accessibilité une dernière fois."
+echo "✓ Certificat « $NAME » prêt. Prochain sh run.sh --install --start : réautoriser l'Accessibilité une dernière fois."
