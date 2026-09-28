@@ -567,6 +567,18 @@ fenêtre, un dormant répond en quelques millisecondes. Chaque abattage est
 consigné dans le Diagnostic ; la bascule `killFrozenClients` (onglet Persos)
 est active par défaut.
 
+**Une fermeture se voit, et va vite.** Trois sondes espacées de 5 s, c'était
+une quinzaine de secondes de client gelé sous les yeux du joueur qui venait
+de le quitter. Le veilleur guette donc, deux fois par seconde, les fenêtres
+de jeu **à l'écran** (`CrossSpaceTitles.affiches` : `CGWindowList`, sans
+Accessibilité ni permission — un client gelé ne peut pas bloquer la lecture).
+Une fenêtre qui quitte l'écran sans changement d'espace (`VeilleFermeture`,
+pure, testée ; garde de 1,5 s après `activeSpaceDidChange`) signale une
+**fermeture probable** : un inventaire part aussitôt, et **une** sonde muette
+suffit (`requisFermeture`) — ~1,5 s après le ⌘Q. L'abattage exige toujours
+sans fenêtre **et** muet : une fenêtre réduite ou un client passé sur un
+autre espace répondent et sont blanchis ; le soupçon s'éteint après 5 s.
+
 **La sonde, c'est l'inventaire.** `refresh()` interroge déjà `kAXWindows` sur
 chaque client : c'est lui qui constate le mutisme (`.cannotComplete`) et le
 transmet en `mutePIDs`. Le veilleur ne sonde rien lui-même : une sonde à part
