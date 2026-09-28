@@ -26,6 +26,12 @@ final class WindowManager: ObservableObject {
     @Published private(set) var frontmostIsDofus = false
     @Published private(set) var accessibilityGranted = false
 
+    /// La pastille qui clignote : le perso sur lequel Synfus vient de
+    /// basculer, pendant `dureeSignal`. Cf. `SwitchBlink`.
+    @Published private(set) var basculeSignalee: String?
+    private var finSignal: DispatchWorkItem?
+    private static let dureeSignal: TimeInterval = 1.5
+
     /// Clients en cours de fermeture. Tant qu'un pid y figure, l'inventaire ne
     /// l'interroge plus — questionner l'Accessibilité d'un mourant, c'est payer
     /// la borne d'une seconde à chaque tour — et sa pastille porte l'indicateur
@@ -469,8 +475,14 @@ final class WindowManager: ObservableObject {
         focus(effectif[slot])
     }
 
-    func focus(_ client: DofusClient) {
+    /// `signaler` : faire clignoter la pastille du perso atteint
+    /// (`basculeSignalee`) si le réglage le veut. Faux quand le geste vient
+    /// de la pastille elle-même.
+    func focus(_ client: DofusClient, signaler: Bool = true) {
         let reachable = isReachable(client)
+        if signaler, prefs.signalerBascule, client.pid != frontmostPID {
+            signalerBascule(client)
+        }
         if reachable,
            AccessibilityReader.boolAttribute(client.axWindow, kAXMinimizedAttribute) == true {
             AccessibilityReader.set(client.axWindow, kAXMinimizedAttribute, kCFBooleanFalse)
@@ -506,6 +518,19 @@ final class WindowManager: ObservableObject {
         selfActivatedPID = frontmostPID == client.pid ? nil : client.pid
         setFrontmost(pid: client.pid, isDofus: true)
         AttentionWatcher.shared.clear(client)
+    }
+
+    /// Désigne la pastille à faire clignoter, le temps de `dureeSignal`. Une
+    /// bascule suivante reprend le signal à son compte : une seule pastille
+    /// clignote à la fois, celle où l'on est.
+    private func signalerBascule(_ client: DofusClient) {
+        basculeSignalee = client.slotKey
+        finSignal?.cancel()
+        let item = DispatchWorkItem {
+            MainActor.assumeIsolated { WindowManager.shared.basculeSignalee = nil }
+        }
+        finSignal = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.dureeSignal, execute: item)
     }
 
     /// Ferme un client — l'escalade de `ClientTerminator`.

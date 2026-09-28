@@ -228,7 +228,9 @@ struct BarView: View {
         let closing = manager.closingPIDs.contains(client.pid)
 
         return Button {
-            manager.focus(client)
+            // La pastille vient d'être cliquée : la faire clignoter ne dirait
+            // rien de plus.
+            manager.focus(client, signaler: false)
         } label: {
             HStack(spacing: 5) {
                 // La fermeture en cours prend la place du badge : le geste a
@@ -272,6 +274,7 @@ struct BarView: View {
                     .fill(active ? Color.accentColor : Color.clear)
             )
             .overlay { if alerting { AlertPulse() } }
+            .overlay { if manager.basculeSignalee == client.slotKey { SwitchBlink() } }
             .foregroundStyle(active ? Color.white : Color.primary)
             .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         }

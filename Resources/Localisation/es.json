@@ -188,6 +188,8 @@
   "raccourcis.ranger.aide": "Repite la última disposición usada — lado a lado, mosaico, una grande + miniaturas, apiladas — elegida desde el botón de la barra, la barra de menús o el clic derecho. Sin valor por defecto: tú eliges.",
   "raccourcis.refusees": "Rechazados por el sistema (ya ocupados por otra app): %@",
   "raccourcis.retablir": "Restablecer los atajos por defecto",
+  "raccourcis.signalerBascule": "Hacer parpadear el personaje en cada cambio",
+  "raccourcis.signalerBascule.aide": "Cada vez que Synfus cambia de personaje — atajo, encadenar con clic, cambio automático —, su pastilla parpadea en la barra durante un segundo y medio.",
   "raccourcis.voirTous": "Ver todos los personajes",
   "raccourcis.voirTous.aide": "Las vistas previas se muestran mientras se mantiene la combinación. Debe incluir un modificador, y requiere el permiso de grabación de pantalla.",
   "rangement.coteACote": "Lado a lado",
