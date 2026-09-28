@@ -31,7 +31,7 @@ enum GenreLecture: String, CaseIterable, Sendable {
 ///   celle où Vision lit juste (`.fast` ne lit rien de la police du jeu). Une
 ///   grande fenêtre ne coûte pas plus qu'une petite.
 /// - **L'OCR ne repasse que si la zone a changé** (`SignatureZone` : pixels
-///   clairs réduits à une grille, et pour le combat, bouton rose ou non).
+///   clairs réduits à une grille, et pour le combat, bouton coloré ou non).
 ///   Entre deux cartes, entre deux tours, un relevé ne coûte qu'une capture de
 ///   quelques centaines de pixels.
 /// - **L'inventaire ScreenCaptureKit gardé** (`inventaireGarde`).
@@ -224,9 +224,8 @@ final class LecteurEcran: ObservableObject {
                 // Rien de neuf, mais le relevé reste vrai à cet instant.
                 vuLe[cle] = Date()
                 diagnostic.sautes += 1
-                diagnostic.rose = signature.rose ?? diagnostic.rose
                 diagnostic.etat = .actif
-            case .lue(let signature, let lignes, let duree):
+            case .lue(let signature, let lignes, let duree, let couleurBouton):
                 signatures[cle] = signature
                 vuLe[cle] = Date()
                 diagnostic.lectures += 1
@@ -234,7 +233,7 @@ final class LecteurEcran: ObservableObject {
                 diagnostic.lignes[genre] = lignes
                 switch genre {
                 case .position: appliquerPosition(lignes, nom: nom)
-                case .combat: appliquerCombat(lignes, rose: signature.rose ?? 0, nom: nom)
+                case .combat: appliquerCombat(lignes, couleur: couleurBouton ?? signature.couleur ?? 0, nom: nom)
                 }
             }
         }
@@ -248,10 +247,10 @@ final class LecteurEcran: ObservableObject {
         releves[nom] = Releve(position: lue ?? releves[nom]?.position, lignes: lignes, date: Date())
     }
 
-    private func appliquerCombat(_ lignes: [String], rose: Double, nom: String) {
-        diagnostic.rose = rose
+    private func appliquerCombat(_ lignes: [String], couleur: Double, nom: String) {
+        diagnostic.couleur = couleur
         diagnostic.etat = .actif
-        let constat = LectureCombat.classer(lignes: lignes, rose: rose)
+        let constat = LectureCombat.classer(lignes: lignes, couleur: couleur)
         let etat = EtatCombat.depuis(constat, avant: combats[nom], maintenant: Date())
         if combats[nom] != etat { combats[nom] = etat }
     }
@@ -283,25 +282,25 @@ final class DiagnosticLecture: ObservableObject {
     /// quand rien n'est lu : la zone tombe-t-elle au bon endroit ?
     @Published var captures: [GenreLecture: NSImage] = [:]
     @Published var lignes: [GenreLecture: [String]] = [:]
-    /// Part de rose de la dernière zone de combat — le bouton est-il le mien ?
-    @Published var rose: Double?
+    /// Part colorée du bouton à la dernière lecture de combat — est-il le mien ?
+    @Published var couleur: Double?
     @Published var dernierPerso: String?
 
     private init() {}
 }
 
 /// Ce qui décide de relancer l'OCR : le texte clair, et pour le bouton de
-/// combat, sa couleur — le même « Fin de tour » blanc passe du rose au gris
-/// sans qu'un pixel clair ne bouge.
+/// combat, sa couleur — le même « Fin de tour » blanc passe du gris à la
+/// couleur sans qu'un pixel clair ne bouge.
 struct SignatureZone: Equatable, Sendable {
     let empreinte: EmpreinteTexte
-    /// Part de rose, pour les zones où la couleur compte.
-    let rose: Double?
+    /// Part colorée de la zone entière, pour les zones où la couleur compte.
+    let couleur: Double?
 
     func semblable(a autre: SignatureZone) -> Bool {
         guard empreinte.semblable(a: autre.empreinte) else { return false }
-        guard let rose, let autre = autre.rose else { return true }
-        return (rose >= LectureCombat.seuilRose) == (autre >= LectureCombat.seuilRose)
+        guard let couleur, let autre = autre.couleur else { return true }
+        return (couleur >= LectureCombat.seuilSignature) == (autre >= LectureCombat.seuilSignature)
     }
 }
 
@@ -312,7 +311,9 @@ actor MoteurOCR {
     enum Resultat: Sendable {
         case illisible
         case inchangee(SignatureZone)
-        case lue(SignatureZone, [String], TimeInterval)
+        /// Les lignes, la durée de l'OCR, et pour le combat la part colorée
+        /// du corps du bouton — `nil` si aucun bouton n'a été lu.
+        case lue(SignatureZone, [String], TimeInterval, couleurBouton: Double?)
     }
 
     /// Charge le modèle de reconnaissance sur une image vide : le premier
@@ -340,23 +341,42 @@ actor MoteurOCR {
               let image = CGImageSourceCreateImageAtIndex(source, 0, nil),
               let luma = LumaBitmap(cgImage: image)
         else { return .illisible }
-        let signature = SignatureZone(empreinte: EmpreinteTexte(luma),
-                                      rose: couleur ? Self.rose(image) : nil)
+        let rgba = couleur ? Self.rgba(image) : nil
+        let signature = SignatureZone(
+            empreinte: EmpreinteTexte(luma),
+            couleur: rgba.map { LectureCombat.ratioColore(rgba: $0, largeur: image.width) })
         if let precedente, signature.semblable(a: precedente) { return .inchangee(signature) }
 
         let debut = Date()
         let requete = Self.requete()
+        let encadree = Self.encadree(image)
         do {
-            try VNImageRequestHandler(cgImage: Self.encadree(image) ?? image).perform([requete])
+            try VNImageRequestHandler(cgImage: encadree ?? image).perform([requete])
         } catch {
             return .illisible
         }
         // De haut en bas : le nom de la zone précède les coordonnées, le
         // décompte précède le bouton. Le repère de Vision a son origine en bas.
-        let lignes = (requete.results ?? [])
-            .sorted { $0.boundingBox.midY > $1.boundingBox.midY }
-            .compactMap { $0.topCandidates(1).first?.string }
-        return .lue(signature, lignes, Date().timeIntervalSince(debut))
+        let observations = (requete.results ?? []).sorted { $0.boundingBox.midY > $1.boundingBox.midY }
+        let lignes = observations.compactMap { $0.topCandidates(1).first?.string }
+
+        // La couleur du bouton se mesure autour de son texte, en pixels de
+        // l'image d'origine : la boîte de Vision est normalisée, origine en
+        // bas, dans l'image encadrée de sa marge.
+        var couleurBouton: Double?
+        if let rgba, let bouton = observations.first(where: {
+            LectureCombat.estBouton($0.topCandidates(1).first?.string ?? "")
+        }) {
+            let marge = encadree == nil ? 0 : CGFloat(Self.marge)
+            let (lp, hp) = (CGFloat(image.width) + 2 * marge, CGFloat(image.height) + 2 * marge)
+            let boite = bouton.boundingBox
+            let texte = CGRect(x: boite.minX * lp - marge, y: (1 - boite.maxY) * hp - marge,
+                               width: boite.width * lp, height: boite.height * hp)
+            let corps = LectureCombat.corpsDuBouton(texte: texte,
+                                                    image: CGSize(width: image.width, height: image.height))
+            couleurBouton = LectureCombat.ratioColore(rgba: rgba, largeur: image.width, dans: corps)
+        }
+        return .lue(signature, lignes, Date().timeIntervalSince(debut), couleurBouton: couleurBouton)
     }
 
     /// L'image posée sur une marge sombre. Une zone serrée coupe le texte au
@@ -364,8 +384,9 @@ actor MoteurOCR {
     /// la fenêtre —, et Vision lit mal un glyphe collé au cadre : mesuré,
     /// « a16 » pour « -16 » sans marge. Le texte du jeu est clair cerné de
     /// sombre : une marge noire le prolonge sans rien inventer.
+    private static let marge = 12
+
     private static func encadree(_ image: CGImage) -> CGImage? {
-        let marge = 12
         let (w, h) = (image.width + 2 * marge, image.height + 2 * marge)
         guard let contexte = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,
                                        space: CGColorSpaceCreateDeviceRGB(),
@@ -377,8 +398,8 @@ actor MoteurOCR {
         return contexte.makeImage()
     }
 
-    /// La part de rose, sur l'image rendue en RGBA par CoreGraphics.
-    private static func rose(_ image: CGImage) -> Double {
+    /// L'image rendue en RGBA 8 bits par CoreGraphics.
+    private static func rgba(_ image: CGImage) -> [UInt8]? {
         let (w, h) = (image.width, image.height)
         var pixels = [UInt8](repeating: 0, count: w * h * 4)
         let ok = pixels.withUnsafeMutableBytes { buffer -> Bool in
@@ -389,6 +410,6 @@ actor MoteurOCR {
             contexte.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
             return true
         }
-        return ok ? LectureCombat.ratioRose(rgba: pixels) : 0
+        return ok ? pixels : nil
     }
 }

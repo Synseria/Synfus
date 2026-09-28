@@ -124,34 +124,37 @@ struct ZoneEcranTests {
     }
 }
 
-/// Le bouton « Fin de tour » : rose, gris ou absent. Les lignes sont celles
-/// que Vision a rendues sur une vraie capture.
+/// Le bouton « Fin de tour » : en couleur, gris ou absent. Les lignes sont
+/// celles que Vision a rendues sur de vraies captures. La couleur du tour
+/// change avec les thèmes du jeu ; le gris, jamais.
 struct LectureCombatTests {
 
-    @Test("Fin de tour sur fond rose, avec le décompte : mon tour")
+    @Test("Fin de tour sur un bouton coloré, avec le décompte : mon tour")
     func monTour() {
-        let constat = LectureCombat.classer(lignes: ["29s", "FIN DE TOUR"], rose: 0.21)
+        let constat = LectureCombat.classer(lignes: ["29s", "FIN DE TOUR"], couleur: 0.6)
         #expect(constat == .init(genre: .monTour, secondes: 29))
     }
 
-    @Test("Fin de tour sans rose : le tour d'un autre")
+    @Test("Fin de tour sur un bouton gris : le tour d'un autre")
     func pasMonTour() {
-        #expect(LectureCombat.classer(lignes: ["12s", "FIN DE TOUR"], rose: 0.01).genre == .pasMonTour)
+        #expect(LectureCombat.classer(lignes: ["FIN DE TOUR"], couleur: 0).genre == .pasMonTour)
     }
 
-    @Test("Rien de lisible dans la zone : hors combat, même s'il y a du rose")
+    @Test("Rien de lisible dans la zone : hors combat, même s'il y a de la couleur")
     func horsCombat() {
-        #expect(LectureCombat.classer(lignes: [], rose: 0.3).genre == .horsCombat)
-        #expect(LectureCombat.classer(lignes: ["Astrub"], rose: 0).genre == .horsCombat)
+        #expect(LectureCombat.classer(lignes: [], couleur: 0.8).genre == .horsCombat)
+        #expect(LectureCombat.classer(lignes: ["Astrub"], couleur: 0).genre == .horsCombat)
     }
 
     @Test("Le bouton se reconnaît en anglais, en espagnol, et malgré l'OCR")
     func langues() {
-        #expect(LectureCombat.classer(lignes: ["END TURN"], rose: 0.2).genre == .monTour)
-        #expect(LectureCombat.classer(lignes: ["FIN DE TURNO"], rose: 0.2).genre == .monTour)
-        #expect(LectureCombat.classer(lignes: ["FIN DETOUR"], rose: 0.2).genre == .monTour)
-        #expect(LectureCombat.classer(lignes: ["PRÊT"], rose: 0).genre == .placement)
-        #expect(LectureCombat.classer(lignes: ["READY"], rose: 0).genre == .placement)
+        #expect(LectureCombat.classer(lignes: ["END TURN"], couleur: 0.6).genre == .monTour)
+        #expect(LectureCombat.classer(lignes: ["FIN DE TURNO"], couleur: 0.6).genre == .monTour)
+        #expect(LectureCombat.classer(lignes: ["FIN DETOUR"], couleur: 0.6).genre == .monTour)
+        #expect(LectureCombat.classer(lignes: ["PRÊT"], couleur: 0).genre == .placement)
+        #expect(LectureCombat.classer(lignes: ["READY"], couleur: 0).genre == .placement)
+        #expect(LectureCombat.estBouton("Fin de tour"))
+        #expect(!LectureCombat.estBouton("29s"))
     }
 
     @Test("Le décompte se lit collé ou espacé, et rien d'autre ne passe pour lui")
@@ -163,28 +166,44 @@ struct LectureCombatTests {
         #expect(LectureCombat.decompte("1234s") == nil)
     }
 
-    @Test("Le rose du bouton compte, son liseré sombre et le gris non")
-    func ratioRose() {
+    private func pixels(_ couleurs: [[UInt8]]) -> [UInt8] { couleurs.flatMap { $0 } }
+
+    @Test("Toute couleur du tour compte — rose, bleu, vert d'un thème —, pas le gris")
+    func couleurQuelconque() {
         let rose: [UInt8] = [194, 112, 185, 255]
+        let bleu: [UInt8] = [70, 110, 210, 255]
         let lisere: [UInt8] = [76, 45, 72, 255]
         let gris: [UInt8] = [128, 128, 128, 255]
-        let vert: [UInt8] = [173, 255, 68, 255]
-        #expect(LectureCombat.ratioRose(rgba: rose + rose + lisere + gris) == 0.5)
-        #expect(LectureCombat.ratioRose(rgba: vert + gris) == 0)
-        #expect(LectureCombat.ratioRose(rgba: []) == 0)
+        #expect(LectureCombat.ratioColore(rgba: pixels([rose, bleu, lisere, gris]), largeur: 4) == 0.5)
+        #expect(LectureCombat.ratioColore(rgba: [], largeur: 0) == 0)
     }
 
-    /// Relevés sur une vraie capture du bouton grisé : son dégradé gris et les
-    /// icônes lavande pâle de la rangée du dessous — 0 % de rose mesuré sur
-    /// l'image entière, lue « FIN DE TOUR » → pas son tour.
-    @Test("Le bouton grisé et ses icônes lavande ne comptent pas comme rose")
+    /// Relevés sur une vraie capture du bouton grisé : son dégradé gris, le
+    /// fond et les icônes lavande pâle de la rangée du dessous.
+    @Test("Le bouton grisé et ses icônes lavande ne comptent pas comme couleur")
     func boutonGrise() {
         let gris1: [UInt8] = [139, 139, 139, 255]
         let gris2: [UInt8] = [120, 119, 119, 255]
         let fond: [UInt8] = [60, 55, 61, 255]
         let lavande: [UInt8] = [205, 180, 215, 255]
-        #expect(LectureCombat.ratioRose(rgba: gris1 + gris2 + fond + lavande) == 0)
-        #expect(LectureCombat.classer(lignes: ["FIN DE TOUR"], rose: 0).genre == .pasMonTour)
+        #expect(LectureCombat.ratioColore(rgba: pixels([gris1, gris2, fond, lavande]), largeur: 2) == 0)
+    }
+
+    @Test("La couleur se mesure dans le seul rectangle demandé")
+    func rectangle() {
+        let vert: [UInt8] = [173, 255, 68, 255]
+        let gris: [UInt8] = [128, 128, 128, 255]
+        // 2 × 2 : le décompte vert en haut, le bouton gris en bas.
+        let image = pixels([vert, vert, gris, gris])
+        #expect(LectureCombat.ratioColore(rgba: image, largeur: 2) == 0.5)
+        #expect(LectureCombat.ratioColore(rgba: image, largeur: 2, dans: CGRect(x: 0, y: 1, width: 2, height: 1)) == 0)
+    }
+
+    @Test("Le corps du bouton entoure son texte, borné à l'image")
+    func corps() {
+        let corps = LectureCombat.corpsDuBouton(texte: CGRect(x: 10, y: 50, width: 100, height: 20),
+                                                image: CGSize(width: 115, height: 200))
+        #expect(corps == CGRect(x: 0, y: 32, width: 115, height: 56))
     }
 
     @Test("Un tour qui continue garde son échéance ; un nouveau décompte la remplace")
@@ -199,14 +218,14 @@ struct LectureCombatTests {
         #expect(!EtatCombat.horsCombat.enCombat)
     }
 
-    @Test("Le même texte passé du rose au gris relance l'OCR")
+    @Test("Le même texte passé du gris à la couleur relance l'OCR")
     func signature() {
         let empreinte = EmpreinteTexte(cases: Array(repeating: false, count: EmpreinteTexte.colonnes * EmpreinteTexte.lignes))
-        let rose = SignatureZone(empreinte: empreinte, rose: 0.21)
-        let gris = SignatureZone(empreinte: empreinte, rose: 0.01)
-        let roseAussi = SignatureZone(empreinte: empreinte, rose: 0.35)
-        #expect(!rose.semblable(a: gris))
-        #expect(rose.semblable(a: roseAussi))
-        #expect(SignatureZone(empreinte: empreinte, rose: nil).semblable(a: SignatureZone(empreinte: empreinte, rose: nil)))
+        let colore = SignatureZone(empreinte: empreinte, couleur: 0.21)
+        let gris = SignatureZone(empreinte: empreinte, couleur: 0.01)
+        let coloreAussi = SignatureZone(empreinte: empreinte, couleur: 0.35)
+        #expect(!colore.semblable(a: gris))
+        #expect(colore.semblable(a: coloreAussi))
+        #expect(SignatureZone(empreinte: empreinte, couleur: nil).semblable(a: SignatureZone(empreinte: empreinte, couleur: nil)))
     }
 }
