@@ -24,10 +24,14 @@ final class PreviewPanelController: NSObject, ObservableObject {
         case single(DofusClient)
         /// Tous les persos, en grille au centre de l'écran.
         case grid([DofusClient])
+        /// Un seul perso, ancré sous sa pastille, sans vignette : son nom et
+        /// sa position. Le survol quand seule la lecture de la position est
+        /// active — aucune capture de la fenêtre entière.
+        case etiquette(DofusClient)
 
         var clients: [DofusClient] {
             switch self {
-            case .single(let client): return [client]
+            case .single(let client), .etiquette(let client): return [client]
             case .grid(let clients): return clients
             }
         }
@@ -46,9 +50,9 @@ final class PreviewPanelController: NSObject, ObservableObject {
 
     /// Aperçu d'un seul perso, sous la pastille dont le cadre est donné en
     /// coordonnées écran.
-    func show(_ client: DofusClient, below rect: CGRect) {
+    func show(_ client: DofusClient, below rect: CGRect, apercu: Bool = true) {
         anchor = rect
-        present(.single(client))
+        present(apercu ? .single(client) : .etiquette(client))
     }
 
     /// Grille de tous les persos, au centre de l'écran.
@@ -75,15 +79,22 @@ final class PreviewPanelController: NSObject, ObservableObject {
     /// passé dormant ou en cours de fermeture n'était plus « le même », et
     /// l'aperçu restait affiché.
     func hide(ifShowing client: DofusClient) {
-        guard case .single(let shown) = mode, shown.slotKey == client.slotKey else { return }
-        hide()
+        switch mode {
+        case .single(let shown), .etiquette(let shown):
+            guard shown.slotKey == client.slotKey else { return }
+            hide()
+        default:
+            return
+        }
     }
 
     /// Masque l'aperçu ancré sous une pastille. La grille, elle, n'est liée à
     /// aucune pastille : elle suit le raccourci maintenu, pas la barre.
     func hideAnchored() {
-        guard case .single = mode else { return }
-        hide()
+        switch mode {
+        case .single, .etiquette: hide()
+        default: return
+        }
     }
 
     /// Réaligne l'aperçu sur la liste des persos : un perso qui n'y figure plus
@@ -107,7 +118,7 @@ final class PreviewPanelController: NSObject, ObservableObject {
         switch mode {
         case nil:
             return nil
-        case .single(let client):
+        case .single(let client), .etiquette(let client):
             return present.contains(client.slotKey) ? mode : nil
         case .grid(let shown):
             let kept = shown.filter { present.contains($0.slotKey) }
@@ -121,13 +132,16 @@ final class PreviewPanelController: NSObject, ObservableObject {
         if panel == nil { build() }
 
         mode = newMode
-        service.refresh(newMode.clients)
         panel?.orderFrontRegardless()
         reposition()
+        timer?.invalidate()
+        timer = nil
+        // L'étiquette ne montre pas la fenêtre : rien à capturer.
+        if case .etiquette = newMode { return }
+        service.refresh(newMode.clients)
 
         // Un aperçu figé n'apprend rien pendant un combat : on le tient à jour
         // tant qu'il est affiché, sans jamais capturer quand il ne l'est pas.
-        timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let mode = self?.mode else { return }
@@ -207,6 +221,7 @@ final class PreviewPanelController: NSObject, ObservableObject {
 private struct PreviewPanelView: View {
     @ObservedObject private var controller = PreviewPanelController.shared
     @ObservedObject private var service = WindowPreviewService.shared
+    @ObservedObject private var lecteur = LecteurPosition.shared
 
     /// Encombrement d'une vignette à l'écran.
     ///
@@ -227,6 +242,8 @@ private struct PreviewPanelView: View {
                 thumbnail(for: client)
             case .grid(let clients):
                 grid(clients)
+            case .etiquette(let client):
+                etiquette(for: client)
             case nil:
                 EmptyView()
             }
@@ -282,9 +299,42 @@ private struct PreviewPanelView: View {
                     .font(.system(size: 11, weight: .medium))
                     .lineLimit(1)
                 Spacer(minLength: 0)
+                if let position = lecteur.releves[client.name]?.position {
+                    Text(position.coordonnees)
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                        .help(position.zone ?? "")
+                }
             }
             .frame(width: Self.thumbnailWidth, alignment: .leading)
         }
+    }
+
+    /// Le nom, la position et la zone — ou ce qui manque pour les dire. La
+    /// lecture part au survol ; le libellé suit dès qu'elle revient.
+    private func etiquette(for client: DofusClient) -> some View {
+        let position = lecteur.releves[client.name]?.position
+        return VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 6) {
+                Text(client.name)
+                    .font(.system(size: 11, weight: .semibold))
+                    .lineLimit(1)
+                Text(position?.coordonnees ?? (service.authorized ? "…" : "—"))
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(.secondary)
+            }
+            if let zone = position?.zone {
+                Text(zone)
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            } else if !service.authorized {
+                Text(L("apercu.autorisationRequise"))
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: 260, alignment: .leading)
     }
 
     /// Occupe le cadre de la vignette sans en décider la taille : c'est le cadre

@@ -51,6 +51,10 @@ struct ShortcutsSettings: View {
                                         WindowPreviewService.shared.requestAuthorization()
                                     }
                                 }))
+                HStack {
+                    Toggle(L("raccourcis.signalerBascule"), isOn: $prefs.signalerBascule)
+                    HelpTip(L("raccourcis.signalerBascule.aide"))
+                }
             } header: {
                 SectionTitle(L("raccourcis.naviguer"))
             }

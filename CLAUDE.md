@@ -59,9 +59,9 @@ l'autorisation Accessibilité est liée à l'identité de code signée.
   `MainActor.assumeIsolated`, et le callback C de `HotKeyManager` — qui ne peut
   rien capturer — franchit la frontière via `DispatchQueue.main.async`.
   Toute nouvelle classe à état doit être `@MainActor` plutôt que d'obtenir une
-  exemption. Les deux exceptions sont des **acteurs sans état partagé** qui
-  font du travail bloquant : `PreviewCaptureEngine` (captures) et
-  `ClientInventoryEngine` (inventaire Accessibilité). Il n'y entre et n'en sort
+  exemption. Les exceptions sont des **acteurs sans état partagé** qui
+  font du travail bloquant : `PreviewCaptureEngine` (captures),
+  `ClientInventoryEngine` (inventaire Accessibilité) et `MoteurOCR` (Vision). Il n'y entre et n'en sort
   que des valeurs `Sendable`.
 - **Un seul foyer par logique.** Pas deux fonctions qui font à peu près la même
   chose : la lecture AX est dans `AccessibilityReader`, la reconnaissance d'un
@@ -114,6 +114,7 @@ de son domaine ; un fichier qui n'en a pas est le signe d'un domaine à créer.
 | `Marque/` | La Couvée : `SynfusMark` (CoreGraphics pur) et `SynfusGlyph` |
 | `Localisation/` | `L()`, les tables JSON par langue, le choix de langue |
 | `Interface/` | `MenuBarController` ; `Barre/` (barre flottante et ses contrôles) ; `Reglages/` (une vue par onglet + contrôleur de fenêtre) |
+| `Position/` | Lecture OCR des coordonnées de carte : `PositionCarte` et `EmpreinteTexte` (purs), `LecteurPosition`, `DiagnosticPosition` et `MoteurOCR` |
 | `StreamDeck/` | L'interface physique contextuelle : `Sorts/` (reconnaissance de la barre), `Profils/` (sorts par perso, touches), `Liaison/` (protocole et socket), `Combat/` (détection combat) |
 | `../SynfusDeck/` | Le plugin Elgato — second target, binaire séparé, sans code partagé : le protocole JSON est le contrat |
 
@@ -437,6 +438,50 @@ de souris réclame-t-il « Surveillance de la saisie » ? — d'où le compteur
 `seenClicks` affiché dans les réglages : à zéro après un clic, c'est que
 macOS ne livre rien.
 
+### Signal de bascule
+
+À chaque bascule faite par `focus()` — raccourci, enchaînement au clic,
+passage automatique —, la pastille du perso atteint **clignote** 1,5 s dans
+la barre (`WindowManager.basculeSignalee`, `SwitchBlink`) : en enchaînant au
+fn-clic, la seule surbrillance de la pastille active ne se remarquait pas.
+Une annonce flottante près du curseur a été essayée et rejetée — elle
+gênait en jeu : le signal vit dans la barre, rien ne se pose sur le jeu. Le
+clic sur une pastille passe `signaler: false`. Réglage `signalerBascule`,
+actif par défaut.
+
+La rotation (`cycle`) passe par [Rotation.swift](Sources/Synfus/Clients/Rotation.swift)
+— pure, testée — qui **saute les injoignables** (`unreachablePIDs` : fermeture
+en cours, suspects de gel). Après un ⌘Q, le client mourant reste affiché par
+la mémoire ; la rotation s'y posait, activait un processus sans fenêtre, et
+un appui sur deux ne montrait rien. L'accès direct (⌘1…, pastille) n'y passe
+pas.
+
+### Lecture de la position (OCR)
+
+[LecteurPosition.swift](Sources/Synfus/Position/LecteurPosition.swift) lit à
+1 Hz les coordonnées de carte du perso au premier plan, en haut à gauche de la
+fenêtre (`PositionCarte.region`). Mesuré sur de vraies captures : Vision en
+`.fast` ne lit rien de la police du jeu ; `.accurate` à **un pixel par point**
+lit juste en ~50 ms (en Retina, « →16 » pour « -16 » et plus lent). L'OCR ne
+repasse que si l'`EmpreinteTexte` (pixels clairs réduits à une grille) a
+changé — la position ne bouge qu'au changement de carte —, et la capture
+réutilise l'inventaire ScreenCaptureKit gardé (`captureData(…,
+inventaireGarde: true)`). Le **premier** OCR `accurate` charge le modèle :
+~28 s mesurées à froid — `MoteurOCR.prechauffer()` le paie à l'activation,
+état « préparation » au Diagnostic.
+
+Les autres persos sont lus **au survol** de leur pastille (relevé de plus de
+10 s) et par « Tout lire » du Diagnostic : réglages ouverts, Synfus est
+devant et le tour régulier n'a rien à lire — ce qui faisait croire la
+lecture en panne. Au survol, la position s'affiche sous la pastille : dans
+l'aperçu s'il est actif, sinon dans une **étiquette** (`PreviewPanelController`,
+mode `.etiquette`, sans capture de fenêtre). Les info-bulles `.help` ne
+sont pas fiables pour une app inactive, ce que Synfus est toujours. Les compteurs
+et la dernière zone lue vivent dans `DiagnosticPosition`, observé par les
+seuls réglages — la barre n'observe que les relevés, qui ne changent qu'au
+changement de carte. Réglage `lirePosition`, éteint par défaut (seconde
+autorisation TCC). `RealCaptureTests` rejoue la chaîne sur une capture.
+
 ### Fermer les clients
 
 Le client gèle systématiquement à la fermeture chez certains joueurs, qui
@@ -696,6 +741,10 @@ propriété calculée, donc s'y réassigner relance le `didSet` — d'où le dra
   `barOrigin` 250 ms après le dernier mouvement (`flushPendingOrigin`, aussi
   appelé à la fermeture de l'app). Écrire à chaque évènement, c'était un JSON
   et un redessin de toutes les vues qui observent `Preferences` par pixel.
+  Le curseur de la poignée (main ouverte) exige `CurseurArrierePlan` :
+  macOS ignore `NSCursor.set()` d'une app qui n'est pas active, ce que Synfus
+  n'est jamais. La propriété de connexion privée `SetsCursorInBackground`,
+  résolue par `dlsym`, lève la limite — absente, on retombe sur la flèche.
   Le timer de 2 s appelle `updateVisibility(force: false)` — il ne touche au
   panneau que si son état est faux —, les notifications gardent `force: true` :
   c'est ce qui remonte la barre au-dessus d'un espace plein écran fraîchement

@@ -228,7 +228,9 @@ struct BarView: View {
         let closing = manager.closingPIDs.contains(client.pid)
 
         return Button {
-            manager.focus(client)
+            // La pastille vient d'être cliquée : la faire clignoter ne dirait
+            // rien de plus.
+            manager.focus(client, signaler: false)
         } label: {
             HStack(spacing: 5) {
                 // La fermeture en cours prend la place du badge : le geste a
@@ -272,6 +274,7 @@ struct BarView: View {
                     .fill(active ? Color.accentColor : Color.clear)
             )
             .overlay { if alerting { AlertPulse() } }
+            .overlay { if manager.basculeSignalee == client.slotKey { SwitchBlink() } }
             .foregroundStyle(active ? Color.white : Color.primary)
             .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
@@ -332,8 +335,11 @@ struct BarView: View {
         }
 
         // Pendant un glisser, le curseur traverse les pastilles : aucun aperçu
-        // ne doit s'ouvrir, il cacherait la rangée qu'on vise.
-        guard prefs.showPreviewOnHover, dragging == nil else { return }
+        // ne doit s'ouvrir, il cacherait la rangée qu'on vise. Sans aperçu,
+        // la lecture de la position ouvre à la place une simple étiquette.
+        let apercu = prefs.showPreviewOnHover
+        guard apercu || prefs.lirePosition, dragging == nil else { return }
+        if prefs.lirePosition { LecteurPosition.shared.lireAuSurvol(client) }
 
         // Préchauffage : la capture part tout de suite, en parallèle de
         // l'attente, pour que l'aperçu s'ouvre avec son image plutôt que sur
@@ -342,7 +348,7 @@ struct BarView: View {
         // surgir une invite système — et si aucune image n'est connue : une
         // vignette existante attend le rafraîchissement normal du panneau.
         let service = WindowPreviewService.shared
-        if service.authorized, service.previews[client.slotKey] == nil {
+        if apercu, service.authorized, service.previews[client.slotKey] == nil {
             service.refresh(client)
         }
 
@@ -354,7 +360,7 @@ struct BarView: View {
                   let local = chipFrames[client.name],
                   let onScreen = FloatingBarController.shared.screenFrame(fromBarFrame: local)
             else { return }
-            PreviewPanelController.shared.show(client, below: onScreen)
+            PreviewPanelController.shared.show(client, below: onScreen, apercu: apercu)
         }
     }
 
