@@ -36,4 +36,28 @@ enum CrossSpaceTitles {
         }
         return titles
     }
+
+    /// Parmi `pids`, ceux qui ont une fenêtre de jeu **à l'écran** en ce
+    /// moment. Sans autorisation : propriétaire, calque et cadre sont livrés à
+    /// tous, seuls les titres exigent l'enregistrement de l'écran. Et sans
+    /// Accessibilité : c'est le serveur de fenêtres qui répond, pas le client
+    /// — un client gelé ne peut pas faire attendre cette lecture.
+    static func affiches(parmi pids: Set<pid_t>) -> Set<pid_t> {
+        guard !pids.isEmpty,
+              let infos = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements],
+                                                     kCGNullWindowID) as? [[String: Any]]
+        else { return [] }
+        var vus: Set<pid_t> = []
+        for info in infos {
+            guard let owner = (info[kCGWindowOwnerPID as String] as? NSNumber)?.int32Value,
+                  pids.contains(owner),
+                  (info[kCGWindowLayer as String] as? NSNumber)?.intValue == 0,
+                  let boundsDict = info[kCGWindowBounds as String] as? NSDictionary,
+                  let bounds = CGRect(dictionaryRepresentation: boundsDict),
+                  AccessibilityReader.isGameWindow(subrole: nil, size: bounds.size)
+            else { continue }
+            vus.insert(owner)
+        }
+        return vus
+    }
 }
