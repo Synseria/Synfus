@@ -221,7 +221,7 @@ final class PreviewPanelController: NSObject, ObservableObject {
 private struct PreviewPanelView: View {
     @ObservedObject private var controller = PreviewPanelController.shared
     @ObservedObject private var service = WindowPreviewService.shared
-    @ObservedObject private var lecteur = LecteurPosition.shared
+    @ObservedObject private var lecteur = LecteurEcran.shared
 
     /// Encombrement d'une vignette à l'écran.
     ///

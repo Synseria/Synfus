@@ -16,6 +16,10 @@ struct DofusClient: Identifiable, Hashable, Sendable {
     /// en pratique, un client dans un espace plein écran qui n'est pas actif.
     /// Il reste cliquable : l'activation du processus suffit à y basculer.
     let dormant: Bool
+    /// Fenêtre en plein écran (`AXFullScreen`), lue par l'inventaire dans le
+    /// même IPC que le titre : sans barre de titre, le contenu commence en
+    /// haut de la fenêtre — c'est ce qui place les zones de lecture de l'écran.
+    var pleinEcran = false
 
     var id: String { slotKey }
 
@@ -23,12 +27,13 @@ struct DofusClient: Identifiable, Hashable, Sendable {
     func remembered() -> DofusClient {
         DofusClient(
             pid: pid, slotKey: slotKey, axWindow: axWindow, rawTitle: rawTitle,
-            name: name, characterClass: characterClass, dormant: true
+            name: name, characterClass: characterClass, dormant: true, pleinEcran: pleinEcran
         )
     }
 
     static func == (lhs: DofusClient, rhs: DofusClient) -> Bool {
         lhs.slotKey == rhs.slotKey && lhs.name == rhs.name && lhs.dormant == rhs.dormant
+            && lhs.pleinEcran == rhs.pleinEcran
     }
 
     func hash(into hasher: inout Hasher) {
