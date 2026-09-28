@@ -109,32 +109,32 @@ n'apparaît que sur macOS 26 ; en deçà, la barre utilise un matériau transluc
 ## Compiler depuis les sources
 
 ```sh
-./build.sh            # produit dist/Synfus.app
-./build.sh --install  # installe dans /Applications et relance
-swift test            # suite de tests
+sh run.sh                    # build de développement, .build/dev/Synfus.app
+sh run.sh --start            # … puis le lance
+sh run.sh --install --start  # build release, installé dans /Applications et lancé
+sh build.sh                  # build release : dist/Synfus.app
+sh build.sh --release        # + dist/Synfus-<version>-<arch>.dmg
+sh test.sh                   # suite de tests (sh test.sh Rotation : filtrée)
 ```
 
-Deux variables d'environnement pilotent le script :
+Chaque script répond à `--help`. Deux variables d'environnement pilotent
+`build.sh` :
 
 | Variable | Effet |
 | --- | --- |
 | `VERSION` | Numéro inscrit dans l'`Info.plist` (défaut : dernier tag du dépôt) |
 | `ARCH` | Architecture cible, `arm64` ou `x86_64` (défaut : celle de la machine) |
 
-`build.sh` signe avec le certificat local « Synfus Dev » s'il existe —
-`./Tools/make-signing-identity.sh` le crée une fois — ou, à défaut, un
-certificat *Apple Development* : l'identité vue par TCC reste alors stable d'un
-build à l'autre, et l'autorisation Accessibilité n'est pas à redonner à chaque
-fois. Le plugin Stream Deck est construit et embarqué dans l'app, mais jamais
-installé par le script : c'est Synfus qui le propose.
+La signature est choisie par `signature.sh` : un certificat *Developer ID*
+s'il existe, sinon *Apple Development*, sinon le certificat local
+« Synfus Dev » (`./Tools/make-signing-identity.sh` le crée une fois), sinon
+ad hoc. L'identité vue par TCC reste ainsi stable d'un build à l'autre, et
+l'autorisation Accessibilité n'est pas à redonner à chaque fois — mais
+**changer d'identité la fait redonner une fois**. Le plugin Stream Deck est
+construit et embarqué dans l'app, jamais installé par le script : c'est Synfus
+qui le propose.
 
-Le DMG se fabrique à part :
-
-```sh
-./make-dmg.sh dist/Synfus.app dist/Synfus-0.0.1-arm64.dmg
-```
-
-Les tests se lancent avec `swift test`. Ils portent sur la logique pure —
+Les tests se lancent avec `sh test.sh`. Ils portent sur la logique pure —
 analyse des titres de fenêtres, classes, raccourcis, persistance — et ne
 touchent pas aux réglages de la machine.
 

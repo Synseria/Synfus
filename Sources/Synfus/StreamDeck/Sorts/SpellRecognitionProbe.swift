@@ -106,7 +106,7 @@ final class SpellRecognitionProbe: ObservableObject {
 
         guard analysis.candidateCount > 0 else {
             lines.append("✗ Aucune icône de sort connue" + (capture.classe.map { " pour « \($0) »" } ?? "")
-                         + " — lancer Tools/fetch-ankama-assets.sh puis ./build.sh --install.")
+                         + " — lancer Tools/fetch-ankama-assets.sh puis sh run.sh --install --start.")
             report = lines.joined(separator: "\n")
             return
         }

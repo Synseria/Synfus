@@ -217,7 +217,7 @@ struct StreamDeckSettings: View {
             }
             .font(.system(size: 11))
             if bundled("fr.synseria.synfus", "streamDeckPlugin") == nil {
-                Text("Ce build n'embarque pas le plugin — relance ./build.sh --install.")
+                Text("Ce build n'embarque pas le plugin — relance sh run.sh --install --start.")
                     .font(.system(size: 10)).foregroundStyle(.orange)
             }
         } header: {
