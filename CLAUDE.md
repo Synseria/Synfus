@@ -495,7 +495,7 @@ Le coût, mesuré sur de vraies captures :
   mal — « a16 » pour « -16 », mesuré.
 - **L'OCR ne repasse que si la zone a changé** (`SignatureZone`) : pixels
   clairs réduits à une grille (`EmpreinteTexte`), et pour le combat la part
-  de rose. Le décompte est vert, sous le seuil des pixels clairs : il ne
+  colorée. Le décompte est vert, sous le seuil des pixels clairs : il ne
   relance pas l'OCR chaque seconde ; il est lu au changement d'état, et
   l'échéance tenue localement (`EtatCombat.monTour(fin:)`).
 - **L'inventaire ScreenCaptureKit gardé** (`captureData(…, inventaireGarde:)`).
@@ -503,15 +503,21 @@ Le coût, mesuré sur de vraies captures :
   `MoteurOCR.prechauffer()` le paie à l'activation.
 
 Le combat ([LectureCombat.swift](Sources/Synfus/Lecture/LectureCombat.swift),
-pur) : « Fin de tour » (fr, en, es, tolérant à l'OCR) sur fond **rose** —
-`ratioRose`, teinte 280°–340°, ~21 % de la zone mesurés — c'est son tour ;
-sans rose, celui d'un autre (bouton grisé mesuré à 0 %, icônes lavande pâle
-comprises : trop peu saturées) ; « Prêt », le placement ; rien, hors combat. La
-pastille le montre (`CombatBadge`) : contour rose et décompte à son tour, une
-épée en combat. En plein écran, seul le perso devant est lisible : l'état
-des autres date de leur dernier passage devant. La détection calibrée de
-`StreamDeck/Combat/` (en pause) fait doublon : à la reprise du Stream Deck,
-`CombatWatcher` doit passer par `LecteurEcran.combats`.
+pur) : « Fin de tour » (fr, en, es, tolérant à l'OCR) sur un bouton **en
+couleur**, c'est son tour ; sur un bouton **gris**, celui d'un autre ;
+« Prêt », le placement ; rien, hors combat. Aucune teinte n'est supposée :
+le rose par défaut change avec les **thèmes** du jeu, le gris jamais — c'est
+lui qui fait foi. La couleur (`ratioColore` : saturation ≥ 0,3, clarté ≥
+0,35, toute teinte) se mesure sur le seul **corps du bouton**, la boîte du
+texte lu élargie (`corpsDuBouton`) : la zone entière contient aussi le
+décompte, vert. Mesuré sur le bouton grisé : 0 %, icônes lavande pâle
+comprises (s ≈ 0,16) ; seuil `seuilBouton` 25 %. La part colorée de la zone
+entière ne sert qu'à relancer l'OCR quand elle franchit `seuilSignature`
+(10 %). La pastille le montre (`CombatBadge`) : contour et décompte à son
+tour, une épée en combat. En plein écran, seul le perso devant est lisible :
+l'état des autres date de leur dernier passage devant. La détection calibrée
+de `StreamDeck/Combat/` (en pause) fait doublon : à la reprise du Stream
+Deck, `CombatWatcher` doit passer par `LecteurEcran.combats`.
 
 Les zones se **calibrent** d'un tracé (`CalibrationZonesView`, depuis le
 Diagnostic) : le joueur déplace son interface une fois pour toutes, chercher
@@ -526,7 +532,8 @@ actif, sinon dans une **étiquette** (`PreviewPanelController`, mode
 fiables pour une app inactive. Les compteurs et les zones lues vivent dans
 `DiagnosticLecture`, observé par les seuls réglages. `RealCaptureTests`
 rejoue la chaîne sur une capture (`SYNFUS_CAPTURE`, `SYNFUS_PLEIN_ECRAN=1`,
-`SYNFUS_COMBAT_ATTENDU=monTour`).
+`SYNFUS_COMBAT_ATTENDU=monTour`, `SYNFUS_ZONE_ENTIERE=1` pour un recadrage
+du seul bouton).
 
 ### Fermer les clients
 
