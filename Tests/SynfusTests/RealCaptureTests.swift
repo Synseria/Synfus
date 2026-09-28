@@ -43,37 +43,59 @@ struct RealCaptureTests {
         print("sûres : \(analysis.confidentCount)/\(analysis.cells.count)")
     }
 
-    @Test("La position est lue sur la capture fournie", .enabled(if: capturePath != nil))
-    func positionSurCaptureReelle() async throws {
+    /// Ce que fait la capture de la lecture de l'écran, rejoué sur un PNG de
+    /// fenêtre en Retina : la zone prise dans le contenu (sans barre de titre,
+    /// sauf `SYNFUS_PLEIN_ECRAN=1`), ramenée à la hauteur de référence.
+    private func zoneCapturee(_ zone: ZoneEcran) throws -> Data {
         let path = (try #require(Self.capturePath) as NSString).expandingTildeInPath
         let source = try #require(CGImageSourceCreateWithURL(URL(fileURLWithPath: path) as CFURL, nil))
         let pleine = try #require(CGImageSourceCreateImageAtIndex(source, 0, nil))
-        // Ce que fait la capture : la zone, à un pixel par point (la capture
-        // du dépôt est en Retina, deux pixels par point).
-        let zone = PositionCarte.region
-        let rect = CGRect(x: zone.minX * CGFloat(pleine.width), y: zone.minY * CGFloat(pleine.height),
-                          width: zone.width * CGFloat(pleine.width), height: zone.height * CGFloat(pleine.height))
-        let coin = try #require(pleine.cropping(to: rect))
-        let (w, h) = (coin.width / 2, coin.height / 2)
+        let pleinEcran = ProcessInfo.processInfo.environment["SYNFUS_PLEIN_ECRAN"] == "1"
+        let points = CGSize(width: CGFloat(pleine.width) / 2, height: CGFloat(pleine.height) / 2)
+        let contenu = ZoneEcran.contenu(fenetre: points, barreTitre: 28, pleinEcran: pleinEcran)
+        let rect = ZoneEcran.source(zone.rect, contenu: contenu)
+        let pixels = CGRect(x: rect.minX * 2, y: rect.minY * 2, width: rect.width * 2, height: rect.height * 2).integral
+        let coin = try #require(pleine.cropping(to: pixels))
+        let echelle = ZoneEcran.echelle(hauteurContenu: contenu.height, plafond: 2)
+        let (w, h) = (Int(rect.width * echelle), Int(rect.height * echelle))
         let contexte = try #require(CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,
                                               space: CGColorSpaceCreateDeviceRGB(),
                                               bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
         contexte.interpolationQuality = .high
         contexte.draw(coin, in: CGRect(x: 0, y: 0, width: w, height: h))
         let reduite = try #require(contexte.makeImage())
-        let png = try #require(NSBitmapImageRep(cgImage: reduite).representation(using: .png, properties: [:]))
+        print("zone \(w) × \(h) px")
+        return try #require(NSBitmapImageRep(cgImage: reduite).representation(using: .png, properties: [:]))
+    }
 
+    @Test("La position est lue sur la capture fournie", .enabled(if: capturePath != nil))
+    func positionSurCaptureReelle() async throws {
+        let png = try zoneCapturee(.positionParDefaut)
         let moteur = MoteurOCR()
         await moteur.prechauffer()
-        guard case .lue(let empreinte, let lignes, let duree) = await moteur.lire(png: png, precedente: nil)
+        guard case .lue(let signature, let lignes, let duree) = await moteur.lire(png: png, precedente: nil, couleur: false)
         else { Issue.record("rien lu"); return }
         print("OCR \(Int(duree * 1000)) ms : \(lignes)")
         let position = PositionCarte.lire(lignes)
         print("position : \(position?.coordonnees ?? "—") — \(position?.zone ?? "—")")
         #expect(position != nil)
         // La même image ne repasse pas par l'OCR.
-        guard case .inchangee = await moteur.lire(png: png, precedente: empreinte) else {
-            Issue.record("l'empreinte n'a pas reconnu la même image"); return
+        guard case .inchangee = await moteur.lire(png: png, precedente: signature, couleur: false) else {
+            Issue.record("la signature n'a pas reconnu la même image"); return
+        }
+    }
+
+    @Test("L'état de combat est lu sur la capture fournie", .enabled(if: capturePath != nil))
+    func combatSurCaptureReelle() async throws {
+        let png = try zoneCapturee(.combatParDefaut)
+        let moteur = MoteurOCR()
+        await moteur.prechauffer()
+        guard case .lue(let signature, let lignes, let duree) = await moteur.lire(png: png, precedente: nil, couleur: true)
+        else { Issue.record("rien lu"); return }
+        let constat = LectureCombat.classer(lignes: lignes, rose: signature.rose ?? 0)
+        print("OCR \(Int(duree * 1000)) ms : \(lignes) — rose \(Int((signature.rose ?? 0) * 100)) % → \(constat)")
+        if let attendu = ProcessInfo.processInfo.environment["SYNFUS_COMBAT_ATTENDU"] {
+            #expect("\(constat.genre)" == attendu)
         }
     }
 }

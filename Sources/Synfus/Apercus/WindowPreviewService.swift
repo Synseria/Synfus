@@ -99,11 +99,14 @@ final class WindowPreviewService: ObservableObject {
     /// mémoire s'il est frais et y trouve la fenêtre — une lecture répétée
     /// chaque seconde n'a pas à refaire le tour de toutes les fenêtres du
     /// système, qui coûte bien plus que la capture.
+    /// `contenu` : la région se lit dans le **contenu** de la fenêtre, sans sa
+    /// barre de titre (cf. `ZoneEcran`) ; `normaliser` ramène alors le contenu
+    /// à `ZoneEcran.hauteurReference` pixels, et `maxWidth` est ignoré.
     func captureData(_ client: DofusClient, region: CGRect?, maxWidth: Int?,
-                     inventaireGarde: Bool) async -> Data? {
+                     inventaireGarde: Bool, contenu: CaptureContenu? = nil) async -> Data? {
         guard authorized else { lastCaptureError = "enregistrement de l'écran non autorisé"; return nil }
         let request = PreviewRequest(key: client.slotKey, pid: client.pid, title: client.rawTitle,
-                                     maxWidth: maxWidth, region: region)
+                                     maxWidth: maxWidth, region: region, contenu: contenu)
         switch await engine.captureOne(request, inventaireGarde: inventaireGarde) {
         case .success(let data):
             if lastCaptureError != nil { lastCaptureError = nil }
@@ -222,6 +225,16 @@ private struct PreviewRequest: Sendable {
     /// Zone de la fenêtre à capturer, en fractions (0…1) de sa largeur et de
     /// sa hauteur, origine en haut à gauche ; `nil` pour la fenêtre entière.
     let region: CGRect?
+    /// Région prise dans le contenu, et non dans la fenêtre entière.
+    var contenu: CaptureContenu? = nil
+}
+
+/// Ce que la lecture de l'écran dit de la fenêtre pour y placer ses zones :
+/// plein écran ou non (la barre de titre), et s'il faut ramener le contenu à
+/// la hauteur de référence.
+struct CaptureContenu: Sendable {
+    let pleinEcran: Bool
+    let normaliser: Bool
 }
 
 /// Ce qui a empêché une capture — pour le dire plutôt que rendre `nil`.
@@ -361,16 +374,30 @@ private actor PreviewCaptureEngine {
         // une capture de la seule barre de sorts pèse cent fois moins qu'une
         // fenêtre entière, et c'est ce qui rend supportable une lecture répétée.
         var size = window.frame.size
+        var hauteurContenu = size.height
         if let region = request.region {
-            let rect = CGRect(x: region.minX * size.width, y: region.minY * size.height,
-                              width: region.width * size.width, height: region.height * size.height)
+            var cadre = CGRect(origin: .zero, size: size)
+            if let contenu = request.contenu {
+                cadre = ZoneEcran.contenu(fenetre: size, barreTitre: await Self.barreTitre,
+                                          pleinEcran: contenu.pleinEcran)
+                hauteurContenu = cadre.height
+            }
+            let rect = ZoneEcran.source(region, contenu: cadre)
             configuration.sourceRect = rect
             size = rect.size
         }
         // Résolution native : les écrans Retina rendent deux pixels par point,
-        // et la reconnaissance veut ces pixels-là.
-        let pixelsPerPoint = request.maxWidth == nil ? await Self.backingScale : 1
-        let scale = request.maxWidth.map { min(1, CGFloat($0) / max(size.width, 1)) } ?? pixelsPerPoint
+        // et la reconnaissance veut ces pixels-là — sauf pour la lecture de
+        // l'écran, ramenée à une hauteur de contenu fixe.
+        let natif = await Self.backingScale
+        let scale: CGFloat
+        if request.contenu?.normaliser == true {
+            scale = ZoneEcran.echelle(hauteurContenu: hauteurContenu, plafond: natif)
+        } else if let maxWidth = request.maxWidth {
+            scale = min(1, CGFloat(maxWidth) / max(size.width, 1))
+        } else {
+            scale = natif
+        }
         configuration.width = Int((size.width * scale).rounded())
         configuration.height = Int((size.height * scale).rounded())
         configuration.showsCursor = false
@@ -390,5 +417,11 @@ private actor PreviewCaptureEngine {
     /// Le facteur Retina de l'écran principal — lu sur main, `NSScreen` y vit.
     @MainActor private static var backingScale: CGFloat {
         NSScreen.main?.backingScaleFactor ?? 2
+    }
+
+    /// Hauteur d'une barre de titre standard, telle qu'AppKit la dessine sur
+    /// ce système — celle du client en fenêtré.
+    @MainActor private static var barreTitre: CGFloat {
+        NSWindow.frameRect(forContentRect: .zero, styleMask: .titled).height
     }
 }

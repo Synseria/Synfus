@@ -388,6 +388,21 @@ struct PreferencesTests {
         #expect(relues.toggleBar == HotKey(keyCode: 11, modifiers: UInt32(cmdKey) | UInt32(shiftKey)))
     }
 
+    @Test("La lecture de l'écran est éteinte par défaut, et ses zones se relisent")
+    func lectureEcranPersistee() {
+        let (prefs, store) = neuves()
+        #expect(prefs.lirePosition == false)
+        #expect(prefs.lireCombat == false)
+        #expect(prefs.zonePosition == nil)
+        prefs.lireCombat = true
+        prefs.zoneCombat = ZoneEcran(x: 0.1, y: 0.8, largeur: 0.2, hauteur: 0.1)
+
+        let relues = Preferences.forTesting(store: store)
+        #expect(relues.lireCombat == true)
+        #expect(relues.zoneCombat == ZoneEcran(x: 0.1, y: 0.8, largeur: 0.2, hauteur: 0.1))
+        #expect(relues.zonePosition == nil)
+    }
+
     /// L'enchaînement au clic installe un moniteur global de souris : il ne
     /// doit jamais s'activer tout seul à la faveur d'une mise à jour, pas plus
     /// que les aperçus. Et la touche à tenir est `fn`, la seule que le jeu
