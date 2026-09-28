@@ -9,6 +9,9 @@ struct DiagnosticSettings: View {
     @ObservedObject private var arranger = WindowArranger.shared
     @ObservedObject private var freezes = FreezeWatcher.shared
     @ObservedObject private var spells = SpellRecognitionProbe.shared
+    @ObservedObject private var lecteur = LecteurPosition.shared
+    @ObservedObject private var lecture = DiagnosticPosition.shared
+    @ObservedObject private var prefs = Preferences.shared
     @State private var zoomCapture = false
 
     var body: some View {
@@ -64,6 +67,9 @@ struct DiagnosticSettings: View {
                                 Text("pid \(client.pid)")
                                     .font(.system(size: 10, design: .monospaced))
                                     .foregroundStyle(.tertiary)
+                                if prefs.lirePosition {
+                                    positionLine(for: client)
+                                }
                                 if previews.authorized {
                                     Text(previews.unmatched.contains(client.slotKey)
                                          ? L("diagnostic.apercu.introuvable")
@@ -80,6 +86,9 @@ struct DiagnosticSettings: View {
                         }
                     }
             }
+
+            Divider().padding(.vertical, 4)
+            positionSection
 
             Divider().padding(.vertical, 4)
             arrangementSection
@@ -103,6 +112,103 @@ struct DiagnosticSettings: View {
 
             Divider().padding(.vertical, 4)
             attentionProbeSection
+    }
+
+    /// La position lue par OCR, ou ce qui l'empêche. La ligne brute suit :
+    /// si les coordonnées manquent, c'est elle qui dit ce que Vision a vu.
+    @ViewBuilder
+    private func positionLine(for client: DofusClient) -> some View {
+        if let releve = lecteur.releves[client.name] {
+            Text(L("diagnostic.position.ligne",
+                   [releve.position?.coordonnees, releve.position?.zone].compactMap { $0 }.joined(separator: " — ")
+                   .ifEmpty(L("diagnostic.position.illisible"))))
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundStyle(releve.position == nil ? Color.orange : Color.secondary)
+                .textSelection(.enabled)
+            Text(L("diagnostic.position.brut", releve.lignes.joined(separator: " ⏎ ")))
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundStyle(.tertiary)
+                .textSelection(.enabled)
+        } else {
+            Text(L("diagnostic.position.pasEncore"))
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundStyle(.tertiary)
+        }
+    }
+
+    /// Lecture de la position : la bascule, et ce qu'elle coûte. Les compteurs
+    /// sont là pour le prouver — une lecture par changement de carte, pas
+    /// une par seconde.
+    private var positionSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Text(L("diagnostic.position")).font(.system(size: 12, weight: .semibold))
+                HelpTip(L("diagnostic.position.aide"))
+                Spacer()
+                Toggle(L("diagnostic.position.activer"), isOn: Binding(
+                    get: { prefs.lirePosition },
+                    set: { value in
+                        prefs.lirePosition = value
+                        // Le geste de l'utilisateur est la demande : c'est le
+                        // seul endroit où cette lecture la fait.
+                        if value, !previews.authorized { previews.requestAuthorization() }
+                    }))
+                    .toggleStyle(.switch)
+                    .controlSize(.mini)
+                    .font(.system(size: 11))
+            }
+            if prefs.lirePosition {
+                HStack(spacing: 8) {
+                    Text(etatLecture)
+                        .font(.system(size: 11))
+                        .foregroundStyle(etatEnDefaut ? Color.orange : Color.secondary)
+                        .textSelection(.enabled)
+                    Spacer()
+                    Button(L("diagnostic.position.toutLire")) { LecteurPosition.shared.toutLire() }
+                        .font(.system(size: 11))
+                        .disabled(!previews.authorized || manager.clients.isEmpty)
+                        .help(L("diagnostic.position.toutLire.aide"))
+                }
+                Text(L("diagnostic.position.stats", lecture.lectures,
+                       Int(lecture.derniereDuree * 1000), lecture.sautes))
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                if let image = lecture.derniereCapture {
+                    // Ce que l'OCR a reçu : si les coordonnées n'y sont pas,
+                    // c'est la zone qui est en cause, pas la reconnaissance.
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(L("diagnostic.position.zoneVue", lecture.dernierPerso ?? "?"))
+                            .font(.system(size: 10))
+                            .foregroundStyle(.tertiary)
+                        Image(nsImage: image)
+                            .resizable()
+                            .interpolation(.medium)
+                            .aspectRatio(contentMode: .fit)
+                            .frame(maxWidth: 360, maxHeight: 110, alignment: .leading)
+                            .clipShape(RoundedRectangle(cornerRadius: 4))
+                    }
+                }
+            }
+        }
+    }
+
+    private var etatLecture: String {
+        switch lecture.etat {
+        case .eteint: return L("diagnostic.position.etat.eteint")
+        case .nonAutorise: return L("diagnostic.sorts.capturer.nonAutorise")
+        case .preparation: return L("diagnostic.position.etat.preparation")
+        case .attente: return L("diagnostic.position.etat.attente")
+        case .actif: return L("diagnostic.position.etat.actif")
+        case .sansCoordonnees: return L("diagnostic.position.etat.sansCoordonnees")
+        case .echecCapture(let raison): return L("diagnostic.position.etat.echec", raison)
+        }
+    }
+
+    private var etatEnDefaut: Bool {
+        switch lecture.etat {
+        case .nonAutorise, .sansCoordonnees, .echecCapture: return true
+        default: return false
+        }
     }
 
     /// Ce que le dernier rangement a réellement fait. Il repose sur des
@@ -318,4 +424,8 @@ private struct CaptureOverlay: View {
         }
         .background(RoundedRectangle(cornerRadius: 6).fill(Color.black.opacity(0.06)))
     }
+}
+
+private extension String {
+    func ifEmpty(_ remplacement: String) -> String { isEmpty ? remplacement : self }
 }
