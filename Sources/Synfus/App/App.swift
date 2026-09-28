@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         buildApplicationMenu()
 
         WindowManager.shared.start()
+        FreezeWatcher.shared.start()
         HotKeyManager.shared.rebind()
         MenuBarController.shared.install()
         AttentionWatcher.shared.start()

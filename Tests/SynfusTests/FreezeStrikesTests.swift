@@ -100,4 +100,51 @@ struct FreezeStrikesTests {
         #expect(r.record(7, mute: false, probed: false, now: apres(6)) == .ignore)
         #expect(r.suspects == [7])
     }
+
+    @Test("Une fermeture probable est achevée dès la première sonde muette")
+    func fermetureRapide() {
+        var r = registre()
+        #expect(r.record(7, mute: true, probed: true, now: t0, requis: 1) == .condamne)
+        // Sans le soupçon, la règle ordinaire reste de trois sondes.
+        #expect(r.record(8, mute: true, probed: true, now: t0) == .frappe(1))
+    }
+
+    @Test("Une fermeture probable qui répond est blanchie")
+    func fermetureQuiRepond() {
+        var r = registre()
+        #expect(r.record(7, mute: false, probed: true, now: t0, requis: 1) == .blanchi)
+    }
+}
+
+/// Le guet des fenêtres : une fenêtre qui quitte l'écran sans changement
+/// d'espace est une fermeture probable.
+struct VeilleFermetureTests {
+    let t0 = Date(timeIntervalSince1970: 1000)
+
+    @Test("Une fenêtre qui quitte l'écran signale son processus")
+    func disparition() {
+        var v = VeilleFermeture()
+        #expect(v.observer(affiches: [1, 2], vivants: [1, 2], dernierChangementEspace: .distantPast, maintenant: t0).isEmpty)
+        #expect(v.observer(affiches: [2], vivants: [1, 2], dernierChangementEspace: .distantPast,
+                           maintenant: t0.addingTimeInterval(0.5)) == [1])
+    }
+
+    @Test("Juste après un changement d'espace, rien n'est signalé")
+    func changementEspace() {
+        var v = VeilleFermeture()
+        _ = v.observer(affiches: [1, 2], vivants: [1, 2], dernierChangementEspace: .distantPast, maintenant: t0)
+        #expect(v.observer(affiches: [], vivants: [1, 2], dernierChangementEspace: t0,
+                           maintenant: t0.addingTimeInterval(0.5)).isEmpty)
+        // Et l'état suit quand même : pas de faux signal au tour d'après.
+        #expect(v.observer(affiches: [], vivants: [1, 2], dernierChangementEspace: t0,
+                           maintenant: t0.addingTimeInterval(3)).isEmpty)
+    }
+
+    @Test("Un processus mort n'est pas une fermeture à achever")
+    func dejaMort() {
+        var v = VeilleFermeture()
+        _ = v.observer(affiches: [1], vivants: [1], dernierChangementEspace: .distantPast, maintenant: t0)
+        #expect(v.observer(affiches: [], vivants: [], dernierChangementEspace: .distantPast,
+                           maintenant: t0.addingTimeInterval(0.5)).isEmpty)
+    }
 }

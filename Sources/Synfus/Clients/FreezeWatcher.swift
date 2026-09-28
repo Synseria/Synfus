@@ -55,7 +55,69 @@ final class FreezeWatcher: ObservableObject {
                                         strikesRequired: strikesRequired,
                                         condemnedInterval: condemnedInterval)
 
+    /// Fermetures probables : pids dont la fenêtre vient de quitter l'écran
+    /// sans changement d'espace — un ⌘Q, un clic sur la croix. Pour eux, une
+    /// seule sonde muette suffit (`requisFermeture`), le temps qu'on les
+    /// soupçonne (`dureeFermeture`).
+    private var fermetures: [pid_t: Date] = [:]
+    private var veille = VeilleFermeture()
+    private var dernierChangementEspace = Date.distantPast
+    private var timer: Timer?
+
+    /// Sondes muettes qui suffisent à achever une fermeture probable.
+    static let requisFermeture = 1
+    /// Au-delà, une fermeture probable qui n'a pas été tranchée redevient un
+    /// silencieux ordinaire.
+    static let dureeFermeture: TimeInterval = 5
+    /// Cadence du guet de la disparition des fenêtres.
+    static let intervalleGuet: TimeInterval = 0.5
+
     private init() {}
+
+    /// Guette la disparition des fenêtres de jeu, deux fois par seconde.
+    ///
+    /// La règle d'abattage ordinaire — muet à trois sondes espacées de 5 s —
+    /// laissait un client gelé à la fermeture une quinzaine de secondes à
+    /// l'écran : c'est au joueur qui vient de le quitter qu'elle faisait
+    /// attendre. Or une fermeture se voit : la fenêtre quitte l'écran alors
+    /// que l'espace n'a pas changé. Le guet le lit au serveur de fenêtres
+    /// (`CrossSpaceTitles.affiches`, sans Accessibilité, sans permission, un
+    /// client gelé ne peut pas le bloquer), demande aussitôt un inventaire, et
+    /// une seule sonde muette achève alors le processus — ~1,5 s après le ⌘Q.
+    ///
+    /// L'abattage exige toujours **sans fenêtre et muet** : une fenêtre
+    /// réduite ou un client passé sur un autre espace répondent à la sonde et
+    /// sont blanchis. La garde après un changement d'espace n'est qu'une
+    /// économie de sondes.
+    func start() {
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main
+        ) { _ in
+            MainActor.assumeIsolated { FreezeWatcher.shared.dernierChangementEspace = Date() }
+        }
+        timer = Timer.scheduledTimer(withTimeInterval: Self.intervalleGuet, repeats: true) { _ in
+            MainActor.assumeIsolated { FreezeWatcher.shared.guetter() }
+        }
+        timer?.tolerance = 0.1
+    }
+
+    private func guetter() {
+        let manager = WindowManager.shared
+        let vivants = manager.liveDofusPIDs
+        guard Preferences.shared.killFrozenClients, !vivants.isEmpty else {
+            veille = VeilleFermeture()
+            return
+        }
+        let disparus = veille.observer(affiches: CrossSpaceTitles.affiches(parmi: vivants),
+                                       vivants: vivants,
+                                       dernierChangementEspace: dernierChangementEspace,
+                                       maintenant: Date())
+            .subtracting(manager.closingPIDs)
+        guard !disparus.isEmpty else { return }
+        let now = Date()
+        for pid in disparus { fermetures[pid] = now }
+        manager.refreshSoon()
+    }
 
     /// Processus déjà pris en défaut au moins une fois : l'inventaire ne les
     /// réinterroge qu'à l'échéance, et les gestes ne les questionnent plus.
@@ -63,7 +125,8 @@ final class FreezeWatcher: ObservableObject {
 
     /// Une sonde de ce processus est-elle due ?
     func shouldProbe(_ pid: pid_t) -> Bool {
-        strikes.shouldProbe(pid, now: Date())
+        // Une fermeture probable se sonde tout de suite, échéance ou non.
+        fermetures[pid] != nil || strikes.shouldProbe(pid, now: Date())
     }
 
     /// À appeler après chaque inventaire, avec les processus vivants qui ne
@@ -77,16 +140,21 @@ final class FreezeWatcher: ObservableObject {
                  names: [pid_t: String], achever: Bool) {
         let now = Date()
         strikes.prune(keeping: silentPIDs)
+        fermetures = fermetures.filter {
+            silentPIDs.contains($0.key) && now.timeIntervalSince($0.value) < Self.dureeFermeture
+        }
 
         for pid in silentPIDs {
-            guard case .condamne = strikes.record(pid, mute: mutePIDs.contains(pid),
-                                                  probed: probedPIDs.contains(pid), now: now),
-                  achever
-            else { continue }
+            let requis = fermetures[pid] == nil ? nil : Self.requisFermeture
+            let verdict = strikes.record(pid, mute: mutePIDs.contains(pid),
+                                         probed: probedPIDs.contains(pid), now: now, requis: requis)
+            if verdict == .blanchi { fermetures[pid] = nil }
+            guard case .condamne = verdict, achever else { continue }
 
             ClientTerminator.kill(pid)
             journal.append(Abattu(date: now, pid: pid, nom: names[pid] ?? "pid \(pid)"))
             strikes.forget(pid)
+            fermetures[pid] = nil
         }
     }
 }
@@ -148,12 +216,14 @@ struct FreezeStrikes: Equatable {
     /// l'échéance : entre le départ de l'inventaire et son retour, une
     /// échéance a pu passer, et un suspect sauté au départ serait sinon
     /// blanchi sur une réponse qui n'a jamais été demandée.
-    mutating func record(_ pid: pid_t, mute: Bool, probed: Bool, now: Date) -> Verdict {
+    /// `requis` remplace `strikesRequired` pour ce pid — une fermeture
+    /// probable n'attend pas trois sondes.
+    mutating func record(_ pid: pid_t, mute: Bool, probed: Bool, now: Date, requis: Int? = nil) -> Verdict {
         if mute {
             lastProbe[pid] = now
             let compte = strikes[pid, default: 0] + 1
             strikes[pid] = compte
-            return compte >= strikesRequired ? .condamne : .frappe(compte)
+            return compte >= (requis ?? strikesRequired) ? .condamne : .frappe(compte)
         }
         guard probed else { return .ignore }
         lastProbe[pid] = now
@@ -164,5 +234,23 @@ struct FreezeStrikes: Equatable {
     mutating func forget(_ pid: pid_t) {
         strikes[pid] = nil
         lastProbe[pid] = nil
+    }
+}
+
+/// Le guet des fenêtres qui quittent l'écran, pur : on lui donne les pids qui
+/// ont une fenêtre à l'écran à chaque tour, il rend ceux qui viennent de la
+/// perdre — sauf juste après un changement d'espace, où toutes les fenêtres
+/// d'un espace plein écran quittent l'écran d'un coup sans que personne ne
+/// ferme rien.
+struct VeilleFermeture: Equatable {
+    private(set) var affiches: Set<pid_t> = []
+    /// Après un changement d'espace, les disparitions ne disent rien.
+    static let garde: TimeInterval = 1.5
+
+    mutating func observer(affiches nouveaux: Set<pid_t>, vivants: Set<pid_t>,
+                           dernierChangementEspace: Date, maintenant: Date) -> Set<pid_t> {
+        defer { affiches = nouveaux }
+        guard maintenant.timeIntervalSince(dernierChangementEspace) >= Self.garde else { return [] }
+        return affiches.subtracting(nouveaux).intersection(vivants)
     }
 }
