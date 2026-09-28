@@ -73,7 +73,7 @@ struct RealCaptureTests {
         let png = try zoneCapturee(.positionParDefaut)
         let moteur = MoteurOCR()
         await moteur.prechauffer()
-        guard case .lue(let signature, let lignes, let duree) = await moteur.lire(png: png, precedente: nil, couleur: false)
+        guard case .lue(let signature, let lignes, let duree, _) = await moteur.lire(png: png, precedente: nil, couleur: false)
         else { Issue.record("rien lu"); return }
         print("OCR \(Int(duree * 1000)) ms : \(lignes)")
         let position = PositionCarte.lire(lignes)
@@ -87,13 +87,20 @@ struct RealCaptureTests {
 
     @Test("L'état de combat est lu sur la capture fournie", .enabled(if: capturePath != nil))
     func combatSurCaptureReelle() async throws {
-        let png = try zoneCapturee(.combatParDefaut)
+        // `SYNFUS_ZONE_ENTIERE=1` : la capture est déjà la zone (un recadrage
+        // du bouton), on la lit telle quelle.
+        let png: Data
+        if ProcessInfo.processInfo.environment["SYNFUS_ZONE_ENTIERE"] == "1" {
+            png = try Data(contentsOf: URL(fileURLWithPath: (try #require(Self.capturePath) as NSString).expandingTildeInPath))
+        } else {
+            png = try zoneCapturee(.combatParDefaut)
+        }
         let moteur = MoteurOCR()
         await moteur.prechauffer()
-        guard case .lue(let signature, let lignes, let duree) = await moteur.lire(png: png, precedente: nil, couleur: true)
+        guard case .lue(let signature, let lignes, let duree, let bouton) = await moteur.lire(png: png, precedente: nil, couleur: true)
         else { Issue.record("rien lu"); return }
-        let constat = LectureCombat.classer(lignes: lignes, rose: signature.rose ?? 0)
-        print("OCR \(Int(duree * 1000)) ms : \(lignes) — rose \(Int((signature.rose ?? 0) * 100)) % → \(constat)")
+        let constat = LectureCombat.classer(lignes: lignes, couleur: bouton ?? signature.couleur ?? 0)
+        print("OCR \(Int(duree * 1000)) ms : \(lignes) — zone colorée \(Int((signature.couleur ?? 0) * 100)) %, bouton \(bouton.map { "\(Int($0 * 100)) %" } ?? "—") → \(constat)")
         if let attendu = ProcessInfo.processInfo.environment["SYNFUS_COMBAT_ATTENDU"] {
             #expect("\(constat.genre)" == attendu)
         }

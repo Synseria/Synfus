@@ -202,8 +202,8 @@ struct DiagnosticSettings: View {
                     .foregroundStyle(.tertiary)
                     .textSelection(.enabled)
             }
-            if genre == .combat, let rose = lecture.rose {
-                Text(L("diagnostic.lecture.rose", Int(rose * 100)))
+            if genre == .combat, let couleur = lecture.couleur {
+                Text(L("diagnostic.lecture.couleur", Int(couleur * 100)))
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(.tertiary)
             }
