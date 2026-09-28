@@ -1,6 +1,7 @@
 name: Release
 
-# Un tag « vX.Y.Z » suffit à publier :  git tag v0.1.0 && git push origin v0.1.0
+# Un tag « vX.Y.Z » suffit à publier :  sh build.sh --publish 0.1.0
+# (depuis main propre et à jour — le script pose le tag et le pousse).
 # Le déclenchement manuel sert à rejouer une release ratée sans retaguer.
 #
 # Le filtre est strict — « v* » acceptait « v.0.1.0 », dont `${TAG#v}` tire la
@@ -55,19 +56,17 @@ jobs:
           echo "version=${TAG#v}"     >> "$GITHUB_OUTPUT"
 
       - name: Tests
-        run: swift test
+        run: bash test.sh
 
       - name: Construire les DMG
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          chmod +x build.sh make-dmg.sh
-          mkdir -p dist
           # Les deux tranches sont compilées avec le même SDK ; x86_64 est
-          # produit par cross-compilation depuis le runner Apple Silicon.
+          # produit par cross-compilation depuis le runner Apple Silicon. Sans
+          # certificat sur le runner, signature.sh signe ad hoc.
           for arch in arm64 x86_64; do
-            ARCH="$arch" ./build.sh
-            ./make-dmg.sh dist/Synfus.app "dist/Synfus-$VERSION-$arch.dmg"
+            ARCH="$arch" bash build.sh --release "$VERSION"
             rm -rf dist/Synfus.app dist/fr.synseria.synfus.sdPlugin
           done
           shasum -a 256 dist/*.dmg | tee dist/SHA256SUMS.txt
@@ -124,7 +123,7 @@ jobs:
           version doit être réautorisée** — retirer l'ancienne entrée dans la
           liste Accessibilité, puis rajouter la nouvelle.
 
-          Compiler depuis les sources (`./build.sh --install`) évite tout cela.
+          Compiler depuis les sources (`sh run.sh --install --start`) évite tout cela.
           EOF
           sed -i '' "s/VERSION/$VERSION/g" notes.md
 

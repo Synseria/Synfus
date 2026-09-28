@@ -91,7 +91,7 @@ final class SpellProfileStore: ObservableObject {
             return "Aucune barre de sorts trouvée dans la capture (voir Diagnostic pour les détails)."
         }
         guard analysis.candidateCount > 0 else {
-            return "Aucune icône de sort connue pour cette classe — lancer Tools/fetch-ankama-assets.sh puis ./build.sh --install."
+            return "Aucune icône de sort connue pour cette classe — lancer Tools/fetch-ankama-assets.sh puis sh run.sh --install --start."
         }
         var p = profile(for: perso, classe: classe)
         p.classe = classe ?? p.classe
