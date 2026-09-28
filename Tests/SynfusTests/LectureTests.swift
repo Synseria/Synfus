@@ -174,6 +174,19 @@ struct LectureCombatTests {
         #expect(LectureCombat.ratioRose(rgba: []) == 0)
     }
 
+    /// Relevés sur une vraie capture du bouton grisé : son dégradé gris et les
+    /// icônes lavande pâle de la rangée du dessous — 0 % de rose mesuré sur
+    /// l'image entière, lue « FIN DE TOUR » → pas son tour.
+    @Test("Le bouton grisé et ses icônes lavande ne comptent pas comme rose")
+    func boutonGrise() {
+        let gris1: [UInt8] = [139, 139, 139, 255]
+        let gris2: [UInt8] = [120, 119, 119, 255]
+        let fond: [UInt8] = [60, 55, 61, 255]
+        let lavande: [UInt8] = [205, 180, 215, 255]
+        #expect(LectureCombat.ratioRose(rgba: gris1 + gris2 + fond + lavande) == 0)
+        #expect(LectureCombat.classer(lignes: ["FIN DE TOUR"], rose: 0).genre == .pasMonTour)
+    }
+
     @Test("Un tour qui continue garde son échéance ; un nouveau décompte la remplace")
     func echeance() {
         let t0 = Date(timeIntervalSince1970: 1000)

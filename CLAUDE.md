@@ -505,7 +505,8 @@ Le coût, mesuré sur de vraies captures :
 Le combat ([LectureCombat.swift](Sources/Synfus/Lecture/LectureCombat.swift),
 pur) : « Fin de tour » (fr, en, es, tolérant à l'OCR) sur fond **rose** —
 `ratioRose`, teinte 280°–340°, ~21 % de la zone mesurés — c'est son tour ;
-sans rose, celui d'un autre ; « Prêt », le placement ; rien, hors combat. La
+sans rose, celui d'un autre (bouton grisé mesuré à 0 %, icônes lavande pâle
+comprises : trop peu saturées) ; « Prêt », le placement ; rien, hors combat. La
 pastille le montre (`CombatBadge`) : contour rose et décompte à son tour, une
 épée en combat. En plein écran, seul le perso devant est lisible : l'état
 des autres date de leur dernier passage devant. La détection calibrée de
