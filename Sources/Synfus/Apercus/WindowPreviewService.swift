@@ -82,17 +82,32 @@ final class WindowPreviewService: ObservableObject {
     /// la reconnaissance des sorts et de la détection de combat : le même
     /// moteur, le même appariement, un seul foyer.
     func capture(_ client: DofusClient, region: CGRect? = nil) async -> CGImage? {
+        guard let data = await captureData(client, region: region, maxWidth: nil, inventaireGarde: false)
+        else { return nil }
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else {
+            lastCaptureError = "PNG illisible"
+            return nil
+        }
+        return CGImageSourceCreateImageAtIndex(source, 0, nil)
+    }
+
+    /// La même capture, rendue en PNG tel quel — pour qui la traite hors du
+    /// main actor, comme la lecture de la position.
+    ///
+    /// `maxWidth` borne la largeur en pixels (`nil` : résolution native).
+    /// `inventaireGarde` : se contenter de l'inventaire ScreenCaptureKit en
+    /// mémoire s'il est frais et y trouve la fenêtre — une lecture répétée
+    /// chaque seconde n'a pas à refaire le tour de toutes les fenêtres du
+    /// système, qui coûte bien plus que la capture.
+    func captureData(_ client: DofusClient, region: CGRect?, maxWidth: Int?,
+                     inventaireGarde: Bool) async -> Data? {
         guard authorized else { lastCaptureError = "enregistrement de l'écran non autorisé"; return nil }
         let request = PreviewRequest(key: client.slotKey, pid: client.pid, title: client.rawTitle,
-                                     maxWidth: nil, region: region)
-        switch await engine.captureOne(request) {
+                                     maxWidth: maxWidth, region: region)
+        switch await engine.captureOne(request, inventaireGarde: inventaireGarde) {
         case .success(let data):
-            lastCaptureError = nil
-            guard let source = CGImageSourceCreateWithData(data as CFData, nil) else {
-                lastCaptureError = "PNG illisible"
-                return nil
-            }
-            return CGImageSourceCreateImageAtIndex(source, 0, nil)
+            if lastCaptureError != nil { lastCaptureError = nil }
+            return data
         case .failure(let failure):
             lastCaptureError = failure.description
             return nil
@@ -276,9 +291,16 @@ private actor PreviewCaptureEngine {
         return captured
     }
 
-    /// Une capture, avec sa raison d'échec : l'inventaire est toujours refait
-    /// — c'est une demande explicite, la fraîcheur prime.
-    func captureOne(_ request: PreviewRequest) async -> Result<Data, CaptureFailure> {
+    /// Une capture, avec sa raison d'échec. L'inventaire est refait — c'est
+    /// une demande explicite, la fraîcheur prime — sauf si `inventaireGarde`
+    /// autorise celui en mémoire, encore frais, qui y trouve la fenêtre.
+    func captureOne(_ request: PreviewRequest, inventaireGarde: Bool = false) async -> Result<Data, CaptureFailure> {
+        if inventaireGarde, let content, Date().timeIntervalSince(inventoriedAt) < Self.maxAge,
+           let index = WindowPreviewService.match(pid: request.pid, title: request.title,
+                                                  among: Self.candidates(content)),
+           let data = try? await shotThrowing(of: content.windows[index], request: request) {
+            return .success(data)
+        }
         let fresh: SCShareableContent
         do {
             fresh = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
@@ -287,10 +309,7 @@ private actor PreviewCaptureEngine {
         }
         content = fresh
         inventoriedAt = Date()
-        let candidates = fresh.windows.map {
-            WindowPreviewService.Candidate(pid: $0.owningApplication?.processID ?? -1,
-                                           title: $0.title, size: $0.frame.size, onScreen: $0.isOnScreen)
-        }
+        let candidates = Self.candidates(fresh)
         guard let index = WindowPreviewService.match(pid: request.pid, title: request.title, among: candidates)
         else {
             let same = candidates.filter { $0.pid == request.pid }
@@ -303,19 +322,20 @@ private actor PreviewCaptureEngine {
         }
     }
 
+    /// Les fenêtres de l'inventaire, réduites à ce que l'appariement regarde.
+    private static func candidates(_ content: SCShareableContent) -> [WindowPreviewService.Candidate] {
+        content.windows.map {
+            WindowPreviewService.Candidate(pid: $0.owningApplication?.processID ?? -1,
+                                           title: $0.title, size: $0.frame.size, onScreen: $0.isOnScreen)
+        }
+    }
+
     /// Le déroulé est séquentiel à dessein : les captures ne peuvent pas partir
     /// en parallèle sans faire traverser un `SCWindow` — qui n'est pas
     /// `Sendable` — vers une tâche fille. Ce n'est de toute façon pas là qu'est
     /// le coût, l'inventaire l'emporte de loin.
     private func shots(_ requests: [PreviewRequest], in content: SCShareableContent) async -> [String: Data] {
-        let candidates = content.windows.map {
-            WindowPreviewService.Candidate(
-                pid: $0.owningApplication?.processID ?? -1,
-                title: $0.title,
-                size: $0.frame.size,
-                onScreen: $0.isOnScreen
-            )
-        }
+        let candidates = Self.candidates(content)
 
         var captured: [String: Data] = [:]
         for request in requests {
