@@ -27,12 +27,21 @@ struct WindowDragArea: NSViewRepresentable {
             super.updateTrackingAreas()
             for area in trackingAreas { removeTrackingArea(area) }
             addTrackingArea(NSTrackingArea(rect: bounds,
-                                           options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+                                           options: [.mouseEnteredAndExited, .mouseMoved, .activeAlways, .inVisibleRect],
                                            owner: self, userInfo: nil))
         }
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            if window != nil { CurseurArrierePlan.autoriser() }
+        }
+
         // `cursorUpdate` n'est pas livré à un panneau qui n'est jamais clé :
         // on pose le curseur nous-mêmes à l'entrée, et on le rend à la sortie.
+        // Et on le repose à chaque mouvement : le jeu, au premier plan,
+        // réimpose le sien en continu.
         override func mouseEntered(with event: NSEvent) { NSCursor.openHand.set() }
+        override func mouseMoved(with event: NSEvent) { NSCursor.openHand.set() }
         override func mouseExited(with event: NSEvent) { NSCursor.arrow.set() }
         override func mouseDown(with event: NSEvent) {
             NSCursor.closedHand.set()
@@ -40,6 +49,34 @@ struct WindowDragArea: NSViewRepresentable {
             NSCursor.openHand.set()
         }
     }
+}
+
+/// Permet à Synfus de poser le curseur alors qu'il n'est pas l'app active.
+///
+/// C'est le cas de la barre en permanence : l'app est en mode accessory, le
+/// panneau n'est jamais clé, le jeu reste devant. Or macOS ignore
+/// `NSCursor.set()` venu d'une app d'arrière-plan — la main ouverte de la
+/// poignée n'apparaissait jamais. Aucune API publique ne lève la limite ; la
+/// propriété de connexion `SetsCursorInBackground` du serveur de fenêtres le
+/// fait, celle qu'utilisent les utilitaires de barre de menus. Résolue par
+/// `dlsym` : si elle disparaît d'une version de macOS, on retombe
+/// silencieusement sur le curseur du système, rien ne casse.
+enum CurseurArrierePlan {
+    private static let fait: Bool = {
+        typealias Connexion = @convention(c) () -> Int32
+        typealias Propriete = @convention(c) (Int32, Int32, CFString, CFTypeRef) -> Int32
+        guard let lien = dlopen(nil, RTLD_LAZY),
+              let connexion = dlsym(lien, "_CGSDefaultConnection"),
+              let propriete = dlsym(lien, "CGSSetConnectionProperty")
+        else { return false }
+        let cid = unsafeBitCast(connexion, to: Connexion.self)()
+        let resultat = unsafeBitCast(propriete, to: Propriete.self)(
+            cid, cid, "SetsCursorInBackground" as CFString, kCFBooleanTrue)
+        return resultat == 0
+    }()
+
+    /// Une fois par processus, au premier appel.
+    static func autoriser() { _ = fait }
 }
 
 /// Fond de la barre : Liquid Glass sur macOS 26, matériau translucide en deçà.
