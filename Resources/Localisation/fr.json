@@ -188,6 +188,8 @@
   "raccourcis.ranger.aide": "Rejoue la dernière disposition employée — côte à côte, mosaïque, un grand + vignettes, empilés — choisie depuis le bouton de la barre, la barre de menus ou le clic droit. Sans défaut : à toi de choisir.",
   "raccourcis.refusees": "Refusées par le système (déjà prises par une autre app) : %@",
   "raccourcis.retablir": "Rétablir les raccourcis par défaut",
+  "raccourcis.signalerBascule": "Faire clignoter le perso à chaque bascule",
+  "raccourcis.signalerBascule.aide": "À chaque changement de perso fait par Synfus — raccourci, enchaînement au clic, passage automatique —, sa pastille clignote dans la barre pendant une seconde et demie.",
   "raccourcis.voirTous": "Voir tous les persos",
   "raccourcis.voirTous.aide": "Les aperçus restent affichés tant que la combinaison est maintenue. Elle doit comporter un modificateur, et demande l'autorisation d'enregistrement de l'écran.",
   "rangement.coteACote": "Côte à côte",

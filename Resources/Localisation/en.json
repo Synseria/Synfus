@@ -188,6 +188,8 @@
   "raccourcis.ranger.aide": "Replays the last layout used — side by side, grid, one large + thumbnails, stacked — chosen from the bar button, the menu bar or the right click. No default: your call.",
   "raccourcis.refusees": "Refused by the system (already taken by another app): %@",
   "raccourcis.retablir": "Restore default shortcuts",
+  "raccourcis.signalerBascule": "Blink the character on each switch",
+  "raccourcis.signalerBascule.aide": "Whenever Synfus switches character — shortcut, click chaining, auto-switch — its chip blinks in the bar for a second and a half.",
   "raccourcis.voirTous": "See all characters",
   "raccourcis.voirTous.aide": "Previews stay visible as long as the combination is held. It must include a modifier, and requires the screen recording permission.",
   "rangement.coteACote": "Side by side",

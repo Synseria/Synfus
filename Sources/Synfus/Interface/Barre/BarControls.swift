@@ -248,3 +248,28 @@ struct CopiedBadge: View {
             .allowsHitTesting(false)
     }
 }
+
+
+/// Le perso sur lequel Synfus vient de basculer : sa pastille clignote le
+/// temps que `WindowManager.basculeSignalee` la désigne, puis la vue
+/// disparaît — et son animation avec elle, comme `AlertPulse`.
+///
+/// En enchaînant au fn-clic, l'œil est sur la carte : la seule surbrillance
+/// de la pastille active ne se remarquait pas, et l'on perdait le fil. Un
+/// contour qui clignote se voit du coin de l'œil, sans rien poser sur le jeu.
+struct SwitchBlink: View {
+    @State private var allume = true
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 8, style: .continuous)
+            .strokeBorder(Color.white, lineWidth: 2)
+            .shadow(color: .accentColor, radius: 4)
+            .opacity(allume ? 1 : 0.1)
+            .allowsHitTesting(false)
+            .onAppear {
+                withAnimation(.easeInOut(duration: 0.2).repeatForever(autoreverses: true)) {
+                    allume = false
+                }
+            }
+    }
+}

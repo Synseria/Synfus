@@ -62,6 +62,16 @@ final class Preferences: ObservableObject {
     /// macOS n'interprètent sur un clic (voir `ClickModifier`).
     @Published var advanceModifier: ClickModifier = .fn { didSet { save() } }
 
+    /// Faire clignoter la pastille du perso à chaque bascule. Activé par
+    /// défaut — rien à autoriser, et c'est ce qui manquait pour ne pas se
+    /// perdre en enchaînant au clic.
+    @Published var signalerBascule: Bool = true { didSet { save() } }
+
+    /// Lire la position du perso (coordonnées de la carte, en haut à gauche
+    /// de la fenêtre) par OCR. Désactivé par défaut : il faut l'autorisation
+    /// « Enregistrement de l'écran », jamais demandée d'office.
+    @Published var lirePosition: Bool = false { didSet { save() } }
+
     /// Icône du `NSStatusItem`. Le rafraîchissement est à la charge de l'appelant
     /// (`MenuBarController.refreshIcon()`) : les préférences ne pilotent pas l'UI.
     @Published var menuBarIcon: MenuBarIcon = .logo { didSet { save() } }
@@ -264,6 +274,8 @@ final class Preferences: ObservableObject {
         var previewHotKey: HotKey?
         var advanceOnClick: Bool?
         var advanceModifier: ClickModifier?
+        var signalerBascule: Bool?
+        var lirePosition: Bool?
         var killFrozenClients: Bool?
         var lastArrangement: Disposition?
         var arrangeHotKey: HotKey?
@@ -404,6 +416,8 @@ final class Preferences: ObservableObject {
             previewHotKey: previewHotKey,
             advanceOnClick: advanceOnClick,
             advanceModifier: advanceModifier,
+            signalerBascule: signalerBascule,
+            lirePosition: lirePosition,
             killFrozenClients: killFrozenClients,
             lastArrangement: lastArrangement,
             arrangeHotKey: arrangeHotKey,
@@ -467,6 +481,8 @@ final class Preferences: ObservableObject {
         previewHotKey = stored.previewHotKey
         advanceOnClick = stored.advanceOnClick ?? false
         advanceModifier = stored.advanceModifier ?? .fn
+        signalerBascule = stored.signalerBascule ?? true
+        lirePosition = stored.lirePosition ?? false
         killFrozenClients = stored.killFrozenClients ?? true
         lastArrangement = stored.lastArrangement
         arrangeHotKey = stored.arrangeHotKey
