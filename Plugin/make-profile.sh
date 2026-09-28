@@ -11,7 +11,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 PLUGIN="${1:-dist/fr.synseria.synfus.sdPlugin}"
-[ -d "$PLUGIN" ] || { echo "Dossier introuvable : $PLUGIN — lance ./build.sh d'abord." >&2; exit 1; }
+[ -d "$PLUGIN" ] || { echo "Dossier introuvable : $PLUGIN — lance sh build.sh d'abord." >&2; exit 1; }
 PLUGIN="$(cd "$PLUGIN" && pwd)"
 UUID="7F0D2C1A-5E4B-4C63-9A21-5D6E8F3A1B02"
 WORK="$(mktemp -d)"

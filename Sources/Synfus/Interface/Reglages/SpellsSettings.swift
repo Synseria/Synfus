@@ -255,7 +255,7 @@ private struct SpellSlotCell: View {
                 Button("Vider la case") { onSelect(nil); choosing = false }.font(.system(size: 11))
             }
             if choices.isEmpty {
-                Text("Aucune icône de sort pour cette classe — lance Tools/fetch-ankama-assets.sh puis ./build.sh --install.")
+                Text("Aucune icône de sort pour cette classe — lance Tools/fetch-ankama-assets.sh puis sh run.sh --install --start.")
                     .font(.system(size: 10)).foregroundStyle(.secondary).frame(width: 240)
             }
         }

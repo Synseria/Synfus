@@ -218,7 +218,7 @@ struct FetchAnkamaAssets {
         Déjà présents : \(compteur.conserves)
         Échecs : \(compteur.echecs)
         \(options.liste ? "(simulation — rien n'a été écrit)" : "✓ Terminé → \(options.destination.path)")
-        Relance ./build.sh --install pour embarquer les images, ou Réglages → Classes → Recharger.
+        Relance sh run.sh --install --start pour embarquer les images, ou Réglages → Classes → Recharger.
         """)
         if compteur.echecs > 0 { exit(1) }
     }

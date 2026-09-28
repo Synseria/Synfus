@@ -154,7 +154,7 @@ Trois règles tiennent l'ensemble :
   va — `switchToProfile` n'accepte qu'un profil **installé avec le plugin**,
   d'où le paquet `dist/fr.synseria.synfus.streamDeckPlugin`, **embarqué dans
   l'app** et ouvert par le bouton « Installer » de l'onglet Stream Deck — un
-  `.sdPlugin` copié à la main ne l'enregistre pas, et `build.sh --install`
+  `.sdPlugin` copié à la main ne l'enregistre pas, et `sh run.sh --install`
   n'installe jamais le plugin : le Stream Deck est optionnel, tout passe par
   Synfus. Le logiciel Elgato n'accepte un paquet que plus récent que
   l'installé (sinon « AlreadyInstalled », rien n'est touché — mesuré dans
