@@ -96,8 +96,8 @@ réclament en plus **Enregistrement de l'écran** — c'est la seule façon de
 capturer une image de fenêtre sur macOS. Ils sont désactivés par défaut, et rien
 n'est capturé tant qu'ils le restent.
 
-Compatible **macOS 14 (Sonoma) à macOS 26**. L'effet Liquid Glass de la barre
-n'apparaît que sur macOS 26 ; en deçà, la barre utilise un matériau translucide.
+Compatible **macOS 14 (Sonoma) et suivants**. L'effet Liquid Glass de la barre
+n'apparaît qu'à partir de macOS 26 ; en deçà, la barre utilise un matériau translucide.
 
 ## Compiler depuis les sources
 
@@ -137,8 +137,9 @@ sont tirés l'icône du bundle et le symbole de la barre de menus. Après toute 
 ./Tools/generate-app-icons.sh   # régénère Resources/Synfus.{icns,png}
 ```
 
-**La compilation exige le SDK macOS 26** (Xcode 26) : `BarView` appelle
-`glassEffect`, absent des SDK antérieurs. Le deployment target reste 14.0, donc
+**La compilation exige le Xcode le plus récent** (Xcode 27, Swift 6.4) : le
+paquet déclare la dernière `swift-tools-version`, et `BarView` appelle
+`glassEffect`, absent des SDK antérieurs à macOS 26. Le deployment target reste 14.0, donc
 le binaire produit couvre bien macOS 14 et suivants.
 
 ## Licence
@@ -156,5 +157,5 @@ sh build.sh --publish 0.0.2   # depuis main propre et à jour : pose et pousse l
 ```
 
 Le workflow [`release.yml`](.github/workflows/release.yml) compile les deux
-architectures sur un runner `macos-26`, fabrique les DMG et crée la release
+architectures sur un runner `xcode-27`, fabrique les DMG et crée la release
 GitHub avec les fichiers en pièces jointes.
