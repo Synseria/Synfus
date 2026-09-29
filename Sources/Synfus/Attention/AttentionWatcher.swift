@@ -196,7 +196,8 @@ final class AttentionWatcher: ObservableObject {
         else { return false }
 
         let mouse = NSEvent.mouseLocation
-        return box.contains(CGPoint(x: mouse.x, y: reference.frame.maxY - mouse.y))
+        let y = LayoutComputer.flipY(mouse.y, hauteurPrincipale: reference.frame.maxY)
+        return box.contains(CGPoint(x: mouse.x, y: y))
     }
 
     private func trigger(_ client: DofusClient, action: AttentionAction, key: String) {

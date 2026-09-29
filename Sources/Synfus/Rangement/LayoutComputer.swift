@@ -122,8 +122,17 @@ enum LayoutComputer {
     /// **complet** de l'écran principal, `NSScreen.screens[0].frame.height`.
     static func zoneAX(visibleFrame: CGRect, hauteurPrincipale: CGFloat) -> CGRect {
         CGRect(x: visibleFrame.minX,
-               y: hauteurPrincipale - visibleFrame.maxY,
+               y: flipY(visibleFrame.maxY, hauteurPrincipale: hauteurPrincipale),
                width: visibleFrame.width,
                height: visibleFrame.height)
+    }
+
+    /// Bascule une ordonnée entre Cocoa (origine en bas de l'écran principal,
+    /// y vers le haut) et AX (origine en haut, y vers le bas) — l'opération est
+    /// sa propre inverse, une seule fonction sert les deux sens.
+    /// `hauteurPrincipale` est la hauteur du cadre **complet** de l'écran
+    /// principal, `NSScreen.screens[0].frame.height`.
+    static func flipY(_ y: CGFloat, hauteurPrincipale: CGFloat) -> CGFloat {
+        hauteurPrincipale - y
     }
 }
