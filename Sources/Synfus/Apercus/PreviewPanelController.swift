@@ -75,9 +75,9 @@ final class PreviewPanelController: NSObject, ObservableObject {
     ///
     /// La comparaison porte sur l'**identité** (`slotKey`), pas sur l'égalité de
     /// `DofusClient` : celle-ci regarde aussi `dormant` et le nom, qu'un
-    /// `refresh()` peut changer entre l'entrée et la sortie du survol — un perso
-    /// passé dormant ou en cours de fermeture n'était plus « le même », et
-    /// l'aperçu restait affiché.
+    /// `refresh()` peut changer entre l'entrée et la sortie du survol — sur
+    /// l'égalité complète, un perso passé dormant ou en cours de fermeture
+    /// ne serait plus « le même », et l'aperçu resterait affiché.
     func hide(ifShowing client: DofusClient) {
         switch mode {
         case .single(let shown), .etiquette(let shown):
@@ -100,8 +100,8 @@ final class PreviewPanelController: NSObject, ObservableObject {
     /// Réaligne l'aperçu sur la liste des persos : un perso qui n'y figure plus
     /// — déconnecté, fermé, ou dont la fermeture vient d'être demandée — n'a plus
     /// de vignette à montrer. Sans ce point d'appel, l'aperçu ouvert sur une
-    /// pastille survivait à la fermeture du perso : le menu contextuel a déjà
-    /// emporté le `mouseExited`, plus rien ne venait le fermer.
+    /// pastille survivrait à la fermeture du perso : le menu contextuel emporte
+    /// déjà le `mouseExited`, rien d'autre ne le refermerait.
     func reconcile(with clients: [DofusClient]) {
         let next = Self.surviving(mode, among: clients)
         guard next != mode else { return }
@@ -226,12 +226,10 @@ private struct PreviewPanelView: View {
     /// Encombrement d'une vignette à l'écran.
     ///
     /// La **hauteur** est imposée, elle aussi, et ce n'est pas cosmétique : sans
-    /// elle, la taille du panneau suivait celle de l'image, donc l'instant où la
-    /// capture arrivait. Le premier perso survolé avait le temps de se faire
-    /// capturer, les suivants s'ouvraient sur le cadre d'attente — plus court —,
-    /// puis le panneau se redimensionnait et se replaçait une fois l'image là.
-    /// Vu de l'utilisateur : le premier aperçu était bon, les autres s'affichaient
-    /// de travers. Un cadre fixe rend le panneau prévisible avant même la capture.
+    /// elle, la taille du panneau dépendrait de celle de l'image, donc de
+    /// l'instant où la capture arrive — chaque perso encore sans vignette
+    /// s'ouvrirait sur le cadre d'attente puis referait sauter le panneau une
+    /// fois l'image là. Un cadre fixe le rend prévisible avant même la capture.
     private static let thumbnailWidth: CGFloat = 240
     private static let thumbnailHeight: CGFloat = 150
 

@@ -102,10 +102,6 @@ final class WindowManager: ObservableObject {
     private var scheduling = InventoryScheduling()
     private var waiters: [Int: [CheckedContinuation<Void, Never>]] = [:]
 
-    /// Durée du dernier inventaire, côté acteur — c'est là qu'un client gelé
-    /// coûte sa seconde, et le Diagnostic la montre pour qu'on le voie.
-    @Published private(set) var lastInventoryDuration: TimeInterval = 0
-
     private init() {}
 
     func start() {
@@ -373,7 +369,7 @@ final class WindowManager: ObservableObject {
             }
             if let relaunch { launch(relaunch) }
         }
-        lastInventoryDuration = result.duration
+        WindowManagerDiagnostics.shared.lastInventoryDuration = result.duration
         // L'autorisation a pu être retirée pendant le vol : le relevé est vide
         // de sens, `prepareRefresh` a déjà vidé la barre.
         guard accessibilityGranted else { return }
@@ -429,7 +425,7 @@ final class WindowManager: ObservableObject {
     /// Retrie les persos déjà connus selon l'ordre de préférence, sans
     /// inventaire. Réordonner dans la barre ou les réglages ne change rien à ce
     /// qui est connecté : refaire le tour de l'Accessibilité à chaque
-    /// permutation, c'était payer un inventaire complet pour un tri.
+    /// permutation paierait un inventaire complet pour un tri.
     func resort() {
         let sorted = ClientMemory.sorted(clients, by: prefs.characterOrder)
         if sorted != clients {
@@ -483,9 +479,8 @@ final class WindowManager: ObservableObject {
         if signaler, prefs.signalerBascule, client.pid != frontmostPID {
             signalerBascule(client)
         }
-        if reachable,
-           AccessibilityReader.boolAttribute(client.axWindow, kAXMinimizedAttribute) == true {
-            AccessibilityReader.set(client.axWindow, kAXMinimizedAttribute, kCFBooleanFalse)
+        if reachable {
+            AccessibilityReader.unminimize(client.axWindow)
         }
 
         // L'activation vient en premier : c'est elle, et non `AXRaise`, qui fait
@@ -639,4 +634,20 @@ final class WindowManager: ObservableObject {
             NSWorkspace.shared.open(url)
         }
     }
+}
+
+/// Ce que le Diagnostic seul regarde de l'inventaire — sur le modèle
+/// d'`AttentionDiagnostics`/`DiagnosticLecture` : tenir `lastInventoryDuration`
+/// sur `WindowManager` republiait cette valeur, à chaque inventaire, vers tout
+/// ce qui observe `WindowManager` comme `ObservableObject` — la barre flottante
+/// en premier —, pour un chiffre que seul l'onglet Diagnostic affiche.
+@MainActor
+final class WindowManagerDiagnostics: ObservableObject {
+    static let shared = WindowManagerDiagnostics()
+
+    /// Durée du dernier inventaire, côté acteur — c'est là qu'un client gelé
+    /// coûte sa seconde, et le Diagnostic la montre pour qu'on le voie.
+    @Published var lastInventoryDuration: TimeInterval = 0
+
+    private init() {}
 }

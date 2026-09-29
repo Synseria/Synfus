@@ -181,6 +181,13 @@ enum AccessibilityReader {
         AXUIElementPerformAction(element.element, action as CFString)
     }
 
+    /// Repose une fenêtre réduite — départager ses jumelles, la ranger ou y
+    /// basculer, c'est vouloir la voir. Sans effet si elle ne l'est pas.
+    static func unminimize(_ window: AXHandle) {
+        guard boolAttribute(window, kAXMinimizedAttribute) == true else { return }
+        set(window, kAXMinimizedAttribute, kCFBooleanFalse)
+    }
+
     // MARK: - Décodage
 
     /// Plusieurs attributs en un IPC. `nil` si l'appel échoue en bloc ; sinon

@@ -73,11 +73,10 @@ struct BounceDetector {
     /// Fraction de la hauteur de l'icône au-delà de laquelle une montée ne peut
     /// plus être qu'un rebond, et se conclut donc **sans attendre le retour**.
     ///
-    /// C'est ce qui décide de la latence ressentie. Exiger l'aller-retour
-    /// coûtait une seconde pleine : sur le relevé du 03/08, la montée commence à
-    /// 15:00:51 et le retour ne s'achève qu'à 15:00:52. Or l'aller seul est déjà
-    /// sans équivoque — 32 points dès le premier tour, 61 au sommet, pour une
-    /// icône de 56 de haut. Attendre la fin de l'arc n'apprenait rien de plus.
+    /// C'est ce qui décide de la latence ressentie : exiger l'aller-retour
+    /// coûte jusqu'à une seconde pleine, sensible à l'usage, alors que l'aller
+    /// seul, une fois ce seuil franchi, lève déjà toute ambiguïté avec une
+    /// simple réapparition de Dock masqué.
     ///
     /// Le seuil se prend en proportion de l'icône, et non en points : le Dock
     /// tasse ses icônes à mesure qu'on en ajoute, et l'amplitude du saut suit.

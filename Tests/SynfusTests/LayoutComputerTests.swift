@@ -157,4 +157,13 @@ struct LayoutComputerTests {
         )
         #expect(zone == CGRect(x: 0, y: 1117, width: 1920, height: 1080))
     }
+
+    @Test("flipY est sa propre inverse")
+    func flipYInvolutive() {
+        let hauteur: CGFloat = 1117
+        let y: CGFloat = 342
+        let basculee = LayoutComputer.flipY(y, hauteurPrincipale: hauteur)
+        #expect(basculee == hauteur - y)
+        #expect(LayoutComputer.flipY(basculee, hauteurPrincipale: hauteur) == y)
+    }
 }
