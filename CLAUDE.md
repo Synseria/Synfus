@@ -825,6 +825,8 @@ propriété calculée, donc s'y réassigner relance le `didSet` — d'où le dra
   précédente. Le pid vient de la notification elle-même, la décision est prise
   **avant** `refresh()` — l'inventaire AX peut bloquer des centaines de
   millisecondes sur un client occupé —, et le timer de 2 s la réévalue en filet.
+  `WindowManager` déclenche ces réévaluations par un rappel,
+  `visibiliteARevoir`, posé par `AppDelegate` : le modèle ne connaît pas la barre.
   La règle est isolée en fonction pure, `computeVisibility`, donc testée.
 - [SettingsView.swift](Sources/Synfus/Interface/Reglages/SettingsView.swift) — barre latérale à
   gauche, quatre sections (Raccourcis, Persos, Classes, Diagnostic) à droite +

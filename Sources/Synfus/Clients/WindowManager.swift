@@ -53,6 +53,12 @@ final class WindowManager: ObservableObject {
         !client.dormant && !unreachablePIDs.contains(client.pid)
     }
 
+    /// Réévalue la visibilité de la barre flottante (`force` : réordonner le
+    /// panneau même s'il paraît déjà juste). Posé par `AppDelegate` : le modèle
+    /// dit **quand**, sans dépendre de la vue ; l'ordre reste celui de la règle
+    /// « visibilité décidée avant l'inventaire ».
+    var visibiliteARevoir: (_ force: Bool) -> Void = { _ in }
+
     private var timer: Timer?
     let prefs = Preferences.shared
     private var equipesSubscription: AnyCancellable?
@@ -155,7 +161,7 @@ final class WindowManager: ObservableObject {
                         // tour de timer.
                         self.setFrontmost(NSWorkspace.shared.frontmostApplication)
                     }
-                    FloatingBarController.shared.updateVisibility()
+                    self.visibiliteARevoir(true)
 
                     // Une activation que Synfus a lui-même provoquée n'apprend
                     // rien : la barre est déjà à jour, et l'inventaire peut
@@ -175,7 +181,7 @@ final class WindowManager: ObservableObject {
             center.addObserver(forName: note, object: nil, queue: .main) { [weak self] _ in
                 MainActor.assumeIsolated {
                     self?.refreshSoon()
-                    FloatingBarController.shared.updateVisibility()
+                    self?.visibiliteARevoir(true)
                 }
             }
         }
@@ -184,8 +190,8 @@ final class WindowManager: ObservableObject {
         // cette notification, la barre resterait derrière le nouvel espace.
         center.addObserver(
             forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main
-        ) { _ in
-            MainActor.assumeIsolated { FloatingBarController.shared.updateVisibility() }
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.visibiliteARevoir(true) }
         }
 
         // Les titres de fenêtres changent sans émettre de notification système
@@ -203,7 +209,7 @@ final class WindowManager: ObservableObject {
         // notifications, qui gardent le comportement franc.
         timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
-                FloatingBarController.shared.updateVisibility(force: false)
+                self?.visibiliteARevoir(false)
                 guard let self,
                       Date().timeIntervalSince(self.lastRefresh) >= Self.timerMinimumGap
                 else { return }
