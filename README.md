@@ -51,7 +51,7 @@ connectés et permet de passer de l'un à l'autre, d'un clic ou au clavier.
 Synfus ne joue rien à ta place : il n'envoie ni clic ni touche au jeu, il
 change juste la fenêtre qui est devant. Pas de lecture mémoire, pas de réseau.
 Il demande l'autorisation **Accessibilité**, et **Enregistrement de l'écran**
-seulement si tu actives les aperçus.
+seulement si tu actives les aperçus ou la lecture de l'écran.
 
 ## Installation
 
@@ -91,9 +91,10 @@ Au premier lancement, autoriser Synfus dans **Réglages Système → Confidentia
 et sécurité → Accessibilité** : l'API d'accessibilité est ce qui permet de lire
 les fenêtres des clients et de leur donner le focus.
 
-Les aperçus de fenêtres, eux, réclament en plus **Enregistrement de l'écran** —
-c'est la seule façon de capturer une image de fenêtre sur macOS. Ils sont
-désactivés par défaut, et rien n'est capturé tant qu'ils le restent.
+Les aperçus de fenêtres et la lecture de l'écran (position, tour de combat)
+réclament en plus **Enregistrement de l'écran** — c'est la seule façon de
+capturer une image de fenêtre sur macOS. Ils sont désactivés par défaut, et rien
+n'est capturé tant qu'ils le restent.
 
 Compatible **macOS 14 (Sonoma) à macOS 26**. L'effet Liquid Glass de la barre
 n'apparaît que sur macOS 26 ; en deçà, la barre utilise un matériau translucide.
@@ -145,14 +146,13 @@ le binaire produit couvre bien macOS 14 et suivants.
 Code sous licence [MIT](LICENSE). Les visuels du jeu ne font pas partie du
 dépôt et n'en feront jamais partie : ils sont la propriété d'Ankama Studio et
 de Dofus — Tous droits réservés —, et ne sont téléchargés que par l'utilisateur,
-pour son usage personnel (voir *Icône par classe*). Synfus n'est ni affilié à
+pour son usage personnel (voir *Icônes de classe*). Synfus n'est ni affilié à
 ni approuvé par Ankama.
 
 ## Publier une release
 
 ```sh
-git tag v0.0.2
-git push origin v0.0.2
+sh build.sh --publish 0.0.2   # depuis main propre et à jour : pose et pousse le tag v0.0.2
 ```
 
 Le workflow [`release.yml`](.github/workflows/release.yml) compile les deux
