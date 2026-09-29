@@ -110,9 +110,7 @@ final class WindowArranger: ObservableObject {
             let fenetre = client.axWindow
             // Ranger, c'est vouloir tout voir : une fenêtre réduite est reposée.
             // C'est une opération de fenêtre, pas un évènement.
-            if AccessibilityReader.boolAttribute(fenetre, kAXMinimizedAttribute) == true {
-                AccessibilityReader.set(fenetre, kAXMinimizedAttribute, kCFBooleanFalse)
-            }
+            AccessibilityReader.unminimize(fenetre)
             // Taille → position → taille : tant que la fenêtre chevauche son
             // ancien écran, certains clients plafonnent la taille demandée — le
             // second passage, fait une fois la fenêtre en place, corrige.
@@ -196,7 +194,8 @@ final class WindowArranger: ObservableObject {
     private func ecran(de client: DofusClient, hauteurPrincipale: CGFloat) -> NSScreen? {
         guard let position = AccessibilityReader.pointAttribute(client.axWindow, kAXPositionAttribute)
         else { return nil }
-        let cocoa = CGPoint(x: position.x + 10, y: hauteurPrincipale - (position.y + 10))
+        let cocoa = CGPoint(x: position.x + 10,
+                            y: LayoutComputer.flipY(position.y + 10, hauteurPrincipale: hauteurPrincipale))
         return NSScreen.screens.first { $0.frame.contains(cocoa) }
     }
 }

@@ -90,14 +90,21 @@ enum DockInspector {
         return inventory
     }
 
-    /// Le tour complet : retrouve les éléments AX des icônes Dofus et du bandeau.
-    /// Rend `nil` si le Dock n'est pas lancé.
-    static func discoverStructure(now: Date) -> Structure? {
+    /// Le Dock lui-même — son pid, pour identifier le processus, et son
+    /// élément racine Accessibilité. `nil` s'il n'est pas lancé.
+    private static func runningDock() -> (pid: pid_t, element: AXHandle)? {
         guard let dock = NSRunningApplication
             .runningApplications(withBundleIdentifier: "com.apple.dock").first
         else { return nil }
+        return (dock.processIdentifier, AXHandle.application(dock.processIdentifier))
+    }
 
-        let axDock = AXHandle.application(dock.processIdentifier)
+    /// Le tour complet : retrouve les éléments AX des icônes Dofus et du bandeau.
+    /// Rend `nil` si le Dock n'est pas lancé.
+    static func discoverStructure(now: Date) -> Structure? {
+        guard let dock = runningDock() else { return nil }
+
+        let axDock = dock.element
         var items: [(title: String, x: CGFloat, element: AXHandle)] = []
         var strip: AXHandle?
 
@@ -120,7 +127,7 @@ enum DockInspector {
         }
 
         return Structure(
-            dockPID: dock.processIdentifier,
+            dockPID: dock.pid,
             strip: strip,
             items: items.sorted { $0.x < $1.x }.map { ($0.title, $0.element) },
             date: now
@@ -161,11 +168,9 @@ enum DockInspector {
     }
 
     static func snapshots(matching filter: String = "") -> [Snapshot] {
-        guard let dock = NSRunningApplication
-            .runningApplications(withBundleIdentifier: "com.apple.dock").first
-        else { return [] }
+        guard let dock = runningDock() else { return [] }
 
-        let axDock = AXHandle.application(dock.processIdentifier)
+        let axDock = dock.element
         let needle = filter.lowercased()
         var result: [Snapshot] = []
 

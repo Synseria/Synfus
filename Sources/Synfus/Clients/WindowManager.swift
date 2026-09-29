@@ -479,9 +479,8 @@ final class WindowManager: ObservableObject {
         if signaler, prefs.signalerBascule, client.pid != frontmostPID {
             signalerBascule(client)
         }
-        if reachable,
-           AccessibilityReader.boolAttribute(client.axWindow, kAXMinimizedAttribute) == true {
-            AccessibilityReader.set(client.axWindow, kAXMinimizedAttribute, kCFBooleanFalse)
+        if reachable {
+            AccessibilityReader.unminimize(client.axWindow)
         }
 
         // L'activation vient en premier : c'est elle, et non `AXRaise`, qui fait
