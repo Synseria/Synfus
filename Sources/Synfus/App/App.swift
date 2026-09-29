@@ -9,6 +9,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         buildApplicationMenu()
 
+        // Le modèle signale quand la barre doit se réévaluer ; il ne la connaît pas.
+        WindowManager.shared.visibiliteARevoir = { FloatingBarController.shared.updateVisibility(force: $0) }
         WindowManager.shared.start()
         FreezeWatcher.shared.start()
         HotKeyManager.shared.rebind()

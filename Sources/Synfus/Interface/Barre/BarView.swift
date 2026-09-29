@@ -494,7 +494,7 @@ struct BarView: View {
         Divider()
         Button(L("commun.rafraichir")) { manager.refresh() }
         Divider()
-        Button(L("menu.fermerTous")) { manager.closeAll() }
+        Button(L("menu.fermerTous")) { ConfirmationFermeture.fermerTous() }
             .disabled(manager.clients.isEmpty)
         Button(L("menu.quitter")) { NSApp.terminate(nil) }
     }
