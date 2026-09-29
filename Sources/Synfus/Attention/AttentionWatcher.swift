@@ -90,12 +90,6 @@ final class AttentionWatcher: ObservableObject {
         }
     }
 
-    func stop() {
-        timer?.invalidate()
-        timer = nil
-        alerting.removeAll()
-    }
-
     /// Le perso vient d'être regardé : on éteint son alerte.
     func clear(_ client: DofusClient) {
         guard alerting.contains(client.slotKey) else { return }

@@ -8,7 +8,6 @@ import CoreGraphics
 struct LayoutComputerTests {
 
     private static let zone = CGRect(x: 0, y: 25, width: 1728, height: 1067)
-    private static let e = LayoutComputer.espacement
 
     private func cadres(_ disposition: Disposition, _ nombre: Int,
                         principal: Int = 0, zone: CGRect = zone) -> [CGRect] {

@@ -150,11 +150,6 @@ enum AccessibilityReader {
         return size.width > 200 && size.height > 200
     }
 
-    static func isGameWindow(_ window: AXHandle) -> Bool {
-        let facts = windowFacts(window)
-        return isGameWindow(subrole: facts.subrole, size: facts.size)
-    }
-
     // MARK: - Écritures
 
     @discardableResult
