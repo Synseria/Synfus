@@ -438,6 +438,27 @@ struct PreferencesTests {
         #expect(prefs.advanceModifier == .fn)
     }
 
+    /// Les clés de la liaison Stream Deck, retirée, restent dans les
+    /// sauvegardes existantes : elles doivent être ignorées, pas faire
+    /// retomber l'ensemble sur les défauts.
+    @Test("Une sauvegarde portant les clés du Stream Deck se relit")
+    func anciennesClesStreamDeck() {
+        let ancien = """
+        {"characterOrder":["Alpha","Beta"],"hotKeys":[],"barVisible":true,"showNumbers":true,
+         "slotCount":7,"defaultsVersion":6,
+         "streamDeckEnabled":true,"appuiLongMs":150,"appuiTresLongMs":300,
+         "appuiProgressif":false,"deckTitres":true,
+         "spellKeyMap":{"barres":[[{"keyCode":18,"modifiers":0}]]},
+         "gameCommands":[{"nom":"Inventaire","symbole":"bag","touche":null}],
+         "deck":{"kind":"parBarre","pages":[0,1]}}
+        """
+        let store = StockageMemoire([Preferences.key: Data(ancien.utf8)])
+
+        let prefs = Preferences.forTesting(store: store)
+        #expect(prefs.characterOrder == ["Alpha", "Beta"])
+        #expect(prefs.slotCount == 7)
+    }
+
     @Test("Une sauvegarde illisible ramène aux valeurs par défaut")
     func sauvegardeIllisible() {
         let store = StockageMemoire([Preferences.key: Data("pas du JSON".utf8)])

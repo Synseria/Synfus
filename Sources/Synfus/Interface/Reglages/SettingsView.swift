@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Sections des réglages, listées dans la barre latérale.
 private enum SettingsSection: String, CaseIterable, Identifiable {
-    case general, raccourcis, persos, sorts, streamDeck, classes, diagnostic
+    case general, raccourcis, persos, classes, diagnostic
 
     var id: String { rawValue }
 
@@ -11,8 +11,6 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
         case .general: return L("reglages.general")
         case .raccourcis: return L("reglages.raccourcis")
         case .persos: return L("reglages.persos")
-        case .sorts: return L("reglages.sorts")
-        case .streamDeck: return "Stream Deck"
         case .classes: return L("reglages.classes")
         case .diagnostic: return L("reglages.diagnostic")
         }
@@ -23,8 +21,6 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
         case .general: return "gearshape"
         case .raccourcis: return "keyboard"
         case .persos: return "person.3"
-        case .sorts: return "wand.and.stars"
-        case .streamDeck: return "rectangle.grid.3x2"
         case .classes: return "paintpalette"
         case .diagnostic: return "stethoscope"
         }
@@ -33,14 +29,6 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
 
 struct SettingsView: View {
     @State private var section: SettingsSection = .general
-    @ObservedObject private var prefs = Preferences.shared
-
-    /// Les sections visibles : ce qui ne sert à rien tant qu'une fonction est
-    /// coupée n'est pas montré — les profils de sorts n'existent que pour le
-    /// Stream Deck.
-    private var sections: [SettingsSection] {
-        SettingsSection.allCases.filter { $0 != .sorts || prefs.streamDeckEnabled }
-    }
 
     /// Barre latérale à gauche, contenu à droite : les quatre sections en
     /// onglets faisaient défiler des formulaires interminables — le menu
@@ -53,12 +41,11 @@ struct SettingsView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(width: 920, height: 640)
-        .onChange(of: sections) { _, visible in if !visible.contains(section) { section = .general } }
     }
 
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 2) {
-            ForEach(sections) { item in
+            ForEach(SettingsSection.allCases) { item in
                 sidebarRow(item)
             }
             Spacer()
@@ -93,8 +80,6 @@ struct SettingsView: View {
         case .general: GeneralSettings()
         case .raccourcis: ShortcutsSettings()
         case .persos: CharactersSettings()
-        case .sorts: SpellsSettings()
-        case .streamDeck: StreamDeckSettings()
         case .classes: ClassesSettings()
         case .diagnostic: DiagnosticSettings()
         }
