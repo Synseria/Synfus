@@ -20,7 +20,6 @@ enum DockInspector {
     /// a besoin : quand une app réclame l'attention, le Dock fait monter son
     /// icône et l'expose réellement — `AXPosition.y` diminue le temps du saut.
     struct Item: Equatable {
-        let title: String
         let position: CGPoint
         let size: CGSize
         /// Rang d'affichage, de gauche à droite.
@@ -73,7 +72,6 @@ enum DockInspector {
     /// cela ferait trente à cinquante allers-retours vers le Dock. D'où ce cache,
     /// tenu par `DockGeometryReader`, qui n'est reconstruit qu'à bon escient.
     struct Structure {
-        let dockPID: pid_t
         /// La liste qui héberge les icônes Dofus, quand elle a pu être lue.
         let strip: AXHandle?
         /// Icônes des clients Dofus lancés, dans l'ordre d'abscisse à la
@@ -82,29 +80,19 @@ enum DockInspector {
         let date: Date
     }
 
-    /// Tour complet : découverte structurelle puis relevé géométrique.
-    static func inventory() -> Inventory {
-        guard let structure = discoverStructure(now: Date()),
-              let inventory = geometry(of: structure)
-        else { return Inventory(items: [], strip: nil) }
-        return inventory
-    }
-
-    /// Le Dock lui-même — son pid, pour identifier le processus, et son
-    /// élément racine Accessibilité. `nil` s'il n'est pas lancé.
-    private static func runningDock() -> (pid: pid_t, element: AXHandle)? {
+    /// L'élément racine Accessibilité du Dock. `nil` s'il n'est pas lancé.
+    private static func runningDock() -> AXHandle? {
         guard let dock = NSRunningApplication
             .runningApplications(withBundleIdentifier: "com.apple.dock").first
         else { return nil }
-        return (dock.processIdentifier, AXHandle.application(dock.processIdentifier))
+        return AXHandle.application(dock.processIdentifier)
     }
 
     /// Le tour complet : retrouve les éléments AX des icônes Dofus et du bandeau.
     /// Rend `nil` si le Dock n'est pas lancé.
     static func discoverStructure(now: Date) -> Structure? {
-        guard let dock = runningDock() else { return nil }
+        guard let axDock = runningDock() else { return nil }
 
-        let axDock = dock.element
         var items: [(title: String, x: CGFloat, element: AXHandle)] = []
         var strip: AXHandle?
 
@@ -127,7 +115,6 @@ enum DockInspector {
         }
 
         return Structure(
-            dockPID: dock.pid,
             strip: strip,
             items: items.sorted { $0.x < $1.x }.map { ($0.title, $0.element) },
             date: now
@@ -139,10 +126,10 @@ enum DockInspector {
     /// comme attendu — icône disparue, Dock relancé — : c'est le signal que la
     /// structure est périmée et qu'il faut la redécouvrir.
     static func geometry(of structure: Structure) -> Inventory? {
-        var items: [(title: String, position: CGPoint, size: CGSize)] = []
+        var items: [(position: CGPoint, size: CGSize)] = []
         for item in structure.items {
             guard let frame = AccessibilityReader.frame(of: item.element) else { return nil }
-            items.append((item.title, frame.origin, frame.size))
+            items.append((frame.origin, frame.size))
         }
         var strip: CGRect?
         if let element = structure.strip {
@@ -153,7 +140,7 @@ enum DockInspector {
             items: items
                 .sorted { $0.position.x < $1.position.x }
                 .enumerated()
-                .map { Item(title: $1.title, position: $1.position, size: $1.size, rank: $0) },
+                .map { Item(position: $1.position, size: $1.size, rank: $0) },
             strip: strip
         )
     }
@@ -168,9 +155,8 @@ enum DockInspector {
     }
 
     static func snapshots(matching filter: String = "") -> [Snapshot] {
-        guard let dock = runningDock() else { return [] }
+        guard let axDock = runningDock() else { return [] }
 
-        let axDock = dock.element
         let needle = filter.lowercased()
         var result: [Snapshot] = []
 
