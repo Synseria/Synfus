@@ -234,7 +234,7 @@ struct DiagnosticSettings: View {
     private var etatLecture: String {
         switch lecture.etat {
         case .eteint: return L("diagnostic.position.etat.eteint")
-        case .nonAutorise: return L("diagnostic.sorts.capturer.nonAutorise")
+        case .nonAutorise: return L("diagnostic.position.etat.nonAutorise")
         case .preparation: return L("diagnostic.position.etat.preparation")
         case .attente: return L("diagnostic.position.etat.attente")
         case .actif: return L("diagnostic.position.etat.actif")
