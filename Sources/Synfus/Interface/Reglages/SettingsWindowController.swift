@@ -28,6 +28,7 @@ final class SettingsWindowController: NSObject {
             for (note, action) in [
                 (NSWindow.didResizeNotification, #selector(windowResized)),
                 (NSWindow.didMoveNotification, #selector(windowMoved)),
+                (NSWindow.willCloseNotification, #selector(windowWillClose)),
             ] {
                 NotificationCenter.default.addObserver(
                     self, selector: action, name: note, object: window
@@ -65,6 +66,14 @@ final class SettingsWindowController: NSObject {
     @objc private func windowMoved() {
         guard !repositioning else { return }
         placing = false
+    }
+
+    /// La sonde d'attention se démarre à la main depuis l'onglet Diagnostic et
+    /// n'a pas d'autre point d'arrêt : sans celui-ci, fermer les réglages sans
+    /// l'éteindre la laisserait tourner à 4 Hz — Dock interrogé, journal
+    /// grossissant — indéfiniment en arrière-plan.
+    @objc private func windowWillClose() {
+        if AttentionProbe.shared.running { AttentionProbe.shared.stop() }
     }
 
     /// Au milieu de l'écran, sous la barre flottante, bornée à l'écran.
