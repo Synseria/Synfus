@@ -3,7 +3,7 @@ import AppKit
 /// La marque réduite à sa silhouette : la couvée en aplat, l'œuf de tête
 /// détouré de ses deux acolytes par un mince jour.
 ///
-/// La géométrie vient de [SynfusMark](Sources/Synfus/SynfusMark.swift) — un seul
+/// La géométrie vient de [SynfusMark](Sources/Synfus/Marque/SynfusMark.swift) — un seul
 /// dessin sert l'icône du bundle et la barre de menus. Ce qui change ici tient à
 /// la taille de lecture :
 ///
