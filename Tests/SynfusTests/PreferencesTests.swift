@@ -466,4 +466,216 @@ struct PreferencesTests {
         #expect(prefs.slotCount == 5)
         #expect(prefs.hotKeys.count == 5)
     }
+
+    // MARK: - Empreinte de la sauvegarde
+
+    /// Le JSON ramené à une forme canonique — clés triées, espaces retirés —
+    /// pour comparer ce qui est écrit sans dépendre de l'ordre d'émission.
+    private func canonique(_ donnees: Data?) -> String? {
+        guard let donnees,
+              let objet = try? JSONSerialization.jsonObject(with: donnees),
+              let rendu = try? JSONSerialization.data(withJSONObject: objet, options: [.sortedKeys])
+        else { return nil }
+        return String(bytes: rendu, encoding: .utf8)
+    }
+
+    /// Chaque réglage à une valeur autre que son défaut, écrit tel qu'une
+    /// sauvegarde le porte. Les raccourcis sont des keycodes explicites : les
+    /// défauts dépendent du type de clavier de la machine.
+    private static let empreinte = """
+    {"advanceModifier":"option","advanceOnClick":true,
+     "arrangeHotKey":{"keyCode":40,"modifiers":256},"attentionAction":"focus",
+     "autoCenterBar":false,"barOnlyWithDofus":true,"barOriginX":120.5,"barOriginY":640,
+     "barVisible":false,"characterOrder":["Aeryn","Nova"],
+     "cycleNext":{"keyCode":122,"modifiers":0},"cyclePrevious":{"keyCode":120,"modifiers":0},
+     "defaultsVersion":6,"equipeSuivanteHotKey":{"keyCode":17,"modifiers":256},
+     "equipes":[{"membres":["Aeryn"]},{"membres":["Nova"]}],
+     "hotKeys":[{"keyCode":18,"modifiers":256},null,{"keyCode":20,"modifiers":2048}],
+     "inviteFormat":"/w %nom go","inviteHotKey":{"keyCode":34,"modifiers":256},
+     "killFrozenClients":false,"lastArrangement":"principale","lireCombat":true,
+     "lirePosition":true,"menuBarIcon":"symbole",
+     "previewHotKey":{"keyCode":49,"modifiers":2048},
+     "sessionHotKey":{"keyCode":1,"modifiers":256},"showClasses":false,
+     "showNumbers":false,"showPreviewOnHover":true,"signalerBascule":false,
+     "slotCount":3,"toggleAutoFocus":{"keyCode":99,"modifiers":0},
+     "toggleBar":{"keyCode":11,"modifiers":768},
+     "zoneCombat":{"hauteur":0.125,"largeur":0.25,"x":0.125,"y":0.75},
+     "zonePosition":{"hauteur":0.0625,"largeur":0.25,"x":0.5,"y":0.25}}
+    """
+
+    /// Vérifie que `prefs` porte exactement les valeurs de `empreinte`.
+    private func porteLEmpreinte(_ prefs: Preferences) {
+        #expect(prefs.characterOrder == ["Aeryn", "Nova"])
+        #expect(prefs.slotCount == 3)
+        #expect(prefs.hotKeys == [HotKey(keyCode: 18, modifiers: 256), nil,
+                                  HotKey(keyCode: 20, modifiers: 2048)])
+        #expect(prefs.cycleNext == HotKey(keyCode: 122, modifiers: 0))
+        #expect(prefs.cyclePrevious == HotKey(keyCode: 120, modifiers: 0))
+        #expect(prefs.barVisible == false)
+        #expect(prefs.barOrigin == CGPoint(x: 120.5, y: 640))
+        #expect(prefs.showNumbers == false)
+        #expect(prefs.showClasses == false)
+        #expect(prefs.attentionAction == .focus)
+        #expect(prefs.toggleAutoFocus == HotKey(keyCode: 99, modifiers: 0))
+        #expect(prefs.toggleBar == HotKey(keyCode: 11, modifiers: 768))
+        #expect(prefs.barOnlyWithDofus == true)
+        #expect(prefs.autoCenterBar == false)
+        #expect(prefs.menuBarIcon == .symbole)
+        #expect(prefs.showPreviewOnHover == true)
+        #expect(prefs.previewHotKey == HotKey(keyCode: 49, modifiers: 2048))
+        #expect(prefs.advanceOnClick == true)
+        #expect(prefs.advanceModifier == .option)
+        #expect(prefs.signalerBascule == false)
+        #expect(prefs.lirePosition == true)
+        #expect(prefs.lireCombat == true)
+        #expect(prefs.zonePosition == ZoneEcran(x: 0.5, y: 0.25, largeur: 0.25, hauteur: 0.0625))
+        #expect(prefs.zoneCombat == ZoneEcran(x: 0.125, y: 0.75, largeur: 0.25, hauteur: 0.125))
+        #expect(prefs.killFrozenClients == false)
+        #expect(prefs.lastArrangement == .principale)
+        #expect(prefs.arrangeHotKey == HotKey(keyCode: 40, modifiers: 256))
+        #expect(prefs.sessionHotKey == HotKey(keyCode: 1, modifiers: 256))
+        #expect(prefs.equipes == [Equipe(membres: ["Aeryn"]), Equipe(membres: ["Nova"])])
+        #expect(prefs.equipeSuivanteHotKey == HotKey(keyCode: 17, modifiers: 256))
+        #expect(prefs.inviteHotKey == HotKey(keyCode: 34, modifiers: 256))
+        #expect(prefs.inviteFormat == "/w %nom go")
+    }
+
+    @Test("Chaque réglage s'écrit sous sa clé, avec son encodage")
+    func empreinteEcrite() {
+        let (prefs, store) = neuves()
+        prefs.slotCount = 3
+        prefs.characterOrder = ["Aeryn", "Nova"]
+        prefs.hotKeys = [HotKey(keyCode: 18, modifiers: 256), nil, HotKey(keyCode: 20, modifiers: 2048)]
+        prefs.cycleNext = HotKey(keyCode: 122, modifiers: 0)
+        prefs.cyclePrevious = HotKey(keyCode: 120, modifiers: 0)
+        prefs.barVisible = false
+        prefs.barOrigin = CGPoint(x: 120.5, y: 640)
+        prefs.showNumbers = false
+        prefs.showClasses = false
+        prefs.attentionAction = .focus
+        prefs.toggleAutoFocus = HotKey(keyCode: 99, modifiers: 0)
+        prefs.toggleBar = HotKey(keyCode: 11, modifiers: 768)
+        prefs.barOnlyWithDofus = true
+        prefs.autoCenterBar = false
+        prefs.menuBarIcon = .symbole
+        prefs.showPreviewOnHover = true
+        prefs.previewHotKey = HotKey(keyCode: 49, modifiers: 2048)
+        prefs.advanceOnClick = true
+        prefs.advanceModifier = .option
+        prefs.signalerBascule = false
+        prefs.lirePosition = true
+        prefs.lireCombat = true
+        prefs.zonePosition = ZoneEcran(x: 0.5, y: 0.25, largeur: 0.25, hauteur: 0.0625)
+        prefs.zoneCombat = ZoneEcran(x: 0.125, y: 0.75, largeur: 0.25, hauteur: 0.125)
+        prefs.killFrozenClients = false
+        prefs.lastArrangement = .principale
+        prefs.arrangeHotKey = HotKey(keyCode: 40, modifiers: 256)
+        prefs.sessionHotKey = HotKey(keyCode: 1, modifiers: 256)
+        prefs.equipes = [Equipe(membres: ["Aeryn"]), Equipe(membres: ["Nova"])]
+        prefs.equipeSuivanteHotKey = HotKey(keyCode: 17, modifiers: 256)
+        prefs.inviteHotKey = HotKey(keyCode: 34, modifiers: 256)
+        prefs.inviteFormat = "/w %nom go"
+
+        #expect(canonique(store.donnees(pour: Preferences.key))
+                == canonique(Data(Self.empreinte.utf8)))
+    }
+
+    /// Un réglage optionnel à `nil` est **absent** de la sauvegarde, pas écrit
+    /// `null` — et `barOrigin` n'y laisse aucune de ses deux coordonnées.
+    @Test("Un réglage sans valeur n'est pas écrit")
+    func empreinteSansValeurs() {
+        let (prefs, store) = neuves()
+        prefs.slotCount = 1
+        prefs.hotKeys = [nil]
+        for chemin: ReferenceWritableKeyPath<Preferences, HotKey?> in [
+            \.cycleNext, \.cyclePrevious, \.toggleAutoFocus, \.toggleBar, \.previewHotKey,
+            \.arrangeHotKey, \.sessionHotKey, \.equipeSuivanteHotKey, \.inviteHotKey,
+        ] {
+            prefs[keyPath: chemin] = nil
+        }
+        prefs.barOrigin = nil
+
+        let attendu = """
+        {"advanceModifier":"fn","advanceOnClick":false,"attentionAction":"highlight",
+         "autoCenterBar":true,"barOnlyWithDofus":false,"barVisible":true,"characterOrder":[],
+         "defaultsVersion":6,"equipes":[],"hotKeys":[null],"inviteFormat":"/invite %nom",
+         "killFrozenClients":true,"lireCombat":false,"lirePosition":false,"menuBarIcon":"logo",
+         "showClasses":true,"showNumbers":true,"showPreviewOnHover":false,
+         "signalerBascule":true,"slotCount":1}
+        """
+        #expect(canonique(store.donnees(pour: Preferences.key)) == canonique(Data(attendu.utf8)))
+    }
+
+    /// Une sauvegarde complète, plus des clés que Synfus ne connaît pas (celles
+    /// du Stream Deck, de l'ancien mode « enchaîner ») : chaque valeur est
+    /// relue, et la réécriture rend la même sauvegarde, inconnues en moins.
+    @Test("Une sauvegarde complète se relit et se réécrit à l'identique")
+    func empreinteRelue() throws {
+        var objet = try #require(
+            try JSONSerialization.jsonObject(with: Data(Self.empreinte.utf8)) as? [String: Any])
+        objet["streamDeckEnabled"] = true
+        objet["appuiLongMs"] = 150
+        objet["spellKeyMap"] = ["barres": [[["keyCode": 18, "modifiers": 0]]]]
+        objet["advanceArmHotKey"] = ["keyCode": 50, "modifiers": 256]
+        let ancien = try JSONSerialization.data(withJSONObject: objet)
+        let store = StockageMemoire([Preferences.key: ancien])
+
+        let prefs = Preferences.forTesting(store: store)
+        porteLEmpreinte(prefs)
+
+        prefs.barVisible = prefs.barVisible
+        #expect(canonique(store.donnees(pour: Preferences.key))
+                == canonique(Data(Self.empreinte.utf8)))
+    }
+
+    /// Les cinq clés des toutes premières sauvegardes sont obligatoires : sans
+    /// l'une d'elles, la sauvegarde est tenue pour illisible, entière.
+    @Test("Une sauvegarde privée d'une clé d'origine ramène aux défauts")
+    func cleOrigineManquante() throws {
+        for cle in ["characterOrder", "hotKeys", "barVisible", "showNumbers", "slotCount"] {
+            var objet = try #require(
+                try JSONSerialization.jsonObject(with: Data(Self.empreinte.utf8)) as? [String: Any])
+            objet[cle] = nil
+            let store = StockageMemoire([Preferences.key: try JSONSerialization.data(withJSONObject: objet)])
+            let prefs = Preferences.forTesting(store: store)
+            #expect(prefs.slotCount == 5, "sans \(cle)")
+            #expect(prefs.characterOrder.isEmpty, "sans \(cle)")
+            #expect(prefs.showClasses == true, "sans \(cle)")
+        }
+    }
+
+    /// Une valeur du mauvais type rend la sauvegarde illisible, entière ; un
+    /// `null` vaut une clé absente.
+    @Test("Une valeur mal typée ramène aux défauts, un null vaut une absence")
+    func valeurMalTypee() throws {
+        var objet = try #require(
+            try JSONSerialization.jsonObject(with: Data(Self.empreinte.utf8)) as? [String: Any])
+        objet["showClasses"] = "non"
+        var store = StockageMemoire([Preferences.key: try JSONSerialization.data(withJSONObject: objet)])
+        var prefs = Preferences.forTesting(store: store)
+        #expect(prefs.slotCount == 5)
+        #expect(prefs.showClasses == true)
+
+        objet["showClasses"] = NSNull()
+        objet["cycleNext"] = NSNull()
+        objet["inviteFormat"] = NSNull()
+        store = StockageMemoire([Preferences.key: try JSONSerialization.data(withJSONObject: objet)])
+        prefs = Preferences.forTesting(store: store)
+        #expect(prefs.slotCount == 3)
+        #expect(prefs.showClasses == true)
+        #expect(prefs.cycleNext == nil)
+        #expect(prefs.inviteFormat == "/invite %nom")
+    }
+
+    /// `barOrigin` s'écrit en deux coordonnées : une seule ne suffit pas.
+    @Test("Une origine de barre incomplète est ignorée")
+    func origineIncomplete() throws {
+        var objet = try #require(
+            try JSONSerialization.jsonObject(with: Data(Self.empreinte.utf8)) as? [String: Any])
+        objet["barOriginY"] = nil
+        let store = StockageMemoire([Preferences.key: try JSONSerialization.data(withJSONObject: objet)])
+        let prefs = Preferences.forTesting(store: store)
+        #expect(prefs.barOrigin == nil)
+        #expect(prefs.slotCount == 3)
+    }
 }
