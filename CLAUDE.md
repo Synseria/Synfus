@@ -22,7 +22,7 @@ sh build.sh [--release [X.Y.Z] | --publish X.Y.Z]   # dist/Synfus.app, + DMG, ou
 
 Scripts, signature, version (dernier tag `vX.Y.Z`), lots et publication suivent la convention
 commune : **skill `livraison`**. `--publish` ne fait que pousser le tag depuis `main` propre ;
-`release.yml` (runner `macos-26`) compile arm64 + x86_64, signe ad hoc, fait DMG et release.
+`release.yml` (runner `xcode-27`) compile arm64 + x86_64, signe ad hoc, fait DMG et release.
 
 Diagnostic en ligne de commande, **par le binaire installé** — l'autorisation Accessibilité est
 liée à l'identité signée, celui de `.build/` ne l'a pas :
@@ -35,8 +35,9 @@ SYNFUS_CAPTURE=~/Library/Logs/Synfus/captures/x.png sh test.sh RealCapture   # O
 
 ## Contraintes dures
 
-- **SDK macOS 26 (Xcode 26)** : `BarView` appelle `glassEffect`. Deployment target 14.0, repli
-  `.ultraThinMaterial` par `if #available(macOS 26.0, *)`.
+- **Toujours le Xcode et le Swift les plus récents** (Xcode 27, Swift 6.4) : `swift-tools-version`
+  et runner de CI (`xcode-27`) suivent la dernière version. `BarView` appelle `glassEffect`
+  (SDK ≥ 26) ; deployment target 14.0, repli `.ultraThinMaterial` par `if #available(macOS 26.0, *)`.
 - **Swift 6, concurrence stricte, sans dérogation.** L'état vit sur main : toute classe à état est
   `@MainActor` (`Preferences` comprise) ; callbacks Timer et notification repassent par
   `MainActor.assumeIsolated` ; le callback C de `HotKeyManager` par `DispatchQueue.main.async`.

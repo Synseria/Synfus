@@ -1,4 +1,4 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 6.4
 import PackageDescription
 
 // Concurrence stricte de Swift 6 : l'état vit sur le main actor ; seuls trois
