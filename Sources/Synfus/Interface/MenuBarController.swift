@@ -206,7 +206,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     }
 
     @objc private func closeAllClients() {
-        WindowManager.shared.closeAll()
+        ConfirmationFermeture.fermerTous()
     }
 
     @objc private func fullscreenAll() {
