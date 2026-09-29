@@ -59,7 +59,8 @@ fi
 NAME="Synfus"
 # Reverse-DNS du domaine réellement détenu : synseria.fr. Cet identifiant est
 # l'identité vue par TCC et le nom du fichier de préférences — le changer oblige
-# à réautoriser l'Accessibilité, et impose le repli de Preferences.legacyDomains.
+# à réautoriser l'Accessibilité et repart d'un plist de préférences vierge :
+# il n'y a pas de migration (cf. CLAUDE.md, section Préférences).
 BUNDLE_ID="fr.synseria.Synfus"
 # La version est désormais affichée dans les réglages, et les binaires étant
 # signés ad-hoc — donc à réautoriser à chaque version —, savoir laquelle tourne

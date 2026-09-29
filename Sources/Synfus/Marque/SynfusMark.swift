@@ -37,8 +37,6 @@ enum SynfusMark {
         /// macOS : marge Apple + coins arrondis dessinés dans l'image — le
         /// `.icns` n'applique aucun masque, la forme doit être dans le pixel.
         case rounded
-        /// Dessin pleine page, sans coins arrondis.
-        case fullBleed
     }
 
     // MARK: - Repère
@@ -48,12 +46,9 @@ enum SynfusMark {
     private static let roundedInsetRatio: Double = 50.0 / 512.0
 
     /// Aspect d'un œuf : large de 0,772 fois sa hauteur. Un œuf de dragon est
-    /// un bloc — la maquette v2, à 0,81, tombait dans le galet aplati ; la v1,
-    /// à 0,73, restait un œuf de poule.
+    /// un bloc — plus large, il glisse vers le galet aplati ; plus étroit,
+    /// vers l'œuf de poule.
     static let eggAspect: Double = 176.0 / 228.0
-
-    /// Épaisseur du contour d'un œuf, en fraction de sa largeur.
-    static let outlineRatio: Double = 12.0 / 176.0
 
     /// Épaisseur minimale d'un trait, **en pixels du rendu final** : en deçà,
     /// l'antialiasing l'étale en gris sale.

@@ -324,10 +324,10 @@ struct BarView: View {
     /// L'attente est unique pour toute la barre, et la sortie d'une pastille
     /// n'est **pas** garantie d'arriver avant l'entrée dans la suivante :
     /// AppKit émet `mouseEntered` et `mouseExited` de deux zones de suivi
-    /// voisines dans l'ordre qui l'arrange. Annuler sans regarder revenait, une
-    /// fois sur deux, à tuer l'attente que la pastille d'à côté venait
-    /// d'ouvrir — le premier aperçu s'affichait, les suivants jamais. D'où
-    /// `hoverTarget` : une sortie n'annule que sa propre attente.
+    /// voisines dans l'ordre qui l'arrange. Annuler sans regarder tuerait, une
+    /// fois sur deux, l'attente que la pastille voisine vient d'ouvrir — le
+    /// premier aperçu s'afficherait, les suivants jamais. D'où `hoverTarget` :
+    /// une sortie n'annule que sa propre attente.
     private func hover(_ client: DofusClient, inside: Bool) {
         // Une sortie referme toujours, quel que soit l'état du réglage : couper
         // l'aperçu au survol pendant qu'un aperçu est ouvert laissait sinon la
