@@ -113,7 +113,7 @@ de son domaine ; un fichier qui n'en a pas est le signe d'un domaine à créer.
 | --- | --- |
 | `App/` | Point d'entrée, intégrité du bundle, démarrage automatique, `PressePapiers` (l'unique écriture presse-papiers) |
 | `Accessibilite/` | Lecture AX partagée, `--dump-windows`, titres à travers les espaces |
-| `Clients/` | `DofusClient`, `WindowTitle` (titres, pur), `ClientMemory` (mémoire et tri, pur), `Equipes` (équipes, pur), `WindowManager`, `FreezeWatcher` |
+| `Clients/` | `DofusClient`, `WindowTitle` (titres, pur), `ClientMemory` (mémoire et tri, pur), `Equipes` (équipes, pur), `WindowManager` (cœur : état, `start`, inventaire ; extensions `+PremierPlan`, `+Effectif`, `+Focus`, `+Fermeture`), `FreezeWatcher` |
 | `Invitations/` | `/invite Nom` par presse-papiers : `InvitationComposer` (pur) et `InvitationClipboard` |
 | `Attention/` | Détection du rebond du Dock |
 | `Raccourcis/` | Raccourcis globaux, enregistreur, enchaînement au clic |
@@ -123,7 +123,7 @@ de son domaine ; un fichier qui n'en a pas est le signe d'un domaine à créer.
 | `Classes/` | Classes du jeu et icônes fournies par l'utilisateur |
 | `Marque/` | La Couvée : `SynfusMark` (CoreGraphics pur) et `SynfusGlyph` |
 | `Localisation/` | `L()`, les tables JSON par langue, le choix de langue |
-| `Interface/` | `MenuBarController` ; `Barre/` (barre flottante et ses contrôles) ; `Reglages/` (une vue par onglet + contrôleur de fenêtre) |
+| `Interface/` | `MenuBarController`, `ConfirmationFermeture` ; `Barre/` (barre flottante et ses contrôles) ; `Reglages/` (une vue par onglet + contrôleur de fenêtre) |
 | `Lecture/` | Lecture de l'écran par OCR — position et combat : `ZoneEcran`, `PositionCarte`, `EmpreinteTexte`, `LectureCombat` (purs), `LecteurEcran`, `DiagnosticLecture` et `MoteurOCR` |
 
 Les logiques pures ont leur fichier propre (`WindowTitle`, `ClientMemory`,
@@ -546,7 +546,10 @@ fenêtre, et deux persos d'un même client donnaient deux escalades sur le même
 pid : deux Apple Events, deux échéances, deux coups de grâce. Et c'est le seul
 geste de l'app qui demande un dernier mot : irréversible, il vit dans les menus
 juste au-dessus de « Quitter », et une session de huit comptes ne doit pas
-tomber sur un clic de travers.
+tomber sur un clic de travers. Cette alerte appartient à l'interface
+([ConfirmationFermeture.swift](Sources/Synfus/Interface/ConfirmationFermeture.swift)),
+par où passent les deux menus ; le modèle n'expose que `close`, `closeAll` et
+`processusAFermer`, sans UI.
 
 **L'envoi du Quit Apple Event peut bloquer plusieurs secondes** quand le client
 est déjà gelé — c'est ce qui figeait Synfus au moment de fermer. `terminate()`
@@ -822,6 +825,8 @@ propriété calculée, donc s'y réassigner relance le `didSet` — d'où le dra
   précédente. Le pid vient de la notification elle-même, la décision est prise
   **avant** `refresh()` — l'inventaire AX peut bloquer des centaines de
   millisecondes sur un client occupé —, et le timer de 2 s la réévalue en filet.
+  `WindowManager` déclenche ces réévaluations par un rappel,
+  `visibiliteARevoir`, posé par `AppDelegate` : le modèle ne connaît pas la barre.
   La règle est isolée en fonction pure, `computeVisibility`, donc testée.
 - [SettingsView.swift](Sources/Synfus/Interface/Reglages/SettingsView.swift) — barre latérale à
   gauche, quatre sections (Raccourcis, Persos, Classes, Diagnostic) à droite +

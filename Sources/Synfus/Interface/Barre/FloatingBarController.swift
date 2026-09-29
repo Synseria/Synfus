@@ -99,7 +99,7 @@ final class FloatingBarController: NSObject {
     }
 
     /// Appelé à chaque changement d'application active, et par le timer de
-    /// `WindowManager` en filet.
+    /// `WindowManager` en filet — via `WindowManager.visibiliteARevoir`.
     ///
     /// `force` distingue les deux. Une notification — activation, changement
     /// d'espace — réordonne toujours le panneau : c'est ce qui le remonte
