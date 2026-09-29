@@ -139,7 +139,7 @@ if [ -d "Resources/Ankama" ]; then
 fi
 
 echo "==> Signature"
-signer "$APP" "$BUNDLE_ID" --deep
+signer "$APP" "$BUNDLE_ID"
 
 echo "==> $APP prêt"
 
