@@ -64,7 +64,7 @@ final class WindowPreviewService: ObservableObject {
                 inFlight.remove(request.key)
                 if let data = captured[request.key], let image = NSImage(data: data) {
                     previews[request.key] = image
-                    unmatched.remove(request.key)
+                    if unmatched.contains(request.key) { unmatched.remove(request.key) }
                 } else {
                     unmatched.insert(request.key)
                 }

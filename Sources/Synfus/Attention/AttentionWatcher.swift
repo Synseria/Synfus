@@ -74,7 +74,14 @@ final class AttentionWatcher: ObservableObject {
         // elle que l'on trie, pas la précédente.
         clientsSubscription = WindowManager.shared.$clients.sink { [weak self] clients in
             MainActor.assumeIsolated {
-                self?.sortedClients = clients.sorted { $0.pid < $1.pid }
+                guard let self else { return }
+                self.sortedClients = clients.sorted { $0.pid < $1.pid }
+                // Un perso qui se ferme en pleine alerte n'a plus de raison d'y
+                // rester : sans cette purge, `alerting` grossirait d'un
+                // `slotKey` mort à chaque fermeture pendant un rebond.
+                let vivants = Set(clients.map(\.slotKey))
+                let purge = self.alerting.intersection(vivants)
+                if purge != self.alerting { self.alerting = purge }
             }
         }
         // 0,1 s : le saut dure environ une seconde, on le voit largement.
@@ -91,6 +98,7 @@ final class AttentionWatcher: ObservableObject {
 
     /// Le perso vient d'être regardé : on éteint son alerte.
     func clear(_ client: DofusClient) {
+        guard alerting.contains(client.slotKey) else { return }
         alerting.remove(client.slotKey)
     }
 

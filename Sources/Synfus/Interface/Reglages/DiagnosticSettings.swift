@@ -3,6 +3,7 @@ import SwiftUI
 /// Onglet Diagnostic : ce que Synfus voit, et les hypothèses qu'il fait.
 struct DiagnosticSettings: View {
     @ObservedObject private var manager = WindowManager.shared
+    @ObservedObject private var managerDiagnostics = WindowManagerDiagnostics.shared
     @ObservedObject private var probe = AttentionProbe.shared
     @ObservedObject private var attention = AttentionDiagnostics.shared
     @ObservedObject private var previews = WindowPreviewService.shared
@@ -30,9 +31,9 @@ struct DiagnosticSettings: View {
                 // La seconde qu'un client gelé coûte se paie ici, hors main :
                 // si elle monte à ~1 s alors que la barre reste fluide, c'est
                 // que le déport fait son travail.
-                Text(L("diagnostic.dernierInventaire", Int(manager.lastInventoryDuration * 1000)))
+                Text(L("diagnostic.dernierInventaire", Int(managerDiagnostics.lastInventoryDuration * 1000)))
                     .font(.system(size: 10, design: .monospaced))
-                    .foregroundStyle(manager.lastInventoryDuration > 0.5 ? .orange : .secondary)
+                    .foregroundStyle(managerDiagnostics.lastInventoryDuration > 0.5 ? .orange : .secondary)
                 Spacer()
             }
             .padding(10)
