@@ -14,29 +14,29 @@ final class WindowManager: ObservableObject {
     /// `clients` restreint à l'équipe active, dans le même ordre. Sans équipe,
     /// c'est `clients` tel quel. Recalculé à chaque publication de `clients`
     /// et à chaque changement d'équipe — jamais republié sans avoir changé.
-    @Published private(set) var effectif: [DofusClient] = []
+    @Published var effectif: [DofusClient] = []
 
     /// L'équipe active — un état de session, jamais persisté : Synfus démarre
     /// toujours sur « Tous » (`nil`).
-    @Published private(set) var equipeActive: Int?
-    @Published private(set) var frontmostPID: pid_t?
+    @Published var equipeActive: Int?
+    @Published var frontmostPID: pid_t?
     /// L'app au premier plan est-elle un client Dofus ? Tenu à jour en même temps
     /// que `frontmostPID`, pour que la barre puisse décider de sa visibilité sans
     /// refaire le tour des applications.
-    @Published private(set) var frontmostIsDofus = false
+    @Published var frontmostIsDofus = false
     @Published private(set) var accessibilityGranted = false
 
     /// La pastille qui clignote : le perso sur lequel Synfus vient de
     /// basculer, pendant `dureeSignal`. Cf. `SwitchBlink`.
-    @Published private(set) var basculeSignalee: String?
-    private var finSignal: DispatchWorkItem?
-    private static let dureeSignal: TimeInterval = 1.5
+    @Published var basculeSignalee: String?
+    var finSignal: DispatchWorkItem?
+    static let dureeSignal: TimeInterval = 1.5
 
     /// Clients en cours de fermeture. Tant qu'un pid y figure, l'inventaire ne
     /// l'interroge plus — questionner l'Accessibilité d'un mourant, c'est payer
     /// la borne d'une seconde à chaque tour — et sa pastille porte l'indicateur
     /// d'attente. Le pid en sort quand le processus meurt.
-    @Published private(set) var closingPIDs: Set<pid_t> = []
+    @Published var closingPIDs: Set<pid_t> = []
 
     /// Processus à qui l'on ne pose plus de question Accessibilité par un
     /// **geste** : ceux qui se ferment, et ceux que le veilleur de gel tient
@@ -54,7 +54,7 @@ final class WindowManager: ObservableObject {
     }
 
     private var timer: Timer?
-    private let prefs = Preferences.shared
+    let prefs = Preferences.shared
     private var equipesSubscription: AnyCancellable?
 
     /// Fin du dernier inventaire, et inventaire différé en attente, avec son
@@ -78,7 +78,7 @@ final class WindowManager: ObservableObject {
     /// Le pid qu'une bascule de Synfus vient d'activer. La notification
     /// d'activation qui en découle n'est pas une nouvelle de l'extérieur : elle
     /// n'a pas besoin d'un inventaire dans les 200 ms.
-    private var selfActivatedPID: pid_t?
+    var selfActivatedPID: pid_t?
     /// Tous les processus Dofus vivants, persos ou non : un client resté au
     /// login sur un autre bureau n'est pas dans `clients` mais a bien son icône
     /// dans le Dock, et c'est ce compte-là qui périme le cache de structure.
@@ -214,23 +214,6 @@ final class WindowManager: ObservableObject {
         // réveil avec d'autres épargne des réveils.
         timer?.tolerance = 0.3
         refresh()
-    }
-
-    /// Mémorise l'application de premier plan et si c'est un client Dofus.
-    private func setFrontmost(_ app: NSRunningApplication?) {
-        setFrontmost(pid: app?.processIdentifier, bundleID: app?.bundleIdentifier)
-    }
-
-    private func setFrontmost(pid: pid_t?, bundleID: String?) {
-        setFrontmost(pid: pid, isDofus: DofusProcesses.isDofusBundle(bundleID))
-    }
-
-    /// Ne republie que ce qui change : ces deux valeurs sont relues à chaque
-    /// tour de timer, et chaque affectation d'un `@Published` réveille toutes
-    /// les vues qui l'observent, changement ou pas.
-    private func setFrontmost(pid: pid_t?, isDofus: Bool) {
-        if frontmostPID != pid { frontmostPID = pid }
-        if frontmostIsDofus != isDofus { frontmostIsDofus = isDofus }
     }
 
     // MARK: - Découverte
@@ -433,194 +416,6 @@ final class WindowManager: ObservableObject {
             republierEffectif()
         }
     }
-
-    // MARK: - Équipes
-
-    /// Le seul foyer de calcul de l'effectif. Les équipes sont passées
-    /// explicitement par l'abonnement aux préférences — qui les reçoit avant
-    /// qu'elles soient affectées — et lues sinon. Un index d'équipe devenu
-    /// orphelin ramène à « Tous ».
-    private func republierEffectif(equipes: [Equipe]? = nil) {
-        let equipes = equipes ?? prefs.equipes
-        let active = Equipes.activeValide(equipeActive, nombre: equipes.count)
-        if active != equipeActive { equipeActive = active }
-        let nouveau = Equipes.filtre(clients, equipe: active.map { equipes[$0] })
-        if nouveau != effectif { effectif = nouveau }
-    }
-
-    /// Active une équipe — `nil` pour « Tous ». Sans effet si l'index n'existe pas.
-    func activerEquipe(_ index: Int?) {
-        let borne = Equipes.activeValide(index, nombre: prefs.equipes.count)
-        guard borne == index else { return }
-        equipeActive = index
-        republierEffectif()
-    }
-
-    /// Tous → 1 → … → Tous, le geste du raccourci.
-    func equipeSuivante() {
-        activerEquipe(Equipes.suivante(apres: equipeActive, nombre: prefs.equipes.count))
-    }
-
-    // MARK: - Focus
-
-    func focus(slot: Int) {
-        guard slot >= 0, slot < effectif.count else {
-            NSSound.beep()
-            return
-        }
-        focus(effectif[slot])
-    }
-
-    /// `signaler` : faire clignoter la pastille du perso atteint
-    /// (`basculeSignalee`) si le réglage le veut. Faux quand le geste vient
-    /// de la pastille elle-même.
-    func focus(_ client: DofusClient, signaler: Bool = true) {
-        let reachable = isReachable(client)
-        if signaler, prefs.signalerBascule, client.pid != frontmostPID {
-            signalerBascule(client)
-        }
-        if reachable {
-            AccessibilityReader.unminimize(client.axWindow)
-        }
-
-        // L'activation vient en premier : c'est elle, et non `AXRaise`, qui fait
-        // basculer macOS vers l'espace où vit la fenêtre quand le client est en
-        // plein écran. Dans l'ordre inverse, le raise s'appliquait à une fenêtre
-        // d'un autre espace et ne menait nulle part.
-        NSRunningApplication(processIdentifier: client.pid)?.activate()
-
-        // Les attributs AX ne servent qu'à départager plusieurs fenêtres d'un même
-        // processus ; on les pose une fois la transition d'espace engagée — et
-        // seulement s'il y a quelque chose à départager : pour un client à
-        // fenêtre unique, l'activation fait tout, et deux appels AX de plus
-        // n'ajoutent que de la latence à la bascule. Sur un perso seulement
-        // mémorisé, la référence de fenêtre est périmée — il n'y a rien à y poser.
-        let siblings = clients.filter { $0.pid == client.pid && !$0.dormant }.count
-        if reachable, siblings > 1 {
-            let window = client.axWindow
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                MainActor.assumeIsolated {
-                    AccessibilityReader.set(window, kAXMainAttribute, kCFBooleanTrue)
-                    AccessibilityReader.perform(window, action: kAXRaiseAction)
-                }
-            }
-        }
-
-        // La notification d'activation qui va suivre est la nôtre : elle n'aura
-        // pas à déclencher un inventaire à chaud. Si le client est déjà devant,
-        // aucune ne viendra, et le drapeau resterait collé jusqu'à une
-        // activation extérieure qu'il ferait passer pour la nôtre.
-        selfActivatedPID = frontmostPID == client.pid ? nil : client.pid
-        setFrontmost(pid: client.pid, isDofus: true)
-        AttentionWatcher.shared.clear(client)
-    }
-
-    /// Désigne la pastille à faire clignoter, le temps de `dureeSignal`. Une
-    /// bascule suivante reprend le signal à son compte : une seule pastille
-    /// clignote à la fois, celle où l'on est.
-    private func signalerBascule(_ client: DofusClient) {
-        basculeSignalee = client.slotKey
-        finSignal?.cancel()
-        let item = DispatchWorkItem {
-            MainActor.assumeIsolated { WindowManager.shared.basculeSignalee = nil }
-        }
-        finSignal = item
-        DispatchQueue.main.asyncAfter(deadline: .now() + Self.dureeSignal, execute: item)
-    }
-
-    /// Ferme un client — l'escalade de `ClientTerminator`.
-    ///
-    /// Le client gèle systématiquement à la fermeture chez certains joueurs, et
-    /// il faut alors passer par « Forcer à quitter » : on automatise ce geste.
-    func close(_ client: DofusClient) {
-        let pid = client.pid
-        guard NSRunningApplication(processIdentifier: pid) != nil else { return }
-        closingPIDs.insert(pid)
-        // La pastille reste affichée le temps de la fermeture (cf. la mémoire),
-        // mais son aperçu, lui, n'a plus lieu d'être : on le retire tout de
-        // suite plutôt que d'attendre un `mouseExited` que le menu contextuel a
-        // déjà consommé.
-        PreviewPanelController.shared.reconcile(with: clients.filter { $0.pid != pid })
-
-        ClientTerminator.close(pid) { WindowManager.shared.refreshSoon() }
-        refreshSoon()
-    }
-
-    /// Ferme tous les clients, chacun avec la même escalade. Le geste de fin
-    /// de session — sans lui, c'est autant de « Forcer à quitter » que de persos.
-    ///
-    /// Un **processus** à la fois : `clients` porte un perso par fenêtre, et
-    /// deux persos d'un même client auraient déclenché deux escalades sur le
-    /// même pid — deux Apple Events, deux échéances, deux coups de grâce.
-    ///
-    /// Le geste est irréversible, et il vit dans les menus juste au-dessus de
-    /// « Quitter » : on demande confirmation avant de couper une session de
-    /// huit comptes sur un clic de travers.
-    func closeAll() {
-        let pids = Set(clients.map(\.pid)).subtracting(closingPIDs)
-        guard !pids.isEmpty else { return }
-        guard confirmerFermeture(nombre: pids.count) else { return }
-        for client in clients where pids.contains(client.pid) && !closingPIDs.contains(client.pid) {
-            close(client)
-        }
-    }
-
-    /// L'alerte de « Fermer tous les persos ». Séparée pour que `closeAll`
-    /// reste lisible, et parce que c'est le seul endroit de l'app qui demande
-    /// un dernier mot.
-    private func confirmerFermeture(nombre: Int) -> Bool {
-        let alerte = NSAlert()
-        alerte.messageText = L("fermeture.confirmation", nombre)
-        alerte.informativeText = L("fermeture.confirmation.detail")
-        alerte.alertStyle = .warning
-        alerte.addButton(withTitle: L("menu.fermerTous"))
-        alerte.addButton(withTitle: L("commun.annuler"))
-        // L'app tourne en accessory : sans activation, l'alerte s'ouvrirait
-        // derrière le jeu, et Synfus paraîtrait ne rien faire.
-        NSApp.activate(ignoringOtherApps: true)
-        return alerte.runModal() == .alertFirstButtonReturn
-    }
-
-    /// Le geste « lancer la session » : ranger les fenêtres selon la dernière
-    /// disposition, puis basculer sur le premier perso. Rien que des gestes
-    /// existants, enchaînés — et toujours aucun évènement émis.
-    func lancerSession() {
-        Task {
-            await WindowArranger.shared.appliquerDerniere()
-            if !effectif.isEmpty { focus(slot: 0) }
-        }
-    }
-
-    /// Tourne dans l'effectif — l'équipe active, ou tous — en sautant les
-    /// clients injoignables : un client qui se ferme ou gèle reste affiché le
-    /// temps de mourir, mais s'y poser ne montrerait rien (cf. `Rotation`).
-    func cycle(by step: Int) {
-        guard !effectif.isEmpty else {
-            NSSound.beep()
-            return
-        }
-        // Depuis Chrome ou Discord — ou depuis un perso hors de l'équipe —, on
-        // ne « cycle » pas : on revient au premier perso joignable.
-        let injoignables = unreachablePIDs
-        let joignables = effectif.map { !injoignables.contains($0.pid) }
-        guard let next = Rotation.suivant(depuis: currentIndex, pas: step, joignables: joignables) else {
-            NSSound.beep()
-            return
-        }
-        focus(effectif[next])
-    }
-
-    /// Rang du perso au premier plan dans l'effectif ; `nil` s'il n'en fait
-    /// pas partie.
-    var currentIndex: Int? {
-        guard let pid = frontmostPID else { return nil }
-        return effectif.firstIndex { $0.pid == pid }
-    }
-
-    func isFrontmost(_ client: DofusClient) -> Bool {
-        client.pid == frontmostPID
-    }
-
 
     /// Ouvre le panneau Accessibilité, en demandant d'abord à macOS d'afficher
     /// sa propre invite si l'app n'a jamais été autorisée.
