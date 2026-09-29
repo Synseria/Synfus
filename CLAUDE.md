@@ -1,978 +1,110 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Synfus : app AppKit `LSUIElement` (barre de menus, pas de Dock) qui montre les persos Dofus
+connectés et bascule de l'un à l'autre. Cette page est la carte ; le détail de chaque domaine est
+dans un skill de `.claude/skills/` (index en bas), à charger avant d'y toucher.
 
 ## Langue
 
-Le dépôt est intégralement en français : commentaires, clés et textes source
-de l'interface, messages des scripts, documentation. Toute contribution doit
-s'y tenir, accents compris. L'interface est traduite en anglais et en espagnol
-— voir « Localisation » : un libellé n'est jamais écrit en dur dans une vue,
-il passe par `L("clé")` et `Resources/Localisation/fr.json`.
+Le dépôt est intégralement en français, accents compris : commentaires, clés et textes source de
+l'interface, messages des scripts, documentation. L'interface est traduite en anglais et en
+espagnol : aucun libellé en dur dans une vue, tout passe par `L("clé")` (skill `localisation`).
 
 ## Commandes
 
 ```sh
-swift build                        # compilation debug rapide (pas de bundle)
-sh test.sh                         # suite complète (Swift Testing), sortie filtrée
-sh test.sh PreferencesTests        # une suite, ou un test par son nom ; plusieurs filtres = l'un ou l'autre
-sh run.sh                          # build Debug signé → .build/dev/Synfus.app
-sh run.sh --start                  # … puis le lance (l'instance en cours est quittée)
-sh run.sh --install [--start]      # build Release, installé dans /Applications ; --start le relance
-sh build.sh                        # build Release → dist/Synfus.app
-sh build.sh --release [X.Y.Z]      # + dist/Synfus-X.Y.Z-<arch>.dmg (Tools/make-dmg.sh)
-sh build.sh --publish X.Y.Z        # depuis main propre et à jour : tag vX.Y.Z poussé → release.yml
-VERSION=0.0.3 ARCH=x86_64 sh build.sh
-./Tools/generate-app-icons.sh      # régénère Resources/Synfus.{icns,png}
-./Tools/fetch-ankama-assets.sh     # télécharge les emblèmes de classes dans Resources/Ankama (gitignoré)
-SYNFUS_CAPTURE=~/Library/Logs/Synfus/captures/x.png sh test.sh RealCapture   # calibrage sur une vraie capture
+swift build                   # compilation debug rapide (pas de bundle)
+sh test.sh                    # suite complète (Swift Testing), sortie filtrée
+sh test.sh PreferencesTests   # une suite ou un test ; plusieurs filtres = l'un ou l'autre
+sh run.sh [--start | --install [--start]]      # build Debug .build/dev/, ou Release dans /Applications
+sh build.sh [--release [X.Y.Z] | --publish X.Y.Z]   # dist/Synfus.app, + DMG, ou tag → release.yml
 ```
 
-Les scripts suivent la convention commune des apps Synseria (skill
-`livraison`) : lancés par `sh`, ils se relancent en bash plein, répondent à
-`--help`, et les scripts internes vivent dans `Tools/`. Version = dernier tag
-`vX.Y.Z`, numéro de build = nombre de commits.
+Scripts, signature, version (dernier tag `vX.Y.Z`), lots et publication suivent la convention
+commune : **skill `livraison`**. `--publish` ne fait que pousser le tag depuis `main` propre ;
+`release.yml` (runner `macos-26`) compile arm64 + x86_64, signe ad hoc, fait DMG et release.
 
-Les tests portent sur la logique pure — analyse des titres de fenêtres, classes,
-raccourcis, persistance. Tout ce qui dépend de l'API Accessibilité, du Dock ou
-d'AppKit exige un environnement graphique et un client Dofus lancé : cela se
-vérifie par un lancement réel (`sh run.sh --install --start`) et l'onglet Diagnostic.
-
-Les préférences se testent sur un stockage **en mémoire**
-(`Preferences.forTesting(store:)`), jamais sur un `UserDefaults(suiteName:)` :
-un domaine persistant survit à `removePersistentDomain` — `cfprefsd` réécrit le
-fichier derrière — et chaque exécution sèmerait un plist dans
-`~/Library/Preferences`. C'est la raison d'être du protocole `PreferencesStore`.
-
-Mode diagnostic en ligne de commande, qui dump les attributs Accessibilité des
-éléments du Dock — c'est ainsi qu'a été trouvée la détection de rebond :
+Diagnostic en ligne de commande, **par le binaire installé** — l'autorisation Accessibilité est
+liée à l'identité signée, celui de `.build/` ne l'a pas :
 
 ```sh
-/Applications/Synfus.app/Contents/MacOS/Synfus --dump-dock dofus 30
+/Applications/Synfus.app/Contents/MacOS/Synfus --dump-dock dofus 30   # attributs AX du Dock
+/Applications/Synfus.app/Contents/MacOS/Synfus --dump-windows         # fenêtres AX des clients
+SYNFUS_CAPTURE=~/Library/Logs/Synfus/captures/x.png sh test.sh RealCapture   # OCR sur une capture
 ```
 
-Il faut passer par le binaire du bundle installé et non par celui de `.build/` :
-l'autorisation Accessibilité est liée à l'identité de code signée.
+## Contraintes dures
 
-### Contraintes de compilation
-
-- **SDK macOS 26 (Xcode 26) obligatoire** : `BarView` appelle `glassEffect`,
-  absent des SDK antérieurs. Le deployment target reste `14.0`, la bascule vers
-  `.ultraThinMaterial` se fait à l'exécution via `if #available(macOS 26.0, *)`.
-- Le paquet est en **Swift 6, concurrence stricte**, sans dérogation. Le modèle
-  est simple : l'état vit sur le main thread. Les classes à état sont `@MainActor`
-  (`Preferences` comprise), les callbacks Timer et notification repassent par
-  `MainActor.assumeIsolated`, et le callback C de `HotKeyManager` — qui ne peut
-  rien capturer — franchit la frontière via `DispatchQueue.main.async`.
-  Toute nouvelle classe à état doit être `@MainActor` plutôt que d'obtenir une
-  exemption. Les exceptions sont des **acteurs sans état partagé** qui
-  font du travail bloquant : `PreviewCaptureEngine` (captures),
-  `ClientInventoryEngine` (inventaire Accessibilité) et `MoteurOCR` (Vision). Il n'y entre et n'en sort
-  que des valeurs `Sendable`.
-- **Un seul foyer par logique.** Pas deux fonctions qui font à peu près la même
-  chose : la lecture AX est dans `AccessibilityReader`, la reconnaissance d'un
-  processus Dofus dans `DofusProcesses`, l'escalade de fermeture dans
-  `ClientTerminator`, le décodage des titres dans `WindowTitle`. Avant d'écrire
-  une fonction, chercher celle qui existe ; quand une correction touche un
-  chemin, vérifier que son jumeau en bénéficie — le gel à la fermeture externe
-  venait exactement de là : `close()` déportait ce que l'inventaire refaisait
-  sur main.
-- Les constantes `extern CFStringRef` de l'API Accessibilité (par ex.
-  `kAXTrustedCheckOptionPrompt`) sont vues comme des `var` globales et refusées
-  par la concurrence stricte : leur valeur littérale est citée directement.
-- La signature est choisie par **`signature.sh`**, sourcé par `build.sh` (donc
-  par `run.sh`, build de développement compris) — le même ordre dans toutes
-  les apps Synseria : *Developer ID Application*, sinon *Apple Development*
-  de l'équipe personnelle `339WUY8TXY` (compte gratuit : ni notarisation ni
-  Mac App Store), sinon le certificat local **« Synfus Dev »**
-  (`./Tools/make-signing-identity.sh` le crée une fois : auto-signé, approuvé
-  pour la signature de code dans le trousseau de session — macOS demande le
-  mot de passe), sinon ad hoc — le cas de la CI, et là l'identité change à
-  chaque build et l'Accessibilité est à réautoriser à chaque fois. Toucher à
-  la signature ou au `BUNDLE_ID` change l'identité vue par TCC et **oblige à
-  réautoriser l'Accessibilité** (et l'enregistrement de l'écran) — et, le
-  `BUNDLE_ID` nommant aussi le fichier de préférences, remet les réglages à zéro.
-  Il vaut `fr.synseria.Synfus` : le reverse-DNS d'un domaine réellement détenu.
+- **SDK macOS 26 (Xcode 26)** : `BarView` appelle `glassEffect`. Deployment target 14.0, repli
+  `.ultraThinMaterial` par `if #available(macOS 26.0, *)`.
+- **Swift 6, concurrence stricte, sans dérogation.** L'état vit sur main : toute classe à état est
+  `@MainActor` (`Preferences` comprise) ; callbacks Timer et notification repassent par
+  `MainActor.assumeIsolated` ; le callback C de `HotKeyManager` par `DispatchQueue.main.async`.
+  Seules exceptions, des **acteurs sans état partagé** pour le travail bloquant, où n'entrent et
+  ne sortent que des valeurs `Sendable` : `ClientInventoryEngine` (inventaire AX),
+  `PreviewCaptureEngine` (captures), `MoteurOCR` (Vision).
+- **Un seul foyer par logique.** Avant d'écrire une fonction, chercher celle qui existe ; quand une
+  correction touche un chemin, vérifier que son jumeau en bénéficie. Foyers : lecture AX
+  `AccessibilityReader` ; processus Dofus `DofusProcesses` ; titres `WindowTitle` ; fermeture
+  `ClientTerminator` ; presse-papiers `PressePapiers` ; effectif `republierEffectif` ; classes
+  `DofusClass` ; marque `SynfusMark` ; libellés `L()`.
+- Les constantes `extern CFStringRef` de l'Accessibilité (`kAXTrustedCheckOptionPrompt`,
+  `"AXFullScreen"`…) sont refusées par la concurrence stricte : citer leur valeur littérale.
+- **Synfus n'émet, ne rejoue ni ne duplique aucun évènement.** Il change la fenêtre devant, pose
+  position et taille, écrit le presse-papiers, termine des processus — jamais un clic ni une
+  touche synthétisés, jamais de `CGEventTap`, aucun délai randomisé. Rejouer une action sur
+  plusieurs clients serait un multiplicateur, interdit par les CGU de Dofus.
+- **Aucun visuel du jeu dans le dépôt** (CGU Dofus, art. 13.2) : seulement des URL, copie faite
+  par l'utilisateur (skill `marque-assets`).
+- **Identité TCC** : `signature.sh` choisit Developer ID, puis Apple Development de l'équipe
+  `339WUY8TXY`, puis tout autre Apple Development, puis « Synfus Dev »
+  (`Tools/make-signing-identity.sh`), puis ad hoc (CI). Changer d'identité ou de `BUNDLE_ID`
+  (`fr.synseria.Synfus`) fait réautoriser Accessibilité et enregistrement de l'écran ; le
+  `BUNDLE_ID` nomme aussi le fichier de préférences.
+- **Tests sur la logique pure** : chaque décision testable a son fichier pur (`WindowTitle`,
+  `ClientMemory`, `LayoutComputer`, `BounceDetector`, `FreezeStrikes`…). AX, Dock et AppKit se
+  vérifient par un lancement réel (`sh run.sh --install --start`) et l'onglet Diagnostic.
+  Préférences : `Preferences.forTesting(store:)`, **jamais** `UserDefaults(suiteName:)` — un
+  domaine persistant survit à `removePersistentDomain` (`cfprefsd` le réécrit) et chaque
+  exécution sèmerait un plist dans `~/Library/Preferences`.
 
 ## Architecture
 
-App AppKit `LSUIElement` (barre de menus, pas de Dock), point d'entrée
-`SynfusMain` dans [App.swift](Sources/Synfus/App/App.swift). Tous les composants sont
-des singletons `@MainActor` (`.shared`), la plupart `ObservableObject` observés
-par les vues SwiftUI. `applicationDidFinishLaunching` les démarre dans cet ordre :
-`WindowManager` → `HotKeyManager` → `MenuBarController` → `AttentionWatcher` →
-`FloatingBarController`.
+Point d'entrée `SynfusMain` (`App/App.swift`). Composants : singletons `@MainActor` (`.shared`),
+la plupart `ObservableObject`. `applicationDidFinishLaunching` démarre, dans l'ordre :
+`WindowManager` → `FreezeWatcher` → `HotKeyManager.rebind()` → `MenuBarController` →
+`AttentionWatcher` → `ClickAdvanceWatcher` → `FloatingBarController` → `LecteurEcran`.
 
-### Arborescence
-
-`Sources/Synfus/` est rangé par domaine — SwiftPM compile les sous-dossiers
-sans rien déclarer dans `Package.swift`. Un nouveau fichier va dans le dossier
-de son domaine ; un fichier qui n'en a pas est le signe d'un domaine à créer.
+`Sources/Synfus/` est rangé par domaine (SwiftPM compile les sous-dossiers sans déclaration). Un
+nouveau fichier va dans le dossier de son domaine ; un fichier sans domaine en annonce un nouveau.
 
 | Dossier | Contenu |
 | --- | --- |
-| `App/` | Point d'entrée, intégrité du bundle, démarrage automatique, `PressePapiers` (l'unique écriture presse-papiers) |
-| `Accessibilite/` | Lecture AX partagée, `--dump-windows`, titres à travers les espaces |
-| `Clients/` | `DofusClient`, `WindowTitle` (titres, pur), `ClientMemory` (mémoire et tri, pur), `Equipes` (équipes, pur), `WindowManager` (cœur : état, `start`, inventaire ; extensions `+PremierPlan`, `+Effectif`, `+Focus`, `+Fermeture`), `FreezeWatcher` |
-| `Invitations/` | `/invite Nom` par presse-papiers : `InvitationComposer` (pur) et `InvitationClipboard` |
-| `Attention/` | Détection du rebond du Dock |
-| `Raccourcis/` | Raccourcis globaux, enregistreur, enchaînement au clic |
-| `Rangement/` | Dispositions de fenêtres, `LayoutComputer` (pur) |
-| `Apercus/` | Captures ScreenCaptureKit et panneau d'aperçu |
-| `Preferences/` | `Preferences` et son protocole de stockage |
-| `Classes/` | Classes du jeu et icônes fournies par l'utilisateur |
-| `Marque/` | La Couvée : `SynfusMark` (CoreGraphics pur) et `SynfusGlyph` |
-| `Localisation/` | `L()`, les tables JSON par langue, le choix de langue |
-| `Interface/` | `MenuBarController`, `ConfirmationFermeture` ; `Barre/` (barre flottante et ses contrôles) ; `Reglages/` (une vue par onglet + contrôleur de fenêtre) |
-| `Lecture/` | Lecture de l'écran par OCR — position et combat : `ZoneEcran`, `PositionCarte`, `EmpreinteTexte`, `LectureCombat` (purs), `LecteurEcran`, `DiagnosticLecture` et `MoteurOCR` |
-
-Les logiques pures ont leur fichier propre (`WindowTitle`, `ClientMemory`,
-`LayoutComputer`, `BounceDetector`, `FreezeStrikes`…) : c'est ce qui les rend
-testables sans écran, et c'est là que les tests pointent.
-
-### Découverte des persos — le point central
-
-[WindowManager.swift](Sources/Synfus/Clients/WindowManager.swift) est le cœur. Il énumère
-toutes les fenêtres AX des processus dont le bundle ID contient `dofus`, puis
-**dérive tout du titre de la fenêtre** (`« Nom - Classe - version - Release »`) :
-
-- `isCharacterWindow` écarte les clients restés à l'écran de connexion (titre
-  « Dofus » seul). C'est essentiel : les inclure décalerait la numérotation des
-  slots, donc les raccourcis.
-- `characterName` = premier segment, `characterClass` = deuxième segment.
-  Tout le décodage du titre vit dans `WindowTitle` (Clients/), pur et testé
-  (`TitreDeFenetreTests`).
-- L'icône du Dock **ne peut pas** servir de repère : tous les clients partagent
-  le même bundle `Dofus.app`, donc la même icône. C'est la raison d'être de
-  toute l'approche par titre.
-
-Aucune notification système ne signale un changement de titre (reconnexion,
-changement de perso) : un `Timer` de 2 s rafraîchit, complété par les
-notifications `NSWorkspace` (lancement / terminaison / activation). Celles-ci
-passent par `refreshSoon()` et non `refresh()` : un changement d'application en
-émet deux, et enchaîner deux inventaires AX double le gel au moment précis où
-l'utilisateur bascule. Le timer, lui, saute son tour si un inventaire date de
-moins d'une seconde. Une bascule faite par Synfus est reconnue à
-`selfActivatedPID`, posé dans `focus()` : la notification d'activation qui en
-découle n'apprend rien, et l'inventaire attend 1 s (`refreshSoon(after:)`, qui
-ne garde qu'une échéance, la plus tardive) — le temps que la transition
-d'espace s'achève. `focus()` ne pose `kAXMain`/`kAXRaise` que s'il y a
-plusieurs fenêtres à départager dans le processus.
-
-**L'inventaire tourne hors du main thread.** `refresh()` ne lit rien :
-il compose une `InventoryRequest` avec l'état de l'instant (pids vivants dans
-l'ordre de lancement, pids à sauter, candidats cross-space) et l'envoie à
-`ClientInventoryEngine`, un `actor` à **exécuteur dédié** (`DispatchSerialQueue`
-— des IPC bloquants d'une seconde n'ont rien à faire sur le pool coopératif)
-dont `inventory(_:)` ne contient aucun `await` : un inventaire à la fois, par
-construction. Le résultat, des valeurs (`InventoryResult`, `DofusClient` est
-`Sendable` grâce à `AXHandle`), revient sur main dans `apply`, qui décide avec
-l'état **courant** : `ClientMemory.consolidate` (pur, testé) pour la mémoire et
-les découvertes cross-space, puis veilleur de gel, préférences, tri,
-publication. La politique de lancement, `InventoryScheduling` (pure, testée),
-garantit au plus un inventaire en vol et un différé, quelle que soit la
-rafale, et jette un résultat d'une génération dépassée. `refreshed()` attend
-qu'un inventaire lancé après l'appel soit appliqué — c'est ce que l'arrangeur
-utilise. Les **gestes** AX (focus, rangement, plein écran) restent sur main :
-ce sont des actions utilisateur sur un client à la fois, et `isReachable`
-leur épargne les processus en fermeture ou suspects. Cette séparation —
-inventaire hors main, gestes sur main — est une décision, pas un oubli.
-
-Chaque fenêtre est lue en **un seul IPC** (`AXUIElementCopyMultipleAttributeValues`
-pour sous-rôle, taille, titre et `"AXFullScreen"` — ce dernier porté par
-`DofusClient.pleinEcran`, pour la lecture de l'écran), et rien n'est republié sans avoir changé :
-`frontmostPID`, `frontmostIsDofus` et `clients` ne sont réaffectés qu'en cas
-de différence. Réordonner les persos passe par `resort()`, un simple retri de
-`clients` selon `characterOrder` — pas un inventaire —, avec le même
-comparateur pur que `refresh()` (`sorted(_:by:)`, testé dans
-`ClientOrderTests`). Le menu de la barre de menus se construit sur `clients`
-tel quel et ne demande qu'un `refreshSoon()`.
-
-**Un client peut cesser de rendre ses fenêtres.** Mesuré au `--dump-windows` :
-un client dont l'espace plein écran n'est pas actif retire sa fenêtre de l'ordre
-d'affichage, et `kAXWindows` — qui ne liste que ce qui s'y trouve — rend alors
-une liste **vide**, sans erreur. Le perso disparaissait donc de la barre, et son
-icône du Dock restant en place, l'appariement de la détection d'attention se
-décalait avec lui.
-
-D'où `rememberedClients`, une mémoire par **pid** : le processus vit aussi
-longtemps que le client, alors que la fenêtre va et vient au gré des espaces. Un
-perso mémorisé reste affiché, atténué, et reste cliquable — `activate()` sur le
-processus suffit à basculer vers son espace, l'élément AX ne sert qu'à départager
-plusieurs fenêtres d'un même client, et celui d'un perso mémorisé est périmé.
-
-La règle de fusion, `ClientMemory.withRemembered`, est pure et testée. Elle ne ressuscite que
-les processus **silencieux** — ceux qui ne rendent aucune fenêtre. Un client
-revenu à l'écran de connexion en rend une, simplement sans perso : le
-ressusciter afficherait un perso qui n'est plus en jeu.
-
-Un client déjà sur un espace inactif au démarrage de Synfus n'a jamais livré son
-titre à l'Accessibilité. Quand l'enregistrement de l'écran est accordé (celui
-des aperçus), [CrossSpaceTitles.swift](Sources/Synfus/Accessibilite/CrossSpaceTitles.swift)
-lève cette limite : `CGWindowListCopyWindowInfo` voit à travers les espaces, et
-`discoveredAcrossSpaces` — pure, testée — fabrique le dormant à partir du titre
-lu. La lecture n'a lieu que pour les pids sans aucune mémoire, et au plus une
-fois par 10 s pour un même pid (`crossSpaceChecked` — un client au login sur
-un autre bureau n'a rien à livrer et le resterait à chaque tour), et
-l'autorisation n'est **jamais demandée** par ce chemin : sans elle, la limite
-demeure, documentée dans les réglages.
-
-Tous les appels AX du processus sont bornés à 1 s
-(`AXUIElementSetMessagingTimeout` sur l'élément système, posé dans `start()`) :
-un client gelé ne répond jamais, et sans borne chaque inventaire resterait
-suspendu plusieurs secondes sur lui. La borne posée sur l'élément système est
-**par processus** (header SDK), elle vaut donc pour l'acteur ; elle reste à
-1 s même hors main — l'acteur est série, l'allonger retarderait la fraîcheur
-de tous les autres persos. Le Diagnostic affiche la durée du dernier
-inventaire : ~1 s pendant qu'un client gèle, barre fluide, c'est le déport qui
-fait son travail.
-
-L'identité d'un client est `slotKey` = `"<pid>#<index de fenêtre>"`. Le tri suit
-`Preferences.characterOrder`, une liste de noms : les persos non lancés sont
-simplement sautés, d'où des numéros de slot stables.
-
-Tout ce qui est affiché n'est pas mémorisé pour autant : `isPersistableName`
-écarte de `characterOrder` les noms qui ne désignent aucun perso — « Dofus
-3.3.4.9 » (client resté au login, dont le titre n'annonce que la version, et qui
-changerait à chaque mise à jour du jeu) et « Machin (2) » (le suffixe que
-`refresh()` ajoute lui-même aux homonymes, selon l'ordre de découverte). Ces
-clients restent dans la barre — on veut pouvoir cliquer dessus — mais, faute
-d'entrée dans l'ordre, le tri les relègue en fin sans décaler personne.
-`Preferences.purgeOrder` nettoie au démarrage les entrées enregistrées avant que
-ce filtre n'existe.
-
-### Détection d'attention
-
-Aucune API publique ne dit qu'une *autre* app réclame l'attention.
-[AttentionWatcher.swift](Sources/Synfus/Attention/AttentionWatcher.swift) contourne en
-observant, via [DockInspector.swift](Sources/Synfus/Attention/DockInspector.swift), la
-géométrie AX des icônes du Dock : `AXPosition.y` chute pendant le rebond. La
-décision elle-même est isolée dans
-[BounceDetector.swift](Sources/Synfus/Attention/BounceDetector.swift), une struct pure —
-elle ne lit rien, on la nourrit d'un relevé par tour — donc testable sans Dock ni
-écran ([BounceDetectorTests.swift](Tests/SynfusTests/BounceDetectorTests.swift)).
-
-Deux règles y font tout le travail, et aucune n'est décorative :
-
-- **Un rebond est un aller-retour — sauf quand l'aller suffit.** Regarder une
-  montée modeste revenait à prendre la réapparition d'un Dock masqué pour un
-  appel d'attention. Mais attendre l'arc entier coûte **une seconde de latence**,
-  ce qui se sent à l'usage : sur le relevé du 03/08, la montée commence à
-  15:00:51 et le retour ne s'achève qu'à 15:00:52. Au-delà de `certaintyRatio`
-  (0,45 de la hauteur de l'icône, atteint dès le premier tour de la montée), on
-  conclut donc sur l'aller. En deçà, ou faute de bandeau pour repère — la mesure
-  redevenant alors absolue —, le retour reste exigé.
-- **Un rebond se mesure par rapport au Dock, pas à l'écran.** Une icône qui
-  rebondit se détache du bandeau ; un Dock qui se masque ou se dévoile emporte
-  l'un et l'autre. `DockInspector.Inventory.strip` donne le cadre du bandeau, et
-  le détecteur suit l'**écart** icône ↔ bandeau. C'est une hypothèse — que le
-  bandeau ne bouge pas pendant un rebond —, d'où son affichage dans le
-  Diagnostic, comme l'appariement des rangs.
-
-  **En masquage automatique, les icônes reposent sous le bord de l'écran** —
-  sur un 1728 × 1117, à `y = 1117` pile : une position de repos n'a pas à
-  tenir dans l'écran. `BounceDetectorTests` rejoue ce relevé tel quel.
-
-Le survol reste écarté à part, par `mouseInDock`. Sa zone est celle du **bandeau
-entier**, pas des seules icônes Dofus : un Dock masqué se dévoile dès que le
-curseur touche le bord de l'écran, fût-ce à l'autre bout du Dock, et les icônes
-de Dofus remontent alors sans que le curseur soit au-dessus d'elles.
-
-S'y ajoutent les garde-fous d'origine — la taille écarte la magnification, un
-cooldown de 4 s évite les rafales — et le relevé est mis de côté tant que le
-curseur survole le Dock.
-
-Le relevé passe dix fois par seconde : rien de ce qu'il produit ne doit être
-republié sans avoir changé, et rien de ce qui ne change pas ne doit être relu.
-Deux mesures en découlent :
-
-- **Cache de structure.** Retrouver les icônes Dofus — enfants du Dock, titre
-  de chaque icône, sous-rôle, état de lancement — coûtait trente à cinquante
-  allers-retours Accessibilité par tour, alors que seules position et taille
-  varient. [DockGeometryReader.swift](Sources/Synfus/Attention/DockGeometryReader.swift)
-  garde les éléments AX (`DockInspector.Structure`) et, en régime permanent,
-  ne lit que la géométrie, en **un** IPC par élément
-  (`AXUIElementCopyMultipleAttributeValues`). Le tour complet ne revient qu'au
-  premier tour, quand le nombre de pids Dofus distincts diffère du nombre
-  d'icônes en cache, quand une lecture légère échoue (élément invalidé), et au
-  plus tard toutes les 2 s en filet. La décision, `DockRefreshPolicy`, est pure
-  et testée. `BounceDetector` reçoit exactement le même relevé qu'avant.
-- **`AttentionDiagnostics`.** `pairing` et `dockReading` vivent dans cet objet
-  séparé, observé par les seuls réglages : sur `AttentionWatcher`, ils
-  réévaluaient la barre flottante — qui n'a besoin que d'`alerting` — à chaque
-  mouvement du Dock. Les chaînes de diagnostic ne sont recomposées que si le
-  relevé a numériquement changé, et la liste des persos triée par pid est tenue
-  par abonnement à `$clients`, pas retriée à chaque tour.
-
-C'est aussi pourquoi le tour de boucle sort avant d'interroger le Dock
-quand aucun perso n'est connecté.
-
-L'appariement icône du Dock ↔ perso est une **hypothèse** : rang dans le Dock
-(trié par abscisse) ↔ rang par pid croissant, les deux suivant l'ordre de
-lancement. `dofusItems()` ne retient que les icônes de sous-rôle
-`AXApplicationDockItem` appartenant à une app lancée : une fenêtre réduite ou une
-entrée « récents » intitulée « Dofus » décalerait les rangs, donc l'appariement.
-L'identité d'une icône est son **rang**, jamais son abscisse — la magnification
-écarte les icônes sous le curseur, et chaque survol créait sinon une identité
-neuve. C'est pour cette raison que l'appariement est exposé dans l'onglet
-Diagnostic.
-
-L'appariement porte sur les **processus**, jamais sur les persos, et c'est
-[DockPairing.swift](Sources/Synfus/Attention/DockPairing.swift) — pur, testé —
-qui le tient. Une icône du Dock appartient à un processus ; `clients` porte un
-perso par **fenêtre**. Zipper les deux listes ne tenait qu'à longueurs égales,
-et un client resté à l'écran de connexion la rompait : icône sans perso, tous
-les rangs suivants décalés d'un cran, un rebond signalant le voisin et le
-passage automatique basculant sur le mauvais perso. On apparie donc rang ↔ pid
-croissant (`WindowManager.liveDofusPIDs`, le compte qui périme déjà le cache de
-structure), puis pid → perso. `DockPairing.fiable` dit si le compte d'icônes
-est bien celui des processus ; sinon le Diagnostic prévient plutôt que de
-laisser lire une correspondance fausse.
-
-[AttentionProbe.swift](Sources/Synfus/Attention/AttentionProbe.swift) est l'outil
-d'exploration qui a servi à établir ce mécanisme ; il journalise tout changement
-d'attribut dans `~/Library/Logs/Synfus/attention.log`.
-
-### Raccourcis globaux
-
-[HotKeyManager.swift](Sources/Synfus/Raccourcis/HotKeyManager.swift) utilise Carbon
-`RegisterEventHotKey`, délibérément et non un `CGEventTap` : cela réserve une
-combinaison auprès du système au lieu d'observer la frappe, donc aucune
-permission de saisie et aucune visibilité sur ce qui est tapé ailleurs. Le
-callback C ne pouvant rien capturer, il repasse par le singleton.
-
-Le gestionnaire écoute `kEventHotKeyPressed` **et** `kEventHotKeyReleased` : les
-raccourcis « à maintenir » — l'aperçu d'ensemble — en dépendent. Carbon n'émet pas
-de répétition automatique, un appui prolongé ne donne donc qu'un appui et un
-relâchement. Un modificateur seul reste hors de portée : `RegisterEventHotKey`
-exige une touche, et l'observer demanderait un moniteur d'évènements, c'est-à-dire
-exactement ce que l'on refuse de faire.
-
-[HotKey.swift](Sources/Synfus/Raccourcis/HotKey.swift) stocke des **keycodes de position
-ANSI** et non des caractères : sur AZERTY la rangée du haut tape `& é " '`, mais
-tout le monde l'appelle « 1 2 3 4 5 ». `rebind()` réenregistre tout après chaque
-modification de préférence.
-
-Le jeu par défaut sépare deux territoires, et cette séparation est une règle :
-la **rangée de chiffres** (`digitRow`) appartient à l'accès direct — ⌘1…⌘0
-numérotent les emplacements, ⌘0 étant celui du dixième —, tandis que toute la
-navigation tient sur la **touche sous Échap** (`escapeRowKey`), différenciée par
-les modificateurs : ⌘@ suivant, ⇧⌘@ précédent, ⌥⌘@ aperçu d'ensemble, ⌃⌘@
-bascule du passage auto. Aucun nouveau défaut ne doit piocher dans `digitRow`,
-sous peine de se heurter au slot du même rang.
-
-**Le keycode de la touche sous Échap dépend du type physique du clavier**, et
-non de la disposition : un ANSI y place `kVK_ANSI_Grave` (50), un ISO — donc
-tous les claviers Apple européens, clavier interne français compris —
-`kVK_ISO_Section` (10), et relègue le 50 à côté de la touche Majuscule gauche,
-là où AZERTY tape `<`. `escapeRowKey` interroge donc `KBGetLayoutType`. Le
-supposer à 50 partout est ce qui rendait ces quatre raccourcis muets sur un
-clavier français : ils étaient bien enregistrés — `RegisterEventHotKey` rendait
-`noErr` —, simplement sur une autre touche que celle annoncée.
-
-De là une règle sur les **libellés** : hormis la rangée de chiffres, nommée par
-sa position parce que ce sont les numéros d'emplacement, et les touches qui ne
-tapent rien (⇥ ⎋ ↩ flèches…), `keyName` demande le caractère à la **disposition
-active** via `UCKeyTranslate`. Aucune table figée : c'en était une qui affichait
-« @ » pour le keycode 50, et « A » pour la touche marquée Q d'un AZERTY. La
-table est résolue **une seule fois**, dans un `static let` — appelée de
-plusieurs fils à la fois, `TISCopyCurrentKeyboardLayoutInputSource` abandonne
-sur SIGABRT, ce que la suite de tests parallèle a mis au jour.
-
-Changer un défaut ne suffit pas : les préférences déjà enregistrées ne repassent
-jamais par la branche « premier lancement ». D'où `Preferences.defaultsVersion`
-et `adoptDefaults(from:)`, qui ne réécrit que les valeurs **encore identiques à
-l'ancien défaut** — un raccourci personnalisé est un choix. La génération est
-inscrite dans la sauvegarde, ce qui donne au passage la seule façon de
-distinguer « jamais eu ce réglage » de « effacé exprès ».
-
-**Un seul champ enregistre à la fois.** `ShortcutRecording` (dans
-[ShortcutRecorder.swift](Sources/Synfus/Raccourcis/ShortcutRecorder.swift))
-tient l'unique moniteur local et l'identité du champ qui a la parole ; prendre
-la parole la retire à qui l'avait. Chaque champ posait auparavant le sien :
-cliquer un second sans terminer le premier laissait deux moniteurs en place, le
-premier restait sur « Pressez… » indéfiniment, son moniteur survivait à la
-fenêtre, et une frappe pouvait être attribuée aux deux — dont l'un se faisait
-ensuite refuser pour doublon.
-
-Ce doublon-là, justement, se voit désormais **ligne par ligne** :
-[HotKeyConflicts.swift](Sources/Synfus/Raccourcis/HotKeyConflicts.swift) — pur,
-testé — rend les combinaisons données deux fois, et la ligne concernée porte un
-avertissement. `HotKeyManager.rejected` ne disait que la combinaison refusée,
-pas le geste : le raccourci s'affichait, bien en place, et restait sans effet.
-La liste est `@Published` pour que cet avertissement apparaisse et disparaisse
-au rythme des modifications.
-
-### Enchaîner les persos au clic
-
-[ClickAdvanceWatcher.swift](Sources/Synfus/Raccourcis/ClickAdvanceWatcher.swift) : un clic
-sur un client de jeu avec une touche tenue — `Preferences.advanceModifier`,
-**`fn` par défaut** — passe au perso suivant une fois le clic relâché, comme
-« Perso suivant » au clavier. Un clic sans la touche reste un clic.
-
-La limite est nette et ne doit pas bouger. **Synfus n'émet, ne rejoue et ne
-duplique aucun évènement.** Un clic reste un clic, et il en faut toujours autant
-que de persos ; la seule chose automatisée est le changement de fenêtre, que
-`cycleNext` fait déjà au clavier. Rejouer une même action sur plusieurs clients
-serait un multiplicateur, c'est-à-dire exactement ce que les conditions
-d'utilisation de Dofus interdisent — et ce que le dépôt refuse au même titre
-qu'il refuse d'embarquer les visuels d'Ankama. Aucun délai n'est randomisé :
-`settleDelay` est fixe et n'existe que pour laisser le client traiter le clic
-avant de perdre le focus.
-
-**C'est la touche qui porte l'intention** : `fn`, que ni le jeu ni macOS
-n'interprètent. Mesuré en jeu, le client reçoit un clic modifié avec le drapeau
-dessus et ne le traite pas comme un clic ordinaire — avec ⌘, déplacer un perso
-passe, parler à un PNJ non. Synfus ne peut rien y faire : il observe, il ne
-réécrit pas, et retirer le modificateur de l'évènement demanderait exactement
-le `CGEventTap` que le projet refuse. [ClickModifier.swift](Sources/Synfus/Raccourcis/ClickModifier.swift)
-— pur, testé dans `ClickModifierTests` — tient la règle : la touche choisie,
-**et elle seule** (`isHeldAlone`), le verrouillage des majuscules ignoré ;
-⇧fn-clic ou ⌥-clic gardent le sens que le jeu leur donne. ⌃ ⌥ ⇧ ⌘ restent
-proposés (clavier sans `fn`, habitude) avec leur avertissement dans les
-réglages ; sur les claviers Apple récents, relâcher 🌐/fn seule peut ouvrir
-les émojis — réglage système, documenté dans l'aide. Le diagnostic affiche les
-touches vues au dernier clic (`lastModifiers`) : c'est ainsi qu'on vérifie
-que ce clavier-là fait bien voir `fn` à macOS. La clé `advanceArmHotKey`
-d'une sauvegarde ancienne est ignorée à la lecture (testé).
-
-L'observation passe par `addGlobalMonitorForEvents`, **passif** — rien n'est
-intercepté ni modifié —, et sur `.leftMouseUp` plutôt que `.leftMouseDown` : à
-l'appui, le relâchement n'est pas encore parti, et prendre le focus entre les
-deux laisse le client avec un bouton jamais relâché. Elle porte sur la souris
-seule, ce qui préserve la règle posée pour les raccourcis : l'app ne voit pas ce
-qui est tapé — la touche tenue est lue sur les drapeaux du clic lui-même.
-Reste une inconnue que la documentation d'Apple ne tranche pas — un moniteur
-de souris réclame-t-il « Surveillance de la saisie » ? — d'où le compteur
-`seenClicks` affiché dans les réglages : à zéro après un clic, c'est que
-macOS ne livre rien.
-
-### Signal de bascule
-
-À chaque bascule faite par `focus()` — raccourci, enchaînement au clic,
-passage automatique —, la pastille du perso atteint **clignote** 1,5 s dans
-la barre (`WindowManager.basculeSignalee`, `SwitchBlink`) : en enchaînant au
-fn-clic, la seule surbrillance de la pastille active ne se remarquait pas.
-Une annonce flottante près du curseur a été essayée et rejetée — elle
-gênait en jeu : le signal vit dans la barre, rien ne se pose sur le jeu. Le
-clic sur une pastille passe `signaler: false`. Réglage `signalerBascule`,
-actif par défaut.
-
-La rotation (`cycle`) passe par [Rotation.swift](Sources/Synfus/Clients/Rotation.swift)
-— pure, testée — qui **saute les injoignables** (`unreachablePIDs` : fermeture
-en cours, suspects de gel). Après un ⌘Q, le client mourant reste affiché par
-la mémoire ; la rotation s'y posait, activait un processus sans fenêtre, et
-un appui sur deux ne montrait rien. L'accès direct (⌘1…, pastille) n'y passe
-pas.
-
-### Lecture de l'écran (OCR)
-
-[LecteurEcran.swift](Sources/Synfus/Lecture/LecteurEcran.swift) lit, dans la
-fenêtre du perso au premier plan, une fois par seconde, deux zones : la
-**position** (nom de la zone et coordonnées, en haut à gauche) et le
-**combat** (bouton « Fin de tour » et son décompte, en bas à droite par
-défaut). Deux réglages, `lirePosition` et `lireCombat`, éteints par défaut —
-seconde autorisation TCC, demandée seulement par leur bascule, dans le
-Diagnostic.
-
-Le coût, mesuré sur de vraies captures :
-
-- **Zones serrées, en fractions du contenu** ([ZoneEcran.swift](Sources/Synfus/Lecture/ZoneEcran.swift),
-  pur) : l'interface du jeu suit la taille de la fenêtre, la zone aussi. Du
-  *contenu* et non de la fenêtre : en fenêtré la barre de titre (hauteur
-  d'AppKit, `NSWindow.frameRect(…, .titled)`) décale tout ; le plein écran se
-  sait par `DofusClient.pleinEcran`, lu par l'inventaire dans le même IPC que
-  le titre. La position par défaut fait ~ 530 × 70 px, trois fois moins que
-  la première version.
-- **Échelle fixe** : le contenu est ramené à 1080 px de haut
-  (`ZoneEcran.hauteurReference`, plafonné au natif) — le texte a toujours la
-  même taille, une grande fenêtre ne coûte pas plus. Vision `.fast` ne lit
-  rien de la police du jeu ; `.accurate` lit juste en ~50 ms, sur l'image
-  posée sur une **marge noire** (`encadree`) : un glyphe collé au bord se lit
-  mal — « a16 » pour « -16 », mesuré.
-- **L'OCR ne repasse que si la zone a changé** (`SignatureZone`) : pixels
-  clairs réduits à une grille (`EmpreinteTexte`), et pour le combat la part
-  colorée. Le décompte est vert, sous le seuil des pixels clairs : il ne
-  relance pas l'OCR chaque seconde ; il est lu au changement d'état, et
-  l'échéance tenue localement (`EtatCombat.monTour(fin:)`).
-- **L'inventaire ScreenCaptureKit gardé** (`captureData(…, inventaireGarde:)`).
-- Le premier OCR `.accurate` charge le modèle (~28 s à froid) :
-  `MoteurOCR.prechauffer()` le paie à l'activation.
-
-Le combat ([LectureCombat.swift](Sources/Synfus/Lecture/LectureCombat.swift),
-pur) : « Fin de tour » (fr, en, es, tolérant à l'OCR) sur un bouton **en
-couleur**, c'est son tour ; sur un bouton **gris**, celui d'un autre ;
-« Prêt », le placement ; rien, hors combat. Aucune teinte n'est supposée :
-le rose par défaut change avec les **thèmes** du jeu, le gris jamais — c'est
-lui qui fait foi. La couleur (`ratioColore` : saturation ≥ 0,3, clarté ≥
-0,35, toute teinte) se mesure sur le seul **corps du bouton**, la boîte du
-texte lu élargie (`corpsDuBouton`) : la zone entière contient aussi le
-décompte, vert. Mesuré sur le bouton grisé : 0 %, icônes lavande pâle
-comprises (s ≈ 0,16) ; seuil `seuilBouton` 25 %. La part colorée de la zone
-entière ne sert qu'à relancer l'OCR quand elle franchit `seuilSignature`
-(10 %). La pastille le montre (`CombatBadge`) : contour et décompte à son
-tour, une épée en combat. En plein écran, seul le perso devant est lisible :
-l'état des autres date de leur dernier passage devant.
-
-Les zones se **calibrent** d'un tracé (`CalibrationZonesView`, depuis le
-Diagnostic) : le joueur déplace son interface une fois pour toutes, chercher
-le bouton partout à chaque lecture coûterait pour rien. `nil` dans les
-préférences = la valeur par défaut, qui suit ainsi ses corrections futures.
-
-Les autres persos sont lus **au survol** de leur pastille (position, relevé
-de plus de 10 s) et par « Tout lire » : réglages ouverts, Synfus est devant.
-Au survol, la position s'affiche sous la pastille — dans l'aperçu s'il est
-actif, sinon dans une **étiquette** (`PreviewPanelController`, mode
-`.etiquette`, sans capture de fenêtre) ; les info-bulles `.help` ne sont pas
-fiables pour une app inactive. Les compteurs et les zones lues vivent dans
-`DiagnosticLecture`, observé par les seuls réglages. `RealCaptureTests`
-rejoue la chaîne sur une capture (`SYNFUS_CAPTURE`, `SYNFUS_PLEIN_ECRAN=1`,
-`SYNFUS_COMBAT_ATTENDU=monTour`, `SYNFUS_ZONE_ENTIERE=1` pour un recadrage
-du seul bouton).
-
-### Fermer les clients
-
-Le client gèle systématiquement à la fermeture chez certains joueurs, qui
-finissaient chaque session dans « Forcer à quitter ». `WindowManager.close`
-automatise l'escalade : `terminate()` (Quit Apple Event — un client gelé
-l'ignore), puis `forceTerminate()` si le processus est toujours là après 2 s.
-C'est une opération de **processus**, pas une saisie — la règle « Synfus n'émet
-aucun évènement » reste entière. Points d'entrée : clic droit sur une pastille
-(« Fermer “Nom” »), « Fermer tous les persos » dans le menu contextuel de la
-barre et la barre de menus.
-
-`closeAll` ferme **un processus à la fois** — `clients` porte un perso par
-fenêtre, et deux persos d'un même client donnaient deux escalades sur le même
-pid : deux Apple Events, deux échéances, deux coups de grâce. Et c'est le seul
-geste de l'app qui demande un dernier mot : irréversible, il vit dans les menus
-juste au-dessus de « Quitter », et une session de huit comptes ne doit pas
-tomber sur un clic de travers. Cette alerte appartient à l'interface
-([ConfirmationFermeture.swift](Sources/Synfus/Interface/ConfirmationFermeture.swift)),
-par où passent les deux menus ; le modèle n'expose que `close`, `closeAll` et
-`processusAFermer`, sans UI.
-
-**L'envoi du Quit Apple Event peut bloquer plusieurs secondes** quand le client
-est déjà gelé — c'est ce qui figeait Synfus au moment de fermer. `terminate()`
-part donc d'une `Task.detached` ; le `forceTerminate()`, un signal, ne bloque
-jamais et reste sur le main actor. Pendant la fermeture, le pid est dans
-`closingPIDs` : l'inventaire ne l'interroge plus (questionner l'Accessibilité
-d'un mourant, c'est payer la borne d'une seconde à chaque tour), `FreezeWatcher`
-ne le sonde pas, et sa pastille — maintenue par la mémoire — porte un indicateur
-d'attente jusqu'à la mort du processus.
-
-[FreezeWatcher.swift](Sources/Synfus/Clients/FreezeWatcher.swift) rattrape en plus les
-fermetures qui ne sont **pas** passées par Synfus. Un client gelé après
-fermeture est, vu d'ici, un processus vivant sans aucune fenêtre — exactement
-comme un dormant sain sur un espace plein écran inactif. Ce qui les distingue
-est la **réponse** : un dormant sain répond à l'Accessibilité (une liste vide
-est une réponse), un gelé laisse la sonde expirer. La règle d'abattage est
-volontairement stricte — sans fenêtre **et** muet à trois sondes consécutives
-espacées de 5 s — pour ne jamais viser un vivant : un client qui charge a une
-fenêtre, un dormant répond en quelques millisecondes. Chaque abattage est
-consigné dans le Diagnostic ; la bascule `killFrozenClients` (onglet Persos)
-est active par défaut.
-
-**Une fermeture se voit, et va vite.** Trois sondes espacées de 5 s, c'était
-une quinzaine de secondes de client gelé sous les yeux du joueur qui venait
-de le quitter. Le veilleur guette donc, deux fois par seconde, les fenêtres
-de jeu **à l'écran** (`CrossSpaceTitles.affiches` : `CGWindowList`, sans
-Accessibilité ni permission — un client gelé ne peut pas bloquer la lecture).
-Une fenêtre qui quitte l'écran sans changement d'espace (`VeilleFermeture`,
-pure, testée ; garde de 1,5 s après `activeSpaceDidChange`) signale une
-**fermeture probable** : un inventaire part aussitôt, et **une** sonde muette
-suffit (`requisFermeture`) — ~1,5 s après le ⌘Q. L'abattage exige toujours
-sans fenêtre **et** muet : une fenêtre réduite ou un client passé sur un
-autre espace répondent et sont blanchis ; le soupçon s'éteint après 5 s.
-
-**La sonde, c'est l'inventaire.** `refresh()` interroge déjà `kAXWindows` sur
-chaque client : c'est lui qui constate le mutisme (`.cannotComplete`) et le
-transmet en `mutePIDs`. Le veilleur ne sonde rien lui-même : une sonde à part
-doublerait la borne d'une seconde à chaque tour. Un pid pris en défaut (`suspects`) n'est réinterrogé qu'à l'échéance
-(`shouldProbe`), avec la **même** borne d'une seconde que les autres : une
-borne plus courte lui ôterait tout moyen de se blanchir, et un client vivant
-mais lent — chargement, combat chargé — finirait abattu. Entre deux
-échéances, l'inventaire le saute et la mémoire l'affiche atténué. Un pid
-silencieux mais non sondé garde son ardoise : la sonde est un **fait
-rapporté** par l'inventaire (`probedPIDs`), pas déduit de l'échéance — entre
-le départ de l'inventaire et son retour, une échéance a pu passer, et un
-suspect sauté au départ serait sinon blanchi sur une réponse jamais demandée.
-La comptabilité est une struct pure, `FreezeStrikes`, testée dans
-`FreezeStrikesTests` ; les strikes sont comptés même quand `killFrozenClients`
-est désactivé, seul le coup de grâce en dépend — et un condamné qu'on n'achève
-pas n'est plus resondé que toutes les 30 s (`condemnedInterval`). Le coup de
-grâce lui-même, comme celui de `close()`, passe par `ClientTerminator`.
-
-### Rangement des fenêtres
-
-[WindowArranger.swift](Sources/Synfus/Rangement/WindowArranger.swift) applique une
-disposition — côte à côte, mosaïque, un grand + vignettes — aux fenêtres des
-clients en posant `kAXPosition`/`kAXSize`, et rien d'autre : la règle « aucun
-évènement synthétisé » vaut ici aussi. Le calcul des cadres est isolé dans
-[LayoutComputer.swift](Sources/Synfus/Rangement/LayoutComputer.swift), une logique pure
-(zone + nombre → cadres, repère AX y vers le bas) testée dans
-[LayoutComputerTests.swift](Tests/SynfusTests/LayoutComputerTests.swift) — la
-conversion Cocoa → AX (`zoneAX`) comprise, multi-écrans inclus.
-
-Les exclusions sont des décisions : un perso `dormant` (élément AX périmé) et
-une fenêtre en plein écran (lue sur l'attribut littéral `"AXFullScreen"` — on ne
-sort jamais personne du plein écran d'autorité) sont écartés, avec leur raison
-dans le `Rapport` publié, affiché dans l'onglet Diagnostic. Tout est ramené sur
-**un seul** écran — celui du perso au premier plan — et la pose se fait
-**taille → position → taille** : certains clients plafonnent la taille tant que
-la fenêtre chevauche son ancien écran.
-
-Quatre dispositions : côte à côte, mosaïque, un grand + vignettes, et
-**empilés plein cadre** (`.empilee`, la seule où les cadres se recouvrent —
-chaque client occupe tout l'écran, la barre fait tourner la pile). S'y ajoutent
-deux bascules hors `LayoutComputer` : **tout en plein écran** (un espace par
-perso, attribut littéral `"AXFullScreen"` posé y compris sur les dormants —
-le basculement passe par l'objet fenêtre, hypothèse rapportée au Diagnostic)
-et son inverse.
-
-Points d'entrée : le **bouton de la barre flottante** (`ArrangeMenuButton`,
-dans la zone des modes — le seul clic droit s'était avéré introuvable), le
-sous-menu de la barre de menus, le clic droit, et un raccourci optionnel
-**sans défaut** (modèle `toggleBar`) qui rejoue `Preferences.lastArrangement`.
-
-Le geste **« Lancer la session »** (`WindowManager.lancerSession`) compose des
-gestes existants : ranger selon la dernière disposition, puis basculer sur le
-perso 1 — raccourci optionnel sans défaut (`sessionHotKey`).
-
-### Équipes
-
-À huit comptes, on joue rarement tout le monde d'un coup. Les équipes
-([Equipes.swift](Sources/Synfus/Clients/Equipes.swift), pur, testé dans
-`EquipesTests`) sont une **appartenance, pas un ordre** : une `Equipe` est
-une liste de noms, sous-ensemble de `characterOrder`, et l'effectif garde
-l'ordre de la barre. Jusqu'à `Equipes.maximum` (4). Ni nom ni couleur : un
-secteur montre son numéro et un point par membre à la couleur de sa classe.
-
-`WindowManager` publie deux listes. `clients`, **tous** les persos — c'est
-la liste de l'inventaire, de « Fermer tous les persos », de la détection
-d'attention (appariement Dock par pid) et des réglages. `effectif`,
-`clients` restreint à l'équipe active — c'est ce que voient la barre (pastilles
-et numéros), `focus(slot:)` (⌘1 = premier de l'équipe), `cycle(by:)` (donc
-suivant/précédent et l'enchaînement au clic), `lancerSession`, le rangement
-des fenêtres (le rapport dit l'équipe), l'aperçu d'ensemble et le menu de la
-barre de menus. Un seul foyer de calcul, `republierEffectif`, appelé à chaque
-publication de `clients` et par un abonnement `CombineLatest` aux préférences
-— qui reçoit les valeurs émises, car `@Published` publie **avant**
-d'affecter. Rien n'est republié sans avoir changé.
-
-L'équipe active (`equipeActive`) est un **état de session**, jamais
-persisté : Synfus démarre toujours sur « Tous ». Les compositions, elles,
-sont dans `Preferences.equipes`, gardées ⊆ `characterOrder` par `forget` et
-`purgeOrder`. Un index d'équipe devenu orphelin ramène à « Tous »
-(`activeValide`). Un perso au premier plan hors de l'équipe n'a pas de
-`currentIndex` : `cycle` va au premier de l'effectif. Les noms non
-persistables (« Dofus 3.3.4.9 », « Nom (2) ») n'ont jamais d'équipe et
-n'apparaissent que sous « Tous ».
-
-Il n'y a **pas de bascule** : la fonction n'existe que par ses équipes. La
-seconde rangée de la barre ([TeamRow.swift](Sources/Synfus/Interface/Barre/TeamRow.swift))
-n'apparaît que s'il y a une équipe — ou le temps d'un glisser, pour en créer
-une : « Tous », un secteur par équipe, et « + » tant qu'on peut en créer une.
-Une équipe naît d'un dépôt sur « + » et disparaît quand elle se vide, rien à
-configurer. Pendant le glisser les secteurs **s'agrandissent** (`agrandi`) :
-une cible se vise, un onglet se lit. Le **même** `DragGesture` que le
-réordonnancement sert au dépôt : au-dessus d'un secteur, on surligne sans
-permuter (`dropTarget`), et l'affectation se fait au relâchement — jamais en
-cours de geste, chaque écriture de préférence étant un JSON et un redessin.
-Le début du glisser ferme l'aperçu au survol et `hover` l'ignore tant que
-`dragging` est posé : il cachait la rangée visée. `coordinateSpace` est posé
-sur le `VStack` pour que cadres de pastilles et de secteurs se comparent dans
-un seul repère. L'onglet Persos offre le même geste par un `Picker` par ligne.
-Le raccourci « Équipe suivante » est sans défaut et n'apparaît qu'avec une
-équipe. La rangée change la hauteur du panneau en plein geste : AppKit
-gardant l'origine en bas à gauche, `FloatingBarController.topEdge` tient le
-**bord haut** en place — sinon les pastilles descendaient sous la souris.
-
-### Invitations par presse-papiers
-
-Inviter sept persos à la main, c'est sept `/invite Nom` tapés. Synfus les
-**compose**, il ne les envoie pas : la règle « aucun évènement émis » reste
-entière, [PressePapiers.swift](Sources/Synfus/App/PressePapiers.swift) est
-l'unique écriture dans `NSPasteboard`, et le joueur colle lui-même (⌘V ↩) —
-un geste par invité, comme un clic par perso dans l'enchaînement au clic.
-Envoyer la commande au tchat serait exactement la saisie synthétisée que le
-dépôt refuse.
-
-[InvitationComposer.swift](Sources/Synfus/Invitations/InvitationComposer.swift)
-(pur, `InvitationComposerTests`) choisit qui : l'effectif sans le **chef** —
-le perso devant, par pid —, les noms **du titre** (`characterName(fromTitle:)`,
-jamais « Nom (2) », que le jeu ne connaît pas), dédoublonnés, clients au
-login exclus, dormants inclus. Le raccourci `inviteHotKey` — **⌘: par
-défaut** (keycode 47, la touche « : » d'un AZERTY ; c'est aussi
-« Orthographe et grammaire » dans les apps de texte, un choix de
-l'utilisateur, posé à la génération 6 des défauts) tourne en boucle. Le
-**chef est fixé au premier appui** et le reste jusqu'au dernier invité
-(`tourTermine`) ou s'il quitte l'effectif : avec le passage automatique,
-l'invité rebondit et Synfus bascule dessus — sans cela, le tour reprendrait du
-point de vue du nouveau perso et réinviterait le chef. Le clic droit d'une
-pastille copie l'invitation de ce perso-là sans toucher au tour.
-`inviteFormat` (`/invite %nom`) est un réglage texte : le jour où la commande
-change, personne ne recompile. La pastille copiée porte `CopiedBadge` 1,2 s,
-en overlay — la barre ne change pas de taille. « Rétablir les raccourcis par
-défaut » (`Preferences.resetShortcuts`) remet chaque raccourci à son défaut,
-efface ceux qui n'en ont pas, garde le nombre d'emplacements.
-
-### Localisation
-
-L'interface parle français, anglais ou espagnol — les trois langues des
-joueurs de Dofus. [Localisation.swift](Sources/Synfus/Localisation/Localisation.swift)
-tient tout : le code ne porte que des **clés** (`L("barre.aucunPerso")`,
-`L("raccourcis.perso", slot + 1)`), et les textes vivent dans
-[Resources/Localisation/](Resources/Localisation/) — `fr.json`, `en.json`,
-`es.json`, un objet plat trié, lisible par qui veut traduire. Le français est
-la langue source et le repli : une clé absente d'une traduction s'affiche en
-français, une clé absente de tout s'affiche telle quelle — visible, donc
-corrigeable. Les arguments suivent `String(format:)` : `%@` pour un texte,
-`%lld` pour un entier (jamais un `Int32` — `pid_t` se convertit en `Int`).
-
-Pas de `.lproj` ni de `Bundle.module`, et c'est un choix : `build.sh` copie
-le dossier dans `Contents/Resources/Localisation`, et sans bundle — `swift
-run`, les tests — `L10n.dossier` retombe sur celui du dépôt via `#filePath`.
-La table est chargée **une fois**, dans un `static let` (sûr quel que soit
-le fil qui appelle `L()` en premier) : changer de langue veut dire relancer.
-La langue vient de `Locale.preferredLanguages` (`Langue.choisir`, pure,
-testée : première préférence reconnue, français à défaut), qui reflète aussi
-le choix par application de Réglages Système › Langue et région — possible
-parce que `build.sh` déclare `CFBundleLocalizations` dans l'Info.plist. Le
-réglage « Langue » de l'onglet Général écrit la même clé, `AppleLanguages`,
-dans le domaine de l'app (`LangueReglage`), et propose de relancer.
-
-Ce qui est traduit : les réglages, la barre, les menus, les rapports du
-Diagnostic. Ce qui reste en français : les journaux et `--dump-*`.
-`LocalisationTests` verrouille l'ensemble : mêmes clés
-dans les trois tables, mêmes spécificateurs de format, et **chaque clé du
-code existe dans `fr.json` et réciproquement** — une clé morte ou une faute
-de frappe casse la suite. Les tests qui touchent un libellé comparent à
-`L("clé")`, jamais à un mot : ils tiennent quelle que soit la langue de la
-machine.
-
-Deux règles pour une nouvelle vue : une seule chaîne par libellé (une aide
-composée en `"…" + "…"` se traduit mal et casse l'ordre des arguments), et
-les types que `Tools/` compile seuls — `DofusClass`, `SynfusMark` — n'appellent
-pas `L()` ; leur nom localisé vit dans une extension du dossier
-`Localisation/` (`DofusClass+Localisation.swift`).
-
-Le titre de fenêtre, lui, est dans la langue du **jeu** : un client anglais
-annonce « Rogue », un espagnol « Tymador ». `DofusClass.Breed` porte donc
-les noms `en` et `es` de chaque classe, et `key(for:)` les ramène à la clé
-française — même icône, même couleur, testé dans `DofusClassTests`. Sans ces
-alias, tout joueur non francophone voyait ses persos en classe inconnue.
-
-### Préférences
-
-[Preferences.swift](Sources/Synfus/Preferences/Preferences.swift) sérialise l'ensemble en
-JSON sous une clé unique, `fr.synseria.synfus.preferences`, dans le stockage
-fourni à l'initialisation (`UserDefaults.standard` en production).
-
-Il n'y a **aucune migration** depuis les identifiants précédents
-(`fr.dofusyn.DofuSyn`, `fr.synfus.Synfus`) : c'est un choix assumé. Comme
-`UserDefaults.standard` range ses données dans un fichier nommé d'après le
-`BUNDLE_ID`, changer celui-ci repart d'un plist vierge — les anciens
-`~/Library/Preferences/fr.{dofusyn.DofuSyn,synfus.Synfus}.plist` sont orphelins
-et peuvent être supprimés.
-
-Chaque `@Published` déclenche `save()` dans son `didSet` ; le drapeau `loading`
-évite les écritures pendant le chargement. Un réglage s'écrit en deux endroits :
-sa propriété (dont la valeur initiale est le défaut) et **une ligne** de la table
-`reglages`, qui dit sa clé JSON et en dérive écriture et lecture. Un nouveau
-réglage y entre en `.facultatif` (ou `.optionnel` si `nil` est permis) : absente
-d'une sauvegarde ancienne, la clé laisse le défaut — seules les cinq clés
-d'origine sont `.requis`. Les tests d'empreinte (`PreferencesTests`, « Chaque
-réglage s'écrit sous sa clé… ») figent le JSON écrit : une clé ne se renomme
-jamais. Les conformances `Codable` de `Ecriture`/`Lecture` sont isolées au main
-actor (`@MainActor Encodable`), ce qui laisse les closures toucher `Preferences`.
-
-Attention au `didSet` de `slotCount` : `@Published` transforme la propriété en
-propriété calculée, donc s'y réassigner relance le `didSet` — d'où le drapeau
-`clamping`.
-
-### Interface
-
-- **Un réglage n'apparaît que s'il sert.** Les options d'une fonction coupée
-  sont masquées, pas grisées : les options de la barre à « Afficher la
-  barre », la touche de
-  l'enchaînement au clic à sa bascule. Une nouvelle option suit la règle.
-- [BarView.swift](Sources/Synfus/Interface/Barre/BarView.swift) — barre flottante, hébergée dans
-  un `NSPanel` non activable (`canBecomeKey = false`) par
-  [FloatingBarController.swift](Sources/Synfus/Interface/Barre/FloatingBarController.swift) :
-  un overlay de jeu ne doit jamais capter le clavier. Le déplacement passe par
-  `performDrag(with:)` d'AppKit (`WindowDragArea`), pas par un `DragGesture` —
-  ce dernier reste toujours un cran derrière la souris. `didMove` arrive en
-  continu pendant le geste : `panelMoved` ne coupe `autoCenterBar` que s'il est
-  encore vrai et garde la position dans `pendingOrigin`, écrite dans
-  `barOrigin` 250 ms après le dernier mouvement (`flushPendingOrigin`, aussi
-  appelé à la fermeture de l'app). Écrire à chaque évènement, c'était un JSON
-  et un redessin de toutes les vues qui observent `Preferences` par pixel.
-  Le curseur de la poignée (main ouverte) exige `CurseurArrierePlan` :
-  macOS ignore `NSCursor.set()` d'une app qui n'est pas active, ce que Synfus
-  n'est jamais. La propriété de connexion privée `SetsCursorInBackground`,
-  résolue par `dlsym`, lève la limite — absente, on retombe sur la flèche.
-  Le timer de 2 s appelle `updateVisibility(force: false)` — il ne touche au
-  panneau que si son état est faux —, les notifications gardent `force: true` :
-  c'est ce qui remonte la barre au-dessus d'un espace plein écran fraîchement
-  activé.
-  Le panneau est au niveau `.statusBar` et non `.floating` : un espace plein
-  écran héberge la fenêtre du jeu à un niveau propre, sous lequel `.floating`
-  disparaît. `.stationary` est délibérément absent du `collectionBehavior`, il
-  brouille le suivi lors d'un passage en plein écran.
-- La visibilité de la barre se décide sur `WindowManager.frontmostPID` /
-  `frontmostIsDofus`, jamais en interrogeant `NSWorkspace` : au moment où l'on
-  apprend qu'une app passe devant, `frontmostApplication` désigne encore la
-  précédente. Le pid vient de la notification elle-même, la décision est prise
-  **avant** `refresh()` — l'inventaire AX peut bloquer des centaines de
-  millisecondes sur un client occupé —, et le timer de 2 s la réévalue en filet.
-  `WindowManager` déclenche ces réévaluations par un rappel,
-  `visibiliteARevoir`, posé par `AppDelegate` : le modèle ne connaît pas la barre.
-  La règle est isolée en fonction pure, `computeVisibility`, donc testée.
-- [SettingsView.swift](Sources/Synfus/Interface/Reglages/SettingsView.swift) — barre latérale à
-  gauche, quatre sections (Raccourcis, Persos, Classes, Diagnostic) à droite +
-  `SettingsWindowController`, qui doit appeler `NSApp.activate(ignoringOtherApps:)`
-  car l'app est en mode accessory. À l'ouverture, la fenêtre se place centrée
-  sous la barre flottante (`visibleBarFrame`), au centre de l'écran sinon.
-- Le réordonnancement des persos dans la barre passe par un `DragGesture` en
-  espace de coordonnées nommé, pas par `.onDrag`/`.onDrop` : le drag & drop
-  système ne démarre pas de façon fiable depuis un `NSPanel` non activable.
-- [MenuBarController.swift](Sources/Synfus/Interface/MenuBarController.swift) — le menu est
-  reconstruit à chaque ouverture (`menuNeedsUpdate`). Les raccourcis y sont
-  affichés en texte attribué, à titre indicatif : ce sont de vrais raccourcis
-  globaux Carbon, pas des key equivalents de menu.
-- [PreviewPanelController.swift](Sources/Synfus/Apercus/PreviewPanelController.swift) —
-  aperçus des fenêtres, dans un `NSPanel` **distinct** de la barre : celle-ci se
-  dimensionne sur son contenu (`fixedSize` + `preferredContentSize`) et se
-  recentre à chaque changement de taille, donc y greffer un aperçu la ferait
-  sauter à chaque survol. Le panneau est `ignoresMouseEvents`.
-
-### Aperçus des fenêtres
-
-[WindowPreviewService.swift](Sources/Synfus/Apercus/WindowPreviewService.swift) capture
-via **ScreenCaptureKit** — `CGWindowListCreateImage` est déprécié depuis
-macOS 14. Aucune API publique ne relie un `AXUIElement` à une fenêtre capturable :
-l'appariement se fait sur `(pid, titre)`, avec repli sur le pid quand le processus
-n'a qu'une fenêtre (le titre change à la reconnexion). C'est une hypothèse au même
-titre que l'appariement du Dock, donc testée à part et exposée dans le Diagnostic.
-
-La capture s'exécute hors du main actor et ne rend que du **PNG** : ni `SCWindow`
-ni `CGImage` ne franchissent la frontière d'isolation, ce qui évite d'avoir à
-plaider leur sendabilité.
-
-L'inventaire `SCShareableContent` fait le tour de toutes les fenêtres du système
-et coûte bien plus que la capture elle-même. Il appartient à
-`PreviewCaptureEngine`, un `actor` qui le garde en mémoire et ne le refait que
-s'il date de plus de 3 s ou si un perso demandé n'y trouve pas sa fenêtre — et
-toujours **une fois par rafraîchissement**, pour tous les persos restants, non
-une fois par perso. Il n'entre dans l'acteur que des requêtes `Sendable`, il
-n'en sort que du PNG. Les captures restent séquentielles, faute de pouvoir
-faire traverser un `SCWindow` — non `Sendable` — vers une tâche fille.
-
-Le survol d'une pastille **préchauffe** la capture : `BarView.hover` appelle
-`refresh` dès l'entrée, en parallèle des 400 ms d'attente, si aucune vignette
-n'est connue pour ce perso et si l'autorisation est déjà accordée — `refresh`
-ne la demande jamais, un survol ne doit pas faire surgir une invite.
-
-L'appariement écarte les candidats trop petits pour être une fenêtre de jeu,
-avec le seuil de `WindowManager.isGameWindow`. Sans ce filtre, les info-bulles
-et panneaux hors écran que ScreenCaptureKit expose au nom du même processus
-faisaient passer un client parfaitement ordinaire pour ambigu, et son aperçu
-restait vide. Deux vraies fenêtres de jeu dans un même processus restent, elles,
-un cas où l'on renonce : mieux vaut aucun aperçu que celui du mauvais perso.
-
-La vignette a une **taille fixe**, hauteur comprise. Laisser le panneau se
-dimensionner sur l'image revenait à le faire dépendre de l'instant où la capture
-arrive : le premier perso survolé avait le temps d'être capturé, les suivants
-s'ouvraient sur le cadre d'attente puis se redimensionnaient et se replaçaient.
-
-C'est une **seconde autorisation TCC**, distincte de l'Accessibilité
-(`NSScreenCaptureUsageDescription` dans l'Info.plist généré par `build.sh`). Les
-deux réglages d'aperçu sont donc désactivés par défaut : une mise à jour ne doit
-pas faire surgir une demande d'autorisation que personne n'a demandée. Limite
-connue et documentée dans les réglages : une fenêtre d'un espace inactif est
-capturable, mais macOS ne la redessine pas — l'image peut dater.
-
-### Classes et icônes
-
-[DofusClass.swift](Sources/Synfus/Classes/DofusClass.swift) est la **source unique** des
-19 classes (clé sans accent, libellé, couleur) : y ajouter une entrée la fait
-apparaître d'office dans la barre et les réglages. Une classe inconnue reçoit une
-teinte dérivée par hachage du nom plutôt que du gris.
-
-[ClassIconStore.swift](Sources/Synfus/Classes/ClassIconStore.swift) : le dépôt
-**n'embarque aucune image du jeu** — celles d'Ankama n'ont pas à être
-redistribuées. Les icônes sont fournies par l'utilisateur dans
-`~/Library/Application Support/Synfus/Classes/<clé>.png` (l'unique état
-modifiable ; les images importées sont réencodées en PNG 128 px), ou
-téléchargées pour son propre build — voir ci-dessous. Ne jamais ajouter
-d'assets de classe au dépôt.
-
-[Tools/fetch-ankama-assets.sh](Tools/fetch-ankama-assets.sh) — un wrapper qui
-compile [Tools/FetchAnkamaAssets.swift](Tools/FetchAnkamaAssets.swift) avec
-`DofusClass.swift`, pour que les clés soient celles de l'app — télécharge
-depuis l'API communautaire DofusDB (le CDN d'Ankama répond 403) les emblèmes
-des classes dans `Resources/Ankama/Classes/<clé>.png`. Ce dossier est **ignoré par Git** ; `build.sh`
-l'embarque dans `Contents/Resources/Ankama` s'il existe, et
-[AnkamaAssets.swift](Sources/Synfus/Classes/AnkamaAssets.swift) le résout —
-**Application Support d'abord, bundle ensuite** : ce que l'utilisateur dépose
-garde la priorité. La CI n'a pas le dossier, les releases restent sans visuel
-du jeu. Un pare-feu applicatif (LuLu) demandera l'accès réseau au programme
-compilé, une fois. C'est **la seule forme acceptable** : l'article 13.2 des CGU de
-Dofus interdit de distribuer les visuels du jeu sans accord écrit d'Ankama, donc
-le dépôt ne transporte que des URL — la copie est faite par l'utilisateur, sur
-sa machine, pour son usage personnel. Ne jamais convertir ce script en assets
-embarqués, et conserver la mention « Certaines illustrations sont la propriété
-d'Ankama Studio et de Dofus — Tous droits réservés », qui est la pratique
-constante des sites communautaires tolérés.
-
-La marque — **la Couvée** : trois œufs de dragon, l'émeraude écaillé devant, la
-turquoise mouchetée et le pourpre ondé qui dépassent derrière ; un œuf par
-compte, le perso actif au premier plan — est décrite **une seule fois**, dans
-[SynfusMark.swift](Sources/Synfus/Marque/SynfusMark.swift) : un moteur pur
-CoreGraphics, sans AppKit ni SwiftUI, pour rester compilable hors de l'app. Le
-dessin suit la grammaire visuelle d'Ankama (contour unique sombre, volume par
-dégradé, détails ton sur ton, brillance en croissant) sans reprendre aucun
-asset du jeu — chaque tracé est original, la règle de l'article 13.2 reste
-entière. Cette description sert deux usages :
-
-| Usage | Par |
+| `App/` | Point d'entrée et `--dump-*`, intégrité du bundle, démarrage automatique, `PressePapiers` |
+| `Accessibilite/` | `AccessibilityReader` (lecture AX, `DofusProcesses`), `--dump-windows`, `CrossSpaceTitles` |
+| `Clients/` | `DofusClient`, `WindowTitle`, `ClientMemory`, `Equipes`, `Rotation` (purs) ; `WindowManager` (+`PremierPlan`, `+Effectif`, `+Focus`, `+Fermeture`), `ClientInventoryEngine`, `ClientTerminator`, `FreezeWatcher` |
+| `Invitations/` | `/invite Nom` : `InvitationComposer` (pur), `InvitationClipboard` |
+| `Attention/` | Rebond du Dock : `BounceDetector`, `DockPairing` (purs), `DockInspector`, `DockGeometryReader`, `AttentionWatcher`, `AttentionProbe` |
+| `Raccourcis/` | Raccourcis Carbon, enregistreur, conflits, enchaînement au clic |
+| `Rangement/` | `LayoutComputer` (pur), `WindowArranger` |
+| `Apercus/` | Captures ScreenCaptureKit, panneau d'aperçu |
+| `Lecture/` | OCR position et combat : `ZoneEcran`, `PositionCarte`, `LectureCombat`, `LumaBitmap` (purs), `LecteurEcran` (+ `DiagnosticLecture`, `MoteurOCR`) |
+| `Preferences/` | `Preferences`, protocole `PreferencesStore` |
+| `Classes/` | `DofusClass`, icônes utilisateur, visuels Ankama locaux |
+| `Marque/` | La Couvée : `SynfusMark` (CoreGraphics pur), `SynfusGlyph` |
+| `Localisation/` | `L()`, choix de langue ; tables dans `Resources/Localisation/` |
+| `Interface/` | `MenuBarController`, `ConfirmationFermeture` ; `Barre/` (barre flottante) ; `Reglages/` (une vue par onglet) |
+
+## Skills de domaine
+
+| Skill | Charger avant de toucher |
 | --- | --- |
-| Icône du bundle (`.icns`, `.png`) | [Tools/AppIconExport.swift](Tools/AppIconExport.swift) |
-| Symbole de la barre de menus | `SynfusGlyph.menuBarImage()` |
-
-`SynfusGlyphView`,
-la version SwiftUI du dessin, reste disponible pour le prochain usage.
-
-```sh
-./Tools/generate-app-icons.sh   # régénère Resources/Synfus.{icns,png}
-```
-
-Le script compile `SynfusMark.swift` **tel quel** avec l'exportateur : le bundle
-et l'app dessinent donc rigoureusement la même marque. Ne jamais retoucher les
-PNG à la main — modifier la marque veut dire modifier `SynfusMark` puis relancer
-le script. C'est aussi pourquoi `SynfusMark` ne doit importer que CoreGraphics et
-Foundation : un `import AppKit` casserait la compilation du générateur.
-
-Le repère de description est **256 × 256, y vers le bas** — celui de la maquette
-validée sur la planche d'exploration (artifact « L'Œuf de Synfus »).
-`roundedInsetRatio` porte la marge Apple (824/1024), `eggAspect` fixe la
-silhouette (0,772), et `texturesBelow` (96 px) abandonne les peaux — écailles,
-mouchetures, ondes — aux tailles où leurs traits ne survivraient pas.
-
-[Resources/Synfus.svg](Resources/Synfus.svg) est la maquette du **logo
-précédent** (l'œuf filaire aux trois fenêtres), gardée comme archive : elle ne
-correspond plus au rendu.
-
-`SynfusGlyph` réduit la couvée à sa silhouette : les trois œufs en aplat,
-l'œuf de tête détouré par un mince **jour transparent** — dans une image
-*template*, seule l'opacité compte, le détourage passe par un effacement de
-l'alpha (`.clear` / `.destinationOut`), jamais par un trait de couleur. Aucune
-peau n'y survit : la matière reste sur l'icône.
-
-## Publication
-
-`sh build.sh --publish X.Y.Z` (depuis `main` propre et à jour d'`origin`)
-pose et pousse le tag `vX.Y.Z` — `PUBLICATION_PAR_CI=1` dans le script —, qui déclenche
-[release.yml](.github/workflows/release.yml) : runner `macos-26`, compilation
-arm64 + x86_64, DMG et release GitHub. Les builds de CI sont signés ad-hoc et non
-notarisés, d'où le `xattr -dr com.apple.quarantine` documenté dans le README.
+| `inventaire-clients` | découverte des persos, inventaire AX, dormants, ordre et slots, équipes (modèle), invitations |
+| `attention-dock` | détection du rebond, appariement Dock ↔ persos |
+| `raccourcis` | raccourcis globaux, défauts, enregistreur, fn-clic, signal de bascule, rotation |
+| `lecture-ocr` | lecture de la position et du combat |
+| `fermeture-gel` | fermeture des clients, abattage des gelés |
+| `interface-barre` | barre flottante, réglages, menu, aperçus, rangement des fenêtres |
+| `localisation` | tout libellé visible, tables JSON |
+| `preferences` | ajouter ou changer un réglage, un défaut |
+| `marque-assets` | classes, icônes, visuels Ankama, marque et icône de l'app |
