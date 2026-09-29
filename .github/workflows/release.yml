@@ -23,11 +23,11 @@ permissions:
 
 jobs:
   release:
-    # macOS 26 est imposé par le SDK : BarView utilise glassEffect (Liquid Glass),
-    # qui n'existe pas dans les SDK antérieurs. Le deployment target reste 14.0,
-    # donc le binaire produit ici tourne de macOS 14 à 26 — la bascule vers le
-    # matériau translucide se fait à l'exécution.
-    runs-on: macos-26
+    # Toujours l'image du Xcode le plus récent, celui du développement : le
+    # paquet déclare la dernière swift-tools-version, qu'un Xcode antérieur
+    # refuse. Le deployment target reste 14.0 ; glassEffect (SDK ≥ 26) bascule
+    # vers le matériau translucide à l'exécution.
+    runs-on: xcode-27
 
     steps:
       - uses: actions/checkout@v4
