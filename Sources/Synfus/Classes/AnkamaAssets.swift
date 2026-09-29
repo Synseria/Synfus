@@ -1,7 +1,6 @@
 import Foundation
 
-/// Où sont les visuels du jeu — emblèmes de classes, icônes de sorts — et
-/// dans quel ordre on les cherche.
+/// Où sont les emblèmes de classes du jeu, et dans quel ordre on les cherche.
 ///
 /// Deux emplacements, un seul ordre : **Application Support d'abord**, le
 /// bundle ensuite. Application Support est ce que l'utilisateur alimente lui-
@@ -19,8 +18,8 @@ enum AnkamaAssets {
 
     /// `Contents/Resources/Ankama` du bundle, s'il a été embarqué.
     ///
-    /// `SYNFUS_ANKAMA_DIR` dans l'environnement le remplace — pour les tests de
-    /// calibrage sur captures réelles, qui tournent hors bundle.
+    /// `SYNFUS_ANKAMA_DIR` dans l'environnement le remplace — hors bundle
+    /// (`swift run`), il n'y a pas d'autre moyen de pointer vers les visuels.
     static let bundledDirectory: URL? = {
         if let override = ProcessInfo.processInfo.environment["SYNFUS_ANKAMA_DIR"] {
             return URL(fileURLWithPath: (override as NSString).expandingTildeInPath, isDirectory: true)
@@ -41,23 +40,6 @@ enum AnkamaAssets {
         firstExisting(
             classIconsDirectory.appending(path: "\(key).png"),
             bundledDirectory?.appending(path: "Classes/\(key).png")
-        )
-    }
-
-    /// L'icône d'un sort, par le chemin relatif que donne `sorts.json`
-    /// (`Sorts/<classe>/<Nom>.png`).
-    static func spellIconURL(fichier: String) -> URL? {
-        firstExisting(
-            supportDirectory.appending(path: fichier),
-            bundledDirectory?.appending(path: fichier)
-        )
-    }
-
-    /// L'index `sorts.json` écrit par le script, s'il y en a un.
-    static var spellIndexURL: URL? {
-        firstExisting(
-            supportDirectory.appending(path: "sorts.json"),
-            bundledDirectory?.appending(path: "sorts.json")
         )
     }
 

@@ -8,11 +8,9 @@ struct DiagnosticSettings: View {
     @ObservedObject private var previews = WindowPreviewService.shared
     @ObservedObject private var arranger = WindowArranger.shared
     @ObservedObject private var freezes = FreezeWatcher.shared
-    @ObservedObject private var spells = SpellRecognitionProbe.shared
     @ObservedObject private var lecteur = LecteurEcran.shared
     @ObservedObject private var lecture = DiagnosticLecture.shared
     @ObservedObject private var prefs = Preferences.shared
-    @State private var zoomCapture = false
     @State private var calibrer = false
 
     var body: some View {
@@ -112,9 +110,6 @@ struct DiagnosticSettings: View {
                     }
                 }
             }
-
-            Divider().padding(.vertical, 4)
-            spellRecognitionSection
 
             Divider().padding(.vertical, 4)
             attentionProbeSection
@@ -288,44 +283,6 @@ struct DiagnosticSettings: View {
         }
     }
 
-    /// L'exploration de la reconnaissance des sorts : capturer, analyser,
-    /// lire les scores. Rien n'est configuré ici — c'est le banc d'essai.
-    private var spellRecognitionSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                Text(L("diagnostic.sorts")).font(.system(size: 12, weight: .semibold))
-                HelpTip(L("diagnostic.sorts.aide"))
-                Spacer()
-                Button(L("diagnostic.sorts.capturer")) { spells.captureActive() }
-                    .disabled(spells.busy || !previews.authorized)
-                    .help(previews.authorized ? L("diagnostic.sorts.capturer.aide") : L("diagnostic.sorts.capturer.nonAutorise"))
-                Button(L("diagnostic.sorts.analyser")) { spells.analyzeLast() }.disabled(spells.busy)
-                Button(L("diagnostic.sorts.fichier")) { spells.analyzeFile() }.help(L("diagnostic.sorts.fichier.aide"))
-                Button { spells.revealCaptures() } label: { Image(systemName: "folder") }
-                    .help(L("diagnostic.sorts.dossier"))
-            }
-            .font(.system(size: 11))
-            if let picture = spells.lastPicture {
-                CaptureOverlay(picture: picture, bar: spells.lastBar, analysis: spells.lastAnalysis, zoomed: zoomCapture)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: zoomCapture ? 220 : 300)
-                HStack {
-                    Toggle(L("diagnostic.sorts.zoomer"), isOn: $zoomCapture).font(.system(size: 11))
-                        .disabled(spells.lastBar == nil)
-                    Button(L("diagnostic.sorts.ouvrirEnGrand")) { spells.revealLastCapture() }.font(.system(size: 11))
-                }
-            }
-            if !spells.report.isEmpty {
-                Text(spells.report)
-                    .font(.system(size: 10, design: .monospaced))
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(6)
-                    .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.04)))
-            }
-        }
-    }
-
     private var attentionProbeSection: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
@@ -412,61 +369,6 @@ struct DiagnosticSettings: View {
                 .frame(maxHeight: 200)
             }
         }
-    }
-}
-
-/// La capture avec, par-dessus, les cases trouvées : vertes quand le sort est
-/// reconnu avec certitude, orange sinon. C'est ce qui permet de voir d'un
-/// coup d'œil si le localisateur a visé la barre — ou le décor.
-private struct CaptureOverlay: View {
-    let picture: NSImage
-    let bar: SpellBarLocator.Bar?
-    let analysis: SpellRecognition.Analysis?
-    var zoomed = false
-
-    /// La partie de l'image montrée : tout, ou la barre avec une marge.
-    private var window: CGRect {
-        let full = CGRect(origin: .zero, size: picture.size)
-        guard zoomed, let bar else { return full }
-        let region = bar.region(in: picture.size, margin: 0.6)
-        return CGRect(x: region.minX * picture.size.width, y: region.minY * picture.size.height,
-                      width: region.width * picture.size.width, height: region.height * picture.size.height)
-    }
-
-    var body: some View {
-        GeometryReader { geometry in
-            let window = window
-            let scale = min(geometry.size.width / window.width, geometry.size.height / window.height)
-            let drawn = CGSize(width: window.width * scale, height: window.height * scale)
-            ZStack(alignment: .topLeading) {
-                Image(nsImage: picture)
-                    .resizable()
-                    .frame(width: picture.size.width * scale, height: picture.size.height * scale)
-                    .offset(x: -window.minX * scale, y: -window.minY * scale)
-                if let bar {
-                    Canvas { context, _ in
-                        for (row, rects) in bar.rows.enumerated() {
-                            for (position, rect) in rects.enumerated() {
-                                let cell = analysis?.cells.first { $0.row == row && $0.position == position }
-                                let color: Color = cell?.match == nil ? .gray : (cell?.match?.isConfident == true ? .green : .orange)
-                                let scaled = CGRect(x: (rect.minX - window.minX) * scale, y: (rect.minY - window.minY) * scale,
-                                                    width: rect.width * scale, height: rect.height * scale)
-                                context.stroke(Path(scaled), with: .color(color), lineWidth: zoomed ? 2 : 1.5)
-                                if zoomed, let nom = cell?.match?.nom {
-                                    context.draw(Text(nom).font(.system(size: 8)).foregroundStyle(color),
-                                                 at: CGPoint(x: scaled.midX, y: scaled.maxY + 6))
-                                }
-                            }
-                        }
-                    }
-                    .frame(width: drawn.width, height: drawn.height)
-                }
-            }
-            .frame(width: drawn.width, height: drawn.height)
-            .clipped()
-            .frame(width: geometry.size.width, height: geometry.size.height, alignment: .center)
-        }
-        .background(RoundedRectangle(cornerRadius: 6).fill(Color.black.opacity(0.06)))
     }
 }
 
