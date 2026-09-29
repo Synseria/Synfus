@@ -70,7 +70,7 @@ enum DockInspector {
     /// position et leur taille bougent. Retrouver ces éléments coûte cher —
     /// enfants du Dock, enfants de chaque liste, titre de **chaque** icône, puis
     /// sous-rôle et état de lancement des icônes Dofus — et dix fois par seconde,
-    /// c'étaient trente à cinquante allers-retours vers le Dock. D'où ce cache,
+    /// cela ferait trente à cinquante allers-retours vers le Dock. D'où ce cache,
     /// tenu par `DockGeometryReader`, qui n'est reconstruit qu'à bon escient.
     struct Structure {
         let dockPID: pid_t

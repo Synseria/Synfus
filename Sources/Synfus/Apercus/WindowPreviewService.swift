@@ -43,7 +43,7 @@ final class WindowPreviewService: ObservableObject {
     ///
     /// C'est le point important : `SCShareableContent` fait le tour de toutes les
     /// fenêtres du système, et la grille d'aperçu se rafraîchit chaque seconde.
-    /// Un inventaire par perso revenait à en faire cinq par seconde pour cinq
+    /// Un inventaire par perso reviendrait à en faire cinq par seconde pour cinq
     /// clients, alors qu'un seul les sert tous.
     ///
     /// L'autorisation n'est **jamais demandée** ici : sans elle, rien ne part.

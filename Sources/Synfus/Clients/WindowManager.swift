@@ -425,7 +425,7 @@ final class WindowManager: ObservableObject {
     /// Retrie les persos déjà connus selon l'ordre de préférence, sans
     /// inventaire. Réordonner dans la barre ou les réglages ne change rien à ce
     /// qui est connecté : refaire le tour de l'Accessibilité à chaque
-    /// permutation, c'était payer un inventaire complet pour un tri.
+    /// permutation paierait un inventaire complet pour un tri.
     func resort() {
         let sorted = ClientMemory.sorted(clients, by: prefs.characterOrder)
         if sorted != clients {
