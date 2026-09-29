@@ -235,48 +235,6 @@ final class Preferences: ObservableObject {
         if restreintes != equipes { equipes = restreintes }
     }
 
-    // MARK: - Persistance
-
-    private struct Stored: Codable {
-        var characterOrder: [String]
-        var hotKeys: [HotKey?]
-        var cycleNext: HotKey?
-        var cyclePrevious: HotKey?
-        var barVisible: Bool
-        var barOriginX: Double?
-        var barOriginY: Double?
-        var showNumbers: Bool
-        var slotCount: Int
-        var showClasses: Bool?
-        var attentionAction: AttentionAction?
-        var toggleAutoFocus: HotKey?
-        var toggleBar: HotKey?
-        var barOnlyWithDofus: Bool?
-        var autoCenterBar: Bool?
-        var menuBarIcon: MenuBarIcon?
-        var showPreviewOnHover: Bool?
-        var previewHotKey: HotKey?
-        var advanceOnClick: Bool?
-        var advanceModifier: ClickModifier?
-        var signalerBascule: Bool?
-        var lirePosition: Bool?
-        var lireCombat: Bool?
-        var zonePosition: ZoneEcran?
-        var zoneCombat: ZoneEcran?
-        var killFrozenClients: Bool?
-        var lastArrangement: Disposition?
-        var arrangeHotKey: HotKey?
-        var sessionHotKey: HotKey?
-        var equipes: [Equipe]?
-        var equipeSuivanteHotKey: HotKey?
-        var inviteHotKey: HotKey?
-        var inviteFormat: String?
-        /// Génération du jeu de raccourcis par défaut appliqué à cette
-        /// sauvegarde. Absente des sauvegardes d'avant la refonte, d'où le repli
-        /// sur 1 à la lecture.
-        var defaultsVersion: Int?
-    }
-
     /// Génération courante des raccourcis par défaut. À incrémenter — avec la
     /// reprise correspondante dans `adoptDefaults` — chaque fois que les défauts
     /// changent, sans quoi les installations existantes resteraient sur les
@@ -372,45 +330,59 @@ final class Preferences: ObservableObject {
         toggleBar = replaced(toggleBar)
     }
 
+    // MARK: - Persistance
+
+    /// Chaque réglage, une ligne : sa clé dans la sauvegarde et sa propriété.
+    /// Le défaut n'y figure pas — c'est la valeur initiale de la propriété, que
+    /// garde une clé absente : `load()` ne passe qu'une fois, sur une instance
+    /// neuve. Les clés sont celles des sauvegardes existantes, à ne jamais
+    /// renommer ; une clé inconnue de cette table est ignorée à la lecture.
+    private static let reglages: [Reglage] = [
+        .requis("characterOrder", \.characterOrder),
+        .requis("hotKeys", \.hotKeys),
+        .optionnel("cycleNext", \.cycleNext),
+        .optionnel("cyclePrevious", \.cyclePrevious),
+        .requis("barVisible", \.barVisible),
+        .point(x: "barOriginX", y: "barOriginY", \.barOrigin),
+        .requis("showNumbers", \.showNumbers),
+        .requis("slotCount", \.slotCount),
+        .facultatif("showClasses", \.showClasses),
+        .facultatif("attentionAction", \.attentionAction),
+        // Sans défaut à la lecture : un raccourci vide est un choix. Les
+        // sauvegardes plus anciennes que la clé sont rattrapées par
+        // `adoptDefaults`, une fois.
+        .optionnel("toggleAutoFocus", \.toggleAutoFocus),
+        .optionnel("toggleBar", \.toggleBar),
+        .facultatif("barOnlyWithDofus", \.barOnlyWithDofus),
+        .facultatif("autoCenterBar", \.autoCenterBar),
+        .facultatif("menuBarIcon", \.menuBarIcon),
+        .facultatif("showPreviewOnHover", \.showPreviewOnHover),
+        .optionnel("previewHotKey", \.previewHotKey),
+        .facultatif("advanceOnClick", \.advanceOnClick),
+        .facultatif("advanceModifier", \.advanceModifier),
+        .facultatif("signalerBascule", \.signalerBascule),
+        .facultatif("lirePosition", \.lirePosition),
+        .facultatif("lireCombat", \.lireCombat),
+        .optionnel("zonePosition", \.zonePosition),
+        .optionnel("zoneCombat", \.zoneCombat),
+        .facultatif("killFrozenClients", \.killFrozenClients),
+        .optionnel("lastArrangement", \.lastArrangement),
+        .optionnel("arrangeHotKey", \.arrangeHotKey),
+        .optionnel("sessionHotKey", \.sessionHotKey),
+        .facultatif("equipes", \.equipes),
+        .optionnel("equipeSuivanteHotKey", \.equipeSuivanteHotKey),
+        .optionnel("inviteHotKey", \.inviteHotKey),
+        .facultatif("inviteFormat", \.inviteFormat),
+    ]
+
+    /// Génération du jeu de raccourcis par défaut appliqué à la sauvegarde.
+    /// Absente des sauvegardes d'avant la refonte, d'où le repli sur 1 à la
+    /// lecture (`adoptDefaults`).
+    private static let cleGeneration: Cle = "defaultsVersion"
+
     private func save() {
         guard !loading else { return }
-        let stored = Stored(
-            characterOrder: characterOrder,
-            hotKeys: hotKeys,
-            cycleNext: cycleNext,
-            cyclePrevious: cyclePrevious,
-            barVisible: barVisible,
-            barOriginX: barOrigin.map { Double($0.x) },
-            barOriginY: barOrigin.map { Double($0.y) },
-            showNumbers: showNumbers,
-            slotCount: slotCount,
-            showClasses: showClasses,
-            attentionAction: attentionAction,
-            toggleAutoFocus: toggleAutoFocus,
-            toggleBar: toggleBar,
-            barOnlyWithDofus: barOnlyWithDofus,
-            autoCenterBar: autoCenterBar,
-            menuBarIcon: menuBarIcon,
-            showPreviewOnHover: showPreviewOnHover,
-            previewHotKey: previewHotKey,
-            advanceOnClick: advanceOnClick,
-            advanceModifier: advanceModifier,
-            signalerBascule: signalerBascule,
-            lirePosition: lirePosition,
-            lireCombat: lireCombat,
-            zonePosition: zonePosition,
-            zoneCombat: zoneCombat,
-            killFrozenClients: killFrozenClients,
-            lastArrangement: lastArrangement,
-            arrangeHotKey: arrangeHotKey,
-            sessionHotKey: sessionHotKey,
-            equipes: equipes,
-            equipeSuivanteHotKey: equipeSuivanteHotKey,
-            inviteHotKey: inviteHotKey,
-            inviteFormat: inviteFormat,
-            defaultsVersion: Self.defaultsVersion
-        )
-        if let data = try? JSONEncoder().encode(stored) {
+        if let data = try? JSONEncoder().encode(Ecriture(prefs: self)) {
             store.enregistrer(data, pour: Self.key)
         }
     }
@@ -419,7 +391,7 @@ final class Preferences: ObservableObject {
         loading = true
 
         guard let data = store.donnees(pour: Self.key),
-              let stored = try? JSONDecoder().decode(Stored.self, from: data)
+              let lecture = try? JSONDecoder().decode(Lecture.self, from: data)
         else {
             // Premier lancement : ⌘1 à ⌘5 pour l'accès direct, et toute la
             // navigation sur la touche sous Échap.
@@ -435,48 +407,112 @@ final class Preferences: ObservableObject {
             return
         }
 
-        characterOrder = stored.characterOrder
-        hotKeys = stored.hotKeys
-        cycleNext = stored.cycleNext
-        cyclePrevious = stored.cyclePrevious
-        barVisible = stored.barVisible
-        showNumbers = stored.showNumbers
-        slotCount = stored.slotCount
-        showClasses = stored.showClasses ?? true
-        attentionAction = stored.attentionAction ?? .highlight
-        // Sans repli : un raccourci vide est un choix. Les sauvegardes plus
-        // anciennes que la clé sont rattrapées par `adoptDefaults`, une fois.
-        toggleAutoFocus = stored.toggleAutoFocus
-        toggleBar = stored.toggleBar
-        barOnlyWithDofus = stored.barOnlyWithDofus ?? false
-        autoCenterBar = stored.autoCenterBar ?? true
-        menuBarIcon = stored.menuBarIcon ?? .logo
-        showPreviewOnHover = stored.showPreviewOnHover ?? false
-        previewHotKey = stored.previewHotKey
-        advanceOnClick = stored.advanceOnClick ?? false
-        advanceModifier = stored.advanceModifier ?? .fn
-        signalerBascule = stored.signalerBascule ?? true
-        lirePosition = stored.lirePosition ?? false
-        lireCombat = stored.lireCombat ?? false
-        zonePosition = stored.zonePosition
-        zoneCombat = stored.zoneCombat
-        killFrozenClients = stored.killFrozenClients ?? true
-        lastArrangement = stored.lastArrangement
-        arrangeHotKey = stored.arrangeHotKey
-        sessionHotKey = stored.sessionHotKey
-        equipes = stored.equipes ?? []
-        equipeSuivanteHotKey = stored.equipeSuivanteHotKey
-        inviteHotKey = stored.inviteHotKey
-        inviteFormat = stored.inviteFormat ?? InvitationComposer.formatParDefaut
-        if let x = stored.barOriginX, let y = stored.barOriginY {
-            barOrigin = CGPoint(x: x, y: y)
-        }
+        for affecter in lecture.affectations { affecter(self) }
 
         loading = false
         resizeHotKeys()
         // La reprise se fait le drapeau `loading` relâché : c'est elle, et elle
         // seule, qui doit réécrire la sauvegarde — ne serait-ce que pour y
         // inscrire la génération, sans quoi elle se rejouerait à chaque lancement.
-        if adoptDefaults(from: stored.defaultsVersion) { save() }
+        if adoptDefaults(from: lecture.generation) { save() }
+    }
+
+    /// Une clé de la sauvegarde JSON.
+    private struct Cle: CodingKey, ExpressibleByStringLiteral {
+        let stringValue: String
+        init(stringValue: String) { self.stringValue = stringValue }
+        init(stringLiteral value: String) { stringValue = value }
+        var intValue: Int? { nil }
+        init?(intValue _: Int) { nil }
+    }
+
+    /// Comment un réglage s'écrit et se relit. La lecture n'affecte rien : elle
+    /// rend l'affectation à faire, pour que la sauvegarde se lise entière ou
+    /// pas du tout — une valeur mal typée la rend illisible, comme autrefois.
+    @MainActor
+    private struct Reglage {
+        let ecrire: @MainActor (Preferences, inout KeyedEncodingContainer<Cle>) throws -> Void
+        let lire: @MainActor (KeyedDecodingContainer<Cle>) throws -> (@MainActor (Preferences) -> Void)?
+
+        /// Une clé des toutes premières sauvegardes : sans elle, la sauvegarde
+        /// est illisible et l'on repart des défauts du premier lancement.
+        static func requis<V: Codable>(
+            _ cle: Cle, _ chemin: ReferenceWritableKeyPath<Preferences, V>
+        ) -> Reglage {
+            Reglage(ecrire: { try $1.encode($0[keyPath: chemin], forKey: cle) },
+                    lire: { conteneur in
+                        let valeur = try conteneur.decode(V.self, forKey: cle)
+                        return { $0[keyPath: chemin] = valeur }
+                    })
+        }
+
+        /// Une clé apparue après coup : absente ou `null`, la propriété garde
+        /// sa valeur initiale.
+        static func facultatif<V: Codable>(
+            _ cle: Cle, _ chemin: ReferenceWritableKeyPath<Preferences, V>
+        ) -> Reglage {
+            Reglage(ecrire: { try $1.encode($0[keyPath: chemin], forKey: cle) },
+                    lire: { conteneur in
+                        guard let valeur = try conteneur.decodeIfPresent(V.self, forKey: cle)
+                        else { return nil }
+                        return { $0[keyPath: chemin] = valeur }
+                    })
+        }
+
+        /// Une valeur qui peut manquer : `nil` n'est pas écrit du tout.
+        static func optionnel<V: Codable>(
+            _ cle: Cle, _ chemin: ReferenceWritableKeyPath<Preferences, V?>
+        ) -> Reglage {
+            Reglage(ecrire: { try $1.encodeIfPresent($0[keyPath: chemin], forKey: cle) },
+                    lire: { conteneur in
+                        guard let valeur = try conteneur.decodeIfPresent(V.self, forKey: cle)
+                        else { return nil }
+                        return { $0[keyPath: chemin] = valeur }
+                    })
+        }
+
+        /// Un point écrit en deux coordonnées ; il n'est relu que si les deux
+        /// y sont — toutes deux décodées d'abord, pour qu'une valeur mal typée
+        /// rende la sauvegarde illisible quelle que soit sa voisine.
+        static func point(
+            x cleX: Cle, y cleY: Cle, _ chemin: ReferenceWritableKeyPath<Preferences, CGPoint?>
+        ) -> Reglage {
+            Reglage(ecrire: { prefs, conteneur in
+                        let point = prefs[keyPath: chemin]
+                        try conteneur.encodeIfPresent(point.map { Double($0.x) }, forKey: cleX)
+                        try conteneur.encodeIfPresent(point.map { Double($0.y) }, forKey: cleY)
+                    },
+                    lire: { conteneur in
+                        let x = try conteneur.decodeIfPresent(Double.self, forKey: cleX)
+                        let y = try conteneur.decodeIfPresent(Double.self, forKey: cleY)
+                        guard let x, let y else { return nil }
+                        return { $0[keyPath: chemin] = CGPoint(x: x, y: y) }
+                    })
+        }
+    }
+
+    /// La sauvegarde à écrire : chaque réglage, puis la génération courante.
+    @MainActor
+    private struct Ecriture: @MainActor Encodable {
+        let prefs: Preferences
+
+        func encode(to encoder: any Encoder) throws {
+            var conteneur = encoder.container(keyedBy: Cle.self)
+            for reglage in Preferences.reglages { try reglage.ecrire(prefs, &conteneur) }
+            try conteneur.encode(Preferences.defaultsVersion, forKey: Preferences.cleGeneration)
+        }
+    }
+
+    /// Une sauvegarde relue : les affectations à faire, et sa génération.
+    @MainActor
+    private struct Lecture: @MainActor Decodable {
+        let affectations: [@MainActor (Preferences) -> Void]
+        let generation: Int?
+
+        init(from decoder: any Decoder) throws {
+            let conteneur = try decoder.container(keyedBy: Cle.self)
+            affectations = try Preferences.reglages.compactMap { try $0.lire(conteneur) }
+            generation = try conteneur.decodeIfPresent(Int.self, forKey: Preferences.cleGeneration)
+        }
     }
 }
