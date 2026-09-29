@@ -19,14 +19,13 @@ sh test.sh PreferencesTests        # une suite, ou un test par son nom ; plusieu
 sh run.sh                          # build Debug signé → .build/dev/Synfus.app
 sh run.sh --start                  # … puis le lance (l'instance en cours est quittée)
 sh run.sh --install [--start]      # build Release, installé dans /Applications ; --start le relance
-sh build.sh                        # build Release → dist/Synfus.app (plugin et profil embarqués) + dist/fr.synseria.synfus.sdPlugin
+sh build.sh                        # build Release → dist/Synfus.app
 sh build.sh --release [X.Y.Z]      # + dist/Synfus-X.Y.Z-<arch>.dmg (Tools/make-dmg.sh)
 sh build.sh --publish X.Y.Z        # depuis main propre et à jour : tag vX.Y.Z poussé → release.yml
 VERSION=0.0.3 ARCH=x86_64 sh build.sh
 ./Tools/generate-app-icons.sh      # régénère Resources/Synfus.{icns,png}
-./Tools/fetch-ankama-assets.sh     # télécharge emblèmes et icônes de sorts dans Resources/Ankama (gitignoré)
-SYNFUS_ANKAMA_DIR=$PWD/Resources/Ankama SYNFUS_CAPTURE=~/Library/Logs/Synfus/captures/x.png sh test.sh RealCapture   # calibrage sur une vraie capture
-nc -U ~/Library/Application\ Support/Synfus/streamdeck.sock   # lire l'état poussé au plugin
+./Tools/fetch-ankama-assets.sh     # télécharge les emblèmes de classes dans Resources/Ankama (gitignoré)
+SYNFUS_CAPTURE=~/Library/Logs/Synfus/captures/x.png sh test.sh RealCapture   # calibrage sur une vraie capture
 ```
 
 Les scripts suivent la convention commune des apps Synseria (skill
@@ -126,8 +125,6 @@ de son domaine ; un fichier qui n'en a pas est le signe d'un domaine à créer.
 | `Localisation/` | `L()`, les tables JSON par langue, le choix de langue |
 | `Interface/` | `MenuBarController` ; `Barre/` (barre flottante et ses contrôles) ; `Reglages/` (une vue par onglet + contrôleur de fenêtre) |
 | `Lecture/` | Lecture de l'écran par OCR — position et combat : `ZoneEcran`, `PositionCarte`, `EmpreinteTexte`, `LectureCombat` (purs), `LecteurEcran`, `DiagnosticLecture` et `MoteurOCR` |
-| `StreamDeck/` | L'interface physique contextuelle : `Sorts/` (reconnaissance de la barre), `Profils/` (sorts par perso, touches), `Liaison/` (protocole et socket), `Combat/` (détection combat) |
-| `../SynfusDeck/` | Le plugin Elgato — second target, binaire séparé, sans code partagé : le protocole JSON est le contrat |
 
 Les logiques pures ont leur fichier propre (`WindowTitle`, `ClientMemory`,
 `LayoutComputer`, `BounceDetector`, `FreezeStrikes`…) : c'est ce qui les rend
@@ -515,9 +512,7 @@ comprises (s ≈ 0,16) ; seuil `seuilBouton` 25 %. La part colorée de la zone
 entière ne sert qu'à relancer l'OCR quand elle franchit `seuilSignature`
 (10 %). La pastille le montre (`CombatBadge`) : contour et décompte à son
 tour, une épée en combat. En plein écran, seul le perso devant est lisible :
-l'état des autres date de leur dernier passage devant. La détection calibrée
-de `StreamDeck/Combat/` (en pause) fait doublon : à la reprise du Stream
-Deck, `CombatWatcher` doit passer par `LecteurEcran.combats`.
+l'état des autres date de leur dernier passage devant.
 
 Les zones se **calibrent** d'un tracé (`CalibrationZonesView`, depuis le
 Diagnostic) : le joueur déplace son interface une fois pour toutes, chercher
@@ -744,9 +739,8 @@ réglage « Langue » de l'onglet Général écrit la même clé, `AppleLanguage
 dans le domaine de l'app (`LangueReglage`), et propose de relancer.
 
 Ce qui est traduit : les réglages, la barre, les menus, les rapports du
-Diagnostic. Ce qui reste en français : les journaux, `--dump-*`, les onglets
-Sorts et Stream Deck au-delà de leur bascule (fonction en pause), et le
-plugin `SynfusDeck`. `LocalisationTests` verrouille l'ensemble : mêmes clés
+Diagnostic. Ce qui reste en français : les journaux et `--dump-*`.
+`LocalisationTests` verrouille l'ensemble : mêmes clés
 dans les trois tables, mêmes spécificateurs de format, et **chaque clé du
 code existe dans `fr.json` et réciproquement** — une clé morte ou une faute
 de frappe casse la suite. Les tests qui touchent un libellé comparent à
@@ -791,9 +785,8 @@ propriété calculée, donc s'y réassigner relance le `didSet` — d'où le dra
 ### Interface
 
 - **Un réglage n'apparaît que s'il sert.** Les options d'une fonction coupée
-  sont masquées, pas grisées : l'onglet Sorts n'existe qu'avec le Stream Deck
-  activé, l'onglet Stream Deck se réduit à sa bascule tant qu'elle est
-  fausse, les options de la barre à « Afficher la barre », la touche de
+  sont masquées, pas grisées : les options de la barre à « Afficher la
+  barre », la touche de
   l'enchaînement au clic à sa bascule. Une nouvelle option suit la règle.
 - [BarView.swift](Sources/Synfus/Interface/Barre/BarView.swift) — barre flottante, hébergée dans
   un `NSPanel` non activable (`canBecomeKey = false`) par
@@ -908,12 +901,7 @@ d'assets de classe au dépôt.
 compile [Tools/FetchAnkamaAssets.swift](Tools/FetchAnkamaAssets.swift) avec
 `DofusClass.swift`, pour que les clés soient celles de l'app — télécharge
 depuis l'API communautaire DofusDB (le CDN d'Ankama répond 403) les emblèmes
-des classes **et** les icônes de sorts — ceux de la fiche de classe, leurs
-**variantes** (`spell-variants`, le jeu affiche l'un ou l'autre dessin) et les
-**sorts communs** (type 21 : Libération, Cawotte, invocations…) sous la clé
-`communs` —, dans `Resources/Ankama/` :
-`Classes/<clé>.png`, `Sorts/<clé>/<Nom>.png` (le nom du sort, l'id seulement en cas d'homonymie) et un index `sorts.json`
-(`{id, nom, classe, fichier}`). Ce dossier est **ignoré par Git** ; `build.sh`
+des classes dans `Resources/Ankama/Classes/<clé>.png`. Ce dossier est **ignoré par Git** ; `build.sh`
 l'embarque dans `Contents/Resources/Ankama` s'il existe, et
 [AnkamaAssets.swift](Sources/Synfus/Classes/AnkamaAssets.swift) le résout —
 **Application Support d'abord, bundle ensuite** : ce que l'utilisateur dépose
@@ -970,14 +958,6 @@ l'œuf de tête détouré par un mince **jour transparent** — dans une image
 *template*, seule l'opacité compte, le détourage passe par un effacement de
 l'alpha (`.clear` / `.destinationOut`), jamais par un trait de couleur. Aucune
 peau n'y survit : la matière reste sur l'icône.
-
-### Stream Deck
-
-**En pause depuis le 15/09/2026** : aucun développement dans `StreamDeck/`,
-`SynfusDeck/`, `Plugin/` ; le code doit seulement continuer de compiler. Il suit
-l'équipe active de fait, par `cycle` et `focus(slot:)`. Mécanismes détaillés
-(reconnaissance des sorts, protocole, plugin, combat) :
-[Sources/Synfus/StreamDeck/CLAUDE.md](Sources/Synfus/StreamDeck/CLAUDE.md).
 
 ## Publication
 
