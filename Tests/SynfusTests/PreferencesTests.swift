@@ -264,7 +264,7 @@ struct PreferencesTests {
         #expect(relu.menuBarIcon == .symbole)
     }
 
-    /// Les réglages ajoutés après coup sont facultatifs dans `Stored` : une
+    /// Les réglages ajoutés après coup sont facultatifs dans la sauvegarde : une
     /// sauvegarde ancienne doit se relire sans perdre le reste.
     @Test("Une sauvegarde amputée des clés récentes se relit")
     func compatibiliteAscendante() {

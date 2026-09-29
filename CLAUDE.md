@@ -773,10 +773,15 @@ Il n'y a **aucune migration** depuis les identifiants précédents
 et peuvent être supprimés.
 
 Chaque `@Published` déclenche `save()` dans son `didSet` ; le drapeau `loading`
-évite les écritures pendant le chargement. Toute nouvelle clé doit être ajoutée
-en `Optional` dans `Stored` avec un `?? défaut` à la lecture, pour rester
-compatible avec les préférences déjà enregistrées — c'est ce que vérifie le test
-« Une sauvegarde amputée des clés récentes se relit ».
+évite les écritures pendant le chargement. Un réglage s'écrit en deux endroits :
+sa propriété (dont la valeur initiale est le défaut) et **une ligne** de la table
+`reglages`, qui dit sa clé JSON et en dérive écriture et lecture. Un nouveau
+réglage y entre en `.facultatif` (ou `.optionnel` si `nil` est permis) : absente
+d'une sauvegarde ancienne, la clé laisse le défaut — seules les cinq clés
+d'origine sont `.requis`. Les tests d'empreinte (`PreferencesTests`, « Chaque
+réglage s'écrit sous sa clé… ») figent le JSON écrit : une clé ne se renomme
+jamais. Les conformances `Codable` de `Ecriture`/`Lecture` sont isolées au main
+actor (`@MainActor Encodable`), ce qui laisse les closures toucher `Preferences`.
 
 Attention au `didSet` de `slotCount` : `@Published` transforme la propriété en
 propriété calculée, donc s'y réassigner relance le `didSet` — d'où le drapeau
