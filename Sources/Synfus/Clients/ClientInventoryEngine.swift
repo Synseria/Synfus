@@ -90,8 +90,8 @@ struct InventoryScheduling: Equatable {
 ///
 /// Chaque question à un client est un IPC synchrone, borné à 1 s ; un client
 /// gelé — à la fermeture, typiquement — la laisse expirer, et l'inventaire
-/// passe toutes les 2 s. Sur main, c'était la barre, le menu et les raccourcis
-/// qui se figeaient au rythme des sondes. Ici, seul l'acteur attend.
+/// passe toutes les 2 s. Sur main, ce sont la barre, le menu et les raccourcis
+/// qui se figeraient au rythme des sondes : ici, seul l'acteur attend.
 ///
 /// L'acteur a son **exécuteur propre** : des IPC bloquants d'une seconde n'ont
 /// rien à faire sur le pool coopératif de Swift Concurrency, qu'ils

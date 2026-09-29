@@ -21,8 +21,8 @@ import ApplicationServices
 /// Le veilleur ne sonde rien lui-même : **la sonde, c'est l'inventaire.**
 /// `WindowManager.refresh` interroge déjà `kAXWindows` sur chaque client, et
 /// c'est lui qui constate le mutisme (`.cannotComplete`). Sonder une seconde
-/// fois le même pid, c'était payer deux fois l'expiration toutes les 2 s
-/// pendant quinze secondes. L'inventaire consulte donc `suspects` et
+/// fois le même pid paierait deux fois l'expiration toutes les 2 s pendant
+/// quinze secondes. L'inventaire consulte donc `suspects` et
 /// `shouldProbe(_:)` pour ne réinterroger un pid déjà pris en défaut qu'à
 /// l'échéance — avec la borne ordinaire d'une seconde, pour qu'un vivant lent
 /// puisse toujours se blanchir. Entre deux échéances, le perso reste affiché,
