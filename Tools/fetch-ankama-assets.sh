@@ -1,7 +1,7 @@
 #!/bin/bash
-# Télécharge les emblèmes des classes et les icônes de sorts dans
-# Resources/Ankama/ (ignoré par Git), pour ton usage personnel — voir l'en-tête
-# de Tools/FetchAnkamaAssets.swift pour la règle (CGU Dofus, art. 13.2).
+# Télécharge les emblèmes des classes dans Resources/Ankama/ (ignoré par Git),
+# pour ton usage personnel — voir l'en-tête de Tools/FetchAnkamaAssets.swift
+# pour la règle (CGU Dofus, art. 13.2).
 #
 #   ./Tools/fetch-ankama-assets.sh [--force] [--liste] [--dest DIR]
 #

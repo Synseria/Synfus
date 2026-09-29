@@ -1,6 +1,6 @@
 #!/bin/bash
 # build.sh — build Release signé de Synfus.
-#   sh build.sh                    → dist/Synfus.app (et le plugin Stream Deck)
+#   sh build.sh                    → dist/Synfus.app
 #   sh build.sh --release [X.Y.Z]  → + dist/Synfus-X.Y.Z-<arch>.dmg
 #   sh build.sh --publish X.Y.Z    → depuis main propre : tag vX.Y.Z poussé,
 #                                    la release est construite par la CI
@@ -71,8 +71,8 @@ VERSION="${VERSION:-0.0.1}"
 # Numéro de build : le nombre de commits. `CFBundleShortVersionString` reste
 # le tag, purement numérique, comme Apple l'attend.
 BUILD="$(git rev-list --count HEAD 2>/dev/null || echo 1)"
-# Tout ce qui est produit va dans dist/ — l'app comme le plugin ; le build de
-# développement de run.sh dans .build/dev/.
+# Tout ce qui est produit va dans dist/ ; le build de développement de run.sh
+# dans .build/dev/.
 APP="$DIST/$NAME.app"
 mkdir -p "$DIST"
 
@@ -87,37 +87,6 @@ BINARY="$BIN_PATH/$NAME"
 # La signature détermine l'identité vue par TCC (l'autorisation
 # Accessibilité) : signature.sh la choisit, la même pour tous les builds.
 source ./signature.sh
-
-# Le plugin Stream Deck : un dossier .sdPlugin à installer dans le logiciel
-# Elgato (double-clic, ou `streamdeck link dist/fr.synseria.synfus.sdPlugin`
-# avec le CLI d'Elgato pour développer). Le binaire est celui du target
-# SynfusDeck ; les icônes sont dérivées de la marque, jamais du jeu.
-PLUGIN="$DIST/fr.synseria.synfus.sdPlugin"
-echo "==> Assemblage du plugin Stream Deck"
-rm -rf "$PLUGIN"
-mkdir -p "$PLUGIN"
-cp "$BIN_PATH/SynfusDeck" "$PLUGIN/"
-cp Plugin/manifest.json "$PLUGIN/"
-sips -z 144 144 Resources/Synfus.png --out "$PLUGIN/icon.png" >/dev/null
-sips -z 288 288 Resources/Synfus.png --out "$PLUGIN/icon@2x.png" >/dev/null
-# L'état « grisé » (Dofus n'est pas devant) : la même marque pour l'instant —
-# le plugin pose son propre titre, c'est lui qui dit l'état.
-cp "$PLUGIN/icon.png" "$PLUGIN/icon-dim.png"
-cp "$PLUGIN/icon@2x.png" "$PLUGIN/icon-dim@2x.png"
-# Version du plugin : celle de l'app suivie du nombre de commits depuis le
-# tag — le logiciel Stream Deck n'installe un paquet que s'il est plus récent
-# que ce qu'il a, et deux builds d'une même version seraient « déjà installés ».
-PLUGIN_VERSION="$VERSION.$(git rev-list --count "v$VERSION..HEAD" 2>/dev/null || echo 0)"
-sed -i '' "s/\"Version\": \"[^\"]*\"/\"Version\": \"$PLUGIN_VERSION\"/" "$PLUGIN/manifest.json"
-./Plugin/make-profile.sh "$PLUGIN"
-# Le paquet que le logiciel Stream Deck installe par double-clic — et le seul
-# chemin qui enregistre le profil livré comme *appartenant au plugin*, ce que
-# `switchToProfile` exige.
-signer "$PLUGIN/SynfusDeck" "fr.synseria.synfus.deck"
-PACKAGE="$DIST/fr.synseria.synfus.streamDeckPlugin"
-rm -f "$PACKAGE"
-(cd "$DIST" && zip -qr "$(basename "$PACKAGE")" "$(basename "$PLUGIN")")
-echo "==> $PLUGIN prêt"
 
 echo "==> Assemblage du bundle"
 rm -rf "$APP"
@@ -169,13 +138,8 @@ if [ -d "Resources/Ankama" ]; then
     cp -R "Resources/Ankama" "$APP/Contents/Resources/Ankama"
 fi
 
-# Le paquet du plugin et le profil livré, embarqués : l'onglet Stream Deck
-# les ouvre dans le logiciel Elgato d'un clic, sans passer par dist/.
-cp "$PACKAGE" "$APP/Contents/Resources/"
-cp "$PLUGIN/Synfus.streamDeckProfile" "$APP/Contents/Resources/"
-
 echo "==> Signature"
-signer "$APP" "$BUNDLE_ID" --deep
+signer "$APP" "$BUNDLE_ID"
 
 echo "==> $APP prêt"
 
