@@ -16,8 +16,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         AttentionWatcher.shared.start()
         ClickAdvanceWatcher.shared.apply()
         FloatingBarController.shared.apply()
-        StreamDeckLink.shared.start()
-        CombatWatcher.shared.start()
         LecteurEcran.shared.start()
 
         if !AXIsProcessTrusted() {
@@ -31,7 +29,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // déplacement : quitter dans cet intervalle ne doit pas la perdre.
         FloatingBarController.shared.flushPendingOrigin()
         HotKeyManager.shared.unregisterAll()
-        StreamDeckLink.shared.stop()
     }
 
     /// Menu applicatif minimal : sans lui, ⌘Q et ⌘W ne fonctionneraient pas

@@ -121,32 +121,6 @@ final class Preferences: ObservableObject {
     /// Le texte posé dans le presse-papiers, `%nom` remplacé par le perso.
     @Published var inviteFormat: String = InvitationComposer.formatParDefaut { didSet { save() } }
 
-    /// Les touches des barres de sorts du jeu, pour le Stream Deck.
-    @Published var spellKeyMap: SpellKeyMap = .defaults { didSet { save() } }
-
-    /// La liaison Stream Deck — désactivée par défaut : un socket ne s'ouvre
-    /// que si on l'a demandé.
-    @Published var streamDeckEnabled: Bool = false { didSet { save() } }
-
-    /// Les commandes du jeu (inventaire, suivi…) et leurs touches, pour la
-    /// touche « Menu » du Stream Deck.
-    @Published var gameCommands: [GameCommand] = GameCommands.defaults { didSet { save() } }
-
-    /// Le mode d'affichage du Stream Deck — générique ; un profil de perso
-    /// peut le remplacer par le sien.
-    @Published var deck: DeckSettings = .parBarre { didSet { save() } }
-
-    /// Durées d'appui, en ms, à partir desquelles une touche du Stream Deck
-    /// joue son action longue, puis très longue.
-    @Published var appuiLongMs: Int = 100 { didSet { save() } }
-    @Published var appuiTresLongMs: Int = 200 { didSet { save() } }
-    /// Le nom des sorts sous leur icône sur le Stream Deck ; sinon il n'y
-    /// apparaît que pendant l'appui.
-    @Published var deckTitres: Bool = false { didSet { save() } }
-    /// Sélection progressive des sorts : chaque niveau d'appui joue à son
-    /// seuil, le jeu montre le sort sélectionné pendant qu'on tient.
-    @Published var appuiProgressif: Bool = true { didSet { save() } }
-
     /// Nombre de slots exposés (et donc de raccourcis potentiels).
     ///
     /// Le garde-fou `clamping` n'est pas décoratif : `@Published` remplace la
@@ -293,14 +267,6 @@ final class Preferences: ObservableObject {
         var lastArrangement: Disposition?
         var arrangeHotKey: HotKey?
         var sessionHotKey: HotKey?
-        var spellKeyMap: SpellKeyMap?
-        var streamDeckEnabled: Bool?
-        var gameCommands: [GameCommand]?
-        var deck: DeckSettings?
-        var appuiLongMs: Int?
-        var appuiTresLongMs: Int?
-        var appuiProgressif: Bool?
-        var deckTitres: Bool?
         var equipes: [Equipe]?
         var equipeSuivanteHotKey: HotKey?
         var inviteHotKey: HotKey?
@@ -438,14 +404,6 @@ final class Preferences: ObservableObject {
             lastArrangement: lastArrangement,
             arrangeHotKey: arrangeHotKey,
             sessionHotKey: sessionHotKey,
-            spellKeyMap: spellKeyMap,
-            streamDeckEnabled: streamDeckEnabled,
-            gameCommands: gameCommands,
-            deck: deck,
-            appuiLongMs: appuiLongMs,
-            appuiTresLongMs: appuiTresLongMs,
-            appuiProgressif: appuiProgressif,
-            deckTitres: deckTitres,
             equipes: equipes,
             equipeSuivanteHotKey: equipeSuivanteHotKey,
             inviteHotKey: inviteHotKey,
@@ -506,14 +464,6 @@ final class Preferences: ObservableObject {
         lastArrangement = stored.lastArrangement
         arrangeHotKey = stored.arrangeHotKey
         sessionHotKey = stored.sessionHotKey
-        spellKeyMap = stored.spellKeyMap ?? .defaults
-        streamDeckEnabled = stored.streamDeckEnabled ?? false
-        gameCommands = GameCommands.normalized(GameCommands.repaired(stored.gameCommands ?? GameCommands.defaults))
-        deck = stored.deck ?? .parBarre
-        appuiLongMs = stored.appuiLongMs ?? 100
-        appuiTresLongMs = stored.appuiTresLongMs ?? 200
-        appuiProgressif = stored.appuiProgressif ?? true
-        deckTitres = stored.deckTitres ?? false
         equipes = stored.equipes ?? []
         equipeSuivanteHotKey = stored.equipeSuivanteHotKey
         inviteHotKey = stored.inviteHotKey

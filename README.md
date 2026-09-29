@@ -53,14 +53,6 @@ change juste la fenêtre qui est devant. Pas de lecture mémoire, pas de réseau
 Il demande l'autorisation **Accessibilité**, et **Enregistrement de l'écran**
 seulement si tu actives les aperçus.
 
-## Stream Deck (optionnel)
-
-Avec un Stream Deck Elgato, Synfus peut afficher les sorts du personnage
-sélectionné et frapper la touche du jeu correspondante — les trois barres sous
-dix touches grâce à trois niveaux d'appui. Totalement optionnel et désactivé
-par défaut : *Réglages → Stream Deck* installe le plugin et fait apparaître
-l'onglet *Sorts*.
-
 ## Installation
 
 Récupérer le DMG correspondant à ta machine dans la page
@@ -130,9 +122,7 @@ s'il existe, sinon *Apple Development*, sinon le certificat local
 « Synfus Dev » (`./Tools/make-signing-identity.sh` le crée une fois), sinon
 ad hoc. L'identité vue par TCC reste ainsi stable d'un build à l'autre, et
 l'autorisation Accessibilité n'est pas à redonner à chaque fois — mais
-**changer d'identité la fait redonner une fois**. Le plugin Stream Deck est
-construit et embarqué dans l'app, jamais installé par le script : c'est Synfus
-qui le propose.
+**changer d'identité la fait redonner une fois**.
 
 Les tests se lancent avec `sh test.sh`. Ils portent sur la logique pure —
 analyse des titres de fenêtres, classes, raccourcis, persistance — et ne

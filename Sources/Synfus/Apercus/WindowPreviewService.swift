@@ -76,23 +76,10 @@ final class WindowPreviewService: ObservableObject {
         refresh([client])
     }
 
-    /// Une capture à la demande, hors vignettes : pleine résolution, et
-    /// éventuellement limitée à une zone de la fenêtre — en fractions de sa
-    /// largeur et de sa hauteur, origine en haut à gauche. C'est la capture de
-    /// la reconnaissance des sorts et de la détection de combat : le même
-    /// moteur, le même appariement, un seul foyer.
-    func capture(_ client: DofusClient, region: CGRect? = nil) async -> CGImage? {
-        guard let data = await captureData(client, region: region, maxWidth: nil, inventaireGarde: false)
-        else { return nil }
-        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else {
-            lastCaptureError = "PNG illisible"
-            return nil
-        }
-        return CGImageSourceCreateImageAtIndex(source, 0, nil)
-    }
-
-    /// La même capture, rendue en PNG tel quel — pour qui la traite hors du
-    /// main actor, comme la lecture de la position.
+    /// Une capture à la demande, hors vignettes, rendue en PNG — pour qui la
+    /// traite hors du main actor, comme la lecture de l'écran. `region` limite
+    /// la capture à une zone de la fenêtre, en fractions de sa largeur et de sa
+    /// hauteur, origine en haut à gauche.
     ///
     /// `maxWidth` borne la largeur en pixels (`nil` : résolution native).
     /// `inventaireGarde` : se contenter de l'inventaire ScreenCaptureKit en
@@ -371,7 +358,7 @@ private actor PreviewCaptureEngine {
     private func shotThrowing(of window: SCWindow, request: PreviewRequest) async throws -> Data {
         let configuration = SCStreamConfiguration()
         // La zone demandée d'abord — en points de la fenêtre —, puis l'échelle :
-        // une capture de la seule barre de sorts pèse cent fois moins qu'une
+        // une capture d'une seule zone pèse cent fois moins qu'une
         // fenêtre entière, et c'est ce qui rend supportable une lecture répétée.
         var size = window.frame.size
         var hauteurContenu = size.height
@@ -386,9 +373,9 @@ private actor PreviewCaptureEngine {
             configuration.sourceRect = rect
             size = rect.size
         }
-        // Résolution native : les écrans Retina rendent deux pixels par point,
-        // et la reconnaissance veut ces pixels-là — sauf pour la lecture de
-        // l'écran, ramenée à une hauteur de contenu fixe.
+        // La lecture de l'écran ramène le contenu à une hauteur fixe, les
+        // vignettes bornent la largeur ; sinon, résolution native (deux pixels
+        // par point en Retina).
         let natif = await Self.backingScale
         let scale: CGFloat
         if request.contenu?.normaliser == true {

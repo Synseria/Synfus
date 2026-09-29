@@ -69,8 +69,6 @@ if [ "$INSTALL" = "1" ]; then
     rm -rf "/Applications/$NAME.app"
     cp -R "dist/$NAME.app" /Applications/
     echo "==> Installé : /Applications/$NAME.app"
-    # Le plugin Stream Deck n'est pas installé ici : c'est optionnel, et
-    # Synfus le propose (Réglages → Stream Deck → « Installer le plugin »).
     APP="/Applications/$NAME.app"
 else
     APP=".build/dev/$NAME.app"

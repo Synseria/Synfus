@@ -67,7 +67,7 @@ jobs:
           # certificat sur le runner, signature.sh signe ad hoc.
           for arch in arm64 x86_64; do
             ARCH="$arch" bash build.sh --release "$VERSION"
-            rm -rf dist/Synfus.app dist/fr.synseria.synfus.sdPlugin
+            rm -rf dist/Synfus.app
           done
           shasum -a 256 dist/*.dmg | tee dist/SHA256SUMS.txt
 
