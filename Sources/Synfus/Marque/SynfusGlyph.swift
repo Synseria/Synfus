@@ -1,5 +1,4 @@
 import AppKit
-import SwiftUI
 
 /// La marque réduite à sa silhouette : la couvée en aplat, l'œuf de tête
 /// détouré de ses deux acolytes par un mince jour.
@@ -25,9 +24,6 @@ enum SynfusGlyph {
     private static let cadreDroit = CGRect(x: 84.0, y: 0.8, width: 91.52, height: 118.56)
     /// Le jour qui détoure l'œuf de tête, en épaisseur de trait.
     private static let jour: CGFloat = 18.72
-
-    /// Proportions du rectangle englobant de la couvée.
-    static let ratio: CGFloat = largeurReference / hauteurReference
 
     private static func scaled(_ rect: CGRect, _ k: CGFloat) -> CGRect {
         CGRect(x: rect.minX * k, y: rect.minY * k,
@@ -65,31 +61,5 @@ enum SynfusGlyph {
         }
         image.isTemplate = true
         return image
-    }
-}
-
-/// Le glyphe en vue SwiftUI, teinté par le style courant.
-///
-/// Sans usage depuis que la poignée de la barre flottante est redevenue un grip
-/// de points. Conservée : c'est la seule version SwiftUI du dessin, et le
-/// prochain endroit qui voudra signer l'interface la reprendra telle quelle.
-struct SynfusGlyphView: View {
-    var body: some View {
-        GeometryReader { geo in
-            let k = geo.size.height / 164.16
-            let avant = CGRect(x: 24.4 * k, y: 0, width: 126.72 * k, height: 164.16 * k)
-            let gauche = CGRect(x: 0, y: 0.8 * k, width: 91.52 * k, height: 118.56 * k)
-            let droit = CGRect(x: 84.0 * k, y: 0.8 * k, width: 91.52 * k, height: 118.56 * k)
-            ZStack {
-                Path(SynfusMark.dragonEgg(in: gauche)).fill()
-                Path(SynfusMark.dragonEgg(in: droit)).fill()
-                Path(SynfusMark.dragonEgg(in: avant))
-                    .stroke(lineWidth: 18.72 * k)
-                    .blendMode(.destinationOut)
-                Path(SynfusMark.dragonEgg(in: avant)).fill()
-            }
-            .compositingGroup()
-        }
-        .aspectRatio(SynfusGlyph.ratio, contentMode: .fit)
     }
 }

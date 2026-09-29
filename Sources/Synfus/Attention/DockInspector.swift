@@ -82,9 +82,6 @@ enum DockInspector {
         let date: Date
     }
 
-    /// Icônes du Dock appartenant à des clients Dofus lancés, de gauche à droite.
-    static func dofusItems() -> [Item] { inventory().items }
-
     /// Tour complet : découverte structurelle puis relevé géométrique.
     static func inventory() -> Inventory {
         guard let structure = discoverStructure(now: Date()),
