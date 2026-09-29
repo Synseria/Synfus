@@ -129,9 +129,19 @@ final class AttentionProbe: ObservableObject {
 
     // MARK: - Journal
 
+    /// Le journal est ouvert en ajout, d'une sonde à l'autre : une sonde
+    /// oubliée en marche l'aurait sinon rempli sans fin. Au-delà de cette
+    /// taille, un nouveau démarrage repart d'un journal vide plutôt que
+    /// d'ajouter encore.
+    private static let maxLogSize = 2 * 1024 * 1024
+
     private func openLog() {
         let path = Self.logURL.path
         if !FileManager.default.fileExists(atPath: path) {
+            FileManager.default.createFile(atPath: path, contents: nil)
+        } else if let size = try? FileManager.default.attributesOfItem(atPath: path)[.size] as? Int,
+                  size > Self.maxLogSize {
+            try? FileManager.default.removeItem(atPath: path)
             FileManager.default.createFile(atPath: path, contents: nil)
         }
         handle = FileHandle(forWritingAtPath: path)

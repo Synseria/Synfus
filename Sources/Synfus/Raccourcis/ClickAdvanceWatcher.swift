@@ -11,18 +11,16 @@ import AppKit
 /// les conditions d'utilisation de Dofus interdisent — et ce que le dépôt refuse
 /// au même titre qu'il refuse d'embarquer les visuels d'Ankama.
 ///
-/// **C'est la touche qui porte l'intention, pas un mode.** La version
-/// précédente était une bascule : mode actif, chaque clic nu enchaînait,
-/// jusqu'à ce qu'on le coupe. À l'usage, personne ne s'en servait — on oubliait
-/// de l'armer, on oubliait de le couper, et un clic anodin changeait de
-/// fenêtre. Ici rien n'est armé : le geste dit ce qu'il veut, un clic ordinaire
-/// reste un clic ordinaire.
+/// **C'est la touche qui porte l'intention, pas un mode.** Rien n'est armé :
+/// le geste dit lui-même ce qu'il veut, et un clic ordinaire reste un clic
+/// ordinaire — pas de bascule à oublier de couper, qui changerait de fenêtre
+/// sur un clic anodin.
 ///
 /// Le jeu reçoit le clic **avec la touche dessus** — Synfus observe, il ne
 /// réécrit pas ; retirer la touche de l'évènement demanderait exactement le
 /// `CGEventTap` que le projet refuse. D'où `fn` par défaut : c'est la seule
-/// touche que ni le jeu ni macOS n'interprètent sur un clic, là où un ⌘-clic,
-/// mesuré, ne parlait plus aux PNJ.
+/// touche que ni le jeu ni macOS n'interprètent sur un clic, là où ⌘, par
+/// exemple, coupe la parole aux PNJ.
 ///
 /// L'observation est passive (`addGlobalMonitorForEvents`) et porte sur la
 /// souris seule : rien n'est intercepté, rien n'est modifié, et le clavier reste

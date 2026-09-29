@@ -252,10 +252,10 @@ final class Preferences: ObservableObject {
 
     /// Fait passer une sauvegarde ancienne au jeu de raccourcis courant.
     ///
-    /// ⌘@ change de rôle : il ouvrait la bascule du passage automatique, il fait
-    /// désormais avancer dans la barre — le geste que l'on répète le plus, sur la
-    /// touche la plus facile à atteindre. La bascule glisse d'un modificateur, et
-    /// l'aperçu d'ensemble reçoit enfin un défaut.
+    /// ⌘@ devient l'avancée dans la barre — le geste le plus répété, sur la
+    /// touche la plus facile à atteindre — et la bascule du passage automatique
+    /// migre vers un autre modificateur ; l'aperçu d'ensemble reçoit son
+    /// premier défaut.
     ///
     /// Rend `true` s'il y a eu quelque chose à reprendre, pour que l'appelant
     /// n'écrive les préférences que dans ce cas.
