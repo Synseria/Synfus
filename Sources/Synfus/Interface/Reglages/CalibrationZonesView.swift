@@ -7,15 +7,17 @@ extension GenreLecture: Identifiable {
         switch self {
         case .position: return L("diagnostic.lecture.position")
         case .combat: return L("diagnostic.lecture.combat")
+        case .chasse: return L("diagnostic.lecture.chasse")
         }
     }
 
     /// Couleur du cadre de la zone sur la capture — le rose du bouton de fin
-    /// de tour pour le combat.
+    /// de tour pour le combat, l'or d'un trésor pour la chasse.
     var teinte: Color {
         switch self {
         case .position: return .blue
         case .combat: return Color(red: 0.76, green: 0.44, blue: 0.73)
+        case .chasse: return Color(red: 0.85, green: 0.65, blue: 0.13)
         }
     }
 }
@@ -185,6 +187,7 @@ struct CalibrationZonesView: View {
         switch genre {
         case .position: return prefs.zonePosition
         case .combat: return prefs.zoneCombat
+        case .chasse: return prefs.zoneChasse
         }
     }
 
@@ -194,6 +197,7 @@ struct CalibrationZonesView: View {
         switch genre {
         case .position: prefs.zonePosition = zone
         case .combat: prefs.zoneCombat = zone
+        case .chasse: prefs.zoneChasse = zone
         }
     }
 

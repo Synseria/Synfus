@@ -39,6 +39,10 @@ struct ZoneEcran: Codable, Equatable, Sendable {
     /// Le bouton « Fin de tour » et le décompte au-dessus, à leur place par
     /// défaut : en bas à droite, contre la barre de sorts.
     static let combatParDefaut = ZoneEcran(x: 0.79, y: 0.85, largeur: 0.12, hauteur: 0.12)
+    /// Le suivi de chasse au trésor, à sa place par défaut : à gauche, sous
+    /// la position, assez haut pour une chasse de dix étapes. Estimé, pas
+    /// mesuré : le tracé du Diagnostic est là pour le corriger.
+    static let chasseParDefaut = ZoneEcran(x: 0, y: 0.10, largeur: 0.26, hauteur: 0.55)
 
     /// En deçà, un tracé est un clic, pas une zone.
     static let tailleMinimale = 0.01

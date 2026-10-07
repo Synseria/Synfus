@@ -77,10 +77,12 @@ final class Preferences: ObservableObject {
     @Published var lireCombat: Bool = false { didSet { save() } }
 
     /// Zones de lecture calibrées dans le Diagnostic ; `nil` : la valeur par
-    /// défaut (`ZoneEcran.positionParDefaut`, `.combatParDefaut`), qui suit
+    /// défaut (`ZoneEcran.positionParDefaut`, `.combatParDefaut`,
+    /// `.chasseParDefaut`), qui suit
     /// ainsi ses corrections futures tant qu'on ne l'a pas remplacée.
     @Published var zonePosition: ZoneEcran? { didSet { save() } }
     @Published var zoneCombat: ZoneEcran? { didSet { save() } }
+    @Published var zoneChasse: ZoneEcran? { didSet { save() } }
 
     /// Icône du `NSStatusItem`. Le rafraîchissement est à la charge de l'appelant
     /// (`MenuBarController.refreshIcon()`) : les préférences ne pilotent pas l'UI.
@@ -151,6 +153,12 @@ final class Preferences: ObservableObject {
     /// Les zaaps proposés au clic droit du bouton de la barre, par `Zaap.cle`,
     /// dans l'ordre où ils ont été marqués.
     @Published var zaapsFavoris: [String] = [] { didSet { save() } }
+
+    /// Raccourci du panneau de chasse au trésor. Sans défaut.
+    @Published var chasseHotKey: HotKey? { didSet { save() } }
+
+    /// Le bouton de chasse dans la barre.
+    @Published var chasseBouton: Bool = true { didSet { save() } }
 
     /// Nombre de slots exposés (et donc de raccourcis potentiels).
     ///
@@ -335,7 +343,7 @@ final class Preferences: ObservableObject {
     var raccourcisGlobaux: [HotKey?] {
         hotKeys + [
             cycleNext, cyclePrevious, toggleBar, previewHotKey, arrangeHotKey, sessionHotKey,
-            equipeSuivanteHotKey, inviteHotKey, zaapHotKey, toggleAutoFocus,
+            equipeSuivanteHotKey, inviteHotKey, zaapHotKey, chasseHotKey, toggleAutoFocus,
         ]
     }
 
@@ -354,6 +362,7 @@ final class Preferences: ObservableObject {
         sessionHotKey = nil
         equipeSuivanteHotKey = nil
         zaapHotKey = nil
+        chasseHotKey = nil
     }
 
     /// Reporte sur la touche sous Échap les raccourcis restés sur le keycode 50.
@@ -406,6 +415,7 @@ final class Preferences: ObservableObject {
         .facultatif("lireCombat", \.lireCombat),
         .optionnel("zonePosition", \.zonePosition),
         .optionnel("zoneCombat", \.zoneCombat),
+        .optionnel("zoneChasse", \.zoneChasse),
         .facultatif("killFrozenClients", \.killFrozenClients),
         .optionnel("lastArrangement", \.lastArrangement),
         .optionnel("arrangeHotKey", \.arrangeHotKey),
@@ -423,6 +433,8 @@ final class Preferences: ObservableObject {
         .facultatif("zaapsAjoutes", \.zaapsAjoutes),
         .facultatif("zaapsChoix", \.zaapsChoix),
         .facultatif("zaapsFavoris", \.zaapsFavoris),
+        .optionnel("chasseHotKey", \.chasseHotKey),
+        .facultatif("chasseBouton", \.chasseBouton),
     ]
 
     /// Génération du jeu de raccourcis par défaut appliqué à la sauvegarde.

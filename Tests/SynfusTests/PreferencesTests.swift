@@ -497,6 +497,7 @@ struct PreferencesTests {
      "arrangeHotKey":{"keyCode":40,"modifiers":256},"attentionAction":"focus",
      "autoCenterBar":false,"barOnlyWithDofus":true,"barOriginX":120.5,"barOriginY":640,
      "barVisible":false,"characterOrder":["Aeryn","Nova"],
+     "chasseBouton":false,"chasseHotKey":{"keyCode":5,"modifiers":2048},
      "cycleNext":{"keyCode":122,"modifiers":0},"cyclePrevious":{"keyCode":120,"modifiers":0},
      "defaultsVersion":6,"equipeSuivanteHotKey":{"keyCode":17,"modifiers":256},
      "equipes":[{"membres":["Aeryn"]},{"membres":["Nova"]}],
@@ -517,7 +518,8 @@ struct PreferencesTests {
      "zaapsDofusDB":{"date":800000000,"zaaps":[{"monde":1,"noms":{"en":"Amakna Village","fr":"Village d'Amakna"},"x":-2,"y":0}]},
      "toggleBar":{"keyCode":11,"modifiers":768},
      "zoneCombat":{"hauteur":0.125,"largeur":0.25,"x":0.125,"y":0.75},
-     "zonePosition":{"hauteur":0.0625,"largeur":0.25,"x":0.5,"y":0.25}}
+     "zonePosition":{"hauteur":0.0625,"largeur":0.25,"x":0.5,"y":0.25},
+     "zoneChasse":{"hauteur":0.5,"largeur":0.25,"x":0,"y":0.125}}
     """
 
     /// Vérifie que `prefs` porte exactement les valeurs de `empreinte`.
@@ -547,6 +549,7 @@ struct PreferencesTests {
         #expect(prefs.lireCombat == true)
         #expect(prefs.zonePosition == ZoneEcran(x: 0.5, y: 0.25, largeur: 0.25, hauteur: 0.0625))
         #expect(prefs.zoneCombat == ZoneEcran(x: 0.125, y: 0.75, largeur: 0.25, hauteur: 0.125))
+        #expect(prefs.zoneChasse == ZoneEcran(x: 0, y: 0.125, largeur: 0.25, hauteur: 0.5))
         #expect(prefs.killFrozenClients == false)
         #expect(prefs.lastArrangement == .principale)
         #expect(prefs.arrangeHotKey == HotKey(keyCode: 40, modifiers: 256))
@@ -566,6 +569,8 @@ struct PreferencesTests {
         #expect(prefs.zaapsDofusDB == ReleveZaaps(
             date: Date(timeIntervalSinceReferenceDate: 800_000_000),
             zaaps: [Zaap(-2, 0, noms: ["fr": "Village d'Amakna", "en": "Amakna Village"])]))
+        #expect(prefs.chasseHotKey == HotKey(keyCode: 5, modifiers: 2048))
+        #expect(prefs.chasseBouton == false)
     }
 
     @Test("Chaque réglage s'écrit sous sa clé, avec son encodage")
@@ -595,6 +600,7 @@ struct PreferencesTests {
         prefs.lireCombat = true
         prefs.zonePosition = ZoneEcran(x: 0.5, y: 0.25, largeur: 0.25, hauteur: 0.0625)
         prefs.zoneCombat = ZoneEcran(x: 0.125, y: 0.75, largeur: 0.25, hauteur: 0.125)
+        prefs.zoneChasse = ZoneEcran(x: 0, y: 0.125, largeur: 0.25, hauteur: 0.5)
         prefs.killFrozenClients = false
         prefs.lastArrangement = .principale
         prefs.arrangeHotKey = HotKey(keyCode: 40, modifiers: 256)
@@ -614,6 +620,8 @@ struct PreferencesTests {
         prefs.zaapsDofusDB = ReleveZaaps(
             date: Date(timeIntervalSinceReferenceDate: 800_000_000),
             zaaps: [Zaap(-2, 0, noms: ["fr": "Village d'Amakna", "en": "Amakna Village"])])
+        prefs.chasseHotKey = HotKey(keyCode: 5, modifiers: 2048)
+        prefs.chasseBouton = false
 
         #expect(canonique(store.donnees(pour: Preferences.key))
                 == canonique(Data(Self.empreinte.utf8)))
@@ -629,6 +637,7 @@ struct PreferencesTests {
         for chemin: ReferenceWritableKeyPath<Preferences, HotKey?> in [
             \.cycleNext, \.cyclePrevious, \.toggleAutoFocus, \.toggleBar, \.previewHotKey,
             \.arrangeHotKey, \.sessionHotKey, \.equipeSuivanteHotKey, \.inviteHotKey, \.zaapHotKey,
+            \.chasseHotKey,
         ] {
             prefs[keyPath: chemin] = nil
         }
@@ -636,7 +645,7 @@ struct PreferencesTests {
 
         let attendu = """
         {"advanceModifier":"fn","advanceOnClick":false,"attentionAction":"highlight",
-         "autoCenterBar":true,"barOnlyWithDofus":false,"barVisible":true,"characterOrder":[],
+         "autoCenterBar":true,"barOnlyWithDofus":false,"barVisible":true,"chasseBouton":true,"characterOrder":[],
          "defaultsVersion":6,"equipes":[],"hotKeys":[null],"inviteFormat":"/invite %nom","inviteGroupee":false,
          "killFrozenClients":true,"lireCombat":false,"lirePosition":false,"menuBarIcon":"logo",
          "showClasses":true,"showNumbers":true,"showPreviewOnHover":false,
