@@ -26,8 +26,6 @@ contenu (`Tools/notes-de-version.sh`), et `sh build.sh --publish` refuse une ver
 
   ![Les commandes](https://raw.githubusercontent.com/Synseria/Synfus/v0.10.0/docs/screenshots/palette-commandes.png)
 
-- **Phrases enregistrées** : recrutement, demande d'aide… retrouvées par leur nom, copiées d'un
-  geste (*Réglages → Palette*).
 - **Tout Synfus au clavier** : tape un perso pour y aller, « ranger », « session », « équipe
   suivante », « chasse »… et Entrée.
 - **`/invite`** : toute l'équipe en une ligne, ou un perso.
@@ -36,7 +34,7 @@ contenu (`Tools/notes-de-version.sh`), et `sh build.sh --publish` refuse une ver
 
 - **Réglages refaits** : une seule grille (libellé à gauche, réglage à droite), des libellés
   harmonisés, un onglet **Palette** qui réunit zaaps (en cartes, étiquettes, favoris), lieux
-  étiquetés, phrases, réécriture du `/travel`, chasse et carte du jeu.
+  étiquetés, réécriture du `/travel`, chasse et carte du jeu.
 
   ![L'onglet Palette](https://raw.githubusercontent.com/Synseria/Synfus/v0.10.0/docs/screenshots/reglages-palette.png)
 

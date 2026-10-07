@@ -13,7 +13,6 @@ struct RecherchePaletteTests {
         contexte.lieux = Carte.integree.lieux
         contexte.etiquettes = etiquettes
         contexte.favoris = favoris
-        contexte.phrases = [Phrase(nom: "Recrutement", texte: "Guilde cherche membres, %pos%")]
         contexte.persos = [(nom: "Bram", slotKey: "2#0")]
         contexte.invitationEquipe = "/invite Bram; /invite Cob"
         contexte.invitations = [(nom: "Bram", commande: "/invite Bram"), (nom: "Cob", commande: "/invite Cob")]
@@ -95,10 +94,9 @@ struct RecherchePaletteTests {
         #expect(entrees.map(\.effet) == [.copier("/invite Bram; /invite Cob"), .copier("/invite Bram"), .copier("/invite Cob")])
     }
 
-    @Test("Sans préfixe : un perso, une phrase, un geste")
+    @Test("Sans préfixe : un perso, un geste")
     func tout() {
         #expect(premiere("bram", contexte())?.effet == .basculer(slotKey: "2#0"))
-        #expect(premiere("recrut", contexte())?.effet == .copier("Guilde cherche membres, %pos%"))
         #expect(premiere("ranger", contexte())?.effet == .action(.rangerFenetres))
     }
 

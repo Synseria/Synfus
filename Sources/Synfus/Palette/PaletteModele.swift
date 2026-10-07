@@ -170,7 +170,6 @@ final class PaletteModele: ObservableObject {
         contexte.lieux = CarteStore.shared.carte.lieux
         contexte.etiquettes = prefs.etiquettes
         contexte.favoris = Set(prefs.zaapsFavoris + prefs.lieuxFavoris)
-        contexte.phrases = prefs.phrases
         contexte.recents = prefs.paletteRecents
         contexte.persos = manager.clients
             .filter { WindowTitle.isPersistableName($0.name) }
