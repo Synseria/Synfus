@@ -121,6 +121,10 @@ final class Preferences: ObservableObject {
     /// Le texte posé dans le presse-papiers, `%nom` remplacé par le perso.
     @Published var inviteFormat: String = InvitationComposer.formatParDefaut { didSet { save() } }
 
+    /// Le raccourci copie toutes les invitations en une ligne plutôt qu'une
+    /// par appui.
+    @Published var inviteGroupee: Bool = false { didSet { save() } }
+
     /// Raccourci « zaap le plus proche du /travel copié ». Sans défaut.
     @Published var zaapHotKey: HotKey? { didSet { save() } }
 
@@ -387,6 +391,7 @@ final class Preferences: ObservableObject {
         .optionnel("equipeSuivanteHotKey", \.equipeSuivanteHotKey),
         .optionnel("inviteHotKey", \.inviteHotKey),
         .facultatif("inviteFormat", \.inviteFormat),
+        .facultatif("inviteGroupee", \.inviteGroupee),
         .optionnel("zaapHotKey", \.zaapHotKey),
         .facultatif("zaapBouton", \.zaapBouton),
         .facultatif("zaapAuto", \.zaapAuto),
