@@ -28,10 +28,11 @@ contenu (`Tools/notes-de-version.sh`), et `sh build.sh --publish` refuse une ver
 
 - **Tout Synfus au clavier** : « ranger », « session », « équipe suivante », « chasse »… et Entrée.
 - **`/invite`** : toute l'équipe en une ligne, ou un perso.
-- **`/quete wogew`** : les **1 976 quêtes** du jeu, ouvertes dans un **panneau transparent** qui
-  reste au-dessus du jeu sans lui prendre le clavier — les **ressources à réunir** (quantités
-  additionnées ; un clic copie le nom pour l'hôtel de vente, ou toute la liste), puis chaque
-  objectif étape par étape, dont un clic copie le trajet. Téléchargées depuis DofusDB à la première ouverture
+- **`/quete wogew`** : les **1 976 quêtes** du jeu, **épinglées** dans un **panneau transparent**
+  (un onglet par quête, redimensionnable) qui reste au-dessus du jeu sans lui prendre le clavier —
+  les **ressources à réunir** avec leur catégorie (ressource, consommable, objet de quête… ; un clic
+  copie le nom pour l'hôtel de vente, ou toute la liste), « en groupe » ou « donjon » quand il le
+  faut, puis l'étape en cours, parcourue aux flèches ‹ › et retenue, dont un clic copie le trajet. Téléchargées depuis DofusDB à la première ouverture
   de la palette (quelques secondes), puis tous les 30 jours.
 
   ![Une quête ouverte](https://raw.githubusercontent.com/Synseria/Synfus/v0.10.0/docs/screenshots/quete.png)

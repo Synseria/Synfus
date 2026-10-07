@@ -14,6 +14,8 @@ enum QuetesDofusDB {
         let id: Int
         let name: DofusDB.Noms
         let levelMin: Int?
+        let isPartyQuest: Bool?
+        let isDungeonQuest: Bool?
         let stepIds: [Int]?
         let startPosition: [Depart]?
         let steps: [EtapeAPI]?
@@ -70,6 +72,18 @@ enum QuetesDofusDB {
     struct Nomme: Decodable, Sendable {
         let id: Int
         let name: DofusDB.Noms
+        /// Pour un objet : son type (`item-types`).
+        var typeId: Int?
+    }
+
+    /// Un type d'objet et sa grande famille (« Ressource », « Consommable »…).
+    struct TypeObjetAPI: Decodable, Sendable {
+        struct Famille: Decodable, Sendable {
+            let name: DofusDB.Noms
+        }
+
+        let id: Int
+        let superType: Famille?
     }
 
     struct CarteAPI: Decodable, Sendable {
@@ -123,8 +137,9 @@ enum QuetesDofusDB {
         let idsSousZones = Set(objectifs.compactMap { $0.map?.subAreaId } + cartes.compactMap(\.subAreaId))
         let sousZones: [SousZoneAPI] = try await parIdentifiants("subareas", idsSousZones)
         let zones: [Nomme] = try await parIdentifiants("areas", Set(sousZones.map(\.areaId)))
+        let types: [TypeObjetAPI] = try await DofusDB.toutes("item-types", [])
         return try await assembler(quetes: quetes, objets: objets, monstres: monstres, pnjs: pnjs,
-                                   cartes: cartes, sousZones: sousZones, zones: zones, date: maintenant)
+                                   cartes: cartes, sousZones: sousZones, zones: zones, types: types, date: maintenant)
     }
 
     /// Les identifiants cités : par les paramètres, et par les renvois du texte.
@@ -148,7 +163,8 @@ enum QuetesDofusDB {
     }
 
     static func assembler(quetes: [QueteAPI], objets: [Nomme], monstres: [Nomme], pnjs: [Nomme],
-                          cartes: [CarteAPI], sousZones: [SousZoneAPI], zones: [Nomme], date: Date) -> Quetes {
+                          cartes: [CarteAPI], sousZones: [SousZoneAPI], zones: [Nomme], types: [TypeObjetAPI] = [],
+                          date: Date) -> Quetes {
         let carteParId = Dictionary(cartes.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
         /// Par PNJ, par case : la sous-zone et les quêtes qui l'y placent.
         var vus: [Int: [PNJ.Position: (sousZone: Int?, quetes: Set<Int>)]] = [:]
@@ -175,7 +191,8 @@ enum QuetesDofusDB {
                                              objet: objectif.aRamener?.objet, quantite: objectif.aRamener?.quantite)
                     })
                 }
-            return Quete(id: api.id, noms: api.name.parLangue, niveau: api.levelMin ?? 0, etapes: etapes)
+            return Quete(id: api.id, noms: api.name.parLangue, niveau: api.levelMin ?? 0,
+                         groupe: api.isPartyQuest ?? false, donjon: api.isDungeonQuest ?? false, etapes: etapes)
         }
         func noms(_ liste: [Nomme]) -> [String: [String: String]] {
             Dictionary(liste.map { (String($0.id), $0.name.parLangue) }, uniquingKeysWith: { a, _ in a })
@@ -195,8 +212,13 @@ enum QuetesDofusDB {
         let lieux = Dictionary(sousZones.map {
             (String($0.id), SousZoneNommee(noms: $0.name.parLangue, zone: nomsZones[String($0.areaId)] ?? [:]))
         }, uniquingKeysWith: { a, _ in a })
+        let familles = Dictionary(types.compactMap { type in type.superType.map { (type.id, $0.name.parLangue) } },
+                                  uniquingKeysWith: { a, _ in a })
+        let categories = Dictionary(objets.compactMap { objet in
+            objet.typeId.flatMap { familles[$0] }.map { (String(objet.id), $0) }
+        }, uniquingKeysWith: { a, _ in a })
         return Quetes(date: date, quetes: modeles, pnjs: situes, objets: noms(objets),
-                      monstres: noms(monstres), nomsPNJ: noms(pnjs), sousZones: lieux)
+                      monstres: noms(monstres), nomsPNJ: noms(pnjs), sousZones: lieux, categoriesObjets: categories)
     }
 
     private static func parIdentifiants<Element: Decodable & Sendable>(_ chemin: String, _ ids: Set<Int>) async throws -> [Element] {
@@ -207,7 +229,8 @@ enum QuetesDofusDB {
             elements += try await DofusDB.toutes(chemin, lot.map { URLQueryItem(name: "id[$in][]", value: "\($0)") }
                 + [URLQueryItem(name: "$select[]", value: "id"), URLQueryItem(name: "$select[]", value: "name"),
                    URLQueryItem(name: "$select[]", value: "posX"), URLQueryItem(name: "$select[]", value: "posY"),
-                   URLQueryItem(name: "$select[]", value: "subAreaId"), URLQueryItem(name: "$select[]", value: "areaId")])
+                   URLQueryItem(name: "$select[]", value: "subAreaId"), URLQueryItem(name: "$select[]", value: "areaId"),
+                   URLQueryItem(name: "$select[]", value: "typeId")])
         }
         return elements
     }

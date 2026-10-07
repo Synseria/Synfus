@@ -163,6 +163,12 @@ final class Preferences: ObservableObject {
     /// L'ordre des résultats de la palette, après les zaaps (⌘T).
     @Published var paletteTri: TriPalette = .proximite { didSet { save() } }
 
+    /// Les quêtes épinglées dans leur panneau, dans l'ordre d'ouverture.
+    @Published var quetesEpinglees: [Int] = [] { didSet { save() } }
+
+    /// L'étape où l'on en est de chaque quête, par identifiant de quête.
+    @Published var quetesEtape: [String: Int] = [:] { didSet { save() } }
+
     /// Raccourci de la palette. ⌘: par défaut (génération 7).
     @Published var paletteHotKey: HotKey? { didSet { save() } }
 
@@ -460,6 +466,8 @@ final class Preferences: ObservableObject {
         .optionnel("paletteHotKey", \.paletteHotKey),
         .facultatif("paletteRecents", \.paletteRecents),
         .facultatif("paletteTri", \.paletteTri),
+        .facultatif("quetesEpinglees", \.quetesEpinglees),
+        .facultatif("quetesEtape", \.quetesEtape),
         .facultatif("chasseBouton", \.chasseBouton),
     ]
 

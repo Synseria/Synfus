@@ -1,64 +1,118 @@
 import SwiftUI
 
-/// Une quête : son nom, les ressources à réunir, puis chaque étape et ses
-/// objectifs. Un clic sur une ressource copie son nom (pour l'hôtel de
-/// vente), sur un objectif situé copie son trajet, zaap compris.
+/// Les quêtes épinglées : un onglet par quête, puis les ressources à réunir
+/// et l'étape en cours, qu'on parcourt aux flèches. Un clic sur une ressource
+/// copie son nom (pour l'hôtel de vente), sur un objectif situé son trajet,
+/// zaap compris.
 struct QueteVue: View {
-    static let largeur: CGFloat = 340
-
     @ObservedObject private var panneau = QuetePanel.shared
     @ObservedObject private var store = QuetesStore.shared
+    @ObservedObject private var prefs = Preferences.shared
     /// La ligne qui vient d'être copiée, le temps de le dire.
     @State private var copiee: String?
-    /// Une fiche donnée (captures de la documentation) ; `nil` : celle du panneau.
+    /// Une fiche donnée (captures de la documentation) ; `nil` : celles du panneau.
     var ficheImposee: FicheQuete?
 
+    private var langue: Langue { L10n.courante.langue }
+
+    private var idMontre: Int? { panneau.montree ?? prefs.quetesEpinglees.last }
+
     private var fiche: FicheQuete? {
-        ficheImposee ?? panneau.queteID.flatMap { store.quetes?.fiche($0, en: L10n.courante.langue) }
+        ficheImposee ?? idMontre.flatMap { store.quetes?.fiche($0, en: langue) }
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            entete
+            onglets
             Divider()
             if let fiche {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 12) {
+                        entete(fiche)
                         if !fiche.ressources.isEmpty { ressources(fiche) }
-                        ForEach(Array(fiche.etapes.enumerated()), id: \.offset) { rang, etape in
-                            etapeVue(rang, etape)
-                        }
+                        if !fiche.etapes.isEmpty { etape(fiche) }
                     }
                     .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .frame(maxHeight: 460)
+            } else {
+                Text(store.chargement ? L("palette.quetes.chargement") : L("quete.aucune"))
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .frame(width: Self.largeur)
+        .frame(minWidth: 280, maxWidth: .infinity, minHeight: 200, maxHeight: .infinity, alignment: .top)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Color.primary.opacity(0.12)))
     }
 
-    private var entete: some View {
-        HStack(spacing: 8) {
+    // MARK: - Onglets
+
+    /// Une pastille par quête épinglée ; on déplace le panneau par cette bande.
+    private var onglets: some View {
+        HStack(spacing: 6) {
             Image(systemName: "scroll").foregroundStyle(Couleurs.accent)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(fiche?.nom ?? "").font(.system(size: 13, weight: .semibold)).lineLimit(1)
-                if let fiche {
-                    Text(L("quete.niveau", fiche.niveau, fiche.etapes.count))
-                        .font(.system(size: 10)).foregroundStyle(.secondary)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 4) {
+                    if let ficheImposee {
+                        onglet(id: 0, nom: ficheImposee.nom, choisi: true)
+                    } else {
+                        ForEach(prefs.quetesEpinglees, id: \.self) { id in
+                            onglet(id: id, nom: store.quetes?.fiche(id, en: langue)?.nom ?? "…", choisi: id == idMontre)
+                        }
+                    }
                 }
             }
-            Spacer(minLength: 0)
             Button { QuetePanel.shared.fermer() } label: {
-                Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                Image(systemName: "minus.circle.fill").foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
             .help(L("quete.fermer"))
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 9)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
         .background(WindowDragArea())
+    }
+
+    private func onglet(id: Int, nom: String, choisi: Bool) -> some View {
+        HStack(spacing: 4) {
+            Text(nom).lineLimit(1)
+            Button { QuetePanel.shared.desepingler(id) } label: {
+                Image(systemName: "xmark").font(.system(size: 8, weight: .bold))
+            }
+            .buttonStyle(.plain)
+            .help(L("quete.desepingler"))
+        }
+        .font(.system(size: 11, weight: choisi ? .semibold : .regular))
+        .foregroundStyle(choisi ? Color.white : Color.primary)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 3)
+        .background(Capsule().fill(choisi ? Couleurs.accent : Color.primary.opacity(0.08)))
+        .onTapGesture { QuetePanel.shared.montrer(id) }
+    }
+
+    // MARK: - Contenu
+
+    private func entete(_ fiche: FicheQuete) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(fiche.nom).font(.system(size: 14, weight: .semibold))
+            HStack(spacing: 6) {
+                Text(L("quete.niveau", fiche.niveau, fiche.etapes.count))
+                if fiche.groupe { badge(L("quete.groupe"), icone: "person.3") }
+                if fiche.donjon { badge(L("quete.donjon"), icone: "building.columns") }
+            }
+            .font(.system(size: 10))
+            .foregroundStyle(.secondary)
+        }
+    }
+
+    private func badge(_ texte: String, icone: String) -> some View {
+        Label(texte, systemImage: icone)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 1)
+            .background(Capsule().fill(Couleurs.ambre.opacity(0.25)))
+            .foregroundStyle(Couleurs.ambre)
     }
 
     private func ressources(_ fiche: FicheQuete) -> some View {
@@ -75,29 +129,56 @@ struct QueteVue: View {
             }
             ForEach(Array(fiche.ressources.enumerated()), id: \.offset) { indice, ressource in
                 ligne(id: "ressource:\(indice)", icone: "shippingbox",
-                      texte: L("quete.ressource", ressource.nom, ressource.quantite), detail: nil) {
+                      texte: L("quete.ressource", ressource.nom, ressource.quantite), detail: ressource.categorie,
+                      monospace: false) {
                     copier(ressource.nom, ligne: "ressource:\(indice)")
                 }
             }
         }
     }
 
-    private func etapeVue(_ rang: Int, _ etape: FicheQuete.Etape) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            titreSection(L("quete.etape", rang + 1, etape.nom))
+    /// L'étape en cours, ‹ › pour passer à la précédente ou à la suivante ;
+    /// le panneau s'en souvient d'une ouverture à l'autre.
+    private func etape(_ fiche: FicheQuete) -> some View {
+        let rang = min(rangEtape, fiche.etapes.count - 1)
+        let etape = fiche.etapes[rang]
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Button { changerEtape(rang - 1) } label: { Image(systemName: "chevron.left") }
+                    .disabled(rang == 0)
+                    .help(L("quete.etapePrecedente"))
+                titreSection(L("quete.etapeSur", rang + 1, fiche.etapes.count, etape.nom))
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+                Button { changerEtape(rang + 1) } label: { Image(systemName: "chevron.right") }
+                    .disabled(rang >= fiche.etapes.count - 1)
+                    .help(L("quete.etapeSuivante"))
+            }
+            .buttonStyle(.borderless)
             ForEach(Array(etape.objectifs.enumerated()), id: \.offset) { indice, objectif in
                 let id = "objectif:\(rang):\(indice)"
                 if let position = objectif.position {
                     ligne(id: id, icone: "mappin.and.ellipse", texte: objectif.texte,
-                          detail: "\(position.x),\(position.y)") {
+                          detail: "\(position.x),\(position.y)", monospace: true) {
                         ZaapClipboard.shared.copierTrajet(vers: (position.x, position.y))
                         signaler(id)
                     }
                 } else {
-                    ligne(id: id, icone: "circle", texte: objectif.texte, detail: nil, action: nil)
+                    ligne(id: id, icone: "circle", texte: objectif.texte, detail: L("quete.nonSitue"),
+                          monospace: false, action: nil)
                 }
             }
         }
+    }
+
+    private var rangEtape: Int {
+        guard let id = idMontre else { return 0 }
+        return prefs.quetesEtape[String(id)] ?? 0
+    }
+
+    private func changerEtape(_ rang: Int) {
+        guard let id = idMontre else { return }
+        prefs.quetesEtape[String(id)] = max(rang, 0)
     }
 
     private func titreSection(_ texte: String) -> some View {
@@ -108,8 +189,8 @@ struct QueteVue: View {
     }
 
     /// Une ligne ; cliquable quand elle copie quelque chose.
-    private func ligne(id: String, icone: String, texte: String, detail: String?,
-                      action: (() -> Void)?) -> some View {
+    private func ligne(id: String, icone: String, texte: String, detail: String?, monospace: Bool,
+                       action: (() -> Void)?) -> some View {
         let faite = copiee == id
         return Button { action?() } label: {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -122,7 +203,9 @@ struct QueteVue: View {
                 if faite {
                     Text(L("quete.copie")).font(.system(size: 10, weight: .semibold)).foregroundStyle(Couleurs.accent)
                 } else if let detail {
-                    Text(detail).font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary)
+                    Text(detail)
+                        .font(.system(size: monospace ? 11 : 10, design: monospace ? .monospaced : .default))
+                        .foregroundStyle(.secondary)
                 }
             }
             .padding(.horizontal, 6)
@@ -132,7 +215,7 @@ struct QueteVue: View {
         }
         .buttonStyle(.plain)
         .disabled(action == nil)
-        .help(action == nil ? "" : (detail == nil ? L("quete.copierNom") : L("quete.copierTrajet")))
+        .help(action == nil ? "" : (monospace ? L("quete.copierTrajet") : L("quete.copierNom")))
     }
 
     private func copier(_ texte: String, ligne: String) {
