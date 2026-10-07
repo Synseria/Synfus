@@ -360,7 +360,7 @@ struct BarView: View {
                 // L'invitation de ce perso-là, dans le presse-papiers — Synfus
                 // n'envoie rien au jeu, c'est le joueur qui colle.
                 if WindowTitle.isPersistableName(client.name) {
-                    Button(L("barre.copier", invitations.commande(pour: client))) {
+                    Button(L("barre.inviter", WindowTitle.characterName(fromTitle: client.rawTitle))) {
                         invitations.copier(client)
                     }
                 }
