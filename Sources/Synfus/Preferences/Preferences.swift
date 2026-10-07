@@ -160,6 +160,9 @@ final class Preferences: ObservableObject {
     /// Les phrases enregistrées, copiées depuis la palette.
     @Published var phrases: [Phrase] = [] { didSet { save() } }
 
+    /// Les derniers textes copiés depuis la palette, le plus récent d'abord.
+    @Published var paletteRecents: [String] = [] { didSet { save() } }
+
     /// Raccourci de la palette. ⌘: par défaut (génération 7).
     @Published var paletteHotKey: HotKey? { didSet { save() } }
 
@@ -456,6 +459,7 @@ final class Preferences: ObservableObject {
         .facultatif("etiquettes", \.etiquettes),
         .facultatif("phrases", \.phrases),
         .optionnel("paletteHotKey", \.paletteHotKey),
+        .facultatif("paletteRecents", \.paletteRecents),
         .facultatif("chasseBouton", \.chasseBouton),
     ]
 
