@@ -17,7 +17,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 # Où la release se construit : 1 → le tag poussé déclenche release.yml (le
-# runner macos-26 a le SDK de Liquid Glass) ; 0 → construite et publiée
+# runner xcode-27 a le SDK de Liquid Glass) ; 0 → construite et publiée
 # depuis ce Mac.
 PUBLICATION_PAR_CI=1
 
@@ -49,6 +49,7 @@ if [ "$MODE" = "publish" ]; then
     [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] \
         || { echo "build.sh : main n'est pas à jour d'origin/main" >&2; exit 1; }
     ! git rev-parse -q --verify "refs/tags/$TAG" >/dev/null || { echo "build.sh : le tag $TAG existe déjà" >&2; exit 1; }
+    bash Tools/notes-de-version.sh "$VERSION_DEMANDEE" >/dev/null || exit 1
     git tag -a "$TAG" -m "Synfus $VERSION_DEMANDEE"
     git push origin "$TAG"
     echo "==> $TAG poussé : la release se construit sur la CI"
