@@ -138,6 +138,16 @@ final class Preferences: ObservableObject {
     /// Les cartes que le zaap doit épargner pour être proposé.
     @Published var zaapGainMinimal: Int = ItineraireZaap.gainParDefaut { didSet { save() } }
 
+    /// La dernière liste téléchargée de DofusDB ; `nil` : la liste intégrée,
+    /// qui suit ainsi les mises à jour de Synfus.
+    @Published var zaapsDofusDB: ReleveZaaps? { didSet { save() } }
+
+    /// Les zaaps ajoutés à la main.
+    @Published var zaapsAjoutes: [Zaap] = [] { didSet { save() } }
+
+    /// Activation choisie, par `Zaap.cle` ; absent : `CatalogueZaaps.actifParDefaut`.
+    @Published var zaapsChoix: [String: Bool] = [:] { didSet { save() } }
+
     /// Nombre de slots exposés (et donc de raccourcis potentiels).
     ///
     /// Le garde-fou `clamping` n'est pas décoratif : `@Published` remplace la
@@ -316,6 +326,15 @@ final class Preferences: ObservableObject {
         return true
     }
 
+    /// Tous les raccourcis globaux — ceux dont un doublon se signale, quel
+    /// que soit l'onglet qui les règle.
+    var raccourcisGlobaux: [HotKey?] {
+        hotKeys + [
+            cycleNext, cyclePrevious, toggleBar, previewHotKey, arrangeHotKey, sessionHotKey,
+            equipeSuivanteHotKey, inviteHotKey, zaapHotKey, toggleAutoFocus,
+        ]
+    }
+
     /// Remet tous les raccourcis à leur défaut — ceux qui n'en ont pas sont
     /// effacés. Le nombre d'emplacements est conservé : c'est un choix, pas un
     /// raccourci. L'appelant réenregistre (`HotKeyManager.rebind`).
@@ -396,6 +415,9 @@ final class Preferences: ObservableObject {
         .facultatif("zaapBouton", \.zaapBouton),
         .facultatif("zaapAuto", \.zaapAuto),
         .facultatif("zaapGainMinimal", \.zaapGainMinimal),
+        .optionnel("zaapsDofusDB", \.zaapsDofusDB),
+        .facultatif("zaapsAjoutes", \.zaapsAjoutes),
+        .facultatif("zaapsChoix", \.zaapsChoix),
     ]
 
     /// Génération du jeu de raccourcis par défaut appliqué à la sauvegarde.
