@@ -278,15 +278,26 @@ enum RecherchePalette {
         }
     }
 
-    /// Un PNJ par position connue : le plus proche passe devant.
+    /// Un PNJ par position connue, avec sa zone : celle que le plus de quêtes
+    /// citent est dite habituelle, les autres « aussi ici ».
     static func pnjs(_ contexte: ContextePalette) -> [EntreePalette] {
-        let sousTitre = L("palette.pnj")
-        return (contexte.quetes?.pnjs ?? []).flatMap { pnj in
-            pnj.positions.map { position in
-                EntreePalette(id: "pnj:\(pnj.id):\(position.x),\(position.y)", genre: .pnj,
-                              titre: Lieu.traduit(pnj.noms, contexte.langue) ?? "?", sousTitre: sousTitre,
-                              detail: "\(position.x),\(position.y)", distance: distance(vers: position, contexte),
-                              effet: .trajet(x: position.x, y: position.y))
+        guard let quetes = contexte.quetes else { return [] }
+        let inconnu = L("palette.pnj")
+        return quetes.pnjs.flatMap { pnj in
+            pnj.passages.enumerated().map { rang, passage in
+                let position = passage.position
+                let sousZone = passage.sousZone.flatMap { quetes.sousZones[String($0)] }
+                let lieu = sousZone.map {
+                    [Lieu.traduit($0.noms, contexte.langue), Lieu.traduit($0.zone, contexte.langue)]
+                        .compactMap { $0 }.joined(separator: " · ")
+                } ?? inconnu
+                let sousTitre = rang == 0 && pnj.passages.count > 1
+                    ? L("palette.pnj.habituel", lieu, passage.quetes)
+                    : rang == 0 ? L("palette.pnj.cite", lieu, passage.quetes) : L("palette.pnj.aussi", lieu, passage.quetes)
+                return EntreePalette(id: "pnj:\(pnj.id):\(position.x),\(position.y)", genre: .pnj,
+                                     titre: Lieu.traduit(pnj.noms, contexte.langue) ?? "?", sousTitre: sousTitre,
+                                     detail: "\(position.x),\(position.y)", distance: distance(vers: position, contexte),
+                                     effet: .trajet(x: position.x, y: position.y))
             }
         }
     }
