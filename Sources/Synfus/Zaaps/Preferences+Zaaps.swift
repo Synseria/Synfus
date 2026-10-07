@@ -10,4 +10,18 @@ extension Preferences {
     }
 
     var zaapsFavorisConnus: [Zaap] { CatalogueZaaps.favoris(zaapsFavoris, parmi: zaapsConnus) }
+
+    /// Un favori, zaap (`Zaap.cle`) ou lieu (`Lieu.cle`) : chacun sa liste,
+    /// un seul chemin pour les tenir.
+    func estFavori(_ cle: String) -> Bool {
+        (cle.hasPrefix(Lieu.prefixeCle) ? lieuxFavoris : zaapsFavoris).contains(cle)
+    }
+
+    func basculerFavori(_ cle: String) {
+        if cle.hasPrefix(Lieu.prefixeCle) {
+            if lieuxFavoris.contains(cle) { lieuxFavoris.removeAll { $0 == cle } } else { lieuxFavoris.append(cle) }
+        } else {
+            if zaapsFavoris.contains(cle) { zaapsFavoris.removeAll { $0 == cle } } else { zaapsFavoris.append(cle) }
+        }
+    }
 }

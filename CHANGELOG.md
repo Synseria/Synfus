@@ -44,10 +44,12 @@ contenu (`Tools/notes-de-version.sh`), et `sh build.sh --publish` refuse une ver
 ### Améliorations
 
 - **Réglages refaits** : une seule grille (libellé à gauche, réglage à droite), des libellés
-  harmonisés, un onglet **Palette** qui réunit zaaps (en cartes, étiquettes, favoris), lieux
-  étiquetés, réécriture du `/travel`, chasse et carte du jeu.
+  harmonisés, et **plus d'onglets, moins chargés**, rangés par sujet — Clavier (raccourcis,
+  attention, enchaîner, invitations), En jeu (palette, trajets, chasse), **Données du jeu**
+  (zaaps, lieux, quêtes, PNJ, chacun à chercher et mettre à jour), Persos, Avancé (lecture de
+  l'écran, diagnostic).
 
-  ![L'onglet Palette](https://raw.githubusercontent.com/Synseria/Synfus/v0.10.0/docs/screenshots/reglages-palette.png)
+  ![L'onglet Zaaps](https://raw.githubusercontent.com/Synseria/Synfus/v0.10.0/docs/screenshots/reglages-zaaps.png)
 
 - **Une seule carte du jeu** : zaaps et lieux viennent d'une même liste DofusDB, intégrée à
   Synfus et rafraîchie tous les 30 jours.
