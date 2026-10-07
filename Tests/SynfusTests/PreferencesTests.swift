@@ -448,6 +448,25 @@ struct PreferencesTests {
         #expect(prefs.advanceModifier == .fn)
     }
 
+    /// La palette prend ⌘: en génération 7 ; l'invitation qui l'occupait passe
+    /// à ⇧⌘:, une invitation personnalisée ne bouge pas.
+    @Test("Génération 7 : ⌘: à la palette, l'invitation à ⇧⌘:")
+    func generationPalette() {
+        func relue(invite: String) -> Preferences {
+            let ancien = """
+            {"characterOrder":[],"hotKeys":[],"barVisible":true,"showNumbers":true,
+             "slotCount":5,"defaultsVersion":6,"inviteHotKey":\(invite)}
+            """
+            return Preferences.forTesting(store: StockageMemoire([Preferences.key: Data(ancien.utf8)]))
+        }
+        let parDefaut = relue(invite: #"{"keyCode":47,"modifiers":256}"#)
+        #expect(parDefaut.paletteHotKey == HotKey.defaultPalette)
+        #expect(parDefaut.inviteHotKey == HotKey.defaultInvite)
+        let choisie = relue(invite: #"{"keyCode":34,"modifiers":256}"#)
+        #expect(choisie.inviteHotKey == HotKey(keyCode: 34, modifiers: 256))
+        #expect(choisie.paletteHotKey == HotKey.defaultPalette)
+    }
+
     /// Les clés de la liaison Stream Deck, retirée, restent dans les
     /// sauvegardes existantes : elles doivent être ignorées, pas faire
     /// retomber l'ensemble sur les défauts.
@@ -499,7 +518,9 @@ struct PreferencesTests {
      "barVisible":false,"characterOrder":["Aeryn","Nova"],
      "chasseBouton":false,"chasseHotKey":{"keyCode":5,"modifiers":2048},
      "cycleNext":{"keyCode":122,"modifiers":0},"cyclePrevious":{"keyCode":120,"modifiers":0},
-     "defaultsVersion":6,"equipeSuivanteHotKey":{"keyCode":17,"modifiers":256},
+     "defaultsVersion":7,"equipeSuivanteHotKey":{"keyCode":17,"modifiers":256},
+     "etiquettes":{"1:-78,-41":"Fri 1"},"lieuxFavoris":["lieu:2738"],
+     "paletteHotKey":{"keyCode":47,"modifiers":256},"phrases":[{"nom":"Recrutement","texte":"Guilde cherche %pos%"}],
      "equipes":[{"membres":["Aeryn"]},{"membres":["Nova"]}],
      "hotKeys":[{"keyCode":18,"modifiers":256},null,{"keyCode":20,"modifiers":2048}],
      "inviteFormat":"/w %nom go","inviteGroupee":true,
@@ -565,6 +586,10 @@ struct PreferencesTests {
         #expect(prefs.zaapsAjoutes == [Zaap(50, -50, noms: ["fr": "Mon zaap"])])
         #expect(prefs.zaapsChoix == ["1:-2,0": false])
         #expect(prefs.zaapsFavoris == ["1:5,-18", "1:-2,0"])
+        #expect(prefs.etiquettes == ["1:-78,-41": "Fri 1"])
+        #expect(prefs.lieuxFavoris == ["lieu:2738"])
+        #expect(prefs.paletteHotKey == HotKey(keyCode: 47, modifiers: 256))
+        #expect(prefs.phrases == [Phrase(nom: "Recrutement", texte: "Guilde cherche %pos%")])
         #expect(prefs.chasseHotKey == HotKey(keyCode: 5, modifiers: 2048))
         #expect(prefs.chasseBouton == false)
     }
@@ -613,6 +638,10 @@ struct PreferencesTests {
         prefs.zaapsAjoutes = [Zaap(50, -50, noms: ["fr": "Mon zaap"])]
         prefs.zaapsChoix = ["1:-2,0": false]
         prefs.zaapsFavoris = ["1:5,-18", "1:-2,0"]
+        prefs.etiquettes = ["1:-78,-41": "Fri 1"]
+        prefs.lieuxFavoris = ["lieu:2738"]
+        prefs.paletteHotKey = HotKey(keyCode: 47, modifiers: 256)
+        prefs.phrases = [Phrase(nom: "Recrutement", texte: "Guilde cherche %pos%")]
         prefs.chasseHotKey = HotKey(keyCode: 5, modifiers: 2048)
         prefs.chasseBouton = false
 
@@ -629,7 +658,7 @@ struct PreferencesTests {
         prefs.hotKeys = [nil]
         for chemin: ReferenceWritableKeyPath<Preferences, HotKey?> in [
             \.cycleNext, \.cyclePrevious, \.toggleAutoFocus, \.toggleBar, \.previewHotKey,
-            \.arrangeHotKey, \.sessionHotKey, \.equipeSuivanteHotKey, \.inviteHotKey, \.zaapHotKey,
+            \.arrangeHotKey, \.sessionHotKey, \.equipeSuivanteHotKey, \.inviteHotKey, \.zaapHotKey, \.paletteHotKey,
             \.chasseHotKey,
         ] {
             prefs[keyPath: chemin] = nil
@@ -639,11 +668,12 @@ struct PreferencesTests {
         let attendu = """
         {"advanceModifier":"fn","advanceOnClick":false,"attentionAction":"highlight",
          "autoCenterBar":true,"barOnlyWithDofus":false,"barVisible":true,"chasseBouton":true,"characterOrder":[],
-         "defaultsVersion":6,"equipes":[],"hotKeys":[null],"inviteFormat":"/invite %nom","inviteGroupee":false,
+         "defaultsVersion":7,"equipes":[],"etiquettes":{},"hotKeys":[null],"inviteFormat":"/invite %nom","inviteGroupee":false,
          "killFrozenClients":true,"lireCombat":false,"lirePosition":false,"menuBarIcon":"logo",
          "showClasses":true,"showNumbers":true,"showPreviewOnHover":false,
          "signalerBascule":true,"slotCount":1,"zaapAuto":false,"zaapBouton":true,
-         "zaapGainMinimal":5,"zaapsAjoutes":[],"zaapsChoix":{},"zaapsFavoris":[]}
+         "zaapGainMinimal":5,"zaapsAjoutes":[],"zaapsChoix":{},"zaapsFavoris":[],
+         "lieuxFavoris":[],"phrases":[]}
         """
         #expect(canonique(store.donnees(pour: Preferences.key)) == canonique(Data(attendu.utf8)))
     }

@@ -15,8 +15,10 @@ struct Lieu: Codable, Hashable, Sendable {
     let zone: [String: String]
     let sousZone: [String: String]
 
-    /// Ce qui identifie un lieu dans les réglages (étiquettes, favoris).
-    var cle: String { "lieu:\(id)" }
+    /// Ce qui identifie un lieu dans les réglages (étiquettes, favoris) ; le
+    /// préfixe le distingue d'une `Zaap.cle`.
+    var cle: String { Self.prefixeCle + "\(id)" }
+    static let prefixeCle = "lieu:"
 
     var estZaap: Bool { noms[Langue.fr.rawValue] == "Zaap" }
 
