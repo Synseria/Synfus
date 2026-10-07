@@ -88,7 +88,7 @@ nouveau fichier va dans le dossier de son domaine ; un fichier sans domaine en a
 | `Clients/` | `DofusClient`, `WindowTitle`, `ClientMemory`, `Equipes`, `Rotation` (purs) ; `WindowManager` (+`PremierPlan`, `+Effectif`, `+Focus`, `+Fermeture`), `ClientInventoryEngine`, `ClientTerminator`, `FreezeWatcher` |
 | `Invitations/` | `/invite Nom` : `InvitationComposer` (pur), `InvitationClipboard` |
 | `Carte/` | Tous les repères du jeu (zaaps, banques, ateliers, donjons…) : `Lieu`, `Carte` (purs), `CarteDofusDB` (téléchargement, cache disque, `--exporter-carte` → `Resources/Carte.json`), `CarteStore` |
-| `Zaaps/` | `/zaap x,y; /travel a,b` : `Zaap` (tiré de la carte), `CatalogueZaaps`, `ItineraireZaap` (purs), `ZaapClipboard` (raccourci, bouton, veille du presse-papiers) |
+| `Zaaps/` | `/zaap x,y ; /travel a,b` : `Zaap` (tiré de la carte), `CatalogueZaaps`, `ItineraireZaap` (purs), `ZaapClipboard` (raccourci, bouton, veille du presse-papiers) |
 | `Palette/` | La palette (⌘:) : `RecherchePalette`, `CommandesJeu` (purs) — zaaps, lieux, `/` commandes, `%` variables, quêtes, PNJ, gestes, dernières copies ; `PaletteModele`, `PalettePanel` (panneau key sans activer Synfus), `PaletteVue` |
 | `Quetes/` | Quêtes et PNJ situés : `Quete` (pur : renvois, ressources), `QuetesDofusDB` (téléchargement à la première palette, cache disque, 30 jours), `QuetesStore`, `QuetePanel`/`QueteVue` (panneau transparent, jamais key) |
 | `Chasse/` | Chasse au trésor : `IndicesChasse`, `EtapeChasse` (purs), `ChasseDofusDB` (indices en cache disque, étape à la demande), `ChasseModele`, `ChassePanel` (panneau key sans activer Synfus), `ChasseVue` |

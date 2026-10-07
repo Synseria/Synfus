@@ -16,7 +16,7 @@ contenu (`Tools/notes-de-version.sh`), et `sh build.sh --publish` refuse une ver
   **étiquette** libre (« Fri 1 », « Bouftou »), posée d'un ⌘E ; ⌘D pour un favori.
 - **`/travel banque bonta`** : les **834 lieux** du jeu — banques, hôtels de vente, ateliers,
   temples, donjons, transports — avec les surnoms des joueurs (`fm`, `hdv conso`, `bijou`…). Le
-  plus proche de toi passe devant, et le trajet est copié en `/zaap x,y; /travel a,b` quand le
+  plus proche de toi passe devant, et le trajet est copié en `/zaap x,y ; /travel a,b` quand le
   zaap fait gagner du chemin.
 
   ![/travel banque bonta](https://raw.githubusercontent.com/Synseria/Synfus/v0.10.0/docs/screenshots/palette-travel.png)
@@ -67,7 +67,7 @@ contenu (`Tools/notes-de-version.sh`), et `sh build.sh --publish` refuse une ver
 - **Aide aux chasses au trésor** (bouton de la barre, raccourci ou menu) : départ lu à l'écran,
   direction aux flèches, indice saisi ou lu par OCR ; la carte vient de DofusDB et son `/travel`
   est copié — par un zaap si c'est plus court. La zone lue se calibre dans l'onglet Diagnostic.
-- **Zaaps** : un `/travel` copié devient `/zaap x,y; /travel a,b` quand un zaap épargne assez de
+- **Zaaps** : un `/travel` copié devient `/zaap x,y ; /travel a,b` quand un zaap épargne assez de
   cartes — au raccourci, au bouton de la barre, ou tout seul à chaque copie.
 - **Onglet Zaap** : tous les zaaps du jeu, activables un à un, ajouts à la main, liste tenue à jour
   depuis DofusDB (d'elle-même tous les 30 jours).

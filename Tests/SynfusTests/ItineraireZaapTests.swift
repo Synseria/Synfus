@@ -23,7 +23,7 @@ struct ItineraireZaapTests {
 
     @Test("Tout autre texte est ignoré")
     func autresTextes() {
-        for texte in ["", "-2,0", "/invite Brok", "/zaap -2,0; /travel 5,7", "/Travel -2,0",
+        for texte in ["", "-2,0", "/invite Brok", "/zaap -2,0 ; /travel 5,7", "/Travel -2,0",
                       "voir /travel -2,0", "/travel -2,0 merci", "/travel -2,0\n/travel 3,4",
                       "/travel -2", "/travel 999,0", "/traveler 1,2"] {
             #expect(ItineraireZaap.cible(dans: texte) == nil, "\(texte)")
@@ -35,7 +35,7 @@ struct ItineraireZaapTests {
     func reecrit() {
         // Cible à deux cartes du zaap de Coin des Bouftous (5,7).
         let texte = ItineraireZaap.reecrire("/travel 6,8", depuis: position(-30, -40), gainMinimal: 5, zaaps: zaaps)
-        #expect(texte == "/zaap 5,7; /travel 6,8")
+        #expect(texte == "/zaap 5,7 ; /travel 6,8")
     }
 
     @Test("Un gain sous le seuil laisse le presse-papiers intact")
@@ -43,7 +43,7 @@ struct ItineraireZaapTests {
         // Depuis -2,0 (zaap d'Amakna) vers 3,-3 : 8 cartes à pied, 2 depuis
         // le zaap du Château (3,-5) — 6 de gagnées.
         #expect(ItineraireZaap.reecrire("/travel 3,-3", depuis: position(-2, 0), gainMinimal: 6, zaaps: zaaps)
-                == "/zaap 3,-5; /travel 3,-3")
+                == "/zaap 3,-5 ; /travel 3,-3")
         #expect(ItineraireZaap.reecrire("/travel 3,-3", depuis: position(-2, 0), gainMinimal: 7, zaaps: zaaps) == nil)
     }
 
@@ -66,7 +66,7 @@ struct ItineraireZaapTests {
         #expect(zaaps.allSatisfy { $0.monde == Zaap.mondeDesDouze })
         // Sans cela, un /travel 3,-1 d'Amakna passerait par le cimetière d'Incarnam.
         #expect(ItineraireZaap.reecrire("/travel 3,-1", depuis: position(-40, 20), gainMinimal: 1, zaaps: zaaps)
-                == "/zaap 3,-5; /travel 3,-1")
+                == "/zaap 3,-5 ; /travel 3,-1")
     }
 
     @Test("Un zaap décoché n'est plus proposé, un zaap d'une autre carte coché l'est")
@@ -88,7 +88,7 @@ struct ItineraireZaapTests {
         #expect(tous.first { $0.cle == doublon.cle }?.nom(en: .fr) == "Village d'Amakna")
         let actifs = CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [nouveau], choix: [:])
         #expect(ItineraireZaap.reecrire("/travel 51,50", depuis: position(0, 0), gainMinimal: 5, zaaps: actifs)
-                == "/zaap 50,50; /travel 51,50")
+                == "/zaap 50,50 ; /travel 51,50")
     }
 
     @Test("Les commandes composées se relisent comme une cible")
