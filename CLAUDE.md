@@ -48,7 +48,7 @@ SYNFUS_CAPTURE=~/Library/Logs/Synfus/captures/x.png sh test.sh RealCapture   # O
 - **Un seul foyer par logique.** Avant d'écrire une fonction, chercher celle qui existe ; quand une
   correction touche un chemin, vérifier que son jumeau en bénéficie. Foyers : lecture AX
   `AccessibilityReader` ; processus Dofus `DofusProcesses` ; titres `WindowTitle` ; fermeture
-  `ClientTerminator` ; presse-papiers `PressePapiers` ; effectif `republierEffectif` ; classes
+  `ClientTerminator` ; presse-papiers `PressePapiers` ; API DofusDB `DofusDB` ; effectif `republierEffectif` ; classes
   `DofusClass` ; marque `SynfusMark` ; libellés `L()`.
 - Les constantes `extern CFStringRef` de l'Accessibilité (`kAXTrustedCheckOptionPrompt`,
   `"AXFullScreen"`…) sont refusées par la concurrence stricte : citer leur valeur littérale.
@@ -83,11 +83,12 @@ nouveau fichier va dans le dossier de son domaine ; un fichier sans domaine en a
 
 | Dossier | Contenu |
 | --- | --- |
-| `App/` | Point d'entrée et `--dump-*`, intégrité du bundle, démarrage automatique, `PressePapiers` |
+| `App/` | Point d'entrée et `--dump-*`, intégrité du bundle, démarrage automatique, `PressePapiers`, `DofusDB` (client de l'API) |
 | `Accessibilite/` | `AccessibilityReader` (lecture AX, `DofusProcesses`), `--dump-windows`, `CrossSpaceTitles` |
 | `Clients/` | `DofusClient`, `WindowTitle`, `ClientMemory`, `Equipes`, `Rotation` (purs) ; `WindowManager` (+`PremierPlan`, `+Effectif`, `+Focus`, `+Fermeture`), `ClientInventoryEngine`, `ClientTerminator`, `FreezeWatcher` |
 | `Invitations/` | `/invite Nom` : `InvitationComposer` (pur), `InvitationClipboard` |
 | `Zaaps/` | `/zaap x,y; /travel a,b` : `Zaap` (liste intégrée), `CatalogueZaaps`, `ItineraireZaap` (purs), `ZaapsDofusDB` (mise à jour), `ZaapClipboard` (raccourci, bouton, veille du presse-papiers) |
+| `Chasse/` | Chasse au trésor : `IndicesChasse`, `EtapeChasse` (purs), `ChasseDofusDB` (indices en cache disque, étape à la demande), `ChasseModele`, `ChassePanel` (panneau key sans activer Synfus), `ChasseVue` |
 | `Attention/` | Rebond du Dock : `BounceDetector`, `DockPairing` (purs), `DockInspector`, `DockGeometryReader`, `AttentionWatcher`, `AttentionProbe` |
 | `Raccourcis/` | Raccourcis Carbon, enregistreur, conflits, enchaînement au clic |
 | `Rangement/` | `LayoutComputer` (pur), `WindowArranger` |
