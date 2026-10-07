@@ -14,7 +14,7 @@ struct QuetesTests {
           {"className":"QuestObjectiveFightMonsterData","text":{"fr":"Vaincre x1 {monster,182} en un seul combat"},
            "coords":{"x":25,"y":-8},"parameters":{"parameter0":182,"parameter1":1}},
           {"className":"QuestObjectiveBringItemToNpcData","text":{"fr":"Ramener à {npc,119} : x3 {item,1746}"},
-           "map":{"posX":-2,"posY":-4},"parameters":{"parameter0":119,"parameter1":1746,"parameter2":3}}]},
+           "map":{"posX":-2,"posY":-4,"subAreaId":10},"parameters":{"parameter0":119,"parameter1":1746,"parameter2":3}}]},
         {"id":57,"name":{"fr":"Analyse de sang"},"objectives":[
           {"className":"QuestObjectiveBringItemToNpcData","text":{"fr":"Ramener à {npc,196} : x2 {item,1746}"},
            "parameters":{"parameter0":196,"parameter1":1746,"parameter2":2}},
@@ -27,10 +27,13 @@ struct QuetesTests {
             try JSONDecoder().decode(QuetesDofusDB.Nomme.self, from: Data(#"{"id":\#(id),"name":{"fr":"\#(nom)"}}"#.utf8))
         }
         let carte = try JSONDecoder().decode(QuetesDofusDB.CarteAPI.self,
-                                             from: Data(#"{"id":160695296,"posX":-1,"posY":-39}"#.utf8))
+                                             from: Data(#"{"id":160695296,"posX":-1,"posY":-39,"subAreaId":56}"#.utf8))
+        let sousZone = try JSONDecoder().decode(QuetesDofusDB.SousZoneAPI.self,
+                                                from: Data(#"{"id":10,"areaId":0,"name":{"fr":"Village d'Amakna"}}"#.utf8))
         return QuetesDofusDB.assembler(
             quetes: api, objets: [try nomme(1746, "Sang de Wabbit GM")], monstres: [try nomme(182, "Wabbit GM")],
-            pnjs: [try nomme(119, "Otomaï"), try nomme(196, "Wogew")], cartes: [carte], date: .now)
+            pnjs: [try nomme(119, "Otomaï"), try nomme(196, "Wogew")], cartes: [carte],
+            sousZones: [sousZone], zones: [try nomme(0, "Amakna")], date: .now)
     }
 
     @Test("Les étapes suivent stepIds, les renvois se résolvent, un renvoi inconnu reste lisible")
@@ -52,11 +55,31 @@ struct QuetesTests {
         #expect(Quetes.ressources(quete).map { [$0.objet, $0.quantite] } == [[1746, 5]])
     }
 
+    @Test("Les passages d'un PNJ : le plus cité d'abord, avec sa sous-zone nommée")
+    func passages() throws {
+        // Une quête place Wogew en 5,5 ; deux autres en -2,-4.
+        func quete(_ id: Int, _ x: Int, _ y: Int) -> String {
+            #"{"id":\#(id),"name":{"fr":"Q\#(id)"},"steps":[{"id":\#(id),"name":{"fr":"E"},"objectives":[{"#
+                + #""className":"QuestObjectiveGoToNpcData","text":{"fr":"Aller voir {npc,196}"},"#
+                + #""map":{"posX":\#(x),"posY":\#(y),"subAreaId":10},"parameters":{"parameter0":196}}]}]}"#
+        }
+        let page = #"{"total":3,"data":["# + [quete(1, 5, 5), quete(2, -2, -4), quete(3, -2, -4)].joined(separator: ",") + "]}"
+        let api = try JSONDecoder().decode(DofusDB.Page<QuetesDofusDB.QueteAPI>.self, from: Data(page.utf8)).data
+        let wogew = try JSONDecoder().decode(QuetesDofusDB.Nomme.self, from: Data(#"{"id":196,"name":{"fr":"Wogew"}}"#.utf8))
+        let quetes = QuetesDofusDB.assembler(quetes: api, objets: [], monstres: [], pnjs: [wogew], cartes: [],
+                                             sousZones: [], zones: [], date: .now)
+        #expect(quetes.pnjs.first?.passages.map(\.quetes) == [2, 1])
+        #expect(quetes.pnjs.first?.passages.first?.position == PNJ.Position(x: -2, y: -4))
+        #expect(try Self.quetes().sousZones["10"]
+                == SousZoneNommee(noms: ["fr": "Village d'Amakna"], zone: ["fr": "Amakna"]))
+    }
+
     @Test("Un PNJ est situé par le départ de la quête et par les objectifs qui mènent à lui")
     func pnjs() throws {
         let pnjs = try Self.quetes().pnjs
-        #expect(pnjs.first { $0.id == 196 }?.positions == [PNJ.Position(x: -1, y: -39)])
-        #expect(pnjs.first { $0.id == 119 }?.positions == [PNJ.Position(x: -2, y: -4)])
+        #expect(pnjs.first { $0.id == 196 }?.passages.map(\.position) == [PNJ.Position(x: -1, y: -39)])
+        #expect(pnjs.first { $0.id == 119 }?.passages == [PNJ.Passage(position: PNJ.Position(x: -2, y: -4),
+                                                                      sousZone: 10, quetes: 1)])
     }
 
     private func contexte() throws -> ContextePalette {
@@ -87,6 +110,7 @@ struct QuetesTests {
     func paletteePNJ() throws {
         let contexte = try contexte()
         #expect(RecherchePalette.entrees("/pnj wogew", contexte).first?.detail == "-1,-39")
+        #expect(RecherchePalette.entrees("/pnj otomai", contexte).first?.sousTitre?.hasPrefix("Village d'Amakna · Amakna") == true)
         #expect(RecherchePalette.entrees("", contexte, filtre: .pnj).allSatisfy { $0.genre == .pnj })
         #expect(RecherchePalette.entrees("wogew", contexte, filtre: .quetes).map(\.genre) == [.quete])
     }

@@ -34,6 +34,7 @@ enum QuetesDofusDB {
         struct Carte: Decodable, Sendable {
             let posX: Int
             let posY: Int
+            let subAreaId: Int?
         }
 
         struct Parametres: Decodable, Sendable {
@@ -75,6 +76,13 @@ enum QuetesDofusDB {
         let id: Int
         let posX: Int
         let posY: Int
+        let subAreaId: Int?
+    }
+
+    struct SousZoneAPI: Decodable, Sendable {
+        let id: Int
+        let areaId: Int
+        let name: DofusDB.Noms
     }
 
     enum Echec: LocalizedError {
@@ -111,9 +119,12 @@ enum QuetesDofusDB {
         async let objets: [Nomme] = parIdentifiants("items", renvois.objets)
         async let monstres: [Nomme] = parIdentifiants("monsters", renvois.monstres)
         async let pnjs: [Nomme] = parIdentifiants("npcs", renvois.pnjs.union(departs.map(\.npcId)))
-        async let cartes: [CarteAPI] = parIdentifiants("map-positions", Set(departs.map(\.mapId)))
+        let cartes: [CarteAPI] = try await parIdentifiants("map-positions", Set(departs.map(\.mapId)))
+        let idsSousZones = Set(objectifs.compactMap { $0.map?.subAreaId } + cartes.compactMap(\.subAreaId))
+        let sousZones: [SousZoneAPI] = try await parIdentifiants("subareas", idsSousZones)
+        let zones: [Nomme] = try await parIdentifiants("areas", Set(sousZones.map(\.areaId)))
         return try await assembler(quetes: quetes, objets: objets, monstres: monstres, pnjs: pnjs,
-                                   cartes: cartes, date: maintenant)
+                                   cartes: cartes, sousZones: sousZones, zones: zones, date: maintenant)
     }
 
     /// Les identifiants cités : par les paramètres, et par les renvois du texte.
@@ -137,23 +148,29 @@ enum QuetesDofusDB {
     }
 
     static func assembler(quetes: [QueteAPI], objets: [Nomme], monstres: [Nomme], pnjs: [Nomme],
-                          cartes: [CarteAPI], date: Date) -> Quetes {
-        let positionsDeCarte = Dictionary(cartes.map { ($0.id, PNJ.Position(x: $0.posX, y: $0.posY)) },
-                                          uniquingKeysWith: { a, _ in a })
-        var positions: [Int: [PNJ.Position]] = [:]
-        func situer(_ pnj: Int, _ position: PNJ.Position?) {
-            guard let position, !(positions[pnj]?.contains(position) ?? false) else { return }
-            positions[pnj, default: []].append(position)
+                          cartes: [CarteAPI], sousZones: [SousZoneAPI], zones: [Nomme], date: Date) -> Quetes {
+        let carteParId = Dictionary(cartes.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        /// Par PNJ, par case : la sous-zone et les quêtes qui l'y placent.
+        var vus: [Int: [PNJ.Position: (sousZone: Int?, quetes: Set<Int>)]] = [:]
+        var ordre: [Int: [PNJ.Position]] = [:]
+        func situer(_ pnj: Int, _ position: PNJ.Position?, _ sousZone: Int?, _ quete: Int) {
+            guard let position else { return }
+            if vus[pnj]?[position] == nil { ordre[pnj, default: []].append(position) }
+            let deja = vus[pnj]?[position]
+            vus[pnj, default: [:]][position] = (deja?.sousZone ?? sousZone, (deja?.quetes ?? []).union([quete]))
         }
         let modeles = quetes.map { api -> Quete in
-            for depart in api.startPosition ?? [] { situer(depart.npcId, positionsDeCarte[depart.mapId]) }
+            for depart in api.startPosition ?? [] {
+                let carte = carteParId[depart.mapId]
+                situer(depart.npcId, carte.map { PNJ.Position(x: $0.posX, y: $0.posY) }, carte?.subAreaId, api.id)
+            }
             let ordre = api.stepIds ?? []
             let etapes = (api.steps ?? [])
                 .sorted { (ordre.firstIndex(of: $0.id) ?? .max) < (ordre.firstIndex(of: $1.id) ?? .max) }
                 .map { etape in
                     EtapeQuete(noms: etape.name.parLangue, objectifs: (etape.objectives ?? []).map { objectif in
                         let position = objectif.position
-                        if let pnj = objectif.pnj { situer(pnj, position) }
+                        if let pnj = objectif.pnj { situer(pnj, position, objectif.map?.subAreaId, api.id) }
                         return ObjectifQuete(textes: objectif.text.parLangue, x: position?.x, y: position?.y,
                                              objet: objectif.aRamener?.objet, quantite: objectif.aRamener?.quantite)
                     })
@@ -163,11 +180,23 @@ enum QuetesDofusDB {
         func noms(_ liste: [Nomme]) -> [String: [String: String]] {
             Dictionary(liste.map { (String($0.id), $0.name.parLangue) }, uniquingKeysWith: { a, _ in a })
         }
-        let situes = pnjs.compactMap { pnj in
-            positions[pnj.id].map { PNJ(id: pnj.id, noms: pnj.name.parLangue, positions: $0) }
+        let situes = pnjs.compactMap { pnj -> PNJ? in
+            guard let positions = ordre[pnj.id], let releves = vus[pnj.id] else { return nil }
+            let passages = positions.enumerated()
+                .map { rang, position in
+                    (rang, PNJ.Passage(position: position, sousZone: releves[position]?.sousZone,
+                                       quetes: releves[position]?.quetes.count ?? 0))
+                }
+                .sorted { $0.1.quetes != $1.1.quetes ? $0.1.quetes > $1.1.quetes : $0.0 < $1.0 }
+                .map(\.1)
+            return PNJ(id: pnj.id, noms: pnj.name.parLangue, passages: passages)
         }
+        let nomsZones = noms(zones)
+        let lieux = Dictionary(sousZones.map {
+            (String($0.id), SousZoneNommee(noms: $0.name.parLangue, zone: nomsZones[String($0.areaId)] ?? [:]))
+        }, uniquingKeysWith: { a, _ in a })
         return Quetes(date: date, quetes: modeles, pnjs: situes, objets: noms(objets),
-                      monstres: noms(monstres), nomsPNJ: noms(pnjs))
+                      monstres: noms(monstres), nomsPNJ: noms(pnjs), sousZones: lieux)
     }
 
     private static func parIdentifiants<Element: Decodable & Sendable>(_ chemin: String, _ ids: Set<Int>) async throws -> [Element] {
@@ -177,7 +206,8 @@ enum QuetesDofusDB {
             let lot = ids[debut..<min(debut + DofusDB.parPage, ids.count)]
             elements += try await DofusDB.toutes(chemin, lot.map { URLQueryItem(name: "id[$in][]", value: "\($0)") }
                 + [URLQueryItem(name: "$select[]", value: "id"), URLQueryItem(name: "$select[]", value: "name"),
-                   URLQueryItem(name: "$select[]", value: "posX"), URLQueryItem(name: "$select[]", value: "posY")])
+                   URLQueryItem(name: "$select[]", value: "posX"), URLQueryItem(name: "$select[]", value: "posY"),
+                   URLQueryItem(name: "$select[]", value: "subAreaId"), URLQueryItem(name: "$select[]", value: "areaId")])
         }
         return elements
     }

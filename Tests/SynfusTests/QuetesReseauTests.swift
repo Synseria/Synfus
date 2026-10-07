@@ -17,7 +17,7 @@ struct QuetesReseauTests {
         let wogew = try #require(quetes.quetes.first { $0.id == 18 })
         #expect(wogew.etapes.count == 3)
         #expect(quetes.texte(wogew.etapes[1].objectifs[0].textes["fr"] ?? "", en: .fr).contains("{") == false)
-        #expect(quetes.pnjs.contains { $0.id == 196 && $0.positions.contains(PNJ.Position(x: -1, y: -39)) })
+        #expect(quetes.pnjs.contains { $0.id == 196 && $0.passages.contains { $0.position == PNJ.Position(x: -1, y: -39) } })
 
         var contexte = ContextePalette()
         contexte.lieux = Carte.integree.lieux
