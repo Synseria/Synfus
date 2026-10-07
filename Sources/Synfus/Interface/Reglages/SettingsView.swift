@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Sections des réglages, listées dans la barre latérale.
 private enum SettingsSection: String, CaseIterable, Identifiable {
-    case general, raccourcis, persos, classes, diagnostic
+    case general, raccourcis, zaap, persos, classes, diagnostic
 
     var id: String { rawValue }
 
@@ -10,6 +10,7 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
         switch self {
         case .general: return L("reglages.general")
         case .raccourcis: return L("reglages.raccourcis")
+        case .zaap: return L("reglages.zaap")
         case .persos: return L("reglages.persos")
         case .classes: return L("reglages.classes")
         case .diagnostic: return L("reglages.diagnostic")
@@ -20,6 +21,7 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
         switch self {
         case .general: return "gearshape"
         case .raccourcis: return "keyboard"
+        case .zaap: return "point.3.connected.trianglepath.dotted"
         case .persos: return "person.3"
         case .classes: return "paintpalette"
         case .diagnostic: return "stethoscope"
@@ -79,6 +81,7 @@ struct SettingsView: View {
         switch section {
         case .general: GeneralSettings()
         case .raccourcis: ShortcutsSettings()
+        case .zaap: ZaapSettings()
         case .persos: CharactersSettings()
         case .classes: ClassesSettings()
         case .diagnostic: DiagnosticSettings()

@@ -53,8 +53,8 @@ sa bascule). Toute nouvelle option suit la règle.
 
 ## Réglages et menu
 
-- `Reglages/SettingsView.swift` : barre latérale, cinq sections — Général, Raccourcis, Persos,
-  Classes, Diagnostic —, une vue par onglet. `SettingsWindowController` doit appeler
+- `Reglages/SettingsView.swift` : barre latérale, six sections — Général, Raccourcis, Zaap,
+  Persos, Classes, Diagnostic —, une vue par onglet. `SettingsWindowController` doit appeler
   `NSApp.activate(ignoringOtherApps:)` (app accessory) ; la fenêtre s'ouvre sous la barre
   (`visibleBarFrame`), au centre sinon.
 - `MenuBarController` reconstruit le menu à chaque ouverture (`menuNeedsUpdate`), sur
