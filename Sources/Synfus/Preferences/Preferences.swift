@@ -160,6 +160,9 @@ final class Preferences: ObservableObject {
     /// Les derniers textes copiés depuis la palette, le plus récent d'abord.
     @Published var paletteRecents: [String] = [] { didSet { save() } }
 
+    /// L'ordre des résultats de la palette, après les zaaps (⌘T).
+    @Published var paletteTri: TriPalette = .proximite { didSet { save() } }
+
     /// Raccourci de la palette. ⌘: par défaut (génération 7).
     @Published var paletteHotKey: HotKey? { didSet { save() } }
 
@@ -456,6 +459,7 @@ final class Preferences: ObservableObject {
         .facultatif("etiquettes", \.etiquettes),
         .optionnel("paletteHotKey", \.paletteHotKey),
         .facultatif("paletteRecents", \.paletteRecents),
+        .facultatif("paletteTri", \.paletteTri),
         .facultatif("chasseBouton", \.chasseBouton),
     ]
 

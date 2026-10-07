@@ -117,4 +117,31 @@ struct RecherchePaletteTests {
         avecRecents.recents = ["/travel 12,34"]
         #expect(premiere("12,34", avecRecents)?.effet == .copier("/travel 12,34"))
     }
+
+    // MARK: - Filtres et tris
+
+    @Test("Sans préfixe, les zaaps passent devant les lieux")
+    func zaapsDevant() {
+        let entrees = RecherchePalette.entrees("amakna", contexte())
+        let premierLieu = entrees.firstIndex { $0.genre == .lieu }
+        let dernierZaap = entrees.lastIndex { $0.genre == .zaap }
+        #expect(premierLieu != nil && dernierZaap != nil && dernierZaap! < premierLieu!)
+    }
+
+    @Test("Le filtre ne garde qu'une famille ; vide, il liste la famille entière")
+    func filtres() {
+        #expect(RecherchePalette.entrees("amakna", contexte(), filtre: .lieux).allSatisfy { $0.genre == .lieu })
+        #expect(RecherchePalette.entrees("", contexte(), filtre: .persos).map(\.titre) == ["Brok"])
+        #expect(FiltrePalette.tout.suivant(-1) == FiltrePalette.allCases.last)
+    }
+
+    @Test("Les trois tris : proximité, alphabétique, type")
+    func tris() {
+        let proches = RecherchePalette.entrees("/travel banque", contexte(), tri: .proximite).compactMap(\.distance)
+        #expect(proches == proches.sorted())
+        let titres = RecherchePalette.entrees("", contexte(), filtre: .lieux, tri: .alphabetique).map(\.titre)
+        #expect(titres == titres.sorted { $0.localizedStandardCompare($1) == .orderedAscending })
+        let categories = RecherchePalette.entrees("", contexte(), filtre: .lieux, tri: .type).compactMap(\.categorie)
+        #expect(categories == categories.sorted())
+    }
 }

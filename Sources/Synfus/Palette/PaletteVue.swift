@@ -12,6 +12,7 @@ struct PaletteVue: View {
     var body: some View {
         VStack(spacing: 0) {
             recherche
+            filtres
             Divider()
             resultats
             Divider()
@@ -45,6 +46,28 @@ struct PaletteVue: View {
         }
         .padding(.horizontal, 16)
         .frame(height: 52)
+    }
+
+    /// Les familles que Tab fait défiler, et le tri (⌘T).
+    private var filtres: some View {
+        HStack(spacing: 4) {
+            ForEach(FiltrePalette.allCases, id: \.self) { filtre in
+                let choisi = modele.filtre == filtre
+                Text(filtre.titre)
+                    .font(.system(size: 11, weight: choisi ? .semibold : .regular))
+                    .foregroundStyle(choisi ? Color.white : Color.secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(choisi ? Couleurs.accent : Color.primary.opacity(0.06)))
+            }
+            Spacer()
+            Text(L("palette.tri", modele.tri.titre))
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .onTapGesture { modele.triSuivant() }
+        }
+        .padding(.horizontal, 16)
+        .padding(.bottom, 10)
     }
 
     private var mode: String {
@@ -163,9 +186,10 @@ struct PaletteVue: View {
                 aide("↵", entree)
                     .lineLimit(1)
                     .truncationMode(.middle)
-                aide("⇥", L("palette.touche.tab"))
-                aide("/", L("palette.touche.commandes"))
-                aide("%", L("palette.touche.variables"))
+                aide("⇥", L("palette.touche.filtre"))
+                aide("⌘E", L("palette.touche.etiquette"))
+                aide("⌘D", L("palette.touche.favori"))
+                aide("⌘T", L("palette.touche.tri"))
                 Spacer()
                 aide("esc", L("palette.touche.fermer"))
             }
