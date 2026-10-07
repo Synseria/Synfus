@@ -71,7 +71,8 @@ struct PaletteVue: View {
         } else {
             ScrollViewReader { defilement in
                 ScrollView {
-                    Group {
+                    VStack(alignment: .leading, spacing: 10) {
+                        if modele.enGrille, !modele.recents.isEmpty { recents }
                         if modele.enGrille { grille } else { liste }
                     }
                     .padding(10)
@@ -83,6 +84,26 @@ struct PaletteVue: View {
                 }
             }
         }
+    }
+
+    /// Les dernières copies, en pastilles : un clic recopie.
+    private var recents: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                Image(systemName: "clock.arrow.circlepath").foregroundStyle(.secondary)
+                ForEach(modele.recents) { entree in
+                    Text(entree.titre)
+                        .font(.system(size: 11, design: .monospaced))
+                        .lineLimit(1)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Capsule().fill(Color.primary.opacity(0.07)))
+                        .onTapGesture { modele.executer(entree) }
+                        .help(entree.titre)
+                }
+            }
+        }
+        .font(.system(size: 11))
     }
 
     private var grille: some View {
@@ -275,6 +296,7 @@ private struct LigneResultat: View {
         case .perso: return "person"
         case .action: return "bolt"
         case .phrase: return "text.bubble"
+        case .recent: return "clock.arrow.circlepath"
         }
     }
 }
