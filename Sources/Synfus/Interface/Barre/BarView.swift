@@ -9,6 +9,7 @@ struct BarView: View {
     @ObservedObject private var invitations = InvitationClipboard.shared
     @ObservedObject private var zaaps = ZaapClipboard.shared
     @ObservedObject private var chasse = ChassePanel.shared
+    @ObservedObject private var palette = PalettePanel.shared
     @State private var dragging: String?
     @State private var chipFrames: [String: CGRect] = [:]
     /// Cadres des secteurs de la rangée des équipes, dans le même repère que
@@ -168,14 +169,14 @@ struct BarView: View {
             }
             separator
             arrangeMenu
-            if prefs.lirePosition, prefs.zaapBouton { zaapButton }
+            if prefs.zaapBouton { zaapButton }
             if prefs.chasseBouton { chasseButton }
             autoFocusToggle
         }
     }
 
-    /// Le zaap le plus proche du `/travel` copié. La barre ne prend pas le
-    /// focus : le jeu reste devant, prêt pour ⌘V.
+    /// La palette : zaaps, lieux, commandes. Elle prend le clavier sans
+    /// activer Synfus — le jeu reste devant, prêt pour ⌘V.
     ///
     /// Les favoris au clic droit, pas dans un popover au survol : la fenêtre
     /// d'un `NSPopover` n'est pas un panneau non activable, son premier clic
@@ -186,10 +187,10 @@ struct BarView: View {
         ModeButton(
             icone: "point.3.connected.trianglepath.dotted",
             teinte: .green,
-            actif: zaaps.reecritRecemment,
-            aide: L("barre.zaapAide", prefs.zaapHotKey?.displayString ?? L("barre.aucunRaccourci"))
+            actif: zaaps.reecritRecemment || palette.ouvert,
+            aide: L("barre.paletteAide", prefs.paletteHotKey?.displayString ?? L("barre.aucunRaccourci"))
         ) {
-            ZaapClipboard.shared.optimiser()
+            PalettePanel.shared.basculer()
         }
         .contextMenu { zaapsFavoris }
     }

@@ -199,10 +199,13 @@ struct HotKey: Codable, Equatable, Hashable {
     static var defaultToggleAutoFocus: HotKey {
         HotKey(keyCode: escapeRowKey, modifiers: UInt32(cmdKey) | UInt32(controlKey))
     }
-    /// ⌘: — copier l'invitation suivante. Le keycode 47 est la touche « : »
-    /// d'un AZERTY (« . » sur un QWERTY). Un seul modificateur : on le presse
-    /// une fois par invité, entre deux collages.
-    static var defaultInvite: HotKey {
+    /// ⌘: — la palette. Le keycode 47 est la touche « : » d'un AZERTY (« . »
+    /// sur un QWERTY) : celle du tchat, sous la main quand on va y coller.
+    static var defaultPalette: HotKey {
         HotKey(keyCode: 47, modifiers: UInt32(cmdKey))
+    }
+    /// ⇧⌘: — copier l'invitation suivante, à côté de la palette qui l'offre aussi.
+    static var defaultInvite: HotKey {
+        HotKey(keyCode: 47, modifiers: UInt32(cmdKey) | UInt32(shiftKey))
     }
 }
