@@ -1,10 +1,11 @@
 import AppKit
 import Combine
 
-/// Passe un `/travel` copié par le zaap le plus proche de sa cible : au
-/// raccourci, au bouton de la barre, ou de lui-même à chaque copie
-/// (`zaapAuto`). La décision est dans `ItineraireZaap` ; ici, le presse-papiers
-/// et le retour visuel.
+/// Le seul foyer des trajets copiés : passer un `/travel` copié par le zaap le
+/// plus proche de sa cible (au raccourci, au bouton de la barre, ou de lui-même
+/// à chaque copie, `zaapAuto`), copier le trajet vers une case ou un `/zaap`.
+/// La décision et les commandes sont dans `ItineraireZaap` ; ici, le
+/// presse-papiers et le retour visuel.
 @MainActor
 final class ZaapClipboard: ObservableObject {
     static let shared = ZaapClipboard()
@@ -35,6 +36,24 @@ final class ZaapClipboard: ObservableObject {
                 MainActor.assumeIsolated { actif ? self?.armer() : self?.desarmer() }
             }
             .store(in: &subscriptions)
+        // Discrète : un échec garde la liste en place, le bouton des réglages
+        // reste là pour réessayer et dire pourquoi.
+        if ZaapsDofusDB.aRafraichir(releve: Preferences.shared.zaapsDofusDB, maintenant: Date()) {
+            Task { try? await ZaapsDofusDB.mettreAJour(Preferences.shared) }
+        }
+    }
+
+    /// Copie `/travel x,y`, précédé du zaap qui fait gagner assez de cartes
+    /// depuis le perso devant — le même calcul que pour un `/travel` copié.
+    func copierTrajet(vers cible: (x: Int, y: Int)) {
+        let travel = ItineraireZaap.travel(vers: cible)
+        guard let nouveau = itineraire(travel) else { return poser(travel) }
+        poser(nouveau)
+        signaler()
+    }
+
+    func copierZaap(_ zaap: Zaap) {
+        poser(ItineraireZaap.zaap(zaap))
     }
 
     /// Le raccourci et le bouton : un bip quand le presse-papiers reste tel quel.
@@ -68,15 +87,22 @@ final class ZaapClipboard: ObservableObject {
 
     @discardableResult
     private func reecrire() -> Bool {
-        guard let texte = PressePapiers.lire(),
-              let nouveau = ItineraireZaap.reecrire(
-                  texte, depuis: LecteurEcran.shared.positionDuPersoDevant,
-                  gainMinimal: Preferences.shared.zaapGainMinimal, zaaps: Preferences.shared.zaapsActifs)
-        else { return false }
-        PressePapiers.copier(nouveau)
-        generationVue = PressePapiers.generation
+        guard let texte = PressePapiers.lire(), let nouveau = itineraire(texte) else { return false }
+        poser(nouveau)
         signaler()
         return true
+    }
+
+    private func itineraire(_ texte: String) -> String? {
+        let prefs = Preferences.shared
+        return ItineraireZaap.reecrire(texte, depuis: LecteurEcran.shared.positionDuPersoDevant,
+                                       gainMinimal: prefs.zaapGainMinimal, zaaps: prefs.zaapsActifs)
+    }
+
+    /// Notre propre copie n'est pas une nouvelle copie à examiner.
+    private func poser(_ texte: String) {
+        PressePapiers.copier(texte)
+        generationVue = PressePapiers.generation
     }
 
     private func signaler() {

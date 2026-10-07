@@ -67,7 +67,7 @@ final class LecteurEcran: ObservableObject {
     /// la fraîcheur, hors des `@Published`.
     private var vuLe: [String: Date] = [:]
     private var timer: Timer?
-    private var persoDevant: String?
+    private(set) var persoDevant: String?
     private var prechauffe = false
     /// Lectures demandées, dans l'ordre — le tour, un survol, le bouton du
     /// Diagnostic. Une à la fois : l'OCR est séquentiel.

@@ -109,4 +109,63 @@ struct ItineraireZaapTests {
         #expect(zaaps[1].monde == 2)
         #expect(zaaps[1].nom(en: .en) == "Zaap")
     }
+
+    @Test("Les commandes composées se relisent comme une cible")
+    func compositions() {
+        let travel = ItineraireZaap.travel(vers: (-27, 36))
+        #expect(travel == "/travel -27,36")
+        #expect(ItineraireZaap.cible(dans: travel).map { [$0.x, $0.y] } == [-27, 36])
+        #expect(ItineraireZaap.zaap(Zaap(5, -18, noms: [:])) == "/zaap 5,-18")
+    }
+
+    @Test("On ne rejoint un perso que dans le Monde des Douze")
+    func rejoindre() {
+        #expect(ItineraireZaap.rejoindre(position(4, -3)).map { [$0.x, $0.y] } == [4, -3])
+        #expect(ItineraireZaap.rejoindre(position(4, -3, zone: "Incarnam (Pâturages)")) == nil)
+        #expect(ItineraireZaap.rejoindre(nil) == nil)
+    }
+
+    // MARK: - Favoris
+
+    private let bouftous = Zaap(5, 7, noms: ["fr": "Coin des Bouftous"])
+    private let astrub = Zaap(5, -18, noms: ["fr": "Cité d'Astrub"])
+    private let amakna = Zaap(-2, 0, noms: ["fr": "Village d'Amakna"])
+    private let incarnam = Zaap(2, -5, monde: 2, noms: ["fr": "Pâturages"])
+
+    @Test("Les favoris suivent l'ordre choisi et sautent les clés inconnues")
+    func favoris() {
+        let connus = [bouftous, astrub, amakna]
+        let favoris = CatalogueZaaps.favoris([astrub.cle, "1:99,99", bouftous.cle], parmi: connus)
+        #expect(favoris == [astrub, bouftous])
+    }
+
+    @Test("Les favoris se trient du plus proche, l'autre carte en dernier")
+    func triParDistance() {
+        let zaaps = [incarnam, astrub, bouftous, amakna]
+        #expect(CatalogueZaaps.parDistance(zaaps, depuis: position(4, 6)) == [bouftous, amakna, astrub, incarnam])
+        #expect(CatalogueZaaps.distance(de: bouftous, depuis: position(4, 6)) == 2)
+        #expect(CatalogueZaaps.distance(de: incarnam, depuis: position(4, 6)) == nil)
+    }
+
+    @Test("Sans position utilisable, les favoris gardent leur ordre")
+    func triSansPosition() {
+        let zaaps = [astrub, bouftous, amakna]
+        #expect(CatalogueZaaps.parDistance(zaaps, depuis: nil) == zaaps)
+        #expect(CatalogueZaaps.parDistance(zaaps, depuis: position(4, 6, zone: "Incarnam")) == zaaps)
+    }
+
+    // MARK: - Mise à jour DofusDB
+
+    @Test("La liste DofusDB se rafraîchit absente ou vieille de plus de 30 jours")
+    func aRafraichir() {
+        let maintenant = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        let jour: TimeInterval = 24 * 3600
+        func releve(age: TimeInterval) -> ReleveZaaps {
+            ReleveZaaps(date: maintenant.addingTimeInterval(-age), zaaps: [])
+        }
+        #expect(ZaapsDofusDB.aRafraichir(releve: nil, maintenant: maintenant))
+        #expect(!ZaapsDofusDB.aRafraichir(releve: releve(age: 29 * jour), maintenant: maintenant))
+        #expect(!ZaapsDofusDB.aRafraichir(releve: releve(age: 30 * jour), maintenant: maintenant))
+        #expect(ZaapsDofusDB.aRafraichir(releve: releve(age: 31 * jour), maintenant: maintenant))
+    }
 }

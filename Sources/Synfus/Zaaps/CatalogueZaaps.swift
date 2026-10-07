@@ -23,6 +23,38 @@ enum CatalogueZaaps {
     static func actifs(base: [Zaap], ajoutes: [Zaap], choix: [String: Bool]) -> [Zaap] {
         tous(base: base, ajoutes: ajoutes).filter { estActif($0, choix: choix) }
     }
+
+    /// Les favoris dans l'ordre choisi ; une clé qui ne désigne plus aucun zaap
+    /// connu (ajout supprimé, liste DofusDB changée) est sautée.
+    static func favoris(_ cles: [String], parmi connus: [Zaap]) -> [Zaap] {
+        let parCle = Dictionary(connus.map { ($0.cle, $0) }, uniquingKeysWith: { premier, _ in premier })
+        return cles.compactMap { parCle[$0] }
+    }
+
+    /// Les cartes à traverser jusqu'au zaap — `nil` quand le nombre ne veut
+    /// rien dire : position inconnue ou hors du Monde des Douze, zaap sur une
+    /// autre carte du monde.
+    static func distance(de zaap: Zaap, depuis position: PositionCarte?) -> Int? {
+        guard let position, !ItineraireZaap.horsDuMondeDesDouze(position.zone),
+              zaap.monde == Zaap.mondeDesDouze
+        else { return nil }
+        return ItineraireZaap.distance((position.x, position.y), (zaap.x, zaap.y))
+    }
+
+    /// Du plus proche au plus loin ; ceux sans distance ferment la marche dans
+    /// leur ordre, et sans position tout garde l'ordre donné.
+    static func parDistance(_ zaaps: [Zaap], depuis position: PositionCarte?) -> [Zaap] {
+        zaaps.enumerated()
+            .sorted { a, b in
+                switch (distance(de: a.element, depuis: position), distance(de: b.element, depuis: position)) {
+                case let (da?, db?) where da != db: return da < db
+                case (_?, nil): return true
+                case (nil, _?): return false
+                default: return a.offset < b.offset
+                }
+            }
+            .map(\.element)
+    }
 }
 
 /// La liste téléchargée de DofusDB, et quand.
