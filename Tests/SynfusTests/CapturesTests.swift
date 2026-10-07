@@ -5,7 +5,8 @@ import Testing
 
 /// Les captures de la documentation et des notes de version : les vues de
 /// Synfus rendues hors écran, sur des données d'exemple — jamais un visuel du
-/// jeu. Ignoré sans `SYNFUS_CAPTURES=<dossier>`.
+/// jeu. Ignoré sans `SYNFUS_CAPTURES=<dossier>` ; pour `docs/screenshots` :
+/// `SYNFUS_CAPTURES=$PWD/docs/screenshots sh test.sh CapturesTests`.
 @MainActor
 struct CapturesTests {
     nonisolated private static let dossier = ProcessInfo.processInfo.environment["SYNFUS_CAPTURES"]
@@ -33,8 +34,7 @@ struct CapturesTests {
         let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
         try FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)
         for (nom, requete) in [("palette-zaaps", ""), ("palette-travel", "/travel banque bonta"),
-                               ("palette-fm", "/travel fm"), ("palette-commandes", "/"),
-                               ("palette-variables", "%"), ("palette-tout", "recru")] {
+                               ("palette-commandes", "/")] {
             let modele = PaletteModele(contexte: contexte(), requete: requete)
             let vue = PaletteVue(modele: modele)
                 .padding(24)
@@ -48,11 +48,11 @@ struct CapturesTests {
     func reglages() throws {
         let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
         try FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)
-        for section in SettingsSection.allCases {
+        for (nom, section) in [("reglages", SettingsSection.general), ("reglages-palette", .palette)] {
             let vue = SettingsView(section: section)
                 .background(Color(nsColor: .windowBackgroundColor))
                 .environment(\.colorScheme, .dark)
-            try ecrire(vue, vers: dossier.appending(path: "reglages-\(section.rawValue).png"))
+            try ecrire(vue, vers: dossier.appending(path: nom + ".png"))
         }
     }
 
