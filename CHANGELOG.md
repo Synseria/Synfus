@@ -3,6 +3,52 @@
 Une section par version, `## X.Y.Z — AAAA-MM-JJ` : la release GitHub de `vX.Y.Z` en reprend le
 contenu (`Tools/notes-de-version.sh`), et `sh build.sh --publish` refuse une version absente d'ici.
 
+## 0.10.0 — 2026-10-08
+
+![La palette](https://raw.githubusercontent.com/Synseria/Synfus/v0.10.0/docs/screenshots/palette-zaaps.png)
+
+### Nouveautés
+
+- **La palette (⌘:)** : un champ de recherche au-dessus du jeu, qui prend le clavier sans passer
+  devant Dofus. Tu tapes, Entrée copie, ⌘V colle dans le tchat — Synfus n'envoie toujours rien.
+  Rien de tapé : les zaaps en cartes, favoris d'abord puis du plus proche, et tes dernières copies.
+- **`/zaap bonta`** : un zaap par son nom, sa **zone** (Cœur immaculé → Bonta) ou ton
+  **étiquette** libre (« Fri 1 », « Bouftou »), posée d'un Tab ou d'un clic droit.
+- **`/travel banque bonta`** : les **834 lieux** du jeu — banques, hôtels de vente, ateliers,
+  temples, donjons, transports — avec les surnoms des joueurs (`fm`, `hdv conso`, `bijou`…). Le
+  plus proche de toi passe devant, et le trajet est copié en `/zaap x,y; /travel a,b` quand le
+  zaap fait gagner du chemin.
+
+  ![/travel banque bonta](https://raw.githubusercontent.com/Synseria/Synfus/v0.10.0/docs/screenshots/palette-travel.png)
+
+- **`/`** : les commandes du jeu (`/w`, `/g`, `/p`, `/whois`, `/away`…), une commande à argument
+  se complète. **`%`** : les variables du tchat (`%pos%`, `%zone%`, `%souszone%`…).
+
+  ![Les commandes](https://raw.githubusercontent.com/Synseria/Synfus/v0.10.0/docs/screenshots/palette-commandes.png)
+
+- **Phrases enregistrées** : recrutement, demande d'aide… retrouvées par leur nom, copiées d'un
+  geste (*Réglages → Palette*).
+- **Tout Synfus au clavier** : tape un perso pour y aller, « ranger », « session », « équipe
+  suivante », « chasse »… et Entrée.
+- **`/invite`** : toute l'équipe en une ligne, ou un perso.
+
+### Améliorations
+
+- **Réglages refaits** : une seule grille (libellé à gauche, réglage à droite), des libellés
+  harmonisés, un onglet **Palette** qui réunit zaaps (en cartes, étiquettes, favoris), lieux
+  étiquetés, phrases, réécriture du `/travel`, chasse et carte du jeu.
+
+  ![L'onglet Palette](https://raw.githubusercontent.com/Synseria/Synfus/v0.10.0/docs/screenshots/reglages-palette.png)
+
+- **Une seule carte du jeu** : zaaps et lieux viennent d'une même liste DofusDB, intégrée à
+  Synfus et rafraîchie tous les 30 jours.
+- Le bouton Zaap de la barre ouvre la palette.
+
+### Changé
+
+- **⌘: ouvre la palette** ; l'invitation passe à **⇧⌘:** (si tu l'avais changée, elle ne bouge
+  pas).
+
 ## 0.9.0 — 2026-10-07
 
 ### Nouveautés
