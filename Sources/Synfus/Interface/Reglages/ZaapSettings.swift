@@ -32,8 +32,8 @@ struct ZaapSettings: View {
                                         set: { prefs.zaapHotKey = $0; HotKeyManager.shared.rebind() }))
             Stepper(L("zaap.gain", prefs.zaapGainMinimal),
                     value: $prefs.zaapGainMinimal, in: ItineraireZaap.gainsPossibles)
+            Toggle(L("zaap.bouton"), isOn: $prefs.zaapBouton)
             if prefs.lirePosition {
-                Toggle(L("zaap.bouton"), isOn: $prefs.zaapBouton)
                 HStack {
                     Toggle(L("zaap.auto"), isOn: $prefs.zaapAuto)
                     HelpTip(L("zaap.auto.aide"))
