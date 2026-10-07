@@ -1,14 +1,29 @@
 import Foundation
 
-/// Faut-il passer par un zaap pour aller où dit le `/travel` copié ? Pur : on
-/// lui donne le texte du presse-papiers et la position lue, il rend le texte à
-/// poser — ou `nil`, et le presse-papiers reste intact.
+/// Les commandes `/travel` et `/zaap`, et faut-il passer par un zaap pour aller
+/// où dit un `/travel` ? Pur : on lui donne le texte et la position lue, il
+/// rend le texte à poser — ou `nil`, et le presse-papiers reste intact.
 ///
 /// Le presse-papiers n'est réécrit que s'il contient **exactement** une
 /// commande `/travel x,y` : tout autre texte est ignoré, quel qu'il soit.
 enum ItineraireZaap {
     static let gainParDefaut = 5
     static let gainsPossibles = 1...30
+
+    static func travel(vers cible: (x: Int, y: Int)) -> String {
+        "/travel \(cible.x),\(cible.y)"
+    }
+
+    static func zaap(_ zaap: Zaap) -> String {
+        "/zaap \(zaap.x),\(zaap.y)"
+    }
+
+    /// La case où rejoindre un perso d'après sa position lue — `nil` hors du
+    /// Monde des Douze : un `/travel` y viserait la case homonyme d'Amakna.
+    static func rejoindre(_ position: PositionCarte?) -> (x: Int, y: Int)? {
+        guard let position, !horsDuMondeDesDouze(position.zone) else { return nil }
+        return (position.x, position.y)
+    }
 
     /// La case visée par `/travel x,y` — aussi `x y`, `[x,y]` ou `x, y`, les
     /// formes que copient les sites de cartes. Rien d'autre sur la ligne.
@@ -49,7 +64,7 @@ enum ItineraireZaap {
         let gain = distance((position.x, position.y), cible) - distance((zaap.x, zaap.y), cible)
         guard gain >= gainMinimal else { return nil }
         let travel = texte.trimmingCharacters(in: .whitespacesAndNewlines)
-        return "/zaap \(zaap.x),\(zaap.y); \(travel)"
+        return "\(Self.zaap(zaap)); \(travel)"
     }
 
     /// Les régions dont les coordonnées ne sont pas celles du Monde des Douze

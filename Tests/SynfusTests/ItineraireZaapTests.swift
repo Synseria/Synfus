@@ -109,4 +109,19 @@ struct ItineraireZaapTests {
         #expect(zaaps[1].monde == 2)
         #expect(zaaps[1].nom(en: .en) == "Zaap")
     }
+
+    @Test("Les commandes composées se relisent comme une cible")
+    func compositions() {
+        let travel = ItineraireZaap.travel(vers: (-27, 36))
+        #expect(travel == "/travel -27,36")
+        #expect(ItineraireZaap.cible(dans: travel).map { [$0.x, $0.y] } == [-27, 36])
+        #expect(ItineraireZaap.zaap(Zaap(5, -18, noms: [:])) == "/zaap 5,-18")
+    }
+
+    @Test("On ne rejoint un perso que dans le Monde des Douze")
+    func rejoindre() {
+        #expect(ItineraireZaap.rejoindre(position(4, -3)).map { [$0.x, $0.y] } == [4, -3])
+        #expect(ItineraireZaap.rejoindre(position(4, -3, zone: "Incarnam (Pâturages)")) == nil)
+        #expect(ItineraireZaap.rejoindre(nil) == nil)
+    }
 }
