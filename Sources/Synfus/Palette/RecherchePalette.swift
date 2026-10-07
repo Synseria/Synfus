@@ -1,11 +1,5 @@
 import Foundation
 
-/// Une phrase enregistrée : un message tout prêt, retrouvé par son nom.
-struct Phrase: Codable, Hashable, Sendable {
-    var nom: String
-    var texte: String
-}
-
 /// Les gestes de Synfus que la palette sait faire, tapés en toutes lettres.
 enum ActionPalette: CaseIterable, Sendable {
     case rangerFenetres, lancerSession, equipeSuivante, inviterEquipe, chasse, reglages
@@ -24,7 +18,7 @@ enum ActionPalette: CaseIterable, Sendable {
 
 /// Une ligne de la palette, et ce qu'Entrée en fait.
 struct EntreePalette: Equatable, Identifiable, Sendable {
-    enum Genre: Equatable, Sendable { case zaap, lieu, commande, variable, perso, action, phrase, recent }
+    enum Genre: Equatable, Sendable { case zaap, lieu, commande, variable, perso, action, recent }
 
     enum Effet: Equatable, Sendable {
         /// Pose le texte dans le presse-papiers et ferme.
@@ -61,7 +55,6 @@ struct ContextePalette: Sendable {
     var lieux: [Lieu] = []
     var etiquettes: [String: String] = [:]
     var favoris: Set<String> = []
-    var phrases: [Phrase] = []
     /// Les derniers textes copiés depuis la palette, le plus récent d'abord.
     var recents: [String] = []
     var persos: [(nom: String, slotKey: String)] = []
@@ -180,7 +173,7 @@ enum RecherchePalette {
                                  sousTitre: $0.description, effet: .copier($0.texte)) }
     }
 
-    /// Sans préfixe : zaaps, lieux, persos, gestes et phrases ensemble.
+    /// Sans préfixe : zaaps, lieux, persos, gestes et dernières copies ensemble.
     private static func tout(_ contexte: ContextePalette) -> [EntreePalette] {
         let persos = contexte.persos.map {
             EntreePalette(id: "perso:" + $0.slotKey, genre: .perso, titre: $0.nom,
@@ -189,11 +182,7 @@ enum RecherchePalette {
         let actions = ActionPalette.allCases.map {
             EntreePalette(id: "action:\($0)", genre: .action, titre: $0.titre, effet: .action($0))
         }
-        let phrases = contexte.phrases.enumerated().map {
-            EntreePalette(id: "phrase:\($0.offset)", genre: .phrase, titre: $0.element.nom,
-                          sousTitre: $0.element.texte, effet: .copier($0.element.texte))
-        }
-        return zaaps(contexte) + lieux(contexte) + persos + actions + phrases + recents(contexte)
+        return zaaps(contexte) + lieux(contexte) + persos + actions + recents(contexte)
     }
 
     /// Les dernières copies : au-dessus des zaaps quand rien n'est tapé, et
