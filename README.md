@@ -12,6 +12,26 @@ connectés et permet de passer de l'un à l'autre, d'un clic ou au clavier.
 
 ## Ce que ça fait
 
+- **La palette (⌘:)** : un champ de recherche au-dessus du jeu, qui prend le
+  clavier sans passer devant Dofus. Tu tapes, Entrée copie, ⌘V colle dans le
+  tchat.
+  - `/zaap bonta` : le zaap par son nom, sa zone ou ton étiquette (« Fri 1 »).
+  - `/travel banque bonta`, `/travel fm`, `/travel hdv conso` : les 834 lieux
+    du jeu (banques, hôtels de vente, ateliers, temples, donjons, transports),
+    le plus proche de toi devant, copiés en `/zaap x,y; /travel a,b` quand
+    le zaap fait gagner du chemin.
+  - `/` les commandes du jeu, `%` les variables du tchat (`%pos%`…), `/invite`
+    l'équipe en une ligne, tes phrases enregistrées (recrutement, demande
+    d'aide…), tes persos et les gestes de Synfus.
+
+  ![La palette](docs/screenshots/palette-zaaps.png)
+  ![/travel banque bonta](docs/screenshots/palette-travel.png)
+
+- **Zaaps** : un `/travel` copié devient `/zaap x,y; /travel a,b` quand un
+  zaap épargne assez de cartes — au raccourci, ou tout seul à chaque copie.
+  Ta position est lue à l'écran.
+- **Chasse au trésor** : départ lu à l'écran, direction aux flèches, indice
+  saisi ou lu ; la carte vient de DofusDB et son `/travel` est copié.
 - **Overlay des personnages** avec leur classe : un clic pour passer sur le
   bon compte.
 - **Raccourcis clavier** : ⌘@ pour le personnage suivant, ⇧⌘@ pour le
@@ -32,9 +52,9 @@ connectés et permet de passer de l'un à l'autre, d'un clic ou au clavier.
   d'un coup. Jusqu'à quatre équipes, composées en glissant une pastille sur
   la seconde rangée de la barre ; l'équipe active restreint la barre, les
   raccourcis et le rangement, « Tous » reste à un clic.
-- **Invitations** : ⌘: copie `/invite Nom` pour le prochain personnage de
-  l'équipe, tu colles dans le tchat (⌘V ↩), et ainsi de suite. Synfus
-  n'envoie rien au jeu — c'est toi qui colles.
+- **Invitations** : ⇧⌘: copie `/invite Nom` pour le prochain personnage de
+  l'équipe — ou toute l'équipe en une ligne —, tu colles dans le tchat (⌘V ↩).
+  Synfus n'envoie rien au jeu — c'est toi qui colles.
 - **Fermeture propre des clients** : certains clients restent bloqués en
   quittant, Synfus s'en occupe.
 - **Aperçu** d'une fenêtre au survol, ou de tous les personnages en maintenant
@@ -49,7 +69,9 @@ connectés et permet de passer de l'un à l'autre, d'un clic ou au clavier.
 ![Les réglages](docs/screenshots/reglages.png)
 
 Synfus ne joue rien à ta place : il n'envoie ni clic ni touche au jeu, il
-change juste la fenêtre qui est devant. Pas de lecture mémoire, pas de réseau.
+change juste la fenêtre qui est devant, et pose du texte dans le presse-papiers.
+Pas de lecture mémoire ; pour le réseau, la seule API publique de DofusDB (la
+carte du jeu et les indices de chasse, rafraîchis tous les 30 jours).
 Il demande l'autorisation **Accessibilité**, et **Enregistrement de l'écran**
 seulement si tu actives les aperçus ou la lecture de l'écran.
 
