@@ -9,12 +9,16 @@ enum GenreLecture: String, CaseIterable, Sendable {
     case position
     /// Le bouton « Fin de tour » et son décompte, en bas à droite par défaut.
     case combat
+    /// Le suivi de chasse au trésor, à gauche par défaut — lu à la demande
+    /// seulement (`lireUneFois`), jamais au tour.
+    case chasse
 
     @MainActor var zone: ZoneEcran {
         let prefs = Preferences.shared
         switch self {
         case .position: return prefs.zonePosition ?? .positionParDefaut
         case .combat: return prefs.zoneCombat ?? .combatParDefaut
+        case .chasse: return prefs.zoneChasse ?? .chasseParDefaut
         }
     }
 }
@@ -87,6 +91,7 @@ final class LecteurEcran: ObservableObject {
             switch $0 {
             case .position: return prefs.lirePosition
             case .combat: return prefs.lireCombat
+            case .chasse: return false
             }
         }
     }
@@ -216,15 +221,10 @@ final class LecteurEcran: ObservableObject {
                 busy = false
                 pomper()
             }
-            guard let png = await previews.captureData(
-                client, region: genre.zone.rect, maxWidth: nil, inventaireGarde: true,
-                contenu: CaptureContenu(pleinEcran: client.pleinEcran, normaliser: true))
-            else {
+            guard let png = await capturer(client, genre) else {
                 diagnostic.etat = .echecCapture(previews.lastCaptureError ?? "?")
                 return
             }
-            diagnostic.captures[genre] = NSImage(data: png)
-            diagnostic.dernierPerso = nom
             switch await moteur.lire(png: png, precedente: precedente, couleur: genre == .combat) {
             case .illisible:
                 diagnostic.etat = .echecCapture("PNG illisible")
@@ -242,9 +242,39 @@ final class LecteurEcran: ObservableObject {
                 switch genre {
                 case .position: appliquerPosition(lignes, nom: nom)
                 case .combat: appliquerCombat(lignes, couleur: couleurBouton ?? signature.couleur ?? 0, nom: nom)
+                case .chasse: break
                 }
             }
         }
+    }
+
+    /// Le seul chemin de capture d'une zone : à l'échelle de référence, et
+    /// montrée au Diagnostic telle que l'OCR la reçoit.
+    private func capturer(_ client: DofusClient, _ genre: GenreLecture) async -> Data? {
+        guard let png = await WindowPreviewService.shared.captureData(
+            client, region: genre.zone.rect, maxWidth: nil, inventaireGarde: true,
+            contenu: CaptureContenu(pleinEcran: client.pleinEcran, normaliser: true))
+        else { return nil }
+        diagnostic.captures[genre] = NSImage(data: png)
+        diagnostic.dernierPerso = client.name
+        return png
+    }
+
+    /// Une lecture à la demande, hors du tour et sans signature : les lignes
+    /// de la zone `genre` chez le perso devant — ou le dernier lu devant, si
+    /// Synfus vient de passer au premier plan. `nil` : rien à lire (aucun
+    /// perso, pas d'autorisation, capture manquée). Le moteur est un acteur :
+    /// une lecture du tour en cours passe avant, sans se mélanger.
+    func lireUneFois(_ genre: GenreLecture) async -> [String]? {
+        let manager = WindowManager.shared
+        guard WindowPreviewService.shared.authorized,
+              let client = manager.clients.first(where: { manager.isFrontmost($0) })
+                ?? manager.clients.first(where: { $0.name == persoDevant }),
+              let png = await capturer(client, genre),
+              case .lue(_, let lignes, _, _) = await moteur.lire(png: png, precedente: nil, couleur: false)
+        else { return nil }
+        diagnostic.lignes[genre] = lignes
+        return lignes
     }
 
     private func appliquerPosition(_ lignes: [String], nom: String) {

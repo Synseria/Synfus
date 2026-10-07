@@ -8,6 +8,7 @@ struct BarView: View {
     @ObservedObject private var lecteur = LecteurEcran.shared
     @ObservedObject private var invitations = InvitationClipboard.shared
     @ObservedObject private var zaaps = ZaapClipboard.shared
+    @ObservedObject private var chasse = ChassePanel.shared
     @State private var dragging: String?
     @State private var chipFrames: [String: CGRect] = [:]
     /// Cadres des secteurs de la rangée des équipes, dans le même repère que
@@ -168,6 +169,7 @@ struct BarView: View {
             separator
             arrangeMenu
             if prefs.lirePosition, prefs.zaapBouton { zaapButton }
+            if prefs.chasseBouton { chasseButton }
             autoFocusToggle
         }
     }
@@ -190,6 +192,19 @@ struct BarView: View {
             ZaapClipboard.shared.optimiser()
         }
         .contextMenu { zaapsFavoris }
+    }
+
+    /// Le panneau de chasse au trésor : il prend le clavier sans activer
+    /// Synfus, le jeu reste l'app active.
+    private var chasseButton: some View {
+        ModeButton(
+            icone: "map",
+            teinte: .yellow,
+            actif: chasse.ouvert,
+            aide: L("barre.chasseAide", prefs.chasseHotKey?.displayString ?? L("barre.aucunRaccourci"))
+        ) {
+            ChassePanel.shared.basculer()
+        }
     }
 
     /// Du plus proche au plus loin du perso devant.
