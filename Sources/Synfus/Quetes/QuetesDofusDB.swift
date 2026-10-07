@@ -138,8 +138,9 @@ enum QuetesDofusDB {
         let sousZones: [SousZoneAPI] = try await parIdentifiants("subareas", idsSousZones)
         let zones: [Nomme] = try await parIdentifiants("areas", Set(sousZones.map(\.areaId)))
         let types: [TypeObjetAPI] = try await DofusDB.toutes("item-types", [])
-        return try await assembler(quetes: quetes, objets: objets, monstres: monstres, pnjs: pnjs,
-                                   cartes: cartes, sousZones: sousZones, zones: zones, types: types, date: maintenant)
+        let cites = Cites(objets: try await objets, monstres: try await monstres, pnjs: try await pnjs,
+                          cartes: cartes, sousZones: sousZones, zones: zones, types: types)
+        return assembler(quetes: quetes, cites: cites, date: maintenant)
     }
 
     /// Les identifiants cités : par les paramètres, et par les renvois du texte.
@@ -162,9 +163,20 @@ enum QuetesDofusDB {
         return (objets, monstres, pnjs)
     }
 
-    static func assembler(quetes: [QueteAPI], objets: [Nomme], monstres: [Nomme], pnjs: [Nomme],
-                          cartes: [CarteAPI], sousZones: [SousZoneAPI], zones: [Nomme], types: [TypeObjetAPI] = [],
-                          date: Date) -> Quetes {
+    /// Ce que les quêtes citent, téléchargé à part : leurs noms, cartes et zones.
+    struct Cites {
+        var objets: [Nomme] = []
+        var monstres: [Nomme] = []
+        var pnjs: [Nomme] = []
+        var cartes: [CarteAPI] = []
+        var sousZones: [SousZoneAPI] = []
+        var zones: [Nomme] = []
+        var types: [TypeObjetAPI] = []
+    }
+
+    static func assembler(quetes: [QueteAPI], cites: Cites, date: Date) -> Quetes {
+        let (objets, monstres, pnjs) = (cites.objets, cites.monstres, cites.pnjs)
+        let (cartes, sousZones, zones, types) = (cites.cartes, cites.sousZones, cites.zones, cites.types)
         let carteParId = Dictionary(cartes.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
         /// Par PNJ, par case : la sous-zone et les quêtes qui l'y placent.
         var vus: [Int: [PNJ.Position: (sousZone: Int?, quetes: Set<Int>)]] = [:]
