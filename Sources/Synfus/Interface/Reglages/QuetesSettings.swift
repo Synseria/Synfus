@@ -33,10 +33,9 @@ struct QuetesSettings: View {
 
     private func montrees(_ langue: Langue) -> [Quete] {
         let mots = RecherchePalette.mots(filtre)
-        return (store.quetes?.quetes ?? [])
-            .filter { quete in
-                mots.isEmpty || mots.allSatisfy(RecherchePalette.normaliser(Lieu.traduit(quete.noms, langue) ?? "").contains)
-            }
-            .sorted { ($0.niveau, Lieu.traduit($0.noms, langue) ?? "") < ($1.niveau, Lieu.traduit($1.noms, langue) ?? "") }
+        guard !mots.isEmpty else { return store.quetesTriees }
+        return store.quetesTriees.filter { quete in
+            mots.allSatisfy(RecherchePalette.normaliser(Lieu.traduit(quete.noms, langue) ?? "").contains)
+        }
     }
 }
