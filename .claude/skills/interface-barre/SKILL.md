@@ -54,8 +54,11 @@ sa bascule). Toute nouvelle option suit la règle.
 
 ## Réglages et menu
 
-- `Reglages/SettingsView.swift` : barre latérale, six sections — Général, Raccourcis, Zaap,
-  Persos, Classes, Diagnostic —, une vue par onglet. `SettingsWindowController` doit appeler
+- `Reglages/SettingsView.swift` : barre latérale, six sections — Général, Raccourcis, Palette,
+  Persos, Classes, Diagnostic —, une vue par onglet, chacune une `PageReglages` (titre, une
+  phrase, `Form` groupé). Toute ligne passe par `Ligne` (libellé à gauche, contrôle à droite,
+  précision grise, ⓘ) ou `Interrupteur` : c'est ce qui tient l'alignement — jamais un `HStack`
+  maison. Libellés sans deux-points ni « / ». Couleurs : `Couleurs` (accent vert d'eau, ambre). `SettingsWindowController` doit appeler
   `NSApp.activate(ignoringOtherApps:)` (app accessory) ; la fenêtre s'ouvre sous la barre
   (`visibleBarFrame`), au centre sinon.
 - `MenuBarController` reconstruit le menu à chaque ouverture (`menuNeedsUpdate`), sur

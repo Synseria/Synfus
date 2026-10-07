@@ -1,8 +1,99 @@
 import SwiftUI
 
 /// Les briques communes des réglages. La règle d'interface : **un réglage
-/// par ligne, l'explication derrière un ⓘ** — le texte long ne vient qu'à la
-/// demande, dans une bulle, jamais entre deux boutons.
+/// par ligne, le libellé à gauche, le contrôle à droite** (`Ligne`), une
+/// précision d'une ligne en gris sous le libellé, l'explication longue
+/// derrière un ⓘ — jamais entre deux boutons. Libellés : sans deux-points ni
+/// « / », un nom (« Gain minimal ») ou un infinitif (« Afficher la barre »).
+
+/// Une page de réglages : son titre, une phrase, puis ses groupes.
+struct PageReglages<Contenu: View>: View {
+    let titre: String
+    let sousTitre: String
+    @ViewBuilder let contenu: Contenu
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            EnTetePage(titre: titre, sousTitre: sousTitre)
+            Form { contenu }
+                .formStyle(.grouped)
+        }
+    }
+}
+
+/// Le titre d'une page, pour celles qui ne sont pas un formulaire.
+struct EnTetePage: View {
+    let titre: String
+    let sousTitre: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(titre).font(.system(size: 20, weight: .bold))
+            Text(sousTitre).font(.system(size: 12)).foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 28)
+        .padding(.top, 22)
+        .padding(.bottom, 4)
+    }
+}
+
+/// Une ligne : libellé (ⓘ, précision) à gauche, contrôle à droite.
+struct Ligne<Controle: View>: View {
+    let titre: String
+    var detail: String?
+    var sousTexte: String?
+    var aide: String?
+    @ViewBuilder let controle: Controle
+
+    var body: some View {
+        LabeledContent {
+            controle
+        } label: {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(titre)
+                    if let detail { Text(detail).foregroundStyle(.secondary).lineLimit(1) }
+                    if let aide { HelpTip(aide) }
+                }
+                if let sousTexte {
+                    Text(sousTexte).font(.system(size: 11)).foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+}
+
+/// Un interrupteur sur la grille des lignes.
+struct Interrupteur: View {
+    let titre: String
+    var sousTexte: String?
+    var aide: String?
+    let isOn: Binding<Bool>
+
+    var body: some View {
+        Ligne(titre: titre, sousTexte: sousTexte, aide: aide) {
+            Toggle(titre, isOn: isOn)
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .controlSize(.small)
+        }
+    }
+}
+
+/// Un avertissement d'une ligne, et le geste qui le lève.
+struct Avertissement: View {
+    let texte: String
+    var bouton: String?
+    var action: () -> Void = {}
+
+    var body: some View {
+        Ligne(titre: texte) {
+            if let bouton { Button(bouton, action: action) }
+        }
+        .foregroundStyle(.orange)
+    }
+}
 
 /// Le ⓘ : une bulle d'aide, au clic.
 struct HelpTip: View {
@@ -57,20 +148,16 @@ struct ShortcutRow: View {
     let hotKey: Binding<HotKey?>
 
     var body: some View {
-        HStack {
-            Text(label)
-            if let help { HelpTip(help) }
-            Spacer()
-            if let detail {
-                Text(detail).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
+        Ligne(titre: label, detail: detail, aide: help) {
+            HStack(spacing: 6) {
+                if conflit {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.orange)
+                        .help(L("raccourcis.conflit"))
+                }
+                ShortcutRecorder(hotKey: hotKey, allowsBareKeys: allowsBareKeys)
             }
-            if conflit {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.orange)
-                    .help(L("raccourcis.conflit"))
-            }
-            ShortcutRecorder(hotKey: hotKey, allowsBareKeys: allowsBareKeys)
         }
     }
 }
@@ -83,15 +170,13 @@ struct PermissionRow: View {
     let open: () -> Void
 
     var body: some View {
-        HStack {
-            Circle().fill(granted ? Color.green : Color.orange).frame(width: 9, height: 9)
-            Text(name)
-            HelpTip(help)
-            Spacer()
-            Text(granted ? L("commun.accordee") : L("commun.manquante"))
-                .font(.system(size: 11)).foregroundStyle(granted ? Color.secondary : Color.orange)
-            Button(L("commun.ouvrirReglagesSysteme"), action: open)
-                .font(.system(size: 11))
+        Ligne(titre: name, aide: help) {
+            HStack(spacing: 8) {
+                Circle().fill(granted ? Color.green : Color.orange).frame(width: 8, height: 8)
+                Text(granted ? L("commun.accordee") : L("commun.manquante"))
+                    .foregroundStyle(granted ? Color.secondary : Color.orange)
+                if !granted { Button(L("commun.ouvrirReglagesSysteme"), action: open) }
+            }
         }
     }
 }
