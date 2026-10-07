@@ -52,7 +52,7 @@ enum ItineraireZaap {
         zaaps.min { distance(($0.x, $0.y), cible) < distance(($1.x, $1.y), cible) }
     }
 
-    /// `/zaap x,y; /travel a,b` si le zaap de `zaaps` le plus proche de la
+    /// `/zaap x,y ; /travel a,b` si le zaap de `zaaps` le plus proche de la
     /// cible épargne au moins `gainMinimal` cartes depuis `position` ; `nil` sinon.
     static func reecrire(
         _ texte: String, depuis position: PositionCarte?, gainMinimal: Int, zaaps: [Zaap]
@@ -64,7 +64,8 @@ enum ItineraireZaap {
         let gain = distance((position.x, position.y), cible) - distance((zaap.x, zaap.y), cible)
         guard gain >= gainMinimal else { return nil }
         let travel = texte.trimmingCharacters(in: .whitespacesAndNewlines)
-        return "\(Self.zaap(zaap)); \(travel)"
+        // L'espace avant le « ; » : sans elle, le jeu lit mal l'enchaînement.
+        return "\(Self.zaap(zaap)) ; \(travel)"
     }
 
     /// Les régions dont les coordonnées ne sont pas celles du Monde des Douze
