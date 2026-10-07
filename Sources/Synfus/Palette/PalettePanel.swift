@@ -3,12 +3,22 @@ import SwiftUI
 
 /// Un panneau sans cadre qui prend le clavier sans activer Synfus : Dofus
 /// reste l'app active, et le texte copié se colle dès la palette fermée.
-/// Flèches, Entrée, Tab et Échap vont au modèle, le reste au champ.
+/// Flèches, Entrée, Tab (filtre), Échap, ⌘E (étiquette), ⌘D (favori) et ⌘T
+/// (tri) vont au modèle, le reste au champ.
 private final class PanneauPalette: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
 
     override func sendEvent(_ event: NSEvent) {
+        let modificateurs = event.modifierFlags.intersection([.command, .option, .control, .shift])
+        if event.type == .keyDown, modificateurs == .command, PaletteModele.shared.edition == nil {
+            switch event.keyCode {
+            case 14: return PaletteModele.shared.etiqueterSelection()   // ⌘E
+            case 2: return PaletteModele.shared.favoriSelection()       // ⌘D
+            case 17: return PaletteModele.shared.triSuivant()           // ⌘T
+            default: break
+            }
+        }
         if event.type == .keyDown, event.modifierFlags.intersection([.command, .option, .control]).isEmpty {
             let modele = PaletteModele.shared
             let enEdition = modele.edition != nil
@@ -18,7 +28,7 @@ private final class PanneauPalette: NSPanel {
             case 123 where modele.enGrille && !enEdition: return modele.deplacer(colonne: -1)
             case 124 where modele.enGrille && !enEdition: return modele.deplacer(colonne: 1)
             case 36, 76: return modele.valider()
-            case 48 where !enEdition: return modele.tabulation()
+            case 48 where !enEdition: return modele.tabulation(arriere: event.modifierFlags.contains(.shift))
             case 53: return modele.echap()
             default: break
             }

@@ -18,6 +18,10 @@ final class PaletteModele: ObservableObject {
         }
     }
     @Published private(set) var entrees: [EntreePalette] = []
+    /// La famille montrée, que Tab fait défiler ; revient à « Tout » à
+    /// chaque ouverture.
+    @Published private(set) var filtre: FiltrePalette = .tout
+    @Published private(set) var tri: TriPalette = .proximite
     @Published var selection = 0
     /// L'entrée dont on écrit l'étiquette, et le texte en cours.
     @Published private(set) var edition: EntreePalette?
@@ -33,20 +37,25 @@ final class PaletteModele: ObservableObject {
     private init() { contexteImpose = nil }
 
     /// Une palette hors de l'app, sur un contexte donné.
-    init(contexte: ContextePalette, requete: String = "") {
+    init(contexte: ContextePalette, requete: String = "", filtre: FiltrePalette = .tout) {
         contexteImpose = contexte
         self.contexte = contexte
         self.requete = requete
+        self.filtre = filtre
         recalculer()
     }
 
-    var enGrille: Bool { requete.trimmingCharacters(in: .whitespaces).isEmpty }
+    var enGrille: Bool {
+        requete.trimmingCharacters(in: .whitespaces).isEmpty && (filtre == .tout || filtre == .zaaps)
+    }
 
     /// Les dernières copies, montrées au-dessus des cartes.
     var recents: [EntreePalette] { RecherchePalette.recents(contexte) }
 
     func ouvrir() {
         contexte = contexteImpose ?? Self.contexteCourant()
+        filtre = .tout
+        tri = contexteImpose == nil ? Preferences.shared.paletteTri : tri
         edition = nil
         requete = ""
         selection = 0
@@ -69,11 +78,36 @@ final class PaletteModele: ObservableObject {
         executer(entrees[selection])
     }
 
-    /// Tab : compléter une commande, ou étiqueter un zaap ou un lieu.
-    func tabulation() {
-        guard entrees.indices.contains(selection) else { return }
-        let entree = entrees[selection]
-        if case .completer(let texte) = entree.effet { requete = texte } else { commencerEtiquette(entree) }
+    /// Tab : compléter une commande, sinon passer au filtre suivant (⇧Tab :
+    /// au précédent).
+    func tabulation(arriere: Bool = false) {
+        if !arriere, entrees.indices.contains(selection), case .completer(let texte) = entrees[selection].effet {
+            requete = texte
+            return
+        }
+        filtre = filtre.suivant(arriere ? -1 : 1)
+        selection = 0
+        recalculer()
+    }
+
+    /// ⌘T : proximité, ordre alphabétique, type — et le choix est gardé.
+    func triSuivant() {
+        tri = tri.suivant
+        if contexteImpose == nil { Preferences.shared.paletteTri = tri }
+        selection = 0
+        recalculer()
+    }
+
+    /// ⌘E : l'étiquette de la sélection.
+    func etiqueterSelection() {
+        guard entrees.indices.contains(selection) else { return NSSound.beep() }
+        commencerEtiquette(entrees[selection])
+    }
+
+    /// ⌘D : la sélection en favori, ou plus.
+    func favoriSelection() {
+        guard entrees.indices.contains(selection) else { return NSSound.beep() }
+        basculerFavori(entrees[selection])
     }
 
     /// Échap : quitte l'étiquette, sinon ferme.
@@ -120,7 +154,7 @@ final class PaletteModele: ObservableObject {
     // MARK: - Favoris et étiquettes
 
     func basculerFavori(_ entree: EntreePalette) {
-        guard let cle = entree.cle else { return }
+        guard let cle = entree.cle else { return NSSound.beep() }
         let prefs = Preferences.shared
         if cle.hasPrefix(Lieu.prefixeCle) {
             if prefs.lieuxFavoris.contains(cle) { prefs.lieuxFavoris.removeAll { $0 == cle } } else { prefs.lieuxFavoris.append(cle) }
@@ -131,7 +165,7 @@ final class PaletteModele: ObservableObject {
     }
 
     func commencerEtiquette(_ entree: EntreePalette) {
-        guard entree.cle != nil else { return }
+        guard entree.cle != nil else { return NSSound.beep() }
         edition = entree
         texteEtiquette = entree.etiquette ?? ""
     }
@@ -153,7 +187,7 @@ final class PaletteModele: ObservableObject {
     }
 
     private func recalculer() {
-        entrees = RecherchePalette.entrees(requete, contexte)
+        entrees = RecherchePalette.entrees(requete, contexte, filtre: filtre, tri: tri)
         if selection >= entrees.count { selection = max(entrees.count - 1, 0) }
     }
 
