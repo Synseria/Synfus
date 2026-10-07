@@ -124,4 +124,33 @@ struct ItineraireZaapTests {
         #expect(ItineraireZaap.rejoindre(position(4, -3, zone: "Incarnam (Pâturages)")) == nil)
         #expect(ItineraireZaap.rejoindre(nil) == nil)
     }
+
+    // MARK: - Favoris
+
+    private let bouftous = Zaap(5, 7, noms: ["fr": "Coin des Bouftous"])
+    private let astrub = Zaap(5, -18, noms: ["fr": "Cité d'Astrub"])
+    private let amakna = Zaap(-2, 0, noms: ["fr": "Village d'Amakna"])
+    private let incarnam = Zaap(2, -5, monde: 2, noms: ["fr": "Pâturages"])
+
+    @Test("Les favoris suivent l'ordre choisi et sautent les clés inconnues")
+    func favoris() {
+        let connus = [bouftous, astrub, amakna]
+        let favoris = CatalogueZaaps.favoris([astrub.cle, "1:99,99", bouftous.cle], parmi: connus)
+        #expect(favoris == [astrub, bouftous])
+    }
+
+    @Test("Les favoris se trient du plus proche, l'autre carte en dernier")
+    func triParDistance() {
+        let zaaps = [incarnam, astrub, bouftous, amakna]
+        #expect(CatalogueZaaps.parDistance(zaaps, depuis: position(4, 6)) == [bouftous, amakna, astrub, incarnam])
+        #expect(CatalogueZaaps.distance(de: bouftous, depuis: position(4, 6)) == 2)
+        #expect(CatalogueZaaps.distance(de: incarnam, depuis: position(4, 6)) == nil)
+    }
+
+    @Test("Sans position utilisable, les favoris gardent leur ordre")
+    func triSansPosition() {
+        let zaaps = [astrub, bouftous, amakna]
+        #expect(CatalogueZaaps.parDistance(zaaps, depuis: nil) == zaaps)
+        #expect(CatalogueZaaps.parDistance(zaaps, depuis: position(4, 6, zone: "Incarnam")) == zaaps)
+    }
 }

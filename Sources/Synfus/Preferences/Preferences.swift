@@ -148,6 +148,10 @@ final class Preferences: ObservableObject {
     /// Activation choisie, par `Zaap.cle` ; absent : `CatalogueZaaps.actifParDefaut`.
     @Published var zaapsChoix: [String: Bool] = [:] { didSet { save() } }
 
+    /// Les zaaps proposés au clic droit du bouton de la barre, par `Zaap.cle`,
+    /// dans l'ordre où ils ont été marqués.
+    @Published var zaapsFavoris: [String] = [] { didSet { save() } }
+
     /// Nombre de slots exposés (et donc de raccourcis potentiels).
     ///
     /// Le garde-fou `clamping` n'est pas décoratif : `@Published` remplace la
@@ -418,6 +422,7 @@ final class Preferences: ObservableObject {
         .optionnel("zaapsDofusDB", \.zaapsDofusDB),
         .facultatif("zaapsAjoutes", \.zaapsAjoutes),
         .facultatif("zaapsChoix", \.zaapsChoix),
+        .facultatif("zaapsFavoris", \.zaapsFavoris),
     ]
 
     /// Génération du jeu de raccourcis par défaut appliqué à la sauvegarde.

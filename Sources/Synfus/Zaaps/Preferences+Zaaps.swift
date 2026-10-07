@@ -8,4 +8,6 @@ extension Preferences {
     var zaapsActifs: [Zaap] {
         CatalogueZaaps.actifs(base: zaapsDeBase, ajoutes: zaapsAjoutes, choix: zaapsChoix)
     }
+
+    var zaapsFavorisConnus: [Zaap] { CatalogueZaaps.favoris(zaapsFavoris, parmi: zaapsConnus) }
 }
