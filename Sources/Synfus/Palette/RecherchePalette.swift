@@ -16,6 +16,53 @@ enum ActionPalette: CaseIterable, Sendable {
     }
 }
 
+/// Ce que Tab fait défiler : la famille de résultats montrée.
+enum FiltrePalette: CaseIterable, Sendable {
+    case tout, zaaps, lieux, persos
+
+    var titre: String {
+        switch self {
+        case .tout: return L("palette.filtre.tout")
+        case .zaaps: return L("palette.filtre.zaaps")
+        case .lieux: return L("palette.filtre.lieux")
+        case .persos: return L("palette.filtre.persos")
+        }
+    }
+
+    func garde(_ genre: EntreePalette.Genre) -> Bool {
+        switch self {
+        case .tout: return true
+        case .zaaps: return genre == .zaap
+        case .lieux: return genre == .lieu
+        case .persos: return genre == .perso
+        }
+    }
+
+    /// Le suivant (Tab) ou le précédent (⇧Tab), en boucle.
+    func suivant(_ pas: Int) -> FiltrePalette {
+        let tous = Self.allCases
+        return tous[(tous.firstIndex(of: self)! + pas + tous.count) % tous.count]
+    }
+}
+
+/// L'ordre des résultats, après les zaaps qui passent toujours devant.
+enum TriPalette: String, CaseIterable, Codable, Sendable {
+    case proximite, alphabetique, type
+
+    var titre: String {
+        switch self {
+        case .proximite: return L("palette.tri.proximite")
+        case .alphabetique: return L("palette.tri.alphabetique")
+        case .type: return L("palette.tri.type")
+        }
+    }
+
+    var suivant: TriPalette {
+        let tous = Self.allCases
+        return tous[(tous.firstIndex(of: self)! + 1) % tous.count]
+    }
+}
+
 /// Une ligne de la palette, et ce qu'Entrée en fait.
 struct EntreePalette: Equatable, Identifiable, Sendable {
     enum Genre: Equatable, Sendable { case zaap, lieu, commande, variable, perso, action, recent }
@@ -40,6 +87,8 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
     /// Les cartes depuis le perso devant, quand elles veulent dire quelque
     /// chose : départage deux résultats aussi bons.
     var distance: Int?
+    /// La catégorie DofusDB d'un lieu (`CategorieLieu`) : le tri par type.
+    var categorie: Int?
     /// Ce qu'une étiquette ou un favori désigne (`Zaap.cle`, `Lieu.cle`) ;
     /// `nil` pour ce qui ne s'étiquette pas.
     var cle: String?
@@ -66,28 +115,38 @@ struct ContextePalette: Sendable {
 
 /// La recherche de la palette. Pure : un texte et un contexte, des entrées
 /// triées. Les préfixes choisissent le mode — `/zaap`, `/travel`, `/invite`,
-/// `/` (commandes), `%` (variables) — ; sans préfixe, tout se cherche.
+/// `/` (commandes), `%` (variables) — ; sans préfixe, tout se cherche, dans
+/// la famille du filtre. Les zaaps passent toujours devant, puis le tri.
 enum RecherchePalette {
-    static let limite = 60
+    static let limite = 200
 
-    static func entrees(_ requete: String, _ contexte: ContextePalette) -> [EntreePalette] {
+    static func entrees(_ requete: String, _ contexte: ContextePalette,
+                        filtre: FiltrePalette = .tout, tri: TriPalette = .proximite) -> [EntreePalette] {
         let texte = requete.trimmingCharacters(in: .whitespaces)
-        if texte.isEmpty { return zaaps(contexte) }
+        func classer(_ entrees: [EntreePalette], _ mots: [String]) -> [EntreePalette] {
+            RecherchePalette.classer(entrees, mots, tri: tri)
+        }
+        if texte.isEmpty {
+            // La grille des zaaps, favoris d'abord puis du plus proche — sauf
+            // filtre sur une autre famille, montrée entière.
+            if filtre == .tout || filtre == .zaaps { return zaaps(contexte) }
+            return classer(tout(contexte).filter { filtre.garde($0.genre) }, [])
+        }
         if texte.hasPrefix("%") { return variables(texte) }
         guard texte.hasPrefix("/") else {
-            return classer(tout(contexte), mots(texte), contexte)
+            return classer(tout(contexte).filter { filtre.garde($0.genre) }, mots(texte))
         }
         let (commande, reste) = separer(texte)
         switch commande {
-        case "/zaap": return classer(zaaps(contexte), mots(reste), contexte)
+        case "/zaap": return classer(zaaps(contexte), mots(reste))
         case "/travel":
             if let cible = ItineraireZaap.cible(dans: "/travel " + reste) {
                 let copie = trajet(vers: cible, contexte)
                 return [EntreePalette(id: "travel", genre: .lieu, titre: copie, detail: "\(cible.x),\(cible.y)",
                                       effet: .copier(copie))]
             }
-            return classer(lieux(contexte) + zaapsCommeLieux(contexte), mots(reste), contexte)
-        case "/invite": return classer(invitations(contexte), mots(reste), contexte)
+            return classer(lieux(contexte) + zaapsCommeLieux(contexte), mots(reste))
+        case "/invite": return classer(invitations(contexte), mots(reste))
         default: return commandes(texte)
         }
     }
@@ -133,7 +192,7 @@ enum RecherchePalette {
             return EntreePalette(
                 id: lieu.cle, genre: .lieu, titre: lieu.nom(en: contexte.langue), sousTitre: sousTitre,
                 etiquette: contexte.etiquettes[lieu.cle], detail: "\(lieu.x),\(lieu.y)",
-                favori: contexte.favoris.contains(lieu.cle), distance: distance, cle: lieu.cle,
+                favori: contexte.favoris.contains(lieu.cle), distance: distance, categorie: lieu.categorie, cle: lieu.cle,
                 effet: .copier(lieu.monde == Zaap.mondeDesDouze ? trajet(vers: (lieu.x, lieu.y), contexte)
                                                                 : ItineraireZaap.travel(vers: (lieu.x, lieu.y))))
         }
@@ -243,36 +302,67 @@ enum RecherchePalette {
         CategorieLieu.transport.rawValue: ["transport"],
     ]
 
-    /// Garde les entrées dont chaque mot tapé trouve un écho, les meilleures
-    /// d'abord : étiquette, puis nom, puis zone ; favoris et proches devant.
-    private static func classer(_ entrees: [EntreePalette], _ mots: [String],
-                                _ contexte: ContextePalette) -> [EntreePalette] {
-        guard !mots.isEmpty else { return Array(entrees.prefix(limite)) }
-        let categories = Dictionary(contexte.lieux.map { ($0.cle, $0.categorie) }, uniquingKeysWith: { a, _ in a })
-        return entrees
-            .compactMap { entree -> (EntreePalette, Int)? in
-                let champs = Champs(entree, categorie: entree.cle.flatMap { categories[$0] })
-                var score = 0
-                for mot in mots {
-                    let points = champs.points(mot)
-                    guard points > 0 else { return nil }
-                    score += points
-                }
-                if entree.favori { score += 30 }
-                return (entree, score)
+    /// Garde les entrées dont chaque mot tapé trouve un écho, puis les range :
+    /// les zaaps devant, les favoris en tête de chaque famille, puis le tri ;
+    /// à égalité, la meilleure correspondance (étiquette, nom, zone).
+    private static func classer(_ entrees: [EntreePalette], _ mots: [String], tri: TriPalette) -> [EntreePalette] {
+        let retenues = entrees.enumerated().compactMap { rang, entree -> (entree: EntreePalette, score: Int, rang: Int)? in
+            let champs = Champs(entree)
+            var score = 0
+            for mot in mots {
+                let points = champs.points(mot)
+                guard points > 0 else { return nil }
+                score += points
             }
-            .enumerated()
+            return (entree, score, rang)
+        }
+        return retenues
             .sorted { a, b in
-                if a.element.1 != b.element.1 { return a.element.1 > b.element.1 }
-                switch (a.element.0.distance, b.element.0.distance) {
-                case let (da?, db?) where da != db: return da < db
-                case (_?, nil): return true
-                case (nil, _?): return false
-                default: return a.offset < b.offset
-                }
+                let (ea, eb) = (a.entree, b.entree)
+                if (ea.genre == .zaap) != (eb.genre == .zaap) { return ea.genre == .zaap }
+                if ea.favori != eb.favori { return ea.favori }
+                if let ordre = comparer(ea, eb, tri) { return ordre }
+                if a.score != b.score { return a.score > b.score }
+                return a.rang < b.rang
             }
             .prefix(limite)
-            .map(\.element.0)
+            .map(\.entree)
+    }
+
+    /// `nil` à égalité.
+    private static func comparer(_ a: EntreePalette, _ b: EntreePalette, _ tri: TriPalette) -> Bool? {
+        switch tri {
+        case .proximite:
+            return comparerDistances(a, b)
+        case .alphabetique:
+            let ordre = a.titre.localizedStandardCompare(b.titre)
+            return ordre == .orderedSame ? comparerDistances(a, b) : ordre == .orderedAscending
+        case .type:
+            let (ta, tb) = (rangDeType(a), rangDeType(b))
+            return ta != tb ? ta < tb : comparerDistances(a, b)
+        }
+    }
+
+    private static func comparerDistances(_ a: EntreePalette, _ b: EntreePalette) -> Bool? {
+        switch (a.distance, b.distance) {
+        case let (da?, db?) where da != db: return da < db
+        case (_?, nil): return true
+        case (nil, _?): return false
+        default: return nil
+        }
+    }
+
+    /// Persos, puis lieux par catégorie (temples, hôtels de vente, ateliers…),
+    /// puis gestes et copies.
+    private static func rangDeType(_ entree: EntreePalette) -> Int {
+        switch entree.genre {
+        case .zaap: return 0
+        case .perso: return 1
+        case .lieu: return 10 + (entree.categorie ?? 99)
+        case .action: return 200
+        case .recent: return 300
+        case .commande, .variable: return 400
+        }
     }
 
     /// Les textes d'une entrée, normalisés une fois.
@@ -282,13 +372,13 @@ enum RecherchePalette {
         let lieu: [String]
         let surnoms: [String]
 
-        init(_ entree: EntreePalette, categorie: Int?) {
+        init(_ entree: EntreePalette) {
             etiquette = RecherchePalette.mots(entree.etiquette ?? "")
             titre = RecherchePalette.mots(entree.titre)
             lieu = RecherchePalette.mots(entree.sousTitre ?? "")
             let nom = RecherchePalette.normaliser(entree.titre)
             surnoms = RecherchePalette.surnoms.filter { nom.contains($0.motif) }.flatMap(\.mots)
-                + (categorie.flatMap { RecherchePalette.motsDeCategorie[$0] } ?? [])
+                + (entree.categorie.flatMap { RecherchePalette.motsDeCategorie[$0] } ?? [])
         }
 
         func points(_ mot: String) -> Int {
