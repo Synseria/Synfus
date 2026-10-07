@@ -51,11 +51,9 @@ struct PNJSettings: View {
 
     private func montres(_ langue: Langue) -> [PNJ] {
         let mots = RecherchePalette.mots(filtre)
-        return (store.quetes?.pnjs ?? [])
-            .filter { pnj in
-                mots.isEmpty || mots.allSatisfy(RecherchePalette.normaliser(Lieu.traduit(pnj.noms, langue) ?? "").contains)
-            }
-            .sorted { (Lieu.traduit($0.noms, langue) ?? "").localizedStandardCompare(Lieu.traduit($1.noms, langue) ?? "")
-                == .orderedAscending }
+        guard !mots.isEmpty else { return store.pnjsTries }
+        return store.pnjsTries.filter { pnj in
+            mots.allSatisfy(RecherchePalette.normaliser(Lieu.traduit(pnj.noms, langue) ?? "").contains)
+        }
     }
 }

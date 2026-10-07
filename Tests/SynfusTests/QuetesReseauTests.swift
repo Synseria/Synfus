@@ -25,8 +25,15 @@ struct QuetesReseauTests {
         contexte.quetes = quetes
         let horloge = ContinuousClock()
         let index = IndexPalette(contexte)
+        let entrees = horloge.measure {
+            _ = RecherchePalette.lieux(contexte) + RecherchePalette.quetes(contexte) + RecherchePalette.pnjs(contexte)
+        }
+        print("entrées seules : \(entrees)")
         let construction = horloge.measure { _ = index.tout }
         let frappe = horloge.measure { _ = RecherchePalette.entrees("bonta", index) }
+        let champs = IndexPalette.champs(de: contexte)
+        let rechauffe = horloge.measure { _ = IndexPalette(contexte, connus: champs).tout }
+        print("index préchauffé : \(rechauffe)")
         print("index : \(construction), frappe : \(frappe)")
         #expect(frappe < .milliseconds(150))
     }

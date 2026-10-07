@@ -153,8 +153,11 @@ struct FicheQuete: Equatable, Sendable {
 
 extension Quetes {
     func fiche(_ id: Int, en langue: Langue) -> FicheQuete? {
-        guard let quete = quetes.first(where: { $0.id == id }) else { return nil }
-        return FicheQuete(
+        quetes.first { $0.id == id }.map { fiche($0, en: langue) }
+    }
+
+    func fiche(_ quete: Quete, en langue: Langue) -> FicheQuete {
+        FicheQuete(
             nom: Lieu.traduit(quete.noms, langue) ?? "?",
             niveau: quete.niveau,
             groupe: quete.groupe,

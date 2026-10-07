@@ -32,9 +32,13 @@ final class PaletteModele: ObservableObject {
     private var abonnements: Set<AnyCancellable> = []
 
     private var contexte = ContextePalette() {
-        didSet { index = IndexPalette(contexte) }
+        didSet { index = IndexPalette(contexte, connus: champsConnus) }
     }
     private var index = IndexPalette(ContextePalette())
+    /// Les textes normalisés de toutes les entrées, gardés d'une ouverture à
+    /// l'autre et préparés hors du fil principal (`prechauffer`) : la première
+    /// lettre tapée ne paie plus la normalisation de tout le jeu.
+    private var champsConnus: [String: RecherchePalette.Champs] = [:]
     /// Le contexte imposé (tests, captures de la documentation) ; `nil` : celui
     /// du moment, relu à chaque ouverture.
     private let contexteImpose: ContextePalette?
@@ -50,9 +54,22 @@ final class PaletteModele: ObservableObject {
                     let modele = PaletteModele.shared
                     modele.contexte.quetes = quetes
                     modele.recalculer()
+                    modele.prechauffer()
                 }
             }
             .store(in: &abonnements)
+    }
+
+    /// Normalise d'avance, en tâche de fond, les textes de tout ce que la
+    /// palette cherche — au lancement, et quand les quêtes arrivent.
+    func prechauffer() {
+        guard contexteImpose == nil else { return }
+        let contexte = Self.contexteCourant()
+        let connus = champsConnus
+        Task.detached(priority: .utility) {
+            let champs = IndexPalette.champs(de: contexte, connus: connus)
+            await MainActor.run { PaletteModele.shared.champsConnus = champs }
+        }
     }
 
     /// Une palette hors de l'app, sur un contexte donné.
