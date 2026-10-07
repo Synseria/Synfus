@@ -35,10 +35,11 @@ struct QuetesTests {
                                              from: Data(#"{"id":160695296,"posX":-1,"posY":-39,"subAreaId":56}"#.utf8))
         let sousZone = try JSONDecoder().decode(QuetesDofusDB.SousZoneAPI.self,
                                                 from: Data(#"{"id":10,"areaId":0,"name":{"fr":"Village d'Amakna"}}"#.utf8))
-        return QuetesDofusDB.assembler(
-            quetes: api, objets: [try nomme(1746, "Sang de Wabbit GM", type: 137)], monstres: [try nomme(182, "Wabbit GM")],
+        let cites = QuetesDofusDB.Cites(
+            objets: [try nomme(1746, "Sang de Wabbit GM", type: 137)], monstres: [try nomme(182, "Wabbit GM")],
             pnjs: [try nomme(119, "Otomaï"), try nomme(196, "Wogew")], cartes: [carte],
-            sousZones: [sousZone], zones: [try nomme(0, "Amakna")], types: [type], date: .now)
+            sousZones: [sousZone], zones: [try nomme(0, "Amakna")], types: [type])
+        return QuetesDofusDB.assembler(quetes: api, cites: cites, date: .now)
     }
 
     @Test("Les étapes suivent stepIds, les renvois se résolvent, un renvoi inconnu reste lisible")
@@ -71,8 +72,7 @@ struct QuetesTests {
         let page = #"{"total":3,"data":["# + [quete(1, 5, 5), quete(2, -2, -4), quete(3, -2, -4)].joined(separator: ",") + "]}"
         let api = try JSONDecoder().decode(DofusDB.Page<QuetesDofusDB.QueteAPI>.self, from: Data(page.utf8)).data
         let wogew = try JSONDecoder().decode(QuetesDofusDB.Nomme.self, from: Data(#"{"id":196,"name":{"fr":"Wogew"}}"#.utf8))
-        let quetes = QuetesDofusDB.assembler(quetes: api, objets: [], monstres: [], pnjs: [wogew], cartes: [],
-                                             sousZones: [], zones: [], date: .now)
+        let quetes = QuetesDofusDB.assembler(quetes: api, cites: QuetesDofusDB.Cites(pnjs: [wogew]), date: .now)
         #expect(quetes.pnjs.first?.passages.map(\.quetes) == [2, 1])
         #expect(quetes.pnjs.first?.passages.first?.position == PNJ.Position(x: -2, y: -4))
         #expect(try Self.quetes().sousZones["10"]

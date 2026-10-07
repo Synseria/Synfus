@@ -13,8 +13,6 @@ struct QueteVue: View {
     /// Une fiche donnée (captures de la documentation) ; `nil` : celles du panneau.
     var ficheImposee: FicheQuete?
 
-    private var langue: Langue { L10n.courante.langue }
-
     private var idMontre: Int? { panneau.montree ?? prefs.quetesEpinglees.last }
 
     private var fiche: FicheQuete? {
