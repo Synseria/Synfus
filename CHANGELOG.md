@@ -29,8 +29,17 @@ contenu (`Tools/notes-de-version.sh`), et `sh build.sh --publish` refuse une ver
 - **Tout Synfus au clavier** : tape un perso pour y aller, « ranger », « session », « équipe
   suivante », « chasse »… et Entrée.
 - **`/invite`** : toute l'équipe en une ligne, ou un perso.
+- **`/quete wogew`** : les **1 976 quêtes** du jeu — les **ressources à réunir** (quantités
+  additionnées, Entrée copie le nom pour l'hôtel de vente), puis chaque objectif étape par étape,
+  avec son trajet quand la carte est connue. Téléchargées depuis DofusDB à la première ouverture
+  de la palette (quelques secondes), puis tous les 30 jours.
+
+  ![Une quête ouverte](https://raw.githubusercontent.com/Synseria/Synfus/v0.10.0/docs/screenshots/palette-quete.png)
+
+- **`/pnj nom`** : les PNJ que les quêtes situent (plus de 2 000), le plus proche devant, leur
+  trajet copié.
 - **Filtres et tris** : les zaaps passent toujours devant ; Tab fait défiler Tout, Zaaps, Lieux,
-  Persos, et ⌘T trie le reste par proximité, par ordre alphabétique ou par type.
+  Persos, Quêtes, PNJ, et ⌘T trie le reste par proximité, par ordre alphabétique ou par type.
 
 ### Améliorations
 

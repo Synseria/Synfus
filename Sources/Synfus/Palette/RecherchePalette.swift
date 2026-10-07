@@ -18,7 +18,7 @@ enum ActionPalette: CaseIterable, Sendable {
 
 /// Ce que Tab fait défiler : la famille de résultats montrée.
 enum FiltrePalette: CaseIterable, Sendable {
-    case tout, zaaps, lieux, persos
+    case tout, zaaps, lieux, persos, quetes, pnj
 
     var titre: String {
         switch self {
@@ -26,6 +26,8 @@ enum FiltrePalette: CaseIterable, Sendable {
         case .zaaps: return L("palette.filtre.zaaps")
         case .lieux: return L("palette.filtre.lieux")
         case .persos: return L("palette.filtre.persos")
+        case .quetes: return L("palette.filtre.quetes")
+        case .pnj: return L("palette.filtre.pnj")
         }
     }
 
@@ -35,6 +37,8 @@ enum FiltrePalette: CaseIterable, Sendable {
         case .zaaps: return genre == .zaap
         case .lieux: return genre == .lieu
         case .persos: return genre == .perso
+        case .quetes: return genre == .quete
+        case .pnj: return genre == .pnj
         }
     }
 
@@ -65,7 +69,7 @@ enum TriPalette: String, CaseIterable, Codable, Sendable {
 
 /// Une ligne de la palette, et ce qu'Entrée en fait.
 struct EntreePalette: Equatable, Identifiable, Sendable {
-    enum Genre: Equatable, Sendable { case zaap, lieu, commande, variable, perso, action, recent }
+    enum Genre: Equatable, Sendable { case zaap, lieu, commande, variable, perso, action, recent, quete, pnj, ressource, objectif }
 
     enum Effet: Equatable, Sendable {
         /// Pose le texte dans le presse-papiers et ferme.
@@ -73,6 +77,11 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
         /// Remplace la recherche, la palette reste ouverte (`/w ` à compléter).
         case completer(String)
         case basculer(slotKey: String)
+        /// Montre les étapes, objectifs et ressources de la quête.
+        case ouvrirQuete(Int)
+        /// Copie le trajet vers la case, zaap compris s'il vaut le coup —
+        /// calculé seulement pour l'entrée choisie (`texte(de:)`).
+        case trajet(x: Int, y: Int)
         case action(ActionPalette)
     }
 
@@ -111,6 +120,8 @@ struct ContextePalette: Sendable {
     /// `/invite A; /invite B` pour l'équipe active, déjà composé.
     var invitationEquipe: String?
     var invitations: [(nom: String, commande: String)] = []
+    /// `nil` tant qu'elles ne sont pas téléchargées.
+    var quetes: Quetes?
 }
 
 /// La recherche de la palette. Pure : un texte et un contexte, des entrées
@@ -122,39 +133,59 @@ enum RecherchePalette {
 
     static func entrees(_ requete: String, _ contexte: ContextePalette,
                         filtre: FiltrePalette = .tout, tri: TriPalette = .proximite) -> [EntreePalette] {
+        entrees(requete, IndexPalette(contexte), filtre: filtre, tri: tri)
+    }
+
+    static func entrees(_ requete: String, _ index: IndexPalette,
+                        filtre: FiltrePalette = .tout, tri: TriPalette = .proximite) -> [EntreePalette] {
         let texte = requete.trimmingCharacters(in: .whitespaces)
-        func classer(_ entrees: [EntreePalette], _ mots: [String]) -> [EntreePalette] {
-            RecherchePalette.classer(entrees, mots, tri: tri)
+        func classer(_ fiches: [Fiche], _ mots: [String]) -> [EntreePalette] {
+            RecherchePalette.classer(fiches, mots, tri: tri)
         }
         if texte.isEmpty {
             // La grille des zaaps, favoris d'abord puis du plus proche — sauf
             // filtre sur une autre famille, montrée entière.
-            if filtre == .tout || filtre == .zaaps { return zaaps(contexte) }
-            return classer(tout(contexte).filter { filtre.garde($0.genre) }, [])
+            if filtre == .tout || filtre == .zaaps { return index.zaaps.map(\.entree) }
+            return classer(index.tout.filter { filtre.garde($0.entree.genre) }, [])
         }
         if texte.hasPrefix("%") { return variables(texte) }
         guard texte.hasPrefix("/") else {
-            return classer(tout(contexte).filter { filtre.garde($0.genre) }, mots(texte))
+            return classer(index.tout.filter { filtre.garde($0.entree.genre) }, mots(texte))
         }
         let (commande, reste) = separer(texte)
         switch commande {
-        case "/zaap": return classer(zaaps(contexte), mots(reste))
+        case "/zaap": return classer(index.zaaps, mots(reste))
         case "/travel":
             if let cible = ItineraireZaap.cible(dans: "/travel " + reste) {
-                let copie = trajet(vers: cible, contexte)
+                let copie = trajet(vers: cible, index.contexte)
                 return [EntreePalette(id: "travel", genre: .lieu, titre: copie, detail: "\(cible.x),\(cible.y)",
                                       effet: .copier(copie))]
             }
-            return classer(lieux(contexte) + zaapsCommeLieux(contexte), mots(reste))
-        case "/invite": return classer(invitations(contexte), mots(reste))
+            return classer(index.lieux + index.zaapsCommeLieux, mots(reste))
+        case "/invite": return classer(fiches(invitations(index.contexte)), mots(reste))
+        case "/quete", "/quête": return classer(index.quetes, mots(reste))
+        case "/pnj": return classer(index.pnjs, mots(reste))
         default: return commandes(texte)
         }
+    }
+
+    /// Le texte qu'Entrée copiera — `nil` pour ce qui ne copie rien.
+    static func texte(de effet: EntreePalette.Effet, _ contexte: ContextePalette) -> String? {
+        switch effet {
+        case .copier(let texte): return texte
+        case .trajet(let x, let y): return trajet(vers: (x, y), contexte)
+        case .completer, .basculer, .action, .ouvrirQuete: return nil
+        }
+    }
+
+    static func fiches(_ entrees: [EntreePalette]) -> [Fiche] {
+        entrees.map { Fiche(entree: $0, champs: Champs($0)) }
     }
 
     // MARK: - Modes
 
     /// Les zaaps, favoris d'abord puis du plus proche au plus loin.
-    private static func zaaps(_ contexte: ContextePalette) -> [EntreePalette] {
+    static func zaaps(_ contexte: ContextePalette) -> [EntreePalette] {
         zaapsTries(contexte).map { zaap in
             EntreePalette(
                 id: "zaap:" + zaap.cle, genre: .zaap, titre: zaap.nom(en: contexte.langue),
@@ -166,14 +197,14 @@ enum RecherchePalette {
     }
 
     /// Un zaap cherché par `/travel` : le trajet vers lui, comme vers un lieu.
-    private static func zaapsCommeLieux(_ contexte: ContextePalette) -> [EntreePalette] {
+    static func zaapsCommeLieux(_ contexte: ContextePalette) -> [EntreePalette] {
         zaapsTries(contexte).map { zaap in
             EntreePalette(
                 id: "travel:" + zaap.cle, genre: .lieu, titre: L("palette.zaap", zaap.nom(en: contexte.langue)),
                 sousTitre: zaap.zone(en: contexte.langue), etiquette: contexte.etiquettes[zaap.cle],
                 detail: "\(zaap.x),\(zaap.y)", favori: contexte.favoris.contains(zaap.cle),
                 distance: CatalogueZaaps.distance(de: zaap, depuis: contexte.position), cle: zaap.cle,
-                effet: .copier(trajet(vers: (zaap.x, zaap.y), contexte)))
+                effet: .trajet(x: zaap.x, y: zaap.y))
         }
     }
 
@@ -183,7 +214,7 @@ enum RecherchePalette {
         return proches.filter { contexte.favoris.contains($0.cle) } + proches.filter { !contexte.favoris.contains($0.cle) }
     }
 
-    private static func lieux(_ contexte: ContextePalette) -> [EntreePalette] {
+    static func lieux(_ contexte: ContextePalette) -> [EntreePalette] {
         contexte.lieux.filter { !$0.estZaap }.map { lieu in
             let distance = distanceVers(lieu, contexte)
             let lieuDit = [lieu.sousZone(en: contexte.langue), lieu.zone(en: contexte.langue)]
@@ -193,8 +224,8 @@ enum RecherchePalette {
                 id: lieu.cle, genre: .lieu, titre: lieu.nom(en: contexte.langue), sousTitre: sousTitre,
                 etiquette: contexte.etiquettes[lieu.cle], detail: "\(lieu.x),\(lieu.y)",
                 favori: contexte.favoris.contains(lieu.cle), distance: distance, categorie: lieu.categorie, cle: lieu.cle,
-                effet: .copier(lieu.monde == Zaap.mondeDesDouze ? trajet(vers: (lieu.x, lieu.y), contexte)
-                                                                : ItineraireZaap.travel(vers: (lieu.x, lieu.y))))
+                effet: lieu.monde == Zaap.mondeDesDouze ? .trajet(x: lieu.x, y: lieu.y)
+                                                        : .copier(ItineraireZaap.travel(vers: (lieu.x, lieu.y))))
         }
     }
 
@@ -232,16 +263,81 @@ enum RecherchePalette {
                                  sousTitre: $0.description, effet: .copier($0.texte)) }
     }
 
-    /// Sans préfixe : zaaps, lieux, persos, gestes et dernières copies ensemble.
-    private static func tout(_ contexte: ContextePalette) -> [EntreePalette] {
+    /// Les persos, les gestes et les dernières copies : ce que `tout` ajoute
+    /// aux zaaps, lieux, quêtes et PNJ.
+    static func divers(_ contexte: ContextePalette) -> [EntreePalette] {
+        let aller = L("palette.perso")
         let persos = contexte.persos.map {
             EntreePalette(id: "perso:" + $0.slotKey, genre: .perso, titre: $0.nom,
-                          sousTitre: L("palette.perso"), effet: .basculer(slotKey: $0.slotKey))
+                          sousTitre: aller, effet: .basculer(slotKey: $0.slotKey))
         }
         let actions = ActionPalette.allCases.map {
             EntreePalette(id: "action:\($0)", genre: .action, titre: $0.titre, effet: .action($0))
         }
-        return zaaps(contexte) + lieux(contexte) + persos + actions + recents(contexte)
+        return persos + actions + recents(contexte)
+    }
+
+    // MARK: - Quêtes et PNJ
+
+    static func quetes(_ contexte: ContextePalette) -> [EntreePalette] {
+        (contexte.quetes?.quetes ?? []).map { quete in
+            EntreePalette(id: "quete:\(quete.id)", genre: .quete, titre: Lieu.traduit(quete.noms, contexte.langue) ?? "?",
+                          sousTitre: L("palette.quete.resume", quete.niveau, quete.etapes.count),
+                          effet: .ouvrirQuete(quete.id))
+        }
+    }
+
+    /// Un PNJ par position connue : le plus proche passe devant.
+    static func pnjs(_ contexte: ContextePalette) -> [EntreePalette] {
+        let sousTitre = L("palette.pnj")
+        return (contexte.quetes?.pnjs ?? []).flatMap { pnj in
+            pnj.positions.map { position in
+                EntreePalette(id: "pnj:\(pnj.id):\(position.x),\(position.y)", genre: .pnj,
+                              titre: Lieu.traduit(pnj.noms, contexte.langue) ?? "?", sousTitre: sousTitre,
+                              detail: "\(position.x),\(position.y)", distance: distance(vers: position, contexte),
+                              effet: .trajet(x: position.x, y: position.y))
+            }
+        }
+    }
+
+    /// Une quête ouverte : les ressources à réunir (le nom se copie, pour
+    /// l'hôtel de vente), puis chaque objectif, étape par étape — son trajet
+    /// quand la carte est connue.
+    static func quete(_ id: Int, _ requete: String, _ contexte: ContextePalette) -> [EntreePalette] {
+        guard let quetes = contexte.quetes, let quete = quetes.quetes.first(where: { $0.id == id }) else { return [] }
+        let langue = contexte.langue
+        let ressources = Quetes.ressources(quete).map { ressource in
+            let nom = quetes.nomObjet(ressource.objet, en: langue)
+            return EntreePalette(id: "ressource:\(ressource.objet)", genre: .ressource,
+                                 titre: L("palette.quete.ressource", nom, ressource.quantite),
+                                 sousTitre: L("palette.quete.aReunir"), effet: .copier(nom))
+        }
+        let objectifs = quete.etapes.enumerated().flatMap { rang, etape in
+            etape.objectifs.enumerated().map { indice, objectif in
+                let texte = quetes.texte(Lieu.traduit(objectif.textes, langue) ?? "", en: langue)
+                let etapeNommee = L("palette.quete.etape", rang + 1, Lieu.traduit(etape.noms, langue) ?? "")
+                guard let x = objectif.x, let y = objectif.y else {
+                    return EntreePalette(id: "objectif:\(rang):\(indice)", genre: .objectif, titre: texte,
+                                         sousTitre: etapeNommee, effet: .copier(texte))
+                }
+                return EntreePalette(id: "objectif:\(rang):\(indice)", genre: .objectif, titre: texte,
+                                     sousTitre: etapeNommee, detail: "\(x),\(y)",
+                                     distance: distance(vers: PNJ.Position(x: x, y: y), contexte),
+                                     effet: .trajet(x: x, y: y))
+            }
+        }
+        let mots = mots(requete)
+        let toutes = ressources + objectifs
+        guard !mots.isEmpty else { return toutes }
+        return toutes.filter { entree in
+            let texte = normaliser(entree.titre + " " + (entree.sousTitre ?? ""))
+            return mots.allSatisfy(texte.contains)
+        }
+    }
+
+    private static func distance(vers position: PNJ.Position, _ contexte: ContextePalette) -> Int? {
+        guard let depuis = contexte.position, !ItineraireZaap.horsDuMondeDesDouze(depuis.zone) else { return nil }
+        return ItineraireZaap.distance((depuis.x, depuis.y), (position.x, position.y))
     }
 
     /// Les dernières copies : au-dessus des zaaps quand rien n'est tapé, et
@@ -305,16 +401,15 @@ enum RecherchePalette {
     /// Garde les entrées dont chaque mot tapé trouve un écho, puis les range :
     /// les zaaps devant, les favoris en tête de chaque famille, puis le tri ;
     /// à égalité, la meilleure correspondance (étiquette, nom, zone).
-    private static func classer(_ entrees: [EntreePalette], _ mots: [String], tri: TriPalette) -> [EntreePalette] {
-        let retenues = entrees.enumerated().compactMap { rang, entree -> (entree: EntreePalette, score: Int, rang: Int)? in
-            let champs = Champs(entree)
+    private static func classer(_ fiches: [Fiche], _ mots: [String], tri: TriPalette) -> [EntreePalette] {
+        let retenues = fiches.enumerated().compactMap { rang, fiche -> (entree: EntreePalette, score: Int, rang: Int)? in
             var score = 0
             for mot in mots {
-                let points = champs.points(mot)
+                let points = fiche.champs.points(mot)
                 guard points > 0 else { return nil }
                 score += points
             }
-            return (entree, score, rang)
+            return (fiche.entree, score, rang)
         }
         return retenues
             .sorted { a, b in
@@ -358,6 +453,10 @@ enum RecherchePalette {
         switch entree.genre {
         case .zaap: return 0
         case .perso: return 1
+        case .quete: return 120
+        case .pnj: return 130
+        case .ressource: return 140
+        case .objectif: return 150
         case .lieu: return 10 + (entree.categorie ?? 99)
         case .action: return 200
         case .recent: return 300
@@ -365,8 +464,14 @@ enum RecherchePalette {
         }
     }
 
+    /// Une entrée et ses textes normalisés, prêts pour la recherche.
+    struct Fiche {
+        let entree: EntreePalette
+        let champs: Champs
+    }
+
     /// Les textes d'une entrée, normalisés une fois.
-    private struct Champs {
+    struct Champs {
         let etiquette: [String]
         let titre: [String]
         let lieu: [String]
@@ -413,4 +518,21 @@ enum RecherchePalette {
         return (normaliser(String(texte[..<espace])),
                 String(texte[texte.index(after: espace)...]).trimmingCharacters(in: .whitespaces))
     }
+}
+
+/// Les fiches d'un contexte, construites une fois puis cherchées à chaque
+/// frappe : normaliser des milliers de noms (quêtes, PNJ) à chaque lettre
+/// rendrait la palette poussive.
+final class IndexPalette {
+    let contexte: ContextePalette
+
+    init(_ contexte: ContextePalette) { self.contexte = contexte }
+
+    private(set) lazy var zaaps = RecherchePalette.fiches(RecherchePalette.zaaps(contexte))
+    private(set) lazy var zaapsCommeLieux = RecherchePalette.fiches(RecherchePalette.zaapsCommeLieux(contexte))
+    private(set) lazy var lieux = RecherchePalette.fiches(RecherchePalette.lieux(contexte))
+    private(set) lazy var quetes = RecherchePalette.fiches(RecherchePalette.quetes(contexte))
+    private(set) lazy var pnjs = RecherchePalette.fiches(RecherchePalette.pnjs(contexte))
+    /// Sans préfixe : zaaps, lieux, persos, quêtes, PNJ, gestes, dernières copies.
+    private(set) lazy var tout = zaaps + lieux + quetes + pnjs + RecherchePalette.fiches(RecherchePalette.divers(contexte))
 }

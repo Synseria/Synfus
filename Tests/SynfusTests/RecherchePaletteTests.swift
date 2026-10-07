@@ -50,7 +50,7 @@ struct RecherchePaletteTests {
         let entree = try #require(premiere("/travel banque bonta", contexte()))
         #expect(entree.titre == "Banque")
         #expect(entree.sousTitre?.contains("Bonta") == true)
-        guard case .copier(let texte) = entree.effet else { Issue.record("pas une copie"); return }
+        let texte = try #require(RecherchePalette.texte(de: entree.effet, contexte()))
         #expect(texte.hasPrefix("/zaap -31,-56; /travel "))
     }
 

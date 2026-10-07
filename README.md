@@ -20,6 +20,8 @@ connectés et permet de passer de l'un à l'autre, d'un clic ou au clavier.
     du jeu (banques, hôtels de vente, ateliers, temples, donjons, transports),
     le plus proche de toi devant, copiés en `/zaap x,y; /travel a,b` quand
     le zaap fait gagner du chemin.
+  - `/quete wogew` : les ressources à réunir et chaque objectif avec son
+    trajet ; `/pnj nom` : la position des PNJ que les quêtes situent.
   - `/` les commandes du jeu, `%` les variables du tchat (`%pos%`…), `/invite`
     l'équipe en une ligne, tes persos et les gestes de Synfus.
 
@@ -70,7 +72,7 @@ connectés et permet de passer de l'un à l'autre, d'un clic ou au clavier.
 Synfus ne joue rien à ta place : il n'envoie ni clic ni touche au jeu, il
 change juste la fenêtre qui est devant, et pose du texte dans le presse-papiers.
 Pas de lecture mémoire ; pour le réseau, la seule API publique de DofusDB (la
-carte du jeu et les indices de chasse, rafraîchis tous les 30 jours).
+carte du jeu, les quêtes et les indices de chasse, rafraîchis tous les 30 jours).
 Il demande l'autorisation **Accessibilité**, et **Enregistrement de l'écran**
 seulement si tu actives les aperçus ou la lecture de l'écran.
 

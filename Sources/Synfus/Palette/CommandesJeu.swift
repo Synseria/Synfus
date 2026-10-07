@@ -2,7 +2,7 @@
 /// les guides de la communauté (JeuxOnLine, forums) : une ligne qui n'existe
 /// plus dans le jeu se retire ici, sans toucher au reste.
 enum CommandeJeu: CaseIterable, Sendable {
-    case zaap, travel, invite
+    case zaap, travel, invite, quete, pnj
     case w, p, g, a, t, r, b
     case whois, whoami, away, invisible, amiAjouter, amiRetirer
     case list, kick, spectator, time, ping, mapid, clear
@@ -13,6 +13,8 @@ enum CommandeJeu: CaseIterable, Sendable {
         case .zaap: return "/zaap"
         case .travel: return "/travel"
         case .invite: return "/invite"
+        case .quete: return "/quete"
+        case .pnj: return "/pnj"
         case .w: return "/w"
         case .p: return "/p"
         case .g: return "/g"
@@ -37,12 +39,13 @@ enum CommandeJeu: CaseIterable, Sendable {
     }
 
     /// Composée par Synfus plutôt que par le jeu.
-    var synfus: Bool { [.zaap, .travel, .invite].contains(self) }
+    var synfus: Bool { [.zaap, .travel, .invite, .quete, .pnj].contains(self) }
 
     /// L'argument attendu, montré en gris ; `nil` : la commande se suffit.
     var argument: String? {
         switch self {
-        case .zaap, .whois, .amiAjouter, .amiRetirer, .kick: return L("palette.arg.nom")
+        case .zaap, .pnj, .whois, .amiAjouter, .amiRetirer, .kick: return L("palette.arg.nom")
+        case .quete: return L("palette.arg.quete")
         case .travel: return L("palette.arg.lieu")
         case .invite: return L("palette.arg.invite")
         case .w: return L("palette.arg.nomMessage")
@@ -56,6 +59,8 @@ enum CommandeJeu: CaseIterable, Sendable {
         case .zaap: return L("palette.cmd.zaap")
         case .travel: return L("palette.cmd.travel")
         case .invite: return L("palette.cmd.invite")
+        case .quete: return L("palette.cmd.quete")
+        case .pnj: return L("palette.cmd.pnj")
         case .w: return L("palette.cmd.w")
         case .p: return L("palette.cmd.p")
         case .g: return L("palette.cmd.g")
