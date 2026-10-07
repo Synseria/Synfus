@@ -55,6 +55,10 @@ contenu (`Tools/notes-de-version.sh`), et `sh build.sh --publish` refuse une ver
 - **Une seule carte du jeu** : zaaps et lieux viennent d'une même liste DofusDB, intégrée à
   Synfus et rafraîchie tous les 30 jours.
 - Le bouton Zaap de la barre ouvre la palette.
+- **Chasse au trésor** : un panneau transparent, au style des quêtes, et une **boussole** — les
+  quatre directions autour de « Lire », l'indice lu à l'écran.
+- **Plus rapide** : la palette prépare sa recherche en fond, les zaaps et les quêtes sont indexés
+  une fois.
 
 ### Changé
 
