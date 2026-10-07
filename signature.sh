@@ -39,6 +39,8 @@ unset -f _equipe
 
 if [ -n "$IDENTITE_SIGNATURE" ]; then
     echo "[signature] 🔏 $IDENTITE_SIGNATURE"
+elif [ "${DISTRIBUTION:-0}" = "1" ]; then
+    echo "[signature] build à distribuer : signature ad hoc"
 else
     echo "[signature] ⚠️  aucune identité : signature ad hoc — l'Accessibilité sera à réautoriser après chaque build."
     echo "[signature]    ./Tools/make-signing-identity.sh crée un certificat local une fois pour toutes."
