@@ -77,7 +77,10 @@ jobs:
           TAG: ${{ steps.version.outputs.tag }}
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          cat > notes.md <<'EOF'
+          # Ce qui change vient de CHANGELOG.md, seule source ; le mode
+          # d'emploi qui suit est le même à chaque version.
+          { bash Tools/notes-de-version.sh "$VERSION"; echo; } > notes.md
+          cat >> notes.md <<'EOF'
           ### Téléchargement
 
           | Mac | Fichier |

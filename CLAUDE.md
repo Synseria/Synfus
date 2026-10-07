@@ -21,8 +21,9 @@ sh build.sh [--release [X.Y.Z] | --publish X.Y.Z]   # dist/Synfus.app, + DMG, ou
 ```
 
 Scripts, signature, version (dernier tag `vX.Y.Z`), lots et publication suivent la convention
-commune : **skill `livraison`**. `--publish` ne fait que pousser le tag depuis `main` propre ;
-`release.yml` (runner `xcode-27`) compile arm64 + x86_64, signe ad hoc, fait DMG et release.
+commune : **skill `livraison`**. `--publish` ne fait que pousser le tag depuis `main` propre, et refuse une version sans section
+dans `CHANGELOG.md` ; `release.yml` (runner `xcode-27`) compile arm64 + x86_64, signe ad hoc, fait
+DMG et release, notes tirées de `CHANGELOG.md` (`Tools/notes-de-version.sh`).
 
 Diagnostic en ligne de commande, **par le binaire installé** — l'autorisation Accessibilité est
 liée à l'identité signée, celui de `.build/` ne l'a pas :
