@@ -153,4 +153,19 @@ struct ItineraireZaapTests {
         #expect(CatalogueZaaps.parDistance(zaaps, depuis: nil) == zaaps)
         #expect(CatalogueZaaps.parDistance(zaaps, depuis: position(4, 6, zone: "Incarnam")) == zaaps)
     }
+
+    // MARK: - Mise à jour DofusDB
+
+    @Test("La liste DofusDB se rafraîchit absente ou vieille de plus de 30 jours")
+    func aRafraichir() {
+        let maintenant = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        let jour: TimeInterval = 24 * 3600
+        func releve(age: TimeInterval) -> ReleveZaaps {
+            ReleveZaaps(date: maintenant.addingTimeInterval(-age), zaaps: [])
+        }
+        #expect(ZaapsDofusDB.aRafraichir(releve: nil, maintenant: maintenant))
+        #expect(!ZaapsDofusDB.aRafraichir(releve: releve(age: 29 * jour), maintenant: maintenant))
+        #expect(!ZaapsDofusDB.aRafraichir(releve: releve(age: 30 * jour), maintenant: maintenant))
+        #expect(ZaapsDofusDB.aRafraichir(releve: releve(age: 31 * jour), maintenant: maintenant))
+    }
 }

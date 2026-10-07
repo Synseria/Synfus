@@ -267,7 +267,7 @@
   "zaap.liste": "Zaaps — %lld activos de %lld",
   "zaap.liste.aide": "Desmarca un zaap para que nunca se proponga. Los marcados «otro mapa» (Incarnam, Canopea, Kontatrás, Cocuzko) tienen coordenadas que se solapan con el Mundo de los Doce: desmarcados por defecto, si no un /travel hacia Amakna podría pasar por Incarnam.",
   "zaap.maj": "Actualizar desde DofusDB",
-  "zaap.maj.aide": "Descarga la lista de zaaps desde api.dofusdb.fr — Synfus solo contacta este sitio con este clic. Tus elecciones y añadidos se conservan.",
+  "zaap.maj.aide": "Descarga la lista de zaaps desde api.dofusdb.fr — Synfus también lo hace solo al iniciar cuando la lista tiene más de 30 días. Tus elecciones, añadidos y favoritos se conservan.",
   "zaap.maj.date": "Lista de DofusDB del %@",
   "zaap.maj.echec": "Error al actualizar: %@",
   "zaap.maj.integree": "Lista integrada en Synfus",
