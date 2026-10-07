@@ -42,6 +42,13 @@ enum InvitationComposer {
         return format.replacingOccurrences(of: jeton, with: nom)
     }
 
+    /// Toutes les invitations en une ligne, séparées par « ; » : le jeu
+    /// enchaîne les commandes, un seul collage invite tout le monde.
+    static func groupee(format: String, noms: [String]) -> String? {
+        guard !noms.isEmpty else { return nil }
+        return noms.map { commande(format: format, nom: $0) }.joined(separator: "; ")
+    }
+
     /// Le prochain nom à copier, en boucle sur `candidats`. Le curseur repart
     /// de zéro dès que la liste diffère de `precedents` — un autre chef, une
     /// autre équipe, un perso arrivé : on recommence le tour proprement.

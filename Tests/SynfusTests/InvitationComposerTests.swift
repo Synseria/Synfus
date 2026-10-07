@@ -46,6 +46,13 @@ struct InvitationComposerTests {
         #expect(InvitationComposer.commande(format: "/invite ", nom: "Aeryn") == "/invite Aeryn")
     }
 
+    @Test("Les invitations groupées tiennent en une ligne, séparées par « ; »")
+    func groupee() {
+        #expect(InvitationComposer.groupee(format: "/invite %nom", noms: ["Brok", "Cid"])
+                == "/invite Brok; /invite Cid")
+        #expect(InvitationComposer.groupee(format: "/invite %nom", noms: []) == nil)
+    }
+
     @Test("Les appuis successifs tournent en boucle")
     func boucle() {
         let noms = ["Brok", "Cid"]
