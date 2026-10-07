@@ -12,7 +12,9 @@
 #   2. Apple Development de l'équipe personnelle 339WUY8TXY (compte gratuit :
 #      pas de notarisation), puis tout autre Apple Development
 #   3. « Synfus Dev », le certificat local (Tools/make-signing-identity.sh)
-#   4. ad hoc — c'est le cas de la CI, qui n'a aucun certificat.
+#   4. ad hoc — c'est le cas de la CI, qui n'a aucun certificat, et de
+#      toute release publiée (DISTRIBUTION=1) : le certificat de ce Mac ne
+#      voyage pas avec l'app, il n'y ajouterait que le nom de son titulaire.
 #
 # ⚠️ Changer d'identité — y compris en en créant une mieux classée — fait
 # réautoriser l'Accessibilité (et l'enregistrement de l'écran) une fois.
@@ -33,6 +35,7 @@ fi
 [ -n "$IDENTITE_SIGNATURE" ] || IDENTITE_SIGNATURE="$(printf '%s\n' "$_identites" | grep -x 'Synfus Dev' | head -1 || true)"
 unset _identites _nom
 unset -f _equipe
+[ "${DISTRIBUTION:-0}" = "1" ] && IDENTITE_SIGNATURE=""
 
 if [ -n "$IDENTITE_SIGNATURE" ]; then
     echo "[signature] 🔏 $IDENTITE_SIGNATURE"
