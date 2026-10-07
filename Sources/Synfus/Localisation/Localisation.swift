@@ -78,21 +78,8 @@ enum L10n {
         return Localisation.charger(langue, dans: dossier)
     }()
 
-    /// Le dossier des tables : celui du bundle (`Contents/Resources/Localisation`,
-    /// copié par `build.sh`), sinon celui du dépôt — pour `swift run` et les
-    /// tests, où il n'y a pas de bundle.
-    static let dossier: URL? = {
-        if let bundle = Bundle.main.resourceURL?.appendingPathComponent("Localisation"),
-           FileManager.default.fileExists(atPath: bundle.path) {
-            return bundle
-        }
-        let depot = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()   // Localisation/
-            .deletingLastPathComponent()   // Synfus/
-            .deletingLastPathComponent()   // Sources/
-            .appendingPathComponent("Resources/Localisation")
-        return FileManager.default.fileExists(atPath: depot.path) ? depot : nil
-    }()
+    /// Le dossier des tables (`Resources/Localisation`).
+    static let dossier: URL? = Ressources.url("Localisation")
 }
 
 /// Le libellé d'une clé dans la langue en vigueur.

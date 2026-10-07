@@ -56,9 +56,3 @@ enum CatalogueZaaps {
             .map(\.element)
     }
 }
-
-/// La liste téléchargée de DofusDB, et quand.
-struct ReleveZaaps: Codable, Equatable, Sendable {
-    let date: Date
-    let zaaps: [Zaap]
-}
