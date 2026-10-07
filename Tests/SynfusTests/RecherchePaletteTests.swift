@@ -1,0 +1,110 @@
+import Foundation
+import Testing
+@testable import Synfus
+
+/// La recherche de la palette, sur la carte intégrée.
+struct RecherchePaletteTests {
+
+    private func contexte(position: PositionCarte? = PositionCarte(x: -2, y: 0, zone: "Amakna"),
+                          etiquettes: [String: String] = [:], favoris: Set<String> = []) -> ContextePalette {
+        var contexte = ContextePalette()
+        contexte.position = position
+        contexte.zaaps = CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [], choix: [:])
+        contexte.lieux = Carte.integree.lieux
+        contexte.etiquettes = etiquettes
+        contexte.favoris = favoris
+        contexte.phrases = [Phrase(nom: "Recrutement", texte: "Guilde cherche membres, %pos%")]
+        contexte.persos = [(nom: "Brok", slotKey: "2#0")]
+        contexte.invitationEquipe = "/invite Brok; /invite Cid"
+        contexte.invitations = [(nom: "Brok", commande: "/invite Brok"), (nom: "Cid", commande: "/invite Cid")]
+        return contexte
+    }
+
+    private func premiere(_ requete: String, _ contexte: ContextePalette) -> EntreePalette? {
+        RecherchePalette.entrees(requete, contexte).first
+    }
+
+    @Test("Sans rien taper : les zaaps, favoris d'abord puis du plus proche")
+    func grille() {
+        let amakna = "1:-2,0", bonta = "1:-31,-56"
+        let entrees = RecherchePalette.entrees("", contexte(favoris: [bonta]))
+        #expect(entrees.allSatisfy { $0.genre == .zaap })
+        #expect(entrees.first?.cle == bonta)
+        #expect(entrees.dropFirst().first?.cle == amakna)
+    }
+
+    @Test("/zaap bonta trouve Cœur immaculé par sa zone")
+    func zaapParZone() {
+        let entree = premiere("/zaap bonta", contexte())
+        #expect(entree?.titre == "Cœur immaculé")
+        #expect(entree?.effet == .copier("/zaap -31,-56"))
+    }
+
+    @Test("Une étiquette passe devant les noms")
+    func etiquette() {
+        let entree = premiere("/zaap fri 1", contexte(etiquettes: ["1:-78,-41": "Fri 1", "1:-77,-73": "Fri 2"]))
+        #expect(entree?.cle == "1:-78,-41")
+    }
+
+    @Test("/travel banque bonta : la banque de Bonta, par le zaap")
+    func travelLieu() throws {
+        let entree = try #require(premiere("/travel banque bonta", contexte()))
+        #expect(entree.titre == "Banque")
+        #expect(entree.sousTitre?.contains("Bonta") == true)
+        guard case .copier(let texte) = entree.effet else { Issue.record("pas une copie"); return }
+        #expect(texte.hasPrefix("/zaap -31,-56; /travel "))
+    }
+
+    @Test("Les surnoms des joueurs : fm, hdv conso")
+    func surnoms() {
+        #expect(premiere("/travel fm", contexte())?.titre == "Atelier des forgemages")
+        #expect(premiere("/travel hdv conso", contexte())?.titre == "Hôtel de vente des consommables")
+    }
+
+    @Test("Le lieu le plus proche passe devant à score égal")
+    func plusProche() throws {
+        let depuisBonta = contexte(position: PositionCarte(x: -31, y: -55, zone: "Bonta"))
+        let entree = try #require(premiere("/travel banque", depuisBonta))
+        #expect(entree.sousTitre?.contains("Bonta") == true)
+    }
+
+    @Test("/travel x,y : le trajet, zaap compris")
+    func travelCoordonnees() {
+        #expect(premiere("/travel 6,8", contexte(position: PositionCarte(x: -30, y: -40, zone: nil)))?.effet
+                == .copier("/zaap 5,7; /travel 6,8"))
+    }
+
+    @Test("/ liste les commandes ; une commande à argument se complète")
+    func commandes() {
+        let entrees = RecherchePalette.entrees("/", contexte())
+        #expect(entrees.count == CommandeJeu.allCases.count)
+        #expect(premiere("/wh", contexte())?.titre == "/whois")
+        #expect(premiere("/w", contexte())?.effet == .completer("/w "))
+        #expect(premiere("/away", contexte())?.effet == .copier("/away"))
+    }
+
+    @Test("% liste les variables, filtrées")
+    func variables() {
+        #expect(RecherchePalette.entrees("%", contexte()).count == VariableJeu.allCases.count)
+        #expect(RecherchePalette.entrees("%vie", contexte()).map(\.titre) == ["%vie%", "%viemax%", "%viep%"])
+    }
+
+    @Test("/invite : toute l'équipe d'abord, puis chacun")
+    func invitations() {
+        let entrees = RecherchePalette.entrees("/invite", contexte())
+        #expect(entrees.map(\.effet) == [.copier("/invite Brok; /invite Cid"), .copier("/invite Brok"), .copier("/invite Cid")])
+    }
+
+    @Test("Sans préfixe : un perso, une phrase, un geste")
+    func tout() {
+        #expect(premiere("brok", contexte())?.effet == .basculer(slotKey: "2#0"))
+        #expect(premiere("recrut", contexte())?.effet == .copier("Guilde cherche membres, %pos%"))
+        #expect(premiere("ranger", contexte())?.effet == .action(.rangerFenetres))
+    }
+
+    @Test("Les accents et la casse ne comptent pas")
+    func normalisation() {
+        #expect(premiere("/zaap COEUR", contexte())?.titre == "Cœur immaculé")
+        #expect(premiere("/zaap eleveurs", contexte())?.titre == "Village des Éleveurs")
+    }
+}

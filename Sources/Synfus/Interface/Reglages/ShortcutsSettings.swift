@@ -20,6 +20,13 @@ struct ShortcutsSettings: View {
     var body: some View {
         Form {
             Section {
+                ShortcutRow(label: L("raccourcis.palette"), help: L("raccourcis.palette.aide"),
+                            conflit: enConflit(prefs.paletteHotKey), hotKey: hotKey(\.paletteHotKey))
+            } header: {
+                SectionTitle(L("raccourcis.palette.titre"))
+            }
+
+            Section {
                 ForEach(0..<prefs.slotCount, id: \.self) { slot in
                     ShortcutRow(label: L("raccourcis.perso", slot + 1), detail: nameForSlot(slot),
                                 conflit: enConflit(slot < prefs.hotKeys.count ? prefs.hotKeys[slot] : nil),

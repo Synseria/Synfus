@@ -86,6 +86,9 @@ final class HotKeyManager: ObservableObject {
         if let invite = prefs.inviteHotKey {
             register(invite) { InvitationClipboard.shared.copierSuivante() }
         }
+        if let palette = prefs.paletteHotKey {
+            register(palette) { PalettePanel.shared.basculer() }
+        }
         if let zaap = prefs.zaapHotKey {
             register(zaap) { ZaapClipboard.shared.optimiser() }
         }

@@ -140,7 +140,6 @@ final class Preferences: ObservableObject {
     /// Les cartes que le zaap doit épargner pour être proposé.
     @Published var zaapGainMinimal: Int = ItineraireZaap.gainParDefaut { didSet { save() } }
 
-
     /// Les zaaps ajoutés à la main.
     @Published var zaapsAjoutes: [Zaap] = [] { didSet { save() } }
 
@@ -150,6 +149,19 @@ final class Preferences: ObservableObject {
     /// Les zaaps proposés au clic droit du bouton de la barre, par `Zaap.cle`,
     /// dans l'ordre où ils ont été marqués.
     @Published var zaapsFavoris: [String] = [] { didSet { save() } }
+
+    /// Les lieux de la carte mis en avant dans la palette, par `Lieu.cle`.
+    @Published var lieuxFavoris: [String] = [] { didSet { save() } }
+
+    /// Les étiquettes libres (« Fri 1 », « Bouftou »), par `Zaap.cle` ou
+    /// `Lieu.cle` : la palette les cherche avant les noms.
+    @Published var etiquettes: [String: String] = [:] { didSet { save() } }
+
+    /// Les phrases enregistrées, copiées depuis la palette.
+    @Published var phrases: [Phrase] = [] { didSet { save() } }
+
+    /// Raccourci de la palette. ⌘: par défaut (génération 7).
+    @Published var paletteHotKey: HotKey? { didSet { save() } }
 
     /// Raccourci du panneau de chasse au trésor. Sans défaut.
     @Published var chasseHotKey: HotKey? { didSet { save() } }
@@ -275,7 +287,7 @@ final class Preferences: ObservableObject {
     /// reprise correspondante dans `adoptDefaults` — chaque fois que les défauts
     /// changent, sans quoi les installations existantes resteraient sur les
     /// anciens à jamais.
-    static let defaultsVersion = 6
+    static let defaultsVersion = 7
 
     /// Les défauts de la génération 1, ceux qu'une installation existante peut
     /// encore porter sans que l'utilisateur les ait choisis. Seules ces
@@ -285,6 +297,8 @@ final class Preferences: ObservableObject {
     private static let legacyCyclePrevious = HotKey(
         keyCode: 48, modifiers: UInt32(controlKey) | UInt32(shiftKey))
     private static let legacyToggleAutoFocus = HotKey(keyCode: 50, modifiers: UInt32(cmdKey))
+    /// ⌘:, l'invitation des générations 6 : la palette le prend en 7.
+    private static let legacyInvite = HotKey(keyCode: 47, modifiers: UInt32(cmdKey))
 
     /// Fait passer une sauvegarde ancienne au jeu de raccourcis courant.
     ///
@@ -332,6 +346,13 @@ final class Preferences: ObservableObject {
         // L'invitation par presse-papiers est arrivée avec la génération 6 :
         // une sauvegarde plus ancienne ne l'a jamais eue.
         if from < 6, inviteHotKey == nil { inviteHotKey = .defaultInvite }
+
+        // La palette arrive avec la génération 7 et prend ⌘: ; l'invitation,
+        // aussi dans la palette (`/invite`), passe à ⇧⌘: si elle y était.
+        if from < 7 {
+            if inviteHotKey == Self.legacyInvite { inviteHotKey = .defaultInvite }
+            if paletteHotKey == nil { paletteHotKey = .defaultPalette }
+        }
         return true
     }
 
@@ -340,7 +361,7 @@ final class Preferences: ObservableObject {
     var raccourcisGlobaux: [HotKey?] {
         hotKeys + [
             cycleNext, cyclePrevious, toggleBar, previewHotKey, arrangeHotKey, sessionHotKey,
-            equipeSuivanteHotKey, inviteHotKey, zaapHotKey, chasseHotKey, toggleAutoFocus,
+            equipeSuivanteHotKey, inviteHotKey, zaapHotKey, chasseHotKey, paletteHotKey, toggleAutoFocus,
         ]
     }
 
@@ -354,6 +375,7 @@ final class Preferences: ObservableObject {
         toggleAutoFocus = .defaultToggleAutoFocus
         previewHotKey = .defaultPreview
         inviteHotKey = .defaultInvite
+        paletteHotKey = .defaultPalette
         toggleBar = nil
         arrangeHotKey = nil
         sessionHotKey = nil
@@ -430,6 +452,10 @@ final class Preferences: ObservableObject {
         .facultatif("zaapsChoix", \.zaapsChoix),
         .facultatif("zaapsFavoris", \.zaapsFavoris),
         .optionnel("chasseHotKey", \.chasseHotKey),
+        .facultatif("lieuxFavoris", \.lieuxFavoris),
+        .facultatif("etiquettes", \.etiquettes),
+        .facultatif("phrases", \.phrases),
+        .optionnel("paletteHotKey", \.paletteHotKey),
         .facultatif("chasseBouton", \.chasseBouton),
     ]
 
@@ -460,6 +486,7 @@ final class Preferences: ObservableObject {
             toggleAutoFocus = .defaultToggleAutoFocus
             previewHotKey = .defaultPreview
             inviteHotKey = .defaultInvite
+            paletteHotKey = .defaultPalette
             loading = false
             resizeHotKeys()
             return
