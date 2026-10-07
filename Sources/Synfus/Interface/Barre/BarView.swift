@@ -321,7 +321,7 @@ struct BarView: View {
                 Button(L("barre.fermer", client.name)) { manager.close(client) }
             }
         }
-        .overlay { if invitations.copieRecente == client.slotKey { CopiedBadge() } }
+        .overlay { if invitations.copiesRecentes.contains(client.slotKey) { CopiedBadge() } }
         .help(tooltip(index: index, client: client))
         // Un perso sur un autre espace reste cliquable, mais on ne le donne pas
         // pour présent : sa vignette et son titre datent de sa dernière visite.
