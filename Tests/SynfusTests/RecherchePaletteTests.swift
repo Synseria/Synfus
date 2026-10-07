@@ -107,4 +107,16 @@ struct RecherchePaletteTests {
         #expect(premiere("/zaap COEUR", contexte())?.titre == "Cœur immaculé")
         #expect(premiere("/zaap eleveurs", contexte())?.titre == "Village des Éleveurs")
     }
+
+    @Test("Les copies récentes : en tête, sans doublon, huit au plus")
+    func recents() {
+        var recents: [String] = []
+        for texte in ["/zaap 1,1", "/zaap 2,2", "/zaap 1,1"] { recents = RecherchePalette.noterRecent(texte, dans: recents) }
+        #expect(recents == ["/zaap 1,1", "/zaap 2,2"])
+        for index in 0..<20 { recents = RecherchePalette.noterRecent("\(index)", dans: recents) }
+        #expect(recents.count == RecherchePalette.nombreDeRecents)
+        var avecRecents = contexte()
+        avecRecents.recents = ["/travel 12,34"]
+        #expect(premiere("12,34", avecRecents)?.effet == .copier("/travel 12,34"))
+    }
 }
