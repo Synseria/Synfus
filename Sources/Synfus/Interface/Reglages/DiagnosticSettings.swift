@@ -10,9 +10,7 @@ struct DiagnosticSettings: View {
     @ObservedObject private var arranger = WindowArranger.shared
     @ObservedObject private var freezes = FreezeWatcher.shared
     @ObservedObject private var lecteur = LecteurEcran.shared
-    @ObservedObject private var lecture = DiagnosticLecture.shared
     @ObservedObject private var prefs = Preferences.shared
-    @State private var calibrer = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -96,9 +94,6 @@ struct DiagnosticSettings: View {
             }
 
             Divider().padding(.vertical, 4)
-            lectureSection
-
-            Divider().padding(.vertical, 4)
             arrangementSection
 
             if !freezes.journal.isEmpty {
@@ -141,88 +136,6 @@ struct DiagnosticSettings: View {
         }
     }
 
-    /// Lecture de l'écran : les bascules, les zones, et ce que ça coûte. Les
-    /// compteurs sont là pour le prouver — une lecture par changement de carte
-    /// ou de tour, pas une par seconde.
-    private var lectureSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                Text(L("diagnostic.lecture")).font(.system(size: 12, weight: .semibold))
-                HelpTip(L("diagnostic.lecture.aide"))
-                Spacer()
-                bascule(L("diagnostic.lecture.position"), \.lirePosition)
-                bascule(L("diagnostic.lecture.combat"), \.lireCombat)
-            }
-            if prefs.lirePosition || prefs.lireCombat {
-                HStack(spacing: 8) {
-                    Text(etatLecture)
-                        .font(.system(size: 11))
-                        .foregroundStyle(etatEnDefaut ? Color.orange : Color.secondary)
-                        .textSelection(.enabled)
-                    Spacer()
-                    Button(L("diagnostic.lecture.calibrer")) { calibrer = true }
-                        .font(.system(size: 11))
-                        .disabled(!previews.authorized || manager.clients.isEmpty)
-                    Button(L("diagnostic.position.toutLire")) { LecteurEcran.shared.toutLire() }
-                        .font(.system(size: 11))
-                        .disabled(!previews.authorized || manager.clients.isEmpty)
-                        .help(L("diagnostic.position.toutLire.aide"))
-                }
-                Text(L("diagnostic.position.stats", lecture.lectures,
-                       Int(lecture.derniereDuree * 1000), lecture.sautes))
-                    .font(.system(size: 10, design: .monospaced))
-                    .foregroundStyle(.secondary)
-                ForEach(GenreLecture.allCases) { genre in
-                    if let image = lecture.captures[genre] {
-                        zoneLue(genre, image)
-                    }
-                }
-            }
-        }
-        .sheet(isPresented: $calibrer) { CalibrationZonesView() }
-    }
-
-    /// Ce que l'OCR a reçu : si le texte n'y est pas, c'est la zone qui est en
-    /// cause — à recalibrer —, pas la reconnaissance.
-    private func zoneLue(_ genre: GenreLecture, _ image: NSImage) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(L("diagnostic.lecture.zoneVue", genre.libelle, lecture.dernierPerso ?? "?"))
-                .font(.system(size: 10))
-                .foregroundStyle(.tertiary)
-            Image(nsImage: image)
-                .resizable()
-                .interpolation(.medium)
-                .aspectRatio(contentMode: .fit)
-                .frame(maxWidth: 360, maxHeight: 80, alignment: .leading)
-                .clipShape(RoundedRectangle(cornerRadius: 4))
-            if let lignes = lecture.lignes[genre] {
-                Text(L("diagnostic.position.brut", lignes.joined(separator: " ⏎ ")))
-                    .font(.system(size: 10, design: .monospaced))
-                    .foregroundStyle(.tertiary)
-                    .textSelection(.enabled)
-            }
-            if genre == .combat, let couleur = lecture.couleur {
-                Text(L("diagnostic.lecture.couleur", Int(couleur * 100)))
-                    .font(.system(size: 10, design: .monospaced))
-                    .foregroundStyle(.tertiary)
-            }
-        }
-    }
-
-    /// Une bascule de lecture. L'activer est la demande d'autorisation : c'est
-    /// le seul endroit où la lecture de l'écran la fait.
-    private func bascule(_ titre: String, _ chemin: ReferenceWritableKeyPath<Preferences, Bool>) -> some View {
-        Toggle(titre, isOn: Binding(
-            get: { prefs[keyPath: chemin] },
-            set: { value in
-                prefs[keyPath: chemin] = value
-                if value, !previews.authorized { previews.requestAuthorization() }
-            }))
-            .toggleStyle(.switch)
-            .controlSize(.mini)
-            .font(.system(size: 11))
-    }
-
     private func libelleCombat(_ etat: EtatCombat?) -> String {
         switch etat {
         case nil: return L("combat.pasEncore")
@@ -232,25 +145,6 @@ struct DiagnosticSettings: View {
         case .monTour(let fin):
             guard let fin else { return L("combat.monTour") }
             return L("combat.monTourSecondes", max(0, Int(fin.timeIntervalSinceNow.rounded())))
-        }
-    }
-
-    private var etatLecture: String {
-        switch lecture.etat {
-        case .eteint: return L("diagnostic.position.etat.eteint")
-        case .nonAutorise: return L("diagnostic.position.etat.nonAutorise")
-        case .preparation: return L("diagnostic.position.etat.preparation")
-        case .attente: return L("diagnostic.position.etat.attente")
-        case .actif: return L("diagnostic.position.etat.actif")
-        case .sansCoordonnees: return L("diagnostic.position.etat.sansCoordonnees")
-        case .echecCapture(let raison): return L("diagnostic.position.etat.echec", raison)
-        }
-    }
-
-    private var etatEnDefaut: Bool {
-        switch lecture.etat {
-        case .nonAutorise, .sansCoordonnees, .echecCapture: return true
-        default: return false
         }
     }
 
