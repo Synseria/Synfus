@@ -95,6 +95,9 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
     var distance: Int?
     /// La catégorie DofusDB d'un lieu (`CategorieLieu`) : le tri par type.
     var categorie: Int?
+    /// Le texte cherché après le titre, quand le sous-titre en dit plus
+    /// qu'il n'en faut chercher (la distance d'un lieu) ; sinon le sous-titre.
+    var recherche: String?
     /// Ce qu'une étiquette ou un favori désigne (`Zaap.cle`, `Lieu.cle`) ;
     /// `nil` pour ce qui ne s'étiquette pas.
     var cle: String?
@@ -174,8 +177,8 @@ enum RecherchePalette {
         }
     }
 
-    static func fiches(_ entrees: [EntreePalette]) -> [Fiche] {
-        entrees.map { Fiche(entree: $0, champs: Champs($0)) }
+    static func fiches(_ entrees: [EntreePalette], connus: [String: Champs] = [:]) -> [Fiche] {
+        entrees.map { Fiche(entree: $0, champs: connus[Champs.cle($0)] ?? Champs($0)) }
     }
 
     // MARK: - Modes
@@ -219,7 +222,7 @@ enum RecherchePalette {
             return EntreePalette(
                 id: lieu.cle, genre: .lieu, titre: lieu.nom(en: contexte.langue), sousTitre: sousTitre,
                 etiquette: contexte.etiquettes[lieu.cle], detail: "\(lieu.x),\(lieu.y)",
-                favori: contexte.favoris.contains(lieu.cle), distance: distance, categorie: lieu.categorie, cle: lieu.cle,
+                favori: contexte.favoris.contains(lieu.cle), distance: distance, categorie: lieu.categorie, recherche: lieuDit, cle: lieu.cle,
                 effet: lieu.monde == Zaap.mondeDesDouze ? .trajet(x: lieu.x, y: lieu.y)
                                                         : .copier(ItineraireZaap.travel(vers: (lieu.x, lieu.y))))
         }
@@ -430,23 +433,31 @@ enum RecherchePalette {
     }
 
     /// Une entrée et ses textes normalisés, prêts pour la recherche.
-    struct Fiche {
+    struct Fiche: Sendable {
         let entree: EntreePalette
         let champs: Champs
     }
 
-    /// Les textes d'une entrée, normalisés une fois.
-    struct Champs {
+    /// Les textes d'une entrée, normalisés une fois — c'est ce qui coûte (une
+    /// centaine de millisecondes pour tout le jeu) : `IndexPalette` les garde
+    /// d'une ouverture à l'autre, par `cle`.
+    struct Champs: Sendable {
         let etiquette: [String]
         let titre: [String]
         let lieu: [String]
         let surnoms: [String]
 
+        /// Tout ce dont les champs dépendent : une entrée qui garde sa clé garde ses champs.
+        static func cle(_ entree: EntreePalette) -> String {
+            [entree.id, entree.titre, entree.etiquette ?? "", entree.recherche ?? entree.sousTitre ?? "",
+             entree.categorie.map(String.init) ?? ""].joined(separator: "\u{1F}")
+        }
+
         init(_ entree: EntreePalette) {
             etiquette = RecherchePalette.mots(entree.etiquette ?? "")
-            titre = RecherchePalette.mots(entree.titre)
-            lieu = RecherchePalette.mots(entree.sousTitre ?? "")
             let nom = RecherchePalette.normaliser(entree.titre)
+            titre = RecherchePalette.decouper(nom)
+            lieu = RecherchePalette.mots(entree.recherche ?? entree.sousTitre ?? "")
             surnoms = RecherchePalette.surnoms.filter { nom.contains($0.motif) }.flatMap(\.mots)
                 + (entree.categorie.flatMap { RecherchePalette.motsDeCategorie[$0] } ?? [])
         }
@@ -473,9 +484,11 @@ enum RecherchePalette {
 
     /// Les mots d'un texte, normalisés ; l'apostrophe sépare (« d'Amakna »).
     static func mots(_ texte: String) -> [String] {
-        normaliser(texte)
-            .split(whereSeparator: { $0.isWhitespace || "'·,()-".contains($0) })
-            .map(String.init)
+        decouper(normaliser(texte))
+    }
+
+    static func decouper(_ normalise: String) -> [String] {
+        normalise.split(whereSeparator: { $0.isWhitespace || "'·,()-".contains($0) }).map(String.init)
     }
 
     private static func separer(_ texte: String) -> (commande: String, reste: String) {
@@ -490,14 +503,31 @@ enum RecherchePalette {
 /// rendrait la palette poussive.
 final class IndexPalette {
     let contexte: ContextePalette
+    /// Les champs déjà normalisés, d'un index précédent ou de la préchauffe.
+    let connus: [String: RecherchePalette.Champs]
 
-    init(_ contexte: ContextePalette) { self.contexte = contexte }
+    init(_ contexte: ContextePalette, connus: [String: RecherchePalette.Champs] = [:]) {
+        self.contexte = contexte
+        self.connus = connus
+    }
 
-    private(set) lazy var zaaps = RecherchePalette.fiches(RecherchePalette.zaaps(contexte))
-    private(set) lazy var zaapsCommeLieux = RecherchePalette.fiches(RecherchePalette.zaapsCommeLieux(contexte))
-    private(set) lazy var lieux = RecherchePalette.fiches(RecherchePalette.lieux(contexte))
-    private(set) lazy var quetes = RecherchePalette.fiches(RecherchePalette.quetes(contexte))
-    private(set) lazy var pnjs = RecherchePalette.fiches(RecherchePalette.pnjs(contexte))
+    private func fiches(_ entrees: [EntreePalette]) -> [RecherchePalette.Fiche] {
+        RecherchePalette.fiches(entrees, connus: connus)
+    }
+
+    private(set) lazy var zaaps = fiches(RecherchePalette.zaaps(contexte))
+    private(set) lazy var zaapsCommeLieux = fiches(RecherchePalette.zaapsCommeLieux(contexte))
+    private(set) lazy var lieux = fiches(RecherchePalette.lieux(contexte))
+    private(set) lazy var quetes = fiches(RecherchePalette.quetes(contexte))
+    private(set) lazy var pnjs = fiches(RecherchePalette.pnjs(contexte))
     /// Sans préfixe : zaaps, lieux, quêtes, PNJ, gestes, dernières copies.
-    private(set) lazy var tout = zaaps + lieux + quetes + pnjs + RecherchePalette.fiches(RecherchePalette.divers(contexte))
+    private(set) lazy var tout = zaaps + lieux + quetes + pnjs + fiches(RecherchePalette.divers(contexte))
+
+    /// Les champs de toutes les fiches, à garder pour l'index suivant.
+    static func champs(de contexte: ContextePalette, connus: [String: RecherchePalette.Champs] = [:])
+        -> [String: RecherchePalette.Champs] {
+        let index = IndexPalette(contexte, connus: connus)
+        return Dictionary((index.tout + index.zaapsCommeLieux).map { (RecherchePalette.Champs.cle($0.entree), $0.champs) },
+                          uniquingKeysWith: { a, _ in a })
+    }
 }
