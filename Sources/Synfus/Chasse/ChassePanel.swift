@@ -60,18 +60,20 @@ final class ChassePanel: NSObject, ObservableObject, NSWindowDelegate {
         let hosting = NSHostingController(rootView: ChasseVue())
         hosting.sizingOptions = [.preferredContentSize]
         let panel = PanneauChasse(
-            contentRect: NSRect(x: 0, y: 0, width: 300, height: 260),
-            styleMask: [.titled, .closable, .utilityWindow, .nonactivatingPanel],
+            contentRect: NSRect(x: 0, y: 0, width: 360, height: 300),
+            styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
-        panel.title = L("chasse.titre")
         panel.contentViewController = hosting
         panel.isFloatingPanel = true
         panel.becomesKeyOnlyIfNeeded = false
         panel.level = .statusBar
         panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false
+        panel.backgroundColor = .clear
+        panel.isOpaque = false
+        panel.hasShadow = true
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.delegate = self
         if !panel.setFrameAutosaveName("ChassePanel") || panel.frame.origin == .zero { panel.center() }

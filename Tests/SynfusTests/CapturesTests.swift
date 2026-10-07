@@ -53,6 +53,16 @@ struct CapturesTests {
         try ecrire(vue, vers: dossier.appending(path: "quete.png"))
     }
 
+    @Test("Capture du panneau de chasse", .enabled(if: dossier != nil))
+    func chasse() throws {
+        let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
+        let vue = ChasseVue()
+            .padding(24)
+            .background(Color(red: 0.11, green: 0.11, blue: 0.13))
+            .environment(\.colorScheme, .dark)
+        try ecrire(vue, vers: dossier.appending(path: "chasse.png"))
+    }
+
     @Test("Captures des réglages", .enabled(if: dossier != nil))
     func reglages() throws {
         let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
