@@ -18,7 +18,7 @@ struct QueteVue: View {
     private var idMontre: Int? { panneau.montree ?? prefs.quetesEpinglees.last }
 
     private var fiche: FicheQuete? {
-        ficheImposee ?? idMontre.flatMap { store.quetes?.fiche($0, en: langue) }
+        ficheImposee ?? idMontre.flatMap { store.fiche($0) }
     }
 
     var body: some View {
@@ -59,7 +59,7 @@ struct QueteVue: View {
                         onglet(id: 0, nom: ficheImposee.nom, choisi: true)
                     } else {
                         ForEach(prefs.quetesEpinglees, id: \.self) { id in
-                            onglet(id: id, nom: store.quetes?.fiche(id, en: langue)?.nom ?? "…", choisi: id == idMontre)
+                            onglet(id: id, nom: store.nom(id) ?? "…", choisi: id == idMontre)
                         }
                     }
                 }

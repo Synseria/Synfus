@@ -7,10 +7,17 @@ import Foundation
 final class CarteStore: ObservableObject {
     static let shared = CarteStore()
 
-    @Published private(set) var carte: Carte
+    @Published private(set) var carte: Carte {
+        didSet { zaaps = carte.zaaps }
+    }
+    /// Tirés de la carte une fois, pas à chaque lecture : la palette, la
+    /// réécriture du `/travel` et les réglages les relisent souvent.
+    private(set) var zaaps: [Zaap]
 
     private init() {
-        carte = CarteDofusDB.locale()
+        let carte = CarteDofusDB.locale()
+        self.carte = carte
+        zaaps = carte.zaaps
     }
 
     func start() {
