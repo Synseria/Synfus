@@ -20,10 +20,10 @@ connectés et permet de passer de l'un à l'autre, d'un clic ou au clavier.
     du jeu (banques, hôtels de vente, ateliers, temples, donjons, transports),
     le plus proche de toi devant, copiés en `/zaap x,y; /travel a,b` quand
     le zaap fait gagner du chemin.
-  - `/quete wogew` : les ressources à réunir et chaque objectif avec son
-    trajet ; `/pnj nom` : la position des PNJ que les quêtes situent.
+  - `/quete wogew` : un panneau transparent avec les ressources à réunir et
+    chaque objectif — un clic copie le nom ou le trajet ; `/pnj nom` : la position des PNJ que les quêtes situent.
   - `/` les commandes du jeu, `%` les variables du tchat (`%pos%`…), `/invite`
-    l'équipe en une ligne, tes persos et les gestes de Synfus.
+    l'équipe en une ligne, et les gestes de Synfus.
 
   ![La palette](docs/screenshots/palette-zaaps.png)
   ![/travel banque bonta](docs/screenshots/palette-travel.png)

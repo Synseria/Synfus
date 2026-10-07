@@ -13,7 +13,7 @@ struct PaletteVue: View {
     var body: some View {
         VStack(spacing: 0) {
             recherche
-            if modele.queteOuverte == nil { filtres }
+            filtres
             Divider()
             resultats
             Divider()
@@ -72,7 +72,6 @@ struct PaletteVue: View {
     }
 
     private var mode: String {
-        if let quete = modele.titreQuete { return quete }
         let texte = modele.requete.trimmingCharacters(in: .whitespaces)
         if texte.isEmpty { return L("palette.mode.zaaps") }
         if texte.hasPrefix("%") { return L("palette.mode.variables") }
@@ -195,7 +194,7 @@ struct PaletteVue: View {
                 aide("⌘D", L("palette.touche.favori"))
                 aide("⌘T", L("palette.touche.tri"))
                 Spacer()
-                aide("esc", modele.queteOuverte == nil ? L("palette.touche.fermer") : L("palette.touche.retour"))
+                aide("esc", L("palette.touche.fermer"))
             }
             .font(.system(size: 11))
             .foregroundStyle(.secondary)
@@ -211,7 +210,7 @@ struct PaletteVue: View {
         switch entree.effet {
         case .copier, .trajet: return L("palette.touche.copier", modele.texteACopier(entree) ?? "")
         case .completer: return L("palette.touche.completer")
-        case .basculer, .action: return L("palette.touche.faire")
+        case .action: return L("palette.touche.faire")
         case .ouvrirQuete: return L("palette.touche.ouvrir")
         }
     }
@@ -328,8 +327,6 @@ private struct LigneResultat: View {
         case .recent: return "clock.arrow.circlepath"
         case .quete: return "scroll"
         case .pnj: return "person.wave.2"
-        case .ressource: return "shippingbox"
-        case .objectif: return "checklist"
         }
     }
 }

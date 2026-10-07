@@ -13,7 +13,6 @@ struct RecherchePaletteTests {
         contexte.lieux = Carte.integree.lieux
         contexte.etiquettes = etiquettes
         contexte.favoris = favoris
-        contexte.persos = [(nom: "Brok", slotKey: "2#0")]
         contexte.invitationEquipe = "/invite Brok; /invite Cid"
         contexte.invitations = [(nom: "Brok", commande: "/invite Brok"), (nom: "Cid", commande: "/invite Cid")]
         return contexte
@@ -94,9 +93,8 @@ struct RecherchePaletteTests {
         #expect(entrees.map(\.effet) == [.copier("/invite Brok; /invite Cid"), .copier("/invite Brok"), .copier("/invite Cid")])
     }
 
-    @Test("Sans préfixe : un perso, un geste")
+    @Test("Sans préfixe : un geste")
     func tout() {
-        #expect(premiere("brok", contexte())?.effet == .basculer(slotKey: "2#0"))
         #expect(premiere("ranger", contexte())?.effet == .action(.rangerFenetres))
     }
 
@@ -131,7 +129,7 @@ struct RecherchePaletteTests {
     @Test("Le filtre ne garde qu'une famille ; vide, il liste la famille entière")
     func filtres() {
         #expect(RecherchePalette.entrees("amakna", contexte(), filtre: .lieux).allSatisfy { $0.genre == .lieu })
-        #expect(RecherchePalette.entrees("", contexte(), filtre: .persos).map(\.titre) == ["Brok"])
+        #expect(RecherchePalette.entrees("", contexte(), filtre: .quetes).isEmpty)
         #expect(FiltrePalette.tout.suivant(-1) == FiltrePalette.allCases.last)
     }
 

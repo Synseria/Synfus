@@ -18,14 +18,13 @@ enum ActionPalette: CaseIterable, Sendable {
 
 /// Ce que Tab fait défiler : la famille de résultats montrée.
 enum FiltrePalette: CaseIterable, Sendable {
-    case tout, zaaps, lieux, persos, quetes, pnj
+    case tout, zaaps, lieux, quetes, pnj
 
     var titre: String {
         switch self {
         case .tout: return L("palette.filtre.tout")
         case .zaaps: return L("palette.filtre.zaaps")
         case .lieux: return L("palette.filtre.lieux")
-        case .persos: return L("palette.filtre.persos")
         case .quetes: return L("palette.filtre.quetes")
         case .pnj: return L("palette.filtre.pnj")
         }
@@ -36,7 +35,6 @@ enum FiltrePalette: CaseIterable, Sendable {
         case .tout: return true
         case .zaaps: return genre == .zaap
         case .lieux: return genre == .lieu
-        case .persos: return genre == .perso
         case .quetes: return genre == .quete
         case .pnj: return genre == .pnj
         }
@@ -69,15 +67,14 @@ enum TriPalette: String, CaseIterable, Codable, Sendable {
 
 /// Une ligne de la palette, et ce qu'Entrée en fait.
 struct EntreePalette: Equatable, Identifiable, Sendable {
-    enum Genre: Equatable, Sendable { case zaap, lieu, commande, variable, perso, action, recent, quete, pnj, ressource, objectif }
+    enum Genre: Equatable, Sendable { case zaap, lieu, commande, variable, perso, action, recent, quete, pnj }
 
     enum Effet: Equatable, Sendable {
         /// Pose le texte dans le presse-papiers et ferme.
         case copier(String)
         /// Remplace la recherche, la palette reste ouverte (`/w ` à compléter).
         case completer(String)
-        case basculer(slotKey: String)
-        /// Montre les étapes, objectifs et ressources de la quête.
+        /// Ouvre la quête dans son panneau : étapes, objectifs, ressources.
         case ouvrirQuete(Int)
         /// Copie le trajet vers la case, zaap compris s'il vaut le coup —
         /// calculé seulement pour l'entrée choisie (`texte(de:)`).
@@ -115,7 +112,6 @@ struct ContextePalette: Sendable {
     var favoris: Set<String> = []
     /// Les derniers textes copiés depuis la palette, le plus récent d'abord.
     var recents: [String] = []
-    var persos: [(nom: String, slotKey: String)] = []
     var gainMinimal = ItineraireZaap.gainParDefaut
     /// `/invite A; /invite B` pour l'équipe active, déjà composé.
     var invitationEquipe: String?
@@ -174,7 +170,7 @@ enum RecherchePalette {
         switch effet {
         case .copier(let texte): return texte
         case .trajet(let x, let y): return trajet(vers: (x, y), contexte)
-        case .completer, .basculer, .action, .ouvrirQuete: return nil
+        case .completer, .action, .ouvrirQuete: return nil
         }
     }
 
@@ -263,18 +259,13 @@ enum RecherchePalette {
                                  sousTitre: $0.description, effet: .copier($0.texte)) }
     }
 
-    /// Les persos, les gestes et les dernières copies : ce que `tout` ajoute
-    /// aux zaaps, lieux, quêtes et PNJ.
+    /// Les gestes et les dernières copies : ce que `tout` ajoute aux zaaps,
+    /// lieux, quêtes et PNJ.
     static func divers(_ contexte: ContextePalette) -> [EntreePalette] {
-        let aller = L("palette.perso")
-        let persos = contexte.persos.map {
-            EntreePalette(id: "perso:" + $0.slotKey, genre: .perso, titre: $0.nom,
-                          sousTitre: aller, effet: .basculer(slotKey: $0.slotKey))
-        }
         let actions = ActionPalette.allCases.map {
             EntreePalette(id: "action:\($0)", genre: .action, titre: $0.titre, effet: .action($0))
         }
-        return persos + actions + recents(contexte)
+        return actions + recents(contexte)
     }
 
     // MARK: - Quêtes et PNJ
@@ -297,41 +288,6 @@ enum RecherchePalette {
                               detail: "\(position.x),\(position.y)", distance: distance(vers: position, contexte),
                               effet: .trajet(x: position.x, y: position.y))
             }
-        }
-    }
-
-    /// Une quête ouverte : les ressources à réunir (le nom se copie, pour
-    /// l'hôtel de vente), puis chaque objectif, étape par étape — son trajet
-    /// quand la carte est connue.
-    static func quete(_ id: Int, _ requete: String, _ contexte: ContextePalette) -> [EntreePalette] {
-        guard let quetes = contexte.quetes, let quete = quetes.quetes.first(where: { $0.id == id }) else { return [] }
-        let langue = contexte.langue
-        let ressources = Quetes.ressources(quete).map { ressource in
-            let nom = quetes.nomObjet(ressource.objet, en: langue)
-            return EntreePalette(id: "ressource:\(ressource.objet)", genre: .ressource,
-                                 titre: L("palette.quete.ressource", nom, ressource.quantite),
-                                 sousTitre: L("palette.quete.aReunir"), effet: .copier(nom))
-        }
-        let objectifs = quete.etapes.enumerated().flatMap { rang, etape in
-            etape.objectifs.enumerated().map { indice, objectif in
-                let texte = quetes.texte(Lieu.traduit(objectif.textes, langue) ?? "", en: langue)
-                let etapeNommee = L("palette.quete.etape", rang + 1, Lieu.traduit(etape.noms, langue) ?? "")
-                guard let x = objectif.x, let y = objectif.y else {
-                    return EntreePalette(id: "objectif:\(rang):\(indice)", genre: .objectif, titre: texte,
-                                         sousTitre: etapeNommee, effet: .copier(texte))
-                }
-                return EntreePalette(id: "objectif:\(rang):\(indice)", genre: .objectif, titre: texte,
-                                     sousTitre: etapeNommee, detail: "\(x),\(y)",
-                                     distance: distance(vers: PNJ.Position(x: x, y: y), contexte),
-                                     effet: .trajet(x: x, y: y))
-            }
-        }
-        let mots = mots(requete)
-        let toutes = ressources + objectifs
-        guard !mots.isEmpty else { return toutes }
-        return toutes.filter { entree in
-            let texte = normaliser(entree.titre + " " + (entree.sousTitre ?? ""))
-            return mots.allSatisfy(texte.contains)
         }
     }
 
@@ -455,8 +411,6 @@ enum RecherchePalette {
         case .perso: return 1
         case .quete: return 120
         case .pnj: return 130
-        case .ressource: return 140
-        case .objectif: return 150
         case .lieu: return 10 + (entree.categorie ?? 99)
         case .action: return 200
         case .recent: return 300
@@ -533,6 +487,6 @@ final class IndexPalette {
     private(set) lazy var lieux = RecherchePalette.fiches(RecherchePalette.lieux(contexte))
     private(set) lazy var quetes = RecherchePalette.fiches(RecherchePalette.quetes(contexte))
     private(set) lazy var pnjs = RecherchePalette.fiches(RecherchePalette.pnjs(contexte))
-    /// Sans préfixe : zaaps, lieux, persos, quêtes, PNJ, gestes, dernières copies.
+    /// Sans préfixe : zaaps, lieux, quêtes, PNJ, gestes, dernières copies.
     private(set) lazy var tout = zaaps + lieux + quetes + pnjs + RecherchePalette.fiches(RecherchePalette.divers(contexte))
 }
