@@ -121,6 +121,19 @@ final class Preferences: ObservableObject {
     /// Le texte posé dans le presse-papiers, `%nom` remplacé par le perso.
     @Published var inviteFormat: String = InvitationComposer.formatParDefaut { didSet { save() } }
 
+    /// Raccourci « zaap le plus proche du /travel copié ». Sans défaut.
+    @Published var zaapHotKey: HotKey? { didSet { save() } }
+
+    /// Le bouton zaap dans la barre — montré seulement si la position est lue.
+    @Published var zaapBouton: Bool = true { didSet { save() } }
+
+    /// Réécrire de soi-même chaque `/travel` copié. Éteint par défaut : il
+    /// regarde chaque copie, de n'importe quelle app.
+    @Published var zaapAuto: Bool = false { didSet { save() } }
+
+    /// Les cartes que le zaap doit épargner pour être proposé.
+    @Published var zaapGainMinimal: Int = ItineraireZaap.gainParDefaut { didSet { save() } }
+
     /// Nombre de slots exposés (et donc de raccourcis potentiels).
     ///
     /// Le garde-fou `clamping` n'est pas décoratif : `@Published` remplace la
@@ -313,6 +326,7 @@ final class Preferences: ObservableObject {
         arrangeHotKey = nil
         sessionHotKey = nil
         equipeSuivanteHotKey = nil
+        zaapHotKey = nil
     }
 
     /// Reporte sur la touche sous Échap les raccourcis restés sur le keycode 50.
@@ -373,6 +387,10 @@ final class Preferences: ObservableObject {
         .optionnel("equipeSuivanteHotKey", \.equipeSuivanteHotKey),
         .optionnel("inviteHotKey", \.inviteHotKey),
         .facultatif("inviteFormat", \.inviteFormat),
+        .optionnel("zaapHotKey", \.zaapHotKey),
+        .facultatif("zaapBouton", \.zaapBouton),
+        .facultatif("zaapAuto", \.zaapAuto),
+        .facultatif("zaapGainMinimal", \.zaapGainMinimal),
     ]
 
     /// Génération du jeu de raccourcis par défaut appliqué à la sauvegarde.

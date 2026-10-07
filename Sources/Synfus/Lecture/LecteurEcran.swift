@@ -67,6 +67,7 @@ final class LecteurEcran: ObservableObject {
     /// la fraîcheur, hors des `@Published`.
     private var vuLe: [String: Date] = [:]
     private var timer: Timer?
+    private var persoDevant: String?
     private var prechauffe = false
     /// Lectures demandées, dans l'ordre — le tour, un survol, le bouton du
     /// Diagnostic. Une à la fois : l'OCR est séquentiel.
@@ -160,8 +161,15 @@ final class LecteurEcran: ObservableObject {
             if !busy, file.isEmpty { diagnostic.etat = .attente }
             return
         }
+        persoDevant = client.name
         for genre in genresActifs { demander(client, genre) }
         pomper()
+    }
+
+    /// La position du dernier perso lu au premier plan — celui dont le tchat
+    /// reçoit le prochain collage, même si l'on vient de copier ailleurs.
+    var positionDuPersoDevant: PositionCarte? {
+        persoDevant.flatMap { releves[$0]?.position }
     }
 
     /// Au survol d'une pastille : la position de ce perso-là, si elle n'a pas

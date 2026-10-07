@@ -7,6 +7,7 @@ struct BarView: View {
     @ObservedObject private var icons = ClassIconStore.shared
     @ObservedObject private var lecteur = LecteurEcran.shared
     @ObservedObject private var invitations = InvitationClipboard.shared
+    @ObservedObject private var zaaps = ZaapClipboard.shared
     @State private var dragging: String?
     @State private var chipFrames: [String: CGRect] = [:]
     /// Cadres des secteurs de la rangée des équipes, dans le même repère que
@@ -166,7 +167,21 @@ struct BarView: View {
             }
             separator
             arrangeMenu
+            if prefs.lirePosition, prefs.zaapBouton { zaapButton }
             autoFocusToggle
+        }
+    }
+
+    /// Le zaap le plus proche du `/travel` copié. La barre ne prend pas le
+    /// focus : le jeu reste devant, prêt pour ⌘V.
+    private var zaapButton: some View {
+        ModeButton(
+            icone: "point.3.connected.trianglepath.dotted",
+            teinte: .green,
+            actif: zaaps.reecritRecemment,
+            aide: L("barre.zaapAide", prefs.zaapHotKey?.displayString ?? L("barre.aucunRaccourci"))
+        ) {
+            ZaapClipboard.shared.optimiser()
         }
     }
 

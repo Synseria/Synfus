@@ -498,6 +498,8 @@ struct PreferencesTests {
      "sessionHotKey":{"keyCode":1,"modifiers":256},"showClasses":false,
      "showNumbers":false,"showPreviewOnHover":true,"signalerBascule":false,
      "slotCount":3,"toggleAutoFocus":{"keyCode":99,"modifiers":0},
+     "zaapAuto":true,"zaapBouton":false,"zaapGainMinimal":8,
+     "zaapHotKey":{"keyCode":17,"modifiers":2048},
      "toggleBar":{"keyCode":11,"modifiers":768},
      "zoneCombat":{"hauteur":0.125,"largeur":0.25,"x":0.125,"y":0.75},
      "zonePosition":{"hauteur":0.0625,"largeur":0.25,"x":0.5,"y":0.25}}
@@ -538,6 +540,10 @@ struct PreferencesTests {
         #expect(prefs.equipeSuivanteHotKey == HotKey(keyCode: 17, modifiers: 256))
         #expect(prefs.inviteHotKey == HotKey(keyCode: 34, modifiers: 256))
         #expect(prefs.inviteFormat == "/w %nom go")
+        #expect(prefs.zaapHotKey == HotKey(keyCode: 17, modifiers: 2048))
+        #expect(prefs.zaapBouton == false)
+        #expect(prefs.zaapAuto == true)
+        #expect(prefs.zaapGainMinimal == 8)
     }
 
     @Test("Chaque réglage s'écrit sous sa clé, avec son encodage")
@@ -575,6 +581,10 @@ struct PreferencesTests {
         prefs.equipeSuivanteHotKey = HotKey(keyCode: 17, modifiers: 256)
         prefs.inviteHotKey = HotKey(keyCode: 34, modifiers: 256)
         prefs.inviteFormat = "/w %nom go"
+        prefs.zaapHotKey = HotKey(keyCode: 17, modifiers: 2048)
+        prefs.zaapBouton = false
+        prefs.zaapAuto = true
+        prefs.zaapGainMinimal = 8
 
         #expect(canonique(store.donnees(pour: Preferences.key))
                 == canonique(Data(Self.empreinte.utf8)))
@@ -589,7 +599,7 @@ struct PreferencesTests {
         prefs.hotKeys = [nil]
         for chemin: ReferenceWritableKeyPath<Preferences, HotKey?> in [
             \.cycleNext, \.cyclePrevious, \.toggleAutoFocus, \.toggleBar, \.previewHotKey,
-            \.arrangeHotKey, \.sessionHotKey, \.equipeSuivanteHotKey, \.inviteHotKey,
+            \.arrangeHotKey, \.sessionHotKey, \.equipeSuivanteHotKey, \.inviteHotKey, \.zaapHotKey,
         ] {
             prefs[keyPath: chemin] = nil
         }
@@ -601,7 +611,8 @@ struct PreferencesTests {
          "defaultsVersion":6,"equipes":[],"hotKeys":[null],"inviteFormat":"/invite %nom",
          "killFrozenClients":true,"lireCombat":false,"lirePosition":false,"menuBarIcon":"logo",
          "showClasses":true,"showNumbers":true,"showPreviewOnHover":false,
-         "signalerBascule":true,"slotCount":1}
+         "signalerBascule":true,"slotCount":1,"zaapAuto":false,"zaapBouton":true,
+         "zaapGainMinimal":5}
         """
         #expect(canonique(store.donnees(pour: Preferences.key)) == canonique(Data(attendu.utf8)))
     }
