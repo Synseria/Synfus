@@ -1,8 +1,8 @@
 import SwiftUI
 
 /// Sections des réglages, listées dans la barre latérale.
-private enum SettingsSection: String, CaseIterable, Identifiable {
-    case general, raccourcis, zaap, persos, classes, diagnostic
+enum SettingsSection: String, CaseIterable, Identifiable {
+    case general, raccourcis, palette, persos, classes, diagnostic
 
     var id: String { rawValue }
 
@@ -10,7 +10,7 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
         switch self {
         case .general: return L("reglages.general")
         case .raccourcis: return L("reglages.raccourcis")
-        case .zaap: return L("reglages.zaap")
+        case .palette: return L("reglages.palette")
         case .persos: return L("reglages.persos")
         case .classes: return L("reglages.classes")
         case .diagnostic: return L("reglages.diagnostic")
@@ -21,7 +21,7 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
         switch self {
         case .general: return "gearshape"
         case .raccourcis: return "keyboard"
-        case .zaap: return "point.3.connected.trianglepath.dotted"
+        case .palette: return "command"
         case .persos: return "person.3"
         case .classes: return "paintpalette"
         case .diagnostic: return "stethoscope"
@@ -30,7 +30,11 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
 }
 
 struct SettingsView: View {
-    @State private var section: SettingsSection = .general
+    @State private var section: SettingsSection
+
+    init(section: SettingsSection = .general) {
+        _section = State(initialValue: section)
+    }
 
     /// Barre latérale à gauche, contenu à droite : les quatre sections en
     /// onglets faisaient défiler des formulaires interminables — le menu
@@ -43,6 +47,7 @@ struct SettingsView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(width: 920, height: 640)
+        .tint(Couleurs.accent)
     }
 
     private var sidebar: some View {
@@ -53,7 +58,7 @@ struct SettingsView: View {
             Spacer()
         }
         .padding(8)
-        .frame(width: 150)
+        .frame(width: 170)
         .background(Color.primary.opacity(0.035))
     }
 
@@ -61,14 +66,17 @@ struct SettingsView: View {
         Button {
             section = item
         } label: {
-            Label(item.label, systemImage: item.icon)
+            HStack(spacing: 8) {
+                Image(systemName: item.icon).frame(width: 18)
+                Text(item.label)
+            }
                 .font(.system(size: 12, weight: section == item ? .semibold : .regular))
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 6)
                 .background(
                     RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(section == item ? Color.accentColor : Color.clear)
+                        .fill(section == item ? Couleurs.accent : Color.clear)
                 )
                 .foregroundStyle(section == item ? Color.white : Color.primary)
                 .contentShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
@@ -81,7 +89,7 @@ struct SettingsView: View {
         switch section {
         case .general: GeneralSettings()
         case .raccourcis: ShortcutsSettings()
-        case .zaap: ZaapSettings()
+        case .palette: PaletteSettings()
         case .persos: CharactersSettings()
         case .classes: ClassesSettings()
         case .diagnostic: DiagnosticSettings()

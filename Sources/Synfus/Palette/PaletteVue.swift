@@ -9,10 +9,6 @@ struct PaletteVue: View {
 
     private enum Champ { case recherche, etiquette }
 
-    /// Le vert d'eau des zaaps, l'ambre des étiquettes.
-    static let accent = Color(red: 0.19, green: 0.65, blue: 0.53)
-    static let ambre = Color(red: 0.89, green: 0.71, blue: 0.35)
-
     var body: some View {
         VStack(spacing: 0) {
             recherche
@@ -45,7 +41,7 @@ struct PaletteVue: View {
                 .foregroundStyle(.white)
                 .padding(.horizontal, 7)
                 .padding(.vertical, 2)
-                .background(Capsule().fill(Self.accent))
+                .background(Capsule().fill(Couleurs.accent))
         }
         .padding(.horizontal, 16)
         .frame(height: 52)
@@ -203,7 +199,7 @@ private struct CarteZaap: View {
                 if let etiquette = entree.etiquette { PastilleEtiquette(texte: etiquette) }
                 Spacer(minLength: 0)
                 if entree.favori {
-                    Image(systemName: "star.fill").font(.system(size: 9)).foregroundStyle(PaletteVue.ambre)
+                    Image(systemName: "star.fill").font(.system(size: 9)).foregroundStyle(Couleurs.ambre)
                 }
             }
             .frame(height: 16)
@@ -224,9 +220,9 @@ private struct CarteZaap: View {
         .padding(9)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 9, style: .continuous)
-            .fill(choisie ? PaletteVue.accent.opacity(0.22) : Color.primary.opacity(0.05)))
+            .fill(choisie ? Couleurs.accent.opacity(0.22) : Color.primary.opacity(0.05)))
         .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous)
-            .strokeBorder(choisie ? PaletteVue.accent : Color.primary.opacity(0.08)))
+            .strokeBorder(choisie ? Couleurs.accent : Color.primary.opacity(0.08)))
         .contentShape(Rectangle())
     }
 }
@@ -240,7 +236,7 @@ private struct LigneResultat: View {
         HStack(spacing: 12) {
             Image(systemName: icone)
                 .font(.system(size: 13))
-                .foregroundStyle(choisie ? PaletteVue.accent : Color.secondary)
+                .foregroundStyle(choisie ? Couleurs.accent : Color.secondary)
                 .frame(width: 26, height: 26)
                 .background(RoundedRectangle(cornerRadius: 7).fill(Color.primary.opacity(0.06)))
             VStack(alignment: .leading, spacing: 2) {
@@ -248,7 +244,7 @@ private struct LigneResultat: View {
                     Text(entree.titre).font(.system(size: 13)).lineLimit(1)
                     if let etiquette = entree.etiquette { PastilleEtiquette(texte: etiquette) }
                     if entree.favori {
-                        Image(systemName: "star.fill").font(.system(size: 9)).foregroundStyle(PaletteVue.ambre)
+                        Image(systemName: "star.fill").font(.system(size: 9)).foregroundStyle(Couleurs.ambre)
                     }
                 }
                 if let sousTitre = entree.sousTitre {
@@ -266,7 +262,7 @@ private struct LigneResultat: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
         .background(RoundedRectangle(cornerRadius: 8, style: .continuous)
-            .fill(choisie ? PaletteVue.accent.opacity(0.22) : Color.clear))
+            .fill(choisie ? Couleurs.accent.opacity(0.22) : Color.clear))
         .contentShape(Rectangle())
     }
 
@@ -283,7 +279,7 @@ private struct LigneResultat: View {
     }
 }
 
-private struct PastilleEtiquette: View {
+struct PastilleEtiquette: View {
     let texte: String
 
     var body: some View {
@@ -292,7 +288,7 @@ private struct PastilleEtiquette: View {
             .foregroundStyle(.black.opacity(0.85))
             .padding(.horizontal, 5)
             .padding(.vertical, 1)
-            .background(RoundedRectangle(cornerRadius: 4).fill(PaletteVue.ambre))
+            .background(RoundedRectangle(cornerRadius: 4).fill(Couleurs.ambre))
             .lineLimit(1)
     }
 }
