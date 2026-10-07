@@ -9,16 +9,14 @@ struct ClassesSettings: View {
     /// appartiennent à Ankama. Chacun met donc les siennes, par glisser-déposer
     /// ou en remplissant le dossier à la main.
     var body: some View {
-        Form {
+        PageReglages(titre: L("reglages.classes"), sousTitre: L("classes.sousTitre")) {
             Section {
-                HStack {
-                    Button(L("classes.ouvrirDossier")) { NSWorkspace.shared.open(icons.directory) }
-                    Button(L("classes.recharger")) { icons.reloadAll() }
-                    Spacer()
-                    Text(L("classes.mentionAnkama"))
-                        .font(.system(size: 9)).foregroundStyle(.tertiary).lineLimit(2)
+                Ligne(titre: L("classes.dossier"), sousTexte: L("classes.mentionAnkama")) {
+                    HStack(spacing: 8) {
+                        Button(L("classes.recharger")) { icons.reloadAll() }
+                        Button(L("classes.ouvrirDossier")) { NSWorkspace.shared.open(icons.directory) }
+                    }
                 }
-                .font(.system(size: 11))
                 ForEach(DofusClass.breeds) { breed in
                     classRow(breed)
                 }
@@ -26,7 +24,6 @@ struct ClassesSettings: View {
                 SectionTitle(L("classes.icones"), help: L("classes.icones.aide"))
             }
         }
-        .formStyle(.grouped)
     }
 
     private func classRow(_ breed: DofusClass.Breed) -> some View {
@@ -55,10 +52,8 @@ struct ClassesSettings: View {
 
             if custom != nil, !icons.isBundled(forKey: breed.key) {
                 Button(L("classes.retirer")) { icons.removeIcon(forKey: breed.key) }
-                    .font(.system(size: 11))
             }
             Button(custom == nil ? L("classes.choisir") : L("classes.remplacer")) { chooseIcon(for: breed) }
-                .font(.system(size: 11))
         }
         .padding(.vertical, 1)
         .onDrop(of: [.fileURL], isTargeted: nil) { providers in
