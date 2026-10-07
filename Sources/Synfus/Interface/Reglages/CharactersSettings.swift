@@ -12,17 +12,8 @@ struct CharactersSettings: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 6) {
-                Text(L("persos.ordre")).font(.system(size: 12, weight: .semibold))
-                HelpTip(L("persos.ordre.aide"))
-                Text("·").foregroundStyle(.tertiary)
-                Text(L("persos.equipes")).font(.system(size: 12, weight: .semibold))
-                HelpTip(L("persos.equipes.aide"))
-            }
-            .padding(12)
-
-            List {
+        PageReglages(titre: L("reglages.persos"), sousTitre: L("persos.sousTitre")) {
+            Section {
                 ForEach(Array(prefs.characterOrder.enumerated()), id: \.element) { index, name in
                     characterRow(index: index, name: name)
                 }
@@ -30,39 +21,37 @@ struct CharactersSettings: View {
                     prefs.move(fromOffsets: offsets, toOffset: destination)
                     manager.resort()
                 }
-            }
-
-            HStack {
-                Text(L("persos.connectesSurConnus", manager.clients.count, prefs.characterOrder.count))
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-                Spacer()
                 // Une seule écriture pour toute la fournée, et un dernier mot
                 // avant : la liste des persos est ce qui fixe la numérotation
                 // des emplacements, la vider par mégarde décale tous les
                 // raccourcis.
-                Button(L("persos.oublierHorsLigne")) { confirmerOubli = true }
-                    .font(.system(size: 11))
-                    .disabled(horsLigne.isEmpty)
-                    .confirmationDialog(
-                        L("persos.oublierHorsLigne.confirmation", horsLigne.count),
-                        isPresented: $confirmerOubli, titleVisibility: .visible
-                    ) {
-                        Button(L("persos.oublierHorsLigne"), role: .destructive) {
-                            prefs.forget(names: horsLigne)
+                Ligne(titre: L("persos.connectesSurConnus", manager.clients.count, prefs.characterOrder.count)) {
+                    Button(L("persos.oublierHorsLigne")) { confirmerOubli = true }
+                        .disabled(horsLigne.isEmpty)
+                        .confirmationDialog(
+                            L("persos.oublierHorsLigne.confirmation", horsLigne.count),
+                            isPresented: $confirmerOubli, titleVisibility: .visible
+                        ) {
+                            Button(L("persos.oublierHorsLigne"), role: .destructive) {
+                                prefs.forget(names: horsLigne)
+                            }
+                            Button(L("commun.annuler"), role: .cancel) {}
                         }
-                        Button(L("commun.annuler"), role: .cancel) {}
-                    }
+                }
+            } header: {
+                HStack(spacing: 6) {
+                    SectionTitle(L("persos.ordre"), help: L("persos.ordre.aide"))
+                    Text("·").foregroundStyle(.tertiary)
+                    SectionTitle(L("persos.equipes"), help: L("persos.equipes.aide"))
+                }
             }
-            .padding(12)
 
-            Divider()
-
-            HStack(spacing: 6) {
-                Toggle(L("persos.acheverGeles"), isOn: $prefs.killFrozenClients)
-                HelpTip(L("persos.acheverGeles.aide"))
+            Section {
+                Interrupteur(titre: L("persos.acheverGeles"), aide: L("persos.acheverGeles.aide"),
+                             isOn: $prefs.killFrozenClients)
+            } header: {
+                SectionTitle(L("persos.fermeture"))
             }
-            .padding(12)
         }
     }
 

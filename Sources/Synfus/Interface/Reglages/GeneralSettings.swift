@@ -11,7 +11,7 @@ struct GeneralSettings: View {
     @State private var langue = LangueReglage.choisie?.rawValue ?? ""
 
     var body: some View {
-        Form {
+        PageReglages(titre: L("reglages.general"), sousTitre: L("general.sousTitre")) {
             Section {
                 PermissionRow(
                     name: L("general.accessibilite"),
@@ -33,22 +33,19 @@ struct GeneralSettings: View {
             }
 
             Section {
-                Toggle(L("general.barre.afficher"), isOn: Binding(
+                Interrupteur(titre: L("general.barre.afficher"), isOn: Binding(
                     get: { prefs.barVisible },
                     set: { prefs.barVisible = $0; FloatingBarController.shared.apply() }
                 ))
                 if prefs.barVisible {
-                    Toggle(L("general.barre.seulementDofus"), isOn: Binding(
+                    Interrupteur(titre: L("general.barre.seulementDofus"), isOn: Binding(
                         get: { prefs.barOnlyWithDofus },
                         set: { prefs.barOnlyWithDofus = $0; FloatingBarController.shared.updateVisibility() }
                     ))
-                    Toggle(L("general.barre.numeros"), isOn: $prefs.showNumbers)
-                    Toggle(L("general.barre.classes"), isOn: $prefs.showClasses)
-                    HStack {
-                        Text(L("general.barre.position"))
-                        Spacer()
+                    Interrupteur(titre: L("general.barre.numeros"), isOn: $prefs.showNumbers)
+                    Interrupteur(titre: L("general.barre.classes"), isOn: $prefs.showClasses)
+                    Ligne(titre: L("general.barre.position")) {
                         Button(L("general.barre.recentrer")) { FloatingBarController.shared.recenter() }
-                            .font(.system(size: 11))
                     }
                 }
             } header: {
@@ -56,59 +53,51 @@ struct GeneralSettings: View {
             }
 
             Section {
-                Toggle(L("general.apercus.survol"), isOn: Binding(
+                Interrupteur(titre: L("general.apercus.survol"), aide: L("general.apercus.aide"), isOn: Binding(
                     get: { prefs.showPreviewOnHover },
                     set: { value in
                         prefs.showPreviewOnHover = value
                         if value, !previews.authorized { previews.requestAuthorization() }
                     }
                 ))
-            } header: {
-                SectionTitle(L("general.apercus"), help: L("general.apercus.aide"))
-            }
-
-            Section {
-                Picker(L("general.icone"), selection: Binding(
-                    get: { prefs.menuBarIcon },
-                    set: { prefs.menuBarIcon = $0; MenuBarController.shared.refreshIcon() }
-                )) {
-                    ForEach(MenuBarIcon.allCases) { Text($0.label).tag($0) }
+                Ligne(titre: L("general.icone")) {
+                    Picker(L("general.icone"), selection: Binding(
+                        get: { prefs.menuBarIcon },
+                        set: { prefs.menuBarIcon = $0; MenuBarController.shared.refreshIcon() }
+                    )) {
+                        ForEach(MenuBarIcon.allCases) { Text($0.label).tag($0) }
+                    }
+                    .labelsHidden()
+                    .fixedSize()
                 }
-                Toggle(L("general.demarrerAvecSession"), isOn: $launchAtLogin)
+                Interrupteur(titre: L("general.demarrerAvecSession"), isOn: $launchAtLogin)
                     .onChange(of: launchAtLogin) { _, value in LaunchAtLogin.set(value) }
                 languageRow
-                HStack {
-                    Text(L("general.version"))
-                    Spacer()
-                    Text(AppIntegrity.displayName).font(.system(size: 11)).foregroundStyle(.secondary)
-                        .textSelection(.enabled)
+                Ligne(titre: L("general.version")) {
+                    Text(AppIntegrity.displayName).foregroundStyle(.secondary).textSelection(.enabled)
                 }
             } header: {
                 SectionTitle(L("general.systeme"))
             }
         }
-        .formStyle(.grouped)
     }
 
     /// La langue de l'interface. La table est chargée au lancement : le choix
     /// ne prend effet qu'en relançant, et le bouton n'apparaît que si le
     /// prochain lancement parlerait une autre langue que celui-ci.
     private var languageRow: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
+        Ligne(titre: L("general.langue"), aide: L("general.langue.aide")) {
+            HStack(spacing: 8) {
+                if LangueReglage.auProchainLancement != L10n.courante.langue {
+                    Button(L("general.langue.relancer")) { LangueReglage.relancer() }
+                }
                 Picker(L("general.langue"), selection: $langue) {
                     Text(L("general.langue.systeme")).tag("")
                     ForEach(Langue.allCases) { Text($0.nom).tag($0.rawValue) }
                 }
+                .labelsHidden()
+                .fixedSize()
                 .onChange(of: langue) { _, value in LangueReglage.choisie = Langue(rawValue: value) }
-                HelpTip(L("general.langue.aide"))
-            }
-            if LangueReglage.auProchainLancement != L10n.courante.langue {
-                HStack {
-                    Spacer()
-                    Button(L("general.langue.relancer")) { LangueReglage.relancer() }
-                        .font(.system(size: 11))
-                }
             }
         }
     }

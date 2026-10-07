@@ -18,23 +18,18 @@ struct ShortcutsSettings: View {
     }
 
     var body: some View {
-        Form {
-            Section {
-                ShortcutRow(label: L("raccourcis.palette"), help: L("raccourcis.palette.aide"),
-                            conflit: enConflit(prefs.paletteHotKey), hotKey: hotKey(\.paletteHotKey))
-            } header: {
-                SectionTitle(L("raccourcis.palette.titre"))
-            }
-
+        PageReglages(titre: L("reglages.raccourcis"), sousTitre: L("raccourcis.sousTitre")) {
             Section {
                 ForEach(0..<prefs.slotCount, id: \.self) { slot in
                     ShortcutRow(label: L("raccourcis.perso", slot + 1), detail: nameForSlot(slot),
                                 conflit: enConflit(slot < prefs.hotKeys.count ? prefs.hotKeys[slot] : nil),
                                 hotKey: binding(forSlot: slot))
                 }
-                Stepper(L("raccourcis.emplacements", prefs.slotCount),
-                        value: Binding(get: { prefs.slotCount }, set: { prefs.slotCount = $0; rebind() }),
-                        in: 1...10)
+                Ligne(titre: L("raccourcis.emplacements")) {
+                    Stepper("\(prefs.slotCount)",
+                            value: Binding(get: { prefs.slotCount }, set: { prefs.slotCount = $0; rebind() }),
+                            in: 1...10)
+                }
             } header: {
                 SectionTitle(L("raccourcis.allerAUnPerso"), help: L("raccourcis.allerAUnPerso.aide"))
             }
@@ -54,10 +49,8 @@ struct ShortcutsSettings: View {
                                         WindowPreviewService.shared.requestAuthorization()
                                     }
                                 }))
-                HStack {
-                    Toggle(L("raccourcis.signalerBascule"), isOn: $prefs.signalerBascule)
-                    HelpTip(L("raccourcis.signalerBascule.aide"))
-                }
+                Interrupteur(titre: L("raccourcis.signalerBascule"), aide: L("raccourcis.signalerBascule.aide"),
+                             isOn: $prefs.signalerBascule)
             } header: {
                 SectionTitle(L("raccourcis.naviguer"))
             }
@@ -79,13 +72,11 @@ struct ShortcutsSettings: View {
                 ShortcutRow(label: prefs.inviteGroupee ? L("raccourcis.invitation.toutes") : L("raccourcis.invitation"),
                             help: prefs.inviteGroupee ? L("raccourcis.invitation.toutes.aide") : L("raccourcis.invitation.aide"),
                             conflit: enConflit(prefs.inviteHotKey), hotKey: hotKey(\.inviteHotKey))
-                Toggle(L("raccourcis.invitation.groupee"), isOn: $prefs.inviteGroupee)
-                HStack {
-                    Text(L("raccourcis.invitation.format"))
-                    HelpTip(L("raccourcis.invitation.format.aide"))
-                    Spacer()
-                    TextField("", text: $prefs.inviteFormat)
-                        .font(.system(size: 11, design: .monospaced))
+                Interrupteur(titre: L("raccourcis.invitation.groupee"), isOn: $prefs.inviteGroupee)
+                Ligne(titre: L("raccourcis.invitation.format"), aide: L("raccourcis.invitation.format.aide")) {
+                    TextField(L("raccourcis.invitation.format"), text: $prefs.inviteFormat)
+                        .labelsHidden()
+                        .font(.system(size: 12, design: .monospaced))
                         .frame(width: 180)
                 }
             } header: {
@@ -93,33 +84,24 @@ struct ShortcutsSettings: View {
             }
 
             Section {
-                Toggle(L("raccourcis.enchainer.bascule"), isOn: Binding(
+                Interrupteur(titre: L("raccourcis.enchainer.bascule"), isOn: Binding(
                     get: { prefs.advanceOnClick },
                     set: { prefs.advanceOnClick = $0; ClickAdvanceWatcher.shared.apply() }
                 ))
                 if prefs.advanceOnClick {
-                    HStack {
-                        Text(L("raccourcis.enchainer.touche"))
-                        HelpTip(L("raccourcis.enchainer.touche.aide"))
-                        Spacer()
-                        Picker("", selection: $prefs.advanceModifier) {
+                    Ligne(titre: L("raccourcis.enchainer.touche"), aide: L("raccourcis.enchainer.touche.aide")) {
+                        Picker(L("raccourcis.enchainer.touche"), selection: $prefs.advanceModifier) {
                             ForEach(ClickModifier.allCases) { Text($0.label).tag($0) }
                         }
                         .labelsHidden()
-                        .frame(width: 150)
+                        .fixedSize()
                     }
-                    HStack {
-                        Text(L("raccourcis.enchainer.clicsCaptes", clicks.seenClicks))
-                            .font(.system(size: 11))
+                    Ligne(titre: L("raccourcis.enchainer.clicsCaptes"),
+                          sousTexte: clicks.lastModifiers.map { L("raccourcis.enchainer.dernierClic", $0) },
+                          aide: clicks.seenClicks == 0 ? L("raccourcis.enchainer.clicsCaptes.aide") : nil) {
+                        Text("\(clicks.seenClicks)")
+                            .monospacedDigit()
                             .foregroundStyle(clicks.seenClicks == 0 ? Color.orange : Color.secondary)
-                        if clicks.seenClicks == 0 {
-                            HelpTip(L("raccourcis.enchainer.clicsCaptes.aide"))
-                        }
-                        if let dernier = clicks.lastModifiers {
-                            Text(L("raccourcis.enchainer.dernierClic", dernier))
-                                .font(.system(size: 11))
-                                .foregroundStyle(.secondary)
-                        }
                     }
                 }
             } header: {
@@ -127,10 +109,13 @@ struct ShortcutsSettings: View {
             }
 
             Section {
-                Picker(L("raccourcis.attention.reaction"), selection: $prefs.attentionAction) {
-                    ForEach(AttentionAction.allCases) { Text($0.label).tag($0) }
+                Ligne(titre: L("raccourcis.attention.reaction")) {
+                    Picker(L("raccourcis.attention.reaction"), selection: $prefs.attentionAction) {
+                        ForEach(AttentionAction.allCases) { Text($0.label).tag($0) }
+                    }
+                    .labelsHidden()
+                    .fixedSize()
                 }
-                .pickerStyle(.radioGroup)
                 ShortcutRow(label: L("raccourcis.attention.bascule"), conflit: enConflit(prefs.toggleAutoFocus), hotKey: hotKey(\.toggleAutoFocus))
             } header: {
                 SectionTitle(L("raccourcis.attention"), help: prefs.attentionAction.explanation
@@ -138,23 +123,18 @@ struct ShortcutsSettings: View {
             }
 
             Section {
-                Button(L("raccourcis.retablir")) {
-                    prefs.resetShortcuts()
-                    rebind()
+                if !hotKeys.rejected.isEmpty {
+                    Avertissement(texte: L("raccourcis.refusees",
+                                           hotKeys.rejected.map(\.displayString).joined(separator: ", ")))
                 }
-                .font(.system(size: 11))
-            }
-
-            if !hotKeys.rejected.isEmpty {
-                Section {
-                    Label(L("raccourcis.refusees",
-                            hotKeys.rejected.map(\.displayString).joined(separator: ", ")),
-                          systemImage: "exclamationmark.triangle")
-                    .font(.system(size: 11)).foregroundStyle(.orange)
+                Ligne(titre: L("raccourcis.retablir.titre")) {
+                    Button(L("raccourcis.retablir")) {
+                        prefs.resetShortcuts()
+                        rebind()
+                    }
                 }
             }
         }
-        .formStyle(.grouped)
     }
 
     // MARK: - Utilitaires

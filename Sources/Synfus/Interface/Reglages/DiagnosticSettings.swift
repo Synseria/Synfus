@@ -16,11 +16,13 @@ struct DiagnosticSettings: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            EnTetePage(titre: L("reglages.diagnostic"), sousTitre: L("diagnostic.sousTitre"))
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
                     content
                 }
-                .padding(14)
+                .padding(.horizontal, 28)
+                .padding(.vertical, 14)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             Divider()
@@ -34,7 +36,8 @@ struct DiagnosticSettings: View {
                     .foregroundStyle(managerDiagnostics.lastInventoryDuration > 0.5 ? .orange : .secondary)
                 Spacer()
             }
-            .padding(10)
+            .padding(.horizontal, 28)
+            .padding(.vertical, 10)
         }
     }
 

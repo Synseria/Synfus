@@ -43,6 +43,18 @@ struct CapturesTests {
         }
     }
 
+    @Test("Captures des réglages", .enabled(if: dossier != nil))
+    func reglages() throws {
+        let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
+        try FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)
+        for section in SettingsSection.allCases {
+            let vue = SettingsView(section: section)
+                .background(Color(nsColor: .windowBackgroundColor))
+                .environment(\.colorScheme, .dark)
+            try ecrire(vue, vers: dossier.appending(path: "reglages-\(section.rawValue).png"))
+        }
+    }
+
     /// Par une fenêtre hors écran : `ImageRenderer` ne dessine ni champ de
     /// texte ni défilement, qui sont des vues AppKit.
     private func ecrire(_ vue: some View, vers url: URL) throws {
