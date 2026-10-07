@@ -56,7 +56,7 @@ struct CapturesTests {
     func reglages() throws {
         let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
         try FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)
-        for (nom, section) in [("reglages", SettingsSection.general), ("reglages-palette", .palette)] {
+        for (nom, section) in [("reglages", SettingsSection.general), ("reglages-zaaps", .zaaps)] {
             let vue = SettingsView(section: section)
                 .background(Color(nsColor: .windowBackgroundColor))
                 .environment(\.colorScheme, .dark)

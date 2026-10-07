@@ -181,12 +181,7 @@ final class PaletteModele: ObservableObject {
 
     func basculerFavori(_ entree: EntreePalette) {
         guard let cle = entree.cle else { return NSSound.beep() }
-        let prefs = Preferences.shared
-        if cle.hasPrefix(Lieu.prefixeCle) {
-            if prefs.lieuxFavoris.contains(cle) { prefs.lieuxFavoris.removeAll { $0 == cle } } else { prefs.lieuxFavoris.append(cle) }
-        } else {
-            if prefs.zaapsFavoris.contains(cle) { prefs.zaapsFavoris.removeAll { $0 == cle } } else { prefs.zaapsFavoris.append(cle) }
-        }
+        Preferences.shared.basculerFavori(cle)
         rafraichir()
     }
 
