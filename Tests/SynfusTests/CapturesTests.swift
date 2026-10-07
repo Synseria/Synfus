@@ -20,7 +20,7 @@ struct CapturesTests {
                                "1:-2,0": "Village", "1:-16,1": "Koalak", "1:5,7": "Bouftou",
                                "1:-31,-56": "Bonta", "1:-26,37": "Brâk"]
         contexte.favoris = ["1:-31,-56", "1:-26,37", "1:-78,-41"]
-        contexte.recents = ["/zaap -31,-56; /travel -31,-57", "/invite Brok; /invite Cid", "%pos%"]
+        contexte.recents = ["/zaap -31,-56 ; /travel -31,-57", "/invite Brok; /invite Cid", "%pos%"]
         contexte.invitationEquipe = "/invite Brok; /invite Cid"
         contexte.invitations = [(nom: "Brok", commande: "/invite Brok"), (nom: "Cid", commande: "/invite Cid")]
         return contexte

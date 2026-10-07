@@ -18,7 +18,7 @@ connectés et permet de passer de l'un à l'autre, d'un clic ou au clavier.
   - `/zaap bonta` : le zaap par son nom, sa zone ou ton étiquette (« Fri 1 »).
   - `/travel banque bonta`, `/travel fm`, `/travel hdv conso` : les 834 lieux
     du jeu (banques, hôtels de vente, ateliers, temples, donjons, transports),
-    le plus proche de toi devant, copiés en `/zaap x,y; /travel a,b` quand
+    le plus proche de toi devant, copiés en `/zaap x,y ; /travel a,b` quand
     le zaap fait gagner du chemin.
   - `/quete wogew` : un panneau transparent avec les ressources à réunir et
     chaque objectif — un clic copie le nom ou le trajet ; `/pnj nom` : la position des PNJ que les quêtes situent.
@@ -28,7 +28,7 @@ connectés et permet de passer de l'un à l'autre, d'un clic ou au clavier.
   ![La palette](docs/screenshots/palette-zaaps.png)
   ![/travel banque bonta](docs/screenshots/palette-travel.png)
 
-- **Zaaps** : un `/travel` copié devient `/zaap x,y; /travel a,b` quand un
+- **Zaaps** : un `/travel` copié devient `/zaap x,y ; /travel a,b` quand un
   zaap épargne assez de cartes — au raccourci, ou tout seul à chaque copie.
   Ta position est lue à l'écran.
 - **Chasse au trésor** : départ lu à l'écran, direction aux flèches, indice

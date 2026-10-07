@@ -50,7 +50,7 @@ struct RecherchePaletteTests {
         #expect(entree.titre == "Banque")
         #expect(entree.sousTitre?.contains("Bonta") == true)
         let texte = try #require(RecherchePalette.texte(de: entree.effet, contexte()))
-        #expect(texte.hasPrefix("/zaap -31,-56; /travel "))
+        #expect(texte.hasPrefix("/zaap -31,-56 ; /travel "))
     }
 
     @Test("Les surnoms des joueurs : fm, hdv conso")
@@ -69,7 +69,7 @@ struct RecherchePaletteTests {
     @Test("/travel x,y : le trajet, zaap compris")
     func travelCoordonnees() {
         #expect(premiere("/travel 6,8", contexte(position: PositionCarte(x: -30, y: -40, zone: nil)))?.effet
-                == .copier("/zaap 5,7; /travel 6,8"))
+                == .copier("/zaap 5,7 ; /travel 6,8"))
     }
 
     @Test("/ liste les commandes ; une commande à argument se complète")
