@@ -42,3 +42,16 @@ enum CategorieLieu: Int, CaseIterable, Sendable {
     case donjon = 6
     case transport = 9
 }
+
+extension CategorieLieu {
+    var titre: String {
+        switch self {
+        case .temple: return L("lieux.categorie.temple")
+        case .hotelDeVente: return L("lieux.categorie.hdv")
+        case .atelier: return L("lieux.categorie.atelier")
+        case .divers: return L("lieux.categorie.divers")
+        case .donjon: return L("lieux.categorie.donjon")
+        case .transport: return L("lieux.categorie.transport")
+        }
+    }
+}

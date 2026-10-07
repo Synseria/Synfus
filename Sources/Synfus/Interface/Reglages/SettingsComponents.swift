@@ -10,11 +10,13 @@ import SwiftUI
 struct PageReglages<Contenu: View>: View {
     let titre: String
     let sousTitre: String
+    /// L'explication longue, derrière le ⓘ du titre.
+    var aide: String?
     @ViewBuilder let contenu: Contenu
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            EnTetePage(titre: titre, sousTitre: sousTitre)
+            EnTetePage(titre: titre, sousTitre: sousTitre, aide: aide)
             Form { contenu }
                 .formStyle(.grouped)
         }
@@ -25,10 +27,14 @@ struct PageReglages<Contenu: View>: View {
 struct EnTetePage: View {
     let titre: String
     let sousTitre: String
+    var aide: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(titre).font(.system(size: 20, weight: .bold))
+            HStack(spacing: 8) {
+                Text(titre).font(.system(size: 20, weight: .bold))
+                if let aide { HelpTip(aide) }
+            }
             Text(sousTitre).font(.system(size: 12)).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -159,6 +165,42 @@ struct ShortcutRow: View {
                 ShortcutRecorder(hotKey: hotKey, allowsBareKeys: allowsBareKeys)
             }
         }
+    }
+}
+
+/// Un raccourci de `Preferences`, sur la grille : il signale lui-même un
+/// doublon avec n'importe quel autre raccourci et réenregistre à chaque
+/// changement — le seul chemin pour en régler un.
+struct RaccourciReglable: View {
+    let label: String
+    var detail: String?
+    var help: String?
+    let chemin: ReferenceWritableKeyPath<Preferences, HotKey?>
+    /// Après l'enregistrement (demander une autorisation…).
+    var apres: (HotKey?) -> Void = { _ in }
+    @ObservedObject private var prefs = Preferences.shared
+
+    var body: some View {
+        let valeur = prefs[keyPath: chemin]
+        ShortcutRow(label: label, detail: detail, help: help,
+                    conflit: valeur.map(HotKeyConflicts.doublons(prefs.raccourcisGlobaux).contains) ?? false,
+                    hotKey: Binding(get: { prefs[keyPath: chemin] }, set: { nouvelle in
+                        prefs[keyPath: chemin] = nouvelle
+                        HotKeyManager.shared.rebind()
+                        apres(nouvelle)
+                    }))
+    }
+}
+
+/// Le champ de recherche en tête d'un onglet de données.
+struct ChampFiltre: View {
+    let invite: String
+    @Binding var texte: String
+
+    var body: some View {
+        TextField(invite, text: $texte, prompt: Text(invite))
+            .labelsHidden()
+            .textFieldStyle(.roundedBorder)
     }
 }
 
