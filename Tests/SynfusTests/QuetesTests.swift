@@ -67,17 +67,20 @@ struct QuetesTests {
         return contexte
     }
 
-    @Test("/quete trouve la quête ; l'ouvrir montre les ressources puis les objectifs")
+    @Test("/quete trouve la quête, qui s'ouvre dans son panneau")
     func palette() throws {
-        let contexte = try contexte()
-        let quete = try #require(RecherchePalette.entrees("/quete wogew", contexte).first)
+        let quete = try #require(RecherchePalette.entrees("/quete wogew", try contexte()).first)
         #expect(quete.effet == .ouvrirQuete(18))
-        let detail = RecherchePalette.quete(18, "", contexte)
-        #expect(detail.first?.genre == .ressource)
-        #expect(detail.first?.effet == .copier("Sang de Wabbit GM"))
-        let otomai = try #require(detail.first { $0.titre.contains("Otomaï") })
-        #expect(otomai.detail == "-2,-4")
-        #expect(RecherchePalette.quete(18, "otomai", contexte).count == 1)
+    }
+
+    @Test("La fiche : ressources additionnées, objectifs résolus, carte quand elle est connue")
+    func fiche() throws {
+        let fiche = try #require(try Self.quetes().fiche(18, en: .fr))
+        #expect(fiche.ressources == [FicheQuete.Ressource(nom: "Sang de Wabbit GM", quantite: 5)])
+        #expect(fiche.etapes.map(\.nom) == ["Analyse de sang", "Le sang du wabbit GM"])
+        let otomai = try #require(fiche.etapes[1].objectifs.first { $0.texte.contains("Otomaï") })
+        #expect(otomai.position == PNJ.Position(x: -2, y: -4))
+        #expect(fiche.etapes[0].objectifs[1].position == nil)
     }
 
     @Test("/pnj et le filtre PNJ : le trajet vers sa position")

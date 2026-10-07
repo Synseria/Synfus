@@ -21,7 +21,6 @@ struct CapturesTests {
                                "1:-31,-56": "Bonta", "1:-26,37": "Brâk"]
         contexte.favoris = ["1:-31,-56", "1:-26,37", "1:-78,-41"]
         contexte.recents = ["/zaap -31,-56; /travel -31,-57", "/invite Brok; /invite Cid", "%pos%"]
-        contexte.persos = [(nom: "Aeryn", slotKey: "1#0"), (nom: "Brok", slotKey: "2#0")]
         contexte.invitationEquipe = "/invite Brok; /invite Cid"
         contexte.invitations = [(nom: "Brok", commande: "/invite Brok"), (nom: "Cid", commande: "/invite Cid")]
         return contexte
@@ -45,16 +44,12 @@ struct CapturesTests {
     @Test("Capture d'une quête ouverte", .enabled(if: dossier != nil))
     func quete() throws {
         let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
-        var contexte = contexte()
-        contexte.quetes = try QuetesTests.quetes()
-        let modele = PaletteModele(contexte: contexte, requete: "/quete wogew")
-        let quete = try #require(modele.entrees.first)
-        modele.executer(quete)
-        let vue = PaletteVue(modele: modele)
+        let fiche = try #require(try QuetesTests.quetes().fiche(18, en: .fr))
+        let vue = QueteVue(ficheImposee: fiche)
             .padding(24)
             .background(Color(red: 0.11, green: 0.11, blue: 0.13))
             .environment(\.colorScheme, .dark)
-        try ecrire(vue, vers: dossier.appending(path: "palette-quete.png"))
+        try ecrire(vue, vers: dossier.appending(path: "quete.png"))
     }
 
     @Test("Captures des réglages", .enabled(if: dossier != nil))
