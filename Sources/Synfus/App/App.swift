@@ -19,6 +19,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ClickAdvanceWatcher.shared.apply()
         FloatingBarController.shared.apply()
         LecteurEcran.shared.start()
+        ZaapClipboard.shared.start()
 
         if !AXIsProcessTrusted() {
             WindowManager.shared.requestAccessibility()

@@ -74,7 +74,8 @@ SYNFUS_CAPTURE=~/Library/Logs/Synfus/captures/x.png sh test.sh RealCapture   # O
 Point d'entrée `SynfusMain` (`App/App.swift`). Composants : singletons `@MainActor` (`.shared`),
 la plupart `ObservableObject`. `applicationDidFinishLaunching` démarre, dans l'ordre :
 `WindowManager` → `FreezeWatcher` → `HotKeyManager.rebind()` → `MenuBarController` →
-`AttentionWatcher` → `ClickAdvanceWatcher` → `FloatingBarController` → `LecteurEcran`.
+`AttentionWatcher` → `ClickAdvanceWatcher` → `FloatingBarController` → `LecteurEcran` →
+`ZaapClipboard`.
 
 `Sources/Synfus/` est rangé par domaine (SwiftPM compile les sous-dossiers sans déclaration). Un
 nouveau fichier va dans le dossier de son domaine ; un fichier sans domaine en annonce un nouveau.
@@ -85,6 +86,7 @@ nouveau fichier va dans le dossier de son domaine ; un fichier sans domaine en a
 | `Accessibilite/` | `AccessibilityReader` (lecture AX, `DofusProcesses`), `--dump-windows`, `CrossSpaceTitles` |
 | `Clients/` | `DofusClient`, `WindowTitle`, `ClientMemory`, `Equipes`, `Rotation` (purs) ; `WindowManager` (+`PremierPlan`, `+Effectif`, `+Focus`, `+Fermeture`), `ClientInventoryEngine`, `ClientTerminator`, `FreezeWatcher` |
 | `Invitations/` | `/invite Nom` : `InvitationComposer` (pur), `InvitationClipboard` |
+| `Zaaps/` | `/zaap x,y; /travel a,b` : table `Zaap`, `ItineraireZaap` (pur), `ZaapClipboard` (raccourci, bouton, veille du presse-papiers) |
 | `Attention/` | Rebond du Dock : `BounceDetector`, `DockPairing` (purs), `DockInspector`, `DockGeometryReader`, `AttentionWatcher`, `AttentionProbe` |
 | `Raccourcis/` | Raccourcis Carbon, enregistreur, conflits, enchaînement au clic |
 | `Rangement/` | `LayoutComputer` (pur), `WindowArranger` |
