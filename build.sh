@@ -130,8 +130,9 @@ if [ -f "Resources/$NAME.icns" ]; then
     /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string $NAME" "$APP/Contents/Info.plist"
 fi
 
-# Les libellés de l'interface, une table JSON par langue.
+# Les libellés de l'interface (une table JSON par langue), la carte intégrée.
 cp -R "Resources/Localisation" "$APP/Contents/Resources/Localisation"
+cp "Resources/Carte.json" "$APP/Contents/Resources/Carte.json"
 
 # Les visuels Ankama, s'ils ont été téléchargés (Tools/fetch-ankama-assets.sh) :
 # embarqués dans ce build-ci, pour cette machine — le dossier est ignoré par

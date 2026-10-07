@@ -140,9 +140,6 @@ final class Preferences: ObservableObject {
     /// Les cartes que le zaap doit épargner pour être proposé.
     @Published var zaapGainMinimal: Int = ItineraireZaap.gainParDefaut { didSet { save() } }
 
-    /// La dernière liste téléchargée de DofusDB ; `nil` : la liste intégrée,
-    /// qui suit ainsi les mises à jour de Synfus.
-    @Published var zaapsDofusDB: ReleveZaaps? { didSet { save() } }
 
     /// Les zaaps ajoutés à la main.
     @Published var zaapsAjoutes: [Zaap] = [] { didSet { save() } }
@@ -429,7 +426,6 @@ final class Preferences: ObservableObject {
         .facultatif("zaapBouton", \.zaapBouton),
         .facultatif("zaapAuto", \.zaapAuto),
         .facultatif("zaapGainMinimal", \.zaapGainMinimal),
-        .optionnel("zaapsDofusDB", \.zaapsDofusDB),
         .facultatif("zaapsAjoutes", \.zaapsAjoutes),
         .facultatif("zaapsChoix", \.zaapsChoix),
         .facultatif("zaapsFavoris", \.zaapsFavoris),

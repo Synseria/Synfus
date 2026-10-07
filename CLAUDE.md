@@ -76,7 +76,7 @@ Point d'entrée `SynfusMain` (`App/App.swift`). Composants : singletons `@MainAc
 la plupart `ObservableObject`. `applicationDidFinishLaunching` démarre, dans l'ordre :
 `WindowManager` → `FreezeWatcher` → `HotKeyManager.rebind()` → `MenuBarController` →
 `AttentionWatcher` → `ClickAdvanceWatcher` → `FloatingBarController` → `LecteurEcran` →
-`ZaapClipboard`.
+`CarteStore` → `ZaapClipboard`.
 
 `Sources/Synfus/` est rangé par domaine (SwiftPM compile les sous-dossiers sans déclaration). Un
 nouveau fichier va dans le dossier de son domaine ; un fichier sans domaine en annonce un nouveau.
@@ -87,7 +87,8 @@ nouveau fichier va dans le dossier de son domaine ; un fichier sans domaine en a
 | `Accessibilite/` | `AccessibilityReader` (lecture AX, `DofusProcesses`), `--dump-windows`, `CrossSpaceTitles` |
 | `Clients/` | `DofusClient`, `WindowTitle`, `ClientMemory`, `Equipes`, `Rotation` (purs) ; `WindowManager` (+`PremierPlan`, `+Effectif`, `+Focus`, `+Fermeture`), `ClientInventoryEngine`, `ClientTerminator`, `FreezeWatcher` |
 | `Invitations/` | `/invite Nom` : `InvitationComposer` (pur), `InvitationClipboard` |
-| `Zaaps/` | `/zaap x,y; /travel a,b` : `Zaap` (liste intégrée), `CatalogueZaaps`, `ItineraireZaap` (purs), `ZaapsDofusDB` (mise à jour), `ZaapClipboard` (raccourci, bouton, veille du presse-papiers) |
+| `Carte/` | Tous les repères du jeu (zaaps, banques, ateliers, donjons…) : `Lieu`, `Carte` (purs), `CarteDofusDB` (téléchargement, cache disque, `--exporter-carte` → `Resources/Carte.json`), `CarteStore` |
+| `Zaaps/` | `/zaap x,y; /travel a,b` : `Zaap` (tiré de la carte), `CatalogueZaaps`, `ItineraireZaap` (purs), `ZaapClipboard` (raccourci, bouton, veille du presse-papiers) |
 | `Chasse/` | Chasse au trésor : `IndicesChasse`, `EtapeChasse` (purs), `ChasseDofusDB` (indices en cache disque, étape à la demande), `ChasseModele`, `ChassePanel` (panneau key sans activer Synfus), `ChasseVue` |
 | `Attention/` | Rebond du Dock : `BounceDetector`, `DockPairing` (purs), `DockInspector`, `DockGeometryReader`, `AttentionWatcher`, `AttentionProbe` |
 | `Raccourcis/` | Raccourcis Carbon, enregistreur, conflits, enchaînement au clic |

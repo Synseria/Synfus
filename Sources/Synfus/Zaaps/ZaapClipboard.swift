@@ -36,11 +36,6 @@ final class ZaapClipboard: ObservableObject {
                 MainActor.assumeIsolated { actif ? self?.armer() : self?.desarmer() }
             }
             .store(in: &subscriptions)
-        // Discrète : un échec garde la liste en place, le bouton des réglages
-        // reste là pour réessayer et dire pourquoi.
-        if ZaapsDofusDB.aRafraichir(releve: Preferences.shared.zaapsDofusDB, maintenant: Date()) {
-            Task { try? await ZaapsDofusDB.mettreAJour(Preferences.shared) }
-        }
     }
 
     /// Copie `/travel x,y`, précédé du zaap qui fait gagner assez de cartes

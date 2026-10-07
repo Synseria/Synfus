@@ -7,7 +7,7 @@ import Testing
 struct ItineraireZaapTests {
 
     /// Les zaaps actifs d'une installation neuve.
-    private let zaaps = CatalogueZaaps.actifs(base: Zaap.integres, ajoutes: [], choix: [:])
+    private let zaaps = CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [], choix: [:])
 
     private func position(_ x: Int, _ y: Int, zone: String? = nil) -> PositionCarte {
         PositionCarte(x: x, y: y, zone: zone)
@@ -58,10 +58,10 @@ struct ItineraireZaapTests {
 
     @Test("La liste intégrée : aucun zaap en double, ceux d'une autre carte inactifs")
     func table() {
-        let cles = Zaap.integres.map(\.cle)
+        let cles = Carte.integree.zaaps.map(\.cle)
         #expect(Set(cles).count == cles.count)
-        #expect(Zaap.integres.count == 45)
-        let incarnam = try? #require(Zaap.integres.first { $0.monde == 2 && $0.x == 3 && $0.y == 0 })
+        #expect(Carte.integree.zaaps.count == 45)
+        let incarnam = try? #require(Carte.integree.zaaps.first { $0.monde == 2 && $0.x == 3 && $0.y == 0 })
         #expect(incarnam.map { CatalogueZaaps.estActif($0, choix: [:]) } == false)
         #expect(zaaps.allSatisfy { $0.monde == Zaap.mondeDesDouze })
         // Sans cela, un /travel 3,-1 d'Amakna passerait par le cimetière d'Incarnam.
@@ -71,9 +71,9 @@ struct ItineraireZaapTests {
 
     @Test("Un zaap décoché n'est plus proposé, un zaap d'une autre carte coché l'est")
     func choix() {
-        let chateau = Zaap.integres.first { $0.x == 3 && $0.y == -5 }!
-        let cimetiere = Zaap.integres.first { $0.monde == 2 && $0.x == 3 && $0.y == 0 }!
-        let actifs = CatalogueZaaps.actifs(base: Zaap.integres, ajoutes: [],
+        let chateau = Carte.integree.zaaps.first { $0.x == 3 && $0.y == -5 }!
+        let cimetiere = Carte.integree.zaaps.first { $0.monde == 2 && $0.x == 3 && $0.y == 0 }!
+        let actifs = CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [],
                                            choix: [chateau.cle: false, cimetiere.cle: true])
         #expect(!actifs.contains(chateau))
         #expect(actifs.contains(cimetiere))
@@ -83,31 +83,12 @@ struct ItineraireZaapTests {
     func ajouts() {
         let nouveau = Zaap(50, 50, noms: ["fr": "Nouveau"])
         let doublon = Zaap(-2, 0, noms: ["fr": "Autre nom"])
-        let tous = CatalogueZaaps.tous(base: Zaap.integres, ajoutes: [nouveau, doublon])
-        #expect(tous.count == Zaap.integres.count + 1)
+        let tous = CatalogueZaaps.tous(base: Carte.integree.zaaps, ajoutes: [nouveau, doublon])
+        #expect(tous.count == Carte.integree.zaaps.count + 1)
         #expect(tous.first { $0.cle == doublon.cle }?.nom(en: .fr) == "Village d'Amakna")
-        let actifs = CatalogueZaaps.actifs(base: Zaap.integres, ajoutes: [nouveau], choix: [:])
+        let actifs = CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [nouveau], choix: [:])
         #expect(ItineraireZaap.reecrire("/travel 51,50", depuis: position(0, 0), gainMinimal: 5, zaaps: actifs)
                 == "/zaap 50,50; /travel 51,50")
-    }
-
-    @Test("La réponse de DofusDB donne un zaap par case, nommé par sa sous-zone")
-    func dofusDB() throws {
-        let reperes = """
-        {"total":3,"data":[{"x":-2,"y":0,"worldMapId":1,"subareaId":10},
-          {"x":-2,"y":0,"worldMapId":1,"subareaId":10},{"x":3,"y":0,"worldMapId":2,"subareaId":449}]}
-        """
-        let sousZones = """
-        {"total":1,"data":[{"id":10,"name":{"id":"1","fr":"Village d'Amakna","en":"Amakna Village","es":"Pueblo de Amakna"}}]}
-        """
-        let decodeur = JSONDecoder()
-        let zaaps = ZaapsDofusDB.assembler(
-            reperes: try decodeur.decode(DofusDB.Page<ZaapsDofusDB.Repere>.self, from: Data(reperes.utf8)).data,
-            sousZones: try decodeur.decode(DofusDB.Page<ZaapsDofusDB.SousZone>.self, from: Data(sousZones.utf8)).data)
-        #expect(zaaps.count == 2)
-        #expect(zaaps[0] == Zaap(-2, 0, noms: ["fr": "Village d'Amakna", "en": "Amakna Village", "es": "Pueblo de Amakna"]))
-        #expect(zaaps[1].monde == 2)
-        #expect(zaaps[1].nom(en: .en) == "Zaap")
     }
 
     @Test("Les commandes composées se relisent comme une cible")
@@ -152,20 +133,5 @@ struct ItineraireZaapTests {
         let zaaps = [astrub, bouftous, amakna]
         #expect(CatalogueZaaps.parDistance(zaaps, depuis: nil) == zaaps)
         #expect(CatalogueZaaps.parDistance(zaaps, depuis: position(4, 6, zone: "Incarnam")) == zaaps)
-    }
-
-    // MARK: - Mise à jour DofusDB
-
-    @Test("La liste DofusDB se rafraîchit absente ou vieille de plus de 30 jours")
-    func aRafraichir() {
-        let maintenant = Date(timeIntervalSinceReferenceDate: 800_000_000)
-        let jour: TimeInterval = 24 * 3600
-        func releve(age: TimeInterval) -> ReleveZaaps {
-            ReleveZaaps(date: maintenant.addingTimeInterval(-age), zaaps: [])
-        }
-        #expect(ZaapsDofusDB.aRafraichir(releve: nil, maintenant: maintenant))
-        #expect(!ZaapsDofusDB.aRafraichir(releve: releve(age: 29 * jour), maintenant: maintenant))
-        #expect(!ZaapsDofusDB.aRafraichir(releve: releve(age: 30 * jour), maintenant: maintenant))
-        #expect(ZaapsDofusDB.aRafraichir(releve: releve(age: 31 * jour), maintenant: maintenant))
     }
 }
