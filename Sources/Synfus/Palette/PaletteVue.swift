@@ -5,6 +5,7 @@ import SwiftUI
 /// (`PanneauPalette`) ; la vue ne fait que montrer la sélection.
 struct PaletteVue: View {
     @ObservedObject var modele = PaletteModele.shared
+    @ObservedObject private var quetes = QuetesStore.shared
     @FocusState private var champ: Champ?
 
     private enum Champ { case recherche, etiquette }
@@ -12,7 +13,7 @@ struct PaletteVue: View {
     var body: some View {
         VStack(spacing: 0) {
             recherche
-            filtres
+            if modele.queteOuverte == nil { filtres }
             Divider()
             resultats
             Divider()
@@ -71,12 +72,15 @@ struct PaletteVue: View {
     }
 
     private var mode: String {
+        if let quete = modele.titreQuete { return quete }
         let texte = modele.requete.trimmingCharacters(in: .whitespaces)
         if texte.isEmpty { return L("palette.mode.zaaps") }
         if texte.hasPrefix("%") { return L("palette.mode.variables") }
         if texte.hasPrefix("/zaap") { return "/zaap" }
         if texte.hasPrefix("/travel") { return "/travel" }
         if texte.hasPrefix("/invite") { return "/invite" }
+        if texte.hasPrefix("/quete") || texte.hasPrefix("/quête") { return "/quete" }
+        if texte.hasPrefix("/pnj") { return "/pnj" }
         if texte.hasPrefix("/") { return L("palette.mode.commandes") }
         return L("palette.mode.tout")
     }
@@ -86,7 +90,7 @@ struct PaletteVue: View {
     @ViewBuilder
     private var resultats: some View {
         if modele.entrees.isEmpty {
-            Text(L("palette.aucun"))
+            Text(quetes.chargement && quetes.quetes == nil ? L("palette.quetes.chargement") : L("palette.aucun"))
                 .font(.system(size: 13))
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity)
@@ -191,7 +195,7 @@ struct PaletteVue: View {
                 aide("⌘D", L("palette.touche.favori"))
                 aide("⌘T", L("palette.touche.tri"))
                 Spacer()
-                aide("esc", L("palette.touche.fermer"))
+                aide("esc", modele.queteOuverte == nil ? L("palette.touche.fermer") : L("palette.touche.retour"))
             }
             .font(.system(size: 11))
             .foregroundStyle(.secondary)
@@ -203,10 +207,12 @@ struct PaletteVue: View {
     /// Ce qu'Entrée fera de la sélection — le texte même qui sera copié.
     private var entree: String {
         guard modele.entrees.indices.contains(modele.selection) else { return L("palette.touche.valider") }
-        switch modele.entrees[modele.selection].effet {
-        case .copier(let texte): return L("palette.touche.copier", texte)
+        let entree = modele.entrees[modele.selection]
+        switch entree.effet {
+        case .copier, .trajet: return L("palette.touche.copier", modele.texteACopier(entree) ?? "")
         case .completer: return L("palette.touche.completer")
         case .basculer, .action: return L("palette.touche.faire")
+        case .ouvrirQuete: return L("palette.touche.ouvrir")
         }
     }
 
@@ -320,6 +326,10 @@ private struct LigneResultat: View {
         case .perso: return "person"
         case .action: return "bolt"
         case .recent: return "clock.arrow.circlepath"
+        case .quete: return "scroll"
+        case .pnj: return "person.wave.2"
+        case .ressource: return "shippingbox"
+        case .objectif: return "checklist"
         }
     }
 }

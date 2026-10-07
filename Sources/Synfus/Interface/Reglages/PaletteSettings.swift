@@ -6,6 +6,7 @@ import SwiftUI
 struct PaletteSettings: View {
     @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var carte = CarteStore.shared
+    @ObservedObject private var quetes = QuetesStore.shared
     @State private var miseAJour = false
     @State private var echec: String?
     @State private var filtre = ""
@@ -176,6 +177,15 @@ struct PaletteSettings: View {
                     Button(L("zaap.maj"), action: mettreAJour).disabled(miseAJour)
                 }
             }
+            Ligne(titre: sourceQuetes, sousTexte: quetes.quetes.map {
+                      L("palette.reglages.quetes.contenu", $0.quetes.count, $0.pnjs.count) },
+                  aide: L("palette.reglages.quetes.aide")) {
+                HStack(spacing: 8) {
+                    if quetes.chargement { ProgressView().controlSize(.small) }
+                    Button(L("palette.reglages.quetes.maj")) { Task { try? await quetes.mettreAJour() } }
+                        .disabled(quetes.chargement)
+                }
+            }
         } header: {
             SectionTitle(L("palette.reglages.carte"))
         }
@@ -184,6 +194,12 @@ struct PaletteSettings: View {
     private var source: String {
         if let echec { return L("zaap.maj.echec", echec) }
         return L("zaap.maj.date", carte.carte.date.formatted(date: .abbreviated, time: .shortened))
+    }
+
+    private var sourceQuetes: String {
+        if let echec = quetes.echec { return L("zaap.maj.echec", echec) }
+        guard let date = quetes.quetes?.date else { return L("palette.reglages.quetes.aucune") }
+        return L("palette.reglages.quetes.date", date.formatted(date: .abbreviated, time: .shortened))
     }
 
     private func mettreAJour() {

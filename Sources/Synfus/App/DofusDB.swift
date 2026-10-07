@@ -43,6 +43,36 @@ enum DofusDB {
         return try JSONDecoder().decode(Page<Element>.self, from: donnees)
     }
 
+    /// Toutes les pages, plusieurs à la fois : la première dit le total, les
+    /// autres partent ensemble, `simultanees` au plus — pour les grandes
+    /// listes (quêtes), qu'une page à la fois ferait attendre une minute.
+    static func toutesEnParallele<Element: Decodable & Sendable>(
+        _ chemin: String, _ filtres: [URLQueryItem], simultanees: Int = 6
+    ) async throws -> [Element] {
+        func pageA(_ debut: Int) async throws -> Page<Element> {
+            try await page(chemin, filtres + [URLQueryItem(name: "$limit", value: "\(parPage)"),
+                                              URLQueryItem(name: "$skip", value: "\(debut)")])
+        }
+        let premiere = try await pageA(0)
+        let debuts = Array(stride(from: parPage, to: premiere.total, by: parPage))
+        var pages: [Int: [Element]] = [0: premiere.data]
+        try await withThrowingTaskGroup(of: (Int, [Element]).self) { groupe in
+            var suivant = 0
+            func lancer() {
+                guard suivant < debuts.count else { return }
+                let debut = debuts[suivant]
+                suivant += 1
+                groupe.addTask { (debut, try await pageA(debut).data) }
+            }
+            for _ in 0..<simultanees { lancer() }
+            while let (debut, elements) = try await groupe.next() {
+                pages[debut] = elements
+                lancer()
+            }
+        }
+        return pages.keys.sorted().flatMap { pages[$0] ?? [] }
+    }
+
     /// Toutes les pages, `parPage` à la fois.
     static func toutes<Element: Decodable>(_ chemin: String, _ filtres: [URLQueryItem]) async throws -> [Element] {
         var elements: [Element] = []
