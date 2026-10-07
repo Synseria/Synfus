@@ -74,14 +74,6 @@ final class InvitationClipboard: ObservableObject {
         signaler([client])
     }
 
-    /// Le texte que le clic droit annonce, pour que le menu dise ce qu'il fera.
-    func commande(pour client: DofusClient) -> String {
-        InvitationComposer.commande(
-            format: Preferences.shared.inviteFormat,
-            nom: WindowTitle.characterName(fromTitle: client.rawTitle)
-        )
-    }
-
     private func poser(nom: String) {
         PressePapiers.copier(InvitationComposer.commande(format: Preferences.shared.inviteFormat, nom: nom))
     }
