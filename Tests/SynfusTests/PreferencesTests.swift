@@ -501,6 +501,9 @@ struct PreferencesTests {
      "slotCount":3,"toggleAutoFocus":{"keyCode":99,"modifiers":0},
      "zaapAuto":true,"zaapBouton":false,"zaapGainMinimal":8,
      "zaapHotKey":{"keyCode":17,"modifiers":2048},
+     "zaapsAjoutes":[{"monde":1,"noms":{"fr":"Mon zaap"},"x":50,"y":-50}],
+     "zaapsChoix":{"1:-2,0":false},
+     "zaapsDofusDB":{"date":800000000,"zaaps":[{"monde":1,"noms":{"en":"Amakna Village","fr":"Village d'Amakna"},"x":-2,"y":0}]},
      "toggleBar":{"keyCode":11,"modifiers":768},
      "zoneCombat":{"hauteur":0.125,"largeur":0.25,"x":0.125,"y":0.75},
      "zonePosition":{"hauteur":0.0625,"largeur":0.25,"x":0.5,"y":0.25}}
@@ -546,6 +549,11 @@ struct PreferencesTests {
         #expect(prefs.zaapBouton == false)
         #expect(prefs.zaapAuto == true)
         #expect(prefs.zaapGainMinimal == 8)
+        #expect(prefs.zaapsAjoutes == [Zaap(50, -50, noms: ["fr": "Mon zaap"])])
+        #expect(prefs.zaapsChoix == ["1:-2,0": false])
+        #expect(prefs.zaapsDofusDB == ReleveZaaps(
+            date: Date(timeIntervalSinceReferenceDate: 800_000_000),
+            zaaps: [Zaap(-2, 0, noms: ["fr": "Village d'Amakna", "en": "Amakna Village"])]))
     }
 
     @Test("Chaque réglage s'écrit sous sa clé, avec son encodage")
@@ -588,6 +596,11 @@ struct PreferencesTests {
         prefs.zaapBouton = false
         prefs.zaapAuto = true
         prefs.zaapGainMinimal = 8
+        prefs.zaapsAjoutes = [Zaap(50, -50, noms: ["fr": "Mon zaap"])]
+        prefs.zaapsChoix = ["1:-2,0": false]
+        prefs.zaapsDofusDB = ReleveZaaps(
+            date: Date(timeIntervalSinceReferenceDate: 800_000_000),
+            zaaps: [Zaap(-2, 0, noms: ["fr": "Village d'Amakna", "en": "Amakna Village"])])
 
         #expect(canonique(store.donnees(pour: Preferences.key))
                 == canonique(Data(Self.empreinte.utf8)))
@@ -615,7 +628,7 @@ struct PreferencesTests {
          "killFrozenClients":true,"lireCombat":false,"lirePosition":false,"menuBarIcon":"logo",
          "showClasses":true,"showNumbers":true,"showPreviewOnHover":false,
          "signalerBascule":true,"slotCount":1,"zaapAuto":false,"zaapBouton":true,
-         "zaapGainMinimal":5}
+         "zaapGainMinimal":5,"zaapsAjoutes":[],"zaapsChoix":{}}
         """
         #expect(canonique(store.donnees(pour: Preferences.key)) == canonique(Data(attendu.utf8)))
     }

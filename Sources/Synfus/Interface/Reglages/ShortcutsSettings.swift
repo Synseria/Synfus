@@ -10,11 +10,7 @@ struct ShortcutsSettings: View {
     /// Les combinaisons données deux fois : le système n'en enregistre qu'une,
     /// et l'autre ligne restait affichée comme si elle marchait.
     private var doublons: Set<HotKey> {
-        HotKeyConflicts.doublons(prefs.hotKeys + [
-            prefs.cycleNext, prefs.cyclePrevious, prefs.toggleBar, prefs.previewHotKey,
-            prefs.arrangeHotKey, prefs.sessionHotKey, prefs.equipeSuivanteHotKey,
-            prefs.inviteHotKey, prefs.zaapHotKey, prefs.toggleAutoFocus,
-        ])
+        HotKeyConflicts.doublons(prefs.raccourcisGlobaux)
     }
 
     private func enConflit(_ hotKey: HotKey?) -> Bool {
@@ -87,35 +83,6 @@ struct ShortcutsSettings: View {
                 }
             } header: {
                 SectionTitle(L("raccourcis.inviter"), help: L("raccourcis.inviter.aide"))
-            }
-
-            Section {
-                ShortcutRow(label: L("raccourcis.zaap"), help: L("raccourcis.zaap.aide"),
-                            conflit: enConflit(prefs.zaapHotKey), hotKey: hotKey(\.zaapHotKey))
-                Stepper(L("raccourcis.zaap.gain", prefs.zaapGainMinimal),
-                        value: $prefs.zaapGainMinimal, in: ItineraireZaap.gainsPossibles)
-                if prefs.lirePosition {
-                    Toggle(L("raccourcis.zaap.bouton"), isOn: $prefs.zaapBouton)
-                    HStack {
-                        Toggle(L("raccourcis.zaap.auto"), isOn: $prefs.zaapAuto)
-                        HelpTip(L("raccourcis.zaap.auto.aide"))
-                    }
-                } else {
-                    HStack {
-                        Label(L("raccourcis.zaap.sansPosition"), systemImage: "exclamationmark.triangle")
-                            .font(.system(size: 11)).foregroundStyle(.orange)
-                        Spacer()
-                        Button(L("raccourcis.zaap.lirePosition")) {
-                            prefs.lirePosition = true
-                            if !WindowPreviewService.shared.authorized {
-                                WindowPreviewService.shared.requestAuthorization()
-                            }
-                        }
-                        .font(.system(size: 11))
-                    }
-                }
-            } header: {
-                SectionTitle(L("raccourcis.zaap.titre"), help: L("raccourcis.zaap.titre.aide"))
             }
 
             Section {
