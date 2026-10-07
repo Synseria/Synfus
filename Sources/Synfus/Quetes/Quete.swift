@@ -98,3 +98,47 @@ struct PNJ: Codable, Equatable, Sendable {
     let noms: [String: String]
     let positions: [Position]
 }
+
+/// Une quête prête à montrer : noms résolus dans la langue, ressources
+/// additionnées, objectifs et leur carte quand elle est connue.
+struct FicheQuete: Equatable, Sendable {
+    struct Ressource: Equatable, Sendable {
+        let nom: String
+        let quantite: Int
+    }
+
+    struct Objectif: Equatable, Sendable {
+        let texte: String
+        let position: PNJ.Position?
+    }
+
+    struct Etape: Equatable, Sendable {
+        let nom: String
+        let objectifs: [Objectif]
+    }
+
+    let nom: String
+    let niveau: Int
+    let ressources: [Ressource]
+    let etapes: [Etape]
+}
+
+extension Quetes {
+    func fiche(_ id: Int, en langue: Langue) -> FicheQuete? {
+        guard let quete = quetes.first(where: { $0.id == id }) else { return nil }
+        return FicheQuete(
+            nom: Lieu.traduit(quete.noms, langue) ?? "?",
+            niveau: quete.niveau,
+            ressources: Self.ressources(quete).map {
+                FicheQuete.Ressource(nom: nomObjet($0.objet, en: langue), quantite: $0.quantite)
+            },
+            etapes: quete.etapes.map { etape in
+                FicheQuete.Etape(nom: Lieu.traduit(etape.noms, langue) ?? "", objectifs: etape.objectifs.map { objectif in
+                    var position: PNJ.Position?
+                    if let x = objectif.x, let y = objectif.y { position = PNJ.Position(x: x, y: y) }
+                    return FicheQuete.Objectif(
+                        texte: texte(Lieu.traduit(objectif.textes, langue) ?? "", en: langue), position: position)
+                })
+            })
+    }
+}
