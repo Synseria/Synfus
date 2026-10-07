@@ -86,7 +86,7 @@ nouveau fichier va dans le dossier de son domaine ; un fichier sans domaine en a
 | `Accessibilite/` | `AccessibilityReader` (lecture AX, `DofusProcesses`), `--dump-windows`, `CrossSpaceTitles` |
 | `Clients/` | `DofusClient`, `WindowTitle`, `ClientMemory`, `Equipes`, `Rotation` (purs) ; `WindowManager` (+`PremierPlan`, `+Effectif`, `+Focus`, `+Fermeture`), `ClientInventoryEngine`, `ClientTerminator`, `FreezeWatcher` |
 | `Invitations/` | `/invite Nom` : `InvitationComposer` (pur), `InvitationClipboard` |
-| `Zaaps/` | `/zaap x,y; /travel a,b` : table `Zaap`, `ItineraireZaap` (pur), `ZaapClipboard` (raccourci, bouton, veille du presse-papiers) |
+| `Zaaps/` | `/zaap x,y; /travel a,b` : `Zaap` (liste intégrée), `CatalogueZaaps`, `ItineraireZaap` (purs), `ZaapsDofusDB` (mise à jour), `ZaapClipboard` (raccourci, bouton, veille du presse-papiers) |
 | `Attention/` | Rebond du Dock : `BounceDetector`, `DockPairing` (purs), `DockInspector`, `DockGeometryReader`, `AttentionWatcher`, `AttentionProbe` |
 | `Raccourcis/` | Raccourcis Carbon, enregistreur, conflits, enchaînement au clic |
 | `Rangement/` | `LayoutComputer` (pur), `WindowArranger` |

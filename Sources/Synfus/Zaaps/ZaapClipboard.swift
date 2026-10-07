@@ -71,7 +71,7 @@ final class ZaapClipboard: ObservableObject {
         guard let texte = PressePapiers.lire(),
               let nouveau = ItineraireZaap.reecrire(
                   texte, depuis: LecteurEcran.shared.positionDuPersoDevant,
-                  gainMinimal: Preferences.shared.zaapGainMinimal)
+                  gainMinimal: Preferences.shared.zaapGainMinimal, zaaps: Preferences.shared.zaapsActifs)
         else { return false }
         PressePapiers.copier(nouveau)
         generationVue = PressePapiers.generation

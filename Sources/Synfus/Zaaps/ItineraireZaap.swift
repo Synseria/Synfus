@@ -33,16 +33,18 @@ enum ItineraireZaap {
         abs(a.x - b.x) + abs(a.y - b.y)
     }
 
-    static func zaapLePlusProche(de cible: (x: Int, y: Int)) -> Zaap? {
-        Zaap.tous.min { distance(($0.x, $0.y), cible) < distance(($1.x, $1.y), cible) }
+    static func zaapLePlusProche(de cible: (x: Int, y: Int), parmi zaaps: [Zaap]) -> Zaap? {
+        zaaps.min { distance(($0.x, $0.y), cible) < distance(($1.x, $1.y), cible) }
     }
 
-    /// `/zaap x,y; /travel a,b` si le zaap le plus proche de la cible épargne
-    /// au moins `gainMinimal` cartes depuis `position` ; `nil` sinon.
-    static func reecrire(_ texte: String, depuis position: PositionCarte?, gainMinimal: Int) -> String? {
+    /// `/zaap x,y; /travel a,b` si le zaap de `zaaps` le plus proche de la
+    /// cible épargne au moins `gainMinimal` cartes depuis `position` ; `nil` sinon.
+    static func reecrire(
+        _ texte: String, depuis position: PositionCarte?, gainMinimal: Int, zaaps: [Zaap]
+    ) -> String? {
         guard let cible = cible(dans: texte),
               let position, !horsDuMondeDesDouze(position.zone),
-              let zaap = zaapLePlusProche(de: cible)
+              let zaap = zaapLePlusProche(de: cible, parmi: zaaps)
         else { return nil }
         let gain = distance((position.x, position.y), cible) - distance((zaap.x, zaap.y), cible)
         guard gain >= gainMinimal else { return nil }
