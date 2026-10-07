@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 
 /// L'état de la palette : la recherche, la sélection, l'étiquette en cours
 /// d'écriture. Ce qui se cherche est dans `RecherchePalette` ; ici, le
@@ -28,33 +29,65 @@ final class PaletteModele: ObservableObject {
     @Published var texteEtiquette = ""
     /// Change à chaque ouverture : la vue redonne le clavier au champ.
     @Published private(set) var ouverture = 0
+    /// La quête dont on voit le détail ; Échap revient à la recherche d'où
+    /// elle a été ouverte.
+    @Published private(set) var queteOuverte: Int?
+    private var requeteAvantQuete = ""
+    private var abonnements: Set<AnyCancellable> = []
 
-    private var contexte = ContextePalette()
+    private var contexte = ContextePalette() {
+        didSet { index = IndexPalette(contexte) }
+    }
+    private var index = IndexPalette(ContextePalette())
     /// Le contexte imposé (tests, captures de la documentation) ; `nil` : celui
     /// du moment, relu à chaque ouverture.
     private let contexteImpose: ContextePalette?
 
-    private init() { contexteImpose = nil }
+    /// Les quêtes arrivent après l'ouverture la première fois : la recherche
+    /// en cours les reçoit dès qu'elles sont là.
+    private init() {
+        contexteImpose = nil
+        QuetesStore.shared.$quetes
+            .dropFirst()
+            .sink { quetes in
+                MainActor.assumeIsolated {
+                    let modele = PaletteModele.shared
+                    modele.contexte.quetes = quetes
+                    modele.recalculer()
+                }
+            }
+            .store(in: &abonnements)
+    }
 
     /// Une palette hors de l'app, sur un contexte donné.
     init(contexte: ContextePalette, requete: String = "", filtre: FiltrePalette = .tout) {
         contexteImpose = contexte
         self.contexte = contexte
+        index = IndexPalette(contexte)
         self.requete = requete
         self.filtre = filtre
         recalculer()
     }
 
     var enGrille: Bool {
-        requete.trimmingCharacters(in: .whitespaces).isEmpty && (filtre == .tout || filtre == .zaaps)
+        queteOuverte == nil && requete.trimmingCharacters(in: .whitespaces).isEmpty
+            && (filtre == .tout || filtre == .zaaps)
+    }
+
+    /// Le nom de la quête ouverte, pour l'en-tête.
+    var titreQuete: String? {
+        guard let id = queteOuverte, let quete = contexte.quetes?.quetes.first(where: { $0.id == id }) else { return nil }
+        return Lieu.traduit(quete.noms, contexte.langue)
     }
 
     /// Les dernières copies, montrées au-dessus des cartes.
     var recents: [EntreePalette] { RecherchePalette.recents(contexte) }
 
     func ouvrir() {
+        if contexteImpose == nil { QuetesStore.shared.preparer() }
         contexte = contexteImpose ?? Self.contexteCourant()
         filtre = .tout
+        queteOuverte = nil
         tri = contexteImpose == nil ? Preferences.shared.paletteTri : tri
         edition = nil
         requete = ""
@@ -81,6 +114,7 @@ final class PaletteModele: ObservableObject {
     /// Tab : compléter une commande, sinon passer au filtre suivant (⇧Tab :
     /// au précédent).
     func tabulation(arriere: Bool = false) {
+        guard queteOuverte == nil else { return }
         if !arriere, entrees.indices.contains(selection), case .completer(let texte) = entrees[selection].effet {
             requete = texte
             return
@@ -110,16 +144,30 @@ final class PaletteModele: ObservableObject {
         basculerFavori(entrees[selection])
     }
 
-    /// Échap : quitte l'étiquette, sinon ferme.
+    /// Échap : quitte l'étiquette, puis la quête ouverte, sinon ferme.
     func echap() {
-        if edition != nil { edition = nil } else { PalettePanel.shared.fermer() }
+        if edition != nil {
+            edition = nil
+        } else if queteOuverte != nil {
+            queteOuverte = nil
+            requete = requeteAvantQuete
+            recalculer()
+        } else {
+            PalettePanel.shared.fermer()
+        }
     }
 
     // MARK: - Effets
 
+    /// Ce qu'Entrée copiera pour cette entrée, trajet calculé depuis le perso devant.
+    func texteACopier(_ entree: EntreePalette) -> String? {
+        RecherchePalette.texte(de: entree.effet, contexte)
+    }
+
     func executer(_ entree: EntreePalette) {
         switch entree.effet {
-        case .copier(let texte):
+        case .copier, .trajet:
+            guard let texte = texteACopier(entree) else { return }
             PressePapiers.copier(texte)
             if contexteImpose == nil {
                 Preferences.shared.paletteRecents = RecherchePalette.noterRecent(texte, dans: Preferences.shared.paletteRecents)
@@ -127,6 +175,12 @@ final class PaletteModele: ObservableObject {
             PalettePanel.shared.fermer()
         case .completer(let texte):
             requete = texte
+        case .ouvrirQuete(let id):
+            requeteAvantQuete = requete
+            queteOuverte = id
+            requete = ""
+            selection = 0
+            recalculer()
         case .basculer(let slotKey):
             PalettePanel.shared.fermer()
             if let client = WindowManager.shared.clients.first(where: { $0.slotKey == slotKey }) {
@@ -187,7 +241,11 @@ final class PaletteModele: ObservableObject {
     }
 
     private func recalculer() {
-        entrees = RecherchePalette.entrees(requete, contexte, filtre: filtre, tri: tri)
+        if let queteOuverte {
+            entrees = RecherchePalette.quete(queteOuverte, requete, contexte)
+        } else {
+            entrees = RecherchePalette.entrees(requete, index, filtre: filtre, tri: tri)
+        }
         if selection >= entrees.count { selection = max(entrees.count - 1, 0) }
     }
 
@@ -205,6 +263,7 @@ final class PaletteModele: ObservableObject {
         contexte.etiquettes = prefs.etiquettes
         contexte.favoris = Set(prefs.zaapsFavoris + prefs.lieuxFavoris)
         contexte.recents = prefs.paletteRecents
+        contexte.quetes = QuetesStore.shared.quetes
         contexte.persos = manager.clients
             .filter { WindowTitle.isPersistableName($0.name) }
             .map { ($0.name, $0.slotKey) }
