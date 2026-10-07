@@ -46,6 +46,7 @@ struct CapturesTests {
         let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
         let fiche = try #require(try QuetesTests.quetes().fiche(18, en: .fr))
         let vue = QueteVue(ficheImposee: fiche)
+            .frame(width: 360, height: 420)
             .padding(24)
             .background(Color(red: 0.11, green: 0.11, blue: 0.13))
             .environment(\.colorScheme, .dark)

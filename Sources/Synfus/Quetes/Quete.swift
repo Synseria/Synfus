@@ -13,6 +13,9 @@ struct Quetes: Codable, Equatable, Sendable {
     let nomsPNJ: [String: [String: String]]
     /// Les sous-zones où les quêtes placent des PNJ, et leur zone.
     let sousZones: [String: SousZoneNommee]
+    /// La catégorie de chaque objet cité (« Ressource », « Consommable »,
+    /// « Objet de quête »…), par identifiant d'objet.
+    let categoriesObjets: [String: [String: String]]
 
     /// Moins de quêtes que cela : une réponse tronquée.
     static let minimumPlausible = 500
@@ -71,6 +74,10 @@ struct Quete: Codable, Equatable, Sendable {
     let id: Int
     let noms: [String: String]
     let niveau: Int
+    /// À faire à plusieurs.
+    let groupe: Bool
+    /// Passe par un donjon.
+    let donjon: Bool
     let etapes: [EtapeQuete]
 }
 
@@ -122,6 +129,8 @@ struct FicheQuete: Equatable, Sendable {
     struct Ressource: Equatable, Sendable {
         let nom: String
         let quantite: Int
+        /// « Ressource », « Consommable », « Objet de quête »…
+        let categorie: String?
     }
 
     struct Objectif: Equatable, Sendable {
@@ -136,6 +145,8 @@ struct FicheQuete: Equatable, Sendable {
 
     let nom: String
     let niveau: Int
+    let groupe: Bool
+    let donjon: Bool
     let ressources: [Ressource]
     let etapes: [Etape]
 }
@@ -146,8 +157,11 @@ extension Quetes {
         return FicheQuete(
             nom: Lieu.traduit(quete.noms, langue) ?? "?",
             niveau: quete.niveau,
+            groupe: quete.groupe,
+            donjon: quete.donjon,
             ressources: Self.ressources(quete).map {
-                FicheQuete.Ressource(nom: nomObjet($0.objet, en: langue), quantite: $0.quantite)
+                FicheQuete.Ressource(nom: nomObjet($0.objet, en: langue), quantite: $0.quantite,
+                                     categorie: categoriesObjets[String($0.objet)].flatMap { Lieu.traduit($0, langue) })
             },
             etapes: quete.etapes.map { etape in
                 FicheQuete.Etape(nom: Lieu.traduit(etape.noms, langue) ?? "", objectifs: etape.objectifs.map { objectif in
