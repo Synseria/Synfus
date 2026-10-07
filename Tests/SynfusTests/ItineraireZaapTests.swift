@@ -102,8 +102,8 @@ struct ItineraireZaapTests {
         """
         let decodeur = JSONDecoder()
         let zaaps = ZaapsDofusDB.assembler(
-            reperes: try decodeur.decode(ZaapsDofusDB.Page<ZaapsDofusDB.Repere>.self, from: Data(reperes.utf8)).data,
-            sousZones: try decodeur.decode(ZaapsDofusDB.Page<ZaapsDofusDB.SousZone>.self, from: Data(sousZones.utf8)).data)
+            reperes: try decodeur.decode(DofusDB.Page<ZaapsDofusDB.Repere>.self, from: Data(reperes.utf8)).data,
+            sousZones: try decodeur.decode(DofusDB.Page<ZaapsDofusDB.SousZone>.self, from: Data(sousZones.utf8)).data)
         #expect(zaaps.count == 2)
         #expect(zaaps[0] == Zaap(-2, 0, noms: ["fr": "Village d'Amakna", "en": "Amakna Village", "es": "Pueblo de Amakna"]))
         #expect(zaaps[1].monde == 2)
