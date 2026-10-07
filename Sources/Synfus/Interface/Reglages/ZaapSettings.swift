@@ -5,6 +5,7 @@ import SwiftUI
 /// mis à jour depuis DofusDB, ajoutés à la main.
 struct ZaapSettings: View {
     @ObservedObject private var prefs = Preferences.shared
+    @ObservedObject private var carte = CarteStore.shared
     @State private var miseAJour = false
     @State private var echec: String?
     @State private var nouveauNom = ""
@@ -117,8 +118,7 @@ struct ZaapSettings: View {
 
     private var source: String {
         if let echec { return L("zaap.maj.echec", echec) }
-        guard let releve = prefs.zaapsDofusDB else { return L("zaap.maj.integree") }
-        return L("zaap.maj.date", releve.date.formatted(date: .abbreviated, time: .shortened))
+        return L("zaap.maj.date", carte.carte.date.formatted(date: .abbreviated, time: .shortened))
     }
 
     private func actif(_ zaap: Zaap) -> Binding<Bool> {
@@ -155,7 +155,7 @@ struct ZaapSettings: View {
         echec = nil
         Task {
             do {
-                try await ZaapsDofusDB.mettreAJour(prefs)
+                try await carte.mettreAJour()
             } catch {
                 echec = error.localizedDescription
             }

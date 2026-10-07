@@ -19,6 +19,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ClickAdvanceWatcher.shared.apply()
         FloatingBarController.shared.apply()
         LecteurEcran.shared.start()
+        CarteStore.shared.start()
         ZaapClipboard.shared.start()
 
         if !AXIsProcessTrusted() {
@@ -81,6 +82,12 @@ enum SynfusMain {
         // Mode diagnostic : --dump-windows
         if CommandLine.arguments.contains("--dump-windows") {
             WindowDump.runCommandLine()
+        }
+
+        // Relevé de la carte intégrée : --exporter-carte Resources/Carte.json
+        if let index = CommandLine.arguments.firstIndex(of: "--exporter-carte"),
+           index + 1 < CommandLine.arguments.count {
+            CarteDofusDB.exporterLigneDeCommande(vers: URL(fileURLWithPath: CommandLine.arguments[index + 1]))
         }
 
         let application = NSApplication.shared

@@ -512,10 +512,9 @@ struct PreferencesTests {
      "slotCount":3,"toggleAutoFocus":{"keyCode":99,"modifiers":0},
      "zaapAuto":true,"zaapBouton":false,"zaapGainMinimal":8,
      "zaapHotKey":{"keyCode":17,"modifiers":2048},
-     "zaapsAjoutes":[{"monde":1,"noms":{"fr":"Mon zaap"},"x":50,"y":-50}],
+     "zaapsAjoutes":[{"monde":1,"noms":{"fr":"Mon zaap"},"x":50,"y":-50,"zone":{}}],
      "zaapsChoix":{"1:-2,0":false},
      "zaapsFavoris":["1:5,-18","1:-2,0"],
-     "zaapsDofusDB":{"date":800000000,"zaaps":[{"monde":1,"noms":{"en":"Amakna Village","fr":"Village d'Amakna"},"x":-2,"y":0}]},
      "toggleBar":{"keyCode":11,"modifiers":768},
      "zoneCombat":{"hauteur":0.125,"largeur":0.25,"x":0.125,"y":0.75},
      "zonePosition":{"hauteur":0.0625,"largeur":0.25,"x":0.5,"y":0.25},
@@ -566,9 +565,6 @@ struct PreferencesTests {
         #expect(prefs.zaapsAjoutes == [Zaap(50, -50, noms: ["fr": "Mon zaap"])])
         #expect(prefs.zaapsChoix == ["1:-2,0": false])
         #expect(prefs.zaapsFavoris == ["1:5,-18", "1:-2,0"])
-        #expect(prefs.zaapsDofusDB == ReleveZaaps(
-            date: Date(timeIntervalSinceReferenceDate: 800_000_000),
-            zaaps: [Zaap(-2, 0, noms: ["fr": "Village d'Amakna", "en": "Amakna Village"])]))
         #expect(prefs.chasseHotKey == HotKey(keyCode: 5, modifiers: 2048))
         #expect(prefs.chasseBouton == false)
     }
@@ -617,9 +613,6 @@ struct PreferencesTests {
         prefs.zaapsAjoutes = [Zaap(50, -50, noms: ["fr": "Mon zaap"])]
         prefs.zaapsChoix = ["1:-2,0": false]
         prefs.zaapsFavoris = ["1:5,-18", "1:-2,0"]
-        prefs.zaapsDofusDB = ReleveZaaps(
-            date: Date(timeIntervalSinceReferenceDate: 800_000_000),
-            zaaps: [Zaap(-2, 0, noms: ["fr": "Village d'Amakna", "en": "Amakna Village"])])
         prefs.chasseHotKey = HotKey(keyCode: 5, modifiers: 2048)
         prefs.chasseBouton = false
 
@@ -666,6 +659,8 @@ struct PreferencesTests {
         objet["appuiLongMs"] = 150
         objet["spellKeyMap"] = ["barres": [[["keyCode": 18, "modifiers": 0]]]]
         objet["advanceArmHotKey"] = ["keyCode": 50, "modifiers": 256]
+        // La liste de zaaps téléchargée vit désormais dans la carte, sur le disque.
+        objet["zaapsDofusDB"] = ["date": 800_000_000, "zaaps": [] as [Any]]
         let ancien = try JSONSerialization.data(withJSONObject: objet)
         let store = StockageMemoire([Preferences.key: ancien])
 
