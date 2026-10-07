@@ -267,7 +267,7 @@
   "zaap.liste": "Zaaps — %lld active out of %lld",
   "zaap.liste.aide": "Uncheck a zaap so it is never suggested. Those marked \"other map\" (Incarnam, Canopy, Harebourg, Crocuzko) have coordinates that overlap the World of Twelve: unchecked by default, otherwise a /travel to Amakna could go through Incarnam.",
   "zaap.maj": "Update from DofusDB",
-  "zaap.maj.aide": "Downloads the zaap list from api.dofusdb.fr — Synfus only contacts this site on this click. Your choices and additions are kept.",
+  "zaap.maj.aide": "Downloads the zaap list from api.dofusdb.fr — Synfus also does it by itself at launch when the list is more than 30 days old. Your choices, additions and favourites are kept.",
   "zaap.maj.date": "DofusDB list from %@",
   "zaap.maj.echec": "Update failed: %@",
   "zaap.maj.integree": "List built into Synfus",

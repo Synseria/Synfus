@@ -267,7 +267,7 @@
   "zaap.liste": "Zaaps — %lld actifs sur %lld",
   "zaap.liste.aide": "Décoche un zaap pour qu'il ne soit jamais proposé. Ceux marqués « autre carte » (Incarnam, Canopée, Harebourg, Crocuzko) ont des coordonnées qui recoupent celles du Monde des Douze : décochés par défaut, sinon un /travel vers Amakna pourrait passer par Incarnam.",
   "zaap.maj": "Mettre à jour depuis DofusDB",
-  "zaap.maj.aide": "Télécharge la liste des zaaps depuis api.dofusdb.fr — Synfus ne contacte ce site qu'à ce clic. Tes activations et tes ajouts sont conservés.",
+  "zaap.maj.aide": "Télécharge la liste des zaaps depuis api.dofusdb.fr — Synfus le fait aussi de lui-même au démarrage quand la liste a plus de 30 jours. Tes activations, tes ajouts et tes favoris sont conservés.",
   "zaap.maj.date": "Liste DofusDB du %@",
   "zaap.maj.echec": "Échec de la mise à jour : %@",
   "zaap.maj.integree": "Liste intégrée à Synfus",

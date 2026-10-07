@@ -1,8 +1,9 @@
 import Foundation
 
-/// La liste des zaaps depuis l'API de DofusDB, au seul clic « Mettre à jour » :
-/// les repères de carte nommés « Zaap » (`hints`), nommés d'après leur
-/// sous-zone (`subareas`). Le décodage est pur, le réseau n'est qu'autour.
+/// La liste des zaaps depuis l'API de DofusDB, au clic « Mettre à jour » et au
+/// démarrage quand elle a plus de `peremption` : les repères de carte nommés
+/// « Zaap » (`hints`), nommés d'après leur sous-zone (`subareas`). Le décodage
+/// et la péremption sont purs, le réseau n'est qu'autour.
 enum ZaapsDofusDB {
     struct Page<Element: Decodable>: Decodable {
         let total: Int
@@ -38,9 +39,24 @@ enum ZaapsDofusDB {
     }
 
     static let minimumPlausible = 20
+    /// Les zaaps changent aux mises à jour du jeu, quelques fois par an.
+    static let peremption: TimeInterval = 30 * 24 * 3600
     private static let api = URL(string: "https://api.dofusdb.fr")!
     /// Le plafond de page de l'API.
     private static let parPage = 50
+
+    /// Jamais téléchargée, ou trop vieille.
+    static func aRafraichir(releve: ReleveZaaps?, maintenant: Date) -> Bool {
+        guard let releve else { return true }
+        return maintenant.timeIntervalSince(releve.date) > peremption
+    }
+
+    /// Le seul chemin qui remplace la liste : en cas d'échec, l'ancienne reste.
+    @MainActor
+    static func mettreAJour(_ prefs: Preferences) async throws {
+        let zaaps = try await telecharger()
+        prefs.zaapsDofusDB = ReleveZaaps(date: Date(), zaaps: zaaps)
+    }
 
     static func telecharger() async throws -> [Zaap] {
         let reperes: [Repere] = try await toutes("hints", [URLQueryItem(name: "name.fr", value: "Zaap")])

@@ -153,8 +153,7 @@ struct ZaapSettings: View {
         echec = nil
         Task {
             do {
-                let zaaps = try await ZaapsDofusDB.telecharger()
-                prefs.zaapsDofusDB = ReleveZaaps(date: Date(), zaaps: zaaps)
+                try await ZaapsDofusDB.mettreAJour(prefs)
             } catch {
                 echec = error.localizedDescription
             }
