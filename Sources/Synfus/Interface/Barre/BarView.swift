@@ -318,6 +318,14 @@ struct BarView: View {
                         invitations.copier(client)
                     }
                 }
+                // Le trajet vers ce perso, zaap compris s'il fait gagner assez
+                // de cartes ; rejoindre celui de devant n'a pas de sens.
+                if client.name != lecteur.persoDevant,
+                   let cible = ItineraireZaap.rejoindre(lecteur.releves[client.name]?.position) {
+                    Button(L("barre.rejoindre", client.name, "\(cible.x),\(cible.y)")) {
+                        ZaapClipboard.shared.copierTrajet(vers: cible)
+                    }
+                }
                 Button(L("barre.fermer", client.name)) { manager.close(client) }
             }
         }

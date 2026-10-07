@@ -29,6 +29,7 @@
   "barre.raccourci": "Shortcut: %@",
   "barre.rangerAide": "Arrange windows — layouts, full screen, start the session",
   "barre.reglagesAide": "Synfus settings",
+  "barre.rejoindre": "Join %@ (%@)",
   "barre.zaapAide": "Route the copied /travel through the nearest zaap — shortcut: %@",
   "calibration.aide": "Pick an area, then draw a rectangle on the capture. Areas are fractions of the window: they follow its size, fullscreen or windowed.",
   "calibration.apercu": "What the area reads:",

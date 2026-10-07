@@ -29,6 +29,7 @@
   "barre.raccourci": "Raccourci : %@",
   "barre.rangerAide": "Ranger les fenêtres — dispositions, plein écran, lancer la session",
   "barre.reglagesAide": "Réglages de Synfus",
+  "barre.rejoindre": "Rejoindre %@ (%@)",
   "barre.zaapAide": "Passer le /travel copié par le zaap le plus proche — raccourci : %@",
   "calibration.aide": "Choisis une zone, puis trace un rectangle sur la capture. Les zones sont des fractions de la fenêtre : elles suivent sa taille, en plein écran comme en fenêtré.",
   "calibration.apercu": "Ce que lit la zone :",
