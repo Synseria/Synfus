@@ -375,6 +375,16 @@ struct PreferencesTests {
         #expect(relues.arrangeHotKey == HotKey(keyCode: 40, modifiers: UInt32(cmdKey)))
     }
 
+    @Test("Les zaaps favoris se relisent dans leur ordre, les clés inconnues sautées")
+    func zaapsFavorisPersistent() {
+        let (prefs, store) = neuves()
+        prefs.zaapsFavoris = ["1:5,-18", "1:99,99", "1:-2,0"]
+
+        let relues = Preferences.forTesting(store: store)
+        #expect(relues.zaapsFavoris == ["1:5,-18", "1:99,99", "1:-2,0"])
+        #expect(relues.zaapsFavorisConnus.map(\.cle) == ["1:5,-18", "1:-2,0"])
+    }
+
     @Test("Les réglages d'aperçu se relisent après un redémarrage")
     func apercusPersistes() {
         let (prefs, store) = neuves()
@@ -503,6 +513,7 @@ struct PreferencesTests {
      "zaapHotKey":{"keyCode":17,"modifiers":2048},
      "zaapsAjoutes":[{"monde":1,"noms":{"fr":"Mon zaap"},"x":50,"y":-50}],
      "zaapsChoix":{"1:-2,0":false},
+     "zaapsFavoris":["1:5,-18","1:-2,0"],
      "zaapsDofusDB":{"date":800000000,"zaaps":[{"monde":1,"noms":{"en":"Amakna Village","fr":"Village d'Amakna"},"x":-2,"y":0}]},
      "toggleBar":{"keyCode":11,"modifiers":768},
      "zoneCombat":{"hauteur":0.125,"largeur":0.25,"x":0.125,"y":0.75},
@@ -551,6 +562,7 @@ struct PreferencesTests {
         #expect(prefs.zaapGainMinimal == 8)
         #expect(prefs.zaapsAjoutes == [Zaap(50, -50, noms: ["fr": "Mon zaap"])])
         #expect(prefs.zaapsChoix == ["1:-2,0": false])
+        #expect(prefs.zaapsFavoris == ["1:5,-18", "1:-2,0"])
         #expect(prefs.zaapsDofusDB == ReleveZaaps(
             date: Date(timeIntervalSinceReferenceDate: 800_000_000),
             zaaps: [Zaap(-2, 0, noms: ["fr": "Village d'Amakna", "en": "Amakna Village"])]))
@@ -598,6 +610,7 @@ struct PreferencesTests {
         prefs.zaapGainMinimal = 8
         prefs.zaapsAjoutes = [Zaap(50, -50, noms: ["fr": "Mon zaap"])]
         prefs.zaapsChoix = ["1:-2,0": false]
+        prefs.zaapsFavoris = ["1:5,-18", "1:-2,0"]
         prefs.zaapsDofusDB = ReleveZaaps(
             date: Date(timeIntervalSinceReferenceDate: 800_000_000),
             zaaps: [Zaap(-2, 0, noms: ["fr": "Village d'Amakna", "en": "Amakna Village"])])
@@ -628,7 +641,7 @@ struct PreferencesTests {
          "killFrozenClients":true,"lireCombat":false,"lirePosition":false,"menuBarIcon":"logo",
          "showClasses":true,"showNumbers":true,"showPreviewOnHover":false,
          "signalerBascule":true,"slotCount":1,"zaapAuto":false,"zaapBouton":true,
-         "zaapGainMinimal":5,"zaapsAjoutes":[],"zaapsChoix":{}}
+         "zaapGainMinimal":5,"zaapsAjoutes":[],"zaapsChoix":{},"zaapsFavoris":[]}
         """
         #expect(canonique(store.donnees(pour: Preferences.key)) == canonique(Data(attendu.utf8)))
     }

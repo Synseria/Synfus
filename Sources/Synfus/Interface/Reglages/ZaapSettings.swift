@@ -75,6 +75,7 @@ struct ZaapSettings: View {
             }
             ForEach(connus.sorted { ordre($0, $1, langue) }, id: \.cle) { zaap in
                 HStack(spacing: 6) {
+                    etoile(zaap)
                     Toggle(isOn: actif(zaap)) {
                         Text(zaap.nom(en: langue))
                     }
@@ -124,9 +125,27 @@ struct ZaapSettings: View {
             set: { prefs.zaapsChoix[zaap.cle] = $0 })
     }
 
+    /// Un favori se propose au clic droit du bouton Zaap de la barre.
+    private func etoile(_ zaap: Zaap) -> some View {
+        let favori = prefs.zaapsFavoris.contains(zaap.cle)
+        return Button {
+            if favori {
+                prefs.zaapsFavoris.removeAll { $0 == zaap.cle }
+            } else {
+                prefs.zaapsFavoris.append(zaap.cle)
+            }
+        } label: {
+            Image(systemName: favori ? "star.fill" : "star")
+                .foregroundStyle(favori ? Color.yellow : Color.secondary)
+        }
+        .buttonStyle(.borderless)
+        .help(favori ? L("zaap.favori.retirer") : L("zaap.favori.ajouter"))
+    }
+
     private func supprimer(_ zaap: Zaap) {
         prefs.zaapsAjoutes.removeAll { $0.cle == zaap.cle }
         prefs.zaapsChoix[zaap.cle] = nil
+        prefs.zaapsFavoris.removeAll { $0 == zaap.cle }
     }
 
     private func mettreAJour() {
