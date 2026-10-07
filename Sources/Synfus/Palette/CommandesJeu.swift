@@ -38,9 +38,6 @@ enum CommandeJeu: CaseIterable, Sendable {
         }
     }
 
-    /// Composée par Synfus plutôt que par le jeu.
-    var synfus: Bool { [.zaap, .travel, .invite, .quete, .pnj].contains(self) }
-
     /// L'argument attendu, montré en gris ; `nil` : la commande se suffit.
     var argument: String? {
         switch self {
