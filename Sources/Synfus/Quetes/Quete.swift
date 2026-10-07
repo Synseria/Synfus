@@ -11,6 +11,8 @@ struct Quetes: Codable, Equatable, Sendable {
     let objets: [String: [String: String]]
     let monstres: [String: [String: String]]
     let nomsPNJ: [String: [String: String]]
+    /// Les sous-zones où les quêtes placent des PNJ, et leur zone.
+    let sousZones: [String: SousZoneNommee]
 
     /// Moins de quêtes que cela : une réponse tronquée.
     static let minimumPlausible = 500
@@ -87,16 +89,31 @@ struct ObjectifQuete: Codable, Equatable, Sendable {
     let quantite: Int?
 }
 
-/// Un PNJ et les cartes où une quête le place.
+struct SousZoneNommee: Codable, Equatable, Sendable {
+    let noms: [String: String]
+    let zone: [String: String]
+}
+
+/// Un PNJ et les cartes où les quêtes le placent. DofusDB ne dit pas si un
+/// PNJ ne fait que passer : la position que le plus de quêtes citent est
+/// tenue pour la sienne, les autres viennent après.
 struct PNJ: Codable, Equatable, Sendable {
     struct Position: Codable, Hashable, Sendable {
         let x: Int
         let y: Int
     }
 
+    struct Passage: Codable, Equatable, Sendable {
+        let position: Position
+        let sousZone: Int?
+        /// Combien de quêtes le placent ici.
+        let quetes: Int
+    }
+
     let id: Int
     let noms: [String: String]
-    let positions: [Position]
+    /// Le plus cité d'abord.
+    let passages: [Passage]
 }
 
 /// Une quête prête à montrer : noms résolus dans la langue, ressources
