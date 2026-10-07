@@ -295,7 +295,6 @@ private struct LigneResultat: View {
         case .variable: return "percent"
         case .perso: return "person"
         case .action: return "bolt"
-        case .phrase: return "text.bubble"
         case .recent: return "clock.arrow.circlepath"
         }
     }

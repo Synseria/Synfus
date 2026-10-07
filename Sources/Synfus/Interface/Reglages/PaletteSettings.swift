@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Onglet Palette : la palette et son raccourci, la réécriture du `/travel`,
 /// la chasse au trésor, puis ce que la palette propose — zaaps (activés,
-/// étiquetés, favoris), lieux étiquetés, phrases — et la carte du jeu.
+/// étiquetés, favoris), lieux étiquetés — et la carte du jeu.
 struct PaletteSettings: View {
     @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var carte = CarteStore.shared
@@ -30,7 +30,6 @@ struct PaletteSettings: View {
             ChasseSection()
             zaaps
             lieux
-            phrases
             carteDuJeu
         }
     }
@@ -164,31 +163,6 @@ struct PaletteSettings: View {
         }
     }
 
-    // MARK: - Phrases
-
-    private var phrases: some View {
-        Section {
-            ForEach(prefs.phrases.indices, id: \.self) { index in
-                HStack(spacing: 8) {
-                    TextField(L("palette.reglages.phrase.nom"), text: $prefs.phrases[index].nom)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 150)
-                    TextField(L("palette.reglages.phrase.texte"), text: $prefs.phrases[index].texte)
-                        .textFieldStyle(.roundedBorder)
-                    Button { prefs.phrases.remove(at: index) } label: { Image(systemName: "trash") }
-                        .buttonStyle(.borderless)
-                        .help(L("palette.reglages.phrase.supprimer"))
-                }
-            }
-            Ligne(titre: L("palette.reglages.phrase.nouvelle")) {
-                Button(L("palette.reglages.phrase.ajouter")) {
-                    prefs.phrases.append(Phrase(nom: L("palette.reglages.phrase.nomParDefaut"), texte: ""))
-                }
-            }
-        } header: {
-            SectionTitle(L("palette.reglages.phrases"), help: L("palette.reglages.phrases.aide"))
-        }
-    }
 
     // MARK: - Carte
 

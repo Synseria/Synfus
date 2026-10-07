@@ -157,9 +157,6 @@ final class Preferences: ObservableObject {
     /// `Lieu.cle` : la palette les cherche avant les noms.
     @Published var etiquettes: [String: String] = [:] { didSet { save() } }
 
-    /// Les phrases enregistrées, copiées depuis la palette.
-    @Published var phrases: [Phrase] = [] { didSet { save() } }
-
     /// Les derniers textes copiés depuis la palette, le plus récent d'abord.
     @Published var paletteRecents: [String] = [] { didSet { save() } }
 
@@ -457,7 +454,6 @@ final class Preferences: ObservableObject {
         .optionnel("chasseHotKey", \.chasseHotKey),
         .facultatif("lieuxFavoris", \.lieuxFavoris),
         .facultatif("etiquettes", \.etiquettes),
-        .facultatif("phrases", \.phrases),
         .optionnel("paletteHotKey", \.paletteHotKey),
         .facultatif("paletteRecents", \.paletteRecents),
         .facultatif("chasseBouton", \.chasseBouton),
