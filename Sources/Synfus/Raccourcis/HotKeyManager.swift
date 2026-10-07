@@ -89,6 +89,9 @@ final class HotKeyManager: ObservableObject {
         if let zaap = prefs.zaapHotKey {
             register(zaap) { ZaapClipboard.shared.optimiser() }
         }
+        if let chasse = prefs.chasseHotKey {
+            register(chasse) { ChassePanel.shared.basculer() }
+        }
     }
 
     @discardableResult

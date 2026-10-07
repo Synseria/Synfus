@@ -27,6 +27,12 @@ demandé que par leur bascule, dans le Diagnostic.
 - Le premier OCR `.accurate` charge le modèle, long à froid : `MoteurOCR.prechauffer()` le
   paie à l'activation.
 
+## Chasse — lecture à la demande
+
+`GenreLecture.chasse` (suivi de chasse, `ZoneEcran.chasseParDefaut`, à gauche sous la position)
+n'est jamais lu au tour : `LecteurEcran.lireUneFois` (bouton « Lire » et ouverture du panneau),
+même capture (`capturer`) et même `MoteurOCR`, sans signature. Lignes → `EtapeChasse.ciblesLues`.
+
 ## Combat — `LectureCombat.swift` (pur)
 
 - « Fin de tour » (fr, en, es, tolérant à l'OCR) sur bouton **en couleur** = son tour ; bouton
