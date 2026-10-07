@@ -24,7 +24,7 @@ enum ActionPalette: CaseIterable, Sendable {
 
 /// Une ligne de la palette, et ce qu'Entrée en fait.
 struct EntreePalette: Equatable, Identifiable, Sendable {
-    enum Genre: Equatable, Sendable { case zaap, lieu, commande, variable, perso, action, phrase }
+    enum Genre: Equatable, Sendable { case zaap, lieu, commande, variable, perso, action, phrase, recent }
 
     enum Effet: Equatable, Sendable {
         /// Pose le texte dans le presse-papiers et ferme.
@@ -62,6 +62,8 @@ struct ContextePalette: Sendable {
     var etiquettes: [String: String] = [:]
     var favoris: Set<String> = []
     var phrases: [Phrase] = []
+    /// Les derniers textes copiés depuis la palette, le plus récent d'abord.
+    var recents: [String] = []
     var persos: [(nom: String, slotKey: String)] = []
     var gainMinimal = ItineraireZaap.gainParDefaut
     /// `/invite A; /invite B` pour l'équipe active, déjà composé.
@@ -191,7 +193,23 @@ enum RecherchePalette {
             EntreePalette(id: "phrase:\($0.offset)", genre: .phrase, titre: $0.element.nom,
                           sousTitre: $0.element.texte, effet: .copier($0.element.texte))
         }
-        return zaaps(contexte) + lieux(contexte) + persos + actions + phrases
+        return zaaps(contexte) + lieux(contexte) + persos + actions + phrases + recents(contexte)
+    }
+
+    /// Les dernières copies : au-dessus des zaaps quand rien n'est tapé, et
+    /// cherchées comme le reste.
+    static func recents(_ contexte: ContextePalette) -> [EntreePalette] {
+        contexte.recents.enumerated().map {
+            EntreePalette(id: "recent:\($0.offset)", genre: .recent, titre: $0.element,
+                          sousTitre: L("palette.recent"), effet: .copier($0.element))
+        }
+    }
+
+    static let nombreDeRecents = 8
+
+    /// Le texte copié passe en tête ; un doublon remonte au lieu de se répéter.
+    static func noterRecent(_ texte: String, dans recents: [String]) -> [String] {
+        Array(([texte] + recents.filter { $0 != texte }).prefix(nombreDeRecents))
     }
 
     // MARK: - Trajets

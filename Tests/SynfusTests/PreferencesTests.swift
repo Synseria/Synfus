@@ -520,7 +520,7 @@ struct PreferencesTests {
      "cycleNext":{"keyCode":122,"modifiers":0},"cyclePrevious":{"keyCode":120,"modifiers":0},
      "defaultsVersion":7,"equipeSuivanteHotKey":{"keyCode":17,"modifiers":256},
      "etiquettes":{"1:-78,-41":"Fri 1"},"lieuxFavoris":["lieu:2738"],
-     "paletteHotKey":{"keyCode":47,"modifiers":256},"phrases":[{"nom":"Recrutement","texte":"Guilde cherche %pos%"}],
+     "paletteHotKey":{"keyCode":47,"modifiers":256},"paletteRecents":["/zaap 5,7"],"phrases":[{"nom":"Recrutement","texte":"Guilde cherche %pos%"}],
      "equipes":[{"membres":["Aeryn"]},{"membres":["Nova"]}],
      "hotKeys":[{"keyCode":18,"modifiers":256},null,{"keyCode":20,"modifiers":2048}],
      "inviteFormat":"/w %nom go","inviteGroupee":true,
@@ -589,6 +589,7 @@ struct PreferencesTests {
         #expect(prefs.etiquettes == ["1:-78,-41": "Fri 1"])
         #expect(prefs.lieuxFavoris == ["lieu:2738"])
         #expect(prefs.paletteHotKey == HotKey(keyCode: 47, modifiers: 256))
+        #expect(prefs.paletteRecents == ["/zaap 5,7"])
         #expect(prefs.phrases == [Phrase(nom: "Recrutement", texte: "Guilde cherche %pos%")])
         #expect(prefs.chasseHotKey == HotKey(keyCode: 5, modifiers: 2048))
         #expect(prefs.chasseBouton == false)
@@ -641,6 +642,7 @@ struct PreferencesTests {
         prefs.etiquettes = ["1:-78,-41": "Fri 1"]
         prefs.lieuxFavoris = ["lieu:2738"]
         prefs.paletteHotKey = HotKey(keyCode: 47, modifiers: 256)
+        prefs.paletteRecents = ["/zaap 5,7"]
         prefs.phrases = [Phrase(nom: "Recrutement", texte: "Guilde cherche %pos%")]
         prefs.chasseHotKey = HotKey(keyCode: 5, modifiers: 2048)
         prefs.chasseBouton = false
@@ -673,7 +675,7 @@ struct PreferencesTests {
          "showClasses":true,"showNumbers":true,"showPreviewOnHover":false,
          "signalerBascule":true,"slotCount":1,"zaapAuto":false,"zaapBouton":true,
          "zaapGainMinimal":5,"zaapsAjoutes":[],"zaapsChoix":{},"zaapsFavoris":[],
-         "lieuxFavoris":[],"phrases":[]}
+         "lieuxFavoris":[],"phrases":[],"paletteRecents":[]}
         """
         #expect(canonique(store.donnees(pour: Preferences.key)) == canonique(Data(attendu.utf8)))
     }

@@ -42,6 +42,9 @@ final class PaletteModele: ObservableObject {
 
     var enGrille: Bool { requete.trimmingCharacters(in: .whitespaces).isEmpty }
 
+    /// Les dernières copies, montrées au-dessus des cartes.
+    var recents: [EntreePalette] { RecherchePalette.recents(contexte) }
+
     func ouvrir() {
         contexte = contexteImpose ?? Self.contexteCourant()
         edition = nil
@@ -84,6 +87,9 @@ final class PaletteModele: ObservableObject {
         switch entree.effet {
         case .copier(let texte):
             PressePapiers.copier(texte)
+            if contexteImpose == nil {
+                Preferences.shared.paletteRecents = RecherchePalette.noterRecent(texte, dans: Preferences.shared.paletteRecents)
+            }
             PalettePanel.shared.fermer()
         case .completer(let texte):
             requete = texte
@@ -165,6 +171,7 @@ final class PaletteModele: ObservableObject {
         contexte.etiquettes = prefs.etiquettes
         contexte.favoris = Set(prefs.zaapsFavoris + prefs.lieuxFavoris)
         contexte.phrases = prefs.phrases
+        contexte.recents = prefs.paletteRecents
         contexte.persos = manager.clients
             .filter { WindowTitle.isPersistableName($0.name) }
             .map { ($0.name, $0.slotKey) }
