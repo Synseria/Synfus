@@ -491,7 +491,8 @@ struct PreferencesTests {
      "defaultsVersion":6,"equipeSuivanteHotKey":{"keyCode":17,"modifiers":256},
      "equipes":[{"membres":["Aeryn"]},{"membres":["Nova"]}],
      "hotKeys":[{"keyCode":18,"modifiers":256},null,{"keyCode":20,"modifiers":2048}],
-     "inviteFormat":"/w %nom go","inviteHotKey":{"keyCode":34,"modifiers":256},
+     "inviteFormat":"/w %nom go","inviteGroupee":true,
+     "inviteHotKey":{"keyCode":34,"modifiers":256},
      "killFrozenClients":false,"lastArrangement":"principale","lireCombat":true,
      "lirePosition":true,"menuBarIcon":"symbole",
      "previewHotKey":{"keyCode":49,"modifiers":2048},
@@ -540,6 +541,7 @@ struct PreferencesTests {
         #expect(prefs.equipeSuivanteHotKey == HotKey(keyCode: 17, modifiers: 256))
         #expect(prefs.inviteHotKey == HotKey(keyCode: 34, modifiers: 256))
         #expect(prefs.inviteFormat == "/w %nom go")
+        #expect(prefs.inviteGroupee == true)
         #expect(prefs.zaapHotKey == HotKey(keyCode: 17, modifiers: 2048))
         #expect(prefs.zaapBouton == false)
         #expect(prefs.zaapAuto == true)
@@ -581,6 +583,7 @@ struct PreferencesTests {
         prefs.equipeSuivanteHotKey = HotKey(keyCode: 17, modifiers: 256)
         prefs.inviteHotKey = HotKey(keyCode: 34, modifiers: 256)
         prefs.inviteFormat = "/w %nom go"
+        prefs.inviteGroupee = true
         prefs.zaapHotKey = HotKey(keyCode: 17, modifiers: 2048)
         prefs.zaapBouton = false
         prefs.zaapAuto = true
@@ -608,7 +611,7 @@ struct PreferencesTests {
         let attendu = """
         {"advanceModifier":"fn","advanceOnClick":false,"attentionAction":"highlight",
          "autoCenterBar":true,"barOnlyWithDofus":false,"barVisible":true,"characterOrder":[],
-         "defaultsVersion":6,"equipes":[],"hotKeys":[null],"inviteFormat":"/invite %nom",
+         "defaultsVersion":6,"equipes":[],"hotKeys":[null],"inviteFormat":"/invite %nom","inviteGroupee":false,
          "killFrozenClients":true,"lireCombat":false,"lirePosition":false,"menuBarIcon":"logo",
          "showClasses":true,"showNumbers":true,"showPreviewOnHover":false,
          "signalerBascule":true,"slotCount":1,"zaapAuto":false,"zaapBouton":true,

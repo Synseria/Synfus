@@ -23,7 +23,7 @@ La vue des équipes (seconde rangée de la barre, glisser-déposer) est dans le 
 ## Invitations — `Sources/Synfus/Invitations/`
 
 - Synfus **compose** `/invite Nom` dans le presse-papiers, le joueur colle (⌘V ↩) : envoyer au
-  tchat serait une saisie synthétisée. `App/PressePapiers.swift` est l'unique écriture dans
+  tchat serait une saisie synthétisée. `App/PressePapiers.swift` est l'unique accès à
   `NSPasteboard`.
 - `InvitationComposer` (pur, `InvitationComposerTests`) : l'effectif sans le **chef** (le
   perso devant, par pid) ; noms tirés du titre (`characterName(fromTitle:)`, jamais
@@ -34,5 +34,8 @@ La vue des équipes (seconde rangée de la barre, glisser-déposer) est dans le 
 - Raccourci `inviteHotKey` (⌘:, keycode 47 — choix de l'utilisateur malgré le conflit avec
   « Orthographe et grammaire » des apps de texte). Le clic droit d'une pastille copie
   l'invitation de ce perso sans toucher au tour.
+- `inviteGroupee` : le raccourci copie toute l'équipe en une ligne, `/invite A; /invite B`
+  (`InvitationComposer.groupee`) — le jeu enchaîne les commandes séparées par « ; ». Pas de
+  tour : le chef est celui qui est devant à chaque appui.
 - `inviteFormat` (`/invite %nom`) est un réglage texte : si la commande du jeu change, on ne
   recompile pas.

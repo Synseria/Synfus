@@ -73,8 +73,10 @@ struct ShortcutsSettings: View {
             }
 
             Section {
-                ShortcutRow(label: L("raccourcis.invitation"), help: L("raccourcis.invitation.aide"),
+                ShortcutRow(label: prefs.inviteGroupee ? L("raccourcis.invitation.toutes") : L("raccourcis.invitation"),
+                            help: prefs.inviteGroupee ? L("raccourcis.invitation.toutes.aide") : L("raccourcis.invitation.aide"),
                             conflit: enConflit(prefs.inviteHotKey), hotKey: hotKey(\.inviteHotKey))
+                Toggle(L("raccourcis.invitation.groupee"), isOn: $prefs.inviteGroupee)
                 HStack {
                     Text(L("raccourcis.invitation.format"))
                     HelpTip(L("raccourcis.invitation.format.aide"))
