@@ -21,8 +21,7 @@ connectés et permet de passer de l'un à l'autre, d'un clic ou au clavier.
     le plus proche de toi devant, copiés en `/zaap x,y; /travel a,b` quand
     le zaap fait gagner du chemin.
   - `/` les commandes du jeu, `%` les variables du tchat (`%pos%`…), `/invite`
-    l'équipe en une ligne, tes phrases enregistrées (recrutement, demande
-    d'aide…), tes persos et les gestes de Synfus.
+    l'équipe en une ligne, tes persos et les gestes de Synfus.
 
   ![La palette](docs/screenshots/palette-zaaps.png)
   ![/travel banque bonta](docs/screenshots/palette-travel.png)

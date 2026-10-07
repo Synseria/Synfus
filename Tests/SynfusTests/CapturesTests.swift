@@ -20,8 +20,6 @@ struct CapturesTests {
                                "1:-2,0": "Village", "1:-16,1": "Koalak", "1:5,7": "Bouftou",
                                "1:-31,-56": "Bonta", "1:-26,37": "Brâk"]
         contexte.favoris = ["1:-31,-56", "1:-26,37", "1:-78,-41"]
-        contexte.phrases = [Phrase(nom: "Recrutement", texte: "[Guilde] recrute, niveau 150+ — MP !"),
-                            Phrase(nom: "Besoin d'aide", texte: "Besoin d'aide en %souszone% (%pos%) !")]
         contexte.recents = ["/zaap -31,-56; /travel -31,-57", "/invite Brok; /invite Cid", "%pos%"]
         contexte.persos = [(nom: "Aeryn", slotKey: "1#0"), (nom: "Brok", slotKey: "2#0")]
         contexte.invitationEquipe = "/invite Brok; /invite Cid"
