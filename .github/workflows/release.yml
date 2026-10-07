@@ -36,7 +36,17 @@ jobs:
 
       - name: Sélectionner Xcode
         run: |
-          LATEST="$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+          # Le plus récent qui porte le SDK macOS : l'image installe aussi des
+          # bêtas dont le SDK peut manquer, et xcrun retombe alors sur les
+          # Command Line Tools, absents.
+          LATEST=""
+          for x in $(ls -d /Applications/Xcode*.app | sort -rV); do
+            if DEVELOPER_DIR="$x" xcrun --sdk macosx --show-sdk-version >/dev/null 2>&1; then
+              LATEST="$x"; break
+            fi
+          done
+          [ -n "$LATEST" ] || { echo "::error::aucun Xcode avec le SDK macOS"; exit 1; }
+          echo "Xcode retenu : $LATEST"
           sudo xcode-select -s "$LATEST"
           swift --version
           xcrun --show-sdk-version
