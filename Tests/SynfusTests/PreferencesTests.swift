@@ -448,25 +448,6 @@ struct PreferencesTests {
         #expect(prefs.advanceModifier == .fn)
     }
 
-    /// La palette prend ⌘: en génération 7 ; l'invitation qui l'occupait passe
-    /// à ⇧⌘:, une invitation personnalisée ne bouge pas.
-    @Test("Génération 7 : ⌘: à la palette, l'invitation à ⇧⌘:")
-    func generationPalette() {
-        func relue(invite: String) -> Preferences {
-            let ancien = """
-            {"characterOrder":[],"hotKeys":[],"barVisible":true,"showNumbers":true,
-             "slotCount":5,"defaultsVersion":6,"inviteHotKey":\(invite)}
-            """
-            return Preferences.forTesting(store: StockageMemoire([Preferences.key: Data(ancien.utf8)]))
-        }
-        let parDefaut = relue(invite: #"{"keyCode":47,"modifiers":256}"#)
-        #expect(parDefaut.paletteHotKey == HotKey.defaultPalette)
-        #expect(parDefaut.inviteHotKey == HotKey.defaultInvite)
-        let choisie = relue(invite: #"{"keyCode":34,"modifiers":256}"#)
-        #expect(choisie.inviteHotKey == HotKey(keyCode: 34, modifiers: 256))
-        #expect(choisie.paletteHotKey == HotKey.defaultPalette)
-    }
-
     /// Les clés de la liaison Stream Deck, retirée, restent dans les
     /// sauvegardes existantes : elles doivent être ignorées, pas faire
     /// retomber l'ensemble sur les défauts.
@@ -757,5 +738,27 @@ struct PreferencesTests {
         let prefs = Preferences.forTesting(store: store)
         #expect(prefs.barOrigin == nil)
         #expect(prefs.slotCount == 3)
+    }
+}
+
+/// Les générations de défauts récentes, hors du corps de la suite.
+extension PreferencesTests {
+    /// La palette prend ⌘: en génération 7 ; l'invitation qui l'occupait passe
+    /// à ⇧⌘:, une invitation personnalisée ne bouge pas.
+    @Test("Génération 7 : ⌘: à la palette, l'invitation à ⇧⌘:")
+    func generationPalette() {
+        func relue(invite: String) -> Preferences {
+            let ancien = """
+            {"characterOrder":[],"hotKeys":[],"barVisible":true,"showNumbers":true,
+             "slotCount":5,"defaultsVersion":6,"inviteHotKey":\(invite)}
+            """
+            return Preferences.forTesting(store: StockageMemoire([Preferences.key: Data(ancien.utf8)]))
+        }
+        let parDefaut = relue(invite: #"{"keyCode":47,"modifiers":256}"#)
+        #expect(parDefaut.paletteHotKey == HotKey.defaultPalette)
+        #expect(parDefaut.inviteHotKey == HotKey.defaultInvite)
+        let choisie = relue(invite: #"{"keyCode":34,"modifiers":256}"#)
+        #expect(choisie.inviteHotKey == HotKey(keyCode: 34, modifiers: 256))
+        #expect(choisie.paletteHotKey == HotKey.defaultPalette)
     }
 }
