@@ -2,24 +2,25 @@
 # build.sh — build Release signé de Synfus.
 #   sh build.sh                    → dist/Synfus.app
 #   sh build.sh --release [X.Y.Z]  → + dist/Synfus-X.Y.Z-<arch>.dmg
-#   sh build.sh --publish X.Y.Z    → depuis main propre : tag vX.Y.Z poussé,
-#                                    la release est construite par la CI
+#   sh build.sh --publish X.Y.Z    → depuis main propre : main et tag vX.Y.Z
+#                                    poussés, DMG construits ici et publiés
 #   sh build.sh --help
 # Installer et lancer, c'est `sh run.sh --install [--start]`.
 #
-# Deux variables d'environnement pilotent la CI sans changer l'usage local :
+# Trois variables d'environnement, pour la publication :
 #   VERSION=0.0.1   numéro inscrit dans l'Info.plist (défaut : dernier tag git)
 #   ARCH=x86_64     architecture cible (défaut : celle de la machine)
+#   DISTRIBUTION=1  build à publier : signé ad hoc, sans aucun visuel du jeu
 [ -n "${BASH_VERSION:-}" ] || exec /bin/bash "$0" "$@"
 case ":${SHELLOPTS:-}:" in *:posix:*) exec /bin/bash "$0" "$@" ;; esac
 set -euo pipefail
 
 cd "$(dirname "$0")"
 
-# Où la release se construit : 1 → le tag poussé déclenche release.yml (le
-# runner xcode-27 a le SDK de Liquid Glass) ; 0 → construite et publiée
-# depuis ce Mac.
-PUBLICATION_PAR_CI=1
+# Où la release se construit : 1 → le tag poussé déclenche release.yml ;
+# 0 → construite et publiée depuis ce Mac. 0 : le runner GitHub n'a pas
+# encore Xcode 27, qu'exige la swift-tools-version du paquet.
+PUBLICATION_PAR_CI=0
 
 aide() { sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; }
 
@@ -42,18 +43,24 @@ fi
 
 if [ "$MODE" = "publish" ]; then
     TAG="v$VERSION_DEMANDEE"
-    [ "$PUBLICATION_PAR_CI" = "1" ] || { echo "build.sh : publication locale non prévue pour Synfus" >&2; exit 1; }
     [ "$(git rev-parse --abbrev-ref HEAD)" = "main" ] || { echo "build.sh : --publish se lance depuis main" >&2; exit 1; }
     [ -z "$(git status --porcelain)" ] || { echo "build.sh : l'arbre n'est pas propre" >&2; exit 1; }
     git fetch -q origin main --tags
-    [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] \
-        || { echo "build.sh : main n'est pas à jour d'origin/main" >&2; exit 1; }
+    git merge-base --is-ancestor origin/main HEAD \
+        || { echo "build.sh : main a divergé d'origin/main" >&2; exit 1; }
     ! git rev-parse -q --verify "refs/tags/$TAG" >/dev/null || { echo "build.sh : le tag $TAG existe déjà" >&2; exit 1; }
     bash Tools/notes-de-version.sh "$VERSION_DEMANDEE" >/dev/null || exit 1
+    if [ "$PUBLICATION_PAR_CI" = "0" ]; then
+        bash test.sh || { echo "build.sh : tests en échec, rien n'est publié" >&2; exit 1; }
+    fi
+    git push origin main
     git tag -a "$TAG" -m "Synfus $VERSION_DEMANDEE"
     git push origin "$TAG"
-    echo "==> $TAG poussé : la release se construit sur la CI"
-    echo "    https://github.com/Synseria/Synfus/actions/workflows/release.yml"
+    if [ "$PUBLICATION_PAR_CI" = "1" ]; then
+        echo "==> $TAG poussé : la release se construit sur la CI"
+        exit 0
+    fi
+    bash Tools/publier-release.sh "$VERSION_DEMANDEE"
     exit 0
 fi
 
@@ -137,7 +144,7 @@ cp "Resources/Carte.json" "$APP/Contents/Resources/Carte.json"
 # Les visuels Ankama, s'ils ont été téléchargés (Tools/fetch-ankama-assets.sh) :
 # embarqués dans ce build-ci, pour cette machine — le dossier est ignoré par
 # Git et la CI ne l'a pas, les releases restent sans visuel du jeu.
-if [ -d "Resources/Ankama" ]; then
+if [ -d "Resources/Ankama" ] && [ "${DISTRIBUTION:-0}" != "1" ]; then
     cp -R "Resources/Ankama" "$APP/Contents/Resources/Ankama"
 fi
 

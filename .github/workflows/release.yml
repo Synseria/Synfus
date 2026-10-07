@@ -1,17 +1,12 @@
 name: Release
 
-# Un tag « vX.Y.Z » suffit à publier :  sh build.sh --publish 0.1.0
-# (depuis main propre et à jour — le script pose le tag et le pousse).
-# Le déclenchement manuel sert à rejouer une release ratée sans retaguer.
-#
-# Le filtre est strict — « v* » acceptait « v.0.1.0 », dont `${TAG#v}` tire la
-# version « .0.1.0 » : des DMG mal nommés et un CFBundleShortVersionString que
-# macOS refuse. Un tag mal formé ne déclenche donc plus rien du tout.
+# Rejouer la publication d'un tag existant (Tools/publier-release.sh, le même
+# chemin que `sh build.sh --publish X.Y.Z` depuis le Mac). Quand le runner
+# aura Xcode 27 : remettre le déclenchement sur les tags « v[0-9]+.[0-9]+.[0-9]+ »
+# et PUBLICATION_PAR_CI=1 dans build.sh.
 on:
-  push:
-    tags:
-      - "v[0-9]+.[0-9]+.[0-9]+"
-      - "v[0-9]+.[0-9]+.[0-9]+-*"
+  # La publication se fait depuis le Mac (sh build.sh --publish X.Y.Z) tant
+  # que le runner n'a pas Xcode 27 ; ce workflow ne sert qu'à la rejouer.
   workflow_dispatch:
     inputs:
       tag:
@@ -72,95 +67,7 @@ jobs:
       - name: Tests
         run: bash test.sh
 
-      - name: Construire les DMG
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          # Les deux tranches sont compilées avec le même SDK ; x86_64 est
-          # produit par cross-compilation depuis le runner Apple Silicon. Sans
-          # certificat sur le runner, signature.sh signe ad hoc.
-          for arch in arm64 x86_64; do
-            ARCH="$arch" bash build.sh --release "$VERSION"
-            rm -rf dist/Synfus.app
-          done
-          shasum -a 256 dist/*.dmg | tee dist/SHA256SUMS.txt
-
-      - name: Publier la release
+      - name: Construire et publier
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.version.outputs.tag }}
-          VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          # Ce qui change vient de CHANGELOG.md, seule source ; le mode
-          # d'emploi qui suit est le même à chaque version.
-          { bash Tools/notes-de-version.sh "$VERSION"; echo; } > notes.md
-          cat >> notes.md <<'EOF'
-          ### Téléchargement
-
-          | Mac | Fichier |
-          | --- | --- |
-          | Apple Silicon (M1 → M4) | `Synfus-VERSION-arm64.dmg` |
-          | Intel | `Synfus-VERSION-x86_64.dmg` |
-
-          Compatible macOS 14 (Sonoma) à macOS 26. L'effet Liquid Glass de la barre
-          n'apparaît que sur macOS 26 ; en deçà la barre utilise un matériau translucide.
-
-          ### Installation
-
-          **1.** Monter le DMG et glisser **Synfus** dans **Applications**.
-
-          **2.** Lever la quarantaine — **avant** de lancer l'app :
-
-          ```sh
-          xattr -dr com.apple.quarantine /Applications/Synfus.app
-          ```
-
-          ⚠️ Cette étape n'est pas facultative, et son oubli ne se voit pas :
-          l'app **se lance normalement**, mais l'autorisation Accessibilité
-          n'a alors aucun effet — la case se coche dans les Réglages et Synfus
-          continue de dire qu'il n'est pas autorisé. Copier l'app depuis le DMG
-          emmène l'attribut avec elle : le retirer du DMG ne suffit pas.
-
-          **3.** Lancer Synfus, puis l'autoriser dans **Réglages Système →
-          Confidentialité et sécurité → Accessibilité**.
-
-          Si l'app a déjà été lancée avant l'étape 2, réinitialiser l'autorisation
-          après avoir levé la quarantaine :
-
-          ```sh
-          tccutil reset Accessibility fr.synseria.Synfus
-          ```
-
-          ### Pourquoi ces manipulations
-
-          Les binaires publiés ici sont signés **ad-hoc** et non notarisés : le
-          projet n'a pas de certificat *Developer ID* (compte Apple Developer
-          payant). macOS n'a donc aucune identité stable à associer à l'app, et
-          se rabat sur l'empreinte du binaire. Conséquence : **chaque nouvelle
-          version doit être réautorisée** — retirer l'ancienne entrée dans la
-          liste Accessibilité, puis rajouter la nouvelle.
-
-          Compiler depuis les sources (`sh run.sh --install --start`) évite tout cela.
-          EOF
-          sed -i '' "s/VERSION/$VERSION/g" notes.md
-
-          # Créer la release échoue si elle existe déjà — c'est le cas dès qu'on
-          # l'a ouverte depuis l'interface GitHub (ce qui pousse le tag et
-          # déclenche ce workflow), ou qu'on rejoue une exécution. On téléverse
-          # alors dans la release en place, en écrasant les fichiers homonymes.
-          FICHIERS=(
-            dist/Synfus-"$VERSION"-arm64.dmg
-            dist/Synfus-"$VERSION"-x86_64.dmg
-            dist/SHA256SUMS.txt
-          )
-
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "▸ Release $TAG déjà présente — mise à jour."
-            gh release edit "$TAG" --title "Synfus $VERSION" --notes-file notes.md
-            gh release upload "$TAG" "${FICHIERS[@]}" --clobber
-          else
-            gh release create "$TAG" \
-              --title "Synfus $VERSION" \
-              --notes-file notes.md \
-              "${FICHIERS[@]}"
-          fi
+        run: bash Tools/publier-release.sh "${{ steps.version.outputs.version }}"
