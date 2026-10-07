@@ -7,7 +7,7 @@ struct QuetesTests {
 
     /// Wogew l'hewmite, raccourcie : trois étapes, deux objets à ramener.
     static let page = """
-    {"total":1,"data":[{"id":18,"name":{"fr":"Wogew l'hewmite","en":"Wogew the Hewmit"},"levelMin":70,
+    {"total":1,"data":[{"id":18,"name":{"fr":"Wogew l'hewmite","en":"Wogew the Hewmit"},"levelMin":70,"isPartyQuest":true,
       "stepIds":[57,55],"startPosition":[{"mapId":160695296,"npcId":196}],
       "steps":[
         {"id":55,"name":{"fr":"Le sang du wabbit GM"},"objectives":[
@@ -23,17 +23,22 @@ struct QuetesTests {
 
     static func quetes() throws -> Quetes {
         let api = try JSONDecoder().decode(DofusDB.Page<QuetesDofusDB.QueteAPI>.self, from: Data(page.utf8)).data
-        func nomme(_ id: Int, _ nom: String) throws -> QuetesDofusDB.Nomme {
-            try JSONDecoder().decode(QuetesDofusDB.Nomme.self, from: Data(#"{"id":\#(id),"name":{"fr":"\#(nom)"}}"#.utf8))
+        func nomme(_ id: Int, _ nom: String, type: Int? = nil) throws -> QuetesDofusDB.Nomme {
+            var nomme = try JSONDecoder().decode(QuetesDofusDB.Nomme.self,
+                                                 from: Data(#"{"id":\#(id),"name":{"fr":"\#(nom)"}}"#.utf8))
+            nomme.typeId = type
+            return nomme
         }
+        let type = try JSONDecoder().decode(QuetesDofusDB.TypeObjetAPI.self,
+                                            from: Data(#"{"id":137,"superType":{"name":{"fr":"Objet de quête"}}}"#.utf8))
         let carte = try JSONDecoder().decode(QuetesDofusDB.CarteAPI.self,
                                              from: Data(#"{"id":160695296,"posX":-1,"posY":-39,"subAreaId":56}"#.utf8))
         let sousZone = try JSONDecoder().decode(QuetesDofusDB.SousZoneAPI.self,
                                                 from: Data(#"{"id":10,"areaId":0,"name":{"fr":"Village d'Amakna"}}"#.utf8))
         return QuetesDofusDB.assembler(
-            quetes: api, objets: [try nomme(1746, "Sang de Wabbit GM")], monstres: [try nomme(182, "Wabbit GM")],
+            quetes: api, objets: [try nomme(1746, "Sang de Wabbit GM", type: 137)], monstres: [try nomme(182, "Wabbit GM")],
             pnjs: [try nomme(119, "Otomaï"), try nomme(196, "Wogew")], cartes: [carte],
-            sousZones: [sousZone], zones: [try nomme(0, "Amakna")], date: .now)
+            sousZones: [sousZone], zones: [try nomme(0, "Amakna")], types: [type], date: .now)
     }
 
     @Test("Les étapes suivent stepIds, les renvois se résolvent, un renvoi inconnu reste lisible")
@@ -99,7 +104,8 @@ struct QuetesTests {
     @Test("La fiche : ressources additionnées, objectifs résolus, carte quand elle est connue")
     func fiche() throws {
         let fiche = try #require(try Self.quetes().fiche(18, en: .fr))
-        #expect(fiche.ressources == [FicheQuete.Ressource(nom: "Sang de Wabbit GM", quantite: 5)])
+        #expect(fiche.ressources == [FicheQuete.Ressource(nom: "Sang de Wabbit GM", quantite: 5, categorie: "Objet de quête")])
+        #expect(fiche.groupe && !fiche.donjon)
         #expect(fiche.etapes.map(\.nom) == ["Analyse de sang", "Le sang du wabbit GM"])
         let otomai = try #require(fiche.etapes[1].objectifs.first { $0.texte.contains("Otomaï") })
         #expect(otomai.position == PNJ.Position(x: -2, y: -4))
