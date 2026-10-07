@@ -174,6 +174,12 @@ struct BarView: View {
 
     /// Le zaap le plus proche du `/travel` copié. La barre ne prend pas le
     /// focus : le jeu reste devant, prêt pour ⌘V.
+    ///
+    /// Les favoris au clic droit, pas dans un popover au survol : la fenêtre
+    /// d'un `NSPopover` n'est pas un panneau non activable, son premier clic
+    /// active Synfus et prend le clavier au jeu — le `/zaap` copié ne se
+    /// collerait plus sans recliquer dans le jeu. Un menu, lui, se suit sans
+    /// activer l'app, comme celui du rangement.
     private var zaapButton: some View {
         ModeButton(
             icone: "point.3.connected.trianglepath.dotted",
@@ -182,6 +188,30 @@ struct BarView: View {
             aide: L("barre.zaapAide", prefs.zaapHotKey?.displayString ?? L("barre.aucunRaccourci"))
         ) {
             ZaapClipboard.shared.optimiser()
+        }
+        .contextMenu { zaapsFavoris }
+    }
+
+    /// Du plus proche au plus loin du perso devant.
+    @ViewBuilder
+    private var zaapsFavoris: some View {
+        let position = lecteur.positionDuPersoDevant
+        let favoris = CatalogueZaaps.parDistance(prefs.zaapsFavorisConnus, depuis: position)
+        if favoris.isEmpty {
+            Button(L("barre.zaap.aucunFavori")) {}.disabled(true)
+        }
+        let langue = L10n.courante.langue
+        ForEach(favoris, id: \.cle) { zaap in
+            let coordonnees = "\(zaap.x),\(zaap.y)"
+            Button {
+                ZaapClipboard.shared.copierZaap(zaap)
+            } label: {
+                if let cartes = CatalogueZaaps.distance(de: zaap, depuis: position) {
+                    Text(L("barre.zaap.favori", zaap.nom(en: langue), coordonnees, cartes))
+                } else {
+                    Text(L("barre.zaap.favoriSansDistance", zaap.nom(en: langue), coordonnees))
+                }
+            }
         }
     }
 
@@ -316,6 +346,14 @@ struct BarView: View {
                 if WindowTitle.isPersistableName(client.name) {
                     Button(L("barre.copier", invitations.commande(pour: client))) {
                         invitations.copier(client)
+                    }
+                }
+                // Le trajet vers ce perso, zaap compris s'il fait gagner assez
+                // de cartes ; rejoindre celui de devant n'a pas de sens.
+                if client.name != lecteur.persoDevant,
+                   let cible = ItineraireZaap.rejoindre(lecteur.releves[client.name]?.position) {
+                    Button(L("barre.rejoindre", client.name, "\(cible.x),\(cible.y)")) {
+                        ZaapClipboard.shared.copierTrajet(vers: cible)
                     }
                 }
                 Button(L("barre.fermer", client.name)) { manager.close(client) }
