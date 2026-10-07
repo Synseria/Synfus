@@ -13,7 +13,7 @@ contenu (`Tools/notes-de-version.sh`), et `sh build.sh --publish` refuse une ver
   devant Dofus. Tu tapes, Entrée copie, ⌘V colle dans le tchat — Synfus n'envoie toujours rien.
   Rien de tapé : les zaaps en cartes, favoris d'abord puis du plus proche, et tes dernières copies.
 - **`/zaap bonta`** : un zaap par son nom, sa **zone** (Cœur immaculé → Bonta) ou ton
-  **étiquette** libre (« Fri 1 », « Bouftou »), posée d'un Tab ou d'un clic droit.
+  **étiquette** libre (« Fri 1 », « Bouftou »), posée d'un ⌘E ; ⌘D pour un favori.
 - **`/travel banque bonta`** : les **834 lieux** du jeu — banques, hôtels de vente, ateliers,
   temples, donjons, transports — avec les surnoms des joueurs (`fm`, `hdv conso`, `bijou`…). Le
   plus proche de toi passe devant, et le trajet est copié en `/zaap x,y; /travel a,b` quand le
@@ -29,6 +29,8 @@ contenu (`Tools/notes-de-version.sh`), et `sh build.sh --publish` refuse une ver
 - **Tout Synfus au clavier** : tape un perso pour y aller, « ranger », « session », « équipe
   suivante », « chasse »… et Entrée.
 - **`/invite`** : toute l'équipe en une ligne, ou un perso.
+- **Filtres et tris** : les zaaps passent toujours devant ; Tab fait défiler Tout, Zaaps, Lieux,
+  Persos, et ⌘T trie le reste par proximité, par ordre alphabétique ou par type.
 
 ### Améliorations
 
