@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// Onglet Zaap : la réécriture du `/travel` copié, et les zaaps qu'elle peut
-/// proposer — activables un à un, mis à jour depuis DofusDB, ajoutés à la main.
+/// Onglet Zaap : la réécriture du `/travel` copié, la chasse au trésor (qui
+/// copie ses trajets par elle), et les zaaps proposés — activables un à un,
+/// mis à jour depuis DofusDB, ajoutés à la main.
 struct ZaapSettings: View {
     @ObservedObject private var prefs = Preferences.shared
     @State private var miseAJour = false
@@ -13,6 +14,7 @@ struct ZaapSettings: View {
     var body: some View {
         Form {
             reecriture
+            ChasseSection()
             liste
             ajout
         }
