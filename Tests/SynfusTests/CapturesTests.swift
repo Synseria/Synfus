@@ -42,6 +42,21 @@ struct CapturesTests {
         }
     }
 
+    @Test("Capture d'une quête ouverte", .enabled(if: dossier != nil))
+    func quete() throws {
+        let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
+        var contexte = contexte()
+        contexte.quetes = try QuetesTests.quetes()
+        let modele = PaletteModele(contexte: contexte, requete: "/quete wogew")
+        let quete = try #require(modele.entrees.first)
+        modele.executer(quete)
+        let vue = PaletteVue(modele: modele)
+            .padding(24)
+            .background(Color(red: 0.11, green: 0.11, blue: 0.13))
+            .environment(\.colorScheme, .dark)
+        try ecrire(vue, vers: dossier.appending(path: "palette-quete.png"))
+    }
+
     @Test("Captures des réglages", .enabled(if: dossier != nil))
     func reglages() throws {
         let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
