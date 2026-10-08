@@ -123,7 +123,7 @@ struct QuetesTests {
     @Test("La fiche : ressources additionnées, objectifs résolus, carte quand elle est connue")
     func fiche() throws {
         let fiche = try #require(try Self.quetes().fiche(18, en: .fr))
-        #expect(fiche.ressources == [FicheQuete.Ressource(nom: "Sang de Wabbit GM", quantite: 5, categorie: "Objet de quête",
+        #expect(fiche.ressources == [FicheQuete.Ressource(objet: 1746, nom: "Sang de Wabbit GM", quantite: 5, categorie: "Objet de quête",
                                                      objetDeQuete: true)])
         #expect(fiche.groupe && !fiche.donjon)
         #expect(fiche.exigences == [.classe(13), .niveau(60), .metier("Alchimiste", niveau: 80),
@@ -162,7 +162,7 @@ struct QuetesTests {
         #expect(fiche.etapes[0].description == nil)
         #expect(sang.recompenses == FicheQuete.Recompenses(
             niveau: 70, experience: 201_600, kamas: 6_280,
-            objets: [FicheQuete.Ressource(nom: "Analyse de sang", quantite: 1, categorie: nil, objetDeQuete: false)],
+            objets: [FicheQuete.Ressource(objet: 1747, nom: "Analyse de sang", quantite: 1, categorie: nil, objetDeQuete: false)],
             emotes: ["Pierre"], titres: []))
         #expect(fiche.etapes[0].recompenses.vides)
     }
