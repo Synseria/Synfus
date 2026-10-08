@@ -154,7 +154,7 @@ extension QuetePanel {
         for element in MenuQuetes.elements(
             epinglees: prefs.quetesEpinglees, montree: idMontre, reconnues: lecture.reconnues,
             etat: lecture.etat, coches: lecture.cochesLues, actives: Set(MenuQuetes.Option.allCases.filter { prefs[keyPath: Self.reglage($0)] }),
-            nom: { store.nom($0) ?? "…" }) {
+            ici: Self.ici(), nom: { store.nom($0) ?? "…" }) {
             switch element {
             case .titre(let titre):
                 menu.addItem(.sectionHeader(title: titre))
@@ -165,6 +165,11 @@ extension QuetePanel {
             case .desepingler(let id, let nom):
                 let item = CibleMenu.shared.element(L("quete.menu.desepingler", nom)) { QuetePanel.shared.desepingler(id) }
                 item.image = NSImage(systemSymbolName: "pin.slash", accessibilityDescription: nil)
+                menu.addItem(item)
+            case .ici(let id, let titre, let epinglee):
+                let item = CibleMenu.shared.element(titre) { QuetePanel.shared.ouvrir(id) }
+                item.image = NSImage(systemSymbolName: epinglee ? "pin.fill" : "exclamationmark.bubble",
+                                     accessibilityDescription: nil)
                 menu.addItem(item)
             case .toutDesepingler:
                 menu.addItem(CibleMenu.shared.element(L("quete.menu.toutDesepingler")) { QuetePanel.shared.toutDesepingler() })
@@ -195,6 +200,18 @@ extension QuetePanel {
 }
 
 extension QuetePanel {
+    /// Ce qui commence sur la case du perso devant, d'après sa position lue.
+    private static func ici() -> MenuQuetes.Ici? {
+        guard let perso = LecteurEcran.shared.positionDuPersoDevant, let quetes = QuetesStore.shared.quetes else { return nil }
+        let reseau = CarteStore.shared.reseau, langue = L10n.courante.langue
+        return MenuQuetes.Ici(
+            coordonnees: perso.coordonnees,
+            quetes: QuetesIci.quetes(quetes, perso: perso, reseau: reseau).map {
+                .init(id: $0.id, nom: Lieu.traduit($0.noms, langue) ?? "?", niveau: $0.niveau)
+            },
+            pnjs: QuetesIci.pnjs(quetes, perso: perso, reseau: reseau).compactMap { Lieu.traduit($0.noms, langue) })
+    }
+
     /// Le réglage derrière une option du menu.
     private static func reglage(_ option: MenuQuetes.Option) -> ReferenceWritableKeyPath<Preferences, Bool> {
         switch option {

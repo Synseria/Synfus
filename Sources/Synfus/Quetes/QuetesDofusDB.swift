@@ -263,10 +263,12 @@ enum QuetesDofusDB {
                                                 (deja?.quetes ?? []).union([quete]))
         }
         let modeles = quetes.map { api -> Quete in
+            var departs: [DepartQuete] = []
             for depart in api.startPosition ?? [] {
                 let carte = carteParId[depart.mapId]
-                situer(depart.npcId, carte.map { PNJ.Position(x: $0.posX, y: $0.posY) }, carte: carte?.id,
-                       carte?.subAreaId, api.id)
+                let position = carte.map { PNJ.Position(x: $0.posX, y: $0.posY) }
+                situer(depart.npcId, position, carte: carte?.id, carte?.subAreaId, api.id)
+                if let position { departs.append(DepartQuete(pnj: depart.npcId, position: position, sousZone: carte?.subAreaId)) }
             }
             let ordre = api.stepIds ?? []
             let etapes = (api.steps ?? [])
@@ -287,7 +289,8 @@ enum QuetesDofusDB {
                 }
             return Quete(id: api.id, noms: api.name.parLangue, niveau: api.levelMin ?? 0,
                          groupe: api.isPartyQuest ?? false, donjon: api.isDungeonQuest ?? false,
-                         prerequis: api.need?.quests ?? [], critere: api.startCriterion, etapes: etapes)
+                         prerequis: api.need?.quests ?? [], critere: api.startCriterion, etapes: etapes,
+                         departs: departs)
         }
         func noms(_ liste: [Nomme]) -> [String: [String: String]] {
             Dictionary(liste.map { (String($0.id), $0.name.parLangue) }, uniquingKeysWith: { a, _ in a })
@@ -322,17 +325,11 @@ enum QuetesDofusDB {
                       metiers: noms(cites.metiers), camps: noms(cites.camps))
     }
 
+    /// Les champs que lisent `Nomme`, `TitreAPI`, `CarteAPI` et `SousZoneAPI`.
+    private static let champsCites = DofusDB.selection(
+        ["id", "name", "posX", "posY", "subAreaId", "areaId", "typeId", "nameMale"])
+
     private static func parIdentifiants<Element: Decodable & Sendable>(_ chemin: String, _ ids: Set<Int>) async throws -> [Element] {
-        let ids = ids.sorted()
-        var elements: [Element] = []
-        for debut in stride(from: 0, to: ids.count, by: DofusDB.parPage) {
-            let lot = ids[debut..<min(debut + DofusDB.parPage, ids.count)]
-            elements += try await DofusDB.toutes(chemin, lot.map { URLQueryItem(name: "id[$in][]", value: "\($0)") }
-                + [URLQueryItem(name: "$select[]", value: "id"), URLQueryItem(name: "$select[]", value: "name"),
-                   URLQueryItem(name: "$select[]", value: "posX"), URLQueryItem(name: "$select[]", value: "posY"),
-                   URLQueryItem(name: "$select[]", value: "subAreaId"), URLQueryItem(name: "$select[]", value: "areaId"),
-                   URLQueryItem(name: "$select[]", value: "typeId"), URLQueryItem(name: "$select[]", value: "nameMale")])
-        }
-        return elements
+        try await DofusDB.parIdentifiants(chemin, ids, champsCites)
     }
 }

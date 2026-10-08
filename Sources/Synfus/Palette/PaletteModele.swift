@@ -87,6 +87,9 @@ final class PaletteModele: ObservableObject {
             && (filtre == .tout || filtre == .zaaps)
     }
 
+    /// Sans elle, le filtre « Ici » n'a rien à montrer.
+    var positionConnue: Bool { contexte.position != nil }
+
     /// Les dernières copies, montrées au-dessus des cartes.
     var recents: [EntreePalette] { RecherchePalette.recents(contexte) }
 

@@ -94,6 +94,20 @@ enum DofusDB {
         return pages.keys.sorted().flatMap { pages[$0] ?? [] }
     }
 
+    /// Les éléments dont `champ` vaut l'un des identifiants, `parPage`
+    /// identifiants par requête : une URL a sa longueur maximale.
+    static func parIdentifiants<Element: Decodable>(
+        _ chemin: String, _ ids: some Sequence<Int>, champ: String = "id", _ filtres: [URLQueryItem] = []
+    ) async throws -> [Element] {
+        let ids = Array(Set(ids)).sorted()
+        var elements: [Element] = []
+        for debut in stride(from: 0, to: ids.count, by: parPage) {
+            let lot = ids[debut..<min(debut + parPage, ids.count)]
+            elements += try await toutes(chemin, filtres + lot.map { URLQueryItem(name: "\(champ)[$in][]", value: "\($0)") })
+        }
+        return elements
+    }
+
     /// Toutes les pages, `parPage` à la fois.
     static func toutes<Element: Decodable>(_ chemin: String, _ filtres: [URLQueryItem]) async throws -> [Element] {
         var elements: [Element] = []

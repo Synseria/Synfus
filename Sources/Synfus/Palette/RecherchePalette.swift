@@ -16,9 +16,10 @@ enum ActionPalette: CaseIterable, Sendable {
     }
 }
 
-/// Ce que Tab fait défiler : la famille de résultats montrée.
+/// Ce que Tab fait défiler : la famille de résultats montrée, ou ce qui est
+/// sur la case du perso (`ici`) : quêtes qui y commencent, PNJ, lieux.
 enum FiltrePalette: CaseIterable, Sendable {
-    case tout, zaaps, lieux, quetes, pnj
+    case tout, zaaps, lieux, quetes, pnj, ici
 
     var titre: String {
         switch self {
@@ -27,16 +28,18 @@ enum FiltrePalette: CaseIterable, Sendable {
         case .lieux: return L("palette.filtre.lieux")
         case .quetes: return L("palette.filtre.quetes")
         case .pnj: return L("palette.filtre.pnj")
+        case .ici: return L("palette.filtre.ici")
         }
     }
 
-    func garde(_ genre: EntreePalette.Genre) -> Bool {
+    func garde(_ entree: EntreePalette) -> Bool {
         switch self {
         case .tout: return true
-        case .zaaps: return genre == .zaap
-        case .lieux: return genre == .lieu
-        case .quetes: return genre == .quete
-        case .pnj: return genre == .pnj
+        case .zaaps: return entree.genre == .zaap
+        case .lieux: return entree.genre == .lieu
+        case .quetes: return entree.genre == .quete
+        case .pnj: return entree.genre == .pnj
+        case .ici: return entree.ici
         }
     }
 
@@ -105,6 +108,8 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
     var carte: Int?
     /// Le pictogramme d'un lieu (`Lieu.gfx`), à la place du symbole.
     var pictogramme: Int?
+    /// Sur la case du perso : une quête qui y commence, un PNJ, un lieu.
+    var ici = false
     let effet: Effet
 }
 
@@ -152,11 +157,11 @@ enum RecherchePalette {
             // La grille des zaaps, favoris d'abord puis du plus proche — sauf
             // filtre sur une autre famille, montrée entière.
             if filtre == .tout || filtre == .zaaps { return index.zaaps.map(\.entree) }
-            return classer(index.tout.filter { filtre.garde($0.entree.genre) }, [])
+            return classer(index.tout.filter { filtre.garde($0.entree) }, [])
         }
         if texte.hasPrefix("%") { return variables(texte) }
         guard texte.hasPrefix("/") else {
-            return classer(index.tout.filter { filtre.garde($0.entree.genre) }, mots(texte))
+            return classer(index.tout.filter { filtre.garde($0.entree) }, mots(texte))
         }
         let (commande, reste) = separer(texte)
         switch commande {
@@ -231,6 +236,8 @@ enum RecherchePalette {
                 etiquette: contexte.etiquettes[lieu.cle], detail: Coordonnees.texte(lieu.x, lieu.y),
                 favori: contexte.favoris.contains(lieu.cle), distance: distance, categorie: lieu.categorie, recherche: lieuDit, cle: lieu.cle,
                 carte: lieu.idCarte, pictogramme: lieu.gfx,
+                ici: contexte.position.map { QuetesIci.ici(PNJ.Position(x: lieu.x, y: lieu.y), sousZone: lieu.idSousZone,
+                                                          perso: $0, reseau: contexte.reseau) } ?? false,
                 effet: lieu.monde == Zaap.mondeDesDouze ? .trajet(x: lieu.x, y: lieu.y)
                                                         : .copier(ItineraireZaap.travel(vers: (lieu.x, lieu.y))))
         }
@@ -285,6 +292,7 @@ enum RecherchePalette {
         (contexte.quetes?.quetes ?? []).map { quete in
             EntreePalette(id: "quete:\(quete.id)", genre: .quete, titre: Lieu.traduit(quete.noms, contexte.langue) ?? "?",
                           sousTitre: L("palette.quete.resume", nombre: quete.etapes.count, quete.niveau, quete.etapes.count),
+                          ici: contexte.position.map { QuetesIci.commenceIci(quete, perso: $0, reseau: contexte.reseau) } ?? false,
                           effet: .ouvrirQuete(quete.id))
         }
     }
@@ -309,7 +317,11 @@ enum RecherchePalette {
                 return EntreePalette(id: "pnj:\(pnj.id):\(position.x),\(position.y)", genre: .pnj,
                                      titre: Lieu.traduit(pnj.noms, contexte.langue) ?? "?", sousTitre: sousTitre,
                                      detail: Coordonnees.texte(position.x, position.y), distance: distance(vers: position, contexte),
-                                     carte: passage.carte, effet: .trajet(x: position.x, y: position.y))
+                                     carte: passage.carte,
+                                     ici: contexte.position.map {
+                                         QuetesIci.ici(position, sousZone: passage.sousZone, perso: $0, reseau: contexte.reseau)
+                                     } ?? false,
+                                     effet: .trajet(x: position.x, y: position.y))
             }
         }
     }
