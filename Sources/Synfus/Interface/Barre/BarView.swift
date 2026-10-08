@@ -218,7 +218,7 @@ struct BarView: View {
         }
         let langue = L10n.courante.langue
         ForEach(favoris, id: \.cle) { zaap in
-            let coordonnees = "\(zaap.x),\(zaap.y)"
+            let coordonnees = Coordonnees.texte(zaap.x, zaap.y)
             Button {
                 ZaapClipboard.shared.copierZaap(zaap)
             } label: {
@@ -368,7 +368,7 @@ struct BarView: View {
                 // de cartes ; rejoindre celui de devant n'a pas de sens.
                 if client.name != lecteur.persoDevant,
                    let cible = ItineraireZaap.rejoindre(lecteur.releves[client.name]?.position) {
-                    Button(L("barre.rejoindre", client.name, "\(cible.x),\(cible.y)")) {
+                    Button(L("barre.rejoindre", client.name, Coordonnees.texte(cible.x, cible.y))) {
                         ZaapClipboard.shared.copierTrajet(vers: cible)
                     }
                 }

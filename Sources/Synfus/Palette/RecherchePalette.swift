@@ -157,7 +157,7 @@ enum RecherchePalette {
         case "/travel":
             if let cible = ItineraireZaap.cible(dans: "/travel " + reste) {
                 let copie = trajet(vers: cible, index.contexte)
-                return [EntreePalette(id: "travel", genre: .lieu, titre: copie, detail: "\(cible.x),\(cible.y)",
+                return [EntreePalette(id: "travel", genre: .lieu, titre: copie, detail: Coordonnees.texte(cible.x, cible.y),
                                       effet: .copier(copie))]
             }
             return classer(index.lieux + index.zaapsCommeLieux, mots(reste))
@@ -189,7 +189,7 @@ enum RecherchePalette {
             EntreePalette(
                 id: "zaap:" + zaap.cle, genre: .zaap, titre: zaap.nom(en: contexte.langue),
                 sousTitre: zaap.zone(en: contexte.langue), etiquette: contexte.etiquettes[zaap.cle],
-                detail: "\(zaap.x),\(zaap.y)", favori: contexte.favoris.contains(zaap.cle),
+                detail: Coordonnees.texte(zaap.x, zaap.y), favori: contexte.favoris.contains(zaap.cle),
                 distance: CatalogueZaaps.distance(de: zaap, depuis: contexte.position), cle: zaap.cle,
                 effet: .copier(ItineraireZaap.zaap(zaap)))
         }
@@ -201,7 +201,7 @@ enum RecherchePalette {
             EntreePalette(
                 id: "travel:" + zaap.cle, genre: .lieu, titre: L("palette.zaap", zaap.nom(en: contexte.langue)),
                 sousTitre: zaap.zone(en: contexte.langue), etiquette: contexte.etiquettes[zaap.cle],
-                detail: "\(zaap.x),\(zaap.y)", favori: contexte.favoris.contains(zaap.cle),
+                detail: Coordonnees.texte(zaap.x, zaap.y), favori: contexte.favoris.contains(zaap.cle),
                 distance: CatalogueZaaps.distance(de: zaap, depuis: contexte.position), cle: zaap.cle,
                 effet: .trajet(x: zaap.x, y: zaap.y))
         }
@@ -221,7 +221,7 @@ enum RecherchePalette {
             let sousTitre = distance.map { L("palette.aCartes", lieuDit, $0) } ?? lieuDit
             return EntreePalette(
                 id: lieu.cle, genre: .lieu, titre: lieu.nom(en: contexte.langue), sousTitre: sousTitre,
-                etiquette: contexte.etiquettes[lieu.cle], detail: "\(lieu.x),\(lieu.y)",
+                etiquette: contexte.etiquettes[lieu.cle], detail: Coordonnees.texte(lieu.x, lieu.y),
                 favori: contexte.favoris.contains(lieu.cle), distance: distance, categorie: lieu.categorie, recherche: lieuDit, cle: lieu.cle,
                 effet: lieu.monde == Zaap.mondeDesDouze ? .trajet(x: lieu.x, y: lieu.y)
                                                         : .copier(ItineraireZaap.travel(vers: (lieu.x, lieu.y))))
@@ -299,7 +299,7 @@ enum RecherchePalette {
                     : rang == 0 ? L("palette.pnj.cite", lieu, passage.quetes) : L("palette.pnj.aussi", lieu, passage.quetes)
                 return EntreePalette(id: "pnj:\(pnj.id):\(position.x),\(position.y)", genre: .pnj,
                                      titre: Lieu.traduit(pnj.noms, contexte.langue) ?? "?", sousTitre: sousTitre,
-                                     detail: "\(position.x),\(position.y)", distance: distance(vers: position, contexte),
+                                     detail: Coordonnees.texte(position.x, position.y), distance: distance(vers: position, contexte),
                                      effet: .trajet(x: position.x, y: position.y))
             }
         }
