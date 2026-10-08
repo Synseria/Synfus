@@ -3,6 +3,7 @@ import SwiftUI
 /// Onglet Quêtes : chercher une quête et l'ouvrir dans son panneau.
 struct QuetesSettings: View {
     @ObservedObject private var store = QuetesStore.shared
+    @ObservedObject private var prefs = Preferences.shared
     @State private var filtre = ""
 
     private static let limite = 200
@@ -13,6 +14,7 @@ struct QuetesSettings: View {
         PageReglages(titre: L("reglages.quetes"), sousTitre: L("quetes.sousTitre")) {
             Section {
                 SourceQuetes()
+                Interrupteur(titre: L("quetes.bouton"), isOn: $prefs.quetesBouton)
             }
             Section {
                 ChampFiltre(invite: L("quetes.filtrer"), texte: $filtre)

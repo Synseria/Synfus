@@ -33,6 +33,11 @@ enum DofusDB {
         champs.map { URLQueryItem(name: "$select[]", value: $0) }
     }
 
+    /// La vue d'une carte du jeu, en demi-taille (`ImagesDofusDB` la garde).
+    static func imageCarte(_ carte: Int) -> URL {
+        api.appending(path: "img/maps/0.5/\(carte).jpg")
+    }
+
     /// Jamais téléchargée (`nil`), ou trop vieille.
     static func perimee(depuis date: Date?, maintenant: Date) -> Bool {
         guard let date else { return true }

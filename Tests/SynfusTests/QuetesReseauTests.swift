@@ -18,6 +18,14 @@ struct QuetesReseauTests {
         #expect(wogew.etapes.count == 3)
         #expect(quetes.texte(wogew.etapes[1].objectifs[0].textes["fr"] ?? "", en: .fr).contains("{") == false)
         #expect(quetes.pnjs.contains { $0.id == 196 && $0.passages.contains { $0.position == PNJ.Position(x: -1, y: -39) } })
+        let fiche = try #require(quetes.fiche(18, en: .fr))
+        #expect(fiche.etapes.allSatisfy { $0.description != nil })
+        #expect(fiche.etapes.flatMap(\.objectifs).contains { $0.carte == 185862149 })
+        let etapes = quetes.quetes.flatMap(\.etapes)
+        #expect(etapes.contains { !$0.recompenses.objets.isEmpty } && etapes.contains { $0.recompenses.experience > 0 })
+        #expect(etapes.contains { !$0.recompenses.emotes.isEmpty } && quetes.emotes.isEmpty == false)
+        #expect(etapes.contains { !$0.recompenses.titres.isEmpty } && quetes.titres.isEmpty == false)
+        #expect(quetes.suivantes(de: 55).map(\.id).contains(56))
 
         var contexte = ContextePalette()
         contexte.lieux = Carte.integree.lieux
