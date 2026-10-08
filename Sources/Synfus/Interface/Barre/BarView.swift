@@ -9,6 +9,7 @@ struct BarView: View {
     @ObservedObject private var invitations = InvitationClipboard.shared
     @ObservedObject private var zaaps = ZaapClipboard.shared
     @ObservedObject private var chasse = ChassePanel.shared
+    @ObservedObject private var quetes = QuetePanel.shared
     @ObservedObject private var palette = PalettePanel.shared
     @State private var dragging: String?
     @State private var chipFrames: [String: CGRect] = [:]
@@ -171,6 +172,7 @@ struct BarView: View {
             arrangeMenu
             if prefs.zaapBouton { zaapButton }
             if prefs.chasseBouton { chasseButton }
+            if prefs.quetesBouton { quetesButton }
             autoFocusToggle
         }
     }
@@ -205,6 +207,14 @@ struct BarView: View {
             aide: L("barre.chasseAide", prefs.chasseHotKey?.displayString ?? L("barre.aucunRaccourci"))
         ) {
             ChassePanel.shared.basculer()
+        }
+    }
+
+    /// Le panneau des quêtes épinglées ; vide, il invite à en chercher une
+    /// dans la palette.
+    private var quetesButton: some View {
+        ModeButton(icone: "scroll", teinte: .mint, actif: quetes.ouvert, aide: L("barre.quetesAide")) {
+            QuetePanel.shared.basculer()
         }
     }
 
