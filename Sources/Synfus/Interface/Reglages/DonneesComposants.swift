@@ -128,7 +128,7 @@ struct BoutonTrajet: View {
             }
         } label: {
             HStack(spacing: 4) {
-                Text("\(x),\(y)").font(.system(size: 11, design: .monospaced))
+                Text(Coordonnees.texte(x, y)).font(.system(size: 11, design: .monospaced))
                 Image(systemName: copie ? "checkmark" : "doc.on.clipboard")
             }
             .foregroundStyle(copie ? Couleurs.accent : Color.secondary)

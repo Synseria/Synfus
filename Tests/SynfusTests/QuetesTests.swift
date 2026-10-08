@@ -115,7 +115,7 @@ struct QuetesTests {
     @Test("/pnj et le filtre PNJ : le trajet vers sa position")
     func paletteePNJ() throws {
         let contexte = try contexte()
-        #expect(RecherchePalette.entrees("/pnj wogew", contexte).first?.detail == "-1,-39")
+        #expect(RecherchePalette.entrees("/pnj wogew", contexte).first?.detail == "[-1,-39]")
         #expect(RecherchePalette.entrees("/pnj otomai", contexte).first?.sousTitre?.hasPrefix("Village d'Amakna · Amakna") == true)
         #expect(RecherchePalette.entrees("", contexte, filtre: .pnj).allSatisfy { $0.genre == .pnj })
         #expect(RecherchePalette.entrees("wogew", contexte, filtre: .quetes).map(\.genre) == [.quete])

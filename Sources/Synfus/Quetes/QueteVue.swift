@@ -157,7 +157,7 @@ struct QueteVue: View {
                 let id = "objectif:\(rang):\(indice)"
                 if let position = objectif.position {
                     ligne(id: id, icone: "mappin.and.ellipse", texte: objectif.texte,
-                          detail: "\(position.x),\(position.y)", monospace: true) {
+                          detail: Coordonnees.texte(position.x, position.y), monospace: true) {
                         ZaapClipboard.shared.copierTrajet(vers: (position.x, position.y))
                         signaler(id)
                     }

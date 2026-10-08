@@ -20,19 +20,19 @@ struct PositionCarteTests {
     @Test("Deux coordonnées négatives, et un « Niveau » mal lu")
     func deuxNegatives() {
         let position = PositionCarte.lire(["Bonta (Faubourgs des artisans)", "-29, -57 - Nivcau 10"])
-        #expect(position?.coordonnees == "-29, -57")
+        #expect(position?.coordonnees == "[-29,-57]")
         #expect(position?.zone == "Bonta (Faubourgs des artisans)")
     }
 
     @Test("Le signe moins lu en flèche ou en tiret long reste un moins")
     func tiretsSubstitues() {
         #expect(PositionCarte.lire(["→16, 1 - Niveau 1"])?.x == -16)
-        #expect(PositionCarte.lire(["— 3 , −12"])?.coordonnees == "-3, -12")
+        #expect(PositionCarte.lire(["— 3 , −12"])?.coordonnees == "[-3,-12]")
     }
 
     @Test("La virgule lue en point passe encore")
     func virguleEnPoint() {
-        #expect(PositionCarte.lire(["4. -18 - Niveau 20"])?.coordonnees == "4, -18")
+        #expect(PositionCarte.lire(["4. -18 - Niveau 20"])?.coordonnees == "[4,-18]")
     }
 
     @Test("Deux nombres ailleurs qu'en tête de ligne ne sont pas une position")
@@ -50,7 +50,7 @@ struct PositionCarteTests {
     @Test("Sans ligne de zone, la position reste lue")
     func sansZone() {
         let position = PositionCarte.lire(["-16, 1 - Niveau 1"])
-        #expect(position?.coordonnees == "-16, 1")
+        #expect(position?.coordonnees == "[-16,1]")
         #expect(position?.zone == nil)
     }
 }

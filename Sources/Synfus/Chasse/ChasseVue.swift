@@ -195,7 +195,7 @@ struct ChasseVue: View {
                         .foregroundStyle(.secondary)
                     switch constat.resultat {
                     case .trouve(let x, let y, let distance):
-                        Text(L("chasse.trouve", "[\(x),\(y)]", distance)).font(.system(size: 13, weight: .semibold))
+                        Text(L("chasse.trouve", Coordonnees.texte(x, y), distance)).font(.system(size: 13, weight: .semibold))
                     case .introuvable:
                         Text(L("chasse.introuvable", EtapeChasse.portee)).foregroundStyle(.orange)
                     case .phorreur:

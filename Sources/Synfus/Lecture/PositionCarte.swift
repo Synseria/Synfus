@@ -19,7 +19,7 @@ struct PositionCarte: Equatable, Sendable {
     /// que pour être montré.
     let zone: String?
 
-    var coordonnees: String { "\(x), \(y)" }
+    var coordonnees: String { Coordonnees.texte(x, y) }
 
     /// Au-delà, ce n'est pas une coordonnée de carte mais une erreur de lecture.
     static let borne = 200
