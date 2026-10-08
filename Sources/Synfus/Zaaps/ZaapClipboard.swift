@@ -40,11 +40,23 @@ final class ZaapClipboard: ObservableObject {
 
     /// Copie `/travel x,y`, précédé du zaap qui fait gagner assez de cartes
     /// depuis le perso devant — le même calcul que pour un `/travel` copié.
-    func copierTrajet(vers cible: (x: Int, y: Int)) {
+    /// Hors du Monde des Douze (`monde`), le `/travel` seul : ses coordonnées
+    /// recoupent celles d'Amakna, un zaap d'Amakna y mènerait à tort.
+    func copierTrajet(vers cible: (x: Int, y: Int), monde: Int = Zaap.mondeDesDouze) {
         let travel = ItineraireZaap.travel(vers: cible)
-        guard let nouveau = itineraire(travel) else { return poser(travel) }
+        guard monde == Zaap.mondeDesDouze, let nouveau = itineraire(travel) else { return poser(travel) }
         poser(nouveau)
         signaler()
+    }
+
+    /// Les cartes à traverser jusqu'à une case depuis la position du perso
+    /// (`positionDuPersoDevant`), zaap compris s'il vaut le coup — ce que
+    /// coûterait `copierTrajet` —, les réglages lus une fois pour toutes les
+    /// cases. `nil` : position inconnue, ou hors du Monde des Douze.
+    func cout(depuis perso: PositionCarte?) -> ((_ cible: (x: Int, y: Int)) -> Int)? {
+        guard let depart = ItineraireZaap.rejoindre(perso) else { return nil }
+        let couts = Couts()
+        return { couts.depuis(depart, vers: $0) }
     }
 
     /// L'ordre le plus court pour passer par toutes ces cases depuis le perso
@@ -52,15 +64,35 @@ final class ZaapClipboard: ObservableObject {
     /// trajet (`Tournee`). `nil` : position inconnue, ou hors du Monde des Douze.
     func tournee(_ cases: [(id: Int, x: Int, y: Int)]) -> [Int]? {
         guard let depart = ItineraireZaap.rejoindre(LecteurEcran.shared.positionDuPersoDevant) else { return nil }
-        let prefs = Preferences.shared
-        let zaaps = prefs.zaapsActifs, reseau = CarteStore.shared.reseau
+        let couts = Couts()
         let parId = Dictionary(cases.map { ($0.id, (x: $0.x, y: $0.y)) }, uniquingKeysWith: { a, _ in a })
-        let zaapDe = parId.mapValues { ItineraireZaap.zaap(vers: $0, parmi: zaaps, zaapDuJeu: prefs.zaapDuJeu, reseau: reseau) }
+        let zaapDe = parId.mapValues(couts.zaap)
         func cout(_ depuis: (x: Int, y: Int), _ vers: Int) -> Int {
-            ItineraireZaap.cartes(depuis: depuis, vers: parId[vers]!, zaap: zaapDe[vers] ?? nil,
-                                  gainMinimal: prefs.zaapGainMinimal)
+            couts.depuis(depuis, vers: parId[vers]!, zaap: zaapDe[vers] ?? nil)
         }
         return Tournee.ordre(cases.map(\.id), depuisLeDepart: { cout(depart, $0) }, entre: { cout(parId[$0]!, $1) })
+    }
+
+    /// Le coût d'un trajet selon les réglages du moment, lus une fois (sur
+    /// main) ; le calcul, pur, se fait de n'importe où.
+    @MainActor
+    private struct Couts {
+        let zaaps = Preferences.shared.zaapsActifs
+        let zaapDuJeu = Preferences.shared.zaapDuJeu
+        let gainMinimal = Preferences.shared.zaapGainMinimal
+        let reseau = CarteStore.shared.reseau
+
+        nonisolated func zaap(_ cible: (x: Int, y: Int)) -> Zaap? {
+            ItineraireZaap.zaap(vers: cible, parmi: zaaps, zaapDuJeu: zaapDuJeu, reseau: reseau)
+        }
+
+        nonisolated func depuis(_ depart: (x: Int, y: Int), vers cible: (x: Int, y: Int)) -> Int {
+            depuis(depart, vers: cible, zaap: zaap(cible))
+        }
+
+        nonisolated func depuis(_ depart: (x: Int, y: Int), vers cible: (x: Int, y: Int), zaap: Zaap?) -> Int {
+            ItineraireZaap.cartes(depuis: depart, vers: cible, zaap: zaap, gainMinimal: gainMinimal)
+        }
     }
 
     func copierZaap(_ zaap: Zaap) {
