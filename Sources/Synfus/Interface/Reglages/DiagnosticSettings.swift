@@ -72,7 +72,7 @@ struct DiagnosticSettings: View {
                                     positionLine(for: client)
                                 }
                                 if prefs.lireCombat {
-                                    Text(L("diagnostic.combat.ligne", libelleCombat(lecteur.combats[client.name])))
+                                    Text(L("diagnostic.combat.ligne", EtatCombat.libelle(lecteur.combats[client.name])))
                                         .font(.system(size: 10, design: .monospaced))
                                         .foregroundStyle(.secondary)
                                 }
@@ -119,9 +119,7 @@ struct DiagnosticSettings: View {
     @ViewBuilder
     private func positionLine(for client: DofusClient) -> some View {
         if let releve = lecteur.releves[client.name] {
-            Text(L("diagnostic.position.ligne",
-                   [releve.position?.coordonnees, releve.position?.zone].compactMap { $0 }.joined(separator: " — ")
-                   .ifEmpty(L("diagnostic.position.illisible"))))
+            Text(L("diagnostic.position.ligne", PositionCarte.libelle(releve.position)))
                 .font(.system(size: 10, design: .monospaced))
                 .foregroundStyle(releve.position == nil ? Color.orange : Color.secondary)
                 .textSelection(.enabled)
@@ -133,18 +131,6 @@ struct DiagnosticSettings: View {
             Text(L("diagnostic.position.pasEncore"))
                 .font(.system(size: 10, design: .monospaced))
                 .foregroundStyle(.tertiary)
-        }
-    }
-
-    private func libelleCombat(_ etat: EtatCombat?) -> String {
-        switch etat {
-        case nil: return L("combat.pasEncore")
-        case .horsCombat: return L("combat.horsCombat")
-        case .placement: return L("combat.placement")
-        case .pasMonTour: return L("combat.pasMonTour")
-        case .monTour(let fin):
-            guard let fin else { return L("combat.monTour") }
-            return L("combat.monTourSecondes", max(0, Int(fin.timeIntervalSinceNow.rounded())))
         }
     }
 
@@ -272,4 +258,27 @@ struct DiagnosticSettings: View {
 
 private extension String {
     func ifEmpty(_ remplacement: String) -> String { isEmpty ? remplacement : self }
+}
+
+// Les libellés d'une lecture, partagés par le Diagnostic et l'essai du calibrage.
+
+extension EtatCombat {
+    static func libelle(_ etat: EtatCombat?) -> String {
+        switch etat {
+        case nil: return L("combat.pasEncore")
+        case .horsCombat: return L("combat.horsCombat")
+        case .placement: return L("combat.placement")
+        case .pasMonTour: return L("combat.pasMonTour")
+        case .monTour(let fin):
+            guard let fin else { return L("combat.monTour") }
+            return L("combat.monTourSecondes", max(0, Int(fin.timeIntervalSinceNow.rounded())))
+        }
+    }
+}
+
+extension PositionCarte {
+    static func libelle(_ position: PositionCarte?) -> String {
+        [position?.coordonnees, position?.zone].compactMap { $0 }.joined(separator: " — ")
+            .ifEmpty(L("diagnostic.position.illisible"))
+    }
 }

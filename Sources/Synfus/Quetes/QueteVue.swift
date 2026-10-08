@@ -1,13 +1,14 @@
 import SwiftUI
 
-/// Les quêtes épinglées : un onglet par quête, puis les ressources à réunir,
-/// l'étape en cours (consigne, objectifs, récompenses) et les quêtes qui
-/// s'ouvrent ensuite. Un clic sur une ressource copie son nom (pour l'hôtel
+/// Les quêtes épinglées : un onglet par quête, le suivi du jeu lu à l'écran,
+/// puis les ressources à réunir, l'étape en cours (consigne, objectifs,
+/// récompenses) et les quêtes qui s'ouvrent ensuite. Un clic sur une ressource copie son nom (pour l'hôtel
 /// de vente), sur un objectif situé son trajet, zaap compris — et le coche.
 struct QueteVue: View {
     @ObservedObject private var panneau = QuetePanel.shared
     @ObservedObject private var store = QuetesStore.shared
     @ObservedObject private var prefs = Preferences.shared
+    @ObservedObject private var lecture = LectureSuivi.shared
     /// La ligne qui vient d'être copiée, le temps de le dire.
     @State private var copiee: String?
     @State private var guideEnCours = false
@@ -27,6 +28,10 @@ struct QueteVue: View {
         VStack(alignment: .leading, spacing: 0) {
             onglets
             Divider()
+            if ficheImposee == nil {
+                suivi
+                Divider()
+            }
             if let fiche {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 12) {
@@ -120,6 +125,70 @@ struct QueteVue: View {
         .padding(.vertical, 3)
         .background(Capsule().fill(choisi ? Couleurs.accent : Color.primary.opacity(0.08)))
         .onTapGesture { QuetePanel.shared.montrer(id) }
+    }
+
+    // MARK: - Suivi du jeu
+
+    /// Le suivi de quêtes du jeu : le bouton qui le lit, puis les quêtes
+    /// reconnues — un clic épingle et montre, à l'étape lue.
+    private var suivi: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Button { LectureSuivi.shared.lire() } label: {
+                HStack(spacing: 3) {
+                    if lecture.etat == .enCours {
+                        ProgressView().controlSize(.mini)
+                    } else {
+                        Image(systemName: "text.viewfinder")
+                    }
+                    Text(L("quete.suivi.lire")).lineLimit(1)
+                }
+                .fixedSize()
+            }
+            .buttonStyle(.borderless)
+            .disabled(lecture.etat == .enCours)
+            .padding(.top, 2)
+            if let message = messageSuivi {
+                Text(message)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 2)
+            } else {
+                RangeeQuiPasse(espacement: 4) {
+                    ForEach(lecture.reconnues, id: \.id) { pastille($0) }
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .font(.system(size: 10))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+    }
+
+    private var messageSuivi: String? {
+        switch lecture.etat {
+        case .jamaisLu, .enCours: return nil
+        case .illisible: return L("quete.suivi.illisible")
+        case .sansQuetes: return L("palette.quetes.chargement")
+        case .lu: return lecture.reconnues.isEmpty ? L("quete.suivi.rien") : nil
+        }
+    }
+
+    private func pastille(_ reconnue: SuiviQuetes.Reconnue) -> some View {
+        let epinglee = prefs.quetesEpinglees.contains(reconnue.id)
+        return Button { LectureSuivi.shared.choisir(reconnue) } label: {
+            HStack(spacing: 3) {
+                if epinglee { Image(systemName: "pin.fill").font(.system(size: 8)) }
+                Text(store.nom(reconnue.id) ?? "…").lineLimit(1)
+                if let etape = reconnue.etape {
+                    Text(L("quete.suivi.etape", etape + 1)).foregroundStyle(.secondary)
+                }
+            }
+            .padding(.horizontal, 7)
+            .padding(.vertical, 2)
+            .background(Capsule().fill(Couleurs.accent.opacity(epinglee ? 0.08 : 0.18)))
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - En-tête

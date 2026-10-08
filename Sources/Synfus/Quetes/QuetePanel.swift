@@ -36,8 +36,11 @@ final class QuetePanel: NSObject, ObservableObject {
     }
 
     /// Montre le panneau, sur la quête en cours ; sans quête épinglée, il
-    /// invite à en chercher une.
+    /// invite à en chercher une. À l'ouverture, il lit le suivi de quêtes du
+    /// jeu si l'enregistrement de l'écran est déjà permis — jamais il ne le
+    /// demande de lui-même.
     func ouvrir() {
+        if !ouvert, WindowPreviewService.shared.authorized { LectureSuivi.shared.lire() }
         ouvert = true
         impose = true
         appliquer(force: true)
