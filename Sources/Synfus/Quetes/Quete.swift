@@ -257,25 +257,50 @@ struct FicheQuete: Equatable, Sendable {
         let recompenses: Recompenses
 
         /// Les objectifs à proposer de cocher quand le perso se tient en
-        /// `position` : ceux de cette carte encore à faire, s'ils sont le
-        /// prochain à faire de l'étape ou le seul de l'étape sur cette carte.
-        /// Autrement, on n'y est peut-être que de passage : la carte revient
-        /// plus loin dans l'étape, pour un autre objectif. L'objectif en cours
-        /// — celui dont on a copié le trajet — l'est dès qu'on est sur sa
-        /// carte, quels que soient son rang et ses voisins : on y allait.
+        /// `position` : ceux de cette carte, encore à faire, que le jeu tient
+        /// ouverts. `lu` : ce que la lecture fraîche du suivi du perso devant
+        /// dit de la quête.
         ///
-        /// Un objectif « Vaincre… » ne l'est qu'après un combat fini sur sa
-        /// carte (`combatFini`, `FinsDeCombat`) — alors quels que soient son
-        /// rang et ses voisins : le combat est la preuve, pas la présence.
-        func suggeres(en position: PNJ.Position?, valides: Set<Int>, enCours: Int?, combatFini: Bool) -> Set<Int> {
+        /// - Le suivi montre l'étape (`lu` montre ouvert un de ses objectifs) :
+        ///   seuls les objectifs qu'il montre sont proposés, dans n'importe
+        ///   quel ordre — plusieurs PNJ à voir sans ordre. Ce qu'il tait
+        ///   (`nonMontres`) ne l'est jamais : à peine la quête prise auprès
+        ///   d'un PNJ, « lui rapporter » est sur sa case, mais le jeu montre
+        ///   d'abord « aller voir » un autre.
+        /// - Sinon, et pour ce que la lecture ne sait pas (après « VOIR
+        ///   PLUS… ») : le prochain objectif non coché, ou celui en cours —
+        ///   dont on a copié le trajet : on y allait. Ailleurs dans l'étape,
+        ///   on n'est peut-être que de passage sur une carte qui revient.
+        ///
+        /// Un objectif « Vaincre… » exige un combat fini sur sa carte
+        /// (`combatFini`, `FinsDeCombat`) : la présence ne prouve rien, le
+        /// combat si — à tout rang, tant que le suivi ne le tait pas.
+        func suggeres(en position: PNJ.Position?, valides: Set<Int>, enCours: Int?, combatFini: Bool,
+                      lu: SuiviQuetes.Reconnue?) -> Set<Int> {
             guard let position else { return [] }
+            let lu = lecture(lu)
+            let connus = Set((lu?.aFaire ?? []) + (lu?.faits ?? []) + (lu?.nonMontres ?? []))
             let prochain = objectifs.first { !valides.contains($0.id) }?.id
-            let ici = objectifs.filter { $0.position == position && !valides.contains($0.id) }
-            let tous = objectifs.count { $0.position == position }
-            let proposes = ici.filter {
-                $0.combat ? combatFini : $0.id == prochain || $0.id == enCours || tous == 1
+            let proposes = objectifs.filter { objectif in
+                guard objectif.position == position, !valides.contains(objectif.id), !objectif.combat || combatFini
+                else { return false }
+                if connus.contains(objectif.id) { return lu?.aFaire.contains(objectif.id) == true }
+                return objectif.combat || objectif.id == prochain || objectif.id == enCours
             }
             return Set(proposes.map(\.id))
+        }
+
+        /// Ceux que le suivi, lu en entier, tait et que rien ne coche : pas
+        /// encore ouverts (ou faits hors de l'ordre), en retrait.
+        func nonOuverts(valides: Set<Int>, lu: SuiviQuetes.Reconnue?) -> Set<Int> {
+            Set((lecture(lu)?.nonMontres ?? []).filter { !valides.contains($0) })
+        }
+
+        /// La lecture, si elle parle de cette étape : un de ses objectifs y est
+        /// montré ouvert.
+        private func lecture(_ lu: SuiviQuetes.Reconnue?) -> SuiviQuetes.Reconnue? {
+            guard let lu, objectifs.contains(where: { lu.aFaire.contains($0.id) }) else { return nil }
+            return lu
         }
     }
 

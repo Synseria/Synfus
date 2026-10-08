@@ -12,9 +12,10 @@ enum GenreLecture: String, CaseIterable, Sendable {
     case combat
     /// Le suivi de chasse au trésor, à gauche par défaut.
     case chasse
-    /// Le suivi de quêtes du jeu, à gauche par défaut. Chasse et quêtes ne
-    /// sont lues qu'à la demande (`lireUneFois`), jamais au tour : un suivi
-    /// ne change que de la main du joueur, et sa zone est grande.
+    /// Le suivi de quêtes du jeu, à gauche par défaut : au tour tant que le
+    /// panneau des quêtes est montré (`suivreQuetes`), à un rythme plus lent
+    /// — un objectif qui se termine le change, mais sa zone est grande. La
+    /// chasse n'est lue qu'à la demande (`lireUneFois`).
     case quetes
 
     var parDefaut: ZoneEcran {
@@ -37,6 +38,18 @@ enum GenreLecture: String, CaseIterable, Sendable {
     }
 
     @MainActor var zone: ZoneEcran { Preferences.shared[keyPath: reglage] ?? parDefaut }
+
+    /// Au tour, une capture du même perso au plus toutes les tant de secondes.
+    var intervalle: TimeInterval { self == .quetes ? 3 : 1 }
+
+    /// Ce que la signature regarde pour relancer l'OCR.
+    var mesure: MesureSignature {
+        switch self {
+        case .position: return .zone
+        case .combat: return .bouton
+        case .chasse, .quetes: return .lignes
+        }
+    }
 }
 
 /// Lit l'écran du jeu : la position du perso, et son état de combat.
@@ -50,14 +63,16 @@ enum GenreLecture: String, CaseIterable, Sendable {
 ///   (`ZoneEcran.hauteurReference`), le texte y a toujours la même taille —
 ///   celle où Vision lit juste (`.fast` ne lit rien de la police du jeu). Une
 ///   grande fenêtre ne coûte pas plus qu'une petite.
-/// - **L'OCR ne repasse que si la zone a changé** (`SignatureZone` : pixels
-///   clairs réduits à une grille, et pour le combat, bouton coloré ou non).
-///   Entre deux cartes, entre deux tours, un relevé ne coûte qu'une capture de
-///   quelques centaines de pixels.
+/// - **L'OCR ne repasse que si le texte a changé** (`SignatureZone` : pixels
+///   clairs réduits à une grille, là où le texte a été lu — les lignes d'un
+///   suivi, le corps du bouton de combat — et pour le combat, bouton coloré
+///   ou non). Entre deux cartes, entre deux tours, un relevé ne coûte qu'une
+///   capture.
 /// - **L'inventaire ScreenCaptureKit gardé** (`inventaireGarde`).
 ///
-/// Seul le perso au premier plan est lu en continu, une fois par seconde : en
-/// plein écran, macOS ne redessine pas les autres fenêtres. Les autres le sont
+/// Seul le perso au premier plan est lu en continu, une fois par seconde (le
+/// suivi de quêtes toutes les trois) : en plein écran, macOS ne redessine pas
+/// les autres fenêtres. Les autres le sont
 /// au survol de leur pastille (position, relevé de plus de 10 s) et par
 /// « Tout lire » dans le Diagnostic — réglages ouverts, Synfus est devant et
 /// le tour régulier n'a plus rien à lire.
@@ -69,7 +84,6 @@ final class LecteurEcran: ObservableObject {
         var position: PositionCarte?
         /// Les lignes brutes du dernier OCR — pour le Diagnostic.
         var lignes: [String]
-        var date: Date
     }
 
     /// Dernière position de chaque perso, par nom. Ne change qu'au
@@ -89,7 +103,12 @@ final class LecteurEcran: ObservableObject {
     /// la fraîcheur, hors des `@Published`.
     private var vuLe: [String: Date] = [:]
     private var timer: Timer?
-    private(set) var persoDevant: String?
+    /// Le dernier perso lu au premier plan : ne change qu'à la bascule.
+    @Published private(set) var persoDevant: String?
+    /// Lire la position ou le combat, d'après les réglages.
+    private var lectureReglee = false
+    /// Le panneau des quêtes est à l'écran : son suivi est lu au tour.
+    private var suiviMontre = false
     private var prechauffe = false
     /// Lectures demandées, dans l'ordre — le tour, un survol, le bouton du
     /// Diagnostic. Une à la fois : l'OCR est séquentiel.
@@ -122,12 +141,16 @@ final class LecteurEcran: ObservableObject {
             .map { $0 || $1 }
             .removeDuplicates()
             .sink { [weak self] actif in
-                MainActor.assumeIsolated { actif ? self?.armer() : self?.desarmer() }
+                MainActor.assumeIsolated {
+                    self?.lectureReglee = actif
+                    self?.revoirArmement()
+                }
             }
             .store(in: &subscriptions)
         // Une zone recalibrée : l'ancienne signature ne dit plus rien.
-        Preferences.shared.$zonePosition.combineLatest(Preferences.shared.$zoneCombat)
-            .dropFirst()
+        let prefs = Preferences.shared
+        Publishers.Merge3(prefs.$zonePosition, prefs.$zoneCombat, prefs.$zoneQuetes)
+            .dropFirst(3)
             .sink { [weak self] _ in MainActor.assumeIsolated { self?.signatures = [:] } }
             .store(in: &subscriptions)
         // Une bascule : on lit le nouveau perso sans attendre le tour suivant,
@@ -143,6 +166,18 @@ final class LecteurEcran: ObservableObject {
                 }
             }
             .store(in: &subscriptions)
+    }
+
+    /// Le panneau des quêtes paraît ou disparaît (`QuetePanel`) : son suivi
+    /// entre au tour ou en sort. Jamais l'enregistrement de l'écran demandé.
+    func suivreQuetes(_ montre: Bool) {
+        guard montre != suiviMontre else { return }
+        suiviMontre = montre
+        revoirArmement()
+    }
+
+    private func revoirArmement() {
+        lectureReglee || suiviMontre ? armer() : desarmer()
     }
 
     private func armer() {
@@ -184,9 +219,16 @@ final class LecteurEcran: ObservableObject {
             if !busy, file.isEmpty { diagnostic.etat = .attente }
             return
         }
-        persoDevant = client.name
+        if persoDevant != client.name { persoDevant = client.name }
         for genre in genresActifs { demander(client, genre) }
+        if suiviMontre, QuetesStore.shared.quetes != nil, perime(.quetes, client.name) { demander(client, .quetes) }
         pomper()
+    }
+
+    /// La dernière capture de ce genre chez ce perso a son intervalle, à la
+    /// tolérance du minuteur près.
+    private func perime(_ genre: GenreLecture, _ nom: String) -> Bool {
+        vuLe[cle(genre, nom)].map { Date().timeIntervalSince($0) >= genre.intervalle - Self.intervalle / 2 } ?? true
     }
 
     /// La position du dernier perso lu au premier plan — celui dont le tchat
@@ -248,7 +290,7 @@ final class LecteurEcran: ObservableObject {
                 diagnostic.etat = .echecCapture(previews.lastCaptureError ?? "?")
                 return
             }
-            switch await moteur.lire(png: png, precedente: precedente, couleur: genre == .combat) {
+            switch await moteur.lire(png: png, precedente: precedente, mesure: genre.mesure) {
             case .illisible:
                 diagnostic.etat = .echecCapture("PNG illisible")
             case .inchangee:
@@ -256,6 +298,7 @@ final class LecteurEcran: ObservableObject {
                 vuLe[cle] = Date()
                 diagnostic.sautes += 1
                 diagnostic.etat = .actif
+                if genre == .quetes { LectureSuivi.shared.confirmer(nom) }
             case .lue(let signature, let lignes, let duree, let couleurBouton):
                 signatures[cle] = signature
                 vuLe[cle] = Date()
@@ -265,7 +308,8 @@ final class LecteurEcran: ObservableObject {
                 switch genre {
                 case .position: appliquerPosition(lignes, nom: nom)
                 case .combat: appliquerCombat(lignes, couleur: couleurBouton ?? signature.couleur ?? 0, nom: nom)
-                case .chasse, .quetes: break
+                case .quetes: LectureSuivi.shared.recevoir(lignes, coupe: signature.auBord, perso: nom)
+                case .chasse: break
                 }
             }
         }
@@ -283,22 +327,28 @@ final class LecteurEcran: ObservableObject {
         return png
     }
 
-    /// Une lecture à la demande, hors du tour et sans signature : les lignes
-    /// de la zone `genre` chez le perso devant — ou le dernier lu devant, si
-    /// Synfus vient de passer au premier plan —, et le nom de ce perso.
+    /// Une lecture à la demande, hors du tour et sans signature précédente :
+    /// les lignes de la zone `genre` chez le perso devant — ou le dernier lu
+    /// devant, si Synfus vient de passer au premier plan —, le nom de ce
+    /// perso, et si le texte touche le bas de la zone (`SignatureZone.auBord`).
     /// `nil` : rien à lire (aucun perso, pas d'autorisation, capture manquée).
-    /// Le moteur est un acteur : une lecture du tour en cours passe avant,
-    /// sans se mélanger.
-    func lireUneFois(_ genre: GenreLecture) async -> (perso: String, lignes: [String])? {
+    /// Sa signature est gardée : le tour suivant n'y repasse pas pour rien. Le
+    /// moteur est un acteur : une lecture du tour en cours passe avant, sans
+    /// se mélanger.
+    func lireUneFois(_ genre: GenreLecture) async -> (perso: String, lignes: [String], coupe: Bool)? {
         let manager = WindowManager.shared
+        let devant = manager.clients.first(where: { manager.isFrontmost($0) })
         guard WindowPreviewService.shared.authorized,
-              let client = manager.clients.first(where: { manager.isFrontmost($0) })
-                ?? manager.clients.first(where: { $0.name == persoDevant }),
+              let client = devant ?? manager.clients.first(where: { $0.name == persoDevant }),
               let png = await capturer(client, genre),
-              case .lue(_, let lignes, _, _) = await moteur.lire(png: png, precedente: nil, couleur: false)
+              case .lue(let signature, let lignes, _, _) = await moteur.lire(png: png, precedente: nil,
+                                                                             mesure: genre.mesure)
         else { return nil }
+        if devant != nil, persoDevant != client.name { persoDevant = client.name }
+        signatures[cle(genre, client.name)] = signature
+        vuLe[cle(genre, client.name)] = Date()
         diagnostic.lignes[genre] = lignes
-        return (client.name, lignes)
+        return (client.name, lignes, signature.auBord)
     }
 
     /// L'OCR d'une zone déjà découpée — l'essai du calibrage, sur la capture
@@ -306,7 +356,7 @@ final class LecteurEcran: ObservableObject {
     /// celle du bouton de combat, sinon de la zone (cf. `pomper`).
     func lire(png: Data, genre: GenreLecture) async -> (lignes: [String], couleur: Double)? {
         guard case .lue(let signature, let lignes, _, let bouton)
-                = await moteur.lire(png: png, precedente: nil, couleur: genre == .combat)
+                = await moteur.lire(png: png, precedente: nil, mesure: genre.mesure)
         else { return nil }
         return (lignes, bouton ?? signature.couleur ?? 0)
     }
@@ -316,7 +366,8 @@ final class LecteurEcran: ObservableObject {
         diagnostic.etat = lue == nil ? .sansCoordonnees : .actif
         // Une lecture sans coordonnées — écran de chargement, fenêtre du jeu
         // posée sur le coin — garde la dernière position connue.
-        releves[nom] = Releve(position: lue ?? releves[nom]?.position, lignes: lignes, date: Date())
+        let releve = Releve(position: lue ?? releves[nom]?.position, lignes: lignes)
+        if releves[nom] != releve { releves[nom] = releve }
         var fins = finsDeCombat
         fins.position(nom, lue)
         if fins != finsDeCombat { finsDeCombat = fins }
@@ -367,21 +418,6 @@ final class DiagnosticLecture: ObservableObject {
     private init() {}
 }
 
-/// Ce qui décide de relancer l'OCR : le texte clair, et pour le bouton de
-/// combat, sa couleur — le même « Fin de tour » blanc passe du gris à la
-/// couleur sans qu'un pixel clair ne bouge.
-struct SignatureZone: Equatable, Sendable {
-    let empreinte: EmpreinteTexte
-    /// Part colorée de la zone entière, pour les zones où la couleur compte.
-    let couleur: Double?
-
-    func semblable(a autre: SignatureZone) -> Bool {
-        guard empreinte.semblable(a: autre.empreinte) else { return false }
-        guard let couleur, let autre = autre.couleur else { return true }
-        return (couleur >= LectureCombat.seuilSignature) == (autre >= LectureCombat.seuilSignature)
-    }
-}
-
 /// L'OCR, hors du main actor. Sans état : il reçoit un PNG et la signature
 /// précédente, rend la signature et — seulement si elle a changé — les
 /// lignes lues. Il n'en entre et n'en sort que des valeurs `Sendable`.
@@ -414,15 +450,15 @@ actor MoteurOCR {
         return requete
     }
 
-    func lire(png: Data, precedente: SignatureZone?, couleur: Bool) -> Resultat {
+    func lire(png: Data, precedente: SignatureZone?, mesure: MesureSignature) -> Resultat {
         guard let source = CGImageSourceCreateWithData(png as CFData, nil),
               let image = CGImageSourceCreateImageAtIndex(source, 0, nil),
               let luma = LumaBitmap(cgImage: image)
         else { return .illisible }
-        let rgba = couleur ? Self.rgba(image) : nil
-        let signature = SignatureZone(
-            empreinte: EmpreinteTexte(luma),
-            couleur: rgba.map { LectureCombat.ratioColore(rgba: $0, largeur: image.width) })
+        let rgba = mesure == .bouton ? Self.rgba(image) : nil
+        let couleur = rgba.map { LectureCombat.ratioColore(rgba: $0, largeur: image.width) }
+        let signature = SignatureZone(luma, mesure: mesure, cadre: precedente?.cadre, couleur: couleur,
+                                      auBord: precedente?.auBord ?? false)
         if let precedente, signature.semblable(a: precedente) { return .inchangee(signature) }
 
         let debut = Date()
@@ -438,23 +474,34 @@ actor MoteurOCR {
         let observations = (requete.results ?? []).sorted { $0.boundingBox.midY > $1.boundingBox.midY }
         let lignes = observations.compactMap { $0.topCandidates(1).first?.string }
 
-        // La couleur du bouton se mesure autour de son texte, en pixels de
-        // l'image d'origine : la boîte de Vision est normalisée, origine en
-        // bas, dans l'image encadrée de sa marge.
-        var couleurBouton: Double?
-        if let rgba, let bouton = observations.first(where: {
-            LectureCombat.estBouton($0.topCandidates(1).first?.string ?? "")
-        }) {
-            let marge = encadree == nil ? 0 : CGFloat(Self.marge)
-            let (lp, hp) = (CGFloat(image.width) + 2 * marge, CGFloat(image.height) + 2 * marge)
-            let boite = bouton.boundingBox
-            let texte = CGRect(x: boite.minX * lp - marge, y: (1 - boite.maxY) * hp - marge,
-                               width: boite.width * lp, height: boite.height * hp)
-            let corps = LectureCombat.corpsDuBouton(texte: texte,
-                                                    image: CGSize(width: image.width, height: image.height))
-            couleurBouton = LectureCombat.ratioColore(rgba: rgba, largeur: image.width, dans: corps)
+        // Les boîtes de Vision, normalisées, origine en bas, dans l'image
+        // encadrée de sa marge → pixels de l'image d'origine, origine en haut.
+        let taille = CGSize(width: image.width, height: image.height)
+        let marge = encadree == nil ? 0 : CGFloat(Self.marge)
+        let (lp, hp) = (taille.width + 2 * marge, taille.height + 2 * marge)
+        func pixels(_ boite: CGRect) -> CGRect {
+            CGRect(x: boite.minX * lp - marge, y: (1 - boite.maxY) * hp - marge,
+                   width: boite.width * lp, height: boite.height * hp)
         }
-        return .lue(signature, lignes, Date().timeIntervalSince(debut), couleurBouton: couleurBouton)
+        var couleurBouton: Double?, cadre: CGRect?, auBord = false
+        switch mesure {
+        case .zone:
+            break
+        case .bouton:
+            // La couleur du bouton se mesure autour de son texte, et c'est là
+            // que la prochaine capture cherchera un changement.
+            if let bouton = observations.first(where: { LectureCombat.estBouton($0.topCandidates(1).first?.string ?? "") }) {
+                let corps = LectureCombat.corpsDuBouton(texte: pixels(bouton.boundingBox), image: taille)
+                cadre = corps
+                couleurBouton = rgba.map { LectureCombat.ratioColore(rgba: $0, largeur: image.width, dans: corps) }
+            }
+        case .lignes:
+            if let lu = SignatureZone.cadre(lignes: observations.map { pixels($0.boundingBox) }, image: taille) {
+                (cadre, auBord) = lu
+            }
+        }
+        let lue = SignatureZone(luma, mesure: mesure, cadre: cadre, couleur: couleur, auBord: auBord)
+        return .lue(lue, lignes, Date().timeIntervalSince(debut), couleurBouton: couleurBouton)
     }
 
     /// L'image posée sur une marge sombre. Une zone serrée coupe le texte au

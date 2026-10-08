@@ -12,15 +12,37 @@ struct HistoriqueSuivi: Equatable, Sendable {
         let date: Date
     }
 
+    private struct Lecture: Equatable, Sendable {
+        let lu: SuiviQuetes.Lu
+        let date: Date
+    }
+
     /// Au-delà, une étape lue ne dit plus où en est le perso.
     static let memoire: TimeInterval = 24 * 3600
+    /// Une lecture identique à la précédente du perso ne la redate qu'au-delà :
+    /// le suivi est relu dès que l'écran bouge près du texte, sans rien de
+    /// neuf à noter.
+    static let redatation: TimeInterval = 10 * 60
 
+    /// La dernière lecture de chaque perso, vide comprise : ce que son
+    /// écran montre.
+    private var dernieres: [String: Lecture] = [:]
+    /// La dernière qui a vu le suivi : à elle se compare la suivante. Une
+    /// lecture vide (une fenêtre du jeu sur le suivi) ne dit rien des quêtes.
     private var vues: [String: SuiviQuetes.Lu] = [:]
     private var etapes: [Int: [String: EtapeLue]] = [:]
 
+    /// La dernière lecture du suivi de `perso`.
+    func derniere(_ perso: String) -> SuiviQuetes.Lu? { dernieres[perso]?.lu }
+
     /// Note la lecture du suivi de `perso` ; rend les quêtes qu'elle dit
-    /// sorties de son suivi depuis sa lecture précédente (`disparues`).
+    /// sorties de son suivi depuis sa lecture précédente (`disparues`). La
+    /// même que la précédente, depuis moins de `redatation`, ne change rien.
     mutating func noter(_ lu: SuiviQuetes.Lu, perso: String, date: Date) -> Set<Int> {
+        if let derniere = dernieres[perso], derniere.lu == lu,
+           date.timeIntervalSince(derniere.date) < Self.redatation { return [] }
+        dernieres[perso] = Lecture(lu: lu, date: date)
+        guard !lu.reconnues.isEmpty else { return [] }
         let disparues = vues[perso].map { Self.disparues(avant: $0, apres: lu) } ?? []
         vues[perso] = lu
         for reconnue in lu.reconnues {
