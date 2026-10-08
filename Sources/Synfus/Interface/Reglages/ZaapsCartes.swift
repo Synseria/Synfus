@@ -6,7 +6,6 @@ struct CarteZaapReglages: View {
     let zaap: Zaap
     let langue: Langue
     @ObservedObject private var prefs = Preferences.shared
-    @Environment(\.colorScheme) private var apparence
 
     var body: some View {
         let actif = CatalogueZaaps.estActif(zaap, choix: prefs.zaapsChoix)
@@ -37,7 +36,7 @@ struct CarteZaapReglages: View {
             .foregroundStyle(.secondary)
         }
         .padding(9)
-        .background { fond }
+        .background { FondCarte(carte: zaap.idCarte) }
         .opacity(actif ? 1 : 0.55)
         .contextMenu {
             if prefs.zaapsAjoutes.contains(zaap) {
@@ -48,30 +47,6 @@ struct CarteZaapReglages: View {
                     prefs.etiquettes[zaap.cle] = nil
                 }
             }
-        }
-    }
-}
-
-extension CarteZaapReglages {
-    private static let forme = RoundedRectangle(cornerRadius: 9, style: .continuous)
-
-    /// La vue à un quart d'opacité sur un fond uni, assombrie vers le bas où
-    /// sont la zone et les coordonnées : le texte reste lisible sur
-    /// n'importe quelle carte. Le fond uni tient la taille de la case, l'image
-    /// en déborde et la forme la rogne.
-    @ViewBuilder
-    private var fond: some View {
-        if prefs.vuesCartes, let idCarte = zaap.idCarte {
-            let sombre = apparence == .dark
-            Color(white: sombre ? 0.17 : 0.95)
-                .overlay { ImageDofusDB(url: DofusDB.imageCarte(idCarte)).scaledToFill().opacity(0.25) }
-                .overlay {
-                    LinearGradient(colors: [.clear, Color(white: sombre ? 0.12 : 1).opacity(0.7)],
-                                   startPoint: .top, endPoint: .bottom)
-                }
-                .clipShape(Self.forme)
-        } else {
-            Self.forme.fill(Color.primary.opacity(0.05))
         }
     }
 }

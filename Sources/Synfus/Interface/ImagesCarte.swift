@@ -119,6 +119,35 @@ struct MiniatureCarte: View {
     }
 }
 
+/// Le fond d'une case de zaap — réglages et palette : la vue de sa carte à
+/// un quart d'opacité sur un fond uni, assombrie vers le bas où sont la zone
+/// et les coordonnées, pour que le texte reste lisible sur n'importe quelle
+/// carte ; `teinte` (la case choisie) par-dessus. Le fond uni tient la taille
+/// de la case, l'image en déborde et la forme la rogne.
+struct FondCarte: View {
+    let carte: Int?
+    var teinte: Color?
+    @ObservedObject private var prefs = Preferences.shared
+    @Environment(\.colorScheme) private var apparence
+    private let forme = RoundedRectangle(cornerRadius: 9, style: .continuous)
+
+    var body: some View {
+        if prefs.vuesCartes, let carte {
+            let sombre = apparence == .dark
+            Color(white: sombre ? 0.17 : 0.95)
+                .overlay { ImageDofusDB(url: DofusDB.imageCarte(carte)).scaledToFill().opacity(0.25) }
+                .overlay {
+                    LinearGradient(colors: [.clear, Color(white: sombre ? 0.12 : 1).opacity(0.7)],
+                                   startPoint: .top, endPoint: .bottom)
+                }
+                .overlay { teinte ?? .clear }
+                .clipShape(forme)
+        } else {
+            forme.fill(teinte ?? Color.primary.opacity(0.05))
+        }
+    }
+}
+
 /// Le pictogramme d'un repère tel que la carte du jeu le montre ; le symbole
 /// tant qu'il n'est pas venu, ou quand le repère n'en a pas.
 struct PictogrammeLieu<Symbole: View>: View {
