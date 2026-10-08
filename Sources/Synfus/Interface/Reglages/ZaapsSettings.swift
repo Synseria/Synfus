@@ -22,56 +22,56 @@ struct ZaapsSettings: View {
     var body: some View {
         let langue = L10n.courante.langue
         let connus = prefs.zaapsConnus
-        PageReglages(titre: L("reglages.zaaps"),
-                     sousTitre: L("zaaps.sousTitre", prefs.zaapsActifs.count, connus.count)) {
-            Section {
-                SourceCarte()
-                Interrupteur(titre: L("zaaps.vueCarte"), sousTexte: L("zaaps.vueCarte.sousTexte"), isOn: $prefs.zaapsVueCarte)
-            }
-            Section {
-                HStack(spacing: 10) {
-                    ChampFiltre(invite: L("palette.reglages.filtrer"), texte: $filtre)
-                    Picker(L("palette.reglages.vue"), selection: $vue) {
-                        ForEach(Vue.allCases, id: \.self) { Text($0.libelle).tag($0) }
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.segmented)
-                    .fixedSize()
+        PageListe(titre: L("reglages.zaaps"), sousTitre: L("zaaps.sousTitre", prefs.zaapsActifs.count, connus.count)) {
+            SourceCarte().cadreDeListe(premiere: true, derniere: false)
+            Interrupteur(titre: L("zaaps.vueCarte"), sousTexte: L("zaaps.vueCarte.sousTexte"), isOn: $prefs.zaapsVueCarte)
+                .cadreDeListe(premiere: false, derniere: true)
+            EnTeteListe(titre: L("zaaps.grille"), aide: L("zaap.liste.aide"))
+            HStack(spacing: 10) {
+                ChampFiltre(invite: L("palette.reglages.filtrer"), texte: $filtre)
+                Picker(L("palette.reglages.vue"), selection: $vue) {
+                    ForEach(Vue.allCases, id: \.self) { Text($0.libelle).tag($0) }
                 }
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
-                    ForEach(montres(connus, langue), id: \.cle) { zaap in
-                        CarteZaapReglages(zaap: zaap, langue: langue)
-                    }
-                    AjoutZaap()
-                }
-                .padding(.vertical, 4)
-            } header: {
-                SectionTitle(L("zaaps.grille"), help: L("zaap.liste.aide"))
+                .labelsHidden()
+                .pickerStyle(.segmented)
+                .fixedSize()
             }
+            .cadreDeListe(premiere: true, derniere: false)
+            // Paresseuse dans la pile paresseuse : seules les cases à l'écran
+            // se construisent, et avec elles leur vue de carte.
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
+                ForEach(montres(connus, langue), id: \.cle) { zaap in
+                    CarteZaapReglages(zaap: zaap, langue: langue)
+                }
+                AjoutZaap()
+            }
+            .padding(.vertical, 4)
+            .cadreDeListe(premiere: false, derniere: true)
         }
     }
 
     private func montres(_ connus: [Zaap], _ langue: Langue) -> [Zaap] {
-        let mots = RecherchePalette.mots(filtre)
-        return connus
+        let etiquettes = prefs.etiquettes
+        return ListesReglages.zaaps
+            .elements(source: [AnyHashable(connus), AnyHashable(etiquettes), AnyHashable(langue)], filtre: filtre,
+                      trier: {
+                          connus.sorted { a, b in
+                              // Le Monde des Douze d'abord, puis les autres cartes ; par nom ensuite.
+                              let (autreA, autreB) = (a.monde != Zaap.mondeDesDouze, b.monde != Zaap.mondeDesDouze)
+                              if autreA != autreB { return !autreA }
+                              return a.nom(en: langue).localizedStandardCompare(b.nom(en: langue)) == .orderedAscending
+                          }
+                      },
+                      champs: { zaap in
+                          RecherchePalette.Champs(titre: zaap.nom(en: langue), etiquette: etiquettes[zaap.cle],
+                                                  lieu: zaap.zone(en: langue))
+                      })
             .filter { zaap in
                 switch vue {
                 case .tous: return true
                 case .actifs: return CatalogueZaaps.estActif(zaap, choix: prefs.zaapsChoix)
-                case .etiquetes: return prefs.etiquettes[zaap.cle] != nil
+                case .etiquetes: return etiquettes[zaap.cle] != nil
                 }
-            }
-            .filter { zaap in
-                let texte = RecherchePalette.normaliser(
-                    [prefs.etiquettes[zaap.cle] ?? "", zaap.nom(en: langue), zaap.zone(en: langue) ?? ""]
-                        .joined(separator: " "))
-                return mots.allSatisfy(texte.contains)
-            }
-            .sorted { a, b in
-                // Le Monde des Douze d'abord, puis les autres cartes ; par nom ensuite.
-                let (autreA, autreB) = (a.monde != Zaap.mondeDesDouze, b.monde != Zaap.mondeDesDouze)
-                if autreA != autreB { return !autreA }
-                return a.nom(en: langue).localizedStandardCompare(b.nom(en: langue)) == .orderedAscending
             }
     }
 }
