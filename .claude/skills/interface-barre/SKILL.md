@@ -20,6 +20,9 @@ sa bascule). Toute nouvelle option suit la règle.
 - `NSPanel` non activable (`canBecomeKey = false`, `FloatingBarController`) : un overlay de jeu
   ne capte jamais le clavier. Seule exception, le panneau de chasse (`Chasse/ChassePanel`) :
   `.nonactivatingPanel` qui **peut** devenir key, pour taper l'indice sans activer Synfus.
+- Panneau des quêtes (`Quetes/QuetePanel`) : sans bordure, jamais clé, jamais zoomé. Pas de
+  barre de titre, même transparente : elle mange les clics du haut et zoome au double-clic.
+  Bords et coins par `PoigneeRedimension` (ceux du système sont trop minces sans bordure).
 - Niveau `.statusBar`, pas `.floating` (qui disparaît sous un espace plein écran) ;
   `.stationary` volontairement absent du `collectionBehavior`.
 - Déplacement par `performDrag(with:)` (`WindowDragArea`), pas par `DragGesture` (en retard sur
