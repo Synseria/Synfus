@@ -92,6 +92,7 @@ enum QuetesDofusDB {
         }
 
         let id: Int
+        let typeId: Int?
         let className: String
         let text: DofusDB.Noms
         let coords: Coordonnees?
@@ -278,7 +279,8 @@ enum QuetesDofusDB {
                         if let pnj = objectif.pnj { situer(pnj, position, carte: carte, objectif.map?.subAreaId, api.id) }
                         return ObjectifQuete(id: objectif.id, textes: objectif.text.parLangue, x: position?.x, y: position?.y,
                                              carte: carte,
-                                             objet: objectif.aRamener?.objet, quantite: objectif.aRamener?.quantite)
+                                             objet: objectif.aRamener?.objet, quantite: objectif.aRamener?.quantite,
+                                             type: objectif.typeId)
                     }
                     return EtapeQuete(noms: etape.name.parLangue, descriptions: etape.description?.parLangue ?? [:],
                                       objectifs: objectifs, recompenses: etape.recompenses)

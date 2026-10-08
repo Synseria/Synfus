@@ -87,7 +87,7 @@ final class ChasseModele: ObservableObject {
         guard !lectureEnCours, !indices.isEmpty else { return }
         lectureEnCours = true
         Task {
-            let lignes = await LecteurEcran.shared.lireUneFois(.chasse) ?? []
+            let lignes = await LecteurEcran.shared.lireUneFois(.chasse)?.lignes ?? []
             lues = EtapeChasse.ciblesLues(dans: lignes, parmi: indices)
             rienLu = lues.isEmpty
             lectureEnCours = false

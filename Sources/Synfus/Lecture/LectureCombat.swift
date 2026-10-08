@@ -139,3 +139,49 @@ enum EtatCombat: Equatable, Sendable {
         }
     }
 }
+
+/// Les persos dont le dernier combat a fini sur la carte où ils se tiennent
+/// encore : un objectif « Vaincre… » de cette carte est sans doute fait. Pur.
+///
+/// Seul un combat commencé compte — quitter le placement n'a rien vaincu —, et
+/// fini sur la carte où il a commencé : un combat perdu renvoie le perso à son
+/// point de sauvegarde, que la position soit lue avant la fin (le perso
+/// repris après une bascule) ou après (la fin s'oublie au changement de
+/// carte). Le retour en combat l'efface aussi : un bouton masqué un instant
+/// (une fenêtre du jeu par-dessus) passerait sinon pour une fin.
+struct FinsDeCombat: Equatable, Sendable {
+    /// Où chaque perso en combat l'a commencé.
+    private var debuts: [String: PositionCarte] = [:]
+    private var fins: [String: PositionCarte] = [:]
+
+    mutating func combat(_ perso: String, avant: EtatCombat?, apres: EtatCombat, ici: PositionCarte?) {
+        if apres.enCombat {
+            fins[perso] = nil
+            if debuts[perso] == nil { debuts[perso] = ici }
+            return
+        }
+        let debut = debuts.removeValue(forKey: perso)
+        switch avant {
+        case .monTour?, .pasMonTour?:
+            if let debut, let ici, Self.memeCarte(debut, ici) { fins[perso] = ici }
+        default:
+            break
+        }
+    }
+
+    /// La position lue du perso : ailleurs que là où son combat a fini, la fin
+    /// ne compte plus.
+    mutating func position(_ perso: String, _ ici: PositionCarte?) {
+        guard let fin = fins[perso], let ici, !Self.memeCarte(fin, ici) else { return }
+        fins[perso] = nil
+    }
+
+    func fini(_ perso: String, en ici: PositionCarte?) -> Bool {
+        guard let fin = fins[perso], let ici else { return false }
+        return Self.memeCarte(fin, ici)
+    }
+
+    /// Les coordonnées seules : le nom de la zone, lu par l'OCR, varie d'une
+    /// lecture à l'autre.
+    private static func memeCarte(_ a: PositionCarte, _ b: PositionCarte) -> Bool { a.x == b.x && a.y == b.y }
+}

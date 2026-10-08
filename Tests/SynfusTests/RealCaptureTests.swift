@@ -100,7 +100,7 @@ struct RealCaptureTests {
         else { Issue.record("rien lu"); return }
         print("OCR \(Int(duree * 1000)) ms : \(lignes)")
         let debut = Date()
-        let reconnues = SuiviQuetes.reconnaitre(lignes, dans: quetes)
+        let reconnues = SuiviQuetes.reconnaitre(lignes, dans: quetes).reconnues
         let noms = reconnues.map { reconnue in
             quetes.quetes.first { $0.id == reconnue.id }.flatMap { Lieu.traduit($0.noms, .fr) } ?? "#\(reconnue.id)"
         }

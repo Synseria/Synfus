@@ -47,6 +47,22 @@ final class ZaapClipboard: ObservableObject {
         signaler()
     }
 
+    /// L'ordre le plus court pour passer par toutes ces cases depuis le perso
+    /// devant, zaaps compris — le calcul même de `copierTrajet`, trajet par
+    /// trajet (`Tournee`). `nil` : position inconnue, ou hors du Monde des Douze.
+    func tournee(_ cases: [(id: Int, x: Int, y: Int)]) -> [Int]? {
+        guard let depart = ItineraireZaap.rejoindre(LecteurEcran.shared.positionDuPersoDevant) else { return nil }
+        let prefs = Preferences.shared
+        let zaaps = prefs.zaapsActifs, reseau = CarteStore.shared.reseau
+        let parId = Dictionary(cases.map { ($0.id, (x: $0.x, y: $0.y)) }, uniquingKeysWith: { a, _ in a })
+        let zaapDe = parId.mapValues { ItineraireZaap.zaap(vers: $0, parmi: zaaps, zaapDuJeu: prefs.zaapDuJeu, reseau: reseau) }
+        func cout(_ depuis: (x: Int, y: Int), _ vers: Int) -> Int {
+            ItineraireZaap.cartes(depuis: depuis, vers: parId[vers]!, zaap: zaapDe[vers] ?? nil,
+                                  gainMinimal: prefs.zaapGainMinimal)
+        }
+        return Tournee.ordre(cases.map(\.id), depuisLeDepart: { cout(depart, $0) }, entre: { cout(parId[$0]!, $1) })
+    }
+
     func copierZaap(_ zaap: Zaap) {
         poser(ItineraireZaap.zaap(zaap))
     }

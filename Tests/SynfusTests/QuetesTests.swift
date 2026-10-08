@@ -17,9 +17,9 @@ struct QuetesTests {
          "rewards":[{"levelMin":-1,"levelMax":-1,"experienceRatio":1,"kamasRatio":1,
                      "itemsReward":[[1747,1]],"emotesReward":[11],"titlesReward":[]}],
          "objectives":[
-          {"id":101,"className":"QuestObjectiveFightMonsterData","text":{"fr":"Vaincre x1 {monster,182} en un seul combat"},
+          {"id":101,"typeId":6,"className":"QuestObjectiveFightMonsterData","text":{"fr":"Vaincre x1 {monster,182} en un seul combat"},
            "coords":{"x":25,"y":-8},"mapId":0,"parameters":{"parameter0":182,"parameter1":1}},
-          {"id":102,"className":"QuestObjectiveBringItemToNpcData","text":{"fr":"Ramener à {npc,119} : x3 {item,1746}"},
+          {"id":102,"typeId":3,"className":"QuestObjectiveBringItemToNpcData","text":{"fr":"Ramener à {npc,119} : x3 {item,1746}"},
            "mapId":185862149,"map":{"posX":-2,"posY":-4,"subAreaId":10},
            "parameters":{"parameter0":119,"parameter1":1746,"parameter2":3}}]},
         {"id":57,"name":{"fr":"Analyse de sang"},"rewards":[],"objectives":[
@@ -154,6 +154,9 @@ struct QuetesTests {
         #expect(sang.description == "Wogew a besoin du sang d'un Wabbit GM.")
         #expect(sang.objectifs.map(\.id) == [101, 102])
         #expect(sang.objectifs.map(\.carte) == [nil, 185862149])
+        // « Vaincre… » d'après le genre DofusDB (typeId 6) ; sans genre, pas un combat.
+        #expect(sang.objectifs.map(\.combat) == [true, false])
+        #expect(fiche.etapes[0].objectifs.map(\.combat) == [false, false])
         // Une carte que DofusDB ne décrit pas (sans `map`) n'a pas de vue.
         #expect(fiche.etapes[0].objectifs.map(\.carte) == [nil, nil])
         #expect(fiche.etapes[0].description == nil)

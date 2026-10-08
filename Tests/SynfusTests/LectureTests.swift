@@ -218,6 +218,40 @@ struct LectureCombatTests {
         #expect(!EtatCombat.horsCombat.enCombat)
     }
 
+    @Test("Un combat commencé puis fini compte là où le perso se tient, jusqu'à ce qu'il change de carte")
+    func finDeCombat() {
+        let ici = PositionCarte(x: 4, y: -2, zone: "Amakna"), luAutrement = PositionCarte(x: 4, y: -2, zone: "Amakn")
+        let ailleurs = PositionCarte(x: 5, y: -2, zone: "Amakna")
+        var fins = FinsDeCombat()
+        fins.combat("Amarine", avant: .horsCombat, apres: .placement, ici: ici)
+        fins.combat("Amarine", avant: .placement, apres: .monTour(fin: nil), ici: ici)
+        #expect(!fins.fini("Amarine", en: ici))
+        fins.combat("Amarine", avant: .monTour(fin: nil), apres: .horsCombat, ici: ici)
+        #expect(fins.fini("Amarine", en: ici))
+        #expect(fins.fini("Amarine", en: luAutrement))
+        #expect(!fins.fini("Nelo", en: ici))
+        // Une lecture sans coordonnées ne déplace pas le perso.
+        fins.position("Amarine", nil)
+        #expect(fins.fini("Amarine", en: ici))
+        // Perdu : renvoyé ailleurs, la fin ne compte plus, même de retour ici.
+        fins.position("Amarine", ailleurs)
+        #expect(!fins.fini("Amarine", en: ailleurs))
+        #expect(!fins.fini("Amarine", en: ici))
+        // Sorti du placement : rien n'est vaincu.
+        fins.combat("Nelo", avant: .placement, apres: .horsCombat, ici: ici)
+        #expect(!fins.fini("Nelo", en: ici))
+        // Le bouton caché un instant : le retour en combat efface la fin.
+        fins.combat("Nelo", avant: .placement, apres: .pasMonTour, ici: ici)
+        fins.combat("Nelo", avant: .pasMonTour, apres: .horsCombat, ici: ici)
+        #expect(fins.fini("Nelo", en: ici))
+        fins.combat("Nelo", avant: .horsCombat, apres: .pasMonTour, ici: ici)
+        #expect(!fins.fini("Nelo", en: ici))
+        // Repris après une bascule, déjà renvoyé ailleurs : le combat n'a pas
+        // fini où il a commencé.
+        fins.combat("Nelo", avant: .pasMonTour, apres: .horsCombat, ici: ailleurs)
+        #expect(!fins.fini("Nelo", en: ailleurs))
+    }
+
     @Test("Le même texte passé du gris à la couleur relance l'OCR")
     func signature() {
         let empreinte = EmpreinteTexte(cases: Array(repeating: false, count: EmpreinteTexte.colonnes * EmpreinteTexte.lignes))
