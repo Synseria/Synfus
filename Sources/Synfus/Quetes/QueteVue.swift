@@ -293,6 +293,8 @@ struct QueteVue: View {
         let aFaire = ficheImposee == nil ? lecture.aFaire(fiche.id) : []
         let lus = ficheImposee == nil
             ? lecture.historique.persos(fiche.id, etape: rang, seule: !plusieurs, maintenant: Date()) : []
+        let tournee = ficheImposee == nil ? Self.tournee(etape, aFaire: aFaire, valides: coches) : []
+        let numeros = Dictionary(uniqueKeysWithValues: tournee.enumerated().map { ($1, $0 + 1) })
         return VStack(alignment: .leading, spacing: metriques.ecartLignes) {
             if plusieurs {
                 HStack(spacing: 6) {
@@ -324,7 +326,15 @@ struct QueteVue: View {
             ForEach(etape.objectifs, id: \.id) { objectif in
                 ligneObjectif(objectif, quete: fiche.id,
                               etat: .init(valide: coches.contains(objectif.id), suggere: suggeres.contains(objectif.id),
-                                          enCours: enCours == objectif.id, aFaire: aFaire.contains(objectif.id)))
+                                          enCours: enCours == objectif.id, aFaire: aFaire.contains(objectif.id),
+                                          numero: numeros[objectif.id]))
+            }
+            if let premier = etape.objectifs.first(where: { $0.id == tournee.first }) {
+                Button { copierTrajet(premier, quete: fiche.id) } label: {
+                    Label(L("quete.tournee"), systemImage: "point.topleft.down.to.point.bottomright.curvepath")
+                }
+                .controlSize(.small)
+                .help(L("quete.tournee.aide"))
             }
             if !etape.recompenses.vides {
                 Text(L("quete.recompenses", Self.recompenses(etape.recompenses)))
@@ -391,16 +401,42 @@ struct QueteVue: View {
 
     private static func idLigne(_ objectif: FicheQuete.Objectif) -> String { "objectif:\(objectif.id)" }
 
+    /// Les objectifs que le suivi montre ouverts ensemble, situés, dans l'ordre
+    /// le plus court depuis le perso (`ZaapClipboard.tournee`) : le suivi
+    /// n'affiche que les objectifs ouverts, plusieurs à la fois se font dans
+    /// n'importe quel ordre. Un seul : rien à ordonner.
+    private static func tournee(_ etape: FicheQuete.Etape, aFaire: Set<Int>, valides: Set<Int>) -> [Int] {
+        let ouverts = etape.objectifs.compactMap { objectif -> (id: Int, x: Int, y: Int)? in
+            guard aFaire.contains(objectif.id), !valides.contains(objectif.id), let position = objectif.position
+            else { return nil }
+            return (objectif.id, position.x, position.y)
+        }
+        guard ouverts.count > 1 else { return [] }
+        return ZaapClipboard.shared.tournee(ouverts) ?? []
+    }
+
+    /// Copie le trajet de l'objectif, zaap compris, et le met en cours.
+    private func copierTrajet(_ objectif: FicheQuete.Objectif, quete: Int) {
+        if let position = objectif.position {
+            ZaapClipboard.shared.copierTrajet(vers: (position.x, position.y))
+            signaler(Self.idLigne(objectif))
+        }
+        prefs.mettreEnCours(objectif.id, de: quete)
+    }
+
     /// Ce qu'on sait d'un objectif, du plus sûr au moins sûr : fait (coche
     /// verte), le perso sur sa carte (`suggere`, coche violette qui propose
     /// de valider), en cours (le dernier dont on a copié le trajet : coche en
     /// cible, texte appuyé), encore à faire d'après le suivi du jeu lu tout à
     /// l'heure (`aFaire`, trait et fond ambre). Fait, il n'est rien d'autre.
+    /// `numero` : son rang dans le plus court chemin des objectifs ouverts
+    /// ensemble (`tournee`).
     private struct EtatObjectif {
         let valide: Bool
         let suggere: Bool
         let enCours: Bool
         let aFaire: Bool
+        var numero: Int?
 
         var icone: String {
             valide ? "checkmark.circle.fill" : suggere ? "location.circle.fill"
@@ -434,13 +470,7 @@ struct QueteVue: View {
             .help(suggere ? (objectif.combat ? L("quete.suggestion.combat.aide") : L("quete.suggestion.aide"))
                 : etat.aFaire && !valide ? L("quete.aFaire.aide") : "")
             // Fait et sans trajet, la ligne n'a plus rien à faire.
-            let action: (() -> Void)? = valide && objectif.position == nil ? nil : {
-                if let position = objectif.position {
-                    ZaapClipboard.shared.copierTrajet(vers: (position.x, position.y))
-                    signaler(id)
-                }
-                prefs.mettreEnCours(objectif.id, de: quete)
-            }
+            let action: (() -> Void)? = valide && objectif.position == nil ? nil : { copierTrajet(objectif, quete: quete) }
             ligneCopiable(id: id, aide: objectif.position == nil ? L("quete.enCours.aide") : L("quete.copierTrajet"),
                           action: action) {
                 VStack(alignment: .leading, spacing: 1) {
@@ -458,6 +488,11 @@ struct QueteVue: View {
                     }
                     if !replie {
                         HStack(spacing: 6) {
+                            if let numero = etat.numero, !valide {
+                                Text(L("quete.ordre", numero))
+                                    .font(.system(size: metriques.detail, weight: .bold))
+                                    .foregroundStyle(Couleurs.ambre)
+                            }
                             if let position = objectif.position {
                                 detail(id: id, Coordonnees.texte(position.x, position.y), monospace: true)
                                 if suggere, copiee != id {
