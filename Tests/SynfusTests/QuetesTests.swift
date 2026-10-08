@@ -37,7 +37,7 @@ struct QuetesTests {
             return nomme
         }
         let type = try JSONDecoder().decode(QuetesDofusDB.TypeObjetAPI.self,
-                                            from: Data(#"{"id":137,"superType":{"name":{"fr":"Objet de quête"}}}"#.utf8))
+                                            from: Data(#"{"id":137,"superType":{"id":14,"name":{"fr":"Objet de quête"}}}"#.utf8))
         let carte = try JSONDecoder().decode(QuetesDofusDB.CarteAPI.self,
                                              from: Data(#"{"id":160695296,"posX":-1,"posY":-39,"subAreaId":56}"#.utf8))
         let sousZone = try JSONDecoder().decode(QuetesDofusDB.SousZoneAPI.self,
@@ -112,7 +112,8 @@ struct QuetesTests {
     @Test("La fiche : ressources additionnées, objectifs résolus, carte quand elle est connue")
     func fiche() throws {
         let fiche = try #require(try Self.quetes().fiche(18, en: .fr))
-        #expect(fiche.ressources == [FicheQuete.Ressource(nom: "Sang de Wabbit GM", quantite: 5, categorie: "Objet de quête")])
+        #expect(fiche.ressources == [FicheQuete.Ressource(nom: "Sang de Wabbit GM", quantite: 5, categorie: "Objet de quête",
+                                                     objetDeQuete: true)])
         #expect(fiche.groupe && !fiche.donjon)
         #expect(fiche.etapes.map(\.nom) == ["Analyse de sang", "Le sang du wabbit GM"])
         let otomai = try #require(fiche.etapes[1].objectifs.first { $0.texte.contains("Otomaï") })
@@ -133,7 +134,7 @@ struct QuetesTests {
         #expect(fiche.etapes[0].description == nil)
         #expect(sang.recompenses == FicheQuete.Recompenses(
             niveau: 70, experience: 201_600, kamas: 6_280,
-            objets: [FicheQuete.Ressource(nom: "Analyse de sang", quantite: 1, categorie: nil)],
+            objets: [FicheQuete.Ressource(nom: "Analyse de sang", quantite: 1, categorie: nil, objetDeQuete: false)],
             emotes: ["Pierre"], titres: []))
         #expect(fiche.etapes[0].recompenses.vides)
     }

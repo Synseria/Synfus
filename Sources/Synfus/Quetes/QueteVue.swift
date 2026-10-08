@@ -31,7 +31,8 @@ struct QueteVue: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 12) {
                         entete(fiche)
-                        if !fiche.ressources.isEmpty { ressources(fiche) }
+                        let ressources = fiche.ressources.filter { !(prefs.quetesMasquerObjets && $0.objetDeQuete) }
+                        if !ressources.isEmpty { self.ressources(ressources) }
                         if !fiche.etapes.isEmpty { etape(fiche) }
                         if !fiche.suivantes.isEmpty { suivantes(fiche) }
                     }
@@ -179,19 +180,19 @@ struct QueteVue: View {
 
     // MARK: - Ressources
 
-    private func ressources(_ fiche: FicheQuete) -> some View {
+    private func ressources(_ ressources: [FicheQuete.Ressource]) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 titreSection(L("quete.ressources"))
                 Spacer()
                 Button(L("quete.toutCopier")) {
-                    copier(fiche.ressources.map { L("quete.ressource", $0.nom, $0.quantite) }.joined(separator: ", "),
+                    copier(ressources.map { L("quete.ressource", $0.nom, $0.quantite) }.joined(separator: ", "),
                            ligne: "ressources")
                 }
                 .buttonStyle(.borderless)
                 .font(.system(size: 10))
             }
-            ForEach(Array(fiche.ressources.enumerated()), id: \.offset) { indice, ressource in
+            ForEach(Array(ressources.enumerated()), id: \.offset) { indice, ressource in
                 let id = "ressource:\(indice)"
                 ligneCopiable(id: id, aide: L("quete.copierNom"), action: { copier(ressource.nom, ligne: id) }) {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {

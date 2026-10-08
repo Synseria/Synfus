@@ -32,7 +32,7 @@ struct PanneauQuetesTests {
     @Test("Le menu : les épinglées, la montrée cochée, puis le suivi et ses quêtes à leur étape")
     func menu() {
         let reconnues = [SuiviQuetes.Reconnue(id: 7, etape: 2), SuiviQuetes.Reconnue(id: 18, etape: nil)]
-        let elements = MenuQuetes.elements(epinglees: [18, 42], montree: 42, reconnues: reconnues, etat: .lu, nom: nom)
+        let elements = MenuQuetes.elements(epinglees: [18, 42], montree: 42, reconnues: reconnues, etat: .lu, masquerObjets: true, nom: nom)
         #expect(elements == [
             .titre(L("quete.menu.epinglees")),
             .epinglee(id: 18, nom: "Q18", montree: false),
@@ -42,18 +42,20 @@ struct PanneauQuetesTests {
             .lireSuivi(enCours: false),
             .reconnue(reconnues[0], titre: L("quete.menu.reconnueEtape", "Q7", 3), epinglee: false),
             .reconnue(reconnues[1], titre: "Q18", epinglee: true),
+            .separateur,
+            .masquerObjets(true),
         ])
         #expect(MenuQuetes.nouvelles(reconnues, epinglees: [18, 42]) == 1)
     }
 
     @Test("Le menu dit pourquoi le suivi ne propose rien")
     func menuSansQuete() {
-        let vide = MenuQuetes.elements(epinglees: [], montree: nil, reconnues: [], etat: .lu, nom: nom)
+        let vide = MenuQuetes.elements(epinglees: [], montree: nil, reconnues: [], etat: .lu, masquerObjets: false, nom: nom)
         #expect(vide.contains(.message(L("quete.menu.aucune"))))
-        #expect(vide.last == .message(L("quete.suivi.rien")))
-        let enCours = MenuQuetes.elements(epinglees: [1], montree: 1, reconnues: [], etat: .enCours, nom: nom)
-        #expect(enCours.last == .lireSuivi(enCours: true))
-        let illisible = MenuQuetes.elements(epinglees: [1], montree: 1, reconnues: [], etat: .illisible, nom: nom)
-        #expect(illisible.last == .message(L("quete.suivi.illisible")))
+        #expect(vide.dropLast(2).last == .message(L("quete.suivi.rien")))
+        let enCours = MenuQuetes.elements(epinglees: [1], montree: 1, reconnues: [], etat: .enCours, masquerObjets: false, nom: nom)
+        #expect(enCours.dropLast(2).last == .lireSuivi(enCours: true))
+        let illisible = MenuQuetes.elements(epinglees: [1], montree: 1, reconnues: [], etat: .illisible, masquerObjets: false, nom: nom)
+        #expect(illisible.dropLast(2).last == .message(L("quete.suivi.illisible")))
     }
 }

@@ -14,11 +14,13 @@ enum MenuQuetes {
         case reconnue(SuiviQuetes.Reconnue, titre: String, epinglee: Bool)
         /// Ce que la dernière lecture a donné, faute de quête.
         case message(String)
+        /// L'interrupteur des objets de quête dans les ressources.
+        case masquerObjets(Bool)
         case separateur
     }
 
     static func elements(epinglees: [Int], montree: Int?, reconnues: [SuiviQuetes.Reconnue],
-                         etat: LectureSuivi.Etat, nom: (Int) -> String) -> [Element] {
+                         etat: LectureSuivi.Etat, masquerObjets: Bool, nom: (Int) -> String) -> [Element] {
         var elements: [Element] = [.titre(L("quete.menu.epinglees"))]
         elements += epinglees.isEmpty
             ? [.message(L("quete.menu.aucune"))]
@@ -29,7 +31,7 @@ enum MenuQuetes {
             return .reconnue(reconnue, titre: titre, epinglee: epinglees.contains(reconnue.id))
         }
         if let message = message(etat, reconnues: reconnues) { elements.append(.message(message)) }
-        return elements
+        return elements + [.separateur, .masquerObjets(masquerObjets)]
     }
 
     /// Les quêtes que le suivi montre et que le panneau n'a pas encore : ce

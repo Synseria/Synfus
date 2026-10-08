@@ -14,7 +14,10 @@ struct QuetesSettings: View {
         let affichees = Array(quetes.prefix(Self.limite).enumerated())
         PageListe(titre: L("reglages.quetes"), sousTitre: L("quetes.sousTitre")) {
             SourceQuetes().cadreDeListe(premiere: true, derniere: false)
-            Interrupteur(titre: L("quetes.bouton"), isOn: $prefs.quetesBouton).cadreDeListe(premiere: false, derniere: true)
+            Interrupteur(titre: L("quetes.bouton"), isOn: $prefs.quetesBouton).cadreDeListe(premiere: false, derniere: false)
+            Interrupteur(titre: L("quetes.masquerObjets"), sousTexte: L("quetes.masquerObjets.sousTexte"),
+                         isOn: $prefs.quetesMasquerObjets)
+                .cadreDeListe(premiere: false, derniere: true)
             EnTeteListe(titre: L("quetes.compte", quetes.count))
             ChampFiltre(invite: L("quetes.filtrer"), texte: $filtre)
                 .cadreDeListe(premiere: true, derniere: affichees.isEmpty)

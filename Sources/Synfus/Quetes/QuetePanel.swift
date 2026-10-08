@@ -151,11 +151,12 @@ extension QuetePanel {
     func menu() -> NSMenu {
         let lecture = LectureSuivi.shared
         let store = QuetesStore.shared
+        let prefs = Preferences.shared
         let menu = NSMenu()
         menu.autoenablesItems = false
         for element in MenuQuetes.elements(
-            epinglees: Preferences.shared.quetesEpinglees, montree: idMontre, reconnues: lecture.reconnues,
-            etat: lecture.etat, nom: { store.nom($0) ?? "…" }) {
+            epinglees: prefs.quetesEpinglees, montree: idMontre, reconnues: lecture.reconnues,
+            etat: lecture.etat, masquerObjets: prefs.quetesMasquerObjets, nom: { store.nom($0) ?? "…" }) {
             switch element {
             case .titre(let titre):
                 menu.addItem(.sectionHeader(title: titre))
@@ -176,6 +177,10 @@ extension QuetePanel {
             case .message(let texte):
                 let item = NSMenuItem(title: texte, action: nil, keyEquivalent: "")
                 item.isEnabled = false
+                menu.addItem(item)
+            case .masquerObjets(let actif):
+                let item = CibleMenu.shared.element(L("quetes.masquerObjets")) { prefs.quetesMasquerObjets = !actif }
+                item.state = actif ? .on : .off
                 menu.addItem(item)
             case .separateur:
                 menu.addItem(.separator())
