@@ -202,7 +202,7 @@ struct QueteVue: View {
                 if fiche.donjon { badge(L("quete.donjon"), icone: "building.columns") }
             }
             HStack(spacing: 6) {
-                Text(L("quete.niveau", fiche.niveau, fiche.etapes.count))
+                Text(L("quete.niveau", nombre: fiche.etapes.count, fiche.niveau, fiche.etapes.count))
                 Spacer(minLength: 4)
                 Button {
                     guideEnCours = true
