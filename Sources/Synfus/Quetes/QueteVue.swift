@@ -16,6 +16,8 @@ struct QueteVue: View {
     /// La ligne qui vient d'être copiée, le temps de le dire.
     @State private var copiee: String?
     @State private var guideEnCours = false
+    /// Incrémenté pour ramener la fiche en haut (« Étape suivante » en pied).
+    @State private var remontees = 0
     /// Une fiche donnée (captures de la documentation) ; `nil` : celles du panneau.
     var ficheImposee: FicheQuete?
     /// L'étape montrée et les objectifs cochés de la fiche donnée.
@@ -30,6 +32,8 @@ struct QueteVue: View {
 
     /// La colonne des coches.
     private static let colonneCoche: CGFloat = 18
+    /// Le repère du haut de la fiche, où elle revient.
+    private static let haut = "haut"
     /// Le trait au bord d'un objectif que le suivi du jeu montre à faire.
     private static let traitAFaire: CGFloat = 3
 
@@ -38,17 +42,23 @@ struct QueteVue: View {
             enTete
             Divider()
             if let fiche {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: metriques.ecartSections) {
-                        entete(fiche)
-                        let ressources = fiche.ressources.filter { !(prefs.quetesMasquerObjets && $0.objetDeQuete) }
-                        if !ressources.isEmpty { self.ressources(ressources) }
-                        if !fiche.etapes.isEmpty { etape(fiche) }
-                        if !fiche.suivantes.isEmpty { suivantes(fiche) }
+                // Une autre quête, ou l'étape suivante prise en pied : la fiche
+                // repart du haut, sans quoi elle s'ouvre là où l'autre défilait.
+                ScrollViewReader { defilement in
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: metriques.ecartSections) {
+                            entete(fiche).id(Self.haut)
+                            let ressources = fiche.ressources.filter { !(prefs.quetesMasquerObjets && $0.objetDeQuete) }
+                            if !ressources.isEmpty { self.ressources(ressources) }
+                            if !fiche.etapes.isEmpty { etape(fiche) }
+                            if !fiche.suivantes.isEmpty { suivantes(fiche) }
+                        }
+                        .padding(metriques.marge)
+                        .padding(.bottom, 8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .padding(metriques.marge)
-                    .padding(.bottom, 8)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .onChange(of: fiche.id) { defilement.scrollTo(Self.haut, anchor: .top) }
+                    .onChange(of: remontees) { defilement.scrollTo(Self.haut, anchor: .top) }
                 }
             } else {
                 vide
@@ -310,7 +320,10 @@ struct QueteVue: View {
             if plusieurs, rang < fiche.etapes.count - 1 {
                 HStack {
                     Spacer()
-                    Button { changerEtape(fiche, rang + 1) } label: {
+                    Button {
+                        changerEtape(fiche, rang + 1)
+                        remontees += 1
+                    } label: {
                         Label(L("quete.etapeSuivante"), systemImage: "chevron.right")
                             .labelStyle(TitreAvantIcone())
                     }
