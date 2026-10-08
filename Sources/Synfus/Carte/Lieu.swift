@@ -22,7 +22,7 @@ struct Lieu: Codable, Hashable, Sendable {
 
     var estZaap: Bool { noms[Langue.fr.rawValue] == "Zaap" }
 
-    func nom(en langue: Langue) -> String { Self.traduit(noms, langue) ?? "\(x),\(y)" }
+    func nom(en langue: Langue) -> String { Self.traduit(noms, langue) ?? Coordonnees.texte(x, y) }
     func zone(en langue: Langue) -> String? { Self.traduit(zone, langue) }
     func sousZone(en langue: Langue) -> String? { Self.traduit(sousZone, langue) }
 
