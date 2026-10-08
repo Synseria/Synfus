@@ -481,5 +481,7 @@
   "zaap.sansPosition": "Il faut la lecture de la position.",
   "zaap.supprimer": "Supprimer ce zaap",
   "zaaps.grille": "Activer, étiqueter, mettre en favori",
-  "zaaps.sousTitre": "%lld actifs sur %lld — la palette et la réécriture du /travel ne proposent que les actifs."
+  "zaaps.sousTitre": "%lld actifs sur %lld — la palette et la réécriture du /travel ne proposent que les actifs.",
+  "zaaps.vueCarte": "Vue de la carte en fond",
+  "zaaps.vueCarte.sousTexte": "La carte du jeu de chaque zaap, téléchargée de DofusDB à la première ouverture et gardée dans les caches."
 }

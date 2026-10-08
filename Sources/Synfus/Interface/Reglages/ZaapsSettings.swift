@@ -26,6 +26,7 @@ struct ZaapsSettings: View {
                      sousTitre: L("zaaps.sousTitre", prefs.zaapsActifs.count, connus.count)) {
             Section {
                 SourceCarte()
+                Interrupteur(titre: L("zaaps.vueCarte"), sousTexte: L("zaaps.vueCarte.sousTexte"), isOn: $prefs.zaapsVueCarte)
             }
             Section {
                 HStack(spacing: 10) {
