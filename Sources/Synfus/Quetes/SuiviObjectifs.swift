@@ -3,12 +3,13 @@ import Foundation
 /// Les lignes lues sous le titre d'une quête du suivi → les objectifs de son
 /// étape qu'elles désignent, et ce qu'on en déduit des autres. Pur.
 ///
-/// Le suivi montre, sous chaque quête, les objectifs **actifs** de l'étape
+/// Le suivi montre, sous chaque quête, les objectifs **ouverts** de l'étape
 /// en cours, dans l'ordre de l'étape, un objectif souvent sur deux lignes ;
-/// un objectif fait disparaît, et « VOIR PLUS… » coupe la liste. Une étape
-/// ne dévoile pas tout d'un coup (« Pense-bête » : neuf objectifs, un seul
-/// montré) : ce qui suit le dernier objectif montré peut n'être pas encore
-/// ouvert, seul ce qui le précède est tenu pour fait.
+/// un objectif fait disparaît, et « VOIR PLUS… » coupe la fin de la liste,
+/// jamais le début. Une étape ne dévoile pas tout d'un coup (« Pense-bête » :
+/// neuf objectifs, un seul montré) et ses objectifs ne s'ouvrent pas toujours
+/// en file : seul ce qui précède le **premier** objectif montré est tenu pour
+/// fait — et les étapes d'avant, quand l'étape est sûre.
 enum SuiviObjectifs {
     struct Lecture: Equatable, Sendable {
         let etape: Int
@@ -50,27 +51,35 @@ enum SuiviObjectifs {
         let etape = quete.etapes[rang]
         let affectes = parEtape[rang].sorted { $0.debut < $1.debut }
         let aFaire = affectes.map { etape.objectifs[$0.objectif].id }
-        return Lecture(etape: rang, aFaire: aFaire,
-                       faits: sure(affectes, lignes: lues.count)
-                           ? faits(etape.objectifs.map(\.id), affectes: affectes) : [])
-    }
-
-    /// La lecture permet-elle de conclure sur les faits ? Chaque ligne doit
-    /// être un objectif — sinon une ligne mal lue pourrait être l'un de ceux
-    /// qu'on croirait faits —, et l'écran dans l'ordre de l'étape, ce sur quoi
-    /// repose la déduction. Une liste coupée n'y change rien : ce qu'elle cache
-    /// vient après.
-    private static func sure(_ affectes: [Affectation], lignes: Int) -> Bool {
-        let couvertes = affectes.reduce(0) { $0 + $1.fin - $1.debut }
+        // L'écran doit suivre l'ordre de l'étape, sur quoi repose la déduction,
+        // et le premier objectif montré être la première ligne : une ligne
+        // illisible avant lui pourrait être un objectif plus tôt, encore ouvert.
         let rangs = affectes.map(\.objectif)
-        return couvertes == lignes && rangs == rangs.sorted()
+        guard let premier = affectes.first, premier.debut == 0, rangs == rangs.sorted() else {
+            return Lecture(etape: rang, aFaire: aFaire, faits: [])
+        }
+        let couts = Self.couts(parEtape[rang], lignes: lues.count)
+        let sure = parEtape.indices.allSatisfy { autre in
+            autre == rang || zip(couts, Self.couts(parEtape[autre], lignes: lues.count)).allSatisfy { $0 <= $1 }
+        }
+        let avant = sure ? quete.etapes[..<rang].flatMap { $0.objectifs.map(\.id) } : []
+        return Lecture(etape: rang, aFaire: aFaire,
+                       faits: avant + etape.objectifs[..<premier.objectif].map(\.id))
     }
 
-    /// Les objectifs qui précèdent le dernier montré et ne le sont pas.
-    private static func faits(_ ids: [Int], affectes: [Affectation]) -> [Int] {
-        guard let dernier = affectes.map(\.objectif).max() else { return [] }
-        let montres = Set(affectes.map(\.objectif))
-        return (0..<dernier).filter { !montres.contains($0) }.map { ids[$0] }
+    /// Ce que coûte chaque ligne lue, par caractère, dans l'affectation d'une
+    /// étape ; une ligne qu'elle n'explique pas coûte l'infini. L'étape est
+    /// sûre quand aucune autre ne lit mieux une seule ligne : un texte
+    /// répété d'étape en étape (« Retourner voir Maître des clefs ») ne la
+    /// désigne pas, mais ne la dément pas non plus.
+    private static func couts(_ affectes: [Affectation], lignes: Int) -> [Double] {
+        var couts = [Double](repeating: .infinity, count: lignes)
+        for affectation in affectes {
+            for ligne in affectation.debut..<affectation.fin {
+                couts[ligne] = Double(affectation.cout) / Double(affectation.longueur)
+            }
+        }
+        return couts
     }
 
     private static func estTroncature(_ ligne: String) -> Bool {
@@ -113,8 +122,8 @@ enum SuiviObjectifs {
 
     /// Une ligne ↔ un objectif au plus, le mieux lu d'abord. À lecture égale
     /// — le même texte à plusieurs rangs (« Aller voir Jykel » deux fois) —
-    /// l'ordre de l'écran départage, puis le plus tôt dans l'étape : il laisse
-    /// le moins d'objectifs passer pour faits.
+    /// le rang qui garde l'écran dans l'ordre de l'étape, puis le plus tôt :
+    /// il laisse le moins d'objectifs passer pour faits.
     private static func affecter(_ fenetres: [Fenetre], objectifs: [Ressemblance.Forme]) -> [Affectation] {
         var candidats: [Affectation] = []
         for fenetre in fenetres {

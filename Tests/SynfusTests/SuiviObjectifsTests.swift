@@ -80,7 +80,7 @@ struct SuiviObjectifsTests {
         SuiviQuetes.reconnaitre(lignes, dans: Self.jeu)
     }
 
-    @Test("La capture réelle : l'objectif montré à faire, ceux d'avant faits, rien au-delà")
+    @Test("La capture réelle : les objectifs montrés à faire, ceux d'avant faits, étapes d'avant comprises")
     func captureReelle() {
         let reconnues = lu([
             "Suivi de quêtes",
@@ -108,7 +108,7 @@ struct SuiviObjectifsTests {
             // « VOIR PLUS » cache la suite, pas ce qui précède.
             .init(id: 439, etape: 0, aFaire: [2269, 2270, 2271], faits: [2266, 2267, 2268]),
             .init(id: 1467, etape: nil, aFaire: [8166], faits: [8154, 8155, 8156]),
-            .init(id: 157, etape: 1, aFaire: [625, 5504], faits: []),
+            .init(id: 157, etape: 1, aFaire: [625, 5504], faits: [621, 5500, 622]),
         ])
     }
 
@@ -116,27 +116,61 @@ struct SuiviObjectifsTests {
     func fautes() {
         let reconnues = lu(["L'eternelle moisson", "Rapporter 1 ame de Shin Larvc a Assistante d'0tomai",
                             "Rapporter 1 âme de Gelee Royaie Menthe à Assistante d'Otomaï"])
-        #expect(reconnues == [.init(id: 439, etape: 0, aFaire: [2270, 2273], faits: [2266, 2267, 2268, 2269, 2271, 2272])])
+        // Rakoopeur et Scarabosse, entre les deux, ne sont pas montrés : peut-être
+        // pas encore ouverts, rien n'en est déduit.
+        #expect(reconnues == [.init(id: 439, etape: 0, aFaire: [2270, 2273], faits: [2266, 2267, 2268, 2269])])
     }
 
-    @Test("Un même texte à plusieurs rangs : l'ordre de l'écran départage, sinon le plus tôt")
-    func doublons() {
-        #expect(lu(["Le commandant", "Aller voir Commandant Ymagiroh"])
-                == [.init(id: 900, etape: nil, aFaire: [1], faits: [])])
-        #expect(lu(["Le commandant", "Vaincre x1 Directeur Grunob en un seul combat", "Aller voir Commandant Ymagiroh"])
-                == [.init(id: 900, etape: nil, aFaire: [4, 5], faits: [1, 2, 3])])
+    /// « Le commandant » : Aller voir Ymagiroh (1), Ramener (2), Aller voir
+    /// Ymagiroh (3), Vaincre (4), Aller voir Ymagiroh (5).
+    @Test("Un même texte à plusieurs rangs : les lignes suivantes départagent, sinon le plus tôt", arguments: [false, true])
+    func doublons(tronque: Bool) {
+        let fin = tronque ? ["VOIR PLUS…"] : []
+        func lu(_ lignes: [String]) -> SuiviQuetes.Reconnue? { self.lu(["Le commandant"] + lignes + fin).first }
+        let ymagiroh = "Aller voir Commandant Ymagiroh"
+        // Seul, il peut être le premier : rien n'est fait.
+        #expect(lu([ymagiroh]) == .init(id: 900, etape: nil, aFaire: [1], faits: []))
+        // Avant « Vaincre » : le premier ou le deuxième, le plus tôt l'emporte.
+        #expect(lu([ymagiroh, "Vaincre x1 Directeur Grunob en un seul combat"])
+                == .init(id: 900, etape: nil, aFaire: [1, 4], faits: []))
+        // Après « Ramener » : le deuxième ou le troisième, et ce qui précède « Ramener » est fait.
+        #expect(lu(["Ramener à Commandant Ymagiroh : x1 Pensée perdue", ymagiroh])
+                == .init(id: 900, etape: nil, aFaire: [2, 3], faits: [1]))
+        // Après « Vaincre » : forcément le dernier.
+        #expect(lu(["Vaincre x1 Directeur Grunob en un seul combat", ymagiroh])
+                == .init(id: 900, etape: nil, aFaire: [4, 5], faits: [1, 2, 3]))
+        // Deux fois : les deux premiers.
+        #expect(lu([ymagiroh, ymagiroh]) == .init(id: 900, etape: nil, aFaire: [1, 3], faits: []))
     }
 
-    @Test("Une ligne non reconnue : les objectifs lus restent à faire, rien n'est déduit fait")
+    @Test("Une ligne non reconnue avant le premier objectif empêche de conclure, après non")
     func ligneInconnue() {
-        #expect(lu(["Pense-bête", "Retrouver Meuh Sieurchance chez lui, au village des éleveurs", "Parler au forgeron"])
+        let retrouver = "Retrouver Meuh Sieurchance chez lui, au village des éleveurs"
+        #expect(lu(["Pense-bête", "Parler au forgeron", retrouver])
                 == [.init(id: 456, etape: nil, aFaire: [3105], faits: [])])
+        #expect(lu(["Pense-bête", retrouver, "Parler au forgeron"])
+                == [.init(id: 456, etape: nil, aFaire: [3105], faits: [3099, 3100, 3101, 3102, 3103, 3104])])
     }
 
     @Test("L'écran dans le désordre de l'étape : rien n'est déduit fait")
     func desordre() {
         #expect(lu(["La raison du plus fort", "Aller voir Directeur Grunob", "Entrer dans l'Akadémie des Gobs"])
                 == [.init(id: 2442, etape: nil, aFaire: [18462, 18460], faits: [])])
+    }
+
+    @Test("Une étape lue moins bien qu'une autre sur une ligne : les étapes d'avant ne sont pas cochées")
+    func etapePasSure() {
+        let jeu = Quetes(format: Quetes.formatActuel, date: .now, quetes: [
+            Self.quete(902, "Le bricoleur", [
+                [Self.objectif(21, "Parler à Bob le Bricoleur"), Self.objectif(22, "Aller voir Mage Ax")],
+                [Self.objectif(31, "Aller voir Greu Nouille"), Self.objectif(32, "Parler à Bob le Bricoleux"),
+                 Self.objectif(33, "Ramener à Danathor : x1 Pensée perdue")],
+            ]),
+        ], pnjs: [], objets: [:], monstres: [:], nomsPNJ: [:], sousZones: [:], famillesObjets: [:], familles: [:],
+        emotes: [:], titres: [:], metiers: [:], camps: [:])
+        let reconnues = SuiviQuetes.reconnaitre(["Le bricoleur", "Parler à Bob le Bricoleur",
+                                                 "Ramener à Danathor : x1 Pensée perdue"], dans: jeu)
+        #expect(reconnues == [.init(id: 902, etape: 1, aFaire: [32, 33], faits: [31])])
     }
 
     @Test("Deux étapes qui se lisent aussi bien : ni étape ni objectif")

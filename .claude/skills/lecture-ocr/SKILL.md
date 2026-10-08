@@ -46,9 +46,11 @@ Position et combat sont lus au tour ; **chasse** et **quêtes** seulement à la 
   PLUS… ». Affectation une fenêtre ↔ un objectif, la mieux lue d'abord (fautes n/5, débordement
   compté), doublons de texte départagés par l'ordre puis le plus tôt. L'étape : celle qui
   explique le plus de caractères, unique ; à défaut d'objectif lu en entier, les noms cités
-  (`etapeParRenvois`). **Faits = ce qui précède le dernier objectif montré**, jamais ce qui
-  suit (pas encore ouvert : « Pense-bête » n'en montre qu'un sur neuf), et seulement si chaque
-  ligne est un objectif et l'écran dans l'ordre de l'étape. Distance bornée
+  (`etapeParRenvois`). **Faits = ce qui précède le premier objectif montré** (« VOIR PLUS »
+  coupe la fin, jamais le début), jamais ce qui suit ni les trous (pas encore ouverts :
+  « Pense-bête » n'en montre qu'un sur neuf) ; seulement si l'écran suit l'ordre de l'étape et
+  commence par un objectif reconnu. Les étapes d'avant aussi, si aucune autre étape ne lit mieux
+  une ligne. Doublon ambigu : la première occurrence possible (prudent). Distance bornée
   (`distanceDansTexte(_:_:auPlus:)`, Ukkonen) : vingt étapes de vingt « Rapporter 1 âme… ».
 - Panneau : `LectureSuivi.aFaire` (surligné ambre, `fraicheur` 10 min) ; faits cochés par
   `Preferences.cocher` (`CochesQuete`, jamais de décoche, efface l'objectif en cours) si

@@ -429,7 +429,7 @@
   "quete.toutCopier": "Copy all",
   "quetes.bouton": "Button in the bar",
   "quetes.cocherSuivi": "Check off from the tracker",
-  "quetes.cocherSuivi.sousTexte": "When the game's quest tracker is read, the objectives before the ones it shows are checked off (a click unchecks them). The ones it shows are highlighted.",
+  "quetes.cocherSuivi.sousTexte": "When the game's quest tracker is read, the objectives before the first one it shows are checked off (a click unchecks them). The ones it shows are highlighted.",
   "quetes.compact": "Compact mode",
   "quetes.compact.sousTexte": "Smaller text and tighter lines: the panel hides less of the game.",
   "quetes.compte": "%lld quests",
