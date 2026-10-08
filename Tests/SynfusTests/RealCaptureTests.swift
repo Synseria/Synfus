@@ -105,11 +105,14 @@ struct RealCaptureTests {
             Issue.record("la signature n'a pas reconnu la même image"); return
         }
         let debut = Date()
-        let reconnues = SuiviQuetes.reconnaitre(lignes, dans: quetes).reconnues
+        let index = SuiviQuetes.Index(quetes)
+        let indexe = Date()
+        let reconnues = SuiviQuetes.reconnaitre(lignes, dans: index).reconnues
         let noms = reconnues.map { reconnue in
             quetes.quetes.first { $0.id == reconnue.id }.flatMap { Lieu.traduit($0.noms, .fr) } ?? "#\(reconnue.id)"
         }
-        print("reconnues en \(Int(Date().timeIntervalSince(debut) * 1000)) ms : "
+        print("index en \(Int(indexe.timeIntervalSince(debut) * 1000)) ms, reconnues en "
+              + "\(Int(Date().timeIntervalSince(indexe) * 1000)) ms : "
               + zip(noms, reconnues).map {
                   "\($0) (étape \($1.etape.map { String($0 + 1) } ?? "—"), à faire \($1.aFaire), faits \($1.faits))"
               }.joined(separator: ", "))

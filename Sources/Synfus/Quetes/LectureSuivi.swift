@@ -32,6 +32,8 @@ final class LectureSuivi: ObservableObject {
 
     static let fraicheur: Duration = .seconds(10 * 60)
     private var peremption: Task<Void, Never>?
+    /// L'index des noms (`SuiviQuetes.Index`) du dernier jeu de quêtes lu.
+    private var index: (date: Date, tache: Task<SuiviQuetes.Index, Never>)?
 
     private init() {}
 
@@ -48,9 +50,7 @@ final class LectureSuivi: ObservableObject {
         Task {
             guard let (perso, lignes) = await LecteurEcran.shared.lireUneFois(.quetes) else { etat = .illisible; return }
             guard let quetes = await QuetesStore.shared.chargees() else { etat = .sansQuetes; return }
-            // Deux mille noms dans trois langues, comparés à chaque ligne :
-            // hors du main actor.
-            let lu = await Task.detached { SuiviQuetes.reconnaitre(lignes, dans: quetes) }.value
+            let lu = await reconnaitre(lignes, dans: quetes)
             reconnues = lu.reconnues
             let prefs = Preferences.shared
             cochesLues = reconnues.reduce(0) { $0 + prefs.appliquer($1) }
@@ -63,6 +63,21 @@ final class LectureSuivi: ObservableObject {
             etat = .lu
             rafraichir()
         }
+    }
+
+    /// Une lecture reconnue hors du main actor — deux mille noms dans trois
+    /// langues, comparés à chaque ligne —, sur l'index du jeu de quêtes, bâti
+    /// une fois par jeu. Aussi l'essai du calibrage.
+    func reconnaitre(_ lignes: [String], dans quetes: Quetes) async -> SuiviQuetes.Lu {
+        let tache: Task<SuiviQuetes.Index, Never>
+        if let index, index.date == quetes.date {
+            tache = index.tache
+        } else {
+            tache = Task.detached { SuiviQuetes.Index(quetes) }
+            index = (quetes.date, tache)
+        }
+        let pret = await tache.value
+        return await Task.detached { SuiviQuetes.reconnaitre(lignes, dans: pret) }.value
     }
 
     private func rafraichir() {

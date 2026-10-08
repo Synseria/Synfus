@@ -281,7 +281,7 @@ struct CalibrationZonesView: View {
             return lues.isEmpty ? L("chasse.rienLu") : lues.map { $0.nom(en: chasse.langue) }.joined(separator: ", ")
         case .quetes:
             guard let quetes = await QuetesStore.shared.chargees() else { return L("palette.quetes.chargement") }
-            let reconnues = await Task.detached { SuiviQuetes.reconnaitre(lignes, dans: quetes).reconnues }.value
+            let reconnues = await LectureSuivi.shared.reconnaitre(lignes, dans: quetes).reconnues
             guard !reconnues.isEmpty else { return L("quete.suivi.rien") }
             return reconnues.map { reconnue in
                 let nom = QuetesStore.shared.nom(reconnue.id) ?? "#\(reconnue.id)"

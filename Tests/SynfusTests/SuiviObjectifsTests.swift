@@ -19,7 +19,7 @@ struct SuiviObjectifsTests {
         monstres.enumerated().map { objectif(premier + $0.offset, "Rapporter 1 âme de {monster,\($0.element)} à {npc,10}.") }
     }
 
-    private static let jeu = Quetes(
+    private static let jeu = SuiviQuetes.Index(Quetes(
         format: Quetes.formatActuel, date: .now,
         quetes: [
             quete(456, "Pense-bête", [[
@@ -74,7 +74,7 @@ struct SuiviObjectifsTests {
             "7": ["fr": "Directeur Grunob"], "8": ["fr": "Capitaine Starky"], "9": ["fr": "Maître des clefs"],
             "10": ["fr": "Assistante d'Otomaï"], "11": ["fr": "Commandant Ymagiroh"],
         ],
-        sousZones: [:], famillesObjets: [:], familles: [:], emotes: [:], titres: [:], metiers: [:], camps: [:])
+        sousZones: [:], famillesObjets: [:], familles: [:], emotes: [:], titres: [:], metiers: [:], camps: [:]))
 
     private func lu(_ lignes: [String]) -> [SuiviQuetes.Reconnue] {
         SuiviQuetes.reconnaitre(lignes, dans: Self.jeu).reconnues
@@ -169,7 +169,7 @@ struct SuiviObjectifsTests {
         ], pnjs: [], objets: [:], monstres: [:], nomsPNJ: [:], sousZones: [:], famillesObjets: [:], familles: [:],
         emotes: [:], titres: [:], metiers: [:], camps: [:])
         let reconnues = SuiviQuetes.reconnaitre(["Le bricoleur", "Parler à Bob le Bricoleur",
-                                                 "Ramener à Danathor : x1 Pensée perdue"], dans: jeu).reconnues
+                                                 "Ramener à Danathor : x1 Pensée perdue"], dans: .init(jeu)).reconnues
         #expect(reconnues == [.init(id: 902, etape: 1, etapeSure: false, aFaire: [32, 33], faits: [31])])
     }
 
