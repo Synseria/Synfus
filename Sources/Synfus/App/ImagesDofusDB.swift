@@ -59,10 +59,12 @@ final class ImagesDofusDB {
     }
 
     private func enMemoire(_ demande: Demande) -> NSImage? {
-        demande.cote == nil ? memoire[demande.url] : reduites.object(forKey: demande.cle)
+        guard Ressources.visuelsDuJeu else { return nil }
+        return demande.cote == nil ? memoire[demande.url] : reduites.object(forKey: demande.cle)
     }
 
     private func obtenir(_ demande: Demande, reseauDAbord: Bool) async -> NSImage? {
+        guard Ressources.visuelsDuJeu else { return nil }
         if let tache = enCours[demande] { return await tache.value }
         let url = demande.url
         let fichier = dossier.appending(path: url.pathComponents.suffix(2).joined(separator: "-"))

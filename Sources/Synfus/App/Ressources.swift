@@ -10,6 +10,16 @@ enum Ressources {
         .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         .appending(path: "Synfus", directoryHint: .isDirectory)
 
+    /// Les captures de la documentation se prennent (`SYNFUS_CAPTURES`, cf.
+    /// `CapturesTests`).
+    static let captureDocumentation = ProcessInfo.processInfo.environment["SYNFUS_CAPTURES"] != nil
+
+    /// Faux pendant une capture de la documentation : ni vue de carte, ni
+    /// pictogramme, ni emblème — pas même l'icône posée par l'utilisateur.
+    /// Une capture du dépôt ne porte aucun visuel du jeu (CGU Dofus, art.
+    /// 13.2), quel que soit le cache de la machine qui la prend.
+    static let visuelsDuJeu = !captureDocumentation
+
     static func url(_ chemin: String) -> URL? {
         if let bundle = Bundle.main.resourceURL?.appending(path: chemin),
            FileManager.default.fileExists(atPath: bundle.path) {

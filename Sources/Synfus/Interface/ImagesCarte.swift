@@ -104,7 +104,7 @@ struct MiniatureCarte: View {
     @ObservedObject private var prefs = Preferences.shared
 
     var body: some View {
-        if prefs.vuesCartes {
+        if prefs.vuesCartes, Ressources.visuelsDuJeu {
             // Deux pixels par point : nette sur un écran Retina.
             ImageDofusDB(url: DofusDB.imageCarte(carte), cote: Int(2 * max(taille.width, taille.height)))
                 .aspectRatio(contentMode: .fill)
@@ -132,7 +132,7 @@ struct FondCarte: View {
     private let forme = RoundedRectangle(cornerRadius: 9, style: .continuous)
 
     var body: some View {
-        if prefs.vuesCartes, let carte {
+        if prefs.vuesCartes, Ressources.visuelsDuJeu, let carte {
             let sombre = apparence == .dark
             Color(white: sombre ? 0.17 : 0.95)
                 .overlay { ImageDofusDB(url: DofusDB.imageCarte(carte)).scaledToFill().opacity(0.25) }
