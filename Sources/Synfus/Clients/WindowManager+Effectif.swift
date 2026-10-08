@@ -14,7 +14,11 @@ extension WindowManager {
         let active = Equipes.activeValide(equipeActive, nombre: equipes.count)
         if active != equipeActive { equipeActive = active }
         let nouveau = Equipes.filtre(clients, equipe: active.map { equipes[$0] })
-        if nouveau != effectif { effectif = nouveau }
+        guard nouveau != effectif else { return }
+        let nombreChange = nouveau.count != effectif.count
+        effectif = nouveau
+        // L'accès direct n'a d'emplacement que par perso de l'effectif.
+        if nombreChange { HotKeyManager.shared.rebind() }
     }
 
     /// Active une équipe — `nil` pour « Tous ». Sans effet si l'index n'existe pas.

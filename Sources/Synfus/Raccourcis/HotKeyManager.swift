@@ -39,13 +39,15 @@ final class HotKeyManager: ObservableObject {
 
     private init() {}
 
-    /// Réenregistre tout depuis les préférences. Appelé au lancement et après
-    /// chaque modification d'un raccourci.
+    /// Réenregistre tout depuis les préférences. Appelé au lancement, après
+    /// chaque modification d'un raccourci et quand l'effectif change de taille.
     func rebind() {
         unregisterAll()
         let prefs = Preferences.shared
 
-        for (slot, hotKey) in prefs.hotKeys.enumerated() {
+        // Un emplacement par perso de l'effectif, pas plus : ⌘6 n'est pas
+        // confisqué aux autres apps tant qu'il n'y a pas de sixième perso.
+        for (slot, hotKey) in prefs.hotKeys.prefix(WindowManager.shared.effectif.count).enumerated() {
             guard let hotKey else { continue }
             register(hotKey) {
                 WindowManager.shared.focus(slot: slot)

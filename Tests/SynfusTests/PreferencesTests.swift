@@ -23,12 +23,12 @@ struct PreferencesTests {
         return (Preferences.forTesting(store: store), store)
     }
 
-    @Test("Sans rien d'enregistré, les cinq premiers slots ont ⌘1 à ⌘5")
+    @Test("Sans rien d'enregistré, chaque emplacement a son chiffre, ⌘1 à ⌘0")
     func premierLancement() {
         let (prefs, _) = neuves()
-        #expect(prefs.slotCount == 5)
-        #expect(prefs.hotKeys.count == 5)
+        #expect(prefs.hotKeys.count == HotKey.digitRow.count)
         #expect(prefs.hotKeys[0] == HotKey(keyCode: 18, modifiers: UInt32(cmdKey)))
+        #expect(prefs.hotKeys[9] == HotKey(keyCode: 29, modifiers: UInt32(cmdKey)))
         #expect(prefs.characterOrder.isEmpty)
     }
 
@@ -119,46 +119,21 @@ struct PreferencesTests {
         #expect(relues.previewHotKey == nil)
     }
 
-    // MARK: - Nombre d'emplacements
+    // MARK: - Emplacements
 
-    /// `@Published` remplace la propriété stockée par une propriété calculée :
-    /// se réassigner depuis son propre `didSet` le redéclenche. Sans le drapeau
-    /// `clamping`, ce test partirait en récursion infinie.
-    @Test("Un nombre d'emplacements hors bornes est ramené sans boucler")
-    func bornesDesEmplacements() {
-        let (prefs, _) = neuves()
-
-        prefs.slotCount = 99
-        #expect(prefs.slotCount == HotKey.digitRow.count)
-
-        prefs.slotCount = 0
-        #expect(prefs.slotCount == 1)
-
-        prefs.slotCount = -5
-        #expect(prefs.slotCount == 1)
-    }
-
-    @Test("La liste des raccourcis suit le nombre d'emplacements")
-    func redimensionnement() {
-        let (prefs, _) = neuves()
-
-        prefs.slotCount = 8
-        #expect(prefs.hotKeys.count == 8)
-        #expect(prefs.hotKeys[7] == HotKey.defaultHotKey(slot: 7))
-
-        prefs.slotCount = 2
-        #expect(prefs.hotKeys.count == 2)
-    }
-
-    /// Réduire puis réétendre ne doit pas ressusciter un raccourci effacé à la
-    /// main : les nouveaux emplacements repartent du défaut.
-    @Test("Un raccourci effacé ne revient pas tout seul")
-    func raccourciEfface() {
-        let (prefs, _) = neuves()
-        prefs.hotKeys[1] = nil
-        prefs.slotCount = 6
+    /// Le nombre d'emplacements n'est plus un réglage : une ancienne sauvegarde
+    /// qui en avait moins les complète, sans ressusciter un raccourci effacé.
+    @Test("Une sauvegarde à deux emplacements est complétée jusqu'à ⌘0")
+    func emplacementsCompletes() {
+        let ancien = """
+        {"characterOrder":[],"hotKeys":[{"keyCode":18,"modifiers":256},null],
+         "barVisible":true,"showNumbers":true,"slotCount":2}
+        """
+        let prefs = Preferences.forTesting(store: StockageMemoire([Preferences.key: Data(ancien.utf8)]))
+        #expect(prefs.hotKeys.count == HotKey.digitRow.count)
+        #expect(prefs.hotKeys[0] == HotKey(keyCode: 18, modifiers: 256))
         #expect(prefs.hotKeys[1] == nil)
-        #expect(prefs.hotKeys[5] == HotKey.defaultHotKey(slot: 5))
+        #expect(prefs.hotKeys[2] == HotKey.defaultHotKey(slot: 2))
     }
 
     // MARK: - Ordre des persos
@@ -240,7 +215,6 @@ struct PreferencesTests {
     func allerRetour() {
         let (prefs, store) = neuves()
         prefs.characterOrder = ["Aeryn", "Nova"]
-        prefs.slotCount = 4
         prefs.barVisible = false
         prefs.showClasses = false
         prefs.attentionAction = .focus
@@ -253,7 +227,6 @@ struct PreferencesTests {
         // Même stockage, nouvelle instance : c'est ce que fait un relancement.
         let relu = Preferences.forTesting(store: store)
         #expect(relu.characterOrder == ["Aeryn", "Nova"])
-        #expect(relu.slotCount == 4)
         #expect(relu.barVisible == false)
         #expect(relu.showClasses == false)
         #expect(relu.attentionAction == .focus)
@@ -276,7 +249,7 @@ struct PreferencesTests {
 
         let prefs = Preferences.forTesting(store: store)
         #expect(prefs.characterOrder == ["Aeryn"])
-        #expect(prefs.slotCount == 2)
+        #expect(prefs.hotKeys.count == HotKey.digitRow.count)
         // Valeurs de repli des réglages apparus depuis.
         #expect(prefs.showClasses == true)
         #expect(prefs.attentionAction == .highlight)
@@ -311,18 +284,16 @@ struct PreferencesTests {
         #expect(relues.inviteHotKey == nil)
     }
 
-    @Test("Rétablir les défauts remet chaque raccourci, efface ceux sans défaut, garde les emplacements")
+    @Test("Rétablir les défauts remet chaque raccourci, efface ceux sans défaut")
     func retablirLesDefauts() {
         let (prefs, _) = neuves()
-        prefs.slotCount = 7
         prefs.hotKeys[0] = nil
         prefs.cycleNext = HotKey(keyCode: 48, modifiers: UInt32(cmdKey))
         prefs.toggleBar = HotKey(keyCode: 40, modifiers: UInt32(cmdKey))
         prefs.inviteHotKey = nil
 
         prefs.resetShortcuts()
-        #expect(prefs.slotCount == 7)
-        #expect(prefs.hotKeys.count == 7)
+        #expect(prefs.hotKeys.count == HotKey.digitRow.count)
         #expect(prefs.hotKeys[0] == HotKey.defaultHotKey(slot: 0))
         #expect(prefs.cycleNext == HotKey.defaultCycleNext)
         #expect(prefs.toggleBar == nil)
@@ -466,15 +437,13 @@ struct PreferencesTests {
 
         let prefs = Preferences.forTesting(store: store)
         #expect(prefs.characterOrder == ["Alpha", "Beta"])
-        #expect(prefs.slotCount == 7)
     }
 
     @Test("Une sauvegarde illisible ramène aux valeurs par défaut")
     func sauvegardeIllisible() {
         let store = StockageMemoire([Preferences.key: Data("pas du JSON".utf8)])
         let prefs = Preferences.forTesting(store: store)
-        #expect(prefs.slotCount == 5)
-        #expect(prefs.hotKeys.count == 5)
+        #expect(prefs.hotKeys.count == HotKey.digitRow.count)
     }
 
     // MARK: - Empreinte de la sauvegarde
@@ -503,7 +472,7 @@ struct PreferencesTests {
      "etiquettes":{"1:-78,-41":"Fri 1"},"lieuxFavoris":["lieu:2738"],
      "paletteHotKey":{"keyCode":47,"modifiers":256},"paletteRecents":["/zaap 5,7"],"paletteTri":"type","quetesEpinglees":[18,42],"quetesEtape":{"18":2},
      "equipes":[{"membres":["Aeryn"]},{"membres":["Nova"]}],
-     "hotKeys":[{"keyCode":18,"modifiers":256},null,{"keyCode":20,"modifiers":2048}],
+     "hotKeys":[{"keyCode":18,"modifiers":256},null,{"keyCode":20,"modifiers":2048},null,null,null,null,null,null,null],
      "inviteFormat":"/w %nom go","inviteGroupee":true,
      "inviteHotKey":{"keyCode":34,"modifiers":256},
      "killFrozenClients":false,"lastArrangement":"principale","lireCombat":true,
@@ -511,7 +480,7 @@ struct PreferencesTests {
      "previewHotKey":{"keyCode":49,"modifiers":2048},
      "sessionHotKey":{"keyCode":1,"modifiers":256},"showClasses":false,
      "showNumbers":false,"showPreviewOnHover":true,"signalerBascule":false,
-     "slotCount":3,"toggleAutoFocus":{"keyCode":99,"modifiers":0},
+     "toggleAutoFocus":{"keyCode":99,"modifiers":0},
      "zaapAuto":true,"zaapBouton":false,"zaapGainMinimal":8,
      "zaapHotKey":{"keyCode":17,"modifiers":2048},
      "zaapsAjoutes":[{"monde":1,"noms":{"fr":"Mon zaap"},"x":50,"y":-50,"zone":{}}],
@@ -523,12 +492,16 @@ struct PreferencesTests {
      "zoneChasse":{"hauteur":0.5,"largeur":0.25,"x":0,"y":0.125}}
     """
 
+    /// Les dix emplacements de l'empreinte : la sauvegarde relue les complète
+    /// toujours jusqu'à dix.
+    private static let raccourcisEmpreinte: [HotKey?] =
+        [HotKey(keyCode: 18, modifiers: 256), nil, HotKey(keyCode: 20, modifiers: 2048)]
+        + Array(repeating: nil, count: HotKey.digitRow.count - 3)
+
     /// Vérifie que `prefs` porte exactement les valeurs de `empreinte`.
     private func porteLEmpreinte(_ prefs: Preferences) {
         #expect(prefs.characterOrder == ["Aeryn", "Nova"])
-        #expect(prefs.slotCount == 3)
-        #expect(prefs.hotKeys == [HotKey(keyCode: 18, modifiers: 256), nil,
-                                  HotKey(keyCode: 20, modifiers: 2048)])
+        #expect(prefs.hotKeys == Self.raccourcisEmpreinte)
         #expect(prefs.cycleNext == HotKey(keyCode: 122, modifiers: 0))
         #expect(prefs.cyclePrevious == HotKey(keyCode: 120, modifiers: 0))
         #expect(prefs.barVisible == false)
@@ -581,9 +554,8 @@ struct PreferencesTests {
     @Test("Chaque réglage s'écrit sous sa clé, avec son encodage")
     func empreinteEcrite() {
         let (prefs, store) = neuves()
-        prefs.slotCount = 3
         prefs.characterOrder = ["Aeryn", "Nova"]
-        prefs.hotKeys = [HotKey(keyCode: 18, modifiers: 256), nil, HotKey(keyCode: 20, modifiers: 2048)]
+        prefs.hotKeys = Self.raccourcisEmpreinte
         prefs.cycleNext = HotKey(keyCode: 122, modifiers: 0)
         prefs.cyclePrevious = HotKey(keyCode: 120, modifiers: 0)
         prefs.barVisible = false
@@ -641,7 +613,6 @@ struct PreferencesTests {
     @Test("Un réglage sans valeur n'est pas écrit")
     func empreinteSansValeurs() {
         let (prefs, store) = neuves()
-        prefs.slotCount = 1
         prefs.hotKeys = [nil]
         for chemin: ReferenceWritableKeyPath<Preferences, HotKey?> in [
             \.cycleNext, \.cyclePrevious, \.toggleAutoFocus, \.toggleBar, \.previewHotKey,
@@ -658,7 +629,7 @@ struct PreferencesTests {
          "defaultsVersion":7,"equipes":[],"etiquettes":{},"hotKeys":[null],"inviteFormat":"/invite %nom","inviteGroupee":false,
          "killFrozenClients":true,"lireCombat":false,"lirePosition":false,"menuBarIcon":"logo",
          "showClasses":true,"showNumbers":true,"showPreviewOnHover":false,
-         "signalerBascule":true,"slotCount":1,"zaapAuto":false,"zaapBouton":true,
+         "signalerBascule":true,"zaapAuto":false,"zaapBouton":true,
          "zaapGainMinimal":5,"zaapsAjoutes":[],"zaapsChoix":{},"zaapsFavoris":[],
          "lieuxFavoris":[],"paletteRecents":[],"paletteTri":"proximite","quetesEpinglees":[],"quetesEtape":{}}
         """
@@ -689,17 +660,17 @@ struct PreferencesTests {
                 == canonique(Data(Self.empreinte.utf8)))
     }
 
-    /// Les cinq clés des toutes premières sauvegardes sont obligatoires : sans
+    /// Les quatre clés des toutes premières sauvegardes encore lues sont obligatoires : sans
     /// l'une d'elles, la sauvegarde est tenue pour illisible, entière.
     @Test("Une sauvegarde privée d'une clé d'origine ramène aux défauts")
     func cleOrigineManquante() throws {
-        for cle in ["characterOrder", "hotKeys", "barVisible", "showNumbers", "slotCount"] {
+        for cle in ["characterOrder", "hotKeys", "barVisible", "showNumbers"] {
             var objet = try #require(
                 try JSONSerialization.jsonObject(with: Data(Self.empreinte.utf8)) as? [String: Any])
             objet[cle] = nil
             let store = StockageMemoire([Preferences.key: try JSONSerialization.data(withJSONObject: objet)])
             let prefs = Preferences.forTesting(store: store)
-            #expect(prefs.slotCount == 5, "sans \(cle)")
+            #expect(prefs.hotKeys[1] == HotKey.defaultHotKey(slot: 1), "sans \(cle)")
             #expect(prefs.characterOrder.isEmpty, "sans \(cle)")
             #expect(prefs.showClasses == true, "sans \(cle)")
         }
@@ -714,7 +685,7 @@ struct PreferencesTests {
         objet["showClasses"] = "non"
         var store = StockageMemoire([Preferences.key: try JSONSerialization.data(withJSONObject: objet)])
         var prefs = Preferences.forTesting(store: store)
-        #expect(prefs.slotCount == 5)
+        #expect(prefs.hotKeys[1] == HotKey.defaultHotKey(slot: 1))
         #expect(prefs.showClasses == true)
 
         objet["showClasses"] = NSNull()
@@ -722,7 +693,7 @@ struct PreferencesTests {
         objet["inviteFormat"] = NSNull()
         store = StockageMemoire([Preferences.key: try JSONSerialization.data(withJSONObject: objet)])
         prefs = Preferences.forTesting(store: store)
-        #expect(prefs.slotCount == 3)
+        #expect(prefs.hotKeys[1] == nil)
         #expect(prefs.showClasses == true)
         #expect(prefs.cycleNext == nil)
         #expect(prefs.inviteFormat == "/invite %nom")
@@ -737,7 +708,7 @@ struct PreferencesTests {
         let store = StockageMemoire([Preferences.key: try JSONSerialization.data(withJSONObject: objet)])
         let prefs = Preferences.forTesting(store: store)
         #expect(prefs.barOrigin == nil)
-        #expect(prefs.slotCount == 3)
+        #expect(prefs.hotKeys[1] == nil)
     }
 }
 
