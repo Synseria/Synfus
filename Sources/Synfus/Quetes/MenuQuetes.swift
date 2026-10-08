@@ -9,6 +9,10 @@ enum MenuQuetes {
         case titre(String)
         /// Une quête épinglée : la choisir la montre.
         case epinglee(id: Int, nom: String, montree: Bool)
+        /// Retirer la quête montrée — une quête finie n'a plus rien à faire là.
+        case desepingler(id: Int, nom: String)
+        /// Retirer toutes les quêtes épinglées, le panneau avec.
+        case toutDesepingler
         case lireSuivi(enCours: Bool)
         /// Une quête du suivi : la choisir l'épingle et la montre à l'étape lue.
         case reconnue(SuiviQuetes.Reconnue, titre: String, epinglee: Bool)
@@ -25,6 +29,8 @@ enum MenuQuetes {
         elements += epinglees.isEmpty
             ? [.message(L("quete.menu.aucune"))]
             : epinglees.map { .epinglee(id: $0, nom: nom($0), montree: $0 == montree) }
+        if let montree, epinglees.contains(montree) { elements.append(.desepingler(id: montree, nom: nom(montree))) }
+        if epinglees.count > 1 { elements.append(.toutDesepingler) }
         elements += [.separateur, .titre(L("quete.menu.suivi")), .lireSuivi(enCours: etat == .enCours)]
         elements += reconnues.map { reconnue in
             let titre = reconnue.etape.map { L("quete.menu.reconnueEtape", nom(reconnue.id), $0 + 1) } ?? nom(reconnue.id)
