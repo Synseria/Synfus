@@ -180,6 +180,9 @@ final class Preferences: ObservableObject {
     /// Le bouton des quêtes dans la barre.
     @Published var quetesBouton: Bool = true { didSet { save() } }
 
+    /// Les objets de quête hors des ressources à réunir : ils ne s'achètent pas.
+    @Published var quetesMasquerObjets: Bool = false { didSet { save() } }
+
     /// Raccourci de la palette. ⌘: par défaut (génération 7).
     @Published var paletteHotKey: HotKey? { didSet { save() } }
 
@@ -463,6 +466,7 @@ final class Preferences: ObservableObject {
         .facultatif("chasseBouton", \.chasseBouton),
         .facultatif("quetesValides", \.quetesValides),
         .facultatif("quetesBouton", \.quetesBouton),
+        .facultatif("quetesMasquerObjets", \.quetesMasquerObjets),
         .facultatif("zaapsVueCarte", \.zaapsVueCarte),
     ]
 

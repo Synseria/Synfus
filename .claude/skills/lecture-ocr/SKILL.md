@@ -37,7 +37,7 @@ Position et combat sont lus au tour ; **chasse** et **quêtes** seulement à la 
 
 - Chasse : lignes → `EtapeChasse.ciblesLues` (bouton « Lire » et ouverture du panneau).
 - Quêtes : le suivi de quêtes du jeu (`quetesParDefaut`, à gauche, estimé). `LectureSuivi`
-  (bouton « Lire le suivi » et ouverture du panneau des quêtes si l'écran est déjà autorisé) →
+  (« Lire le suivi » du menu du panneau des quêtes, et son ouverture si l'écran est déjà autorisé) →
   `SuiviQuetes.reconnaitre` (pur, hors main) : une ligne de titre **est** un nom de quête
   (tolérance n/4, `surplusTitre` pour les icônes), pas seulement le contient ; ordre de
   l'écran, sans doublon, 10 au plus. L'étape : celle dont les noms cités (PNJ, objet,

@@ -14,13 +14,16 @@ struct QuetesSettings: View {
         let affichees = Array(quetes.prefix(Self.limite).enumerated())
         PageListe(titre: L("reglages.quetes"), sousTitre: L("quetes.sousTitre")) {
             SourceQuetes().cadreDeListe(premiere: true, derniere: false)
-            Interrupteur(titre: L("quetes.bouton"), isOn: $prefs.quetesBouton).cadreDeListe(premiere: false, derniere: true)
+            Interrupteur(titre: L("quetes.bouton"), isOn: $prefs.quetesBouton).cadreDeListe(premiere: false, derniere: false)
+            Interrupteur(titre: L("quetes.masquerObjets"), sousTexte: L("quetes.masquerObjets.sousTexte"),
+                         isOn: $prefs.quetesMasquerObjets)
+                .cadreDeListe(premiere: false, derniere: true)
             EnTeteListe(titre: L("quetes.compte", quetes.count))
             ChampFiltre(invite: L("quetes.filtrer"), texte: $filtre)
                 .cadreDeListe(premiere: true, derniere: affichees.isEmpty)
             ForEach(affichees, id: \.element.id) { rang, quete in
                 Ligne(titre: Lieu.traduit(quete.noms, langue) ?? "?",
-                      sousTexte: L("quete.niveau", quete.niveau, quete.etapes.count)) {
+                      sousTexte: L("quete.niveau", nombre: quete.etapes.count, quete.niveau, quete.etapes.count)) {
                     Button(L("quetes.ouvrir")) { QuetePanel.shared.ouvrir(quete.id) }
                 }
                 .cadreDeListe(premiere: false, derniere: rang == affichees.count - 1 && quetes.count <= Self.limite)
