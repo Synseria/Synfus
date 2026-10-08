@@ -9,8 +9,27 @@ import ImageIO
 /// des seuils, à lancer à la main :
 ///
 ///     SYNFUS_CAPTURE=~/Library/Logs/Synfus/captures/x.png swift test --filter RealCapture
+///
+/// Une capture du calibrage (`~/Library/Caches/Synfus/Calibrage/<genre>.png`)
+/// est déjà le contenu à l'échelle de la lecture : `SYNFUS_PLEIN_ECRAN=1`.
+/// `SYNFUS_ZONE=x,y,l,h` (fractions) remplace la zone par défaut.
 struct RealCaptureTests {
     static var capturePath: String? { ProcessInfo.processInfo.environment["SYNFUS_CAPTURE"] }
+
+    private static var zoneImposee: ZoneEcran? {
+        guard let texte = ProcessInfo.processInfo.environment["SYNFUS_ZONE"] else { return nil }
+        let v = texte.split(separator: ",").compactMap { Double($0.trimmingCharacters(in: .whitespaces)) }
+        return v.count == 4 ? ZoneEcran(x: v[0], y: v[1], largeur: v[2], hauteur: v[3]) : nil
+    }
+
+    /// La zone du genre, ou la capture telle quelle avec `SYNFUS_ZONE_ENTIERE=1`
+    /// (déjà recadrée sur l'élément).
+    private func zoneLue(_ parDefaut: ZoneEcran) throws -> Data {
+        guard ProcessInfo.processInfo.environment["SYNFUS_ZONE_ENTIERE"] == "1" else {
+            return try zoneCapturee(Self.zoneImposee ?? parDefaut)
+        }
+        return try Data(contentsOf: URL(fileURLWithPath: (try #require(Self.capturePath) as NSString).expandingTildeInPath))
+    }
 
     /// Ce que fait la capture de la lecture de l'écran, rejoué sur un PNG de
     /// fenêtre en Retina : la zone prise dans le contenu (sans barre de titre,
@@ -39,7 +58,7 @@ struct RealCaptureTests {
 
     @Test("La position est lue sur la capture fournie", .enabled(if: capturePath != nil))
     func positionSurCaptureReelle() async throws {
-        let png = try zoneCapturee(.positionParDefaut)
+        let png = try zoneLue(.positionParDefaut)
         let moteur = MoteurOCR()
         await moteur.prechauffer()
         guard case .lue(let signature, let lignes, let duree, _) = await moteur.lire(png: png, precedente: nil, couleur: false)
@@ -56,14 +75,7 @@ struct RealCaptureTests {
 
     @Test("L'état de combat est lu sur la capture fournie", .enabled(if: capturePath != nil))
     func combatSurCaptureReelle() async throws {
-        // `SYNFUS_ZONE_ENTIERE=1` : la capture est déjà la zone (un recadrage
-        // du bouton), on la lit telle quelle.
-        let png: Data
-        if ProcessInfo.processInfo.environment["SYNFUS_ZONE_ENTIERE"] == "1" {
-            png = try Data(contentsOf: URL(fileURLWithPath: (try #require(Self.capturePath) as NSString).expandingTildeInPath))
-        } else {
-            png = try zoneCapturee(.combatParDefaut)
-        }
+        let png = try zoneLue(.combatParDefaut)
         let moteur = MoteurOCR()
         await moteur.prechauffer()
         guard case .lue(let signature, let lignes, let duree, let bouton) = await moteur.lire(png: png, precedente: nil, couleur: true)
@@ -72,6 +84,30 @@ struct RealCaptureTests {
         print("OCR \(Int(duree * 1000)) ms : \(lignes) — zone colorée \(Int((signature.couleur ?? 0) * 100)) %, bouton \(bouton.map { "\(Int($0 * 100)) %" } ?? "—") → \(constat)")
         if let attendu = ProcessInfo.processInfo.environment["SYNFUS_COMBAT_ATTENDU"] {
             #expect("\(constat.genre)" == attendu)
+        }
+    }
+
+    /// `SYNFUS_QUETES_ATTENDUES="Pense-bête|La voie du guerrier"` : les noms
+    /// français attendus, dans l'ordre. Les quêtes sont celles que l'app a
+    /// téléchargées (`~/Library/Application Support/Synfus/Quetes.json`).
+    @Test("Le suivi de quêtes est lu sur la capture fournie", .enabled(if: capturePath != nil))
+    func suiviQuetesSurCaptureReelle() async throws {
+        let png = try zoneLue(.quetesParDefaut)
+        let quetes = try #require(QuetesDofusDB.gardees(), "aucune quête gardée : ouvrir une fois la palette de l'app")
+        let moteur = MoteurOCR()
+        await moteur.prechauffer()
+        guard case .lue(_, let lignes, let duree, _) = await moteur.lire(png: png, precedente: nil, couleur: false)
+        else { Issue.record("rien lu"); return }
+        print("OCR \(Int(duree * 1000)) ms : \(lignes)")
+        let debut = Date()
+        let reconnues = SuiviQuetes.reconnaitre(lignes, dans: quetes)
+        let noms = reconnues.map { reconnue in
+            quetes.quetes.first { $0.id == reconnue.id }.flatMap { Lieu.traduit($0.noms, .fr) } ?? "#\(reconnue.id)"
+        }
+        print("reconnues en \(Int(Date().timeIntervalSince(debut) * 1000)) ms : "
+              + zip(noms, reconnues).map { "\($0) (étape \($1.etape.map { String($0 + 1) } ?? "—"))" }.joined(separator: ", "))
+        if let attendues = ProcessInfo.processInfo.environment["SYNFUS_QUETES_ATTENDUES"] {
+            #expect(noms == attendues.split(separator: "|").map(String.init))
         }
     }
 }
