@@ -271,6 +271,17 @@ struct LectureCombatTests {
         let suite = EtatCombat.depuis(.init(genre: .monTour, secondes: nil), avant: debut,
                                       maintenant: t0.addingTimeInterval(5))
         #expect(suite == debut)
+        // Relu une seconde plus tard, le décompte arrondi redonne l'échéance
+        // à une seconde près : elle ne bouge pas, la barre ne se redessine pas.
+        let relu = EtatCombat.depuis(.init(genre: .monTour, secondes: 28), avant: debut,
+                                     maintenant: t0.addingTimeInterval(1.4))
+        #expect(relu == debut)
+        // Le tour suivant, ou un décompte qui s'en écarte vraiment : la nouvelle.
+        let ecart = EtatCombat.depuis(.init(genre: .monTour, secondes: 30), avant: debut,
+                                      maintenant: t0.addingTimeInterval(10))
+        #expect(ecart == .monTour(fin: t0.addingTimeInterval(40)))
+        #expect(EtatCombat.depuis(.init(genre: .monTour, secondes: 30), avant: .pasMonTour, maintenant: t0.addingTimeInterval(1))
+            == .monTour(fin: t0.addingTimeInterval(31)))
         #expect(EtatCombat.depuis(.init(genre: .pasMonTour, secondes: 12), avant: debut, maintenant: t0) == .pasMonTour)
         #expect(!EtatCombat.horsCombat.enCombat)
     }
