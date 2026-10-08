@@ -1,8 +1,10 @@
 import SwiftUI
 
 /// Le panneau de chasse, au style du panneau de quêtes : transparent, un
-/// en-tête par lequel on le déplace. Le départ, puis la boussole — les quatre
-/// directions autour de « Lire » —, l'indice, et le résultat.
+/// en-tête par lequel on le déplace. Une seule colonne, aussi étroite que la
+/// boussole le permet, pour masquer le moins de jeu possible : le départ, la
+/// boussole — les quatre directions autour de « Lire » —, puis l'indice et
+/// le résultat dessous.
 struct ChasseVue: View {
     @ObservedObject private var modele = ChasseModele.shared
     @ObservedObject private var previews = WindowPreviewService.shared
@@ -11,20 +13,16 @@ struct ChasseVue: View {
         VStack(alignment: .leading, spacing: 0) {
             entete
             Divider()
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 10) {
                 depart
-                HStack(alignment: .top, spacing: 14) {
-                    boussole
-                    VStack(alignment: .leading, spacing: 6) {
-                        indice
-                        lus
-                    }
-                }
+                boussole.frame(maxWidth: .infinity)
+                indice
+                lus
                 resultat
             }
             .padding(12)
         }
-        .frame(width: 360, alignment: .leading)
+        .frame(width: 216, alignment: .leading)
         .font(.system(size: 12))
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Color.primary.opacity(0.12)))
@@ -51,11 +49,12 @@ struct ChasseVue: View {
 
     private var depart: some View {
         HStack(spacing: 6) {
-            Text(L("chasse.depart")).foregroundStyle(.secondary)
+            Image(systemName: "flag").foregroundStyle(.secondary)
+                .help(L("chasse.depart"))
             TextField("x", value: $modele.departX, format: .number.grouping(.never))
-                .frame(width: 54)
+                .frame(width: 52)
             TextField("y", value: $modele.departY, format: .number.grouping(.never))
-                .frame(width: 54)
+                .frame(width: 52)
             Button { modele.reprendrePosition() } label: { Image(systemName: "location") }
                 .buttonStyle(.borderless)
                 .disabled(LecteurEcran.shared.positionDuPersoDevant == nil)
@@ -193,14 +192,17 @@ struct ChasseVue: View {
                     Text(constat.cible.nom(en: modele.langue))
                         .font(.system(size: 10))
                         .foregroundStyle(.secondary)
-                    switch constat.resultat {
-                    case .trouve(let x, let y, let distance):
-                        Text(L("chasse.trouve", Coordonnees.texte(x, y), distance)).font(.system(size: 13, weight: .semibold))
-                    case .introuvable:
-                        Text(L("chasse.introuvable", EtapeChasse.portee)).foregroundStyle(.orange)
-                    case .phorreur:
-                        Text(L("chasse.phorreur.suivre", constat.direction.libelle))
+                    Group {
+                        switch constat.resultat {
+                        case .trouve(let x, let y, let distance):
+                            Text(L("chasse.trouve", Coordonnees.texte(x, y), distance)).font(.system(size: 13, weight: .semibold))
+                        case .introuvable:
+                            Text(L("chasse.introuvable", EtapeChasse.portee)).foregroundStyle(.orange)
+                        case .phorreur:
+                            Text(L("chasse.phorreur.suivre", constat.direction.libelle))
+                        }
                     }
+                    .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer()
                 if case .trouve = constat.resultat {
