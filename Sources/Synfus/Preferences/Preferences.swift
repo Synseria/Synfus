@@ -76,13 +76,13 @@ final class Preferences: ObservableObject {
     /// la même lecture de l'écran. Désactivé par défaut, pour la même raison.
     @Published var lireCombat: Bool = false { didSet { save() } }
 
-    /// Zones de lecture calibrées dans le Diagnostic ; `nil` : la valeur par
-    /// défaut (`ZoneEcran.positionParDefaut`, `.combatParDefaut`,
-    /// `.chasseParDefaut`), qui suit
-    /// ainsi ses corrections futures tant qu'on ne l'a pas remplacée.
+    /// Zones de lecture calibrées (onglet Lecture de l'écran), une par
+    /// `GenreLecture` ; `nil` : son défaut (`GenreLecture.parDefaut`), qui
+    /// suit ainsi ses corrections futures tant qu'on ne l'a pas remplacé.
     @Published var zonePosition: ZoneEcran? { didSet { save() } }
     @Published var zoneCombat: ZoneEcran? { didSet { save() } }
     @Published var zoneChasse: ZoneEcran? { didSet { save() } }
+    @Published var zoneQuetes: ZoneEcran? { didSet { save() } }
 
     /// Icône du `NSStatusItem`. Le rafraîchissement est à la charge de l'appelant
     /// (`MenuBarController.refreshIcon()`) : les préférences ne pilotent pas l'UI.
@@ -435,6 +435,7 @@ final class Preferences: ObservableObject {
         .optionnel("zonePosition", \.zonePosition),
         .optionnel("zoneCombat", \.zoneCombat),
         .optionnel("zoneChasse", \.zoneChasse),
+        .optionnel("zoneQuetes", \.zoneQuetes),
         .facultatif("killFrozenClients", \.killFrozenClients),
         .optionnel("lastArrangement", \.lastArrangement),
         .optionnel("arrangeHotKey", \.arrangeHotKey),

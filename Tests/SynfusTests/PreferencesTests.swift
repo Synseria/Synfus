@@ -490,7 +490,8 @@ struct PreferencesTests {
      "toggleBar":{"keyCode":11,"modifiers":768},
      "zoneCombat":{"hauteur":0.125,"largeur":0.25,"x":0.125,"y":0.75},
      "zonePosition":{"hauteur":0.0625,"largeur":0.25,"x":0.5,"y":0.25},
-     "zoneChasse":{"hauteur":0.5,"largeur":0.25,"x":0,"y":0.125}}
+     "zoneChasse":{"hauteur":0.5,"largeur":0.25,"x":0,"y":0.125},
+     "zoneQuetes":{"hauteur":0.625,"largeur":0.25,"x":0,"y":0.125}}
     """
 
     /// Les dix emplacements de l'empreinte : la sauvegarde relue les complète
@@ -525,6 +526,7 @@ struct PreferencesTests {
         #expect(prefs.zonePosition == ZoneEcran(x: 0.5, y: 0.25, largeur: 0.25, hauteur: 0.0625))
         #expect(prefs.zoneCombat == ZoneEcran(x: 0.125, y: 0.75, largeur: 0.25, hauteur: 0.125))
         #expect(prefs.zoneChasse == ZoneEcran(x: 0, y: 0.125, largeur: 0.25, hauteur: 0.5))
+        #expect(prefs.zoneQuetes == ZoneEcran(x: 0, y: 0.125, largeur: 0.25, hauteur: 0.625))
         #expect(prefs.killFrozenClients == false)
         #expect(prefs.lastArrangement == .principale)
         #expect(prefs.arrangeHotKey == HotKey(keyCode: 40, modifiers: 256))
@@ -582,6 +584,7 @@ struct PreferencesTests {
         prefs.zonePosition = ZoneEcran(x: 0.5, y: 0.25, largeur: 0.25, hauteur: 0.0625)
         prefs.zoneCombat = ZoneEcran(x: 0.125, y: 0.75, largeur: 0.25, hauteur: 0.125)
         prefs.zoneChasse = ZoneEcran(x: 0, y: 0.125, largeur: 0.25, hauteur: 0.5)
+        prefs.zoneQuetes = ZoneEcran(x: 0, y: 0.125, largeur: 0.25, hauteur: 0.625)
         prefs.killFrozenClients = false
         prefs.lastArrangement = .principale
         prefs.arrangeHotKey = HotKey(keyCode: 40, modifiers: 256)

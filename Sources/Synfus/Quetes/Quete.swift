@@ -31,15 +31,18 @@ struct Quetes: Codable, Equatable, Sendable {
     /// « Ramener à {npc,119} : x1 {item,1746} » → « Ramener à Otomaï : x1 Sang de Wabbit GM ».
     /// Un renvoi inconnu reste lisible : son seul type, entre crochets.
     func texte(_ modele: String, en langue: Langue) -> String {
-        Self.resoudre(modele) { genre, id in
-            let noms: [String: String]? = switch genre {
-            case "item": objets[id]
-            case "monster": monstres[id]
-            case "npc": nomsPNJ[id]
-            default: nil
-            }
-            return noms.flatMap { Lieu.traduit($0, langue) }
+        Self.resoudre(modele) { nomRenvoi($0, $1, en: langue) }
+    }
+
+    /// Le nom d'un renvoi (`item`, `monster`, `npc`), `nil` s'il est inconnu.
+    func nomRenvoi(_ genre: String, _ id: String, en langue: Langue) -> String? {
+        let noms: [String: String]? = switch genre {
+        case "item": objets[id]
+        case "monster": monstres[id]
+        case "npc": nomsPNJ[id]
+        default: nil
         }
+        return noms.flatMap { Lieu.traduit($0, langue) }
     }
 
     static func resoudre(_ modele: String, nom: (_ genre: String, _ id: String) -> String?) -> String {

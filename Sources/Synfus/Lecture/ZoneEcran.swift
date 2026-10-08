@@ -43,9 +43,19 @@ struct ZoneEcran: Codable, Equatable, Sendable {
     /// la position, assez haut pour une chasse de dix étapes. Estimé, pas
     /// mesuré : le tracé du Diagnostic est là pour le corriger.
     static let chasseParDefaut = ZoneEcran(x: 0, y: 0.10, largeur: 0.26, hauteur: 0.55)
+    /// Le suivi de quêtes, à la même place que celui de chasse (le jeu les
+    /// range dans la même colonne), un peu plus large pour ses titres en
+    /// gras et plus haut pour cinq quêtes et leurs objectifs. Estimé.
+    static let quetesParDefaut = ZoneEcran(x: 0, y: 0.10, largeur: 0.28, hauteur: 0.62)
 
     /// En deçà, un tracé est un clic, pas une zone.
     static let tailleMinimale = 0.01
+
+    /// La zone en pixels d'une image du contenu entier, arrondie au pixel.
+    func pixels(dans taille: CGSize) -> CGRect {
+        CGRect(x: x * taille.width, y: y * taille.height,
+               width: largeur * taille.width, height: hauteur * taille.height).integral
+    }
 
     /// La zone ramenée dans le contenu, et à une taille lisible.
     func bornee() -> ZoneEcran {
