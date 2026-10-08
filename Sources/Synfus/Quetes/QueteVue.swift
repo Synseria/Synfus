@@ -6,7 +6,9 @@ import SwiftUI
 /// clic sur une ressource copie son nom (pour l'hôtel de vente), sur un
 /// objectif son trajet, zaap compris — et le met en cours ; seule la coche le
 /// valide. Un objectif fait reste à sa place, grisé, sur une ligne ; au
-/// survol d'un objectif, la vue de sa carte en grand. Tailles : `MetriquesQuete`.
+/// survol d'un objectif, la vue de sa carte en grand. Une ressource, un
+/// monstre ou un objet cité se déplient sur où les trouver (`OuTrouverVue`).
+/// Tailles : `MetriquesQuete`.
 struct QueteVue: View {
     @ObservedObject private var panneau = QuetePanel.shared
     @ObservedObject private var store = QuetesStore.shared
@@ -16,6 +18,8 @@ struct QueteVue: View {
     /// La ligne qui vient d'être copiée, le temps de le dire.
     @State private var copiee: String?
     @State private var guideEnCours = false
+    /// Les lignes dépliées sur où trouver leur objet ou leur monstre.
+    @State private var deplies: Set<OuTrouver.Sujet> = []
     /// Incrémenté pour ramener la fiche en haut (« Étape suivante » en pied).
     @State private var remontees = 0
     /// Une fiche donnée (captures de la documentation) ; `nil` : celles du panneau.
@@ -259,21 +263,57 @@ struct QueteVue: View {
             }
             ForEach(Array(ressources.enumerated()), id: \.offset) { indice, ressource in
                 let id = "ressource:\(indice)"
-                ligneCopiable(id: id, aide: L("quete.copierNom"), action: { copier(ressource.nom, ligne: id) }) {
-                    HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        Image(systemName: copiee == id ? "checkmark" : "shippingbox")
-                            .font(.system(size: metriques.icone))
-                            .foregroundStyle(copiee == id ? Couleurs.accent : Color.secondary)
-                            .frame(width: 14)
-                        // Le nom d'abord : à l'étroit, c'est la catégorie qui se tronque.
-                        Text(L("quete.ressource", ressource.nom, ressource.quantite))
-                            .font(.system(size: metriques.texte))
-                            .layoutPriority(1)
-                        Spacer(minLength: 4)
-                        detail(id: id, ressource.categorie, monospace: false)
+                HStack(alignment: .firstTextBaseline, spacing: 0) {
+                    ligneCopiable(id: id, aide: L("quete.copierNom"), action: { copier(ressource.nom, ligne: id) }) {
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            Image(systemName: copiee == id ? "checkmark" : "shippingbox")
+                                .font(.system(size: metriques.icone))
+                                .foregroundStyle(copiee == id ? Couleurs.accent : Color.secondary)
+                                .frame(width: 14)
+                            // Le nom d'abord : à l'étroit, c'est la catégorie qui se tronque.
+                            Text(L("quete.ressource", ressource.nom, ressource.quantite))
+                                .font(.system(size: metriques.texte))
+                                .layoutPriority(1)
+                            Spacer(minLength: 4)
+                            detail(id: id, ressource.categorie, monospace: false)
+                        }
                     }
+                    deplier(.objet(ressource.objet))
                 }
+                ouTrouver(.objet(ressource.objet), retrait: 14 + 6)
             }
+        }
+    }
+
+    // MARK: - Où trouver
+
+    /// Le chevron qui déplie, sous la ligne, où trouver l'objet ou le monstre.
+    private func deplier(_ sujet: OuTrouver.Sujet) -> some View {
+        let deplie = deplies.contains(sujet)
+        return Button {
+            if deplie { deplies.remove(sujet) } else { deplies.insert(sujet) }
+        } label: {
+            Image(systemName: deplie ? "chevron.down" : "chevron.right")
+                .font(.system(size: metriques.icone, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 16)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(sujet.estUnMonstre ? L("ouTrouver.aide.monstre") : L("ouTrouver.aide.objet"))
+    }
+
+    /// `retrait` : sous le texte de la ligne, pas sous son icône.
+    @ViewBuilder
+    private func ouTrouver(_ sujet: OuTrouver.Sujet, retrait: CGFloat) -> some View {
+        if deplies.contains(sujet) {
+            // Un autre sujet à la même place (autre quête) : une autre vue, qui
+            // fait sa demande en paraissant.
+            OuTrouverVue(sujet: sujet, metriques: metriques)
+                .id(sujet)
+                .padding(.leading, retrait + metriques.ligneHorizontale)
+                .padding(.trailing, metriques.ligneHorizontale)
+                .padding(.bottom, metriques.ligneVerticale)
         }
     }
 
@@ -415,13 +455,23 @@ struct QueteVue: View {
         return ZaapClipboard.shared.tournee(ouverts) ?? []
     }
 
-    /// Copie le trajet de l'objectif, zaap compris, et le met en cours.
+    /// Copie le trajet de l'objectif, zaap compris, et le met en cours. Sans
+    /// case, celui du repaire le plus proche du monstre qu'il cite.
     private func copierTrajet(_ objectif: FicheQuete.Objectif, quete: Int) {
+        let id = Self.idLigne(objectif)
         if let position = objectif.position {
             ZaapClipboard.shared.copierTrajet(vers: (position.x, position.y))
-            signaler(Self.idLigne(objectif))
+            signaler(id)
+        } else if case .monstre(let monstre)? = objectif.sujet {
+            Task { if await OuTrouverStore.shared.copierLePlusProche(monstre: monstre) { signaler(id) } }
         }
         prefs.mettreEnCours(objectif.id, de: quete)
+    }
+
+    private static func aide(_ objectif: FicheQuete.Objectif) -> String {
+        if objectif.position != nil { return L("quete.copierTrajet") }
+        if objectif.sujet?.estUnMonstre == true { return L("quete.copierTrajetMonstre") }
+        return L("quete.enCours.aide")
     }
 
     /// Ce qu'on sait d'un objectif, du plus sûr au moins sûr : fait (coche
@@ -458,73 +508,76 @@ struct QueteVue: View {
         let id = Self.idLigne(objectif)
         let valide = etat.valide, suggere = etat.suggere && !valide
         let replie = valide && copiee != id
-        return HStack(alignment: .firstTextBaseline, spacing: 2) {
-            Button { prefs.cocher(objectif.id, de: quete, !valide) } label: {
-                Image(systemName: etat.icone)
-                    .font(.system(size: metriques.coche))
-                    .foregroundStyle(etat.teinte)
-                    .frame(width: Self.colonneCoche)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .help(suggere ? (objectif.combat ? L("quete.suggestion.combat.aide") : L("quete.suggestion.aide"))
-                : etat.aFaire && !valide ? L("quete.aFaire.aide") : "")
-            // Fait et sans trajet, la ligne n'a plus rien à faire.
-            let action: (() -> Void)? = valide && objectif.position == nil ? nil : { copierTrajet(objectif, quete: quete) }
-            ligneCopiable(id: id, aide: objectif.position == nil ? L("quete.enCours.aide") : L("quete.copierTrajet"),
-                          action: action) {
-                VStack(alignment: .leading, spacing: 1) {
-                    if replie {
-                        Text(objectif.texte)
-                            .font(.system(size: metriques.texte))
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                    } else {
-                        Text(objectif.texte)
-                            .font(.system(size: metriques.texte, weight: etat.enCours && !valide ? .semibold : .regular))
-                            .foregroundStyle(valide ? Color.secondary : Color.primary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    if !replie {
-                        HStack(spacing: 6) {
-                            if let numero = etat.numero, !valide {
-                                Text(L("quete.ordre", numero))
-                                    .font(.system(size: metriques.detail, weight: .bold))
-                                    .foregroundStyle(Couleurs.ambre)
-                            }
-                            if let position = objectif.position {
-                                detail(id: id, Coordonnees.texte(position.x, position.y), monospace: true)
-                                if suggere, copiee != id {
-                                    Text(L("quete.suggestion"))
-                                        .font(.system(size: metriques.detail, weight: .semibold))
-                                        .foregroundStyle(Couleurs.suggestion)
+        return VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .firstTextBaseline, spacing: 2) {
+                Button { prefs.cocher(objectif.id, de: quete, !valide) } label: {
+                    Image(systemName: etat.icone)
+                        .font(.system(size: metriques.coche))
+                        .foregroundStyle(etat.teinte)
+                        .frame(width: Self.colonneCoche)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help(suggere ? (objectif.combat ? L("quete.suggestion.combat.aide") : L("quete.suggestion.aide"))
+                    : etat.aFaire && !valide ? L("quete.aFaire.aide") : "")
+                // Fait et sans trajet, la ligne n'a plus rien à faire.
+                let action: (() -> Void)? = valide && objectif.position == nil ? nil : { copierTrajet(objectif, quete: quete) }
+                ligneCopiable(id: id, aide: Self.aide(objectif), action: action) {
+                    VStack(alignment: .leading, spacing: 1) {
+                        if replie {
+                            Text(objectif.texte)
+                                .font(.system(size: metriques.texte))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                        } else {
+                            Text(objectif.texte)
+                                .font(.system(size: metriques.texte, weight: etat.enCours && !valide ? .semibold : .regular))
+                                .foregroundStyle(valide ? Color.secondary : Color.primary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        if !replie {
+                            HStack(spacing: 6) {
+                                if let numero = etat.numero, !valide {
+                                    Text(L("quete.ordre", numero))
+                                        .font(.system(size: metriques.detail, weight: .bold))
+                                        .foregroundStyle(Couleurs.ambre)
                                 }
-                            } else {
-                                detail(id: id, L("quete.nonSitue"), monospace: false)
-                            }
-                            Spacer(minLength: 0)
-                            if prefs.quetesVignettes, let carte = objectif.carte {
-                                MiniatureCarte(carte: carte, taille: metriques.vignette, agrandir: false)
+                                if let position = objectif.position {
+                                    detail(id: id, Coordonnees.texte(position.x, position.y), monospace: true)
+                                    if suggere, copiee != id {
+                                        Text(L("quete.suggestion"))
+                                            .font(.system(size: metriques.detail, weight: .semibold))
+                                            .foregroundStyle(Couleurs.suggestion)
+                                    }
+                                } else {
+                                    detail(id: id, L("quete.nonSitue"), monospace: false)
+                                }
+                                Spacer(minLength: 0)
+                                if prefs.quetesVignettes, let carte = objectif.carte {
+                                    MiniatureCarte(carte: carte, taille: metriques.vignette, agrandir: false)
+                                }
                             }
                         }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                if let sujet = objectif.sujet, !replie { deplier(sujet) }
             }
-        }
-        .background {
-            if etat.aFaire, !valide {
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(Couleurs.ambre.opacity(0.12))
-                    .overlay(alignment: .leading) {
-                        Capsule().fill(Couleurs.ambre).frame(width: Self.traitAFaire).padding(.vertical, 2)
-                    }
+            .background {
+                if etat.aFaire, !valide {
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Couleurs.ambre.opacity(0.12))
+                        .overlay(alignment: .leading) {
+                            Capsule().fill(Couleurs.ambre).frame(width: Self.traitAFaire).padding(.vertical, 2)
+                        }
+                }
             }
+            // Sur la ligne entière, coche comprise : le bouton d'une ligne faite
+            // et non située est désactivé, et n'aurait pas de survol.
+            .apercuCarteAuSurvol(objectif.carte)
+            if let sujet = objectif.sujet, !replie { ouTrouver(sujet, retrait: Self.colonneCoche + 2) }
         }
-        // Sur la ligne entière, coche comprise : le bouton d'une ligne faite
-        // et non située est désactivé, et n'aurait pas de survol.
-        .apercuCarteAuSurvol(objectif.carte)
     }
 
     private func valides(_ quete: Int) -> Set<Int> {

@@ -6,7 +6,7 @@ struct Quetes: Codable, Equatable, Sendable {
     /// La forme du fichier gardé sur le disque : une autre (ancienne) n'est
     /// pas relue, les quêtes se retéléchargent — sans quoi un cache d'avant
     /// un nouveau champ le laisserait vide trente jours.
-    static let formatActuel = 6
+    static let formatActuel = 7
     let format: Int
     let date: Date
     let quetes: [Quete]
@@ -104,6 +104,16 @@ struct Quete: Codable, Equatable, Sendable {
     /// (`startCriterion`, lu par `ConditionsQuete`).
     let critere: String?
     let etapes: [EtapeQuete]
+    /// Où elle commence : le PNJ qui la donne et sa case (`startPosition`).
+    var departs: [DepartQuete] = []
+}
+
+struct DepartQuete: Codable, Equatable, Sendable {
+    let pnj: Int
+    let position: PNJ.Position
+    /// Ce qui distingue une case du Monde des Douze de son homonyme
+    /// d'Incarnam (`QuetesIci`).
+    let sousZone: Int?
 }
 
 struct EtapeQuete: Codable, Equatable, Sendable {
@@ -202,6 +212,8 @@ struct PNJ: Codable, Equatable, Sendable {
 /// additionnées, objectifs et leur carte quand elle est connue.
 struct FicheQuete: Equatable, Sendable {
     struct Ressource: Equatable, Sendable {
+        /// L'identifiant DofusDB, pour dire où le trouver (`OuTrouver`).
+        let objet: Int
         let nom: String
         let quantite: Int
         /// « Ressource », « Consommable », « Objet de quête »…
@@ -219,6 +231,9 @@ struct FicheQuete: Equatable, Sendable {
         /// « Vaincre… » : être sur sa carte ne suffit pas, il faut y avoir
         /// fini un combat.
         let combat: Bool
+        /// Le monstre qu'il cite, sinon l'objet qu'il cite sans le faire
+        /// ramener (celui-là est dans les ressources) : où le trouver.
+        var sujet: OuTrouver.Sujet?
     }
 
     struct Recompenses: Equatable, Sendable {
@@ -318,13 +333,30 @@ extension Quetes {
                         if let x = objectif.x, let y = objectif.y { position = PNJ.Position(x: x, y: y) }
                         return FicheQuete.Objectif(
                             id: objectif.id, texte: texte(Lieu.traduit(objectif.textes, langue) ?? "", en: langue),
-                            position: position, carte: objectif.carte, combat: objectif.combat)
+                            position: position, carte: objectif.carte, combat: objectif.combat,
+                            sujet: Self.sujet(objectif))
                     },
                     recompenses: recompenses(etape.recompenses, en: langue))
             },
             suivantes: suivantes(de: quete.id).map {
                 FicheQuete.Suivante(id: $0.id, nom: Lieu.traduit($0.noms, langue) ?? "?", niveau: $0.niveau)
             })
+    }
+
+    /// Le premier monstre cité, sinon le premier objet cité, s'il n'est pas
+    /// à ramener. Les renvois sont les mêmes dans chaque langue.
+    static func sujet(_ objectif: ObjectifQuete) -> OuTrouver.Sujet? {
+        var monstre: Int?, objet: Int?
+        _ = resoudre(objectif.textes[Langue.fr.rawValue] ?? objectif.textes.values.first ?? "") { genre, id in
+            switch genre {
+            case "monster": monstre = monstre ?? Int(id)
+            case "item": objet = objet ?? Int(id)
+            default: break
+            }
+            return nil
+        }
+        if let monstre { return .monstre(monstre) }
+        return objectif.objet == nil ? objet.map { .objet($0) } : nil
     }
 
     /// Le niveau minimum n'est dit que s'il diffère de celui de la quête.
@@ -349,7 +381,7 @@ extension Quetes {
 
     private func ressource(_ objet: Int, _ quantite: Int, en langue: Langue) -> FicheQuete.Ressource {
         let famille = famillesObjets[String(objet)]
-        return FicheQuete.Ressource(nom: nomObjet(objet, en: langue), quantite: quantite,
+        return FicheQuete.Ressource(objet: objet, nom: nomObjet(objet, en: langue), quantite: quantite,
                                     categorie: famille.flatMap { familles[String($0)] }.flatMap { Lieu.traduit($0, langue) },
                                     objetDeQuete: famille == Self.familleObjetDeQuete)
     }
