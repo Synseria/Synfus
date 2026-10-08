@@ -69,18 +69,6 @@ struct PanneauQuetesTests {
         #expect(illisible.dropLast(pied).last == .message(L("quete.suivi.illisible")))
     }
 
-    @Test("Les objectifs faits se replient, sauf celui qu'on vient de copier")
-    @MainActor
-    func repli() {
-        let objectifs = (1...4).map { FicheQuete.Objectif(id: $0, texte: "O\($0)", position: nil, carte: nil) }
-        let repli = QueteVue.repli(objectifs, valides: [1, 3], garde: nil)
-        #expect(repli.aFaire.map(\.id) == [2, 4])
-        #expect(repli.faits.map(\.id) == [1, 3])
-        let garde = QueteVue.repli(objectifs, valides: [1, 3], garde: 3)
-        #expect(garde.aFaire.map(\.id) == [2, 3, 4])
-        #expect(garde.faits.map(\.id) == [1])
-    }
-
     @Test("Le mode compact ne grandit aucune mesure de la fiche")
     func compact() {
         let confort = Mirror(reflecting: MetriquesQuete.confort).children.map(\.value)

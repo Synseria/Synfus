@@ -391,8 +391,6 @@
   "quete.exigence.metier": "%@ nivel %lld",
   "quete.exigence.niveau": "desde el nivel %lld",
   "quete.exigences": "Requisitos: %@",
-  "quete.faits": "%lld completados",
-  "quete.faits.un": "%lld completado",
   "quete.fermer": "Ocultar el panel (las misiones siguen fijadas)",
   "quete.fermer.simple": "Cerrar",
   "quete.groupe": "En grupo",

@@ -55,7 +55,9 @@ struct EnTetePanneau<Titre: View, Boutons: View>: View {
                 .padding(.trailing, 4)
                 .frame(maxHeight: .infinity)
                 .background(WindowDragArea())
-            titre
+            // Le titre d'abord : sans priorité, la zone de glisser, flexible
+            // elle aussi, lui prenait la moitié de la place et le tronquait.
+            titre.layoutPriority(1)
             WindowDragArea().frame(minWidth: 4, maxWidth: .infinity, maxHeight: .infinity)
             HStack(spacing: 4) { boutons }
                 .padding(.vertical, 3)
