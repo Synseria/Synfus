@@ -1,8 +1,9 @@
 import Foundation
 
 /// Le suivi de quêtes du jeu lu par l'OCR : les quêtes qu'il montre, dans
-/// l'ordre de l'écran, et l'étape en cours quand ses objectifs la désignent
-/// sans ambiguïté. Pur : les lignes et les quêtes sont fournies.
+/// l'ordre de l'écran, l'étape en cours quand ses objectifs la désignent
+/// sans ambiguïté, et ce qu'ils disent des objectifs de cette étape
+/// (`SuiviObjectifs`). Pur : les lignes et les quêtes sont fournies.
 ///
 /// Le suivi aligne, pour chaque quête, son titre — en gras décoratif, que
 /// Vision écorche plus que le reste, suivi d'icônes (groupe, donjon) lues
@@ -14,8 +15,22 @@ enum SuiviQuetes {
     struct Reconnue: Equatable, Sendable {
         let id: Int
         /// Le rang de l'étape que désignent les objectifs lus, si une seule
-        /// s'y reconnaît mieux que les autres.
+        /// s'y reconnaît mieux que les autres ; jamais pour une quête d'une
+        /// seule étape.
         let etape: Int?
+        /// Les objectifs de l'étape que le suivi montre, donc encore à faire,
+        /// dans l'ordre de l'écran.
+        let aFaire: [Int]
+        /// Ceux que le suivi tient pour faits ; vide quand la lecture est
+        /// douteuse (`SuiviObjectifs`).
+        let faits: [Int]
+
+        init(id: Int, etape: Int?, aFaire: [Int] = [], faits: [Int] = []) {
+            self.id = id
+            self.etape = etape
+            self.aFaire = aFaire
+            self.faits = faits
+        }
     }
 
     /// Ce que le panneau propose au plus.
@@ -56,9 +71,14 @@ enum SuiviQuetes {
                 groupes[courant].objectifs.append(texte)
             }
         }
-        return groupes.map {
-            Reconnue(id: $0.titre.quete.id, etape: etape($0.titre.quete, langue: $0.titre.langue,
-                                                         objectifs: $0.objectifs, dans: quetes))
+        return groupes.map { groupe in
+            let quete = groupe.titre.quete, langue = groupe.titre.langue
+            if let lue = SuiviObjectifs.lire(groupe.objectifs, quete: quete, langue: langue, dans: quetes) {
+                return Reconnue(id: quete.id, etape: quete.etapes.count > 1 ? lue.etape : nil,
+                                aFaire: lue.aFaire, faits: lue.faits)
+            }
+            return Reconnue(id: quete.id, etape: etapeParRenvois(quete, langue: langue, objectifs: groupe.objectifs,
+                                                                 dans: quetes))
         }
     }
 
@@ -101,13 +121,13 @@ enum SuiviQuetes {
 
     // MARK: - Étape
 
-    /// L'étape dont les objectifs se lisent le mieux sous le titre : un point
-    /// par nom cité retrouvé (PNJ, objet, monstre), deux par objectif retrouvé
-    /// en entier. Le texte du suivi n'est pas toujours celui de DofusDB
-    /// (« Rapporter 1 âme de… » pour « Ramener à … : x1 … ») : les noms cités
-    /// sont le signal le plus sûr. Une égalité — le même PNJ à deux étapes —
-    /// ne désigne rien.
-    private static func etape(_ quete: Quete, langue: Langue, objectifs: [String], dans quetes: Quetes) -> Int? {
+    /// Faute d'objectif lu en entier (`SuiviObjectifs`), l'étape dont les
+    /// noms cités (PNJ, objet, monstre) se lisent le mieux sous le titre : un
+    /// point par nom retrouvé, deux par objectif retrouvé en entier. Le texte
+    /// du suivi peut être reformulé (« Rapporter 1 âme de… » pour « Ramener à
+    /// … : x1 … ») : les noms cités résistent. Une égalité — le même PNJ à
+    /// deux étapes — ne désigne rien.
+    private static func etapeParRenvois(_ quete: Quete, langue: Langue, objectifs: [String], dans quetes: Quetes) -> Int? {
         guard quete.etapes.count > 1, !objectifs.isEmpty else { return nil }
         let bloc = objectifs.joined(separator: " ")
         let points = quete.etapes.map { etape in

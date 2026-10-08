@@ -23,6 +23,9 @@ struct QuetesSettings: View {
             Interrupteur(titre: L("quetes.masquerObjets"), sousTexte: L("quetes.masquerObjets.sousTexte"),
                          isOn: $prefs.quetesMasquerObjets)
                 .cadreDeListe(premiere: false, derniere: false)
+            Interrupteur(titre: L("quetes.cocherSuivi"), sousTexte: L("quetes.cocherSuivi.sousTexte"),
+                         isOn: $prefs.quetesCocherSuivi)
+                .cadreDeListe(premiere: false, derniere: false)
             // Les vignettes ne servent que si les vues des cartes sont là.
             InterrupteurVuesCartes().cadreDeListe(premiere: false, derniere: !prefs.vuesCartes)
             if prefs.vuesCartes {

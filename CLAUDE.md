@@ -52,7 +52,7 @@ SYNFUS_CAPTURE=~/Library/Logs/Synfus/captures/x.png sh test.sh RealCapture   # O
   `AccessibilityReader` ; processus Dofus `DofusProcesses` ; titres `WindowTitle` ; fermeture
   `ClientTerminator` ; presse-papiers `PressePapiers` ; API DofusDB `DofusDB` ; images du jeu `ImagesDofusDB` (vues de carte : `MiniatureCarte`) ; effectif `republierEffectif` ; classes
   `ClassesStore.catalogue` ; marque `SynfusMark` ; libellés `L()` ; texte lu comparé à des noms `Ressemblance` ;
-  zones de lecture `GenreLecture`.
+  zones de lecture `GenreLecture` ; coches et objectif en cours des quêtes `Preferences.cocher` (`CochesQuete`).
 - Les constantes `extern CFStringRef` de l'Accessibilité (`kAXTrustedCheckOptionPrompt`,
   `"AXFullScreen"`…) sont refusées par la concurrence stricte : citer leur valeur littérale.
 - **Synfus n'émet, ne rejoue ni ne duplique aucun évènement.** Il change la fenêtre devant, pose
@@ -95,7 +95,7 @@ nouveau fichier va dans le dossier de son domaine ; un fichier sans domaine en a
 | `Carte/` | Tous les repères du jeu (zaaps, banques, ateliers, donjons…) et les sous-zones du Monde des Douze : `Lieu`, `Carte`, `ReseauSousZones` (purs), `CarteDofusDB` (téléchargement, cache disque, `--exporter-carte` → `Resources/Carte.json`), `CarteStore` |
 | `Zaaps/` | `/zaap x,y ; /travel a,b` : `Zaap` (tiré de la carte), `CatalogueZaaps`, `ItineraireZaap` (purs : le zaap de la sous-zone visée, sinon par les voisines), `ZaapClipboard` (raccourci, bouton, veille du presse-papiers) |
 | `Palette/` | La palette (⌘:) : `RecherchePalette`, `CommandesJeu` (purs) — zaaps, lieux, `/` commandes, `%` variables, quêtes, PNJ, gestes, dernières copies ; `PaletteModele`, `PalettePanel` (panneau key sans activer Synfus), `PaletteVue` |
-| `Quetes/` | Quêtes et PNJ situés : `Quete` (pur : renvois, ressources, récompenses, suivantes), `QuetesDofusDB` (téléchargement à la première palette, cache disque versionné, 30 jours), `QuetesStore`, `QuetePanel`/`QueteVue` (panneau transparent, jamais key, montré devant Dofus seulement), `SuiviQuetes` (pur : suivi du jeu lu par OCR), `LectureSuivi`, `DofusPourLesNoobs` (adresses candidates du guide) |
+| `Quetes/` | Quêtes et PNJ situés : `Quete` (pur : renvois, ressources, récompenses, suivantes), `QuetesDofusDB` (téléchargement à la première palette, cache disque versionné, 30 jours), `QuetesStore`, `QuetePanel`/`QueteVue` (panneau transparent, jamais key, montré devant Dofus seulement), `SuiviQuetes`, `SuiviObjectifs` (purs : suivi du jeu lu par OCR, objectifs à faire et faits), `LectureSuivi`, `DofusPourLesNoobs` (adresses candidates du guide) |
 | `Chasse/` | Chasse au trésor : `IndicesChasse`, `EtapeChasse` (purs), `ChasseDofusDB` (indices en cache disque, étape à la demande), `ChasseModele`, `ChassePanel` (panneau key sans activer Synfus), `ChasseVue` |
 | `Attention/` | Rebond du Dock : `BounceDetector`, `DockPairing` (purs), `DockInspector`, `DockGeometryReader`, `AttentionWatcher`, `AttentionProbe` |
 | `Raccourcis/` | Raccourcis Carbon, enregistreur, conflits, enchaînement au clic |
