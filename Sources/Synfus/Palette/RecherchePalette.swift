@@ -221,7 +221,7 @@ enum RecherchePalette {
             let distance = distanceVers(lieu, contexte)
             let lieuDit = [lieu.sousZone(en: contexte.langue), lieu.zone(en: contexte.langue)]
                 .compactMap { $0 }.joined(separator: " · ")
-            let sousTitre = distance.map { L("palette.aCartes", lieuDit, $0) } ?? lieuDit
+            let sousTitre = distance.map { L("palette.aCartes", nombre: $0, lieuDit, $0) } ?? lieuDit
             return EntreePalette(
                 id: lieu.cle, genre: .lieu, titre: lieu.nom(en: contexte.langue), sousTitre: sousTitre,
                 etiquette: contexte.etiquettes[lieu.cle], detail: Coordonnees.texte(lieu.x, lieu.y),
