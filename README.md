@@ -60,9 +60,10 @@ connectés et permet de passer de l'un à l'autre, d'un clic ou au clavier.
   quittant, Synfus s'en occupe.
 - **Aperçu** d'une fenêtre au survol, ou de tous les personnages en maintenant
   ⌥⌘@.
-- **Icônes de classe** à fournir soi-même (*Réglages → Classes*) : Synfus
-  n'embarque aucune image du jeu. `./Tools/fetch-ankama-assets.sh` télécharge
-  les emblèmes sur ta machine, pour ton usage personnel.
+- **Icônes de classe** : l'emblème de chaque classe, téléchargé depuis
+  DofusDB sur ta machine, pour ton usage personnel — ou l'image de ton choix
+  (*Réglages → Classes*). Synfus n'embarque aucune image du jeu ; une nouvelle
+  classe apparaît sans mettre Synfus à jour.
 
   > Certaines illustrations sont la propriété d'Ankama Studio et de Dofus
   > — Tous droits réservés.
@@ -72,7 +73,8 @@ connectés et permet de passer de l'un à l'autre, d'un clic ou au clavier.
 Synfus ne joue rien à ta place : il n'envoie ni clic ni touche au jeu, il
 change juste la fenêtre qui est devant, et pose du texte dans le presse-papiers.
 Pas de lecture mémoire ; pour le réseau, la seule API publique de DofusDB (la
-carte du jeu, les quêtes et les indices de chasse, rafraîchis tous les 30 jours).
+carte du jeu, les quêtes, les indices de chasse et les classes, rafraîchis tous
+les 30 jours).
 Il demande l'autorisation **Accessibilité**, et **Enregistrement de l'écran**
 seulement si tu actives les aperçus ou la lecture de l'écran.
 
@@ -169,8 +171,8 @@ le binaire produit couvre bien macOS 14 et suivants.
 
 Code sous licence [MIT](LICENSE). Les visuels du jeu ne font pas partie du
 dépôt et n'en feront jamais partie : ils sont la propriété d'Ankama Studio et
-de Dofus — Tous droits réservés —, et ne sont téléchargés que par l'utilisateur,
-pour son usage personnel (voir *Icônes de classe*). Synfus n'est ni affilié à
+de Dofus — Tous droits réservés —, et ne sont téléchargés que sur la machine de
+l'utilisateur, pour son usage personnel (voir *Icônes de classe*). Synfus n'est ni affilié à
 ni approuvé par Ankama.
 
 ## Publier une release
