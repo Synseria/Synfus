@@ -45,20 +45,24 @@ struct LocalisationTests {
 
     /// Le code ne porte que des clés ; chacune doit exister en français, et
     /// chaque clé française doit servir quelque part — sinon c'est un libellé
-    /// mort, ou une faute de frappe qui s'afficherait telle quelle.
+    /// mort, ou une faute de frappe qui s'afficherait telle quelle. Une clé
+    /// accordée (`L("…", nombre:`) demande aussi sa forme `.un`, que seul
+    /// cet usage fait vivre.
     @Test("Les clés du code et celles de fr.json se correspondent")
     func clesDuCode() throws {
         let sources = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("Sources/Synfus")
         var utilisees = Set<String>()
-        let regex = try NSRegularExpression(pattern: #"\bL\("([^"]+)""#)
+        let regex = try NSRegularExpression(pattern: #"\bL\("([^"]+)"(, nombre:)?"#)
         let fichiers = try #require(FileManager.default.enumerator(at: sources, includingPropertiesForKeys: nil))
         for cas in fichiers {
             guard let url = cas as? URL, url.pathExtension == "swift",
                   let contenu = try? String(contentsOf: url, encoding: .utf8) else { continue }
             for match in regex.matches(in: contenu, range: NSRange(contenu.startIndex..., in: contenu)) {
-                if let plage = Range(match.range(at: 1), in: contenu) { utilisees.insert(String(contenu[plage])) }
+                guard let plage = Range(match.range(at: 1), in: contenu) else { continue }
+                utilisees.insert(String(contenu[plage]))
+                if match.range(at: 2).location != NSNotFound { utilisees.insert(contenu[plage] + ".un") }
             }
         }
         let fr = Set(try table(.fr).keys)
@@ -73,6 +77,17 @@ struct LocalisationTests {
         #expect(table.texte("a") == "A")
         #expect(table.texte("b") == "Bé")
         #expect(table.texte("c") == "c")
+    }
+
+    /// Le français dit « 0 étape », l'anglais et l'espagnol « 0 steps ».
+    @Test("Une clé accordée prend sa forme .un au singulier de chaque langue")
+    func pluriel() {
+        let textes = ["n": "%lld étapes", "n.un": "%lld étape"]
+        let fr = Localisation(langue: .fr, textes: textes, repli: textes)
+        let en = Localisation(langue: .en, textes: ["n": "%lld steps", "n.un": "%lld step"], repli: textes)
+        #expect([0, 1, 2].map { fr.texte("n", nombre: $0) } == ["%lld étape", "%lld étape", "%lld étapes"])
+        #expect([0, 1, 2].map { en.texte("n", nombre: $0) } == ["%lld steps", "%lld step", "%lld steps"])
+        #expect(Langue.es.singulier(1) && !Langue.es.singulier(0))
     }
 
     @Test("Les trois tables se chargent et diffèrent")
