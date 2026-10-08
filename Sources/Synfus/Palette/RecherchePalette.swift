@@ -456,12 +456,23 @@ enum RecherchePalette {
         }
 
         init(_ entree: EntreePalette) {
-            etiquette = RecherchePalette.mots(entree.etiquette ?? "")
-            let nom = RecherchePalette.normaliser(entree.titre)
-            titre = RecherchePalette.decouper(nom)
-            lieu = RecherchePalette.mots(entree.recherche ?? entree.sousTitre ?? "")
+            self.init(titre: entree.titre, etiquette: entree.etiquette, lieu: entree.recherche ?? entree.sousTitre,
+                      categorie: entree.categorie)
+        }
+
+        /// Aussi pour les listes des réglages, qui filtrent selon la même règle.
+        init(titre: String, etiquette: String? = nil, lieu: String? = nil, categorie: Int? = nil) {
+            self.etiquette = RecherchePalette.mots(etiquette ?? "")
+            let nom = RecherchePalette.normaliser(titre)
+            self.titre = RecherchePalette.decouper(nom)
+            self.lieu = RecherchePalette.mots(lieu ?? "")
             surnoms = RecherchePalette.surnoms.filter { nom.contains($0.motif) }.flatMap(\.mots)
-                + (entree.categorie.flatMap { RecherchePalette.motsDeCategorie[$0] } ?? [])
+                + (categorie.flatMap { RecherchePalette.motsDeCategorie[$0] } ?? [])
+        }
+
+        /// Chaque mot tapé trouve un écho.
+        func garde(_ mots: [String]) -> Bool {
+            mots.allSatisfy { points($0) > 0 }
         }
 
         func points(_ mot: String) -> Int {

@@ -11,33 +11,31 @@ struct QuetesSettings: View {
     var body: some View {
         let langue = L10n.courante.langue
         let quetes = montrees(langue)
-        PageReglages(titre: L("reglages.quetes"), sousTitre: L("quetes.sousTitre")) {
-            Section {
-                SourceQuetes()
-                Interrupteur(titre: L("quetes.bouton"), isOn: $prefs.quetesBouton)
+        let affichees = Array(quetes.prefix(Self.limite).enumerated())
+        PageListe(titre: L("reglages.quetes"), sousTitre: L("quetes.sousTitre")) {
+            SourceQuetes().cadreDeListe(premiere: true, derniere: false)
+            Interrupteur(titre: L("quetes.bouton"), isOn: $prefs.quetesBouton).cadreDeListe(premiere: false, derniere: true)
+            EnTeteListe(titre: L("quetes.compte", quetes.count))
+            ChampFiltre(invite: L("quetes.filtrer"), texte: $filtre)
+                .cadreDeListe(premiere: true, derniere: affichees.isEmpty)
+            ForEach(affichees, id: \.element.id) { rang, quete in
+                Ligne(titre: Lieu.traduit(quete.noms, langue) ?? "?",
+                      sousTexte: L("quete.niveau", quete.niveau, quete.etapes.count)) {
+                    Button(L("quetes.ouvrir")) { QuetePanel.shared.ouvrir(quete.id) }
+                }
+                .cadreDeListe(premiere: false, derniere: rang == affichees.count - 1 && quetes.count <= Self.limite)
             }
-            Section {
-                ChampFiltre(invite: L("quetes.filtrer"), texte: $filtre)
-                ForEach(quetes.prefix(Self.limite), id: \.id) { quete in
-                    Ligne(titre: Lieu.traduit(quete.noms, langue) ?? "?",
-                          sousTexte: L("quete.niveau", quete.niveau, quete.etapes.count)) {
-                        Button(L("quetes.ouvrir")) { QuetePanel.shared.ouvrir(quete.id) }
-                    }
-                }
-                if quetes.count > Self.limite {
-                    Text(L("lieux.affiner", quetes.count)).foregroundStyle(.secondary)
-                }
-            } header: {
-                SectionTitle(L("quetes.compte", quetes.count))
+            if quetes.count > Self.limite {
+                Text(L("lieux.affiner", quetes.count)).foregroundStyle(.secondary)
+                    .cadreDeListe(premiere: false, derniere: true)
             }
         }
     }
 
     private func montrees(_ langue: Langue) -> [Quete] {
-        let mots = RecherchePalette.mots(filtre)
-        guard !mots.isEmpty else { return store.quetesTriees }
-        return store.quetesTriees.filter { quete in
-            mots.allSatisfy(RecherchePalette.normaliser(Lieu.traduit(quete.noms, langue) ?? "").contains)
-        }
+        ListesReglages.quetes.elements(
+            source: [AnyHashable(store.quetes?.date), AnyHashable(langue)], filtre: filtre,
+            trier: { store.quetesTriees },
+            champs: { RecherchePalette.Champs(titre: Lieu.traduit($0.noms, langue) ?? "") })
     }
 }

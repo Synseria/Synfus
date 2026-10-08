@@ -11,32 +11,31 @@ struct PNJSettings: View {
     var body: some View {
         let langue = L10n.courante.langue
         let pnjs = montres(langue)
-        PageReglages(titre: L("reglages.pnj"), sousTitre: L("pnj.sousTitre")) {
-            Section {
-                SourceQuetes()
-            }
-            Section {
-                ChampFiltre(invite: L("pnj.filtrer"), texte: $filtre)
-                ForEach(pnjs.prefix(Self.limite), id: \.id) { pnj in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(Lieu.traduit(pnj.noms, langue) ?? "?").font(.system(size: 13, weight: .medium))
-                        ForEach(Array(pnj.passages.enumerated()), id: \.offset) { rang, passage in
-                            HStack(spacing: 8) {
-                                Text(lieu(passage, langue)).foregroundStyle(rang == 0 ? Color.primary : Color.secondary)
-                                Text(L("pnj.quetes", passage.quetes)).font(.system(size: 11)).foregroundStyle(.secondary)
-                                Spacer()
-                                BoutonTrajet(x: passage.position.x, y: passage.position.y)
-                            }
-                            .font(.system(size: 12))
+        let affiches = Array(pnjs.prefix(Self.limite).enumerated())
+        PageListe(titre: L("reglages.pnj"), sousTitre: L("pnj.sousTitre")) {
+            SourceQuetes().cadreDeListe(premiere: true, derniere: true)
+            EnTeteListe(titre: L("pnj.compte", pnjs.count))
+            ChampFiltre(invite: L("pnj.filtrer"), texte: $filtre)
+                .cadreDeListe(premiere: true, derniere: affiches.isEmpty)
+            ForEach(affiches, id: \.element.id) { rang, pnj in
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(Lieu.traduit(pnj.noms, langue) ?? "?").font(.system(size: 13, weight: .medium))
+                    ForEach(Array(pnj.passages.enumerated()), id: \.offset) { rang, passage in
+                        HStack(spacing: 8) {
+                            Text(lieu(passage, langue)).foregroundStyle(rang == 0 ? Color.primary : Color.secondary)
+                            Text(L("pnj.quetes", passage.quetes)).font(.system(size: 11)).foregroundStyle(.secondary)
+                            Spacer()
+                            BoutonTrajet(x: passage.position.x, y: passage.position.y)
                         }
+                        .font(.system(size: 12))
                     }
-                    .padding(.vertical, 2)
                 }
-                if pnjs.count > Self.limite {
-                    Text(L("lieux.affiner", pnjs.count)).foregroundStyle(.secondary)
-                }
-            } header: {
-                SectionTitle(L("pnj.compte", pnjs.count))
+                .padding(.vertical, 2)
+                .cadreDeListe(premiere: false, derniere: rang == affiches.count - 1 && pnjs.count <= Self.limite)
+            }
+            if pnjs.count > Self.limite {
+                Text(L("lieux.affiner", pnjs.count)).foregroundStyle(.secondary)
+                    .cadreDeListe(premiere: false, derniere: true)
             }
         }
     }
@@ -50,10 +49,9 @@ struct PNJSettings: View {
     }
 
     private func montres(_ langue: Langue) -> [PNJ] {
-        let mots = RecherchePalette.mots(filtre)
-        guard !mots.isEmpty else { return store.pnjsTries }
-        return store.pnjsTries.filter { pnj in
-            mots.allSatisfy(RecherchePalette.normaliser(Lieu.traduit(pnj.noms, langue) ?? "").contains)
-        }
+        ListesReglages.pnjs.elements(
+            source: [AnyHashable(store.quetes?.date), AnyHashable(langue)], filtre: filtre,
+            trier: { store.pnjsTries },
+            champs: { RecherchePalette.Champs(titre: Lieu.traduit($0.noms, langue) ?? "") })
     }
 }
