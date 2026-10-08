@@ -84,8 +84,8 @@ pose la zone ; l'essai (`LecteurEcran.lire(png:genre:)`) relit la zone découpé
   zone entière contenant aussi le décompte vert. Seuils : `seuilBouton`, `seuilSignature`.
 - En plein écran seul le perso devant est lisible : l'état des autres date de leur dernier
   passage. Affichage : `CombatBadge`.
-- `FinsDeCombat` (pur) : un combat **commencé** (pas le placement) fini sur la carte où le perso
-  est encore ; effacé au changement de carte (combat perdu) ou au retour en combat. Seul signal
+- `FinsDeCombat` (pur) : un combat **commencé** (pas le placement) fini sur sa carte de départ,
+  où le perso est encore ; effacé au changement de carte (combat perdu) ou au retour en combat. Seul signal
   qui propose un objectif « Vaincre… » (`ObjectifQuete.typesCombat`, `typeId` DofusDB).
 
 ## Autres persos
