@@ -79,6 +79,8 @@ final class LecteurEcran: ObservableObject {
     /// Dernier état de combat connu de chaque perso, par nom. Celui d'un perso
     /// qui n'est pas devant date de la dernière fois qu'il l'a été.
     @Published private(set) var combats: [String: EtatCombat] = [:]
+    /// Les persos dont un combat vient de finir là où ils sont encore.
+    @Published private(set) var finsDeCombat = FinsDeCombat()
 
     private let moteur = MoteurOCR()
     private let diagnostic = DiagnosticLecture.shared
@@ -193,6 +195,11 @@ final class LecteurEcran: ObservableObject {
         persoDevant.flatMap { releves[$0]?.position }
     }
 
+    /// Le perso devant vient de finir un combat sur la carte où il se tient.
+    var combatFiniDevant: Bool {
+        persoDevant.map { finsDeCombat.fini($0, en: releves[$0]?.position) } ?? false
+    }
+
     /// Au survol d'une pastille : la position de ce perso-là, si elle n'a pas
     /// été relevée depuis dix secondes. Le perso devant est lu chaque seconde,
     /// les autres ne bougent pas tant qu'on ne les joue pas.
@@ -278,10 +285,11 @@ final class LecteurEcran: ObservableObject {
 
     /// Une lecture à la demande, hors du tour et sans signature : les lignes
     /// de la zone `genre` chez le perso devant — ou le dernier lu devant, si
-    /// Synfus vient de passer au premier plan. `nil` : rien à lire (aucun
-    /// perso, pas d'autorisation, capture manquée). Le moteur est un acteur :
-    /// une lecture du tour en cours passe avant, sans se mélanger.
-    func lireUneFois(_ genre: GenreLecture) async -> [String]? {
+    /// Synfus vient de passer au premier plan —, et le nom de ce perso.
+    /// `nil` : rien à lire (aucun perso, pas d'autorisation, capture manquée).
+    /// Le moteur est un acteur : une lecture du tour en cours passe avant,
+    /// sans se mélanger.
+    func lireUneFois(_ genre: GenreLecture) async -> (perso: String, lignes: [String])? {
         let manager = WindowManager.shared
         guard WindowPreviewService.shared.authorized,
               let client = manager.clients.first(where: { manager.isFrontmost($0) })
@@ -290,7 +298,7 @@ final class LecteurEcran: ObservableObject {
               case .lue(_, let lignes, _, _) = await moteur.lire(png: png, precedente: nil, couleur: false)
         else { return nil }
         diagnostic.lignes[genre] = lignes
-        return lignes
+        return (client.name, lignes)
     }
 
     /// L'OCR d'une zone déjà découpée — l'essai du calibrage, sur la capture
@@ -309,6 +317,9 @@ final class LecteurEcran: ObservableObject {
         // Une lecture sans coordonnées — écran de chargement, fenêtre du jeu
         // posée sur le coin — garde la dernière position connue.
         releves[nom] = Releve(position: lue ?? releves[nom]?.position, lignes: lignes, date: Date())
+        var fins = finsDeCombat
+        fins.position(nom, lue)
+        if fins != finsDeCombat { finsDeCombat = fins }
     }
 
     private func appliquerCombat(_ lignes: [String], couleur: Double, nom: String) {
@@ -316,6 +327,9 @@ final class LecteurEcran: ObservableObject {
         diagnostic.etat = .actif
         let constat = LectureCombat.classer(lignes: lignes, couleur: couleur)
         let etat = EtatCombat.depuis(constat, avant: combats[nom], maintenant: Date())
+        var fins = finsDeCombat
+        fins.combat(nom, avant: combats[nom], apres: etat, ici: releves[nom]?.position)
+        if fins != finsDeCombat { finsDeCombat = fins }
         if combats[nom] != etat { combats[nom] = etat }
     }
 }

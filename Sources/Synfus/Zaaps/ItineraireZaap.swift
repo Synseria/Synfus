@@ -80,18 +80,33 @@ enum ItineraireZaap {
         return zaapLePlusProche(de: cible, parmi: zaaps)
     }
 
+    /// Le zaap de la cible (`zaap(vers:)`), s'il épargne au moins
+    /// `gainMinimal` cartes depuis `depart` ; `nil` : on y va à pied.
+    static func zaapUtile(depuis depart: (x: Int, y: Int), vers cible: (x: Int, y: Int), zaap: Zaap?,
+                          gainMinimal: Int) -> Zaap? {
+        guard let zaap, distance(depart, cible) - distance((zaap.x, zaap.y), cible) >= gainMinimal else { return nil }
+        return zaap
+    }
+
+    /// Les cartes à traverser de `depart` à `cible`, par le zaap s'il est utile
+    /// (`zaapUtile`) : le coût d'un trajet copié.
+    static func cartes(depuis depart: (x: Int, y: Int), vers cible: (x: Int, y: Int), zaap: Zaap?,
+                       gainMinimal: Int) -> Int {
+        let par = zaapUtile(depuis: depart, vers: cible, zaap: zaap, gainMinimal: gainMinimal)
+        return distance(par.map { ($0.x, $0.y) } ?? depart, cible)
+    }
+
     /// `/zaap x,y ; /travel a,b` si le zaap retenu pour la cible (`zaap(vers:)`)
     /// épargne au moins `gainMinimal` cartes depuis `position` ; `nil` sinon.
     static func reecrire(
         _ texte: String, depuis position: PositionCarte?, gainMinimal: Int, zaaps: [Zaap], zaapDuJeu: Bool,
         reseau: ReseauSousZones
     ) -> String? {
-        guard let cible = cible(dans: texte),
-              let position, !horsDuMondeDesDouze(position.zone),
-              let zaap = Self.zaap(vers: cible, parmi: zaaps, zaapDuJeu: zaapDuJeu, reseau: reseau)
+        guard let cible = cible(dans: texte), let depart = rejoindre(position),
+              let zaap = zaapUtile(depuis: depart, vers: cible,
+                                   zaap: Self.zaap(vers: cible, parmi: zaaps, zaapDuJeu: zaapDuJeu, reseau: reseau),
+                                   gainMinimal: gainMinimal)
         else { return nil }
-        let gain = distance((position.x, position.y), cible) - distance((zaap.x, zaap.y), cible)
-        guard gain >= gainMinimal else { return nil }
         let travel = texte.trimmingCharacters(in: .whitespacesAndNewlines)
         // L'espace avant le « ; » : sans elle, le jeu lit mal l'enchaînement.
         return "\(Self.zaap(zaap)) ; \(travel)"

@@ -52,9 +52,18 @@ Position et combat sont lus au tour ; **chasse** et **quêtes** seulement à la 
   commence par un objectif reconnu. Les étapes d'avant aussi, si aucune autre étape ne lit mieux
   une ligne. Doublon ambigu : la première occurrence possible (prudent). Distance bornée
   (`distanceDansTexte(_:_:auPlus:)`, Ukkonen) : vingt étapes de vingt « Rapporter 1 âme… ».
-- Panneau : `LectureSuivi.aFaire` (surligné ambre, `fraicheur` 10 min) ; faits cochés par
-  `Preferences.cocher` (`CochesQuete`, jamais de décoche, efface l'objectif en cours) si
-  `quetesCocherSuivi`.
+- Panneau : `LectureSuivi.aFaire` (surligné ambre, `fraicheur` 10 min). Une lecture passe par
+  `Preferences.appliquer` (`CochesQuete`, seul chemin) : faits cochés si `quetesCocherSuivi`, jamais
+  de décoche, jamais un objectif décoché à la main (`quetesDecoches`, oublié quand le suivi le
+  remontre ouvert) ; une étape **sûre** (`Lecture.sure`) après celle du panneau l'y fait avancer.
+- Par perso (`lireUneFois` rend le perso lu) : `HistoriqueSuivi` (pur, en mémoire). Persos lus à
+  l'étape (moins de 24 h) à côté de son titre. « Terminée ? » : une quête sortie du suivi entre
+  deux lectures du même perso, si la lecture voit le suivi dans le même ordre et que ni un titre
+  mal lu (voisine du dessus ou en-tête plus longs) ni la zone (quête suivante encore lue, ou rien
+  de nouveau ni de plus long au-dessus) ne l'expliquent. Suivi vide : rien n'est proposé (une
+  fenêtre du jeu par-dessus ne s'en distingue pas).
+- Objectifs ouverts ensemble (plusieurs `aFaire`) : ordre libre, numérotés au plus court
+  (`Tournee`, coût `ItineraireZaap.cartes` par `ZaapClipboard.tournee`).
 - Comparaison tolérante commune (chasse, quêtes) : `Ressemblance` (normalisation, distance de
   Sellers, `Forme` préparée et borne `tropLoin` — deux mille noms par ligne lue).
 
@@ -75,6 +84,9 @@ pose la zone ; l'essai (`LecteurEcran.lire(png:genre:)`) relit la zone découpé
   zone entière contenant aussi le décompte vert. Seuils : `seuilBouton`, `seuilSignature`.
 - En plein écran seul le perso devant est lisible : l'état des autres date de leur dernier
   passage. Affichage : `CombatBadge`.
+- `FinsDeCombat` (pur) : un combat **commencé** (pas le placement) fini sur sa carte de départ,
+  où le perso est encore ; effacé au changement de carte (combat perdu) ou au retour en combat. Seul signal
+  qui propose un objectif « Vaincre… » (`ObjectifQuete.typesCombat`, `typeId` DofusDB).
 
 ## Autres persos
 

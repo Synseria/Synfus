@@ -13,6 +13,9 @@ import Foundation
 enum SuiviObjectifs {
     struct Lecture: Equatable, Sendable {
         let etape: Int
+        /// Aucune autre étape ne lit mieux une seule ligne : l'étape est
+        /// établie, le panneau peut y avancer.
+        let sure: Bool
         let aFaire: [Int]
         let faits: [Int]
     }
@@ -51,19 +54,19 @@ enum SuiviObjectifs {
         let etape = quete.etapes[rang]
         let affectes = parEtape[rang].sorted { $0.debut < $1.debut }
         let aFaire = affectes.map { etape.objectifs[$0.objectif].id }
+        let couts = Self.couts(parEtape[rang], lignes: lues.count)
+        let sure = parEtape.indices.allSatisfy { autre in
+            autre == rang || zip(couts, Self.couts(parEtape[autre], lignes: lues.count)).allSatisfy { $0 <= $1 }
+        }
         // L'écran doit suivre l'ordre de l'étape, sur quoi repose la déduction,
         // et le premier objectif montré être la première ligne : une ligne
         // illisible avant lui pourrait être un objectif plus tôt, encore ouvert.
         let rangs = affectes.map(\.objectif)
         guard let premier = affectes.first, premier.debut == 0, rangs == rangs.sorted() else {
-            return Lecture(etape: rang, aFaire: aFaire, faits: [])
-        }
-        let couts = Self.couts(parEtape[rang], lignes: lues.count)
-        let sure = parEtape.indices.allSatisfy { autre in
-            autre == rang || zip(couts, Self.couts(parEtape[autre], lignes: lues.count)).allSatisfy { $0 <= $1 }
+            return Lecture(etape: rang, sure: sure, aFaire: aFaire, faits: [])
         }
         let avant = sure ? quete.etapes[..<rang].flatMap { $0.objectifs.map(\.id) } : []
-        return Lecture(etape: rang, aFaire: aFaire,
+        return Lecture(etape: rang, sure: sure, aFaire: aFaire,
                        faits: avant + etape.objectifs[..<premier.objectif].map(\.id))
     }
 
