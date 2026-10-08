@@ -3,6 +3,49 @@
 Une section par version, `## X.Y.Z — AAAA-MM-JJ` : la release GitHub de `vX.Y.Z` en reprend le
 contenu (`Tools/notes-de-version.sh`), et `sh build.sh --publish` refuse une version absente d'ici.
 
+## 0.10.1 — 2026-10-08
+
+### Nouveautés
+
+- **Le zaap qui mène vraiment quelque part** : un `/travel` passe par le zaap que le jeu rattache à
+  la zone visée — `/travel -20,9` part du zaap des Koalaks, plus de celui de Sidimote derrière la
+  montagne. Éteint (Trajets → « Zaap désigné par le jeu »), le plus proche par les zones voisines.
+- **Panneau des quêtes** :
+  - un bouton dans la barre ;
+  - un en-tête d'une ligne, avec un menu des quêtes épinglées et du **suivi lu à l'écran** ;
+  - la consigne de chaque étape, les récompenses, la vue de la carte de chaque objectif, en grand
+    au survol ;
+  - une coche verte sur l'objectif dont on a copié le trajet ;
+  - ce que la quête exige (classe, niveau, métier, alignement) ;
+  - les quêtes qui suivent ;
+  - un lien vers Dofus pour les noobs.
+
+  Il ne se montre que devant Dofus.
+- **Lire le suivi de quêtes** : les quêtes suivies en jeu sont reconnues et s'épinglent d'un clic, à
+  leur étape.
+- **Calibrer chaque lecture de l'écran** sur sa propre capture (position, combat, chasse, suivi de
+  quêtes), avec un essai de lecture en direct.
+- **Vues des cartes** à droite des lieux, des PNJ et des zaaps, dans la palette et les réglages,
+  et en fond des cartes de zaap ; le pictogramme du jeu pour chaque lieu. Un seul interrupteur les
+  masque toutes.
+- **Classes tirées de DofusDB** : noms et emblèmes téléchargés par l'app ; ton icône garde la
+  priorité.
+- **Masquer les objets de quête** dans les ressources à réunir.
+
+### Améliorations
+
+- Toute position s'affiche **`[x,y]`**, comme le jeu l'écrit.
+- Les onglets Zaaps, Lieux, Quêtes et PNJ des réglages s'ouvrent sans attendre.
+- Raccourcis : plus de « nombre d'emplacements » — un raccourci par perso connecté, et ⌘6 reste aux
+  autres apps tant qu'il n'y a pas de sixième perso.
+- Chasse au trésor : une seule colonne étroite, l'indice sous la boussole.
+- Pluriels justes : « 1 étape », « 1 carte ».
+
+### Corrections
+
+- Panneau des quêtes : la première ligne répond au clic, un double-clic ne l'agrandit plus en
+  plein écran, et la croix se clique sans viser.
+
 ## 0.10.0 — 2026-10-08
 
 ![La palette](https://raw.githubusercontent.com/Synseria/Synfus/v0.10.0/docs/screenshots/palette-zaaps.png)
