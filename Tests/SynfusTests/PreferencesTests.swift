@@ -502,7 +502,7 @@ struct PreferencesTests {
      "defaultsVersion":7,"equipeSuivanteHotKey":{"keyCode":17,"modifiers":256},
      "etiquettes":{"1:-78,-41":"Fri 1"},"lieuxFavoris":["lieu:2738"],
      "paletteHotKey":{"keyCode":47,"modifiers":256},"paletteRecents":["/zaap 5,7"],"paletteTri":"type","quetesEpinglees":[18,42],"quetesEtape":{"18":2},
-     "quetesValides":{"18":[102,104]},
+     "quetesValides":{"18":[102,104]},"quetesBouton":false,
      "equipes":[{"membres":["Aeryn"]},{"membres":["Nova"]}],
      "hotKeys":[{"keyCode":18,"modifiers":256},null,{"keyCode":20,"modifiers":2048}],
      "inviteFormat":"/w %nom go","inviteGroupee":true,
@@ -576,6 +576,7 @@ struct PreferencesTests {
         #expect(prefs.quetesEpinglees == [18, 42])
         #expect(prefs.quetesEtape == ["18": 2])
         #expect(prefs.quetesValides == ["18": [102, 104]])
+        #expect(prefs.quetesBouton == false)
         #expect(prefs.chasseHotKey == HotKey(keyCode: 5, modifiers: 2048))
         #expect(prefs.chasseBouton == false)
     }
@@ -632,6 +633,7 @@ struct PreferencesTests {
         prefs.quetesEpinglees = [18, 42]
         prefs.quetesEtape = ["18": 2]
         prefs.quetesValides = ["18": [102, 104]]
+        prefs.quetesBouton = false
         prefs.chasseHotKey = HotKey(keyCode: 5, modifiers: 2048)
         prefs.chasseBouton = false
 
@@ -664,7 +666,7 @@ struct PreferencesTests {
          "signalerBascule":true,"slotCount":1,"zaapAuto":false,"zaapBouton":true,
          "zaapGainMinimal":5,"zaapsAjoutes":[],"zaapsChoix":{},"zaapsFavoris":[],
          "lieuxFavoris":[],"paletteRecents":[],"paletteTri":"proximite","quetesEpinglees":[],"quetesEtape":{},
-         "quetesValides":{}}
+         "quetesValides":{},"quetesBouton":true}
         """
         #expect(canonique(store.donnees(pour: Preferences.key)) == canonique(Data(attendu.utf8)))
     }
