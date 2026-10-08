@@ -10,7 +10,7 @@ struct TrajetsSettings: View {
             Section {
                 RaccourciReglable(label: L("zaap.raccourci"), help: L("zaap.raccourci.aide"), chemin: \.zaapHotKey)
                 Ligne(titre: L("zaap.gain"), sousTexte: L("zaap.gain.sousTexte")) {
-                    Stepper(L("zaap.gain.valeur", prefs.zaapGainMinimal),
+                    Stepper(L("zaap.gain.valeur", nombre: prefs.zaapGainMinimal, prefs.zaapGainMinimal),
                             value: $prefs.zaapGainMinimal, in: ItineraireZaap.gainsPossibles)
                 }
                 Interrupteur(titre: L("zaap.duJeu"), sousTexte: L("zaap.duJeu.sousTexte"), isOn: $prefs.zaapDuJeu)

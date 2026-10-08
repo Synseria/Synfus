@@ -277,18 +277,22 @@ private struct CarteZaap: View {
     }
 }
 
-/// Une ligne de résultat : genre, titre, étiquette, sous-titre, détail.
+/// Une ligne de résultat : genre (ou pictogramme du lieu), titre, étiquette,
+/// sous-titre, détail, vue de la carte.
 private struct LigneResultat: View {
     let entree: EntreePalette
     let choisie: Bool
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: icone)
-                .font(.system(size: 13))
-                .foregroundStyle(choisie ? Couleurs.accent : Color.secondary)
-                .frame(width: 26, height: 26)
-                .background(RoundedRectangle(cornerRadius: 7).fill(Color.primary.opacity(0.06)))
+            PictogrammeLieu(gfx: entree.pictogramme) {
+                Image(systemName: icone)
+                    .font(.system(size: 13))
+                    .foregroundStyle(choisie ? Couleurs.accent : Color.secondary)
+            }
+            .frame(width: 22, height: 22)
+            .frame(width: 26, height: 26)
+            .background(RoundedRectangle(cornerRadius: 7).fill(Color.primary.opacity(0.06)))
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text(entree.titre).font(.system(size: 13)).lineLimit(1)
@@ -308,6 +312,7 @@ private struct LigneResultat: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
+            if let carte = entree.carte { MiniatureCarte(carte: carte, taille: Self.vignette) }
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
@@ -315,6 +320,9 @@ private struct LigneResultat: View {
             .fill(choisie ? Couleurs.accent.opacity(0.22) : Color.clear))
         .contentShape(Rectangle())
     }
+
+    /// À la hauteur d'une ligne de deux textes : la liste ne s'allonge pas.
+    private static let vignette = CGSize(width: 46, height: 32)
 
     private var icone: String {
         switch entree.genre {

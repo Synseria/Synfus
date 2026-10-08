@@ -110,9 +110,6 @@ final class QuetePanel: NSObject, ObservableObject {
         }
     }
 
-    /// Le cadre à l'écran, pour placer la vue agrandie d'une carte à côté.
-    var cadre: NSRect? { panel?.isVisible == true ? panel?.frame : nil }
-
     private func cacher() {
         panel?.orderOut(nil)
         ApercuCarte.shared.cacher()

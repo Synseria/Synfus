@@ -10,7 +10,7 @@ struct CarteTests {
         let reperes = """
         {"total":3,"data":[
           {"id":1,"x":-2,"y":0,"mapId":11,"worldMapId":1,"categoryId":9,"subareaId":10,"name":{"fr":"Zaap","en":"Zaap"}},
-          {"id":2,"x":-2,"y":1,"mapId":12,"worldMapId":1,"categoryId":4,"subareaId":10,"name":{"fr":"Banque","en":"Bank"}},
+          {"id":2,"x":-2,"y":1,"mapId":12,"worldMapId":1,"categoryId":4,"gfx":402,"subareaId":10,"name":{"fr":"Banque","en":"Bank"}},
           {"id":3,"x":9,"y":9,"mapId":13,"worldMapId":1,"categoryId":4,"subareaId":999,"name":{"fr":"Milice"}}]}
         """
         let sousZones = """
@@ -32,6 +32,7 @@ struct CarteTests {
         #expect(lieux[1].sousZone(en: .fr) == "Village d'Amakna")
         #expect(lieux[1].zone(en: .es) == "Amakna")
         #expect(lieux[2].zone.isEmpty && lieux[2].sousZone.isEmpty)
+        #expect(lieux.map(\.gfx) == [nil, 402, nil])
 
         #expect(carte.zaaps == [Zaap(-2, 0, noms: ["fr": "Village d'Amakna", "en": "Amakna Village"],
                                      zone: ["fr": "Amakna", "en": "Amakna"], idCarte: 11, idSousZone: 10)])
@@ -83,6 +84,10 @@ struct CarteTests {
         #expect(CarteDofusDB.retenue(gardee: try JSONEncoder().encode(recente), integree: integree) == recente)
         let vieille = Carte(date: Date(timeIntervalSinceReferenceDate: 500), lieux: [], sousZones: [], cases: [:])
         #expect(CarteDofusDB.retenue(gardee: try JSONEncoder().encode(vieille), integree: integree) == integree)
+        // Plus récente mais d'un format antérieur (sans pictogrammes) : l'intégrée.
+        let autreFormat = Carte(format: Carte.formatActuel - 1, date: Date(timeIntervalSinceReferenceDate: 2000),
+                                lieux: [], sousZones: [], cases: [:])
+        #expect(CarteDofusDB.retenue(gardee: try JSONEncoder().encode(autreFormat), integree: integree) == integree)
     }
 
     @Test("La carte intégrée : tous les zaaps, une banque à Bonta")
@@ -93,6 +98,8 @@ struct CarteTests {
         let cles = carte.zaaps.map(\.cle)
         #expect(Set(cles).count == cles.count)
         #expect(carte.lieux.contains { $0.nom(en: .fr) == "Banque" && $0.zone(en: .fr) == "Bonta" })
+        #expect(carte.format == Carte.formatActuel)
+        #expect(carte.lieux.filter { $0.gfx != nil }.count >= Carte.minimumPlausible)
         #expect(carte.zaaps.contains { $0.nom(en: .fr) == "Cœur immaculé" && $0.zone(en: .fr) == "Bonta" })
         // Le Monde des Douze, case par case ; chaque zaap y a sa sous-zone.
         #expect(carte.cases.count >= Carte.minimumCasesPlausible)
