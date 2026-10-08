@@ -97,21 +97,40 @@ struct PanneauQuetesTests {
         let etape = FicheQuete.Etape(
             nom: "E", description: nil,
             objectifs: [(1, ici), (2, ici), (3, nil), (4, ici), (5, ailleurs)].map {
-                FicheQuete.Objectif(id: $0.0, texte: "O\($0.0)", position: $0.1, carte: nil)
+                FicheQuete.Objectif(id: $0.0, texte: "O\($0.0)", position: $0.1, carte: nil, combat: false)
             },
             recompenses: .init(niveau: 1, experience: 0, kamas: 0, objets: [], emotes: [], titres: []))
-        #expect(etape.suggeres(en: ici, valides: [], enCours: nil) == [1])
-        #expect(etape.suggeres(en: ici, valides: [1], enCours: nil) == [2])
+        #expect(etape.suggeres(en: ici, valides: [], enCours: nil, combatFini: false) == [1])
+        #expect(etape.suggeres(en: ici, valides: [1], enCours: nil, combatFini: false) == [2])
         // Le prochain est ailleurs (3, non situé) : [0,4] n'est pas à valider.
-        #expect(etape.suggeres(en: ici, valides: [1, 2], enCours: nil).isEmpty)
-        #expect(etape.suggeres(en: ailleurs, valides: [], enCours: nil) == [5])
-        #expect(etape.suggeres(en: ailleurs, valides: [5], enCours: nil).isEmpty)
-        #expect(etape.suggeres(en: nil, valides: [], enCours: nil).isEmpty)
+        #expect(etape.suggeres(en: ici, valides: [1, 2], enCours: nil, combatFini: false).isEmpty)
+        #expect(etape.suggeres(en: ailleurs, valides: [], enCours: nil, combatFini: false) == [5])
+        #expect(etape.suggeres(en: ailleurs, valides: [5], enCours: nil, combatFini: false).isEmpty)
+        #expect(etape.suggeres(en: nil, valides: [], enCours: nil, combatFini: false).isEmpty)
         // En cours, l'objectif est proposé sur sa carte, rang et voisins
         // n'y font rien ; ailleurs ou fait, non.
-        #expect(etape.suggeres(en: ici, valides: [1, 2], enCours: 4) == [4])
-        #expect(etape.suggeres(en: ici, valides: [], enCours: 4) == [1, 4])
-        #expect(etape.suggeres(en: ailleurs, valides: [5], enCours: 4).isEmpty)
-        #expect(etape.suggeres(en: ici, valides: [1, 2, 4], enCours: 4).isEmpty)
+        #expect(etape.suggeres(en: ici, valides: [1, 2], enCours: 4, combatFini: false) == [4])
+        #expect(etape.suggeres(en: ici, valides: [], enCours: 4, combatFini: false) == [1, 4])
+        #expect(etape.suggeres(en: ailleurs, valides: [5], enCours: 4, combatFini: false).isEmpty)
+        #expect(etape.suggeres(en: ici, valides: [1, 2, 4], enCours: 4, combatFini: false).isEmpty)
+    }
+
+    /// [0,4] : aller voir (1), vaincre (2) ; [0,9] : vaincre (3), seul de sa carte.
+    @Test("« Vaincre… » n'est proposé qu'après un combat fini sur sa carte, quel que soit son rang")
+    func suggestionCombat() {
+        let ici = PNJ.Position(x: 0, y: 4), ailleurs = PNJ.Position(x: 0, y: 9)
+        let etape = FicheQuete.Etape(
+            nom: "E", description: nil,
+            objectifs: [(1, ici, false), (2, ici, true), (3, ailleurs, true)].map {
+                FicheQuete.Objectif(id: $0.0, texte: "O\($0.0)", position: $0.1, carte: nil, combat: $0.2)
+            },
+            recompenses: .init(niveau: 1, experience: 0, kamas: 0, objets: [], emotes: [], titres: []))
+        #expect(etape.suggeres(en: ici, valides: [], enCours: nil, combatFini: false) == [1])
+        #expect(etape.suggeres(en: ici, valides: [], enCours: nil, combatFini: true) == [1, 2])
+        // Prochain, en cours ou seul de sa carte : sans combat, rien.
+        #expect(etape.suggeres(en: ici, valides: [1], enCours: 2, combatFini: false).isEmpty)
+        #expect(etape.suggeres(en: ailleurs, valides: [], enCours: nil, combatFini: false).isEmpty)
+        #expect(etape.suggeres(en: ailleurs, valides: [], enCours: nil, combatFini: true) == [3])
+        #expect(etape.suggeres(en: ailleurs, valides: [3], enCours: nil, combatFini: true).isEmpty)
     }
 }

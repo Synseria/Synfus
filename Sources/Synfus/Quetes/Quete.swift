@@ -6,7 +6,7 @@ struct Quetes: Codable, Equatable, Sendable {
     /// La forme du fichier gardé sur le disque : une autre (ancienne) n'est
     /// pas relue, les quêtes se retéléchargent — sans quoi un cache d'avant
     /// un nouveau champ le laisserait vide trente jours.
-    static let formatActuel = 5
+    static let formatActuel = 6
     let format: Int
     let date: Date
     let quetes: [Quete]
@@ -157,6 +157,15 @@ struct ObjectifQuete: Codable, Equatable, Sendable {
     /// L'objet à ramener et combien — les ressources de la quête.
     let objet: Int?
     let quantite: Int?
+    /// Le genre d'objectif de DofusDB (`typeId`, liste `quest-objective-types`).
+    let type: Int?
+
+    /// Les genres « Vaincre… » : monstres en un ou plusieurs combats (6, 14),
+    /// sur une carte (16), monstre à vaincre (7), éliminer (13), joueur en
+    /// défi (11). Krosmaster (15) n'est pas un combat sur la carte.
+    static let typesCombat: Set<Int> = [6, 7, 11, 13, 14, 16]
+
+    var combat: Bool { type.map(Self.typesCombat.contains) ?? false }
 }
 
 struct SousZoneNommee: Codable, Equatable, Sendable {
@@ -207,6 +216,9 @@ struct FicheQuete: Equatable, Sendable {
         let texte: String
         let position: PNJ.Position?
         let carte: Int?
+        /// « Vaincre… » : être sur sa carte ne suffit pas, il faut y avoir
+        /// fini un combat.
+        let combat: Bool
     }
 
     struct Recompenses: Equatable, Sendable {
@@ -236,12 +248,17 @@ struct FicheQuete: Equatable, Sendable {
         /// plus loin dans l'étape, pour un autre objectif. L'objectif en cours
         /// — celui dont on a copié le trajet — l'est dès qu'on est sur sa
         /// carte, quels que soient son rang et ses voisins : on y allait.
-        func suggeres(en position: PNJ.Position?, valides: Set<Int>, enCours: Int?) -> Set<Int> {
+        ///
+        /// Un objectif « Vaincre… » ne l'est qu'après un combat fini sur sa
+        /// carte (`combatFini`, `FinsDeCombat`) — alors quels que soient son
+        /// rang et ses voisins : le combat est la preuve, pas la présence.
+        func suggeres(en position: PNJ.Position?, valides: Set<Int>, enCours: Int?, combatFini: Bool) -> Set<Int> {
             guard let position else { return [] }
             let prochain = objectifs.first { !valides.contains($0.id) }?.id
-            let ici = objectifs.filter { $0.position == position }
+            let ici = objectifs.filter { $0.position == position && !valides.contains($0.id) }
+            let tous = objectifs.count { $0.position == position }
             let proposes = ici.filter {
-                !valides.contains($0.id) && ($0.id == prochain || $0.id == enCours || ici.count == 1)
+                $0.combat ? combatFini : $0.id == prochain || $0.id == enCours || tous == 1
             }
             return Set(proposes.map(\.id))
         }
@@ -301,7 +318,7 @@ extension Quetes {
                         if let x = objectif.x, let y = objectif.y { position = PNJ.Position(x: x, y: y) }
                         return FicheQuete.Objectif(
                             id: objectif.id, texte: texte(Lieu.traduit(objectif.textes, langue) ?? "", en: langue),
-                            position: position, carte: objectif.carte)
+                            position: position, carte: objectif.carte, combat: objectif.combat)
                     },
                     recompenses: recompenses(etape.recompenses, en: langue))
             },

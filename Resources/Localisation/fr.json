@@ -419,6 +419,7 @@
   "quete.ressources": "Ressources à réunir",
   "quete.suggestion": "Tu y es — fait ?",
   "quete.suggestion.aide": "Le perso est sur cette carte : un clic sur la coche valide l'objectif.",
+  "quete.suggestion.combat.aide": "Un combat vient de finir sur cette carte : un clic sur la coche valide l'objectif.",
   "quete.suivantes": "Ensuite",
   "quete.suivi.coches": "%lld objectifs cochés d'après le suivi",
   "quete.suivi.coches.un": "%lld objectif coché d'après le suivi",

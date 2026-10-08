@@ -279,7 +279,8 @@ struct QueteVue: View {
         let coches = valides(fiche.id)
         let ici = lecteur.positionDuPersoDevant.map { PNJ.Position(x: $0.x, y: $0.y) }
         let enCours = ficheImposee == nil ? prefs.quetesEnCours[String(fiche.id)] : nil
-        let suggeres = ficheImposee == nil ? etape.suggeres(en: ici, valides: coches, enCours: enCours) : []
+        let suggeres = ficheImposee == nil ? etape.suggeres(en: ici, valides: coches, enCours: enCours,
+                                                                  combatFini: lecteur.combatFiniDevant) : []
         let aFaire = ficheImposee == nil ? lecture.aFaire(fiche.id) : []
         return VStack(alignment: .leading, spacing: metriques.ecartLignes) {
             if plusieurs {
@@ -389,7 +390,8 @@ struct QueteVue: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help(suggere ? L("quete.suggestion.aide") : etat.aFaire && !valide ? L("quete.aFaire.aide") : "")
+            .help(suggere ? (objectif.combat ? L("quete.suggestion.combat.aide") : L("quete.suggestion.aide"))
+                : etat.aFaire && !valide ? L("quete.aFaire.aide") : "")
             // Fait et sans trajet, la ligne n'a plus rien à faire.
             let action: (() -> Void)? = valide && objectif.position == nil ? nil : {
                 if let position = objectif.position {
