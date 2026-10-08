@@ -16,16 +16,23 @@ struct Zaap: Codable, Hashable, Sendable {
     let noms: [String: String]
     /// Le nom de la zone (« Bonta » pour Cœur immaculé) ; vide pour un ajout.
     let zone: [String: String]
+    /// La carte du jeu et la sous-zone du zaap (`Lieu.idCarte`, `Lieu.idSousZone`) ;
+    /// `nil` pour un ajout à la main, que seules ses coordonnées situent.
+    let idCarte: Int?
+    let idSousZone: Int?
 
-    init(_ x: Int, _ y: Int, monde: Int = Zaap.mondeDesDouze, noms: [String: String], zone: [String: String] = [:]) {
+    init(_ x: Int, _ y: Int, monde: Int = Zaap.mondeDesDouze, noms: [String: String], zone: [String: String] = [:],
+         idCarte: Int? = nil, idSousZone: Int? = nil) {
         self.x = x
         self.y = y
         self.monde = monde
         self.noms = noms
         self.zone = zone
+        self.idCarte = idCarte
+        self.idSousZone = idSousZone
     }
 
-    private enum CodingKeys: String, CodingKey { case x, y, monde, noms, zone }
+    private enum CodingKeys: String, CodingKey { case x, y, monde, noms, zone, idCarte, idSousZone }
 
     /// Un zaap ajouté à la main avant que la zone n'existe n'en a pas.
     init(from decoder: any Decoder) throws {
@@ -33,7 +40,9 @@ struct Zaap: Codable, Hashable, Sendable {
         self.init(try conteneur.decode(Int.self, forKey: .x), try conteneur.decode(Int.self, forKey: .y),
                   monde: try conteneur.decode(Int.self, forKey: .monde),
                   noms: try conteneur.decode([String: String].self, forKey: .noms),
-                  zone: try conteneur.decodeIfPresent([String: String].self, forKey: .zone) ?? [:])
+                  zone: try conteneur.decodeIfPresent([String: String].self, forKey: .zone) ?? [:],
+                  idCarte: try conteneur.decodeIfPresent(Int.self, forKey: .idCarte),
+                  idSousZone: try conteneur.decodeIfPresent(Int.self, forKey: .idSousZone))
     }
 
     /// Ce qui identifie un zaap d'une liste à l'autre — intégrée, DofusDB, à

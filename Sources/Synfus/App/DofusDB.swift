@@ -27,6 +27,12 @@ enum DofusDB {
     static let parPage = 50
     private static let api = URL(string: "https://api.dofusdb.fr")!
 
+    /// Les seuls champs à rendre : les sous-zones portent la liste de leurs
+    /// cartes, dix fois plus lourde que ce qu'on en lit.
+    static func selection(_ champs: [String]) -> [URLQueryItem] {
+        champs.map { URLQueryItem(name: "$select[]", value: $0) }
+    }
+
     /// La vue d'une carte du jeu, en demi-taille (`ImagesDofusDB` la garde).
     static func imageCarte(_ carte: Int) -> URL {
         api.appending(path: "img/maps/0.5/\(carte).jpg")

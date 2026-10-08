@@ -48,18 +48,42 @@ enum ItineraireZaap {
         abs(a.x - b.x) + abs(a.y - b.y)
     }
 
-    static func zaapLePlusProche(de cible: (x: Int, y: Int), parmi zaaps: [Zaap]) -> Zaap? {
+    private static func zaapLePlusProche(de cible: (x: Int, y: Int), parmi zaaps: [Zaap]) -> Zaap? {
         zaaps.min { distance(($0.x, $0.y), cible) < distance(($1.x, $1.y), cible) }
     }
 
-    /// `/zaap x,y ; /travel a,b` si le zaap de `zaaps` le plus proche de la
-    /// cible épargne au moins `gainMinimal` cartes depuis `position` ; `nil` sinon.
+    /// Le zaap d'où rejoindre la cible. Le plus proche à vol d'oiseau peut
+    /// être derrière une montagne : d'abord celui que le jeu associe à la
+    /// sous-zone de la cible, s'il est actif ; sinon le plus proche en
+    /// sous-zones traversées (à égalité, en cartes) ; sinon — cible hors du
+    /// Monde des Douze relevé, sous-zone isolée — le plus proche à vol d'oiseau.
+    static func zaap(vers cible: (x: Int, y: Int), parmi zaaps: [Zaap], reseau: ReseauSousZones) -> Zaap? {
+        guard let depart = reseau.sousZone(cible.x, cible.y) else { return zaapLePlusProche(de: cible, parmi: zaaps) }
+        if let associe = reseau.zaapAssocie(depart), let zaap = zaaps.first(where: { $0.idCarte == associe }) {
+            return zaap
+        }
+        // Un ajout à la main n'a que ses coordonnées pour dire sa sous-zone.
+        let parSousZone = Dictionary(grouping: zaaps.filter { $0.monde == Zaap.mondeDesDouze }) {
+            $0.idSousZone ?? reseau.sousZone($0.x, $0.y)
+        }
+        var vues: Set<Int> = [depart]
+        var cercle = [depart]
+        while !cercle.isEmpty {
+            let atteints = cercle.flatMap { parSousZone[$0] ?? [] }
+            if !atteints.isEmpty { return zaapLePlusProche(de: cible, parmi: atteints) }
+            cercle = cercle.flatMap(reseau.voisines).filter { vues.insert($0).inserted }
+        }
+        return zaapLePlusProche(de: cible, parmi: zaaps)
+    }
+
+    /// `/zaap x,y ; /travel a,b` si le zaap retenu pour la cible (`zaap(vers:)`)
+    /// épargne au moins `gainMinimal` cartes depuis `position` ; `nil` sinon.
     static func reecrire(
-        _ texte: String, depuis position: PositionCarte?, gainMinimal: Int, zaaps: [Zaap]
+        _ texte: String, depuis position: PositionCarte?, gainMinimal: Int, zaaps: [Zaap], reseau: ReseauSousZones
     ) -> String? {
         guard let cible = cible(dans: texte),
               let position, !horsDuMondeDesDouze(position.zone),
-              let zaap = zaapLePlusProche(de: cible, parmi: zaaps)
+              let zaap = Self.zaap(vers: cible, parmi: zaaps, reseau: reseau)
         else { return nil }
         let gain = distance((position.x, position.y), cible) - distance((zaap.x, zaap.y), cible)
         guard gain >= gainMinimal else { return nil }
