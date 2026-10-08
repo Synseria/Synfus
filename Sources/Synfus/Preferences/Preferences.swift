@@ -185,6 +185,13 @@ final class Preferences: ObservableObject {
     /// identifiant de quête.
     @Published var quetesValides: [String: [Int]] = [:] { didSet { save() } }
 
+    /// L'objectif en cours de chaque quête — le dernier dont on a copié le
+    /// trajet —, par identifiant de quête ; il s'efface quand on le coche.
+    @Published var quetesEnCours: [String: Int] = [:] { didSet { save() } }
+
+    /// Les objectifs que le suivi du jeu montre faits se cochent à sa lecture.
+    @Published var quetesCocherSuivi: Bool = true { didSet { save() } }
+
     /// Le bouton des quêtes dans la barre.
     @Published var quetesBouton: Bool = true { didSet { save() } }
 
@@ -492,6 +499,8 @@ final class Preferences: ObservableObject {
         .facultatif("quetesCompact", \.quetesCompact),
         .facultatif("quetesConsigne", \.quetesConsigne),
         .facultatif("quetesVignettes", \.quetesVignettes),
+        .facultatif("quetesEnCours", \.quetesEnCours),
+        .facultatif("quetesCocherSuivi", \.quetesCocherSuivi),
         .facultatif("zaapsVueCarte", \.vuesCartes),
     ]
 

@@ -32,7 +32,7 @@ struct PanneauQuetesTests {
     @Test("Le menu : les épinglées, la montrée cochée, puis le suivi et ses quêtes à leur étape")
     func menu() {
         let reconnues = [SuiviQuetes.Reconnue(id: 7, etape: 2), SuiviQuetes.Reconnue(id: 18, etape: nil)]
-        let elements = MenuQuetes.elements(epinglees: [18, 42], montree: 42, reconnues: reconnues, etat: .lu, actives: [.masquerObjets], nom: nom)
+        let elements = MenuQuetes.elements(epinglees: [18, 42], montree: 42, reconnues: reconnues, etat: .lu, coches: 3, actives: [.masquerObjets], nom: nom)
         #expect(elements == [
             .titre(L("quete.menu.epinglees")),
             .epinglee(id: 18, nom: "Q18", montree: false),
@@ -42,8 +42,10 @@ struct PanneauQuetesTests {
             .separateur,
             .titre(L("quete.menu.suivi")),
             .lireSuivi(enCours: false),
+            .option(.cocherSuivi, actif: false),
             .reconnue(reconnues[0], titre: L("quete.menu.reconnueEtape", "Q7", 3), epinglee: false),
             .reconnue(reconnues[1], titre: "Q18", epinglee: true),
+            .message(L("quete.suivi.coches", nombre: 3, 3)),
             .separateur,
             .option(.compact, actif: false),
             .option(.consigne, actif: false),
@@ -53,19 +55,20 @@ struct PanneauQuetesTests {
     }
 
     /// Le séparateur et les options, en pied du menu.
-    private let pied = 1 + MenuQuetes.Option.allCases.count
+    private let pied = 1 + MenuQuetes.Option.affichage.count
 
     @Test("Le menu dit pourquoi le suivi ne propose rien")
     func menuSansQuete() {
-        let vide = MenuQuetes.elements(epinglees: [], montree: nil, reconnues: [], etat: .lu, actives: [], nom: nom)
+        let vide = MenuQuetes.elements(epinglees: [], montree: nil, reconnues: [], etat: .lu, coches: 0, actives: [], nom: nom)
         #expect(vide.contains(.message(L("quete.menu.aucune"))))
         #expect(!vide.contains(.toutDesepingler))
         #expect(vide.dropLast(pied).last == .message(L("quete.suivi.rien")))
-        let enCours = MenuQuetes.elements(epinglees: [1], montree: 1, reconnues: [], etat: .enCours, actives: [], nom: nom)
-        #expect(enCours.dropLast(pied).last == .lireSuivi(enCours: true))
+        let enCours = MenuQuetes.elements(epinglees: [1], montree: 1, reconnues: [], etat: .enCours, coches: 2, actives: [], nom: nom)
+        // Pendant la lecture, rien n'est dit de la précédente.
+        #expect(Array(enCours.dropLast(pied).suffix(2)) == [.lireSuivi(enCours: true), .option(.cocherSuivi, actif: false)])
         // Une seule quête : la retirer, c'est tout retirer.
         #expect(enCours.contains(.desepingler(id: 1, nom: "Q1")) && !enCours.contains(.toutDesepingler))
-        let illisible = MenuQuetes.elements(epinglees: [1], montree: 1, reconnues: [], etat: .illisible, actives: [], nom: nom)
+        let illisible = MenuQuetes.elements(epinglees: [1], montree: 1, reconnues: [], etat: .illisible, coches: 2, actives: [], nom: nom)
         #expect(illisible.dropLast(pied).last == .message(L("quete.suivi.illisible")))
     }
 
@@ -88,7 +91,7 @@ struct PanneauQuetesTests {
     /// [0,4] trois fois (aller voir, inspecter, revenir), puis [0,9] une fois :
     /// sur [0,4], seul le prochain à faire est proposé ; sur [0,9], le seul
     /// de sa carte l'est même s'il n'est pas le prochain.
-    @Test("« Tu y es » : le prochain objectif de la carte, ou le seul de sa carte")
+    @Test("« Tu y es » : le prochain objectif de la carte, le seul de sa carte, ou celui en cours")
     func suggestion() {
         let ici = PNJ.Position(x: 0, y: 4), ailleurs = PNJ.Position(x: 0, y: 9)
         let etape = FicheQuete.Etape(
@@ -97,12 +100,18 @@ struct PanneauQuetesTests {
                 FicheQuete.Objectif(id: $0.0, texte: "O\($0.0)", position: $0.1, carte: nil)
             },
             recompenses: .init(niveau: 1, experience: 0, kamas: 0, objets: [], emotes: [], titres: []))
-        #expect(etape.suggeres(en: ici, valides: []) == [1])
-        #expect(etape.suggeres(en: ici, valides: [1]) == [2])
+        #expect(etape.suggeres(en: ici, valides: [], enCours: nil) == [1])
+        #expect(etape.suggeres(en: ici, valides: [1], enCours: nil) == [2])
         // Le prochain est ailleurs (3, non situé) : [0,4] n'est pas à valider.
-        #expect(etape.suggeres(en: ici, valides: [1, 2]).isEmpty)
-        #expect(etape.suggeres(en: ailleurs, valides: []) == [5])
-        #expect(etape.suggeres(en: ailleurs, valides: [5]).isEmpty)
-        #expect(etape.suggeres(en: nil, valides: []).isEmpty)
+        #expect(etape.suggeres(en: ici, valides: [1, 2], enCours: nil).isEmpty)
+        #expect(etape.suggeres(en: ailleurs, valides: [], enCours: nil) == [5])
+        #expect(etape.suggeres(en: ailleurs, valides: [5], enCours: nil).isEmpty)
+        #expect(etape.suggeres(en: nil, valides: [], enCours: nil).isEmpty)
+        // En cours, l'objectif est proposé sur sa carte, rang et voisins
+        // n'y font rien ; ailleurs ou fait, non.
+        #expect(etape.suggeres(en: ici, valides: [1, 2], enCours: 4) == [4])
+        #expect(etape.suggeres(en: ici, valides: [], enCours: 4) == [1, 4])
+        #expect(etape.suggeres(en: ailleurs, valides: [5], enCours: 4).isEmpty)
+        #expect(etape.suggeres(en: ici, valides: [1, 2, 4], enCours: 4).isEmpty)
     }
 }

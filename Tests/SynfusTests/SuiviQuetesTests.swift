@@ -102,7 +102,7 @@ struct SuiviQuetesTests {
             [Self.objectif(72, "Ramener à {npc,10} : x1 {item,20}")],
         ])])
         let reconnues = SuiviQuetes.reconnaitre(["Le retour de la bergere", "Aller voir Meuh Sieurchance"], dans: jeu)
-        #expect(reconnues == [.init(id: 7, etape: 0)])
+        #expect(reconnues == [.init(id: 7, etape: 0, aFaire: [71])])
         let ambigue = SuiviQuetes.reconnaitre(["Le retour de la bergere", "Meuh Sieurchance"], dans: jeu)
         #expect(ambigue == [.init(id: 7, etape: nil)])
     }
