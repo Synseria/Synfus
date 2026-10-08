@@ -472,6 +472,7 @@ struct PreferencesTests {
      "etiquettes":{"1:-78,-41":"Fri 1"},"lieuxFavoris":["lieu:2738"],
      "paletteHotKey":{"keyCode":47,"modifiers":256},"paletteRecents":["/zaap 5,7"],"paletteTri":"type","quetesEpinglees":[18,42],"quetesEtape":{"18":2},
      "quetesValides":{"18":[102,104]},"quetesBouton":false,"quetesMasquerObjets":true,
+     "quetesCompact":false,"quetesConsigne":false,"quetesVignettes":true,
      "equipes":[{"membres":["Aeryn"]},{"membres":["Nova"]}],
      "hotKeys":[{"keyCode":18,"modifiers":256},null,{"keyCode":20,"modifiers":2048},null,null,null,null,null,null,null],
      "inviteFormat":"/w %nom go","inviteGroupee":true,
@@ -555,6 +556,9 @@ struct PreferencesTests {
         #expect(prefs.quetesValides == ["18": [102, 104]])
         #expect(prefs.quetesBouton == false)
         #expect(prefs.quetesMasquerObjets == true)
+        #expect(prefs.quetesCompact == false)
+        #expect(prefs.quetesConsigne == false)
+        #expect(prefs.quetesVignettes == true)
         #expect(prefs.chasseHotKey == HotKey(keyCode: 5, modifiers: 2048))
         #expect(prefs.chasseBouton == false)
         #expect(prefs.vuesCartes == false)
@@ -616,6 +620,9 @@ struct PreferencesTests {
         prefs.quetesValides = ["18": [102, 104]]
         prefs.quetesBouton = false
         prefs.quetesMasquerObjets = true
+        prefs.quetesCompact = false
+        prefs.quetesConsigne = false
+        prefs.quetesVignettes = true
         prefs.chasseHotKey = HotKey(keyCode: 5, modifiers: 2048)
         prefs.chasseBouton = false
         prefs.vuesCartes = false
@@ -648,7 +655,8 @@ struct PreferencesTests {
          "signalerBascule":true,"zaapAuto":false,"zaapBouton":true,
          "zaapGainMinimal":5,"zaapDuJeu":true,"zaapsAjoutes":[],"zaapsChoix":{},"zaapsFavoris":[],"zaapsVueCarte":true,
          "lieuxFavoris":[],"paletteRecents":[],"paletteTri":"proximite","quetesEpinglees":[],"quetesEtape":{},
-         "quetesValides":{},"quetesBouton":true,"quetesMasquerObjets":false}
+         "quetesValides":{},"quetesBouton":true,"quetesMasquerObjets":false,
+         "quetesCompact":true,"quetesConsigne":true,"quetesVignettes":false}
         """
         #expect(canonique(store.donnees(pour: Preferences.key)) == canonique(Data(attendu.utf8)))
     }
