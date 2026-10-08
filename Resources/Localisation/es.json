@@ -415,6 +415,8 @@
   "quete.recompenses": "Recompensas: %@",
   "quete.ressource": "%@ × %lld",
   "quete.ressources": "Recursos a reunir",
+  "quete.suggestion": "Estás aquí — ¿hecho?",
+  "quete.suggestion.aide": "El personaje está en este mapa: un clic en la marca valida el objetivo.",
   "quete.suivantes": "A continuación",
   "quete.suivi.enCours": "Leyendo el seguimiento…",
   "quete.suivi.illisible": "Nada que leer: ningún personaje delante, o la grabación de pantalla no está permitida (Ajustes › Lectura de pantalla).",

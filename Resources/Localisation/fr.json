@@ -415,6 +415,8 @@
   "quete.recompenses": "Récompenses : %@",
   "quete.ressource": "%@ × %lld",
   "quete.ressources": "Ressources à réunir",
+  "quete.suggestion": "Tu y es — fait ?",
+  "quete.suggestion.aide": "Le perso est sur cette carte : un clic sur la coche valide l'objectif.",
   "quete.suivantes": "Ensuite",
   "quete.suivi.enCours": "Lecture du suivi…",
   "quete.suivi.illisible": "Rien à lire : aucun perso devant, ou l'enregistrement de l'écran n'est pas autorisé (Réglages › Lecture de l'écran).",
