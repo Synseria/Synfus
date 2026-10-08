@@ -169,17 +169,21 @@ struct PanneauQuetesTests {
             etape.suggeres(en: position, valides: valides, enCours: enCours, combatFini: fini, lu: lu)
         }
         #expect(suggeres(ici, [], fini: false) == [1])
-        #expect(suggeres(ici, [], fini: true) == [1])
+        // Sans lecture, le combat fini sur sa carte suffit, à tout rang.
+        #expect(suggeres(ici, [], fini: true) == [1, 2])
         #expect(suggeres(ici, [1], fini: true) == [2])
         // Prochain ou en cours : sans combat, rien.
         #expect(suggeres(ici, [1], enCours: 2, fini: false).isEmpty)
-        #expect(suggeres(ailleurs, [], fini: true).isEmpty)
+        #expect(suggeres(ailleurs, [], fini: true) == [3])
         #expect(suggeres(ailleurs, [1, 2], fini: true) == [3])
         #expect(suggeres(ailleurs, [3], fini: true).isEmpty)
         // Le suivi montre les deux combats ouverts : chacun, après son combat.
         let ouverts = SuiviQuetes.Reconnue(id: 7, etape: nil, aFaire: [2, 3], faits: [1])
         #expect(suggeres(ailleurs, [], fini: true, lu: ouverts) == [3])
         #expect(suggeres(ailleurs, [], fini: false, lu: ouverts).isEmpty)
+        // Le suivi tait le second combat : même après lui, rien.
+        let tait = SuiviQuetes.Reconnue(id: 7, etape: nil, aFaire: [2], faits: [1], nonMontres: [3])
+        #expect(suggeres(ailleurs, [], fini: true, lu: tait).isEmpty)
     }
 
     /// La quête prise chez Amayiro : aller voir Machin (1), puis rapporter à

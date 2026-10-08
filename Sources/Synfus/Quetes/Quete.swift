@@ -272,8 +272,9 @@ struct FicheQuete: Equatable, Sendable {
         ///   dont on a copié le trajet : on y allait. Ailleurs dans l'étape,
         ///   on n'est peut-être que de passage sur une carte qui revient.
         ///
-        /// Un objectif « Vaincre… » exige en plus un combat fini sur sa carte
-        /// (`combatFini`, `FinsDeCombat`) : la présence ne prouve rien.
+        /// Un objectif « Vaincre… » exige un combat fini sur sa carte
+        /// (`combatFini`, `FinsDeCombat`) : la présence ne prouve rien, le
+        /// combat si — à tout rang, tant que le suivi ne le tait pas.
         func suggeres(en position: PNJ.Position?, valides: Set<Int>, enCours: Int?, combatFini: Bool,
                       lu: SuiviQuetes.Reconnue?) -> Set<Int> {
             guard let position else { return [] }
@@ -284,7 +285,7 @@ struct FicheQuete: Equatable, Sendable {
                 guard objectif.position == position, !valides.contains(objectif.id), !objectif.combat || combatFini
                 else { return false }
                 if connus.contains(objectif.id) { return lu?.aFaire.contains(objectif.id) == true }
-                return objectif.id == prochain || objectif.id == enCours
+                return objectif.combat || objectif.id == prochain || objectif.id == enCours
             }
             return Set(proposes.map(\.id))
         }
