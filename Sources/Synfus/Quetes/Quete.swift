@@ -6,7 +6,7 @@ struct Quetes: Codable, Equatable, Sendable {
     /// La forme du fichier gardé sur le disque : une autre (ancienne) n'est
     /// pas relue, les quêtes se retéléchargent — sans quoi un cache d'avant
     /// un nouveau champ le laisserait vide trente jours.
-    static let formatActuel = 3
+    static let formatActuel = 4
     let format: Int
     let date: Date
     let quetes: [Quete]
@@ -26,6 +26,9 @@ struct Quetes: Codable, Equatable, Sendable {
     /// Les émotes et titres que des étapes donnent, par identifiant.
     let emotes: [String: [String: String]]
     let titres: [String: [String: String]]
+    /// Les métiers et les camps d'alignement, pour les conditions des quêtes.
+    let metiers: [String: [String: String]]
+    let camps: [String: [String: String]]
 
     /// La famille « Objet de quête » de DofusDB (`item-super-types`) : un
     /// identifiant, pas un nom, qui change avec la langue.
@@ -97,6 +100,9 @@ struct Quete: Codable, Equatable, Sendable {
     let donjon: Bool
     /// Les quêtes à finir avant celle-ci.
     let prerequis: [Int]
+    /// Les conditions pour la commencer, telles que DofusDB les écrit
+    /// (`startCriterion`, lu par `ConditionsQuete`).
+    let critere: String?
     let etapes: [EtapeQuete]
 }
 
@@ -221,6 +227,15 @@ struct FicheQuete: Equatable, Sendable {
         let recompenses: Recompenses
     }
 
+    /// Ce qu'il faut pour commencer la quête, au-delà des quêtes à finir.
+    enum Exigence: Equatable, Sendable {
+        /// L'identifiant DofusDB : le nom vient du catalogue des classes.
+        case classe(Int)
+        case niveau(Int)
+        case metier(String, niveau: Int)
+        case alignement(camp: String?, niveau: Int?)
+    }
+
     /// Une quête qui s'ouvre une fois celle-ci finie.
     struct Suivante: Equatable, Sendable {
         let id: Int
@@ -235,6 +250,7 @@ struct FicheQuete: Equatable, Sendable {
     let niveau: Int
     let groupe: Bool
     let donjon: Bool
+    let exigences: [Exigence]
     let ressources: [Ressource]
     let etapes: [Etape]
     let suivantes: [Suivante]
@@ -253,6 +269,7 @@ extension Quetes {
             niveau: quete.niveau,
             groupe: quete.groupe,
             donjon: quete.donjon,
+            exigences: exigences(quete, en: langue),
             ressources: Self.ressources(quete).map { ressource($0.objet, $0.quantite, en: langue) },
             etapes: quete.etapes.map { etape in
                 let description = texte(Lieu.traduit(etape.descriptions, langue) ?? "", en: langue)
@@ -271,6 +288,21 @@ extension Quetes {
             suivantes: suivantes(de: quete.id).map {
                 FicheQuete.Suivante(id: $0.id, nom: Lieu.traduit($0.noms, langue) ?? "?", niveau: $0.niveau)
             })
+    }
+
+    /// Le niveau minimum n'est dit que s'il diffère de celui de la quête.
+    func exigences(_ quete: Quete, en langue: Langue) -> [FicheQuete.Exigence] {
+        let conditions = ConditionsQuete.lire(quete.critere)
+        var exigences: [FicheQuete.Exigence] = conditions.classe.map { [.classe($0)] } ?? []
+        if let niveau = conditions.niveau, niveau != quete.niveau { exigences.append(.niveau(niveau)) }
+        exigences += conditions.metiers.map { metier in
+            .metier(metiers[String(metier.id)].flatMap { Lieu.traduit($0, langue) } ?? "#\(metier.id)", niveau: metier.niveau)
+        }
+        if conditions.camp != nil || conditions.alignement != nil {
+            exigences.append(.alignement(camp: conditions.camp.flatMap { camps[String($0)] }.flatMap { Lieu.traduit($0, langue) },
+                                         niveau: conditions.alignement))
+        }
+        return exigences
     }
 
     /// Les quêtes qui demandent celle-ci, la plus basse d'abord.

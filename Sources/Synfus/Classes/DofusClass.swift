@@ -119,6 +119,9 @@ enum DofusClass {
 
         func breed(forKey key: String) -> Breed? { index[key] }
 
+        /// La classe qu'une condition de DofusDB désigne (`PG=13`).
+        func breed(idDofusDB id: Int) -> Breed? { breeds.first { $0.idDofusDB == id } }
+
         /// La clé d'un nom de classe lu dans un titre, quelle qu'en soit la
         /// langue : « Rogue » et « Tymador » sont « roublard ». Un nom inconnu
         /// est rendu replié tel quel, pour la couleur dérivée et l'abréviation.
