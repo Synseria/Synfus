@@ -9,6 +9,7 @@ struct ItineraireZaapTests {
     /// Les zaaps actifs d'une installation neuve, et les sous-zones de la carte intégrée.
     private let zaaps = CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [], choix: [:])
     private let reseau = ReseauSousZones(Carte.integree)
+    private var situes: ZaapsSitues { ZaapsSitues(zaaps, reseau: reseau) }
 
     private func position(_ x: Int, _ y: Int, zone: String? = nil) -> PositionCarte {
         PositionCarte(x: x, y: y, zone: zone)
@@ -28,14 +29,14 @@ struct ItineraireZaapTests {
                       "voir /travel -2,0", "/travel -2,0 merci", "/travel -2,0\n/travel 3,4",
                       "/travel -2", "/travel 999,0", "/traveler 1,2"] {
             #expect(ItineraireZaap.cible(dans: texte) == nil, "\(texte)")
-            #expect(ItineraireZaap.reecrire(texte, depuis: position(-30, 30), gainMinimal: 1, zaaps: zaaps, zaapDuJeu: true, reseau: reseau) == nil, "\(texte)")
+            #expect(ItineraireZaap.reecrire(texte, depuis: position(-30, 30), gainMinimal: 1, zaaps: situes, zaapDuJeu: true) == nil, "\(texte)")
         }
     }
 
     @Test("Loin de la cible et près d'un zaap : le zaap précède le /travel tel quel")
     func reecrit() {
         // Cible à deux cartes du zaap de Coin des Bouftous (5,7).
-        let texte = ItineraireZaap.reecrire("/travel 6,8", depuis: position(-30, -40), gainMinimal: 5, zaaps: zaaps, zaapDuJeu: true, reseau: reseau)
+        let texte = ItineraireZaap.reecrire("/travel 6,8", depuis: position(-30, -40), gainMinimal: 5, zaaps: situes, zaapDuJeu: true)
         #expect(texte == "/zaap 5,7 ; /travel 6,8")
     }
 
@@ -43,18 +44,18 @@ struct ItineraireZaapTests {
     func seuil() {
         // Depuis -2,0 (zaap d'Amakna) vers 3,-4 : 9 cartes à pied, 1 depuis
         // le zaap du Château (3,-5) — 8 de gagnées.
-        #expect(ItineraireZaap.reecrire("/travel 3,-4", depuis: position(-2, 0), gainMinimal: 8, zaaps: zaaps, zaapDuJeu: true, reseau: reseau)
+        #expect(ItineraireZaap.reecrire("/travel 3,-4", depuis: position(-2, 0), gainMinimal: 8, zaaps: situes, zaapDuJeu: true)
                 == "/zaap 3,-5 ; /travel 3,-4")
-        #expect(ItineraireZaap.reecrire("/travel 3,-4", depuis: position(-2, 0), gainMinimal: 9, zaaps: zaaps, zaapDuJeu: true, reseau: reseau) == nil)
+        #expect(ItineraireZaap.reecrire("/travel 3,-4", depuis: position(-2, 0), gainMinimal: 9, zaaps: situes, zaapDuJeu: true) == nil)
     }
 
     @Test("Sans position, ou hors du Monde des Douze, rien n'est réécrit")
     func sansPosition() {
-        #expect(ItineraireZaap.reecrire("/travel 6,8", depuis: nil, gainMinimal: 1, zaaps: zaaps, zaapDuJeu: true, reseau: reseau) == nil)
+        #expect(ItineraireZaap.reecrire("/travel 6,8", depuis: nil, gainMinimal: 1, zaaps: situes, zaapDuJeu: true) == nil)
         #expect(ItineraireZaap.reecrire("/travel 6,8", depuis: position(-30, -40, zone: "Incarnam (Pâturages)"),
-                                        gainMinimal: 1, zaaps: zaaps, zaapDuJeu: true, reseau: reseau) == nil)
+                                        gainMinimal: 1, zaaps: situes, zaapDuJeu: true) == nil)
         #expect(ItineraireZaap.reecrire("/travel 6,8", depuis: position(-30, -40, zone: "Montagne des Koalaks"),
-                                        gainMinimal: 1, zaaps: zaaps, zaapDuJeu: true, reseau: reseau) != nil)
+                                        gainMinimal: 1, zaaps: situes, zaapDuJeu: true) != nil)
     }
 
     @Test("La liste intégrée : aucun zaap en double, ceux d'une autre carte inactifs")
@@ -68,9 +69,9 @@ struct ItineraireZaapTests {
         // Sans cela, un /travel 3,-1 d'Amakna passerait par le cimetière
         // d'Incarnam (3,0) à vol d'oiseau ; par les sous-zones, c'est le
         // zaap du Village d'Amakna.
-        #expect(ItineraireZaap.reecrire("/travel 3,-1", depuis: position(-40, 20), gainMinimal: 1, zaaps: zaaps, zaapDuJeu: true, reseau: .vide)
+        #expect(ItineraireZaap.reecrire("/travel 3,-1", depuis: position(-40, 20), gainMinimal: 1, zaaps: ZaapsSitues(zaaps, reseau: .vide), zaapDuJeu: true)
                 == "/zaap 3,-5 ; /travel 3,-1")
-        #expect(ItineraireZaap.reecrire("/travel 3,-1", depuis: position(-40, 20), gainMinimal: 1, zaaps: zaaps, zaapDuJeu: true, reseau: reseau)
+        #expect(ItineraireZaap.reecrire("/travel 3,-1", depuis: position(-40, 20), gainMinimal: 1, zaaps: situes, zaapDuJeu: true)
                 == "/zaap -2,0 ; /travel 3,-1")
     }
 
@@ -92,7 +93,7 @@ struct ItineraireZaapTests {
         #expect(tous.count == Carte.integree.zaaps.count + 1)
         #expect(tous.first { $0.cle == doublon.cle }?.nom(en: .fr) == "Village d'Amakna")
         let actifs = CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [nouveau], choix: [:])
-        #expect(ItineraireZaap.reecrire("/travel 51,50", depuis: position(0, 0), gainMinimal: 5, zaaps: actifs, zaapDuJeu: true, reseau: reseau)
+        #expect(ItineraireZaap.reecrire("/travel 51,50", depuis: position(0, 0), gainMinimal: 5, zaaps: ZaapsSitues(actifs, reseau: reseau), zaapDuJeu: true)
                 == "/zaap 50,50 ; /travel 51,50")
     }
 
@@ -148,10 +149,22 @@ struct ItineraireZaapTests {
         // à huit cartes mais sans chemin ; le jeu y rattache le zaap des
         // Koalaks [-16,1].
         let astrub = position(5, -18)
-        #expect(ItineraireZaap.reecrire("/travel -20,9", depuis: astrub, gainMinimal: 5, zaaps: zaaps, zaapDuJeu: true, reseau: reseau)
+        #expect(ItineraireZaap.reecrire("/travel -20,9", depuis: astrub, gainMinimal: 5, zaaps: situes, zaapDuJeu: true)
                 == "/zaap -16,1 ; /travel -20,9")
-        #expect(ItineraireZaap.reecrire("/travel -20,9", depuis: astrub, gainMinimal: 5, zaaps: zaaps, zaapDuJeu: true, reseau: .vide)
+        #expect(ItineraireZaap.reecrire("/travel -20,9", depuis: astrub, gainMinimal: 5, zaaps: ZaapsSitues(zaaps, reseau: .vide), zaapDuJeu: true)
                 == "/zaap -25,12 ; /travel -20,9")
+    }
+
+    @Test("Le zaap du jeu cède à celui des sous-zones quand il est bien plus loin")
+    func zaapDuJeuLointain() {
+        // [4,12], Forêt d'Amakna : le jeu y rattache le Rivage sufokien
+        // [10,22], à seize cartes ; le Coin des Bouftous [5,7] est à six.
+        #expect(ItineraireZaap.reecrire("/travel 4,12", depuis: position(5, -18), gainMinimal: 5, zaaps: situes, zaapDuJeu: true)
+                == "/zaap 5,7 ; /travel 4,12")
+        // [-20,9] : Koalak [-16,1] à douze cartes, la Route des Roulottes
+        // [-25,12] à huit par les sous-zones — trop peu pour céder.
+        #expect(ItineraireZaap.zaap(vers: (-20, 9), parmi: situes, zaapDuJeu: true).map { [$0.x, $0.y] } == [-16, 1])
+        #expect(ItineraireZaap.zaap(vers: (-20, 9), parmi: situes, zaapDuJeu: false).map { [$0.x, $0.y] } == [-25, 12])
     }
 
     /// 1 ─ 2 ─ 3, et 4 isolée ; la cible [0,0] est dans la sous-zone 1, qui
@@ -161,20 +174,32 @@ struct ItineraireZaapTests {
         sousZones: [SousZoneCarte(id: 1, zaap: 100, voisines: [2]), SousZoneCarte(id: 2, zaap: nil, voisines: [1, 3]),
                     SousZoneCarte(id: 3, zaap: nil, voisines: [2]), SousZoneCarte(id: 4, zaap: nil, voisines: [])],
         cases: ["0,0": 1, "1,0": 1, "5,0": 2, "9,0": 3, "30,0": 3, "40,0": 4]))
-    private let zaapA = Zaap(20, 0, noms: ["fr": "A"], idCarte: 100, idSousZone: 3)
     private let zaapB = Zaap(9, 0, noms: ["fr": "B"], idCarte: 200, idSousZone: 3)
     private let zaapC = Zaap(5, 0, noms: ["fr": "C"], idCarte: 300, idSousZone: 2)
     private let zaapD = Zaap(1, 1, noms: ["fr": "D"], idCarte: 400, idSousZone: 4)
 
     private func choisi(_ cible: (Int, Int), _ zaaps: [Zaap], zaapDuJeu: Bool = true) -> String? {
-        ItineraireZaap.zaap(vers: cible, parmi: zaaps, zaapDuJeu: zaapDuJeu, reseau: petitReseau)?.nom(en: .fr)
+        ItineraireZaap.zaap(vers: cible, parmi: ZaapsSitues(zaaps, reseau: petitReseau), zaapDuJeu: zaapDuJeu)?.nom(en: .fr)
     }
 
-    @Test("Le zaap associé l'emporte, même plus loin qu'un autre")
+    @Test("Le zaap associé l'emporte, sauf si celui des sous-zones épargne l'écart")
     func associe() {
-        #expect(choisi((0, 0), [zaapB, zaapC, zaapD, zaapA]) == "A")
+        // C, par les sous-zones, est à cinq cartes de la cible ; D, plus près,
+        // est dans une sous-zone isolée.
+        let ecart = ItineraireZaap.ecartZaapDuJeu
+        let presque = Zaap(5 + ecart - 1, 0, noms: ["fr": "A"], idCarte: 100, idSousZone: 3)
+        let tropLoin = Zaap(5 + ecart, 0, noms: ["fr": "A"], idCarte: 100, idSousZone: 3)
+        #expect(choisi((0, 0), [zaapC, zaapD, presque]) == "A")
+        #expect(choisi((0, 0), [zaapC, zaapD, tropLoin]) == "C")
         // Sans le zaap du jeu : le plus proche en sous-zones traversées.
-        #expect(choisi((0, 0), [zaapB, zaapC, zaapD, zaapA], zaapDuJeu: false) == "C")
+        #expect(choisi((0, 0), [zaapC, zaapD, presque], zaapDuJeu: false) == "C")
+    }
+
+    @Test("Aucun zaap joignable par les sous-zones : celui du jeu, pas le vol d'oiseau")
+    func associeIsole() {
+        let isole = Zaap(40, 0, noms: ["fr": "A"], idCarte: 100, idSousZone: 4)
+        #expect(choisi((0, 0), [zaapD, isole]) == "A")
+        #expect(choisi((0, 0), [zaapD, isole], zaapDuJeu: false) == "D")
     }
 
     @Test("Associé inactif : le moins de sous-zones à traverser, puis le moins de cartes")
