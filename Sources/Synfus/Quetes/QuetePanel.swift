@@ -74,12 +74,14 @@ final class QuetePanel: NSObject, ObservableObject {
     func desepingler(_ id: Int) {
         let prefs = Preferences.shared
         prefs.quetesEpinglees.removeAll { $0 == id }
+        LectureSuivi.shared.oublier([id])
         if montree == id { montree = prefs.quetesEpinglees.last }
         if prefs.quetesEpinglees.isEmpty { fermer() }
     }
 
     /// Retire toutes les quêtes et cache le panneau.
     func toutDesepingler() {
+        LectureSuivi.shared.oublier(Preferences.shared.quetesEpinglees)
         Preferences.shared.quetesEpinglees = []
         montree = nil
         fermer()

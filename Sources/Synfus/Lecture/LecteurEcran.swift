@@ -285,10 +285,11 @@ final class LecteurEcran: ObservableObject {
 
     /// Une lecture à la demande, hors du tour et sans signature : les lignes
     /// de la zone `genre` chez le perso devant — ou le dernier lu devant, si
-    /// Synfus vient de passer au premier plan. `nil` : rien à lire (aucun
-    /// perso, pas d'autorisation, capture manquée). Le moteur est un acteur :
-    /// une lecture du tour en cours passe avant, sans se mélanger.
-    func lireUneFois(_ genre: GenreLecture) async -> [String]? {
+    /// Synfus vient de passer au premier plan —, et le nom de ce perso.
+    /// `nil` : rien à lire (aucun perso, pas d'autorisation, capture manquée).
+    /// Le moteur est un acteur : une lecture du tour en cours passe avant,
+    /// sans se mélanger.
+    func lireUneFois(_ genre: GenreLecture) async -> (perso: String, lignes: [String])? {
         let manager = WindowManager.shared
         guard WindowPreviewService.shared.authorized,
               let client = manager.clients.first(where: { manager.isFrontmost($0) })
@@ -297,7 +298,7 @@ final class LecteurEcran: ObservableObject {
               case .lue(_, let lignes, _, _) = await moteur.lire(png: png, precedente: nil, couleur: false)
         else { return nil }
         diagnostic.lignes[genre] = lignes
-        return lignes
+        return (client.name, lignes)
     }
 
     /// L'OCR d'une zone déjà découpée — l'essai du calibrage, sur la capture
