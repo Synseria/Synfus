@@ -52,6 +52,17 @@ final class ChassePanel: NSObject, ObservableObject, NSWindowDelegate {
         ouvert = false
     }
 
+    /// Ouvert, il se cache quand une autre app que Dofus passe devant et
+    /// revient avec le jeu, sans reprendre le clavier (`PanneauxJeu`).
+    func revoirVisibilite(force: Bool) {
+        guard let panel, ouvert else { return }
+        if PanneauxJeu.visible(ouvert: true) {
+            if force || !panel.isVisible { panel.orderFrontRegardless() }
+        } else if panel.isVisible {
+            panel.orderOut(nil)
+        }
+    }
+
     func windowWillClose(_: Notification) {
         ouvert = false
     }

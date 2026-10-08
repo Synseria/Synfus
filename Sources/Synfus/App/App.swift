@@ -9,11 +9,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         buildApplicationMenu()
 
-        // Le modèle signale quand la barre et le panneau des quêtes doivent se
+        // Le modèle signale quand la barre et les panneaux du jeu doivent se
         // réévaluer ; il ne les connaît pas.
         WindowManager.shared.visibiliteARevoir = {
             FloatingBarController.shared.updateVisibility(force: $0)
             QuetePanel.shared.revoirVisibilite(force: $0)
+            ChassePanel.shared.revoirVisibilite(force: $0)
         }
         WindowManager.shared.start()
         FreezeWatcher.shared.start()
