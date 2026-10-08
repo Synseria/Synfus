@@ -59,25 +59,28 @@ enum ItineraireZaap {
     /// sinon le plus proche en sous-zones traversées (à égalité, en cartes) ;
     /// sinon — cible hors du Monde des Douze relevé, sous-zone isolée — le plus
     /// proche à vol d'oiseau.
-    static func zaap(vers cible: (x: Int, y: Int), parmi zaaps: [Zaap], zaapDuJeu: Bool,
-                     reseau: ReseauSousZones) -> Zaap? {
-        guard let depart = reseau.sousZone(cible.x, cible.y) else { return zaapLePlusProche(de: cible, parmi: zaaps) }
-        if zaapDuJeu, let associe = reseau.zaapAssocie(depart),
-           let zaap = zaaps.first(where: { $0.idCarte == associe }) {
-            return zaap
+    static func zaap(vers cible: (x: Int, y: Int), parmi zaaps: ZaapsSitues, zaapDuJeu: Bool) -> Zaap? {
+        guard let depart = zaaps.reseau.sousZone(cible.x, cible.y) else {
+            return zaapLePlusProche(de: cible, parmi: zaaps.liste)
         }
-        // Un ajout à la main n'a que ses coordonnées pour dire sa sous-zone.
-        let parSousZone = Dictionary(grouping: zaaps.filter { $0.monde == Zaap.mondeDesDouze }) {
-            $0.idSousZone ?? reseau.sousZone($0.x, $0.y)
+        if zaapDuJeu, let associe = zaaps.reseau.zaapAssocie(depart).flatMap(zaaps.zaap(carte:)) {
+            return associe
         }
+        return parLesSousZones(depuis: depart, vers: cible, parmi: zaaps) ?? zaapLePlusProche(de: cible, parmi: zaaps.liste)
+    }
+
+    /// Le plus proche de la cible parmi les zaaps du premier cercle de
+    /// sous-zones qui en a, depuis celle de la cible ; `nil` si aucun n'est joignable.
+    private static func parLesSousZones(depuis depart: Int, vers cible: (x: Int, y: Int),
+                                        parmi zaaps: ZaapsSitues) -> Zaap? {
         var vues: Set<Int> = [depart]
         var cercle = [depart]
         while !cercle.isEmpty {
-            let atteints = cercle.flatMap { parSousZone[$0] ?? [] }
+            let atteints = cercle.flatMap(zaaps.zaaps(dans:))
             if !atteints.isEmpty { return zaapLePlusProche(de: cible, parmi: atteints) }
-            cercle = cercle.flatMap(reseau.voisines).filter { vues.insert($0).inserted }
+            cercle = cercle.flatMap(zaaps.reseau.voisines).filter { vues.insert($0).inserted }
         }
-        return zaapLePlusProche(de: cible, parmi: zaaps)
+        return nil
     }
 
     /// Le zaap de la cible (`zaap(vers:)`), s'il épargne au moins
@@ -99,12 +102,11 @@ enum ItineraireZaap {
     /// `/zaap x,y ; /travel a,b` si le zaap retenu pour la cible (`zaap(vers:)`)
     /// épargne au moins `gainMinimal` cartes depuis `position` ; `nil` sinon.
     static func reecrire(
-        _ texte: String, depuis position: PositionCarte?, gainMinimal: Int, zaaps: [Zaap], zaapDuJeu: Bool,
-        reseau: ReseauSousZones
+        _ texte: String, depuis position: PositionCarte?, gainMinimal: Int, zaaps: ZaapsSitues, zaapDuJeu: Bool
     ) -> String? {
         guard let cible = cible(dans: texte), let depart = rejoindre(position),
               let zaap = zaapUtile(depuis: depart, vers: cible,
-                                   zaap: Self.zaap(vers: cible, parmi: zaaps, zaapDuJeu: zaapDuJeu, reseau: reseau),
+                                   zaap: Self.zaap(vers: cible, parmi: zaaps, zaapDuJeu: zaapDuJeu),
                                    gainMinimal: gainMinimal)
         else { return nil }
         let travel = texte.trimmingCharacters(in: .whitespacesAndNewlines)

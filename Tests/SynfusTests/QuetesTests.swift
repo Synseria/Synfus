@@ -102,7 +102,7 @@ struct QuetesTests {
     private func contexte() throws -> ContextePalette {
         var contexte = ContextePalette()
         contexte.position = PositionCarte(x: -2, y: 0, zone: "Amakna")
-        contexte.zaaps = CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [], choix: [:])
+        contexte.zaaps = ZaapsSitues(CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [], choix: [:]), reseau: .vide)
         contexte.quetes = try Self.quetes()
         return contexte
     }
@@ -247,7 +247,7 @@ struct QuetesTests {
     @Test("Le filtre « Ici » de la palette : la quête qui commence sur la case, le PNJ qui s'y tient")
     func paletteIci() throws {
         var contexte = try contexte()
-        contexte.reseau = reseau
+        contexte.zaaps = ZaapsSitues(contexte.zaaps.liste, reseau: reseau)
         contexte.position = PositionCarte(x: -1, y: -39, zone: nil)
         let ici = RecherchePalette.entrees("", contexte, filtre: .ici)
         #expect(ici.map(\.id).sorted() == ["pnj:196:-1,-39", "quete:18"])

@@ -241,8 +241,7 @@ final class PaletteModele: ObservableObject {
         var contexte = ContextePalette()
         contexte.langue = L10n.courante.langue
         contexte.position = LecteurEcran.shared.positionDuPersoDevant
-        contexte.zaaps = prefs.zaapsActifs
-        contexte.reseau = CarteStore.shared.reseau
+        contexte.zaaps = ZaapClipboard.shared.zaapsSitues
         contexte.lieux = CarteStore.shared.carte.lieux
         contexte.etiquettes = prefs.etiquettes
         contexte.favoris = Set(prefs.zaapsFavoris + prefs.lieuxFavoris)
