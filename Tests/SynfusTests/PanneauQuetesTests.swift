@@ -72,6 +72,28 @@ struct PanneauQuetesTests {
         #expect(illisible.dropLast(pied).last == .message(L("quete.suivi.illisible")))
     }
 
+    @Test("Le menu dit ce qui commence sur la case du perso, entre les épinglées et le suivi")
+    func menuIci() {
+        let ici = MenuQuetes.Ici(coordonnees: "[1,2]", quetes: [.init(id: 5, nom: "Q5", niveau: 10),
+                                                               .init(id: 18, nom: "Q18", niveau: 70)], pnjs: ["Wogew", "Otomaï"])
+        let elements = MenuQuetes.elements(epinglees: [18], montree: 18, reconnues: [], etat: .jamaisLu, coches: 0,
+                                           actives: [], ici: ici, nom: nom)
+        #expect(Array(elements.prefix(9)) == [
+            .titre(L("quete.menu.epinglees")),
+            .epinglee(id: 18, nom: "Q18", montree: true),
+            .desepingler(id: 18, nom: "Q18"),
+            .separateur,
+            .titre(L("quete.menu.ici", "[1,2]")),
+            .ici(id: 5, titre: L("quete.menu.iciQuete", "Q5", 10), epinglee: false),
+            .ici(id: 18, titre: L("quete.menu.iciQuete", "Q18", 70), epinglee: true),
+            .message(L("quete.menu.iciPNJ", "Wogew, Otomaï")),
+            .separateur,
+        ])
+        let rien = MenuQuetes.elements(epinglees: [18], montree: 18, reconnues: [], etat: .jamaisLu, coches: 0, actives: [],
+                                       ici: MenuQuetes.Ici(coordonnees: "[1,2]", quetes: [], pnjs: []), nom: nom)
+        #expect(!rien.contains(.titre(L("quete.menu.ici", "[1,2]"))))
+    }
+
     @Test("Le mode compact ne grandit aucune mesure de la fiche")
     func compact() {
         let confort = Mirror(reflecting: MetriquesQuete.confort).children.map(\.value)

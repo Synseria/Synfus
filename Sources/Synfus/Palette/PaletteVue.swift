@@ -89,7 +89,8 @@ struct PaletteVue: View {
     @ViewBuilder
     private var resultats: some View {
         if modele.entrees.isEmpty {
-            Text(quetes.chargement && quetes.quetes == nil ? L("palette.quetes.chargement") : L("palette.aucun"))
+            Text(quetes.chargement && quetes.quetes == nil ? L("palette.quetes.chargement")
+                 : modele.filtre == .ici && !modele.positionConnue ? L("palette.ici.sansPosition") : L("palette.aucun"))
                 .font(.system(size: 13))
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity)

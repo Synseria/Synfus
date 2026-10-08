@@ -218,4 +218,40 @@ struct QuetesTests {
         #expect(RecherchePalette.entrees("", contexte, filtre: .pnj).allSatisfy { $0.genre == .pnj })
         #expect(RecherchePalette.entrees("wogew", contexte, filtre: .quetes).map(\.genre) == [.quete])
     }
+
+    // MARK: - Ici
+
+    /// Les sous-zones des départs et des PNJ du jeu d'essai, dans le Monde des Douze.
+    private let reseau = ReseauSousZones(Carte(
+        date: .now, lieux: [], sousZones: [SousZoneCarte(id: 56, zaap: nil, voisines: []),
+                                           SousZoneCarte(id: 10, zaap: nil, voisines: [])], cases: [:]))
+
+    @Test("Le départ d'une quête : son PNJ, sa case et sa sous-zone")
+    func departs() throws {
+        let quete = try #require(try Self.quetes().quetes.first)
+        #expect(quete.departs == [DepartQuete(pnj: 196, position: PNJ.Position(x: -1, y: -39), sousZone: 56)])
+    }
+
+    @Test("Ici : les quêtes qui commencent sur la case lue et les PNJ qui s'y tiennent, dans le même monde")
+    func ici() throws {
+        let quetes = try Self.quetes()
+        let astrub = PositionCarte(x: -1, y: -39, zone: "Astrub (Cité d'Astrub)")
+        #expect(QuetesIci.quetes(quetes, perso: astrub, reseau: reseau).map(\.id) == [18])
+        #expect(QuetesIci.pnjs(quetes, perso: astrub, reseau: reseau).map(\.id) == [196])
+        // Depuis Incarnam, la case homonyme n'est pas celle-ci.
+        let incarnam = PositionCarte(x: -1, y: -39, zone: "Incarnam (Pâturages)")
+        #expect(QuetesIci.quetes(quetes, perso: incarnam, reseau: reseau).isEmpty)
+        #expect(QuetesIci.quetes(quetes, perso: PositionCarte(x: 0, y: -39, zone: nil), reseau: reseau).isEmpty)
+    }
+
+    @Test("Le filtre « Ici » de la palette : la quête qui commence sur la case, le PNJ qui s'y tient")
+    func paletteIci() throws {
+        var contexte = try contexte()
+        contexte.reseau = reseau
+        contexte.position = PositionCarte(x: -1, y: -39, zone: nil)
+        let ici = RecherchePalette.entrees("", contexte, filtre: .ici)
+        #expect(ici.map(\.id).sorted() == ["pnj:196:-1,-39", "quete:18"])
+        contexte.position = nil
+        #expect(RecherchePalette.entrees("", contexte, filtre: .ici).isEmpty)
+    }
 }
