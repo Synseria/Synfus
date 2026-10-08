@@ -2,13 +2,18 @@ import Foundation
 
 /// Les quêtes depuis l'API de DofusDB, téléchargées par Synfus à la première
 /// recherche puis tous les 30 jours, gardées sur le disque. Une page de
-/// quêtes porte déjà ses étapes, objectifs et cartes ; restent à nommer les
-/// objets, monstres et PNJ cités, et à situer les PNJ de départ.
+/// quêtes porte déjà ses étapes, objectifs, cartes et récompenses ; restent à
+/// nommer les objets, monstres, PNJ, émotes et titres cités, et à situer les
+/// PNJ de départ.
 enum QuetesDofusDB {
     struct QueteAPI: Decodable, Sendable {
         struct Depart: Decodable, Sendable {
             let mapId: Int
             let npcId: Int
+        }
+
+        struct Besoins: Decodable, Sendable {
+            let quests: [Int]?
         }
 
         let id: Int
@@ -18,13 +23,53 @@ enum QuetesDofusDB {
         let isDungeonQuest: Bool?
         let stepIds: [Int]?
         let startPosition: [Depart]?
+        let need: Besoins?
         let steps: [EtapeAPI]?
     }
 
     struct EtapeAPI: Decodable, Sendable {
         let id: Int
         let name: DofusDB.Noms
+        let description: DofusDB.Noms?
+        let optimalLevel: Int?
+        let duration: Double?
+        let rewards: [RecompenseAPI]?
         let objectives: [ObjectifAPI]?
+
+        /// Une étape répétable a une récompense par tranche de niveau : celle
+        /// du niveau optimal (une borne à -1 est ouverte).
+        var recompense: RecompenseAPI? {
+            let niveau = optimalLevel ?? 0
+            return rewards?.first { recompense in
+                let (minimum, maximum) = (recompense.levelMin ?? -1, recompense.levelMax ?? -1)
+                return (minimum < 0 || minimum <= niveau) && (maximum < 0 || niveau <= maximum)
+            } ?? rewards?.first
+        }
+
+        var recompenses: RecompensesEtape {
+            guard let recompense else { return .aucune }
+            let niveau = optimalLevel ?? 0, duree = duration ?? 0
+            return RecompensesEtape(
+                niveau: niveau,
+                experience: RecompensesEtape.experience(niveau: niveau, duree: duree, ratio: recompense.experienceRatio ?? 0),
+                kamas: RecompensesEtape.kamas(niveau: niveau, duree: duree, ratio: recompense.kamasRatio ?? 0),
+                objets: (recompense.itemsReward ?? []).compactMap { paire in
+                    guard paire.count == 2, paire[1] > 0 else { return nil }
+                    return RecompensesEtape.Objet(objet: paire[0], quantite: paire[1])
+                },
+                emotes: recompense.emotesReward ?? [], titres: recompense.titlesReward ?? [])
+        }
+    }
+
+    struct RecompenseAPI: Decodable, Sendable {
+        let levelMin: Int?
+        let levelMax: Int?
+        let experienceRatio: Double?
+        let kamasRatio: Double?
+        /// Des paires `[objet, quantité]`.
+        let itemsReward: [[Int]]?
+        let emotesReward: [Int]?
+        let titlesReward: [Int]?
     }
 
     struct ObjectifAPI: Decodable, Sendable {
@@ -45,9 +90,11 @@ enum QuetesDofusDB {
             let parameter2: Int?
         }
 
+        let id: Int
         let className: String
         let text: DofusDB.Noms
         let coords: Coordonnees?
+        let mapId: Int?
         let map: Carte?
         let parameters: Parametres?
 
@@ -74,6 +121,12 @@ enum QuetesDofusDB {
         let name: DofusDB.Noms
         /// Pour un objet : son type (`item-types`).
         var typeId: Int?
+    }
+
+    /// Un titre : DofusDB le donne au masculin et au féminin.
+    struct TitreAPI: Decodable, Sendable {
+        let id: Int
+        let nameMale: DofusDB.Noms
     }
 
     /// Un type d'objet et sa grande famille (« Ressource », « Consommable »…).
@@ -114,9 +167,17 @@ enum QuetesDofusDB {
         AnkamaAssets.supportDirectory.appending(path: "Quetes.json", directoryHint: .notDirectory)
     }
 
+    /// `nil` aussi pour un fichier d'une autre forme : il se retélécharge.
     static func gardees() -> Quetes? {
         guard let donnees = try? Data(contentsOf: fichier) else { return nil }
-        return try? JSONDecoder().decode(Quetes.self, from: donnees)
+        return relire(donnees)
+    }
+
+    static func relire(_ donnees: Data) -> Quetes? {
+        guard let quetes = try? JSONDecoder().decode(Quetes.self, from: donnees),
+              quetes.format == Quetes.formatActuel
+        else { return nil }
+        return quetes
     }
 
     static func garder(_ quetes: Quetes) throws {
@@ -130,7 +191,10 @@ enum QuetesDofusDB {
         let objectifs = quetes.flatMap { ($0.steps ?? []).flatMap { $0.objectives ?? [] } }
         let renvois = renvois(objectifs)
         let departs = quetes.flatMap { $0.startPosition ?? [] }
-        async let objets: [Nomme] = parIdentifiants("items", renvois.objets)
+        let recompenses = quetes.flatMap { ($0.steps ?? []).map(\.recompenses) }
+        async let objets: [Nomme] = parIdentifiants("items", renvois.objets.union(recompenses.flatMap { $0.objets.map(\.objet) }))
+        async let emotes: [Nomme] = parIdentifiants("emoticons", Set(recompenses.flatMap(\.emotes)))
+        async let titres: [TitreAPI] = parIdentifiants("titles", Set(recompenses.flatMap(\.titres)))
         async let monstres: [Nomme] = parIdentifiants("monsters", renvois.monstres)
         async let pnjs: [Nomme] = parIdentifiants("npcs", renvois.pnjs.union(departs.map(\.npcId)))
         let cartes: [CarteAPI] = try await parIdentifiants("map-positions", Set(departs.map(\.mapId)))
@@ -139,7 +203,8 @@ enum QuetesDofusDB {
         let zones: [Nomme] = try await parIdentifiants("areas", Set(sousZones.map(\.areaId)))
         let types: [TypeObjetAPI] = try await DofusDB.toutes("item-types", [])
         let cites = Cites(objets: try await objets, monstres: try await monstres, pnjs: try await pnjs,
-                          cartes: cartes, sousZones: sousZones, zones: zones, types: types)
+                          cartes: cartes, sousZones: sousZones, zones: zones, types: types,
+                          emotes: try await emotes, titres: try await titres)
         return assembler(quetes: quetes, cites: cites, date: maintenant)
     }
 
@@ -172,6 +237,8 @@ enum QuetesDofusDB {
         var sousZones: [SousZoneAPI] = []
         var zones: [Nomme] = []
         var types: [TypeObjetAPI] = []
+        var emotes: [Nomme] = []
+        var titres: [TitreAPI] = []
     }
 
     static func assembler(quetes: [QueteAPI], cites: Cites, date: Date) -> Quetes {
@@ -196,15 +263,20 @@ enum QuetesDofusDB {
             let etapes = (api.steps ?? [])
                 .sorted { (ordre.firstIndex(of: $0.id) ?? .max) < (ordre.firstIndex(of: $1.id) ?? .max) }
                 .map { etape in
-                    EtapeQuete(noms: etape.name.parLangue, objectifs: (etape.objectives ?? []).map { objectif in
+                    let objectifs = (etape.objectives ?? []).map { objectif in
                         let position = objectif.position
                         if let pnj = objectif.pnj { situer(pnj, position, objectif.map?.subAreaId, api.id) }
-                        return ObjectifQuete(textes: objectif.text.parLangue, x: position?.x, y: position?.y,
+                        // Une carte que DofusDB ne connaît pas n'a pas de vue à montrer.
+                        return ObjectifQuete(id: objectif.id, textes: objectif.text.parLangue, x: position?.x, y: position?.y,
+                                             carte: objectif.map == nil ? nil : objectif.mapId,
                                              objet: objectif.aRamener?.objet, quantite: objectif.aRamener?.quantite)
-                    })
+                    }
+                    return EtapeQuete(noms: etape.name.parLangue, descriptions: etape.description?.parLangue ?? [:],
+                                      objectifs: objectifs, recompenses: etape.recompenses)
                 }
             return Quete(id: api.id, noms: api.name.parLangue, niveau: api.levelMin ?? 0,
-                         groupe: api.isPartyQuest ?? false, donjon: api.isDungeonQuest ?? false, etapes: etapes)
+                         groupe: api.isPartyQuest ?? false, donjon: api.isDungeonQuest ?? false,
+                         prerequis: api.need?.quests ?? [], etapes: etapes)
         }
         func noms(_ liste: [Nomme]) -> [String: [String: String]] {
             Dictionary(liste.map { (String($0.id), $0.name.parLangue) }, uniquingKeysWith: { a, _ in a })
@@ -229,8 +301,10 @@ enum QuetesDofusDB {
         let categories = Dictionary(objets.compactMap { objet in
             objet.typeId.flatMap { familles[$0] }.map { (String(objet.id), $0) }
         }, uniquingKeysWith: { a, _ in a })
-        return Quetes(date: date, quetes: modeles, pnjs: situes, objets: noms(objets),
-                      monstres: noms(monstres), nomsPNJ: noms(pnjs), sousZones: lieux, categoriesObjets: categories)
+        return Quetes(format: Quetes.formatActuel, date: date, quetes: modeles, pnjs: situes, objets: noms(objets),
+                      monstres: noms(monstres), nomsPNJ: noms(pnjs), sousZones: lieux, categoriesObjets: categories,
+                      emotes: noms(cites.emotes),
+                      titres: Dictionary(cites.titres.map { (String($0.id), $0.nameMale.parLangue) }, uniquingKeysWith: { a, _ in a }))
     }
 
     private static func parIdentifiants<Element: Decodable & Sendable>(_ chemin: String, _ ids: Set<Int>) async throws -> [Element] {
@@ -242,7 +316,7 @@ enum QuetesDofusDB {
                 + [URLQueryItem(name: "$select[]", value: "id"), URLQueryItem(name: "$select[]", value: "name"),
                    URLQueryItem(name: "$select[]", value: "posX"), URLQueryItem(name: "$select[]", value: "posY"),
                    URLQueryItem(name: "$select[]", value: "subAreaId"), URLQueryItem(name: "$select[]", value: "areaId"),
-                   URLQueryItem(name: "$select[]", value: "typeId")])
+                   URLQueryItem(name: "$select[]", value: "typeId"), URLQueryItem(name: "$select[]", value: "nameMale")])
         }
         return elements
     }

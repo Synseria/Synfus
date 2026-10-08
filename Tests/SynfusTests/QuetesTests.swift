@@ -5,20 +5,27 @@ import Testing
 /// Les quêtes : assemblées depuis DofusDB, leurs ressources, et la palette.
 struct QuetesTests {
 
-    /// Wogew l'hewmite, raccourcie : trois étapes, deux objets à ramener.
+    /// Wogew l'hewmite, raccourcie : deux étapes, deux objets à ramener, une
+    /// récompense ; et la quête qui la suit.
     static let page = """
-    {"total":1,"data":[{"id":18,"name":{"fr":"Wogew l'hewmite","en":"Wogew the Hewmit"},"levelMin":70,"isPartyQuest":true,
-      "stepIds":[57,55],"startPosition":[{"mapId":160695296,"npcId":196}],
+    {"total":2,"data":[{"id":18,"name":{"fr":"Wogew l'hewmite","en":"Wogew the Hewmit"},"levelMin":70,"isPartyQuest":true,
+      "stepIds":[57,55],"startPosition":[{"mapId":160695296,"npcId":196}],"need":{"quests":[]},
       "steps":[
-        {"id":55,"name":{"fr":"Le sang du wabbit GM"},"objectives":[
-          {"className":"QuestObjectiveFightMonsterData","text":{"fr":"Vaincre x1 {monster,182} en un seul combat"},
-           "coords":{"x":25,"y":-8},"parameters":{"parameter0":182,"parameter1":1}},
-          {"className":"QuestObjectiveBringItemToNpcData","text":{"fr":"Ramener à {npc,119} : x3 {item,1746}"},
-           "map":{"posX":-2,"posY":-4,"subAreaId":10},"parameters":{"parameter0":119,"parameter1":1746,"parameter2":3}}]},
-        {"id":57,"name":{"fr":"Analyse de sang"},"objectives":[
-          {"className":"QuestObjectiveBringItemToNpcData","text":{"fr":"Ramener à {npc,196} : x2 {item,1746}"},
-           "parameters":{"parameter0":196,"parameter1":1746,"parameter2":2}},
-          {"className":"QuestObjectiveDiscoverMapData","text":{"fr":"Découvrir la carte : {map,99}"}}]}]}]}
+        {"id":55,"name":{"fr":"Le sang du wabbit GM"},"optimalLevel":70,"duration":1,
+         "description":{"id":"94441","fr":"Wogew a besoin du sang d'un {monster,182}."},
+         "rewards":[{"levelMin":-1,"levelMax":-1,"experienceRatio":1,"kamasRatio":1,
+                     "itemsReward":[[1747,1]],"emotesReward":[11],"titlesReward":[]}],
+         "objectives":[
+          {"id":101,"className":"QuestObjectiveFightMonsterData","text":{"fr":"Vaincre x1 {monster,182} en un seul combat"},
+           "coords":{"x":25,"y":-8},"mapId":0,"parameters":{"parameter0":182,"parameter1":1}},
+          {"id":102,"className":"QuestObjectiveBringItemToNpcData","text":{"fr":"Ramener à {npc,119} : x3 {item,1746}"},
+           "mapId":185862149,"map":{"posX":-2,"posY":-4,"subAreaId":10},
+           "parameters":{"parameter0":119,"parameter1":1746,"parameter2":3}}]},
+        {"id":57,"name":{"fr":"Analyse de sang"},"rewards":[],"objectives":[
+          {"id":103,"className":"QuestObjectiveBringItemToNpcData","text":{"fr":"Ramener à {npc,196} : x2 {item,1746}"},
+           "mapId":149769,"parameters":{"parameter0":196,"parameter1":1746,"parameter2":2}},
+          {"id":104,"className":"QuestObjectiveDiscoverMapData","text":{"fr":"Découvrir la carte : {map,99}"}}]}]},
+     {"id":19,"name":{"fr":"La suite"},"levelMin":80,"need":{"quests":[18]},"steps":[]}]}
     """
 
     static func quetes() throws -> Quetes {
@@ -36,9 +43,10 @@ struct QuetesTests {
         let sousZone = try JSONDecoder().decode(QuetesDofusDB.SousZoneAPI.self,
                                                 from: Data(#"{"id":10,"areaId":0,"name":{"fr":"Village d'Amakna"}}"#.utf8))
         let cites = QuetesDofusDB.Cites(
-            objets: [try nomme(1746, "Sang de Wabbit GM", type: 137)], monstres: [try nomme(182, "Wabbit GM")],
+            objets: [try nomme(1746, "Sang de Wabbit GM", type: 137), try nomme(1747, "Analyse de sang")],
+            monstres: [try nomme(182, "Wabbit GM")],
             pnjs: [try nomme(119, "Otomaï"), try nomme(196, "Wogew")], cartes: [carte],
-            sousZones: [sousZone], zones: [try nomme(0, "Amakna")], types: [type])
+            sousZones: [sousZone], zones: [try nomme(0, "Amakna")], types: [type], emotes: [try nomme(11, "Pierre")])
         return QuetesDofusDB.assembler(quetes: api, cites: cites, date: .now)
     }
 
@@ -66,7 +74,7 @@ struct QuetesTests {
         // Une quête place Wogew en 5,5 ; deux autres en -2,-4.
         func quete(_ id: Int, _ x: Int, _ y: Int) -> String {
             #"{"id":\#(id),"name":{"fr":"Q\#(id)"},"steps":[{"id":\#(id),"name":{"fr":"E"},"objectives":[{"#
-                + #""className":"QuestObjectiveGoToNpcData","text":{"fr":"Aller voir {npc,196}"},"#
+                + #""id":\#(id),"className":"QuestObjectiveGoToNpcData","text":{"fr":"Aller voir {npc,196}"},"#
                 + #""map":{"posX":\#(x),"posY":\#(y),"subAreaId":10},"parameters":{"parameter0":196}}]}]}"#
         }
         let page = #"{"total":3,"data":["# + [quete(1, 5, 5), quete(2, -2, -4), quete(3, -2, -4)].joined(separator: ",") + "]}"
@@ -110,6 +118,54 @@ struct QuetesTests {
         let otomai = try #require(fiche.etapes[1].objectifs.first { $0.texte.contains("Otomaï") })
         #expect(otomai.position == PNJ.Position(x: -2, y: -4))
         #expect(fiche.etapes[0].objectifs[1].position == nil)
+        #expect(fiche.nomFrancais == "Wogew l'hewmite")
+    }
+
+    @Test("La fiche d'une étape : sa consigne résolue, la vue de ses cartes connues, ses récompenses")
+    func ficheEtape() throws {
+        let fiche = try #require(try Self.quetes().fiche(18, en: .en))
+        let sang = fiche.etapes[1]
+        #expect(sang.description == "Wogew a besoin du sang d'un Wabbit GM.")
+        #expect(sang.objectifs.map(\.id) == [101, 102])
+        #expect(sang.objectifs.map(\.carte) == [nil, 185862149])
+        // Une carte que DofusDB ne décrit pas (sans `map`) n'a pas de vue.
+        #expect(fiche.etapes[0].objectifs.map(\.carte) == [nil, nil])
+        #expect(fiche.etapes[0].description == nil)
+        #expect(sang.recompenses == FicheQuete.Recompenses(
+            niveau: 70, experience: 201_600, kamas: 6_280,
+            objets: [FicheQuete.Ressource(nom: "Analyse de sang", quantite: 1, categorie: nil)],
+            emotes: ["Pierre"], titres: []))
+        #expect(fiche.etapes[0].recompenses.vides)
+    }
+
+    @Test("Expérience et kamas d'une étape, au niveau optimal ; une étape répétable prend la tranche de ce niveau")
+    func recompenses() throws {
+        #expect(RecompensesEtape.experience(niveau: 177, duree: 2, ratio: 1.2) == 4_377_903)
+        #expect(RecompensesEtape.kamas(niveau: 1, duree: 1, ratio: 1) == 1)
+        #expect(RecompensesEtape.kamas(niveau: 0, duree: 1, ratio: 1) == 0)
+        let etape = try JSONDecoder().decode(QuetesDofusDB.EtapeAPI.self, from: Data("""
+        {"id":1,"name":{"fr":"E"},"optimalLevel":21,"duration":1,"rewards":[
+          {"levelMin":20,"levelMax":20,"kamasRatio":1},{"levelMin":21,"levelMax":21,"kamasRatio":3}]}
+        """.utf8))
+        #expect(etape.recompenses.kamas == RecompensesEtape.kamas(niveau: 21, duree: 1, ratio: 3))
+    }
+
+    @Test("Les quêtes suivantes : celles qui demandent la quête finie")
+    func suivantes() throws {
+        let quetes = try Self.quetes()
+        #expect(quetes.fiche(18, en: .fr)?.suivantes == [FicheQuete.Suivante(id: 19, nom: "La suite", niveau: 80)])
+        #expect(quetes.fiche(19, en: .fr)?.suivantes == [])
+    }
+
+    @Test("Un fichier de quêtes d'une autre forme n'est pas relu : il se retélécharge")
+    func ancienFormat() throws {
+        let donnees = try JSONEncoder().encode(try Self.quetes())
+        #expect(QuetesDofusDB.relire(donnees) != nil)
+        var objet = try #require(try JSONSerialization.jsonObject(with: donnees) as? [String: Any])
+        objet["format"] = Quetes.formatActuel - 1
+        #expect(QuetesDofusDB.relire(try JSONSerialization.data(withJSONObject: objet)) == nil)
+        objet["format"] = nil
+        #expect(QuetesDofusDB.relire(try JSONSerialization.data(withJSONObject: objet)) == nil)
     }
 
     @Test("/pnj et le filtre PNJ : le trajet vers sa position")
