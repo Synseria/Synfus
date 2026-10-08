@@ -27,6 +27,12 @@ enum DofusDB {
     static let parPage = 50
     private static let api = URL(string: "https://api.dofusdb.fr")!
 
+    /// Les seuls champs à rendre : les sous-zones portent la liste de leurs
+    /// cartes, dix fois plus lourde que ce qu'on en lit.
+    static func selection(_ champs: [String]) -> [URLQueryItem] {
+        champs.map { URLQueryItem(name: "$select[]", value: $0) }
+    }
+
     /// Jamais téléchargée (`nil`), ou trop vieille.
     static func perimee(depuis date: Date?, maintenant: Date) -> Bool {
         guard let date else { return true }
