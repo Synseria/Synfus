@@ -124,49 +124,111 @@ struct PanneauQuetesTests {
         #expect(MetriquesQuete.pour(compact: true) == .compact && MetriquesQuete.pour(compact: false) == .confort)
     }
 
-    /// [0,4] trois fois (aller voir, inspecter, revenir), puis [0,9] une fois :
-    /// sur [0,4], seul le prochain à faire est proposé ; sur [0,9], le seul
-    /// de sa carte l'est même s'il n'est pas le prochain.
-    @Test("« Tu y es » : le prochain objectif de la carte, le seul de sa carte, ou celui en cours")
-    func suggestion() {
-        let ici = PNJ.Position(x: 0, y: 4), ailleurs = PNJ.Position(x: 0, y: 9)
-        let etape = FicheQuete.Etape(
+    private static func etape(_ objectifs: [(Int, PNJ.Position?, Bool)]) -> FicheQuete.Etape {
+        FicheQuete.Etape(
             nom: "E", description: nil,
-            objectifs: [(1, ici), (2, ici), (3, nil), (4, ici), (5, ailleurs)].map {
-                FicheQuete.Objectif(id: $0.0, texte: "O\($0.0)", position: $0.1, carte: nil, combat: false)
-            },
-            recompenses: .init(niveau: 1, experience: 0, kamas: 0, objets: [], emotes: [], titres: []))
-        #expect(etape.suggeres(en: ici, valides: [], enCours: nil, combatFini: false) == [1])
-        #expect(etape.suggeres(en: ici, valides: [1], enCours: nil, combatFini: false) == [2])
-        // Le prochain est ailleurs (3, non situé) : [0,4] n'est pas à valider.
-        #expect(etape.suggeres(en: ici, valides: [1, 2], enCours: nil, combatFini: false).isEmpty)
-        #expect(etape.suggeres(en: ailleurs, valides: [], enCours: nil, combatFini: false) == [5])
-        #expect(etape.suggeres(en: ailleurs, valides: [5], enCours: nil, combatFini: false).isEmpty)
-        #expect(etape.suggeres(en: nil, valides: [], enCours: nil, combatFini: false).isEmpty)
-        // En cours, l'objectif est proposé sur sa carte, rang et voisins
-        // n'y font rien ; ailleurs ou fait, non.
-        #expect(etape.suggeres(en: ici, valides: [1, 2], enCours: 4, combatFini: false) == [4])
-        #expect(etape.suggeres(en: ici, valides: [], enCours: 4, combatFini: false) == [1, 4])
-        #expect(etape.suggeres(en: ailleurs, valides: [5], enCours: 4, combatFini: false).isEmpty)
-        #expect(etape.suggeres(en: ici, valides: [1, 2, 4], enCours: 4, combatFini: false).isEmpty)
-    }
-
-    /// [0,4] : aller voir (1), vaincre (2) ; [0,9] : vaincre (3), seul de sa carte.
-    @Test("« Vaincre… » n'est proposé qu'après un combat fini sur sa carte, quel que soit son rang")
-    func suggestionCombat() {
-        let ici = PNJ.Position(x: 0, y: 4), ailleurs = PNJ.Position(x: 0, y: 9)
-        let etape = FicheQuete.Etape(
-            nom: "E", description: nil,
-            objectifs: [(1, ici, false), (2, ici, true), (3, ailleurs, true)].map {
+            objectifs: objectifs.map {
                 FicheQuete.Objectif(id: $0.0, texte: "O\($0.0)", position: $0.1, carte: nil, combat: $0.2)
             },
             recompenses: .init(niveau: 1, experience: 0, kamas: 0, objets: [], emotes: [], titres: []))
-        #expect(etape.suggeres(en: ici, valides: [], enCours: nil, combatFini: false) == [1])
-        #expect(etape.suggeres(en: ici, valides: [], enCours: nil, combatFini: true) == [1, 2])
-        // Prochain, en cours ou seul de sa carte : sans combat, rien.
-        #expect(etape.suggeres(en: ici, valides: [1], enCours: 2, combatFini: false).isEmpty)
-        #expect(etape.suggeres(en: ailleurs, valides: [], enCours: nil, combatFini: false).isEmpty)
-        #expect(etape.suggeres(en: ailleurs, valides: [], enCours: nil, combatFini: true) == [3])
-        #expect(etape.suggeres(en: ailleurs, valides: [3], enCours: nil, combatFini: true).isEmpty)
+    }
+
+    /// [0,4] trois fois (aller voir, inspecter, revenir), puis [0,9] une fois :
+    /// sans suivi lu, seul le prochain à faire est proposé, ou celui en cours —
+    /// même seul de sa carte, un objectif plus loin dans l'étape ne l'est pas.
+    @Test("« Tu y es » sans suivi lu : le prochain objectif de la carte, ou celui en cours")
+    func suggestion() {
+        let ici = PNJ.Position(x: 0, y: 4), ailleurs = PNJ.Position(x: 0, y: 9)
+        let etape = Self.etape([(1, ici, false), (2, ici, false), (3, nil, false), (4, ici, false), (5, ailleurs, false)])
+        func suggeres(_ position: PNJ.Position?, _ valides: Set<Int>, enCours: Int? = nil) -> Set<Int> {
+            etape.suggeres(en: position, valides: valides, enCours: enCours, combatFini: false, lu: nil)
+        }
+        #expect(suggeres(ici, []) == [1])
+        #expect(suggeres(ici, [1]) == [2])
+        // Le prochain est ailleurs (3, non situé) : [0,4] n'est pas à valider.
+        #expect(suggeres(ici, [1, 2]).isEmpty)
+        #expect(suggeres(ailleurs, []).isEmpty)
+        #expect(suggeres(ailleurs, [1, 2, 3, 4]) == [5])
+        #expect(suggeres(ailleurs, [5]).isEmpty)
+        #expect(suggeres(nil, []).isEmpty)
+        // En cours, l'objectif est proposé sur sa carte, rang et voisins
+        // n'y font rien ; ailleurs ou fait, non.
+        #expect(suggeres(ici, [1, 2], enCours: 4) == [4])
+        #expect(suggeres(ici, [], enCours: 4) == [1, 4])
+        #expect(suggeres(ailleurs, [5], enCours: 4).isEmpty)
+        #expect(suggeres(ici, [1, 2, 4], enCours: 4).isEmpty)
+    }
+
+    /// [0,4] : aller voir (1), vaincre (2) ; [0,9] : vaincre (3).
+    @Test("« Vaincre… » n'est proposé qu'après un combat fini sur sa carte")
+    func suggestionCombat() {
+        let ici = PNJ.Position(x: 0, y: 4), ailleurs = PNJ.Position(x: 0, y: 9)
+        let etape = Self.etape([(1, ici, false), (2, ici, true), (3, ailleurs, true)])
+        func suggeres(_ position: PNJ.Position, _ valides: Set<Int>, enCours: Int? = nil, fini: Bool,
+                      lu: SuiviQuetes.Reconnue? = nil) -> Set<Int> {
+            etape.suggeres(en: position, valides: valides, enCours: enCours, combatFini: fini, lu: lu)
+        }
+        #expect(suggeres(ici, [], fini: false) == [1])
+        #expect(suggeres(ici, [], fini: true) == [1])
+        #expect(suggeres(ici, [1], fini: true) == [2])
+        // Prochain ou en cours : sans combat, rien.
+        #expect(suggeres(ici, [1], enCours: 2, fini: false).isEmpty)
+        #expect(suggeres(ailleurs, [], fini: true).isEmpty)
+        #expect(suggeres(ailleurs, [1, 2], fini: true) == [3])
+        #expect(suggeres(ailleurs, [3], fini: true).isEmpty)
+        // Le suivi montre les deux combats ouverts : chacun, après son combat.
+        let ouverts = SuiviQuetes.Reconnue(id: 7, etape: nil, aFaire: [2, 3], faits: [1])
+        #expect(suggeres(ailleurs, [], fini: true, lu: ouverts) == [3])
+        #expect(suggeres(ailleurs, [], fini: false, lu: ouverts).isEmpty)
+    }
+
+    /// La quête prise chez Amayiro : aller voir Machin (1), puis rapporter à
+    /// Amayiro (2), sur la case où l'on vient de la prendre.
+    @Test("Chez Amayiro : « lui rapporter » n'est pas proposé tant que le jeu montre « aller voir » un autre")
+    func suggestionAmayiro() {
+        let machin = PNJ.Position(x: 3, y: -7), amayiro = PNJ.Position(x: -1, y: 2)
+        let etape = Self.etape([(1, machin, false), (2, amayiro, false)])
+        func suggeres(_ position: PNJ.Position, _ valides: Set<Int>, lu: SuiviQuetes.Reconnue?) -> Set<Int> {
+            etape.suggeres(en: position, valides: valides, enCours: nil, combatFini: false, lu: lu)
+        }
+        // Sans lecture : le prochain est chez Machin.
+        #expect(suggeres(amayiro, [], lu: nil).isEmpty)
+        #expect(suggeres(machin, [], lu: nil) == [1])
+        // Le jeu montre « aller voir Machin » et tait « rapporter » : rien chez
+        // Amayiro, et « rapporter » passe en retrait.
+        let auDepart = SuiviQuetes.Reconnue(id: 7, etape: nil, aFaire: [1], nonMontres: [2])
+        #expect(suggeres(amayiro, [], lu: auDepart).isEmpty)
+        #expect(etape.nonOuverts(valides: [], lu: auDepart) == [2])
+        // Machin vu, le jeu montre « rapporter » : proposé chez Amayiro, même
+        // sans la coche de Machin.
+        let auRetour = SuiviQuetes.Reconnue(id: 7, etape: nil, aFaire: [2], faits: [1])
+        #expect(suggeres(amayiro, [], lu: auRetour) == [2])
+        #expect(etape.nonOuverts(valides: [], lu: auRetour).isEmpty)
+        // Sans lecture, Machin coché : « rapporter » est le prochain.
+        #expect(suggeres(amayiro, [1], lu: nil) == [2])
+    }
+
+    /// Trois PNJ à voir dans n'importe quel ordre (1, 2, 3), puis rapporter (4).
+    @Test("Plusieurs PNJ à voir sans ordre : chacun montré ouvert est proposé sur sa case")
+    func suggestionSansOrdre() {
+        let cases = (1...4).map { PNJ.Position(x: $0, y: 0) }
+        let etape = Self.etape((1...4).map { ($0, cases[$0 - 1], false) })
+        func suggeres(_ rang: Int, _ lu: SuiviQuetes.Reconnue?, enCours: Int? = nil) -> Set<Int> {
+            etape.suggeres(en: cases[rang - 1], valides: [], enCours: enCours, combatFini: false, lu: lu)
+        }
+        let ouverts = SuiviQuetes.Reconnue(id: 7, etape: nil, aFaire: [1, 2, 3], nonMontres: [4])
+        #expect(suggeres(3, ouverts) == [3])
+        #expect(suggeres(4, ouverts).isEmpty)
+        #expect(suggeres(3, nil).isEmpty)
+        // Coupé par « VOIR PLUS… » après le deuxième : le troisième n'est pas
+        // su, il ne l'est qu'en cours.
+        let coupe = SuiviQuetes.Reconnue(id: 7, etape: nil, aFaire: [1, 2])
+        #expect(suggeres(3, coupe).isEmpty)
+        #expect(suggeres(3, coupe, enCours: 3) == [3])
+        #expect(etape.nonOuverts(valides: [], lu: coupe).isEmpty)
+        // Une lecture d'une autre étape ne dit rien de celle-ci.
+        let autre = SuiviQuetes.Reconnue(id: 7, etape: nil, aFaire: [99], nonMontres: [4])
+        #expect(suggeres(3, autre).isEmpty)
+        #expect(etape.nonOuverts(valides: [], lu: autre).isEmpty)
     }
 }

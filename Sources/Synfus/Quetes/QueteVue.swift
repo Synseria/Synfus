@@ -329,9 +329,12 @@ struct QueteVue: View {
         let coches = valides(fiche.id)
         let ici = lecteur.positionDuPersoDevant.map { PNJ.Position(x: $0.x, y: $0.y) }
         let enCours = ficheImposee == nil ? prefs.quetesEnCours[String(fiche.id)] : nil
+        // Le suivi du perso devant, lu tout à l'heure : ce que le jeu montre.
+        let lu = ficheImposee == nil ? lecture.reconnue(fiche.id) : nil
         let suggeres = ficheImposee == nil ? etape.suggeres(en: ici, valides: coches, enCours: enCours,
-                                                                  combatFini: lecteur.combatFiniDevant) : []
-        let aFaire = ficheImposee == nil ? lecture.aFaire(fiche.id) : []
+                                                                  combatFini: lecteur.combatFiniDevant, lu: lu) : []
+        let aFaire = Set(lu?.aFaire ?? [])
+        let nonOuverts = etape.nonOuverts(valides: coches, lu: lu)
         let lus = ficheImposee == nil
             ? lecture.historique.persos(fiche.id, etape: rang, seule: !plusieurs, maintenant: Date()) : []
         let tournee = ficheImposee == nil ? Self.tournee(etape, aFaire: aFaire, valides: coches) : []
@@ -368,7 +371,7 @@ struct QueteVue: View {
                 ligneObjectif(objectif, quete: fiche.id,
                               etat: .init(valide: coches.contains(objectif.id), suggere: suggeres.contains(objectif.id),
                                           enCours: enCours == objectif.id, aFaire: aFaire.contains(objectif.id),
-                                          numero: numeros[objectif.id]))
+                                          nonOuvert: nonOuverts.contains(objectif.id), numero: numeros[objectif.id]))
             }
             if let premier = etape.objectifs.first(where: { $0.id == tournee.first }) {
                 Button { copierTrajet(premier, quete: fiche.id) } label: {
@@ -479,19 +482,21 @@ struct QueteVue: View {
     /// verte), le perso sur sa carte (`suggere`, coche violette qui propose
     /// de valider), en cours (le dernier dont on a copié le trajet : coche en
     /// cible, texte appuyé), encore à faire d'après le suivi du jeu lu tout à
-    /// l'heure (`aFaire`, trait et fond ambre). Fait, il n'est rien d'autre.
-    /// `numero` : son rang dans le plus court chemin des objectifs ouverts
-    /// ensemble (`tournee`).
+    /// l'heure (`aFaire`, trait et fond ambre), ou tu par ce suivi lu en
+    /// entier (`nonOuvert` : pas encore ouvert, en retrait). Fait, il n'est
+    /// rien d'autre. `numero` : son rang dans le plus court chemin des
+    /// objectifs ouverts ensemble (`tournee`).
     private struct EtatObjectif {
         let valide: Bool
         let suggere: Bool
         let enCours: Bool
         let aFaire: Bool
+        let nonOuvert: Bool
         var numero: Int?
 
         var icone: String {
             valide ? "checkmark.circle.fill" : suggere ? "location.circle.fill"
-                : enCours ? "smallcircle.filled.circle" : "circle"
+                : enCours ? "smallcircle.filled.circle" : nonOuvert ? "circle.dashed" : "circle"
         }
 
         var teinte: Color {
@@ -520,7 +525,8 @@ struct QueteVue: View {
                 }
                 .buttonStyle(.plain)
                 .help(suggere ? (objectif.combat ? L("quete.suggestion.combat.aide") : L("quete.suggestion.aide"))
-                    : etat.aFaire && !valide ? L("quete.aFaire.aide") : "")
+                    : etat.aFaire && !valide ? L("quete.aFaire.aide")
+                    : etat.nonOuvert && !valide ? L("quete.nonOuvert.aide") : "")
                 // Fait et sans trajet, la ligne n'a plus rien à faire.
                 let action: (() -> Void)? = valide && objectif.position == nil ? nil : { copierTrajet(objectif, quete: quete) }
                 ligneCopiable(id: id, aide: Self.aide(objectif), action: action) {
@@ -534,7 +540,7 @@ struct QueteVue: View {
                         } else {
                             Text(objectif.texte)
                                 .font(.system(size: metriques.texte, weight: etat.enCours && !valide ? .semibold : .regular))
-                                .foregroundStyle(valide ? Color.secondary : Color.primary)
+                                .foregroundStyle(valide || etat.nonOuvert ? Color.secondary : Color.primary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         if !replie {
@@ -553,6 +559,12 @@ struct QueteVue: View {
                                     }
                                 } else {
                                     detail(id: id, L("quete.nonSitue"), monospace: false)
+                                }
+                                if etat.nonOuvert, !valide, copiee != id {
+                                    Text(L("quete.nonOuvert"))
+                                        .font(.system(size: metriques.detail))
+                                        .foregroundStyle(.tertiary)
+                                        .lineLimit(1)
                                 }
                                 Spacer(minLength: 0)
                                 if prefs.quetesVignettes, let carte = objectif.carte {
