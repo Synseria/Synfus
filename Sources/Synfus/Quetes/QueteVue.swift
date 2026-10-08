@@ -51,7 +51,7 @@ struct QueteVue: View {
         .frame(minWidth: 280, maxWidth: .infinity, minHeight: 200, maxHeight: .infinity, alignment: .top)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Color.primary.opacity(0.12)))
-        .overlay(alignment: .bottomTrailing) { poignee }
+        .bordsRedimensionnables(coin: poignee)
     }
 
     /// Sans quête épinglée : où en trouver une.
@@ -76,7 +76,6 @@ struct QueteVue: View {
             .font(.system(size: 8, weight: .bold))
             .foregroundStyle(.tertiary)
             .frame(width: 18, height: 18)
-            .overlay(PoigneeRedimension())
             .padding(2)
     }
 
