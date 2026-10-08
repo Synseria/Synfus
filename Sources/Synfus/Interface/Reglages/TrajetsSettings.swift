@@ -13,6 +13,7 @@ struct TrajetsSettings: View {
                     Stepper(L("zaap.gain.valeur", prefs.zaapGainMinimal),
                             value: $prefs.zaapGainMinimal, in: ItineraireZaap.gainsPossibles)
                 }
+                Interrupteur(titre: L("zaap.duJeu"), sousTexte: L("zaap.duJeu.sousTexte"), isOn: $prefs.zaapDuJeu)
                 if prefs.lirePosition {
                     Interrupteur(titre: L("zaap.auto"), aide: L("zaap.auto.aide"), isOn: $prefs.zaapAuto)
                 } else {

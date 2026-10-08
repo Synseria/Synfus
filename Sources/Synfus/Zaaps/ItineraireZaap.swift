@@ -53,13 +53,17 @@ enum ItineraireZaap {
     }
 
     /// Le zaap d'où rejoindre la cible. Le plus proche à vol d'oiseau peut
-    /// être derrière une montagne : d'abord celui que le jeu associe à la
-    /// sous-zone de la cible, s'il est actif ; sinon le plus proche en
-    /// sous-zones traversées (à égalité, en cartes) ; sinon — cible hors du
-    /// Monde des Douze relevé, sous-zone isolée — le plus proche à vol d'oiseau.
-    static func zaap(vers cible: (x: Int, y: Int), parmi zaaps: [Zaap], reseau: ReseauSousZones) -> Zaap? {
+    /// être derrière une montagne : d'abord, avec `zaapDuJeu`, celui que le
+    /// jeu associe à la sous-zone de la cible, s'il est actif — parfois loin,
+    /// mais l'autopilote connaît des raccourcis que la carte ne dit pas ;
+    /// sinon le plus proche en sous-zones traversées (à égalité, en cartes) ;
+    /// sinon — cible hors du Monde des Douze relevé, sous-zone isolée — le plus
+    /// proche à vol d'oiseau.
+    static func zaap(vers cible: (x: Int, y: Int), parmi zaaps: [Zaap], zaapDuJeu: Bool,
+                     reseau: ReseauSousZones) -> Zaap? {
         guard let depart = reseau.sousZone(cible.x, cible.y) else { return zaapLePlusProche(de: cible, parmi: zaaps) }
-        if let associe = reseau.zaapAssocie(depart), let zaap = zaaps.first(where: { $0.idCarte == associe }) {
+        if zaapDuJeu, let associe = reseau.zaapAssocie(depart),
+           let zaap = zaaps.first(where: { $0.idCarte == associe }) {
             return zaap
         }
         // Un ajout à la main n'a que ses coordonnées pour dire sa sous-zone.
@@ -79,11 +83,12 @@ enum ItineraireZaap {
     /// `/zaap x,y ; /travel a,b` si le zaap retenu pour la cible (`zaap(vers:)`)
     /// épargne au moins `gainMinimal` cartes depuis `position` ; `nil` sinon.
     static func reecrire(
-        _ texte: String, depuis position: PositionCarte?, gainMinimal: Int, zaaps: [Zaap], reseau: ReseauSousZones
+        _ texte: String, depuis position: PositionCarte?, gainMinimal: Int, zaaps: [Zaap], zaapDuJeu: Bool,
+        reseau: ReseauSousZones
     ) -> String? {
         guard let cible = cible(dans: texte),
               let position, !horsDuMondeDesDouze(position.zone),
-              let zaap = Self.zaap(vers: cible, parmi: zaaps, reseau: reseau)
+              let zaap = Self.zaap(vers: cible, parmi: zaaps, zaapDuJeu: zaapDuJeu, reseau: reseau)
         else { return nil }
         let gain = distance((position.x, position.y), cible) - distance((zaap.x, zaap.y), cible)
         guard gain >= gainMinimal else { return nil }

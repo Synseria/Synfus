@@ -522,6 +522,8 @@
   "zaap.auto.aide": "Synfus looks at every new copy, from any app, and only touches a \"/travel x,y\" text. Passwords marked as secret are never read. macOS may ask once whether Synfus can read the clipboard.",
   "zaap.autreCarte": "other map",
   "zaap.bouton": "Palette button in the bar",
+  "zaap.duJeu": "Zaap chosen by the game",
+  "zaap.duJeu.sousTexte": "The one the game links to the target area, even if farther: autopilot knows shortcuts. Off: the closest through neighbouring areas.",
   "zaap.favori.ajouter": "Add to favorites",
   "zaap.favori.retirer": "Remove from favourites",
   "zaap.gain": "Minimum gain",
