@@ -391,8 +391,6 @@
   "quete.exigence.metier": "%@ level %lld",
   "quete.exigence.niveau": "from level %lld",
   "quete.exigences": "Requires: %@",
-  "quete.faits": "%lld done",
-  "quete.faits.un": "%lld done",
   "quete.fermer": "Hide the panel (quests stay pinned)",
   "quete.fermer.simple": "Close",
   "quete.groupe": "Group",
