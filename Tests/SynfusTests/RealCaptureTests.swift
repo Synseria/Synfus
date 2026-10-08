@@ -107,14 +107,15 @@ struct RealCaptureTests {
         let debut = Date()
         let index = SuiviQuetes.Index(quetes)
         let indexe = Date()
-        let reconnues = SuiviQuetes.reconnaitre(lignes, dans: index).reconnues
+        let reconnues = SuiviQuetes.reconnaitre(lignes, coupe: signature.auBord, dans: index).reconnues
         let noms = reconnues.map { reconnue in
             quetes.quetes.first { $0.id == reconnue.id }.flatMap { Lieu.traduit($0.noms, .fr) } ?? "#\(reconnue.id)"
         }
         print("index en \(Int(indexe.timeIntervalSince(debut) * 1000)) ms, reconnues en "
               + "\(Int(Date().timeIntervalSince(indexe) * 1000)) ms : "
               + zip(noms, reconnues).map {
-                  "\($0) (étape \($1.etape.map { String($0 + 1) } ?? "—"), à faire \($1.aFaire), faits \($1.faits))"
+                  "\($0) (étape \($1.etape.map { String($0 + 1) } ?? "—"), à faire \($1.aFaire), faits \($1.faits), "
+                  + "non montrés \($1.nonMontres))"
               }.joined(separator: ", "))
         if let attendues = ProcessInfo.processInfo.environment["SYNFUS_QUETES_ATTENDUES"] {
             #expect(noms == attendues.split(separator: "|").map(String.init))

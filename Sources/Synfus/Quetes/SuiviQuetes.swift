@@ -27,13 +27,19 @@ enum SuiviQuetes {
         /// Ceux que le suivi tient pour faits ; vide quand la lecture est
         /// douteuse (`SuiviObjectifs`).
         let faits: [Int]
+        /// Ceux que le suivi tait : pas encore ouverts, ou faits hors de
+        /// l'ordre. Seulement jusqu'à la coupure, et quand toutes les lignes
+        /// se sont lues (`SuiviObjectifs`).
+        let nonMontres: [Int]
 
-        init(id: Int, etape: Int?, etapeSure: Bool = false, aFaire: [Int] = [], faits: [Int] = []) {
+        init(id: Int, etape: Int?, etapeSure: Bool = false, aFaire: [Int] = [], faits: [Int] = [],
+             nonMontres: [Int] = []) {
             self.id = id
             self.etape = etape
             self.etapeSure = etape != nil && etapeSure
             self.aFaire = aFaire
             self.faits = faits
+            self.nonMontres = nonMontres
         }
     }
 
@@ -89,7 +95,9 @@ enum SuiviQuetes {
         }
     }
 
-    static func reconnaitre(_ lignes: [String], dans index: Index) -> Lu {
+    /// `coupe` : le texte lu touche le bas de la zone (`SignatureZone.auBord`),
+    /// les objectifs de la dernière quête lue peuvent continuer dessous.
+    static func reconnaitre(_ lignes: [String], coupe: Bool = false, dans index: Index) -> Lu {
         let noms = index.noms, quetes = index.quetes
         var groupes: [(titre: Nom, objectifs: [String])] = []
         var entete = 0
@@ -112,11 +120,12 @@ enum SuiviQuetes {
                 entete += 1
             }
         }
-        let reconnues = groupes.map { groupe in
+        let reconnues = groupes.enumerated().map { rang, groupe in
             let quete = groupe.titre.quete, langue = groupe.titre.langue
-            if let lue = SuiviObjectifs.lire(groupe.objectifs, quete: quete, langue: langue, dans: quetes) {
+            if let lue = SuiviObjectifs.lire(groupe.objectifs, coupee: coupe && rang == groupes.count - 1,
+                                             quete: quete, langue: langue, dans: quetes) {
                 return Reconnue(id: quete.id, etape: quete.etapes.count > 1 ? lue.etape : nil, etapeSure: lue.sure,
-                                aFaire: lue.aFaire, faits: lue.faits)
+                                aFaire: lue.aFaire, faits: lue.faits, nonMontres: lue.nonMontres)
             }
             return Reconnue(id: quete.id, etape: etapeParRenvois(quete, langue: langue, objectifs: groupe.objectifs,
                                                                  dans: quetes))

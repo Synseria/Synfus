@@ -9,7 +9,9 @@ import Foundation
 /// jamais le début. Une étape ne dévoile pas tout d'un coup (« Pense-bête » :
 /// neuf objectifs, un seul montré) et ses objectifs ne s'ouvrent pas toujours
 /// en file : seul ce qui précède le **premier** objectif montré est tenu pour
-/// fait — et les étapes d'avant, quand l'étape est sûre.
+/// fait — et les étapes d'avant, quand l'étape est sûre. Ce que le suivi tait
+/// ensuite, jusqu'à la coupure, n'est pas ouvert (ou fait hors de l'ordre) :
+/// le panneau le met en retrait, et ne le propose pas de cocher.
 enum SuiviObjectifs {
     struct Lecture: Equatable, Sendable {
         let etape: Int
@@ -18,6 +20,9 @@ enum SuiviObjectifs {
         let sure: Bool
         let aFaire: [Int]
         let faits: [Int]
+        /// Ce que l'écran tait d'une lecture entière : pas encore ouvert, ou
+        /// fait hors de l'ordre.
+        let nonMontres: [Int]
     }
 
     /// Un objectif tient au plus sur autant de lignes.
@@ -34,9 +39,11 @@ enum SuiviObjectifs {
     static let troncatures = ["voir plus", "see more", "show more", "ver mas", "mostrar mas"]
 
     /// `lignes` : normalisées (`Ressemblance.normaliser`), dans l'ordre de
-    /// l'écran. `nil` : aucun objectif d'aucune étape ne s'y lit en entier,
-    /// ou deux étapes s'y lisent aussi bien.
-    static func lire(_ lignes: [String], quete: Quete, langue: Langue, dans quetes: Quetes) -> Lecture? {
+    /// l'écran ; `coupee` : la zone lue a pu couper la fin de la liste, comme
+    /// « VOIR PLUS… ». `nil` : aucun objectif d'aucune étape ne s'y lit en
+    /// entier, ou deux étapes s'y lisent aussi bien.
+    static func lire(_ lignes: [String], coupee: Bool = false, quete: Quete, langue: Langue,
+                     dans quetes: Quetes) -> Lecture? {
         let lignes = lignes.filter { $0.count { $0.isLetter } >= lettresMinimum }
         let lues = lignes.filter { !estTroncature($0) }
         guard !lues.isEmpty else { return nil }
@@ -63,11 +70,19 @@ enum SuiviObjectifs {
         // illisible avant lui pourrait être un objectif plus tôt, encore ouvert.
         let rangs = affectes.map(\.objectif)
         guard let premier = affectes.first, premier.debut == 0, rangs == rangs.sorted() else {
-            return Lecture(etape: rang, sure: sure, aFaire: aFaire, faits: [])
+            return Lecture(etape: rang, sure: sure, aFaire: aFaire, faits: [], nonMontres: [])
         }
         let avant = sure ? quete.etapes[..<rang].flatMap { $0.objectifs.map(\.id) } : []
+        // Ce que l'écran tait après le premier objectif montré n'est pas
+        // ouvert — ou fait hors de l'ordre —, jusqu'à la coupure ; au-delà,
+        // rien n'est su. Une ligne incomprise pourrait être l'un d'eux.
+        var nonMontres: [Int] = []
+        if couts.allSatisfy(\.isFinite) {
+            let dernier = coupee || lues.count < lignes.count ? rangs.last ?? premier.objectif : etape.objectifs.count - 1
+            nonMontres = (premier.objectif...dernier).filter { !rangs.contains($0) }.map { etape.objectifs[$0].id }
+        }
         return Lecture(etape: rang, sure: sure, aFaire: aFaire,
-                       faits: avant + etape.objectifs[..<premier.objectif].map(\.id))
+                       faits: avant + etape.objectifs[..<premier.objectif].map(\.id), nonMontres: nonMontres)
     }
 
     /// Ce que coûte chaque ligne lue, par caractère, dans l'affectation d'une
