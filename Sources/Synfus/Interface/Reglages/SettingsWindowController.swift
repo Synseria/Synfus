@@ -71,9 +71,11 @@ final class SettingsWindowController: NSObject {
     /// La sonde d'attention se démarre à la main depuis l'onglet Diagnostic et
     /// n'a pas d'autre point d'arrêt : sans celui-ci, fermer les réglages sans
     /// l'éteindre la laisserait tourner à 4 Hz — Dock interrogé, journal
-    /// grossissant — indéfiniment en arrière-plan.
+    /// grossissant — indéfiniment en arrière-plan. Une vue de carte agrandie
+    /// ne survit pas non plus à la fenêtre de sa vignette.
     @objc private func windowWillClose() {
         if AttentionProbe.shared.running { AttentionProbe.shared.stop() }
+        ApercuCarte.shared.cacher()
     }
 
     /// Au milieu de l'écran, sous la barre flottante, bornée à l'écran.

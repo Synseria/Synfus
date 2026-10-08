@@ -516,6 +516,8 @@
   "touche.majuscule": "mayúsculas",
   "touche.option": "opción",
   "trajets.sousTitre": "Un /travel copiado pasa por el zaap más cercano si ahorra camino.",
+  "vuesCartes": "Vistas de los mapas",
+  "vuesCartes.sousTexte": "En miniatura en la paleta, las listas y el panel de misiones, ampliadas al pasar el ratón; de fondo en los zaaps. Descargadas de DofusDB la primera vez y guardadas en la caché.",
   "zaap.ajout": "Añadir un zaap",
   "zaap.ajout.aide": "Para un zaap que la lista aún no conoce: cuenta como un zaap del Mundo de los Doce. Un zaap ya listado se marca en la lista.",
   "zaap.ajout.bouton": "Añadir",
@@ -545,7 +547,5 @@
   "zaap.sansPosition": "Hace falta la lectura de la posición.",
   "zaap.supprimer": "Eliminar este zaap",
   "zaaps.grille": "Activar, etiquetar, marcar como favorito",
-  "zaaps.sousTitre": "%lld activos de %lld — la paleta y la reescritura del /travel solo proponen los activos.",
-  "zaaps.vueCarte": "Vista del mapa de fondo",
-  "zaaps.vueCarte.sousTexte": "El mapa del juego de cada zaap, descargado de DofusDB la primera vez y guardado en la caché."
+  "zaaps.sousTitre": "%lld activos de %lld — la paleta y la reescritura del /travel solo proponen los activos."
 }

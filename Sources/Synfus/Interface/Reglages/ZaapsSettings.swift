@@ -24,7 +24,7 @@ struct ZaapsSettings: View {
         let connus = prefs.zaapsConnus
         PageListe(titre: L("reglages.zaaps"), sousTitre: L("zaaps.sousTitre", prefs.zaapsActifs.count, connus.count)) {
             SourceCarte().cadreDeListe(premiere: true, derniere: false)
-            Interrupteur(titre: L("zaaps.vueCarte"), sousTexte: L("zaaps.vueCarte.sousTexte"), isOn: $prefs.zaapsVueCarte)
+            InterrupteurVuesCartes()
                 .cadreDeListe(premiere: false, derniere: true)
             EnTeteListe(titre: L("zaaps.grille"), aide: L("zaap.liste.aide"))
             HStack(spacing: 10) {

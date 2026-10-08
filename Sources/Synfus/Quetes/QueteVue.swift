@@ -425,26 +425,6 @@ struct QueteVue: View {
     }
 }
 
-/// La vue d'une carte en vignette ; au survol, en grand à côté du panneau.
-/// `onHover` suit la souris sur un panneau jamais clé d'une app inactive
-/// (ses zones de suivi sont actives en permanence, comme celles des pastilles
-/// de la barre) — une bulle d'aide, elle, n'y apparaît pas.
-private struct MiniatureCarte: View {
-    let carte: Int
-
-    var body: some View {
-        ImageDofusDB(url: DofusDB.imageCarte(carte))
-            .aspectRatio(contentMode: .fill)
-            .frame(width: 52, height: 36)
-            .background(Color.primary.opacity(0.08))
-            .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
-            .onHover { dedans in
-                if dedans { ApercuCarte.shared.montrer(carte) } else { ApercuCarte.shared.cacher() }
-            }
-            .onDisappear { ApercuCarte.shared.cacher() }
-    }
-}
-
 /// Le texte puis l'icône : « Étape suivante › ».
 private struct TitreAvantIcone: LabelStyle {
     func makeBody(configuration: Configuration) -> some View {

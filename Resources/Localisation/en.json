@@ -516,6 +516,8 @@
   "touche.majuscule": "shift",
   "touche.option": "option",
   "trajets.sousTitre": "A copied /travel goes through the nearest zaap when it saves the trip.",
+  "vuesCartes": "Map views",
+  "vuesCartes.sousTexte": "As thumbnails in the palette, the lists and the quest panel, enlarged on hover; behind each zaap. Downloaded from DofusDB on first display and kept in the caches.",
   "zaap.ajout": "Add a zaap",
   "zaap.ajout.aide": "For a zaap the list doesn't know yet: it counts as a World of Twelve zaap. A zaap already listed is checked in the list.",
   "zaap.ajout.bouton": "Add",
@@ -545,7 +547,5 @@
   "zaap.sansPosition": "Position reading is required.",
   "zaap.supprimer": "Delete this zaap",
   "zaaps.grille": "Enable, label, favorite",
-  "zaaps.sousTitre": "%lld active out of %lld — the palette and /travel rewriting only offer active ones.",
-  "zaaps.vueCarte": "Map view in the background",
-  "zaaps.vueCarte.sousTexte": "Each zaap's in-game map, downloaded from DofusDB on first opening and kept in the caches."
+  "zaaps.sousTitre": "%lld active out of %lld — the palette and /travel rewriting only offer active ones."
 }
