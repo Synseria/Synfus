@@ -87,9 +87,9 @@ struct QueteVue: View {
             if lecture.etat == .enCours { ProgressView().controlSize(.mini) }
             Spacer(minLength: 0)
             if let montree {
-                boutonEnTete("xmark", aide: L("quete.desepingler")) { QuetePanel.shared.desepingler(montree) }
+                BoutonEnTete(icone: "xmark", aide: L("quete.desepingler")) { QuetePanel.shared.desepingler(montree) }
             }
-            boutonEnTete("minus", aide: L("quete.fermer")) { QuetePanel.shared.fermer() }
+            BoutonEnTete(icone: "minus", aide: L("quete.fermer")) { QuetePanel.shared.fermer() }
         }
         .font(.system(size: 12))
         .padding(.leading, 10)
@@ -118,19 +118,6 @@ struct QueteVue: View {
         .padding(.vertical, 3)
         .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.06)))
         .overlay { if ficheImposee == nil { DeclencheurMenu { QuetePanel.shared.menu() } } }
-    }
-
-    /// Un bouton d'en-tête : une cible de 22 pt, quelle que soit l'icône.
-    private func boutonEnTete(_ icone: String, aide: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: icone)
-                .font(.system(size: 10, weight: .bold))
-                .foregroundStyle(.secondary)
-                .frame(width: 22, height: 22)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .help(aide)
     }
 
     // MARK: - En-tête

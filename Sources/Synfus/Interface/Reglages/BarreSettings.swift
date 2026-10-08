@@ -24,6 +24,12 @@ struct BarreSettings: View {
                         Button(L("general.barre.recentrer")) { FloatingBarController.shared.recenter() }
                     }
                 }
+                Interrupteur(titre: L("barre.panneauxSeulementDofus"), sousTexte: L("barre.panneauxSeulementDofus.sousTexte"),
+                             isOn: Binding(get: { prefs.panneauxSeulementDofus }, set: { valeur in
+                                 prefs.panneauxSeulementDofus = valeur
+                                 QuetePanel.shared.revoirVisibilite(force: true)
+                                 ChassePanel.shared.revoirVisibilite(force: true)
+                             }))
             }
 
 

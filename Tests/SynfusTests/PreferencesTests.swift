@@ -464,7 +464,7 @@ struct PreferencesTests {
     private static let empreinte = """
     {"advanceModifier":"option","advanceOnClick":true,
      "arrangeHotKey":{"keyCode":40,"modifiers":256},"attentionAction":"focus",
-     "autoCenterBar":false,"barOnlyWithDofus":true,"barOriginX":120.5,"barOriginY":640,
+     "autoCenterBar":false,"barOnlyWithDofus":true,"panneauxSeulementDofus":false,"barOriginX":120.5,"barOriginY":640,
      "barVisible":false,"characterOrder":["Aeryn","Nova"],
      "chasseBouton":false,"chasseHotKey":{"keyCode":5,"modifiers":2048},
      "cycleNext":{"keyCode":122,"modifiers":0},"cyclePrevious":{"keyCode":120,"modifiers":0},
@@ -514,6 +514,7 @@ struct PreferencesTests {
         #expect(prefs.toggleAutoFocus == HotKey(keyCode: 99, modifiers: 0))
         #expect(prefs.toggleBar == HotKey(keyCode: 11, modifiers: 768))
         #expect(prefs.barOnlyWithDofus == true)
+        #expect(prefs.panneauxSeulementDofus == false)
         #expect(prefs.autoCenterBar == false)
         #expect(prefs.menuBarIcon == .symbole)
         #expect(prefs.showPreviewOnHover == true)
@@ -574,6 +575,7 @@ struct PreferencesTests {
         prefs.toggleAutoFocus = HotKey(keyCode: 99, modifiers: 0)
         prefs.toggleBar = HotKey(keyCode: 11, modifiers: 768)
         prefs.barOnlyWithDofus = true
+        prefs.panneauxSeulementDofus = false
         prefs.autoCenterBar = false
         prefs.menuBarIcon = .symbole
         prefs.showPreviewOnHover = true
@@ -639,7 +641,7 @@ struct PreferencesTests {
 
         let attendu = """
         {"advanceModifier":"fn","advanceOnClick":false,"attentionAction":"highlight",
-         "autoCenterBar":true,"barOnlyWithDofus":false,"barVisible":true,"chasseBouton":true,"characterOrder":[],
+         "autoCenterBar":true,"barOnlyWithDofus":false,"panneauxSeulementDofus":true,"barVisible":true,"chasseBouton":true,"characterOrder":[],
          "defaultsVersion":7,"equipes":[],"etiquettes":{},"hotKeys":[null],"inviteFormat":"/invite %nom","inviteGroupee":false,
          "killFrozenClients":true,"lireCombat":false,"lirePosition":false,"menuBarIcon":"logo",
          "showClasses":true,"showNumbers":true,"showPreviewOnHover":false,
