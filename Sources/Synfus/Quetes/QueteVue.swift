@@ -12,6 +12,7 @@ struct QueteVue: View {
     @ObservedObject private var store = QuetesStore.shared
     @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var lecture = LectureSuivi.shared
+    @ObservedObject private var lecteur = LecteurEcran.shared
     /// La ligne qui vient d'être copiée, le temps de le dire.
     @State private var copiee: String?
     @State private var guideEnCours = false
@@ -264,6 +265,8 @@ struct QueteVue: View {
         let rang = min(rangEtape(fiche), fiche.etapes.count - 1)
         let etape = fiche.etapes[rang]
         let coches = valides(fiche.id)
+        let ici = lecteur.positionDuPersoDevant.map { PNJ.Position(x: $0.x, y: $0.y) }
+        let suggeres = ficheImposee == nil ? etape.suggeres(en: ici, valides: coches) : []
         return VStack(alignment: .leading, spacing: metriques.ecartLignes) {
             if plusieurs {
                 HStack(spacing: 6) {
@@ -289,7 +292,8 @@ struct QueteVue: View {
                     .padding(.bottom, 2)
             }
             ForEach(etape.objectifs, id: \.id) { objectif in
-                ligneObjectif(objectif, quete: fiche.id, valide: coches.contains(objectif.id))
+                ligneObjectif(objectif, quete: fiche.id, valide: coches.contains(objectif.id),
+                              suggere: suggeres.contains(objectif.id))
             }
             if !etape.recompenses.vides {
                 Text(L("quete.recompenses", Self.recompenses(etape.recompenses)))
@@ -332,19 +336,23 @@ struct QueteVue: View {
     /// coche ; la coche seule se décoche. Fait, il reste à sa place — l'ordre
     /// de la quête ne bouge pas — sur une ligne grisée, sans sa position, une
     /// fois le « Copié » passé. La vue de la carte paraît en grand au survol
-    /// de la ligne, en vignette avec `quetesVignettes`.
-    private func ligneObjectif(_ objectif: FicheQuete.Objectif, quete: Int, valide: Bool) -> some View {
+    /// de la ligne, en vignette avec `quetesVignettes`. `suggere` : le perso
+    /// se tient sur sa carte (`FicheQuete.Etape.suggeres`) — la coche passe
+    /// au violet et propose de valider.
+    private func ligneObjectif(_ objectif: FicheQuete.Objectif, quete: Int, valide: Bool,
+                               suggere: Bool) -> some View {
         let id = Self.idLigne(objectif)
         let replie = valide && copiee != id
         return HStack(alignment: .firstTextBaseline, spacing: 2) {
             Button { QuetePanel.shared.cocher(objectif.id, de: quete, !valide) } label: {
-                Image(systemName: valide ? "checkmark.circle.fill" : "circle")
+                Image(systemName: valide ? "checkmark.circle.fill" : suggere ? "location.circle.fill" : "circle")
                     .font(.system(size: metriques.coche))
-                    .foregroundStyle(valide ? Couleurs.accent : Color.secondary)
+                    .foregroundStyle(valide ? Couleurs.accent : suggere ? Couleurs.suggestion : Color.secondary)
                     .frame(width: Self.colonneCoche)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .help(suggere ? L("quete.suggestion.aide") : "")
             let action: (() -> Void)? = objectif.position.map { position in
                 {
                     ZaapClipboard.shared.copierTrajet(vers: (position.x, position.y))
@@ -370,6 +378,11 @@ struct QueteVue: View {
                         HStack(spacing: 6) {
                             if let position = objectif.position {
                                 detail(id: id, Coordonnees.texte(position.x, position.y), monospace: true)
+                                if suggere, copiee != id {
+                                    Text(L("quete.suggestion"))
+                                        .font(.system(size: metriques.detail, weight: .semibold))
+                                        .foregroundStyle(Couleurs.suggestion)
+                                }
                             } else {
                                 detail(id: id, L("quete.nonSitue"), monospace: false)
                             }
