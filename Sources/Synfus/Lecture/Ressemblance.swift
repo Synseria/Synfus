@@ -85,4 +85,33 @@ enum Ressemblance {
         }
         return meilleur
     }
+
+    /// `distanceDansTexte`, seulement si elle ne dépasse pas `auPlus` : la
+    /// coupure d'Ukkonen ne calcule que les lignes du motif encore sous la
+    /// borne, k colonnes au lieu de m — des milliers d'objectifs voisins
+    /// (« Rapporter 1 âme de … ») par lecture du suivi.
+    static func distanceDansTexte(_ motif: Forme, _ texte: Forme, auPlus k: Int) -> Int? {
+        let m = motif.scalaires
+        guard m.count > k else { return distanceDansTexte(motif, texte) }
+        var colonne = Array(0...m.count)
+        // La dernière ligne du motif dont la valeur tient sous la borne ; au-delà,
+        // toutes la dépassent (une ligne vaut au plus son rang).
+        var derniere = k
+        var meilleur = k + 1
+        for caractere in texte.scalaires {
+            var diagonale = 0
+            let limite = min(derniere + 1, m.count)
+            for i in 1...limite {
+                // Une ligne non calculée à la colonne précédente dépassait la borne.
+                let gauche = i > derniere ? k + 1 : colonne[i]
+                let valeur = min(diagonale + (m[i - 1] == caractere ? 0 : 1), gauche + 1, colonne[i - 1] + 1)
+                diagonale = gauche
+                colonne[i] = valeur
+            }
+            derniere = limite
+            while colonne[derniere] > k { derniere -= 1 }
+            if derniere == m.count { meilleur = min(meilleur, colonne[m.count]) }
+        }
+        return meilleur <= k ? meilleur : nil
+    }
 }
