@@ -3,6 +3,22 @@
 Une section par version, `## X.Y.Z — AAAA-MM-JJ` : la release GitHub de `vX.Y.Z` en reprend le
 contenu (`Tools/notes-de-version.sh`), et `sh build.sh --publish` refuse une version absente d'ici.
 
+## 0.11.0 — 2026-10-08
+
+![La barre](https://raw.githubusercontent.com/Synseria/Synfus/v0.11.0/docs/screenshots/barre.png)
+
+### Nouveautés
+
+- **Panneaux seulement devant Dofus** (Réglages → Barre, allumé) : les panneaux des quêtes et de la
+  chasse se cachent quand une autre app passe devant, et reviennent avec le jeu sans lui prendre
+  le clavier.
+- **Un README vitrine** : chaque fonction de Synfus en une capture, à partager d'un lien.
+
+### Améliorations
+
+- Les cases de zaap de la palette ont, elles aussi, la vue de leur carte en fond.
+- Quêtes et chasse au même dessin : même en-tête, même bouton « − » pour cacher le panneau.
+
 ## 0.10.1 — 2026-10-08
 
 ### Nouveautés
