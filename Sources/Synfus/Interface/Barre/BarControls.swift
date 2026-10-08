@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// Poignée de déplacement adossée à AppKit.
+/// Poignée de déplacement adossée à AppKit — et, avec `menu`, bouton de menu
+/// qu'on peut aussi glisser (le titre des quêtes).
 ///
 /// `performDrag(with:)` confie le déplacement au gestionnaire de fenêtres du
 /// système : la fenêtre suit le curseur au rythme du compositeur. Une version
@@ -8,15 +9,45 @@ import SwiftUI
 /// évènement reste toujours un cran derrière la souris — c'est ce qui rendait
 /// la barre poussive.
 ///
-/// La vue est posée **par-dessus** la poignée (`overlay`), pas derrière : sous
-/// un `glassEffect`, ce qui est en fond ne reçoit plus le clic. Et le panneau
-/// n'est jamais fenêtre clé : sans `acceptsFirstMouse`, le premier clic ne
-/// servirait qu'à le « réveiller » et le glisser ne partirait pas.
+/// Avec un menu, l'appui ne dit pas encore ce qu'il veut : une courte boucle
+/// d'évènements attend le relâchement (le menu s'ouvre) ou un mouvement franc
+/// (`estUnGlisser`), puis remet l'appui **d'origine** à `performDrag` — AppKit
+/// prévoit ce passage de main après examen de l'appui, ce qui garde un seul
+/// mécanisme de déplacement plutôt qu'une boucle qui déplacerait la fenêtre
+/// elle-même. Le menu est un `NSMenu` en `popUp` plutôt qu'un `Menu` SwiftUI :
+/// il suit la souris dans un panneau jamais clé d'une app inactive sans
+/// activer Synfus, comme le menu de la barre de menus.
+///
+/// La vue est posée **par-dessus** ce qu'elle rend saisissable (`overlay`) :
+/// une image, un texte ou un `glassEffect` au-dessus d'elle garderaient le
+/// clic. Et le panneau n'est jamais fenêtre clé : sans `acceptsFirstMouse`, le
+/// premier clic ne servirait qu'à le « réveiller » et le glisser ne partirait pas.
 struct WindowDragArea: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSView { DragView() }
-    func updateNSView(_ nsView: NSView, context: Context) {}
+    /// Le menu qu'ouvre un clic sans glisser, sous la zone.
+    var menu: (@MainActor () -> NSMenu)?
 
-    private final class DragView: NSView {
+    /// En deçà, un appui qui tremble reste un clic : le menu s'ouvre plutôt
+    /// que le panneau ne parte à la dérive.
+    nonisolated static let seuilGlisser: CGFloat = 3
+
+    nonisolated static func estUnGlisser(depuis depart: NSPoint, jusqua point: NSPoint) -> Bool {
+        hypot(point.x - depart.x, point.y - depart.y) > seuilGlisser
+    }
+
+    func makeNSView(context _: Context) -> DragView { DragView(fabriqueMenu: menu) }
+    func updateNSView(_ nsView: DragView, context _: Context) { nsView.fabriqueMenu = menu }
+
+    final class DragView: NSView {
+        var fabriqueMenu: (@MainActor () -> NSMenu)?
+
+        init(fabriqueMenu: (@MainActor () -> NSMenu)?) {
+            self.fabriqueMenu = fabriqueMenu
+            super.init(frame: .zero)
+        }
+
+        @available(*, unavailable)
+        required init?(coder _: NSCoder) { nil }
+
         override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
         override var mouseDownCanMoveWindow: Bool { false }
 
@@ -43,10 +74,28 @@ struct WindowDragArea: NSViewRepresentable {
         override func mouseEntered(with event: NSEvent) { NSCursor.openHand.set() }
         override func mouseMoved(with event: NSEvent) { NSCursor.openHand.set() }
         override func mouseExited(with event: NSEvent) { NSCursor.arrow.set() }
+
         override func mouseDown(with event: NSEvent) {
+            guard let window else { return }
+            guard let fabriqueMenu else { return glisser(window, appui: event) }
+            let depart = NSEvent.mouseLocation
+            while let suivant = window.nextEvent(matching: [.leftMouseDragged, .leftMouseUp]) {
+                if suivant.type == .leftMouseUp {
+                    fabriqueMenu().popUp(positioning: nil, at: NSPoint(x: 0, y: isFlipped ? bounds.maxY + 2 : -2), in: self)
+                    return
+                }
+                if WindowDragArea.estUnGlisser(depuis: depart, jusqua: NSEvent.mouseLocation) {
+                    return glisser(window, appui: event)
+                }
+            }
+        }
+
+        /// `performDrag` rend la main tout de suite, le serveur de fenêtres
+        /// menant le glisser : la main fermée reste jusqu'au premier mouvement
+        /// sans bouton, qui rend la main ouverte.
+        private func glisser(_ window: NSWindow, appui: NSEvent) {
             NSCursor.closedHand.set()
-            window?.performDrag(with: event)
-            NSCursor.openHand.set()
+            window.performDrag(with: appui)
         }
     }
 }

@@ -103,11 +103,12 @@ struct QueteVue: View {
     // MARK: - En-tête du panneau
 
     /// Une seule ligne : le menu des quêtes au nom de la montrée, puis de quoi
-    /// la désépingler et cacher le panneau. L'espace libre déplace le panneau
-    /// (`EnTetePanneau`).
+    /// la désépingler et cacher le panneau. Tout l'en-tête déplace le panneau,
+    /// sauf les boutons ; un clic sur le titre ouvre le menu (`EnTetePanneau`).
     private var enTete: some View {
         let montree = ficheImposee?.id ?? panneau.idMontre
-        return EnTetePanneau(icone: "scroll", teinte: Couleurs.accent) {
+        return EnTetePanneau(icone: "scroll", teinte: Couleurs.accent,
+                             menu: ficheImposee == nil ? { @MainActor in QuetePanel.shared.menu() } : nil) {
             menuQuetes(titre: ficheImposee?.nom ?? montree.flatMap { store.nom($0) } ?? L("quete.menu.titre"))
             if lecture.etat == .enCours { ProgressView().controlSize(.mini).padding(.leading, 4) }
         } boutons: {
@@ -118,8 +119,9 @@ struct QueteVue: View {
         }
     }
 
-    /// Le nom de la quête montrée, ▾ : le menu (`QuetePanel.menu`). Une
-    /// pastille y compte les quêtes du suivi que le panneau n'a pas encore.
+    /// Le nom de la quête montrée, ▾ : le menu (`QuetePanel.menu`, ouvert par
+    /// `EnTetePanneau`). Une pastille y compte les quêtes du suivi que le
+    /// panneau n'a pas encore.
     private func menuQuetes(titre: String) -> some View {
         let nouvelles = MenuQuetes.nouvelles(lecture.reconnues, epinglees: prefs.quetesEpinglees)
         return HStack(spacing: 4) {
@@ -137,7 +139,6 @@ struct QueteVue: View {
         .padding(.horizontal, 6)
         .padding(.vertical, 3)
         .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.06)))
-        .overlay { if ficheImposee == nil { DeclencheurMenu { QuetePanel.shared.menu() } } }
     }
 
     // MARK: - En-tête
