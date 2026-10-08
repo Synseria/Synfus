@@ -391,8 +391,6 @@
   "quete.exigence.metier": "%@ niveau %lld",
   "quete.exigence.niveau": "dès le niveau %lld",
   "quete.exigences": "Requis : %@",
-  "quete.faits": "%lld faits",
-  "quete.faits.un": "%lld fait",
   "quete.fermer": "Cacher le panneau (les quêtes restent épinglées)",
   "quete.fermer.simple": "Fermer",
   "quete.groupe": "En groupe",
