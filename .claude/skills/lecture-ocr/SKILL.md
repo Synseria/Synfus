@@ -1,14 +1,15 @@
 ---
 name: lecture-ocr
-description: Lecture de l'écran par OCR Vision — position, état de combat (bouton « Fin de tour »), suivis de chasse et de quêtes à la demande, calibrage par genre, coût maîtrisé, lecture au survol. Charger avant de toucher Lecture/ (LecteurEcran, ZoneEcran, PositionCarte, LectureCombat, LumaBitmap, MoteurOCR, Ressemblance, CapturesCalibrage), Quetes/SuiviQuetes, LectureSuivi, CalibrationZonesView, CombatBadge ou RealCaptureTests.
+description: Lecture de l'écran par OCR Vision — position, état de combat (bouton « Fin de tour »), suivi de quêtes tant que son panneau est montré, chasse à la demande, calibrage par genre, coût maîtrisé, lecture au survol. Charger avant de toucher Lecture/ (LecteurEcran, ZoneEcran, PositionCarte, LectureCombat, LumaBitmap, MoteurOCR, Ressemblance, CapturesCalibrage), Quetes/SuiviQuetes, LectureSuivi, CalibrationZonesView, CombatBadge ou RealCaptureTests.
 user-invocable: false
 ---
 
 # Lecture de l'écran
 
-`Sources/Synfus/Lecture/LecteurEcran.swift` lit une fois par seconde, dans la fenêtre du perso
-au premier plan, la **position** (haut gauche) et le **combat** (bas droite par défaut) ; les
-suivis de chasse et de quêtes à la demande.
+`Sources/Synfus/Lecture/LecteurEcran.swift` lit, dans la fenêtre du perso au premier plan, la
+**position** (haut gauche) et le **combat** (bas droite par défaut) une fois par seconde, le
+**suivi de quêtes** toutes les trois secondes tant que le panneau des quêtes est montré ; la
+chasse à la demande.
 Réglages `lirePosition` / `lireCombat` éteints par défaut : l'enregistrement de l'écran n'est
 demandé que par leur bascule et par la capture du calibrage, jamais par un panneau.
 
@@ -21,9 +22,12 @@ demandé que par leur bascule et par la capture du calibrage, jamais par un pann
 - Échelle fixe : contenu ramené à `ZoneEcran.hauteurReference` (plafonné au natif).
 - Vision `.accurate` seulement (`.fast` ne lit pas la police du jeu), image posée sur une
   **marge noire** (`encadree`) : un glyphe collé au bord se lit mal.
-- L'OCR ne repasse que si la zone a changé (`SignatureZone`, `EmpreinteTexte`). Le décompte,
-  vert, ne relance pas l'OCR : il est lu au changement d'état et l'échéance est tenue
-  localement (`EtatCombat.monTour(fin:)`).
+- L'OCR ne repasse que si le texte a changé (`SignatureZone`, `MesureSignature` par genre) :
+  position, grille fixe 96 × 24 au seuil 225 ; combat, couleur sur la zone et empreinte du seul
+  corps du bouton — le décompte ne relance rien, l'échéance est tenue localement
+  (`EtatCombat.monTour(fin:)`, gardée à 1,5 s près) ; suivis, cadre des lignes lues (+1½ ligne
+  vers le bas), grille fine 5 × 3 px au seuil 180 — la grille fixe d'une zone haute ne voit pas
+  une ligne (mesuré). `auBord` : le texte touche le bas de la zone.
 - Inventaire ScreenCaptureKit gardé (`captureData(…, inventaireGarde:)`).
 - Le premier OCR `.accurate` charge le modèle, long à froid : `MoteurOCR.prechauffer()` le
   paie à l'activation.
@@ -32,13 +36,15 @@ demandé que par leur bascule et par la capture du calibrage, jamais par un pann
 
 Une seule table (`LecteurEcran.swift`) : par genre, `parDefaut` (`ZoneEcran.*ParDefaut`),
 `reglage` (clé `zone…` des préférences, `nil` = défaut, qui suit ses corrections), `zone`.
-Position et combat sont lus au tour ; **chasse** et **quêtes** seulement à la demande
-(`LecteurEcran.lireUneFois`, sans signature, même `capturer` et même `MoteurOCR`).
+Position et combat au tour ; **quêtes** au tour (`GenreLecture.intervalle`, 3 s) tant que le
+panneau est montré et l'écran déjà autorisé (`QuetePanel` → `suivreQuetes`) ; chasse à la
+demande (`lireUneFois`, même `capturer` et même `MoteurOCR`).
 
 - Chasse : lignes → `EtapeChasse.ciblesLues` (bouton « Lire » et ouverture du panneau).
-- Quêtes : le suivi de quêtes du jeu (`quetesParDefaut`, à gauche, estimé). `LectureSuivi`
-  (« Lire le suivi » du menu du panneau des quêtes, et son ouverture si l'écran est déjà autorisé) →
-  `SuiviQuetes.reconnaitre` (pur, hors main) : une ligne de titre **est** un nom de quête
+- Quêtes : le suivi de quêtes du jeu (`quetesParDefaut`, à gauche, estimé). Un seul chemin,
+  `LectureSuivi.traiter` — `lire()` (bouton, ouverture), `recevoir` (tour, `.lue`), `confirmer`
+  (tour, `.inchangee` : la lecture tient) — vers `SuiviQuetes.reconnaitre` (pur, hors main, sur
+  `SuiviQuetes.Index` bâti une fois par jeu de quêtes) : une ligne de titre **est** un nom de quête
   (tolérance n/4, `surplusTitre` pour les icônes), pas seulement le contient ; ordre de
   l'écran, sans doublon, 10 au plus.
 - Objectifs : `SuiviObjectifs` (pur). Le suivi montre les objectifs **actifs** de l'étape,
@@ -52,7 +58,14 @@ Position et combat sont lus au tour ; **chasse** et **quêtes** seulement à la 
   commence par un objectif reconnu. Les étapes d'avant aussi, si aucune autre étape ne lit mieux
   une ligne. Doublon ambigu : la première occurrence possible (prudent). Distance bornée
   (`distanceDansTexte(_:_:auPlus:)`, Ukkonen) : vingt étapes de vingt « Rapporter 1 âme… ».
-- Panneau : `LectureSuivi.aFaire` (surligné ambre, `fraicheur` 10 min). Une lecture passe par
+- Panneau : tout vient de la lecture du **perso devant** (`persoDevant` publié), fraîche si
+  l'écran l'a montrée — lue ou confirmée — il y a moins de 10 min. `aFaire` ambre ; `nonMontres`
+  (ce que le suivi tait après le premier objectif montré, jusqu'à « VOIR PLUS… » ou `auBord`,
+  seulement lignes toutes comprises et ordre suivi) en retrait « pas encore ouvert ».
+  « Tu y es — fait ? » (`FicheQuete.Etape.suggeres`) : lecture fraîche de l'étape → seuls ses
+  objectifs ouverts, tout ordre ; sans lecture et après la coupure → le prochain non coché ou
+  celui en cours ; « Vaincre… » : un combat fini sur sa carte, à tout rang sauf si le suivi le
+  tait. Une lecture passe par
   `Preferences.appliquer` (`CochesQuete`, seul chemin) : faits cochés si `quetesCocherSuivi`, jamais
   de décoche, jamais un objectif décoché à la main (`quetesDecoches`, oublié quand le suivi le
   remontre ouvert) ; une étape **sûre** (`Lecture.sure`) après celle du panneau l'y fait avancer.
