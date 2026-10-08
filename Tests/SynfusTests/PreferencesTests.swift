@@ -516,7 +516,7 @@ struct PreferencesTests {
      "zaapHotKey":{"keyCode":17,"modifiers":2048},
      "zaapsAjoutes":[{"monde":1,"noms":{"fr":"Mon zaap"},"x":50,"y":-50,"zone":{}}],
      "zaapsChoix":{"1:-2,0":false},
-     "zaapsFavoris":["1:5,-18","1:-2,0"],
+     "zaapsFavoris":["1:5,-18","1:-2,0"],"zaapsVueCarte":false,
      "toggleBar":{"keyCode":11,"modifiers":768},
      "zoneCombat":{"hauteur":0.125,"largeur":0.25,"x":0.125,"y":0.75},
      "zonePosition":{"hauteur":0.0625,"largeur":0.25,"x":0.5,"y":0.25},
@@ -576,6 +576,7 @@ struct PreferencesTests {
         #expect(prefs.quetesEtape == ["18": 2])
         #expect(prefs.chasseHotKey == HotKey(keyCode: 5, modifiers: 2048))
         #expect(prefs.chasseBouton == false)
+        #expect(prefs.zaapsVueCarte == false)
     }
 
     @Test("Chaque réglage s'écrit sous sa clé, avec son encodage")
@@ -631,6 +632,7 @@ struct PreferencesTests {
         prefs.quetesEtape = ["18": 2]
         prefs.chasseHotKey = HotKey(keyCode: 5, modifiers: 2048)
         prefs.chasseBouton = false
+        prefs.zaapsVueCarte = false
 
         #expect(canonique(store.donnees(pour: Preferences.key))
                 == canonique(Data(Self.empreinte.utf8)))
@@ -659,7 +661,7 @@ struct PreferencesTests {
          "killFrozenClients":true,"lireCombat":false,"lirePosition":false,"menuBarIcon":"logo",
          "showClasses":true,"showNumbers":true,"showPreviewOnHover":false,
          "signalerBascule":true,"slotCount":1,"zaapAuto":false,"zaapBouton":true,
-         "zaapGainMinimal":5,"zaapsAjoutes":[],"zaapsChoix":{},"zaapsFavoris":[],
+         "zaapGainMinimal":5,"zaapsAjoutes":[],"zaapsChoix":{},"zaapsFavoris":[],"zaapsVueCarte":true,
          "lieuxFavoris":[],"paletteRecents":[],"paletteTri":"proximite","quetesEpinglees":[],"quetesEtape":{}}
         """
         #expect(canonique(store.donnees(pour: Preferences.key)) == canonique(Data(attendu.utf8)))

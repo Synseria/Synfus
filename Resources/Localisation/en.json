@@ -481,5 +481,7 @@
   "zaap.sansPosition": "Position reading is required.",
   "zaap.supprimer": "Delete this zaap",
   "zaaps.grille": "Enable, label, favorite",
-  "zaaps.sousTitre": "%lld active out of %lld — the palette and /travel rewriting only offer active ones."
+  "zaaps.sousTitre": "%lld active out of %lld — the palette and /travel rewriting only offer active ones.",
+  "zaaps.vueCarte": "Map view in the background",
+  "zaaps.vueCarte.sousTexte": "Each zaap's in-game map, downloaded from DofusDB on first opening and kept in the caches."
 }
