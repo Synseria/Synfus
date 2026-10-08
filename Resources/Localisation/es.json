@@ -522,6 +522,8 @@
   "zaap.auto.aide": "Synfus mira cada nueva copia, de cualquier app, y solo toca un texto «/travel x,y». Las contraseñas marcadas como secretas nunca se leen. macOS puede pedir una vez permiso para que Synfus lea el portapapeles.",
   "zaap.autreCarte": "otro mapa",
   "zaap.bouton": "Botón de la paleta en la barra",
+  "zaap.duJeu": "Zaap designado por el juego",
+  "zaap.duJeu.sousTexte": "El que el juego asocia a la zona de destino, aunque esté más lejos: el piloto automático conoce atajos. Desactivado: el más cercano por las zonas vecinas.",
   "zaap.favori.ajouter": "Añadir a favoritos",
   "zaap.favori.retirer": "Quitar de favoritos",
   "zaap.gain": "Ganancia mínima",
