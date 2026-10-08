@@ -473,7 +473,7 @@ struct PreferencesTests {
      "paletteHotKey":{"keyCode":47,"modifiers":256},"paletteRecents":["/zaap 5,7"],"paletteTri":"type","quetesEpinglees":[18,42],"quetesEtape":{"18":2},
      "quetesValides":{"18":[102,104]},"quetesBouton":false,"quetesMasquerObjets":true,
      "quetesCompact":false,"quetesConsigne":false,"quetesVignettes":true,
-     "quetesEnCours":{"18":104},"quetesCocherSuivi":false,
+     "quetesEnCours":{"18":104},"quetesCocherSuivi":false,"quetesDecoches":{"18":[103]},
      "equipes":[{"membres":["Aeryn"]},{"membres":["Nova"]}],
      "hotKeys":[{"keyCode":18,"modifiers":256},null,{"keyCode":20,"modifiers":2048},null,null,null,null,null,null,null],
      "inviteFormat":"/w %nom go","inviteGroupee":true,
@@ -562,6 +562,7 @@ struct PreferencesTests {
         #expect(prefs.quetesVignettes == true)
         #expect(prefs.quetesEnCours == ["18": 104])
         #expect(prefs.quetesCocherSuivi == false)
+        #expect(prefs.quetesDecoches == ["18": [103]])
         #expect(prefs.chasseHotKey == HotKey(keyCode: 5, modifiers: 2048))
         #expect(prefs.chasseBouton == false)
         #expect(prefs.vuesCartes == false)
@@ -628,6 +629,7 @@ struct PreferencesTests {
         prefs.quetesVignettes = true
         prefs.quetesEnCours = ["18": 104]
         prefs.quetesCocherSuivi = false
+        prefs.quetesDecoches = ["18": [103]]
         prefs.chasseHotKey = HotKey(keyCode: 5, modifiers: 2048)
         prefs.chasseBouton = false
         prefs.vuesCartes = false
@@ -662,7 +664,7 @@ struct PreferencesTests {
          "lieuxFavoris":[],"paletteRecents":[],"paletteTri":"proximite","quetesEpinglees":[],"quetesEtape":{},
          "quetesValides":{},"quetesBouton":true,"quetesMasquerObjets":false,
          "quetesCompact":true,"quetesConsigne":true,"quetesVignettes":false,
-         "quetesEnCours":{},"quetesCocherSuivi":true}
+         "quetesEnCours":{},"quetesCocherSuivi":true,"quetesDecoches":{}}
         """
         #expect(canonique(store.donnees(pour: Preferences.key)) == canonique(Data(attendu.utf8)))
     }
@@ -765,8 +767,13 @@ extension PreferencesTests {
     }
 }
 
-/// Les coches et l'objectif en cours des quêtes (`CochesQuete`).
+/// Les coches, décoches, l'objectif en cours et l'étape des quêtes (`CochesQuete`).
 extension PreferencesTests {
+    private func lue(_ id: Int = 18, etape: Int? = nil, sure: Bool = false, aFaire: [Int] = [],
+                     faits: [Int] = []) -> SuiviQuetes.Reconnue {
+        .init(id: id, etape: etape, etapeSure: sure, aFaire: aFaire, faits: faits)
+    }
+
     @Test("La lecture du suivi coche sans décocher ; cocher l'objectif en cours l'efface")
     func cochesQuete() {
         let (prefs, _) = neuves()
@@ -776,10 +783,10 @@ extension PreferencesTests {
         // Un objectif fait ne se met pas en cours.
         prefs.mettreEnCours(3, de: 18)
         #expect(prefs.quetesEnCours == ["18": 5])
-        #expect(prefs.cocher([1, 3, 5, 1], de: 18) == 2)
+        #expect(prefs.appliquer(lue(faits: [1, 3, 5, 1])) == 2)
         #expect(prefs.quetesValides == ["18": [3, 1, 5]])
         #expect(prefs.quetesEnCours.isEmpty)
-        #expect(prefs.cocher([1], de: 18) == 0)
+        #expect(prefs.appliquer(lue(faits: [1])) == 0)
         prefs.mettreEnCours(7, de: 18)
         prefs.mettreEnCours(8, de: 18)
         #expect(prefs.quetesEnCours == ["18": 8])
@@ -787,5 +794,41 @@ extension PreferencesTests {
         prefs.cocher(1, de: 18, false)
         prefs.cocher(5, de: 18, false)
         #expect(prefs.quetesValides.isEmpty)
+        prefs.quetesCocherSuivi = false
+        #expect(prefs.appliquer(lue(faits: [9])) == 0)
+        #expect(prefs.quetesValides.isEmpty)
+    }
+
+    @Test("Décoché à la main, un objectif ne se recoche plus à la lecture, jusqu'à ce que le suivi le remontre ouvert")
+    func decoches() {
+        let (prefs, _) = neuves()
+        prefs.appliquer(lue(faits: [1, 2]))
+        prefs.cocher(2, de: 18, false)
+        #expect(prefs.quetesDecoches == ["18": [2]])
+        #expect(prefs.appliquer(lue(faits: [1, 2])) == 0)
+        #expect(prefs.quetesValides == ["18": [1]])
+        // Le suivi le montre ouvert : la décoche est oubliée, il se cochera
+        // quand le suivi le dira fait.
+        prefs.appliquer(lue(aFaire: [2, 3]))
+        #expect(prefs.quetesDecoches.isEmpty)
+        #expect(prefs.appliquer(lue(faits: [1, 2])) == 1)
+        // Recoché à la main : plus de décoche.
+        prefs.cocher(2, de: 18, false)
+        prefs.cocher(2, de: 18, true)
+        #expect(prefs.quetesDecoches.isEmpty)
+        #expect(prefs.quetesValides == ["18": [1, 2]])
+    }
+
+    @Test("Une étape établie après celle du panneau l'y fait avancer, jamais reculer ; une étape probable, non")
+    func avanceeEtape() {
+        let (prefs, _) = neuves()
+        prefs.appliquer(lue(etape: 2, sure: false))
+        #expect(prefs.quetesEtape.isEmpty)
+        prefs.appliquer(lue(etape: 2, sure: true))
+        #expect(prefs.quetesEtape == ["18": 2])
+        prefs.appliquer(lue(etape: 1, sure: true))
+        #expect(prefs.quetesEtape == ["18": 2])
+        prefs.appliquer(lue(etape: 0, sure: true))
+        #expect(prefs.quetesEtape == ["18": 2])
     }
 }

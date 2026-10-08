@@ -189,6 +189,10 @@ final class Preferences: ObservableObject {
     /// trajet —, par identifiant de quête ; il s'efface quand on le coche.
     @Published var quetesEnCours: [String: Int] = [:] { didSet { save() } }
 
+    /// Les objectifs décochés à la main, par identifiant de quête : la lecture
+    /// du suivi ne les recoche pas, tant qu'il ne les remontre pas ouverts.
+    @Published var quetesDecoches: [String: [Int]] = [:] { didSet { save() } }
+
     /// Les objectifs que le suivi du jeu montre faits se cochent à sa lecture.
     @Published var quetesCocherSuivi: Bool = true { didSet { save() } }
 
@@ -501,6 +505,7 @@ final class Preferences: ObservableObject {
         .facultatif("quetesVignettes", \.quetesVignettes),
         .facultatif("quetesEnCours", \.quetesEnCours),
         .facultatif("quetesCocherSuivi", \.quetesCocherSuivi),
+        .facultatif("quetesDecoches", \.quetesDecoches),
         .facultatif("zaapsVueCarte", \.vuesCartes),
     ]
 

@@ -52,33 +52,33 @@ struct SuiviQuetesTests {
             "VOIR PLUS…",
             "La voie du guerrier",
         ]
-        #expect(SuiviQuetes.reconnaitre(lignes, dans: Self.jeu).map(\.id) == [1, 2, 3, 4, 5])
+        #expect(SuiviQuetes.reconnaitre(lignes, dans: Self.jeu).reconnues.map(\.id) == [1, 2, 3, 4, 5])
     }
 
     @Test("Un titre court se lit sans faute admise, le plus long l'emporte")
     func courts() {
-        #expect(SuiviQuetes.reconnaitre(["La voie"], dans: Self.jeu).map(\.id) == [6])
-        #expect(SuiviQuetes.reconnaitre(["Ogre"], dans: Self.jeu).map(\.id) == [8])
-        #expect(SuiviQuetes.reconnaitre(["Ogro"], dans: Self.jeu).isEmpty)
-        #expect(SuiviQuetes.reconnaitre(["La voie du guerier"], dans: Self.jeu).map(\.id) == [5])
+        #expect(SuiviQuetes.reconnaitre(["La voie"], dans: Self.jeu).reconnues.map(\.id) == [6])
+        #expect(SuiviQuetes.reconnaitre(["Ogre"], dans: Self.jeu).reconnues.map(\.id) == [8])
+        #expect(SuiviQuetes.reconnaitre(["Ogro"], dans: Self.jeu).reconnues.isEmpty)
+        #expect(SuiviQuetes.reconnaitre(["La voie du guerier"], dans: Self.jeu).reconnues.map(\.id) == [5])
     }
 
     @Test("Un objectif qui cite une quête n'en est pas le titre")
     func objectifCitant() {
         let lignes = ["Pense-bête", "Demander conseil à propos de La raison du plus fort au maître"]
-        #expect(SuiviQuetes.reconnaitre(lignes, dans: Self.jeu).map(\.id) == [1])
+        #expect(SuiviQuetes.reconnaitre(lignes, dans: Self.jeu).reconnues.map(\.id) == [1])
     }
 
     @Test("Le titre dans une autre langue que celle de l'interface")
     func langue() {
-        #expect(SuiviQuetes.reconnaitre(["Reminder"], dans: Self.jeu).map(\.id) == [1])
+        #expect(SuiviQuetes.reconnaitre(["Reminder"], dans: Self.jeu).reconnues.map(\.id) == [1])
     }
 
     @Test("Sans doublon, dix au plus")
     func limite() {
         let liste = (1...12).map { Self.quete($0, ["fr": "Quête numéro \($0) du suivi"]) }
         let lignes = ["Quête numéro 1 du suivi"] + liste.map { $0.noms["fr"]! }
-        let reconnues = SuiviQuetes.reconnaitre(lignes, dans: Self.quetes(liste))
+        let reconnues = SuiviQuetes.reconnaitre(lignes, dans: Self.quetes(liste)).reconnues
         #expect(reconnues.map(\.id) == Array(1...SuiviQuetes.limite))
     }
 
@@ -86,12 +86,12 @@ struct SuiviQuetesTests {
     func etape() {
         let lignes = ["L'éternelle moisson", "Rapporter 1 âme de Gelée Royale Bleuet à", "Assistante d'Otomaï.",
                       "La raison du plus fort", "Retrouver Meuh Sieurchance chez lui"]
-        let reconnues = SuiviQuetes.reconnaitre(lignes, dans: Self.jeu)
+        let reconnues = SuiviQuetes.reconnaitre(lignes, dans: Self.jeu).reconnues
         // Meuh Sieurchance est sous une autre quête : il ne désigne pas la
         // première étape de la moisson.
         #expect(reconnues == [.init(id: 3, etape: 1), .init(id: 2, etape: nil)])
         let premiere = SuiviQuetes.reconnaitre(["L'éternelle moisson", "Retrouver Meuh Sieurchance chez lui"],
-                                               dans: Self.jeu)
+                                               dans: Self.jeu).reconnues
         #expect(premiere == [.init(id: 3, etape: 0)])
     }
 
@@ -101,9 +101,9 @@ struct SuiviQuetesTests {
             [Self.objectif(71, "Aller voir {npc,10}")],
             [Self.objectif(72, "Ramener à {npc,10} : x1 {item,20}")],
         ])])
-        let reconnues = SuiviQuetes.reconnaitre(["Le retour de la bergere", "Aller voir Meuh Sieurchance"], dans: jeu)
-        #expect(reconnues == [.init(id: 7, etape: 0, aFaire: [71])])
-        let ambigue = SuiviQuetes.reconnaitre(["Le retour de la bergere", "Meuh Sieurchance"], dans: jeu)
+        let reconnues = SuiviQuetes.reconnaitre(["Le retour de la bergere", "Aller voir Meuh Sieurchance"], dans: jeu).reconnues
+        #expect(reconnues == [.init(id: 7, etape: 0, etapeSure: true, aFaire: [71])])
+        let ambigue = SuiviQuetes.reconnaitre(["Le retour de la bergere", "Meuh Sieurchance"], dans: jeu).reconnues
         #expect(ambigue == [.init(id: 7, etape: nil)])
     }
 }

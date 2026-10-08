@@ -1,26 +1,54 @@
 import Foundation
 
-/// Les coches et l'objectif en cours d'une quête, gardés par quête dans les
-/// préférences : le seul chemin qui les écrit, à la main comme à la lecture
-/// du suivi.
+/// Les coches, les décoches, l'objectif en cours et l'étape d'une quête,
+/// gardés par quête dans les préférences : le seul chemin qui les écrit, à la
+/// main comme à la lecture du suivi.
 extension Preferences {
-    /// Coche ou décoche un objectif. Coché, il n'est plus en cours.
+    /// Coche ou décoche à la main. Coché, il n'est plus en cours ; décoché, il
+    /// est retenu : la lecture suivante, qui le tient peut-être encore pour
+    /// fait, ne le recoche pas.
     func cocher(_ objectif: Int, de quete: Int, _ valide: Bool) {
-        guard valide else {
-            let cle = String(quete)
-            let avant = quetesValides[cle] ?? []
-            guard avant.contains(objectif) else { return }
-            let apres = avant.filter { $0 != objectif }
-            quetesValides[cle] = apres.isEmpty ? nil : apres
+        let cle = String(quete)
+        if valide {
+            if (quetesDecoches[cle] ?? []).contains(objectif) { quetesDecoches[cle] = Self.sans([objectif], quetesDecoches[cle]) }
+            ajouter([objectif], de: quete)
             return
         }
-        cocher([objectif], de: quete)
+        guard (quetesValides[cle] ?? []).contains(objectif) else { return }
+        quetesValides[cle] = Self.sans([objectif], quetesValides[cle])
+        if !(quetesDecoches[cle] ?? []).contains(objectif) { quetesDecoches[cle, default: []].append(objectif) }
     }
 
-    /// Coche des objectifs sans jamais en décocher : une coche posée à la main
-    /// reste. Rend combien ne l'étaient pas.
+    /// Ce qu'une lecture du suivi dit d'une quête. Ses objectifs montrés
+    /// ouverts ne sont plus des décoches : le jeu dit lui-même qu'ils restent
+    /// à faire. Ses faits se cochent (`quetesCocherSuivi`), jamais ceux
+    /// décochés à la main, et rien ne se décoche. Une étape établie après
+    /// celle que montre le panneau l'y fait avancer, jamais reculer : le
+    /// suivi d'un perso en retard ne ramène pas en arrière. Rend combien
+    /// d'objectifs se sont cochés.
     @discardableResult
-    func cocher(_ objectifs: [Int], de quete: Int) -> Int {
+    func appliquer(_ lue: SuiviQuetes.Reconnue) -> Int {
+        let cle = String(lue.id)
+        if let decoches = quetesDecoches[cle], decoches.contains(where: lue.aFaire.contains) {
+            quetesDecoches[cle] = Self.sans(lue.aFaire, decoches)
+        }
+        if lue.etapeSure, let etape = lue.etape, etape > quetesEtape[cle] ?? 0 { quetesEtape[cle] = etape }
+        guard quetesCocherSuivi else { return 0 }
+        let decoches = quetesDecoches[cle] ?? []
+        return ajouter(lue.faits.filter { !decoches.contains($0) }, de: lue.id)
+    }
+
+    /// L'objectif devient celui en cours de sa quête, à la place du précédent.
+    /// Un objectif coché ne l'est pas : il est fait.
+    func mettreEnCours(_ objectif: Int, de quete: Int) {
+        let cle = String(quete)
+        guard quetesEnCours[cle] != objectif, !(quetesValides[cle] ?? []).contains(objectif) else { return }
+        quetesEnCours[cle] = objectif
+    }
+
+    /// Coche sans jamais décocher ; rend combien ne l'étaient pas.
+    @discardableResult
+    private func ajouter(_ objectifs: [Int], de quete: Int) -> Int {
         let cle = String(quete)
         let avant = quetesValides[cle] ?? []
         var nouveaux: [Int] = []
@@ -32,11 +60,10 @@ extension Preferences {
         return nouveaux.count
     }
 
-    /// L'objectif devient celui en cours de sa quête, à la place du précédent.
-    /// Un objectif coché ne l'est pas : il est fait.
-    func mettreEnCours(_ objectif: Int, de quete: Int) {
-        let cle = String(quete)
-        guard quetesEnCours[cle] != objectif, !(quetesValides[cle] ?? []).contains(objectif) else { return }
-        quetesEnCours[cle] = objectif
+    /// La liste privée de `retires` ; `nil` quand elle se vide, pour ne pas
+    /// garder de clé vide dans la sauvegarde.
+    private static func sans(_ retires: [Int], _ liste: [Int]?) -> [Int]? {
+        let reste = (liste ?? []).filter { !retires.contains($0) }
+        return reste.isEmpty ? nil : reste
     }
 }
