@@ -15,7 +15,9 @@ user-invocable: false
 - Appui **et** relâchement sont écoutés (raccourcis « à maintenir » : aperçu d'ensemble).
   Carbon ne répète pas. Un modificateur seul est hors de portée, et le restera (il faudrait
   un moniteur de clavier).
-- `rebind()` réenregistre tout après chaque modification de préférence.
+- `rebind()` réenregistre tout après chaque modification de préférence, et quand l'effectif
+  change de taille (`republierEffectif`) : l'accès direct n'enregistre qu'un emplacement par
+  perso de l'effectif — ⌘6 reste aux autres apps tant qu'il n'y a pas de sixième perso.
 - `HotKey` stocke des **keycodes de position**, pas des caractères.
 - Deux territoires, règle du jeu par défaut : la rangée de chiffres (`digitRow`) est à
   l'accès direct (⌘1…⌘0) ; toute la navigation est sur la touche sous Échap
