@@ -322,17 +322,11 @@ enum QuetesDofusDB {
                       metiers: noms(cites.metiers), camps: noms(cites.camps))
     }
 
+    /// Les champs que lisent `Nomme`, `TitreAPI`, `CarteAPI` et `SousZoneAPI`.
+    private static let champsCites = DofusDB.selection(
+        ["id", "name", "posX", "posY", "subAreaId", "areaId", "typeId", "nameMale"])
+
     private static func parIdentifiants<Element: Decodable & Sendable>(_ chemin: String, _ ids: Set<Int>) async throws -> [Element] {
-        let ids = ids.sorted()
-        var elements: [Element] = []
-        for debut in stride(from: 0, to: ids.count, by: DofusDB.parPage) {
-            let lot = ids[debut..<min(debut + DofusDB.parPage, ids.count)]
-            elements += try await DofusDB.toutes(chemin, lot.map { URLQueryItem(name: "id[$in][]", value: "\($0)") }
-                + [URLQueryItem(name: "$select[]", value: "id"), URLQueryItem(name: "$select[]", value: "name"),
-                   URLQueryItem(name: "$select[]", value: "posX"), URLQueryItem(name: "$select[]", value: "posY"),
-                   URLQueryItem(name: "$select[]", value: "subAreaId"), URLQueryItem(name: "$select[]", value: "areaId"),
-                   URLQueryItem(name: "$select[]", value: "typeId"), URLQueryItem(name: "$select[]", value: "nameMale")])
-        }
-        return elements
+        try await DofusDB.parIdentifiants(chemin, ids, champsCites)
     }
 }
