@@ -44,29 +44,51 @@ struct EnTetePage: View {
     }
 }
 
-/// Une ligne : libellé (ⓘ, précision) à gauche, contrôle à droite.
-struct Ligne<Controle: View>: View {
+/// Une ligne : libellé (ⓘ, précision) à gauche, précédé d'une icône s'il y
+/// en a une, contrôle à droite.
+struct Ligne<Controle: View, Icone: View>: View {
     let titre: String
     var detail: String?
     var sousTexte: String?
     var aide: String?
-    @ViewBuilder let controle: Controle
+    let icone: Icone
+    let controle: Controle
+
+    init(titre: String, detail: String? = nil, sousTexte: String? = nil, aide: String? = nil,
+         @ViewBuilder icone: () -> Icone, @ViewBuilder controle: () -> Controle) {
+        self.titre = titre
+        self.detail = detail
+        self.sousTexte = sousTexte
+        self.aide = aide
+        self.icone = icone()
+        self.controle = controle()
+    }
 
     var body: some View {
         LabeledContent {
             controle
         } label: {
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(titre)
-                    if let detail { Text(detail).foregroundStyle(.secondary).lineLimit(1) }
-                    if let aide { HelpTip(aide) }
-                }
-                if let sousTexte {
-                    Text(sousTexte).font(.system(size: 11)).foregroundStyle(.secondary)
+            HStack(spacing: 8) {
+                icone
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Text(titre)
+                        if let detail { Text(detail).foregroundStyle(.secondary).lineLimit(1) }
+                        if let aide { HelpTip(aide) }
+                    }
+                    if let sousTexte {
+                        Text(sousTexte).font(.system(size: 11)).foregroundStyle(.secondary)
+                    }
                 }
             }
         }
+    }
+}
+
+extension Ligne where Icone == EmptyView {
+    init(titre: String, detail: String? = nil, sousTexte: String? = nil, aide: String? = nil,
+         @ViewBuilder controle: () -> Controle) {
+        self.init(titre: titre, detail: detail, sousTexte: sousTexte, aide: aide, icone: { EmptyView() }, controle: controle)
     }
 }
 
