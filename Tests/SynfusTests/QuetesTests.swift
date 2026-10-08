@@ -168,6 +168,19 @@ struct QuetesTests {
         #expect(QuetesDofusDB.relire(try JSONSerialization.data(withJSONObject: objet)) == nil)
     }
 
+    @Test("Dofus pour les noobs : lettres nues d'abord, puis les entités HTML de Weebly")
+    func dofusPourLesNoobs() {
+        #expect(DofusPourLesNoobs.candidats("La voie du guerrier") == ["la-voie-du-guerrier"])
+        #expect(DofusPourLesNoobs.candidats("Naissance d'une vocation") == ["naissance-dune-vocation"])
+        #expect(DofusPourLesNoobs.candidats("Pense-bête") == ["pense-bete", "pense-becircte"])
+        #expect(DofusPourLesNoobs.candidats("L'éternelle moisson").contains("leacuteternelle-moisson"))
+        #expect(DofusPourLesNoobs.candidats("Esprit, es-tu là ?").first == "esprit-es-tu-la")
+        #expect(DofusPourLesNoobs.candidats("Les gardes d'honneur... à punir")
+                == ["les-gardes-dhonneur-a-punir", "les-gardes-dhonneur-agrave-punir"])
+        #expect(DofusPourLesNoobs.candidats("Ingérence en Amakna à Bonta").count == 4)
+        #expect(DofusPourLesNoobs.page("pense-bete").absoluteString == "https://www.dofuspourlesnoobs.com/pense-bete.html")
+    }
+
     @Test("/pnj et le filtre PNJ : le trajet vers sa position")
     func paletteePNJ() throws {
         let contexte = try contexte()
