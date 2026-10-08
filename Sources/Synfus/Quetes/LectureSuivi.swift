@@ -1,8 +1,13 @@
+import Combine
 import Foundation
 
-/// Le suivi de quêtes du jeu, lu à la demande pour le panneau des quêtes :
-/// au bouton « Lire le suivi » et à l'ouverture du panneau. Jamais au tour —
-/// le suivi ne change que de la main du joueur.
+/// Le suivi de quêtes du jeu, lu pour le panneau des quêtes : au tour de
+/// `LecteurEcran` tant que le panneau est montré — un objectif qui se termine
+/// le change —, au bouton « Lire le suivi » et à l'ouverture du panneau.
+/// Toute lecture prend le même chemin (`traiter`) : reconnaissance hors du
+/// main actor, coches (`Preferences.appliquer`), lectures par perso
+/// (`HistoriqueSuivi`). Ce que le panneau montre vient de la lecture du
+/// **perso devant**, tant que l'écran la confirme : c'est lui qui joue.
 @MainActor
 final class LectureSuivi: ObservableObject {
     static let shared = LectureSuivi()
@@ -17,12 +22,15 @@ final class LectureSuivi: ObservableObject {
         case lu
     }
 
+    /// Les quêtes du suivi du perso devant, à sa dernière lecture.
     @Published private(set) var reconnues: [SuiviQuetes.Reconnue] = []
     @Published private(set) var etat: Etat = .jamaisLu
-    /// Les objectifs que la dernière lecture a cochés (`quetesCocherSuivi`).
+    /// Les objectifs qu'a cochés (`quetesCocherSuivi`) la dernière lecture
+    /// demandée, ou la dernière du tour qui en a coché.
     @Published private(set) var cochesLues = 0
-    /// La dernière lecture dit encore où en est le jeu : passé `fraicheur`,
-    /// le joueur a sans doute avancé, ses « à faire » ne se montrent plus.
+    /// L'écran a montré la lecture du perso devant il y a moins de
+    /// `fraicheur` : au-delà — panneau caché, perso pas revu —, le joueur a
+    /// sans doute avancé, ses « à faire » ne se montrent plus.
     @Published private(set) var fraiche = false
     /// Les lectures de chaque perso : où il en est de chaque quête.
     @Published private(set) var historique = HistoriqueSuivi()
@@ -30,39 +38,64 @@ final class LectureSuivi: ObservableObject {
     /// sans doute — le panneau propose de les désépingler.
     @Published private(set) var terminees: Set<Int> = []
 
-    static let fraicheur: Duration = .seconds(10 * 60)
+    static let fraicheur: TimeInterval = 10 * 60
+    /// Quand l'écran a montré la lecture de chaque perso pour la dernière
+    /// fois, relue ou revue inchangée. Hors des `@Published` : le tour la
+    /// confirme toutes les trois secondes sans rien changer à l'écran.
+    private var vusLe: [String: Date] = [:]
+    /// `LecteurEcran.persoDevant`.
+    private var devant: String?
     private var peremption: Task<Void, Never>?
     /// L'index des noms (`SuiviQuetes.Index`) du dernier jeu de quêtes lu.
     private var index: (date: Date, tache: Task<SuiviQuetes.Index, Never>)?
+    /// La lecture en cours de traitement : la suivante l'attend, l'ordre
+    /// d'arrivée est celui de l'écran.
+    private var traitement: Task<Void, Never>?
+    private var abonnement: AnyCancellable?
 
-    private init() {}
-
-    /// Les objectifs de la quête que le suivi montre encore à faire, tant que
-    /// la lecture est fraîche.
-    func aFaire(_ quete: Int) -> Set<Int> {
-        guard fraiche, let reconnue = reconnues.first(where: { $0.id == quete }) else { return [] }
-        return Set(reconnue.aFaire)
+    private init() {
+        // La valeur émise : `@Published` publie avant d'affecter.
+        abonnement = LecteurEcran.shared.$persoDevant
+            .removeDuplicates()
+            .sink { [weak self] perso in
+                MainActor.assumeIsolated {
+                    self?.devant = perso
+                    self?.revoir()
+                }
+            }
     }
 
+    /// Les objectifs de la quête que le suivi du perso devant montre encore à
+    /// faire, tant que sa lecture est fraîche.
+    func aFaire(_ quete: Int) -> Set<Int> { Set(reconnue(quete)?.aFaire ?? []) }
+
+    /// Ce que la lecture fraîche du perso devant dit de la quête.
+    func reconnue(_ quete: Int) -> SuiviQuetes.Reconnue? {
+        fraiche ? reconnues.first { $0.id == quete } : nil
+    }
+
+    /// « Lire le suivi », et l'ouverture du panneau.
     func lire() {
         guard etat != .enCours else { return }
         etat = .enCours
         Task {
-            guard let (perso, lignes) = await LecteurEcran.shared.lireUneFois(.quetes) else { etat = .illisible; return }
+            guard let lu = await LecteurEcran.shared.lireUneFois(.quetes) else { etat = .illisible; return }
             guard let quetes = await QuetesStore.shared.chargees() else { etat = .sansQuetes; return }
-            let lu = await reconnaitre(lignes, coupe: false, dans: quetes)
-            reconnues = lu.reconnues
-            let prefs = Preferences.shared
-            cochesLues = reconnues.reduce(0) { $0 + prefs.appliquer($1) }
-            // Un client pas encore connecté n'a pas de nom de perso à qui
-            // rapporter son suivi.
-            if WindowTitle.isPersistableName(perso) {
-                let disparues = historique.noter(lu, perso: perso, date: Date())
-                terminees = terminees.union(disparues).subtracting(reconnues.map(\.id))
-            }
-            etat = .lu
-            rafraichir()
+            await traiter(lu.lignes, coupe: lu.coupe, perso: lu.perso, quetes: quetes, demandee: true)
         }
+    }
+
+    /// Une lecture du tour : le suivi de `perso`, devant, a changé à l'écran.
+    func recevoir(_ lignes: [String], coupe: Bool, perso: String) {
+        guard let quetes = QuetesStore.shared.quetes else { return }
+        Task { await traiter(lignes, coupe: coupe, perso: perso, quetes: quetes, demandee: false) }
+    }
+
+    /// Le tour a revu le suivi de `perso` inchangé : sa dernière lecture tient.
+    func confirmer(_ perso: String) {
+        guard historique.derniere(perso) != nil else { return }
+        vusLe[perso] = Date()
+        revoir()
     }
 
     /// Une lecture reconnue hors du main actor — deux mille noms dans trois
@@ -80,13 +113,58 @@ final class LectureSuivi: ObservableObject {
         return await Task.detached { SuiviQuetes.reconnaitre(lignes, coupe: coupe, dans: pret) }.value
     }
 
-    private func rafraichir() {
-        fraiche = true
-        peremption?.cancel()
-        peremption = Task {
-            try? await Task.sleep(for: Self.fraicheur)
-            if !Task.isCancelled { fraiche = false }
+    /// Le seul chemin d'une lecture, demandée ou du tour.
+    private func traiter(_ lignes: [String], coupe: Bool, perso: String, quetes: Quetes, demandee: Bool) async {
+        let precedent = traitement
+        let tache = Task {
+            await precedent?.value
+            let lu = await reconnaitre(lignes, coupe: coupe, dans: quetes)
+            noter(lu, perso: perso, demandee: demandee)
         }
+        traitement = tache
+        await tache.value
+    }
+
+    private func noter(_ lu: SuiviQuetes.Lu, perso: String, demandee: Bool) {
+        let prefs = Preferences.shared
+        let coches = lu.reconnues.reduce(0) { $0 + prefs.appliquer($1) }
+        if demandee || coches > 0, cochesLues != coches { cochesLues = coches }
+        // Un client pas encore connecté n'a pas de nom de perso à qui
+        // rapporter son suivi.
+        if WindowTitle.isPersistableName(perso) {
+            vusLe[perso] = Date()
+            // Une relecture identique ne change rien : rien à redessiner.
+            var historique = self.historique
+            let disparues = historique.noter(lu, perso: perso, date: Date())
+            if historique != self.historique { self.historique = historique }
+            let restent = terminees.union(disparues).subtracting(lu.reconnues.map(\.id))
+            if restent != terminees { terminees = restent }
+        }
+        if etat != .lu, demandee || etat != .enCours { etat = .lu }
+        revoir()
+    }
+
+    /// Ce que le panneau montre : la dernière lecture du perso devant, et si
+    /// l'écran l'a montrée il y a moins de `fraicheur`.
+    private func revoir() {
+        let lues = devant.flatMap { historique.derniere($0) }?.reconnues ?? []
+        if reconnues != lues { reconnues = lues }
+        let frais = devant.flatMap { vusLe[$0] }.map { Date().timeIntervalSince($0) < Self.fraicheur } ?? false
+        if fraiche != frais { fraiche = frais }
+        if frais, peremption == nil { peremption = Task { await perimer() } }
+    }
+
+    /// Attend que la lecture du perso devant n'ait plus été vue depuis
+    /// `fraicheur`, confirmations et bascules comprises.
+    private func perimer() async {
+        while !Task.isCancelled {
+            let vu = devant.flatMap { vusLe[$0] } ?? .distantPast
+            let reste = Self.fraicheur - Date().timeIntervalSince(vu)
+            guard reste > 0 else { break }
+            try? await Task.sleep(for: .seconds(reste))
+        }
+        peremption = nil
+        revoir()
     }
 
     /// La quête n'est plus à proposer comme terminée : désépinglée.
