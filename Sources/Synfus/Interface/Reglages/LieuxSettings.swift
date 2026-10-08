@@ -17,7 +17,8 @@ struct LieuxSettings: View {
         let lieux = montres(langue)
         let affiches = Array(lieux.prefix(Self.limite).enumerated())
         PageListe(titre: L("reglages.lieux"), sousTitre: L("lieux.sousTitre")) {
-            SourceCarte().cadreDeListe(premiere: true, derniere: true)
+            SourceCarte().cadreDeListe(premiere: true, derniere: false)
+            InterrupteurVuesCartes().cadreDeListe(premiere: false, derniere: true)
             EnTeteListe(titre: L("lieux.compte", lieux.count), aide: L("palette.reglages.lieux.aide"))
             HStack(spacing: 10) {
                 ChampFiltre(invite: L("lieux.filtrer"), texte: $filtre)
@@ -33,10 +34,16 @@ struct LieuxSettings: View {
             .cadreDeListe(premiere: true, derniere: affiches.isEmpty)
             ForEach(affiches, id: \.element.cle) { rang, lieu in
                 Ligne(titre: lieu.nom(en: langue), sousTexte: Self.lieuDit(lieu, langue)) {
+                    PictogrammeLieu(gfx: lieu.gfx) {
+                        Image(systemName: "mappin.and.ellipse").foregroundStyle(.secondary)
+                    }
+                    .frame(width: 22, height: 22)
+                } controle: {
                     HStack(spacing: 10) {
                         BoutonEtiquette(cle: lieu.cle)
                         BoutonFavori(cle: lieu.cle)
                         BoutonTrajet(x: lieu.x, y: lieu.y)
+                        MiniatureCarte(carte: lieu.idCarte)
                     }
                 }
                 .cadreDeListe(premiere: false, derniere: rang == affiches.count - 1 && lieux.count <= Self.limite)

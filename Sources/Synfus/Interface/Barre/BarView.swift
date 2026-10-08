@@ -233,7 +233,7 @@ struct BarView: View {
                 ZaapClipboard.shared.copierZaap(zaap)
             } label: {
                 if let cartes = CatalogueZaaps.distance(de: zaap, depuis: position) {
-                    Text(L("barre.zaap.favori", zaap.nom(en: langue), coordonnees, cartes))
+                    Text(L("barre.zaap.favori", nombre: cartes, zaap.nom(en: langue), coordonnees, cartes))
                 } else {
                     Text(L("barre.zaap.favoriSansDistance", zaap.nom(en: langue), coordonnees))
                 }

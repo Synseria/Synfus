@@ -101,6 +101,10 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
     /// Ce qu'une étiquette ou un favori désigne (`Zaap.cle`, `Lieu.cle`) ;
     /// `nil` pour ce qui ne s'étiquette pas.
     var cle: String?
+    /// La carte du jeu de l'entrée, dont la liste montre la vue.
+    var carte: Int?
+    /// Le pictogramme d'un lieu (`Lieu.gfx`), à la place du symbole.
+    var pictogramme: Int?
     let effet: Effet
 }
 
@@ -194,7 +198,7 @@ enum RecherchePalette {
                 sousTitre: zaap.zone(en: contexte.langue), etiquette: contexte.etiquettes[zaap.cle],
                 detail: Coordonnees.texte(zaap.x, zaap.y), favori: contexte.favoris.contains(zaap.cle),
                 distance: CatalogueZaaps.distance(de: zaap, depuis: contexte.position), cle: zaap.cle,
-                effet: .copier(ItineraireZaap.zaap(zaap)))
+                carte: zaap.idCarte, effet: .copier(ItineraireZaap.zaap(zaap)))
         }
     }
 
@@ -206,7 +210,7 @@ enum RecherchePalette {
                 sousTitre: zaap.zone(en: contexte.langue), etiquette: contexte.etiquettes[zaap.cle],
                 detail: Coordonnees.texte(zaap.x, zaap.y), favori: contexte.favoris.contains(zaap.cle),
                 distance: CatalogueZaaps.distance(de: zaap, depuis: contexte.position), cle: zaap.cle,
-                effet: .trajet(x: zaap.x, y: zaap.y))
+                carte: zaap.idCarte, effet: .trajet(x: zaap.x, y: zaap.y))
         }
     }
 
@@ -221,11 +225,12 @@ enum RecherchePalette {
             let distance = distanceVers(lieu, contexte)
             let lieuDit = [lieu.sousZone(en: contexte.langue), lieu.zone(en: contexte.langue)]
                 .compactMap { $0 }.joined(separator: " · ")
-            let sousTitre = distance.map { L("palette.aCartes", lieuDit, $0) } ?? lieuDit
+            let sousTitre = distance.map { L("palette.aCartes", nombre: $0, lieuDit, $0) } ?? lieuDit
             return EntreePalette(
                 id: lieu.cle, genre: .lieu, titre: lieu.nom(en: contexte.langue), sousTitre: sousTitre,
                 etiquette: contexte.etiquettes[lieu.cle], detail: Coordonnees.texte(lieu.x, lieu.y),
                 favori: contexte.favoris.contains(lieu.cle), distance: distance, categorie: lieu.categorie, recherche: lieuDit, cle: lieu.cle,
+                carte: lieu.idCarte, pictogramme: lieu.gfx,
                 effet: lieu.monde == Zaap.mondeDesDouze ? .trajet(x: lieu.x, y: lieu.y)
                                                         : .copier(ItineraireZaap.travel(vers: (lieu.x, lieu.y))))
         }
@@ -304,7 +309,7 @@ enum RecherchePalette {
                 return EntreePalette(id: "pnj:\(pnj.id):\(position.x),\(position.y)", genre: .pnj,
                                      titre: Lieu.traduit(pnj.noms, contexte.langue) ?? "?", sousTitre: sousTitre,
                                      detail: Coordonnees.texte(position.x, position.y), distance: distance(vers: position, contexte),
-                                     effet: .trajet(x: position.x, y: position.y))
+                                     carte: passage.carte, effet: .trajet(x: position.x, y: position.y))
             }
         }
     }

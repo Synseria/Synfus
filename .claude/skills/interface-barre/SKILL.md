@@ -55,6 +55,16 @@ sa bascule). Toute nouvelle option suit la règle.
   haut** (AppKit garde l'origine en bas à gauche).
 - L'onglet Persos offre la même affectation par un `Picker` par ligne.
 
+## Vues des cartes — `Interface/ImagesCarte.swift`
+
+- Toute vue de carte en vignette passe par `MiniatureCarte` (palette, onglets Lieux et PNJ,
+  panneau des quêtes) : réduite hors main (`ImagesDofusDB`, `cote`, cache borné), masquée par
+  `vuesCartes` (clé de sauvegarde `zaapsVueCarte`, qui masque aussi le fond des zaaps), agrandie
+  au survol par `ApercuCarte` — panneau sans bordure, jamais clé, `ignoresMouseEvents`, posé à
+  côté de la fenêtre sous la souris. Une fenêtre qui se cache sans détruire ses vues (palette,
+  réglages, quêtes) appelle `ApercuCarte.shared.cacher()`, sans compter sur `onDisappear`.
+- Pictogramme d'un lieu : `PictogrammeLieu` (`Lieu.gfx`), le symbole en repli.
+
 ## Réglages et menu
 
 - `Reglages/SettingsView.swift` : barre latérale en groupes (`GroupeReglages`), un

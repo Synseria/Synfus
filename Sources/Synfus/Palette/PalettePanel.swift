@@ -65,6 +65,8 @@ final class PalettePanel: NSObject, ObservableObject, NSWindowDelegate {
 
     func fermer() {
         panel?.orderOut(nil)
+        // La vignette survolée ne disparaît pas avec le panneau caché.
+        ApercuCarte.shared.cacher()
         ouvert = false
     }
 

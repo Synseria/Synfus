@@ -154,9 +154,10 @@ final class Preferences: ObservableObject {
     /// dans l'ordre où ils ont été marqués.
     @Published var zaapsFavoris: [String] = [] { didSet { save() } }
 
-    /// La vue de la carte du jeu en fond de chaque zaap de l'onglet Zaaps,
-    /// téléchargée de DofusDB à la première ouverture.
-    @Published var zaapsVueCarte: Bool = true { didSet { save() } }
+    /// Les vues des cartes du jeu, téléchargées de DofusDB à la première
+    /// ouverture : en vignette dans la palette, les listes et le panneau des
+    /// quêtes, en fond des zaaps de l'onglet Zaaps — d'où sa clé.
+    @Published var vuesCartes: Bool = true { didSet { save() } }
 
     /// Les lieux de la carte mis en avant dans la palette, par `Lieu.cle`.
     @Published var lieuxFavoris: [String] = [] { didSet { save() } }
@@ -472,7 +473,7 @@ final class Preferences: ObservableObject {
         .facultatif("quetesValides", \.quetesValides),
         .facultatif("quetesBouton", \.quetesBouton),
         .facultatif("quetesMasquerObjets", \.quetesMasquerObjets),
-        .facultatif("zaapsVueCarte", \.zaapsVueCarte),
+        .facultatif("zaapsVueCarte", \.vuesCartes),
     ]
 
     /// Génération du jeu de raccourcis par défaut appliqué à la sauvegarde.

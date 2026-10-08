@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// Onglet PNJ : les PNJ que les quêtes situent, et chaque case où elles les
-/// placent — la plus citée d'abord, avec sa zone ; un clic copie le trajet.
+/// placent — la plus citée d'abord, avec sa zone et la vue de sa carte ; un
+/// clic copie le trajet.
 struct PNJSettings: View {
     @ObservedObject private var store = QuetesStore.shared
     @State private var filtre = ""
@@ -13,7 +14,8 @@ struct PNJSettings: View {
         let pnjs = montres(langue)
         let affiches = Array(pnjs.prefix(Self.limite).enumerated())
         PageListe(titre: L("reglages.pnj"), sousTitre: L("pnj.sousTitre")) {
-            SourceQuetes().cadreDeListe(premiere: true, derniere: true)
+            SourceQuetes().cadreDeListe(premiere: true, derniere: false)
+            InterrupteurVuesCartes().cadreDeListe(premiere: false, derniere: true)
             EnTeteListe(titre: L("pnj.compte", pnjs.count))
             ChampFiltre(invite: L("pnj.filtrer"), texte: $filtre)
                 .cadreDeListe(premiere: true, derniere: affiches.isEmpty)
@@ -26,6 +28,7 @@ struct PNJSettings: View {
                             Text(L("pnj.quetes", nombre: passage.quetes, passage.quetes)).font(.system(size: 11)).foregroundStyle(.secondary)
                             Spacer()
                             BoutonTrajet(x: passage.position.x, y: passage.position.y)
+                            if let carte = passage.carte { MiniatureCarte(carte: carte) }
                         }
                         .font(.system(size: 12))
                     }

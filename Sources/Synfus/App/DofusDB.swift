@@ -38,6 +38,11 @@ enum DofusDB {
         api.appending(path: "img/maps/0.5/\(carte).jpg")
     }
 
+    /// Le pictogramme d'un repère sur la carte du jeu, par son `Lieu.gfx`.
+    static func pictogramme(_ gfx: Int) -> URL {
+        api.appending(path: "img/hints/\(gfx).png")
+    }
+
     /// L'emblème d'une classe, par son identifiant DofusDB (`ImagesDofusDB` le garde).
     static func emblemeClasse(_ classe: Int) -> URL {
         api.appending(path: "img/breeds/symbol_\(classe).png")

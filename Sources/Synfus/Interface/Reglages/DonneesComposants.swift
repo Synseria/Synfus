@@ -159,3 +159,14 @@ struct BoutonTrajet: View {
         .help(L("quete.copierTrajet"))
     }
 }
+
+/// Les vues des cartes, partout à la fois : vignettes de la palette, des
+/// listes et du panneau des quêtes, fonds des zaaps. Sur chaque page qui en
+/// montre, un seul réglage derrière.
+struct InterrupteurVuesCartes: View {
+    @ObservedObject private var prefs = Preferences.shared
+
+    var body: some View {
+        Interrupteur(titre: L("vuesCartes"), sousTexte: L("vuesCartes.sousTexte"), isOn: $prefs.vuesCartes)
+    }
+}

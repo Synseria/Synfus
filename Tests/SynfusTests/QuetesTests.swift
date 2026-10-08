@@ -89,12 +89,14 @@ struct QuetesTests {
                 == SousZoneNommee(noms: ["fr": "Village d'Amakna"], zone: ["fr": "Amakna"]))
     }
 
-    @Test("Un PNJ est situé par le départ de la quête et par les objectifs qui mènent à lui")
+    @Test("Un PNJ est situé par le départ de la quête et par les objectifs qui mènent à lui, avec leur carte")
     func pnjs() throws {
         let pnjs = try Self.quetes().pnjs
-        #expect(pnjs.first { $0.id == 196 }?.passages.map(\.position) == [PNJ.Position(x: -1, y: -39)])
+        // L'objectif 103 mène aussi à Wogew, mais sans case : il ne le situe pas.
+        #expect(pnjs.first { $0.id == 196 }?.passages == [PNJ.Passage(position: PNJ.Position(x: -1, y: -39),
+                                                                      carte: 160695296, sousZone: 56, quetes: 1)])
         #expect(pnjs.first { $0.id == 119 }?.passages == [PNJ.Passage(position: PNJ.Position(x: -2, y: -4),
-                                                                      sousZone: 10, quetes: 1)])
+                                                                      carte: 185862149, sousZone: 10, quetes: 1)])
     }
 
     private func contexte() throws -> ContextePalette {
@@ -109,6 +111,13 @@ struct QuetesTests {
     func palette() throws {
         let quete = try #require(RecherchePalette.entrees("/quete wogew", try contexte()).first)
         #expect(quete.effet == .ouvrirQuete(18))
+    }
+
+    @Test("/pnj trouve le PNJ là où il se tient, avec la carte dont la liste montre la vue")
+    func palettePNJ() throws {
+        let otomai = try #require(RecherchePalette.entrees("/pnj otomai", try contexte()).first)
+        #expect(otomai.effet == .trajet(x: -2, y: -4))
+        #expect(otomai.carte == 185862149)
     }
 
     @Test("La fiche : ressources additionnées, objectifs résolus, carte quand elle est connue")
