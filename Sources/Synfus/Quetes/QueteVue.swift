@@ -180,6 +180,15 @@ struct QueteVue: View {
                     .foregroundStyle(Couleurs.ambre)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            // Sortie du suivi du jeu entre deux lectures (`HistoriqueSuivi`) :
+            // finie, sans doute, mais seul le joueur le sait.
+            if ficheImposee == nil, lecture.terminees.contains(fiche.id) {
+                Button { QuetePanel.shared.desepingler(fiche.id) } label: {
+                    Label(L("quete.terminee"), systemImage: "flag.checkered")
+                }
+                .controlSize(.small)
+                .help(L("quete.terminee.aide"))
+            }
         }
     }
 
@@ -282,6 +291,8 @@ struct QueteVue: View {
         let suggeres = ficheImposee == nil ? etape.suggeres(en: ici, valides: coches, enCours: enCours,
                                                                   combatFini: lecteur.combatFiniDevant) : []
         let aFaire = ficheImposee == nil ? lecture.aFaire(fiche.id) : []
+        let lus = ficheImposee == nil
+            ? lecture.historique.persos(fiche.id, etape: rang, seule: !plusieurs, maintenant: Date()) : []
         return VStack(alignment: .leading, spacing: metriques.ecartLignes) {
             if plusieurs {
                 HStack(spacing: 6) {
@@ -290,6 +301,7 @@ struct QueteVue: View {
                         .help(L("quete.etapePrecedente"))
                     titreSection(L("quete.etapeSur", rang + 1, fiche.etapes.count, etape.nom))
                         .lineLimit(1)
+                    persosLus(lus)
                     Spacer(minLength: 0)
                     Button { changerEtape(fiche, rang + 1) } label: { Image(systemName: "chevron.right") }
                         .disabled(rang >= fiche.etapes.count - 1)
@@ -297,7 +309,10 @@ struct QueteVue: View {
                 }
                 .buttonStyle(.borderless)
             } else {
-                titreSection(L("quete.objectifs"))
+                HStack(spacing: 6) {
+                    titreSection(L("quete.objectifs"))
+                    persosLus(lus)
+                }
             }
             if prefs.quetesConsigne, let description = etape.description {
                 Text(description)
@@ -333,6 +348,32 @@ struct QueteVue: View {
                 .padding(.top, metriques.ecartLignes)
             }
         }
+    }
+
+    /// Combien de persos leur suivi du jeu montre à cette étape ; au survol,
+    /// lesquels et quand. Jamais tiré des coches, communes à tous les persos.
+    @ViewBuilder
+    private func persosLus(_ lus: [HistoriqueSuivi.EtapeLue]) -> some View {
+        if !lus.isEmpty {
+            let maintenant = Date()
+            HStack(spacing: 1) {
+                Image(systemName: "person.fill")
+                Text("\(lus.count)")
+            }
+            .font(.system(size: metriques.detail, weight: .semibold))
+            .foregroundStyle(.secondary)
+            .fixedSize()
+            .help(L("quete.persos", nombre: lus.count, lus.count,
+                    lus.map { Self.lu($0, maintenant: maintenant) }.joined(separator: "\n")))
+        }
+    }
+
+    /// « Aeryn — lu il y a 5 min ».
+    static func lu(_ lue: HistoriqueSuivi.EtapeLue, maintenant: Date) -> String {
+        let minutes = Int(maintenant.timeIntervalSince(lue.date) / 60)
+        if minutes < 1 { return L("quete.persos.luALInstant", lue.perso) }
+        if minutes < 60 { return L("quete.persos.lu", lue.perso, minutes) }
+        return L("quete.persos.luHeures", lue.perso, minutes / 60)
     }
 
     /// « 4 377 903 XP (niveau 177) · 1 200 kamas · Vaccin × 1 · émote Pierre ».
