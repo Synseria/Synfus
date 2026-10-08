@@ -78,6 +78,63 @@ struct EmpreinteTexteTests {
         let b = EmpreinteTexte(image(texteEn: 10..<140))
         #expect(!a.semblable(a: b))
     }
+
+    /// Un suivi : un titre blanc et un objectif gris clair sur l'encadré
+    /// sombre ; avec `decor`, le jeu qui bouge plus bas, hors de ses lignes.
+    private func suivi(objectif: Range<Int>, decor: Bool = false) -> LumaBitmap {
+        let (w, h) = (200, 300)
+        var pixels = [UInt8](repeating: 40, count: w * h)
+        for y in 20..<28 { for x in 10..<150 { pixels[y * w + x] = 255 } }
+        for y in 34..<42 { for x in objectif { pixels[y * w + x] = 200 } }
+        if decor { for y in 200..<260 { for x in 20..<120 { pixels[y * w + x] = 250 } } }
+        return LumaBitmap(width: w, height: h, pixels: pixels)
+    }
+
+    @Test("Dans les lignes d'un suivi, un objectif gris clair qui change relance l'OCR ; le jeu autour, non")
+    func lignesDuSuivi() throws {
+        let boites = [CGRect(x: 10, y: 20, width: 140, height: 8), CGRect(x: 10, y: 34, width: 120, height: 8)]
+        let cadre = try #require(SignatureZone.cadre(lignes: boites, image: CGSize(width: 200, height: 300))).cadre
+        func signature(_ image: LumaBitmap) -> SignatureZone {
+            SignatureZone(image, mesure: .lignes, cadre: cadre, couleur: nil)
+        }
+        let avant = signature(suivi(objectif: 10..<130))
+        #expect(avant.semblable(a: signature(suivi(objectif: 10..<130, decor: true))))
+        #expect(!avant.semblable(a: signature(suivi(objectif: 10..<60))))
+    }
+
+    @Test("Le cadre des lignes : leur union, prolongée vers le bas ; au bas de la zone, la suite peut être coupée")
+    func cadreDesLignes() {
+        let boites = [CGRect(x: 10, y: 20, width: 100, height: 10), CGRect(x: 10, y: 34, width: 140, height: 10)]
+        let haute = SignatureZone.cadre(lignes: boites, image: CGSize(width: 200, height: 300))
+        #expect(haute?.cadre == CGRect(x: 5, y: 15, width: 150, height: 44))
+        #expect(haute?.auBord == false)
+        let basse = SignatureZone.cadre(lignes: boites, image: CGSize(width: 200, height: 52))
+        #expect(basse?.cadre == CGRect(x: 5, y: 15, width: 150, height: 37))
+        #expect(basse?.auBord == true)
+        #expect(SignatureZone.cadre(lignes: [], image: CGSize(width: 200, height: 300)) == nil)
+    }
+
+    /// Le bouton de fin de tour, blanc, et au-dessus le décompte — blanc lui
+    /// aussi, au pire.
+    private func combat(decompte: Range<Int>, bouton: Range<Int> = 20..<100) -> LumaBitmap {
+        let (w, h) = (120, 100)
+        var pixels = [UInt8](repeating: 40, count: w * h)
+        for y in 30..<40 { for x in decompte { pixels[y * w + x] = 255 } }
+        for y in 60..<70 { for x in bouton { pixels[y * w + x] = 255 } }
+        return LumaBitmap(width: w, height: h, pixels: pixels)
+    }
+
+    @Test("Le décompte qui défile ne relance pas l'OCR ; le texte du bouton qui change, si")
+    func decompteDuBouton() {
+        let corps = LectureCombat.corpsDuBouton(texte: CGRect(x: 20, y: 60, width: 80, height: 10),
+                                                image: CGSize(width: 120, height: 100))
+        func signature(_ image: LumaBitmap) -> SignatureZone {
+            SignatureZone(image, mesure: .bouton, cadre: corps, couleur: 0.21)
+        }
+        let avant = signature(combat(decompte: 50..<70))
+        #expect(avant.semblable(a: signature(combat(decompte: 50..<62))))
+        #expect(!avant.semblable(a: signature(combat(decompte: 50..<70, bouton: 20..<60))))
+    }
 }
 
 /// La géométrie des zones de lecture : fractions du contenu, sans barre de
@@ -214,6 +271,17 @@ struct LectureCombatTests {
         let suite = EtatCombat.depuis(.init(genre: .monTour, secondes: nil), avant: debut,
                                       maintenant: t0.addingTimeInterval(5))
         #expect(suite == debut)
+        // Relu une seconde plus tard, le décompte arrondi redonne l'échéance
+        // à une seconde près : elle ne bouge pas, la barre ne se redessine pas.
+        let relu = EtatCombat.depuis(.init(genre: .monTour, secondes: 28), avant: debut,
+                                     maintenant: t0.addingTimeInterval(1.4))
+        #expect(relu == debut)
+        // Le tour suivant, ou un décompte qui s'en écarte vraiment : la nouvelle.
+        let ecart = EtatCombat.depuis(.init(genre: .monTour, secondes: 30), avant: debut,
+                                      maintenant: t0.addingTimeInterval(10))
+        #expect(ecart == .monTour(fin: t0.addingTimeInterval(40)))
+        #expect(EtatCombat.depuis(.init(genre: .monTour, secondes: 30), avant: .pasMonTour, maintenant: t0.addingTimeInterval(1))
+            == .monTour(fin: t0.addingTimeInterval(31)))
         #expect(EtatCombat.depuis(.init(genre: .pasMonTour, secondes: 12), avant: debut, maintenant: t0) == .pasMonTour)
         #expect(!EtatCombat.horsCombat.enCombat)
     }

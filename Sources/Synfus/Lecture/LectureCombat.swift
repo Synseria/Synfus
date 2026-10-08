@@ -14,9 +14,10 @@ import Foundation
 /// La couleur se mesure (`ratioColore`, sur le seul corps du bouton,
 /// `corpsDuBouton`), le texte se lit : « tour » sur un bouton coloré, c'est
 /// mon tour ; sur un bouton gris, celui d'un autre.
-/// Le décompte n'est lu qu'au changement d'état — le chiffre est vert,
-/// sous le seuil de l'`EmpreinteTexte`, et ne relance pas l'OCR chaque
-/// seconde : l'échéance est calculée une fois, le compte à rebours est local.
+/// Le décompte n'est lu qu'au changement d'état — la signature du combat ne
+/// regarde que le corps du bouton (`MesureSignature.bouton`), le décompte
+/// au-dessus ne relance pas l'OCR chaque seconde : l'échéance est calculée
+/// une fois, le compte à rebours est local.
 enum LectureCombat {
     enum Genre: Equatable, Sendable {
         case horsCombat
@@ -123,19 +124,25 @@ enum EtatCombat: Equatable, Sendable {
 
     var enCombat: Bool { self != .horsCombat }
 
+    /// Le décompte se lit en secondes entières : relu pendant le même tour,
+    /// il redonne la même échéance à une seconde près.
+    static let ecartEcheance: TimeInterval = 1.5
+
     /// Le constat d'une lecture, compte tenu de l'état d'avant : un tour qui
-    /// continue garde son échéance si le décompte n'a pas été relu.
+    /// continue garde son échéance si le décompte n'a pas été relu, ou relu
+    /// à l'arrondi près — sans quoi l'état changerait à chaque lecture et la
+    /// barre avec.
     static func depuis(_ constat: LectureCombat.Constat, avant: EtatCombat?, maintenant: Date) -> EtatCombat {
         switch constat.genre {
         case .horsCombat: return .horsCombat
         case .placement: return .placement
         case .pasMonTour: return .pasMonTour
         case .monTour:
-            if let secondes = constat.secondes {
-                return .monTour(fin: maintenant.addingTimeInterval(TimeInterval(secondes)))
-            }
-            if case .monTour(let fin) = avant { return .monTour(fin: fin) }
-            return .monTour(fin: nil)
+            let tenue: Date? = if case .monTour(let fin) = avant { fin } else { nil }
+            guard let secondes = constat.secondes else { return .monTour(fin: tenue) }
+            let fin = maintenant.addingTimeInterval(TimeInterval(secondes))
+            if let tenue, abs(tenue.timeIntervalSince(fin)) <= ecartEcheance { return .monTour(fin: tenue) }
+            return .monTour(fin: fin)
         }
     }
 }
