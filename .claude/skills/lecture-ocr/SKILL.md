@@ -40,9 +40,19 @@ Position et combat sont lus au tour ; **chasse** et **quêtes** seulement à la 
   (« Lire le suivi » du menu du panneau des quêtes, et son ouverture si l'écran est déjà autorisé) →
   `SuiviQuetes.reconnaitre` (pur, hors main) : une ligne de titre **est** un nom de quête
   (tolérance n/4, `surplusTitre` pour les icônes), pas seulement le contient ; ordre de
-  l'écran, sans doublon, 10 au plus. L'étape : celle dont les noms cités (PNJ, objet,
-  monstre) et objectifs se retrouvent sous le titre, seulement si une seule l'emporte — le
-  texte du suivi n'est pas celui de DofusDB.
+  l'écran, sans doublon, 10 au plus.
+- Objectifs : `SuiviObjectifs` (pur). Le suivi montre les objectifs **actifs** de l'étape,
+  dans son ordre, souvent sur deux lignes (fenêtres de 1 à 3 lignes), coupés par « VOIR
+  PLUS… ». Affectation une fenêtre ↔ un objectif, la mieux lue d'abord (fautes n/5, débordement
+  compté), doublons de texte départagés par l'ordre puis le plus tôt. L'étape : celle qui
+  explique le plus de caractères, unique ; à défaut d'objectif lu en entier, les noms cités
+  (`etapeParRenvois`). **Faits = ce qui précède le dernier objectif montré**, jamais ce qui
+  suit (pas encore ouvert : « Pense-bête » n'en montre qu'un sur neuf), et seulement si chaque
+  ligne est un objectif et l'écran dans l'ordre de l'étape. Distance bornée
+  (`distanceDansTexte(_:_:auPlus:)`, Ukkonen) : vingt étapes de vingt « Rapporter 1 âme… ».
+- Panneau : `LectureSuivi.aFaire` (surligné ambre, `fraicheur` 10 min) ; faits cochés par
+  `Preferences.cocher` (`CochesQuete`, jamais de décoche, efface l'objectif en cours) si
+  `quetesCocherSuivi`.
 - Comparaison tolérante commune (chasse, quêtes) : `Ressemblance` (normalisation, distance de
   Sellers, `Forme` préparée et borne `tropLoin` — deux mille noms par ligne lue).
 

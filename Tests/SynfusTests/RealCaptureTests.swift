@@ -105,7 +105,9 @@ struct RealCaptureTests {
             quetes.quetes.first { $0.id == reconnue.id }.flatMap { Lieu.traduit($0.noms, .fr) } ?? "#\(reconnue.id)"
         }
         print("reconnues en \(Int(Date().timeIntervalSince(debut) * 1000)) ms : "
-              + zip(noms, reconnues).map { "\($0) (étape \($1.etape.map { String($0 + 1) } ?? "—"))" }.joined(separator: ", "))
+              + zip(noms, reconnues).map {
+                  "\($0) (étape \($1.etape.map { String($0 + 1) } ?? "—"), à faire \($1.aFaire), faits \($1.faits))"
+              }.joined(separator: ", "))
         if let attendues = ProcessInfo.processInfo.environment["SYNFUS_QUETES_ATTENDUES"] {
             #expect(noms == attendues.split(separator: "|").map(String.init))
         }
