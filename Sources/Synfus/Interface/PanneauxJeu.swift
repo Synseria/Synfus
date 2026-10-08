@@ -36,3 +36,34 @@ struct BoutonEnTete: View {
         .help(aide)
     }
 }
+
+/// L'en-tête d'une ligne d'un panneau posé sur le jeu : l'icône, le titre,
+/// l'espace libre, les boutons. Seuls l'icône et l'espace libre déplacent le
+/// panneau : `WindowDragArea` est une `NSView`, et posée sous un bouton
+/// SwiftUI d'un panneau jamais clé, c'est elle qui reçoit le clic.
+struct EnTetePanneau<Titre: View, Boutons: View>: View {
+    let icone: String
+    let teinte: Color
+    @ViewBuilder let titre: Titre
+    @ViewBuilder let boutons: Boutons
+
+    var body: some View {
+        HStack(spacing: 0) {
+            Image(systemName: icone)
+                .foregroundStyle(teinte)
+                .padding(.leading, 10)
+                .padding(.trailing, 4)
+                .frame(maxHeight: .infinity)
+                .background(WindowDragArea())
+            titre
+            WindowDragArea().frame(minWidth: 4, maxWidth: .infinity, maxHeight: .infinity)
+            HStack(spacing: 4) { boutons }
+                .padding(.vertical, 3)
+        }
+        .padding(.trailing, 4)
+        .font(.system(size: 12))
+        // Les zones de glisser prennent la hauteur des boutons, sans tirer
+        // l'en-tête vers le bas.
+        .fixedSize(horizontal: false, vertical: true)
+    }
+}
