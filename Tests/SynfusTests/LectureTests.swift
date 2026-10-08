@@ -241,9 +241,15 @@ struct LectureCombatTests {
         fins.combat("Nova", avant: .placement, apres: .horsCombat, ici: ici)
         #expect(!fins.fini("Nova", en: ici))
         // Le bouton caché un instant : le retour en combat efface la fin.
+        fins.combat("Nova", avant: .placement, apres: .pasMonTour, ici: ici)
         fins.combat("Nova", avant: .pasMonTour, apres: .horsCombat, ici: ici)
+        #expect(fins.fini("Nova", en: ici))
         fins.combat("Nova", avant: .horsCombat, apres: .pasMonTour, ici: ici)
         #expect(!fins.fini("Nova", en: ici))
+        // Repris après une bascule, déjà renvoyé ailleurs : le combat n'a pas
+        // fini où il a commencé.
+        fins.combat("Nova", avant: .pasMonTour, apres: .horsCombat, ici: ailleurs)
+        #expect(!fins.fini("Nova", en: ailleurs))
     }
 
     @Test("Le même texte passé du gris à la couleur relance l'OCR")
