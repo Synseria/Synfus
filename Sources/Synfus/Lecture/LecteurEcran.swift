@@ -37,6 +37,15 @@ enum GenreLecture: String, CaseIterable, Sendable {
     }
 
     @MainActor var zone: ZoneEcran { Preferences.shared[keyPath: reglage] ?? parDefaut }
+
+    /// Ce que la signature regarde pour relancer l'OCR.
+    var mesure: MesureSignature {
+        switch self {
+        case .position: return .zone
+        case .combat: return .bouton
+        case .chasse, .quetes: return .lignes
+        }
+    }
 }
 
 /// Lit l'écran du jeu : la position du perso, et son état de combat.
@@ -50,10 +59,11 @@ enum GenreLecture: String, CaseIterable, Sendable {
 ///   (`ZoneEcran.hauteurReference`), le texte y a toujours la même taille —
 ///   celle où Vision lit juste (`.fast` ne lit rien de la police du jeu). Une
 ///   grande fenêtre ne coûte pas plus qu'une petite.
-/// - **L'OCR ne repasse que si la zone a changé** (`SignatureZone` : pixels
-///   clairs réduits à une grille, et pour le combat, bouton coloré ou non).
-///   Entre deux cartes, entre deux tours, un relevé ne coûte qu'une capture de
-///   quelques centaines de pixels.
+/// - **L'OCR ne repasse que si le texte a changé** (`SignatureZone` : pixels
+///   clairs réduits à une grille, là où le texte a été lu — les lignes d'un
+///   suivi, le corps du bouton de combat — et pour le combat, bouton coloré
+///   ou non). Entre deux cartes, entre deux tours, un relevé ne coûte qu'une
+///   capture.
 /// - **L'inventaire ScreenCaptureKit gardé** (`inventaireGarde`).
 ///
 /// Seul le perso au premier plan est lu en continu, une fois par seconde : en
@@ -248,7 +258,7 @@ final class LecteurEcran: ObservableObject {
                 diagnostic.etat = .echecCapture(previews.lastCaptureError ?? "?")
                 return
             }
-            switch await moteur.lire(png: png, precedente: precedente, couleur: genre == .combat) {
+            switch await moteur.lire(png: png, precedente: precedente, mesure: genre.mesure) {
             case .illisible:
                 diagnostic.etat = .echecCapture("PNG illisible")
             case .inchangee:
@@ -295,7 +305,7 @@ final class LecteurEcran: ObservableObject {
               let client = manager.clients.first(where: { manager.isFrontmost($0) })
                 ?? manager.clients.first(where: { $0.name == persoDevant }),
               let png = await capturer(client, genre),
-              case .lue(_, let lignes, _, _) = await moteur.lire(png: png, precedente: nil, couleur: false)
+              case .lue(_, let lignes, _, _) = await moteur.lire(png: png, precedente: nil, mesure: genre.mesure)
         else { return nil }
         diagnostic.lignes[genre] = lignes
         return (client.name, lignes)
@@ -306,7 +316,7 @@ final class LecteurEcran: ObservableObject {
     /// celle du bouton de combat, sinon de la zone (cf. `pomper`).
     func lire(png: Data, genre: GenreLecture) async -> (lignes: [String], couleur: Double)? {
         guard case .lue(let signature, let lignes, _, let bouton)
-                = await moteur.lire(png: png, precedente: nil, couleur: genre == .combat)
+                = await moteur.lire(png: png, precedente: nil, mesure: genre.mesure)
         else { return nil }
         return (lignes, bouton ?? signature.couleur ?? 0)
     }
@@ -399,15 +409,15 @@ actor MoteurOCR {
         return requete
     }
 
-    func lire(png: Data, precedente: SignatureZone?, couleur: Bool) -> Resultat {
+    func lire(png: Data, precedente: SignatureZone?, mesure: MesureSignature) -> Resultat {
         guard let source = CGImageSourceCreateWithData(png as CFData, nil),
               let image = CGImageSourceCreateImageAtIndex(source, 0, nil),
               let luma = LumaBitmap(cgImage: image)
         else { return .illisible }
-        let rgba = couleur ? Self.rgba(image) : nil
-        let signature = SignatureZone(
-            empreinte: EmpreinteTexte(luma),
-            couleur: rgba.map { LectureCombat.ratioColore(rgba: $0, largeur: image.width) })
+        let rgba = mesure == .bouton ? Self.rgba(image) : nil
+        let couleur = rgba.map { LectureCombat.ratioColore(rgba: $0, largeur: image.width) }
+        let signature = SignatureZone(luma, mesure: mesure, cadre: precedente?.cadre, couleur: couleur,
+                                      auBord: precedente?.auBord ?? false)
         if let precedente, signature.semblable(a: precedente) { return .inchangee(signature) }
 
         let debut = Date()
@@ -423,23 +433,34 @@ actor MoteurOCR {
         let observations = (requete.results ?? []).sorted { $0.boundingBox.midY > $1.boundingBox.midY }
         let lignes = observations.compactMap { $0.topCandidates(1).first?.string }
 
-        // La couleur du bouton se mesure autour de son texte, en pixels de
-        // l'image d'origine : la boîte de Vision est normalisée, origine en
-        // bas, dans l'image encadrée de sa marge.
-        var couleurBouton: Double?
-        if let rgba, let bouton = observations.first(where: {
-            LectureCombat.estBouton($0.topCandidates(1).first?.string ?? "")
-        }) {
-            let marge = encadree == nil ? 0 : CGFloat(Self.marge)
-            let (lp, hp) = (CGFloat(image.width) + 2 * marge, CGFloat(image.height) + 2 * marge)
-            let boite = bouton.boundingBox
-            let texte = CGRect(x: boite.minX * lp - marge, y: (1 - boite.maxY) * hp - marge,
-                               width: boite.width * lp, height: boite.height * hp)
-            let corps = LectureCombat.corpsDuBouton(texte: texte,
-                                                    image: CGSize(width: image.width, height: image.height))
-            couleurBouton = LectureCombat.ratioColore(rgba: rgba, largeur: image.width, dans: corps)
+        // Les boîtes de Vision, normalisées, origine en bas, dans l'image
+        // encadrée de sa marge → pixels de l'image d'origine, origine en haut.
+        let taille = CGSize(width: image.width, height: image.height)
+        let marge = encadree == nil ? 0 : CGFloat(Self.marge)
+        let (lp, hp) = (taille.width + 2 * marge, taille.height + 2 * marge)
+        func pixels(_ boite: CGRect) -> CGRect {
+            CGRect(x: boite.minX * lp - marge, y: (1 - boite.maxY) * hp - marge,
+                   width: boite.width * lp, height: boite.height * hp)
         }
-        return .lue(signature, lignes, Date().timeIntervalSince(debut), couleurBouton: couleurBouton)
+        var couleurBouton: Double?, cadre: CGRect?, auBord = false
+        switch mesure {
+        case .zone:
+            break
+        case .bouton:
+            // La couleur du bouton se mesure autour de son texte, et c'est là
+            // que la prochaine capture cherchera un changement.
+            if let bouton = observations.first(where: { LectureCombat.estBouton($0.topCandidates(1).first?.string ?? "") }) {
+                let corps = LectureCombat.corpsDuBouton(texte: pixels(bouton.boundingBox), image: taille)
+                cadre = corps
+                couleurBouton = rgba.map { LectureCombat.ratioColore(rgba: $0, largeur: image.width, dans: corps) }
+            }
+        case .lignes:
+            if let lu = SignatureZone.cadre(lignes: observations.map { pixels($0.boundingBox) }, image: taille) {
+                (cadre, auBord) = lu
+            }
+        }
+        let lue = SignatureZone(luma, mesure: mesure, cadre: cadre, couleur: couleur, auBord: auBord)
+        return .lue(lue, lignes, Date().timeIntervalSince(debut), couleurBouton: couleurBouton)
     }
 
     /// L'image posée sur une marge sombre. Une zone serrée coupe le texte au
