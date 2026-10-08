@@ -2,8 +2,8 @@ import AppKit
 import Testing
 @testable import Synfus
 
-/// Le panneau des quêtes : ses poignées de redimensionnement et le menu de
-/// son en-tête.
+/// Le panneau des quêtes : ses poignées de redimensionnement, le menu de son
+/// en-tête, le repli des objectifs faits et le mode compact.
 struct PanneauQuetesTests {
     private let depart = NSRect(x: 100, y: 200, width: 360, height: 480)
     private let minimum = NSSize(width: 280, height: 200)
@@ -32,7 +32,7 @@ struct PanneauQuetesTests {
     @Test("Le menu : les épinglées, la montrée cochée, puis le suivi et ses quêtes à leur étape")
     func menu() {
         let reconnues = [SuiviQuetes.Reconnue(id: 7, etape: 2), SuiviQuetes.Reconnue(id: 18, etape: nil)]
-        let elements = MenuQuetes.elements(epinglees: [18, 42], montree: 42, reconnues: reconnues, etat: .lu, masquerObjets: true, nom: nom)
+        let elements = MenuQuetes.elements(epinglees: [18, 42], montree: 42, reconnues: reconnues, etat: .lu, actives: [.masquerObjets], nom: nom)
         #expect(elements == [
             .titre(L("quete.menu.epinglees")),
             .epinglee(id: 18, nom: "Q18", montree: false),
@@ -45,22 +45,55 @@ struct PanneauQuetesTests {
             .reconnue(reconnues[0], titre: L("quete.menu.reconnueEtape", "Q7", 3), epinglee: false),
             .reconnue(reconnues[1], titre: "Q18", epinglee: true),
             .separateur,
-            .masquerObjets(true),
+            .option(.compact, actif: false),
+            .option(.consigne, actif: false),
+            .option(.masquerObjets, actif: true),
         ])
         #expect(MenuQuetes.nouvelles(reconnues, epinglees: [18, 42]) == 1)
     }
 
+    /// Le séparateur et les options, en pied du menu.
+    private let pied = 1 + MenuQuetes.Option.allCases.count
+
     @Test("Le menu dit pourquoi le suivi ne propose rien")
     func menuSansQuete() {
-        let vide = MenuQuetes.elements(epinglees: [], montree: nil, reconnues: [], etat: .lu, masquerObjets: false, nom: nom)
+        let vide = MenuQuetes.elements(epinglees: [], montree: nil, reconnues: [], etat: .lu, actives: [], nom: nom)
         #expect(vide.contains(.message(L("quete.menu.aucune"))))
         #expect(!vide.contains(.toutDesepingler))
-        #expect(vide.dropLast(2).last == .message(L("quete.suivi.rien")))
-        let enCours = MenuQuetes.elements(epinglees: [1], montree: 1, reconnues: [], etat: .enCours, masquerObjets: false, nom: nom)
-        #expect(enCours.dropLast(2).last == .lireSuivi(enCours: true))
+        #expect(vide.dropLast(pied).last == .message(L("quete.suivi.rien")))
+        let enCours = MenuQuetes.elements(epinglees: [1], montree: 1, reconnues: [], etat: .enCours, actives: [], nom: nom)
+        #expect(enCours.dropLast(pied).last == .lireSuivi(enCours: true))
         // Une seule quête : la retirer, c'est tout retirer.
         #expect(enCours.contains(.desepingler(id: 1, nom: "Q1")) && !enCours.contains(.toutDesepingler))
-        let illisible = MenuQuetes.elements(epinglees: [1], montree: 1, reconnues: [], etat: .illisible, masquerObjets: false, nom: nom)
-        #expect(illisible.dropLast(2).last == .message(L("quete.suivi.illisible")))
+        let illisible = MenuQuetes.elements(epinglees: [1], montree: 1, reconnues: [], etat: .illisible, actives: [], nom: nom)
+        #expect(illisible.dropLast(pied).last == .message(L("quete.suivi.illisible")))
+    }
+
+    @Test("Les objectifs faits se replient, sauf celui qu'on vient de copier")
+    @MainActor
+    func repli() {
+        let objectifs = (1...4).map { FicheQuete.Objectif(id: $0, texte: "O\($0)", position: nil, carte: nil) }
+        let repli = QueteVue.repli(objectifs, valides: [1, 3], garde: nil)
+        #expect(repli.aFaire.map(\.id) == [2, 4])
+        #expect(repli.faits.map(\.id) == [1, 3])
+        let garde = QueteVue.repli(objectifs, valides: [1, 3], garde: 3)
+        #expect(garde.aFaire.map(\.id) == [2, 3, 4])
+        #expect(garde.faits.map(\.id) == [1])
+    }
+
+    @Test("Le mode compact ne grandit aucune mesure de la fiche")
+    func compact() {
+        let confort = Mirror(reflecting: MetriquesQuete.confort).children.map(\.value)
+        let compact = Mirror(reflecting: MetriquesQuete.compact).children.map(\.value)
+        #expect(confort.count == compact.count && !confort.isEmpty)
+        for (grand, petit) in zip(confort, compact) {
+            switch (grand, petit) {
+            case let (grand as CGFloat, petit as CGFloat): #expect(petit <= grand)
+            case let (grand as CGSize, petit as CGSize): #expect(petit.width <= grand.width && petit.height <= grand.height)
+            default: Issue.record("mesure d'un type inattendu : \(grand)")
+            }
+        }
+        #expect(MetriquesQuete.compact != .confort)
+        #expect(MetriquesQuete.pour(compact: true) == .compact && MetriquesQuete.pour(compact: false) == .confort)
     }
 }
