@@ -37,6 +37,8 @@ struct PanneauQuetesTests {
             .titre(L("quete.menu.epinglees")),
             .epinglee(id: 18, nom: "Q18", montree: false),
             .epinglee(id: 42, nom: "Q42", montree: true),
+            .desepingler(id: 42, nom: "Q42"),
+            .toutDesepingler,
             .separateur,
             .titre(L("quete.menu.suivi")),
             .lireSuivi(enCours: false),
@@ -52,9 +54,12 @@ struct PanneauQuetesTests {
     func menuSansQuete() {
         let vide = MenuQuetes.elements(epinglees: [], montree: nil, reconnues: [], etat: .lu, masquerObjets: false, nom: nom)
         #expect(vide.contains(.message(L("quete.menu.aucune"))))
+        #expect(!vide.contains(.toutDesepingler))
         #expect(vide.dropLast(2).last == .message(L("quete.suivi.rien")))
         let enCours = MenuQuetes.elements(epinglees: [1], montree: 1, reconnues: [], etat: .enCours, masquerObjets: false, nom: nom)
         #expect(enCours.dropLast(2).last == .lireSuivi(enCours: true))
+        // Une seule quête : la retirer, c'est tout retirer.
+        #expect(enCours.contains(.desepingler(id: 1, nom: "Q1")) && !enCours.contains(.toutDesepingler))
         let illisible = MenuQuetes.elements(epinglees: [1], montree: 1, reconnues: [], etat: .illisible, masquerObjets: false, nom: nom)
         #expect(illisible.dropLast(2).last == .message(L("quete.suivi.illisible")))
     }
