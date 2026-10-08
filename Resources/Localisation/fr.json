@@ -429,7 +429,7 @@
   "quete.toutCopier": "Tout copier",
   "quetes.bouton": "Bouton dans la barre",
   "quetes.cocherSuivi": "Cocher d'après le suivi",
-  "quetes.cocherSuivi.sousTexte": "À la lecture du suivi de quêtes du jeu, les objectifs qui précèdent ceux qu'il montre se cochent (un clic les décoche). Ceux qu'il montre sont surlignés.",
+  "quetes.cocherSuivi.sousTexte": "À la lecture du suivi de quêtes du jeu, les objectifs qui précèdent le premier qu'il montre se cochent (un clic les décoche). Ceux qu'il montre sont surlignés.",
   "quetes.compact": "Mode compact",
   "quetes.compact.sousTexte": "Texte plus petit et lignes resserrées : le panneau cache moins de jeu.",
   "quetes.compte": "%lld quêtes",
