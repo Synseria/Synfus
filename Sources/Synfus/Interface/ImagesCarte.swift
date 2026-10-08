@@ -93,14 +93,13 @@ final class ApercuCarte {
 }
 
 /// La vue d'une carte en vignette, réduite hors du fil principal ; au survol,
-/// en grand (`ApercuCarte`). Rien quand les vues des cartes sont coupées
-/// (`Preferences.vuesCartes`). `onHover` suit la souris même sur un panneau
-/// jamais clé d'une app inactive (ses zones de suivi sont actives en
-/// permanence, comme celles des pastilles de la barre) — une bulle d'aide,
-/// elle, n'y apparaît pas.
+/// en grand (`apercuCarteAuSurvol`), sauf quand c'est la ligne qui la porte
+/// qui l'agrandit. Rien quand les vues des cartes sont coupées
+/// (`Preferences.vuesCartes`).
 struct MiniatureCarte: View {
     let carte: Int
     var taille = CGSize(width: 52, height: 36)
+    var agrandir = true
     @ObservedObject private var prefs = Preferences.shared
 
     var body: some View {
@@ -111,11 +110,27 @@ struct MiniatureCarte: View {
                 .frame(width: taille.width, height: taille.height)
                 .background(Color.primary.opacity(0.08))
                 .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
-                .onHover { dedans in
-                    if dedans { ApercuCarte.shared.montrer(carte) } else { ApercuCarte.shared.cacher() }
-                }
-                .onDisappear { ApercuCarte.shared.cacher() }
+                .apercuCarteAuSurvol(agrandir ? carte : nil)
         }
+    }
+}
+
+extension View {
+    /// La vue de `carte` en grand (`ApercuCarte`) tant que la souris est sur
+    /// cette vue, cachée quand elle en sort ou disparaît ; rien sans carte ni
+    /// quand les vues des cartes sont coupées. `onHover` suit la souris même
+    /// sur un panneau jamais clé d'une app inactive (ses zones de suivi sont
+    /// actives en permanence, comme celles des pastilles de la barre) — une
+    /// bulle d'aide, elle, n'y apparaît pas.
+    func apercuCarteAuSurvol(_ carte: Int?) -> some View {
+        onHover { dedans in
+            if dedans, let carte, Preferences.shared.vuesCartes, Ressources.visuelsDuJeu {
+                ApercuCarte.shared.montrer(carte)
+            } else if carte != nil {
+                ApercuCarte.shared.cacher()
+            }
+        }
+        .onDisappear { if carte != nil { ApercuCarte.shared.cacher() } }
     }
 }
 
