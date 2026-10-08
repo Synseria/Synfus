@@ -113,6 +113,13 @@ struct QuetesTests {
         #expect(quete.effet == .ouvrirQuete(18))
     }
 
+    @Test("/pnj trouve le PNJ là où il se tient, avec la carte dont la liste montre la vue")
+    func palettePNJ() throws {
+        let otomai = try #require(RecherchePalette.entrees("/pnj otomai", try contexte()).first)
+        #expect(otomai.effet == .trajet(x: -2, y: -4))
+        #expect(otomai.carte == 185862149)
+    }
+
     @Test("La fiche : ressources additionnées, objectifs résolus, carte quand elle est connue")
     func fiche() throws {
         let fiche = try #require(try Self.quetes().fiche(18, en: .fr))

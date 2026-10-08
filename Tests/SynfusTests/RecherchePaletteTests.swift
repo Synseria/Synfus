@@ -32,6 +32,15 @@ struct RecherchePaletteTests {
         #expect(entrees.dropFirst().first?.cle == amakna)
     }
 
+    @Test("Un lieu porte sa carte et son pictogramme, un zaap sa carte : la liste en montre la vue")
+    func vuesDesCartes() throws {
+        let banque = try #require(Carte.integree.lieux.first { $0.nom(en: .fr) == "Banque" && $0.zone(en: .fr) == "Bonta" })
+        let entree = try #require(RecherchePalette.lieux(contexte()).first { $0.cle == banque.cle })
+        #expect(entree.carte == banque.idCarte && entree.pictogramme == banque.gfx && entree.pictogramme != nil)
+        let zaap = try #require(premiere("/zaap bonta", contexte()))
+        #expect(zaap.carte != nil && zaap.pictogramme == nil)
+    }
+
     @Test("/zaap bonta trouve Cœur immaculé par sa zone")
     func zaapParZone() {
         let entree = premiere("/zaap bonta", contexte())
