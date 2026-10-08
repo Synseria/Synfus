@@ -29,19 +29,20 @@ struct ChasseVue: View {
     }
 
     private var entete: some View {
-        HStack(spacing: 8) {
+        // Au dessin de l'en-tête des quêtes : mêmes marges, même bouton.
+        HStack(spacing: 4) {
             Image(systemName: "map").foregroundStyle(Couleurs.ambre)
-            Text(L("chasse.titre")).font(.system(size: 13, weight: .semibold))
-            Spacer()
-            if modele.rechercheEnCours || modele.lectureEnCours { ProgressView().controlSize(.small) }
-            Button { ChassePanel.shared.fermer() } label: {
-                Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
-            }
-            .buttonStyle(.plain)
-            .help(L("quete.fermer.simple"))
+            Text(L("chasse.titre")).font(.system(size: 12, weight: .semibold))
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
+            if modele.rechercheEnCours || modele.lectureEnCours { ProgressView().controlSize(.mini) }
+            Spacer(minLength: 0)
+            BoutonEnTete(icone: "minus", aide: L("quete.fermer.simple")) { ChassePanel.shared.fermer() }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 9)
+        .font(.system(size: 12))
+        .padding(.leading, 10)
+        .padding(.trailing, 4)
+        .padding(.vertical, 3)
         .background(WindowDragArea())
     }
 

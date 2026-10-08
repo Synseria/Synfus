@@ -269,8 +269,7 @@ private struct CarteZaap: View {
         }
         .padding(9)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 9, style: .continuous)
-            .fill(choisie ? Couleurs.accent.opacity(0.22) : Color.primary.opacity(0.05)))
+        .background { FondCarte(carte: entree.carte, teinte: choisie ? Couleurs.accent.opacity(0.22) : nil) }
         .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous)
             .strokeBorder(choisie ? Couleurs.accent : Color.primary.opacity(0.08)))
         .contentShape(Rectangle())

@@ -26,6 +26,8 @@
   "barre.glisser": "Glisser pour déplacer la barre",
   "barre.inviter": "Inviter %@",
   "barre.paletteAide": "Palette : zaaps, lieux, commandes — raccourci : %@",
+  "barre.panneauxSeulementDofus": "Panneaux seulement devant Dofus",
+  "barre.panneauxSeulementDofus.sousTexte": "Quêtes et chasse se cachent quand une autre app passe devant, et reviennent avec le jeu.",
   "barre.passageAuto.actif": "Passage automatique activé — Synfus bascule sur le perso dont l'icône rebondit (%@)",
   "barre.passageAuto.inactif": "Passage automatique désactivé — le perso est seulement signalé (%@)",
   "barre.quetesAide": "Quêtes épinglées : ressources, objectifs et trajets.",
