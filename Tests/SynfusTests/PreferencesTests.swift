@@ -556,7 +556,7 @@ struct PreferencesTests {
         #expect(prefs.quetesMasquerObjets == true)
         #expect(prefs.chasseHotKey == HotKey(keyCode: 5, modifiers: 2048))
         #expect(prefs.chasseBouton == false)
-        #expect(prefs.zaapsVueCarte == false)
+        #expect(prefs.vuesCartes == false)
     }
 
     @Test("Chaque réglage s'écrit sous sa clé, avec son encodage")
@@ -616,7 +616,7 @@ struct PreferencesTests {
         prefs.quetesMasquerObjets = true
         prefs.chasseHotKey = HotKey(keyCode: 5, modifiers: 2048)
         prefs.chasseBouton = false
-        prefs.zaapsVueCarte = false
+        prefs.vuesCartes = false
 
         #expect(canonique(store.donnees(pour: Preferences.key))
                 == canonique(Data(Self.empreinte.utf8)))

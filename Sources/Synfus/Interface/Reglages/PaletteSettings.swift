@@ -17,6 +17,7 @@ struct PaletteSettings: View {
                     .labelsHidden()
                     .fixedSize()
                 }
+                InterrupteurVuesCartes()
             }
         }
     }

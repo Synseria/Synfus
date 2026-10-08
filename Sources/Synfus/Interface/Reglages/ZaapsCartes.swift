@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Un zaap dans les réglages : étiquette (au clic), favori, activation ; en
-/// fond, la vue de sa carte du jeu (`zaapsVueCarte`).
+/// fond, la vue de sa carte du jeu (`vuesCartes`).
 struct CarteZaapReglages: View {
     let zaap: Zaap
     let langue: Langue
@@ -61,7 +61,7 @@ extension CarteZaapReglages {
     /// en déborde et la forme la rogne.
     @ViewBuilder
     private var fond: some View {
-        if prefs.zaapsVueCarte, let idCarte = zaap.idCarte {
+        if prefs.vuesCartes, let idCarte = zaap.idCarte {
             let sombre = apparence == .dark
             Color(white: sombre ? 0.17 : 0.95)
                 .overlay { ImageDofusDB(url: DofusDB.imageCarte(idCarte)).scaledToFill().opacity(0.25) }

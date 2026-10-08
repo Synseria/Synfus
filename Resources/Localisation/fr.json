@@ -516,6 +516,8 @@
   "touche.majuscule": "majuscule",
   "touche.option": "option",
   "trajets.sousTitre": "Un /travel copié passe par le zaap le plus proche s'il fait gagner du chemin.",
+  "vuesCartes": "Vues des cartes",
+  "vuesCartes.sousTexte": "En vignette dans la palette, les listes et le panneau des quêtes, en grand au survol ; en fond des zaaps. Téléchargées de DofusDB à la première ouverture et gardées dans les caches.",
   "zaap.ajout": "Ajouter un zaap",
   "zaap.ajout.aide": "Pour un zaap que la liste ne connaît pas encore : il compte comme un zaap du Monde des Douze. Un zaap déjà listé se coche dans la liste.",
   "zaap.ajout.bouton": "Ajouter",
@@ -545,7 +547,5 @@
   "zaap.sansPosition": "Il faut la lecture de la position.",
   "zaap.supprimer": "Supprimer ce zaap",
   "zaaps.grille": "Activer, étiqueter, mettre en favori",
-  "zaaps.sousTitre": "%lld actifs sur %lld — la palette et la réécriture du /travel ne proposent que les actifs.",
-  "zaaps.vueCarte": "Vue de la carte en fond",
-  "zaaps.vueCarte.sousTexte": "La carte du jeu de chaque zaap, téléchargée de DofusDB à la première ouverture et gardée dans les caches."
+  "zaaps.sousTitre": "%lld actifs sur %lld — la palette et la réécriture du /travel ne proposent que les actifs."
 }
