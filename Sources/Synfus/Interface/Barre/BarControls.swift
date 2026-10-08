@@ -84,7 +84,15 @@ enum CurseurArrierePlan {
 /// donc pas de build séparé à maintenir pour les versions antérieures.
 struct BarBackground: ViewModifier {
     func body(content: Content) -> some View {
-        if #available(macOS 26.0, *) {
+        if Ressources.captureDocumentation {
+            // `cacheDisplay` ne dessine ni le verre ni les matériaux, qui
+            // échantillonnent l'écran : un fond plein, à leur teinte.
+            content.background(
+                RoundedRectangle(cornerRadius: 13, style: .continuous)
+                    .fill(Color(white: 0.2))
+                    .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous)
+                        .strokeBorder(Color.white.opacity(0.12), lineWidth: 0.5)))
+        } else if #available(macOS 26.0, *) {
             content.glassEffect(.regular, in: .rect(cornerRadius: 13))
         } else {
             content.background(

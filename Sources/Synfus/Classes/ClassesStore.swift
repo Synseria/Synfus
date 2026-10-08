@@ -79,6 +79,7 @@ final class ClassesStore: ObservableObject {
     }
 
     func icon(forKey key: String) -> NSImage? {
+        guard Ressources.visuelsDuJeu else { return nil }
         switch provenance(forKey: key) {
         case .tienne:
             return sienne(key)
