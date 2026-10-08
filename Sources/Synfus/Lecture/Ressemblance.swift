@@ -18,11 +18,56 @@ enum Ressemblance {
         return mots.joined(separator: " ")
     }
 
+    /// Un texte normalisé prêt à comparer, à préparer une fois par nom
+    /// connu : comparer des milliers de noms à chaque ligne lue ne coûte
+    /// alors presque que la borne basse (`tropLoin`).
+    struct Forme: Sendable {
+        let scalaires: [UInt32]
+        /// Combien de chaque lettre (a-z), chiffre, espace, autre.
+        private let compte: [Int]
+
+        init(_ normalise: String) {
+            scalaires = normalise.unicodeScalars.map(\.value)
+            var compte = [Int](repeating: 0, count: Self.cases)
+            for valeur in scalaires { compte[Self.casier(valeur)] += 1 }
+            self.compte = compte
+        }
+
+        var longueur: Int { scalaires.count }
+
+        private static let cases = 38
+
+        private static func casier(_ valeur: UInt32) -> Int {
+            switch valeur {
+            case 97...122: return Int(valeur - 97)
+            case 48...57: return 26 + Int(valeur - 48)
+            case 32: return 36
+            default: return 37
+            }
+        }
+
+        /// `distanceDansTexte(self, texte)` dépasse-t-elle sûrement
+        /// `tolerance` ? Chaque caractère du motif absent du texte coûte au
+        /// moins une édition.
+        func tropLoin(de texte: Forme, tolerance: Int) -> Bool {
+            var manque = 0
+            for indice in 0..<Self.cases where compte[indice] > texte.compte[indice] {
+                manque += compte[indice] - texte.compte[indice]
+                if manque > tolerance { return true }
+            }
+            return false
+        }
+    }
+
+    static func distanceDansTexte(_ motif: String, _ texte: String) -> Int {
+        distanceDansTexte(Forme(motif), Forme(texte))
+    }
+
     /// Le moins d'éditions (insertion, suppression, substitution d'un
     /// caractère) pour trouver `motif` quelque part dans `texte` : le début et
     /// la fin du texte sont gratuits (alignement semi-global de Sellers).
-    static func distanceDansTexte(_ motif: String, _ texte: String) -> Int {
-        let m = Array(motif), t = Array(texte)
+    static func distanceDansTexte(_ motif: Forme, _ texte: Forme) -> Int {
+        let m = motif.scalaires, t = texte.scalaires
         guard !m.isEmpty else { return 0 }
         guard !t.isEmpty else { return m.count }
         // Une colonne par caractère du motif ; la ligne 0 vaut 0 partout.
