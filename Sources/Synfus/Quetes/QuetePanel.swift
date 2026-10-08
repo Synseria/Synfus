@@ -5,7 +5,10 @@ import SwiftUI
 /// garde pour elle les clics de la première ligne et zoome au double-clic.
 /// Jamais clé (un clic ne retire pas la frappe à Dofus), jamais zoomé : on
 /// le déplace par son en-tête (`WindowDragArea`) et on l'agrandit par ses
-/// bords et son coin (`PoigneeRedimension`).
+/// bords et ses coins du bas (`PoigneeRedimension`). Pas `.resizable` : les
+/// bords du système, invisibles et sans curseur pour une app inactive,
+/// chevaucheraient nos poignées et le haut de l'en-tête — un glisser pensé
+/// pour déplacer agrandirait.
 private final class PanneauQuetes: NSPanel {
     override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }
@@ -25,6 +28,8 @@ final class QuetePanel: NSObject, ObservableObject {
     /// Assez étroit pour ne masquer qu'un coin du jeu : la fiche passe ses
     /// étiquettes à la ligne plutôt que de déborder.
     static let tailleMinimale = NSSize(width: 220, height: 200)
+    /// Le cadre gardé par AppKit dans les préférences.
+    private static let nomDuCadre = "QuetePanel"
 
     /// La quête montrée parmi les épinglées.
     @Published private(set) var montree: Int?
@@ -118,7 +123,7 @@ final class QuetePanel: NSObject, ObservableObject {
     private func construire() -> NSPanel {
         let panel = PanneauQuetes(
             contentRect: NSRect(x: 0, y: 0, width: 360, height: 480),
-            styleMask: [.borderless, .resizable, .nonactivatingPanel],
+            styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
@@ -132,7 +137,9 @@ final class QuetePanel: NSObject, ObservableObject {
         panel.isOpaque = false
         panel.hasShadow = true
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        if !panel.setFrameAutosaveName("QuetePanel") || panel.frame.origin == .zero,
+        // Sans `.resizable`, AppKit ne relit le cadre sauvé que de force : sa
+        // taille vient de nos poignées.
+        if !panel.setFrameAutosaveName(Self.nomDuCadre) || !panel.setFrameUsingName(Self.nomDuCadre, force: true),
            let ecran = NSScreen.main?.visibleFrame {
             panel.setFrameTopLeftPoint(NSPoint(x: ecran.maxX - 384, y: ecran.maxY - 80))
         }
@@ -246,35 +253,6 @@ private final class CibleMenu: NSObject {
     }
 }
 
-/// Ouvre un `NSMenu` sous la vue au clic. Plutôt qu'un `Menu` SwiftUI : un
-/// `popUp` suit la souris dans un panneau jamais clé d'une app inactive sans
-/// activer Synfus, comme le menu de la barre de menus.
-struct DeclencheurMenu: NSViewRepresentable {
-    let fabrique: @MainActor () -> NSMenu
-
-    func makeNSView(context _: Context) -> Declencheur { Declencheur(fabrique: fabrique) }
-    func updateNSView(_ vue: Declencheur, context _: Context) { vue.fabrique = fabrique }
-
-    final class Declencheur: NSView {
-        var fabrique: @MainActor () -> NSMenu
-
-        init(fabrique: @escaping @MainActor () -> NSMenu) {
-            self.fabrique = fabrique
-            super.init(frame: .zero)
-        }
-
-        @available(*, unavailable)
-        required init?(coder _: NSCoder) { nil }
-
-        override func acceptsFirstMouse(for _: NSEvent?) -> Bool { true }
-        override var mouseDownCanMoveWindow: Bool { false }
-
-        override func mouseDown(with _: NSEvent) {
-            fabrique().popUp(positioning: nil, at: NSPoint(x: 0, y: isFlipped ? bounds.maxY + 2 : -2), in: self)
-        }
-    }
-}
-
 /// Les bords qu'une poignée déplace. Le haut n'en est pas : c'est l'en-tête,
 /// qui déplace le panneau.
 struct BordsPanneau: OptionSet, Sendable {
@@ -301,20 +279,24 @@ struct BordsPanneau: OptionSet, Sendable {
 
 extension View {
     /// Les bords gauche, droit et bas et les coins du bas, à saisir pour
-    /// agrandir le panneau ; `coin` est la poignée visible du coin bas droit.
+    /// agrandir le panneau ; `coin` est la poignée visible du coin bas droit,
+    /// de la taille de celui de gauche. Les coins passent par-dessus les
+    /// bords : saisi près d'un coin, le panneau s'agrandit dans les deux sens.
     func bordsRedimensionnables(coin: some View) -> some View {
-        let epaisseur: CGFloat = 4
+        let epaisseur: CGFloat = 6, cote: CGFloat = 22
         return overlay(alignment: .leading) { PoigneeRedimension(bords: .gauche).frame(width: epaisseur) }
             .overlay(alignment: .trailing) { PoigneeRedimension(bords: .droite).frame(width: epaisseur) }
             .overlay(alignment: .bottom) { PoigneeRedimension(bords: .bas).frame(height: epaisseur) }
-            .overlay(alignment: .bottomLeading) { PoigneeRedimension(bords: [.gauche, .bas]).frame(width: 12, height: 12) }
+            .overlay(alignment: .bottomLeading) { PoigneeRedimension(bords: [.gauche, .bas]).frame(width: cote, height: cote) }
             .overlay(alignment: .bottomTrailing) { coin.overlay(PoigneeRedimension(bords: [.droite, .bas])) }
     }
 }
 
 /// Une poignée de redimensionnement : un glisser déplace les bords donnés, le
 /// bord haut ne bouge pas. Une boucle d'évènements à soi plutôt que les bords
-/// du système, minces sur un panneau sans bordure et difficiles à saisir.
+/// du système (le panneau n'est pas `.resizable`) : minces sans bordure, et
+/// sans curseur dans une app inactive. Le sien est posé à l'entrée, à l'appui
+/// et à chaque pas du glisser — le jeu, devant, réimpose le sien.
 struct PoigneeRedimension: NSViewRepresentable {
     let bords: BordsPanneau
 
@@ -375,6 +357,7 @@ struct PoigneeRedimension: NSViewRepresentable {
 
         override func mouseDown(with _: NSEvent) {
             guard let window else { return }
+            curseur.set()
             let depart = NSEvent.mouseLocation
             let cadre = window.frame
             while let suivant = window.nextEvent(matching: [.leftMouseDragged, .leftMouseUp]),

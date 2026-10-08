@@ -33,7 +33,6 @@ struct ChasseVue: View {
             Text(L("chasse.titre")).font(.system(size: 12, weight: .semibold))
                 .padding(.horizontal, 6)
                 .padding(.vertical, 3)
-                .background(WindowDragArea())
             if modele.rechercheEnCours || modele.lectureEnCours { ProgressView().controlSize(.mini) }
         } boutons: {
             BoutonEnTete(icone: "minus", aide: L("quete.fermer.simple")) { ChassePanel.shared.fermer() }
