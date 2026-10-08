@@ -38,7 +38,7 @@ la sauvegarde distingue aussi « jamais eu ce réglage » de « effacé exprès 
 
 ## Pièges
 
-- `slotCount` : `@Published` rend la propriété calculée, s'y réassigner dans le `didSet` le
-  relance — d'où le drapeau `clamping`.
+- `hotKeys` a toujours dix emplacements (`completerHotKeys` au chargement) ; combien servent
+  dépend de l'effectif (skill `raccourcis`), aucun réglage ne le fixe.
 - `characterOrder` ne reçoit que des noms persistables ; `purgeOrder` et `forget` gardent
   `equipes` ⊆ `characterOrder` (skill `inventaire-clients`).

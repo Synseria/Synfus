@@ -19,15 +19,14 @@ struct ShortcutsSettings: View {
     var body: some View {
         PageReglages(titre: L("reglages.raccourcis"), sousTitre: L("raccourcis.sousTitre")) {
             Section {
-                ForEach(0..<prefs.slotCount, id: \.self) { slot in
-                    ShortcutRow(label: L("raccourcis.perso", slot + 1), detail: nameForSlot(slot),
-                                conflit: enConflit(slot < prefs.hotKeys.count ? prefs.hotKeys[slot] : nil),
+                // Une ligne par perso connecté : les emplacements suivent l'effectif.
+                ForEach(0..<min(manager.effectif.count, prefs.hotKeys.count), id: \.self) { slot in
+                    ShortcutRow(label: L("raccourcis.perso", slot + 1), detail: manager.effectif[slot].name,
+                                conflit: enConflit(prefs.hotKeys[slot]),
                                 hotKey: binding(forSlot: slot))
                 }
-                Ligne(titre: L("raccourcis.emplacements")) {
-                    Stepper("\(prefs.slotCount)",
-                            value: Binding(get: { prefs.slotCount }, set: { prefs.slotCount = $0; rebind() }),
-                            in: 1...10)
+                if manager.effectif.isEmpty {
+                    Text(L("raccourcis.aucunPerso")).foregroundStyle(.secondary)
                 }
             } header: {
                 SectionTitle(L("raccourcis.allerAUnPerso"), help: L("raccourcis.allerAUnPerso.aide"))
@@ -88,8 +87,4 @@ struct ShortcutsSettings: View {
     }
 
     private func rebind() { HotKeyManager.shared.rebind() }
-
-    private func nameForSlot(_ slot: Int) -> String {
-        slot < manager.effectif.count ? manager.effectif[slot].name : "—"
-    }
 }

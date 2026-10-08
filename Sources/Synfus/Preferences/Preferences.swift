@@ -173,6 +173,13 @@ final class Preferences: ObservableObject {
     /// L'étape où l'on en est de chaque quête, par identifiant de quête.
     @Published var quetesEtape: [String: Int] = [:] { didSet { save() } }
 
+    /// Les objectifs cochés de chaque quête (identifiants DofusDB), par
+    /// identifiant de quête.
+    @Published var quetesValides: [String: [Int]] = [:] { didSet { save() } }
+
+    /// Le bouton des quêtes dans la barre.
+    @Published var quetesBouton: Bool = true { didSet { save() } }
+
     /// Raccourci de la palette. ⌘: par défaut (génération 7).
     @Published var paletteHotKey: HotKey? { didSet { save() } }
 
@@ -182,27 +189,6 @@ final class Preferences: ObservableObject {
     /// Le bouton de chasse dans la barre.
     @Published var chasseBouton: Bool = true { didSet { save() } }
 
-    /// Nombre de slots exposés (et donc de raccourcis potentiels).
-    ///
-    /// Le garde-fou `clamping` n'est pas décoratif : `@Published` remplace la
-    /// propriété stockée par une propriété calculée, donc réassigner `slotCount`
-    /// depuis son propre `didSet` le redéclenche au lieu de court-circuiter comme
-    /// le ferait une propriété stockée classique — et part en récursion infinie.
-    @Published var slotCount: Int = 5 {
-        didSet {
-            guard !clamping else { return }
-            let clamped = min(max(slotCount, 1), HotKey.digitRow.count)
-            if clamped != slotCount {
-                clamping = true
-                slotCount = clamped
-                clamping = false
-            }
-            resizeHotKeys()
-            save()
-        }
-    }
-
-    private var clamping = false
     private var loading = false
 
     /// Clé unique sous laquelle tout est sérialisé, dans le domaine
@@ -221,13 +207,16 @@ final class Preferences: ObservableObject {
         Preferences(store: store)
     }
 
-    private func resizeHotKeys() {
-        if hotKeys.count < slotCount {
-            for slot in hotKeys.count..<slotCount {
-                hotKeys.append(HotKey.defaultHotKey(slot: slot))
-            }
-        } else if hotKeys.count > slotCount {
-            hotKeys.removeSubrange(slotCount...)
+    /// Un emplacement par chiffre, toujours : combien servent dépend des persos
+    /// connectés (`HotKeyManager.rebind`), pas d'un réglage. Un emplacement que
+    /// la sauvegarde n'a pas encore prend son défaut ; un raccourci effacé à la
+    /// main reste effacé.
+    private func completerHotKeys() {
+        let emplacements = HotKey.digitRow.count
+        if hotKeys.count < emplacements {
+            hotKeys += (hotKeys.count..<emplacements).map { HotKey.defaultHotKey(slot: $0) }
+        } else if hotKeys.count > emplacements {
+            hotKeys.removeSubrange(emplacements...)
         }
     }
 
@@ -379,10 +368,9 @@ final class Preferences: ObservableObject {
     }
 
     /// Remet tous les raccourcis à leur défaut — ceux qui n'en ont pas sont
-    /// effacés. Le nombre d'emplacements est conservé : c'est un choix, pas un
-    /// raccourci. L'appelant réenregistre (`HotKeyManager.rebind`).
+    /// effacés. L'appelant réenregistre (`HotKeyManager.rebind`).
     func resetShortcuts() {
-        hotKeys = (0..<slotCount).map { HotKey.defaultHotKey(slot: $0) }
+        hotKeys = HotKey.digitRow.indices.map { HotKey.defaultHotKey(slot: $0) }
         cycleNext = .defaultCycleNext
         cyclePrevious = .defaultCyclePrevious
         toggleAutoFocus = .defaultToggleAutoFocus
@@ -427,7 +415,6 @@ final class Preferences: ObservableObject {
         .requis("barVisible", \.barVisible),
         .point(x: "barOriginX", y: "barOriginY", \.barOrigin),
         .requis("showNumbers", \.showNumbers),
-        .requis("slotCount", \.slotCount),
         .facultatif("showClasses", \.showClasses),
         .facultatif("attentionAction", \.attentionAction),
         // Sans défaut à la lecture : un raccourci vide est un choix. Les
@@ -473,6 +460,8 @@ final class Preferences: ObservableObject {
         .facultatif("quetesEpinglees", \.quetesEpinglees),
         .facultatif("quetesEtape", \.quetesEtape),
         .facultatif("chasseBouton", \.chasseBouton),
+        .facultatif("quetesValides", \.quetesValides),
+        .facultatif("quetesBouton", \.quetesBouton),
         .facultatif("zaapsVueCarte", \.zaapsVueCarte),
     ]
 
@@ -494,10 +483,9 @@ final class Preferences: ObservableObject {
         guard let data = store.donnees(pour: Self.key),
               let lecture = try? JSONDecoder().decode(Lecture.self, from: data)
         else {
-            // Premier lancement : ⌘1 à ⌘5 pour l'accès direct, et toute la
+            // Premier lancement : ⌘1 à ⌘0 pour l'accès direct, et toute la
             // navigation sur la touche sous Échap.
-            slotCount = 5
-            hotKeys = (0..<5).map { HotKey.defaultHotKey(slot: $0) }
+            hotKeys = HotKey.digitRow.indices.map { HotKey.defaultHotKey(slot: $0) }
             cycleNext = .defaultCycleNext
             cyclePrevious = .defaultCyclePrevious
             toggleAutoFocus = .defaultToggleAutoFocus
@@ -505,14 +493,14 @@ final class Preferences: ObservableObject {
             inviteHotKey = .defaultInvite
             paletteHotKey = .defaultPalette
             loading = false
-            resizeHotKeys()
+            completerHotKeys()
             return
         }
 
         for affecter in lecture.affectations { affecter(self) }
 
         loading = false
-        resizeHotKeys()
+        completerHotKeys()
         // La reprise se fait le drapeau `loading` relâché : c'est elle, et elle
         // seule, qui doit réécrire la sauvegarde — ne serait-ce que pour y
         // inscrire la génération, sans quoi elle se rejouerait à chaque lancement.

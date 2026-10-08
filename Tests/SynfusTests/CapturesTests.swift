@@ -45,13 +45,27 @@ struct CapturesTests {
     @Test("Capture d'une quête ouverte", .enabled(if: dossier != nil))
     func quete() throws {
         let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
-        let fiche = try #require(try QuetesTests.quetes().fiche(18, en: .fr))
-        let vue = QueteVue(ficheImposee: fiche)
+        let fiche = Self.sansCartes(try #require(try QuetesTests.quetes().fiche(18, en: .fr)))
+        let vue = QueteVue(ficheImposee: fiche, etapeImposee: 1, validesImposes: [101])
             .frame(width: 360, height: 420)
             .padding(24)
             .background(Color(red: 0.11, green: 0.11, blue: 0.13))
             .environment(\.colorScheme, .dark)
         try ecrire(vue, vers: dossier.appending(path: "quete.png"))
+    }
+
+    /// Sans la vue des cartes : elle viendrait de DofusDB, et une capture du
+    /// dépôt ne porte aucun visuel du jeu (CGU Dofus, art. 13.2).
+    private static func sansCartes(_ fiche: FicheQuete) -> FicheQuete {
+        FicheQuete(
+            id: fiche.id, nom: fiche.nom, nomFrancais: fiche.nomFrancais, niveau: fiche.niveau, groupe: fiche.groupe,
+            donjon: fiche.donjon, ressources: fiche.ressources,
+            etapes: fiche.etapes.map { etape in
+                FicheQuete.Etape(nom: etape.nom, description: etape.description, objectifs: etape.objectifs.map {
+                    FicheQuete.Objectif(id: $0.id, texte: $0.texte, position: $0.position, carte: nil)
+                }, recompenses: etape.recompenses)
+            },
+            suivantes: fiche.suivantes)
     }
 
     @Test("Capture du panneau de chasse", .enabled(if: dossier != nil))
