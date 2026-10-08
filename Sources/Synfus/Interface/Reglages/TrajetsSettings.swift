@@ -6,14 +6,14 @@ struct TrajetsSettings: View {
 
     var body: some View {
         PageReglages(titre: L("reglages.trajets"), sousTitre: L("trajets.sousTitre"),
-                     aide: L("zaap.reecriture.aide")) {
+                     aide: L("zaap.reecriture.aide", ItineraireZaap.ecartZaapDuJeu)) {
             Section {
                 RaccourciReglable(label: L("zaap.raccourci"), help: L("zaap.raccourci.aide"), chemin: \.zaapHotKey)
                 Ligne(titre: L("zaap.gain"), sousTexte: L("zaap.gain.sousTexte")) {
                     Stepper(L("zaap.gain.valeur", nombre: prefs.zaapGainMinimal, prefs.zaapGainMinimal),
                             value: $prefs.zaapGainMinimal, in: ItineraireZaap.gainsPossibles)
                 }
-                Interrupteur(titre: L("zaap.duJeu"), sousTexte: L("zaap.duJeu.sousTexte"), isOn: $prefs.zaapDuJeu)
+                Interrupteur(titre: L("zaap.duJeu"), sousTexte: L("zaap.duJeu.sousTexte", ItineraireZaap.ecartZaapDuJeu), isOn: $prefs.zaapDuJeu)
                 if prefs.lirePosition {
                     Interrupteur(titre: L("zaap.auto"), aide: L("zaap.auto.aide"), isOn: $prefs.zaapAuto)
                 } else {

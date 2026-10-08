@@ -33,7 +33,7 @@ struct QuetesReseauTests {
 
         var contexte = ContextePalette()
         contexte.lieux = Carte.integree.lieux
-        contexte.zaaps = Carte.integree.zaaps
+        contexte.zaaps = ZaapsSitues(Carte.integree.zaaps, reseau: .vide)
         contexte.quetes = quetes
         let horloge = ContinuousClock()
         let index = IndexPalette(contexte)

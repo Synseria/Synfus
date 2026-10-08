@@ -23,7 +23,25 @@ final class ZaapClipboard: ObservableObject {
     private static let dureeSignal: Duration = .seconds(1.2)
     private static let intervalleVeille: TimeInterval = 0.5
 
-    private init() {}
+    /// L'index de `zaapsSitues`, jeté à chaque changement de réglage ou de carte.
+    private var zaapsSituesGardes: ZaapsSitues?
+
+    private init() {
+        // `objectWillChange` part avant l'affectation : l'index, rebâti à la
+        // lecture suivante, voit toujours la nouvelle valeur.
+        Preferences.shared.objectWillChange.merge(with: CarteStore.shared.objectWillChange)
+            .sink { [weak self] in MainActor.assumeIsolated { self?.zaapsSituesGardes = nil } }
+            .store(in: &subscriptions)
+    }
+
+    /// Les zaaps actifs sur le réseau des sous-zones : ce que lisent la
+    /// réécriture, les coûts et la palette, indexé une fois par liste et par carte.
+    var zaapsSitues: ZaapsSitues {
+        if let gardes = zaapsSituesGardes { return gardes }
+        let situes = ZaapsSitues(Preferences.shared.zaapsActifs, reseau: CarteStore.shared.reseau)
+        zaapsSituesGardes = situes
+        return situes
+    }
 
     func start() {
         // Les valeurs émises, pas les propriétés : `@Published` publie avant
@@ -77,13 +95,12 @@ final class ZaapClipboard: ObservableObject {
     /// main) ; le calcul, pur, se fait de n'importe où.
     @MainActor
     private struct Couts {
-        let zaaps = Preferences.shared.zaapsActifs
+        let zaaps = ZaapClipboard.shared.zaapsSitues
         let zaapDuJeu = Preferences.shared.zaapDuJeu
         let gainMinimal = Preferences.shared.zaapGainMinimal
-        let reseau = CarteStore.shared.reseau
 
         nonisolated func zaap(_ cible: (x: Int, y: Int)) -> Zaap? {
-            ItineraireZaap.zaap(vers: cible, parmi: zaaps, zaapDuJeu: zaapDuJeu, reseau: reseau)
+            ItineraireZaap.zaap(vers: cible, parmi: zaaps, zaapDuJeu: zaapDuJeu)
         }
 
         nonisolated func depuis(_ depart: (x: Int, y: Int), vers cible: (x: Int, y: Int)) -> Int {
@@ -139,8 +156,8 @@ final class ZaapClipboard: ObservableObject {
     private func itineraire(_ texte: String) -> String? {
         let prefs = Preferences.shared
         return ItineraireZaap.reecrire(texte, depuis: LecteurEcran.shared.positionDuPersoDevant,
-                                       gainMinimal: prefs.zaapGainMinimal, zaaps: prefs.zaapsActifs,
-                                       zaapDuJeu: prefs.zaapDuJeu, reseau: CarteStore.shared.reseau)
+                                       gainMinimal: prefs.zaapGainMinimal, zaaps: zaapsSitues,
+                                       zaapDuJeu: prefs.zaapDuJeu)
     }
 
     /// Notre propre copie n'est pas une nouvelle copie à examiner.

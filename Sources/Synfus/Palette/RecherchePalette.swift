@@ -117,10 +117,10 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
 struct ContextePalette: Sendable {
     var langue: Langue = .fr
     var position: PositionCarte?
-    /// Les zaaps actifs.
-    var zaaps: [Zaap] = []
-    /// D'où partir vers une case : `ItineraireZaap.zaap(vers:)`.
-    var reseau = ReseauSousZones.vide
+    /// Les zaaps actifs, et d'où partir vers une case (`ItineraireZaap.zaap(vers:)`).
+    var zaaps = ZaapsSitues.vide
+    /// Le réseau de `zaaps`, une seule source : il situe aussi ce qui est ici.
+    var reseau: ReseauSousZones { zaaps.reseau }
     var lieux: [Lieu] = []
     var etiquettes: [String: String] = [:]
     var favoris: Set<String> = []
@@ -221,7 +221,7 @@ enum RecherchePalette {
 
     /// Favoris d'abord, puis du plus proche au plus loin.
     private static func zaapsTries(_ contexte: ContextePalette) -> [Zaap] {
-        let proches = CatalogueZaaps.parDistance(contexte.zaaps, depuis: contexte.position)
+        let proches = CatalogueZaaps.parDistance(contexte.zaaps.liste, depuis: contexte.position)
         return proches.filter { contexte.favoris.contains($0.cle) } + proches.filter { !contexte.favoris.contains($0.cle) }
     }
 
@@ -352,8 +352,7 @@ enum RecherchePalette {
     private static func trajet(vers cible: (x: Int, y: Int), _ contexte: ContextePalette) -> String {
         let travel = ItineraireZaap.travel(vers: cible)
         return ItineraireZaap.reecrire(travel, depuis: contexte.position, gainMinimal: contexte.gainMinimal,
-                                       zaaps: contexte.zaaps, zaapDuJeu: contexte.zaapDuJeu,
-                                       reseau: contexte.reseau) ?? travel
+                                       zaaps: contexte.zaaps, zaapDuJeu: contexte.zaapDuJeu) ?? travel
     }
 
     private static func distanceVers(_ lieu: Lieu, _ contexte: ContextePalette) -> Int? {

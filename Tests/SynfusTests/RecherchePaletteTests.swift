@@ -9,9 +9,9 @@ struct RecherchePaletteTests {
                           etiquettes: [String: String] = [:], favoris: Set<String> = []) -> ContextePalette {
         var contexte = ContextePalette()
         contexte.position = position
-        contexte.zaaps = CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [], choix: [:])
+        contexte.zaaps = ZaapsSitues(CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [], choix: [:]),
+                                     reseau: ReseauSousZones(Carte.integree))
         contexte.lieux = Carte.integree.lieux
-        contexte.reseau = ReseauSousZones(Carte.integree)
         contexte.etiquettes = etiquettes
         contexte.favoris = favoris
         contexte.invitationEquipe = "/invite Brok; /invite Cid"
