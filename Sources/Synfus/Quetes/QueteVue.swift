@@ -4,9 +4,9 @@ import SwiftUI
 /// suivi lu à l'écran), puis les ressources à réunir, l'étape en cours
 /// (consigne, objectifs, récompenses) et les quêtes qui s'ouvrent ensuite. Un
 /// clic sur une ressource copie son nom (pour l'hôtel de vente), sur un
-/// objectif situé son trajet, zaap compris — et le coche. Un objectif fait
-/// reste à sa place, grisé, sur une ligne ; au survol d'un objectif, la vue
-/// de sa carte en grand. Tailles : `MetriquesQuete`.
+/// objectif son trajet, zaap compris — et le met en cours ; seule la coche le
+/// valide. Un objectif fait reste à sa place, grisé, sur une ligne ; au
+/// survol d'un objectif, la vue de sa carte en grand. Tailles : `MetriquesQuete`.
 struct QueteVue: View {
     @ObservedObject private var panneau = QuetePanel.shared
     @ObservedObject private var store = QuetesStore.shared
@@ -30,6 +30,8 @@ struct QueteVue: View {
 
     /// La colonne des coches.
     private static let colonneCoche: CGFloat = 18
+    /// Le trait au bord d'un objectif que le suivi du jeu montre à faire.
+    private static let traitAFaire: CGFloat = 3
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -266,7 +268,9 @@ struct QueteVue: View {
         let etape = fiche.etapes[rang]
         let coches = valides(fiche.id)
         let ici = lecteur.positionDuPersoDevant.map { PNJ.Position(x: $0.x, y: $0.y) }
-        let suggeres = ficheImposee == nil ? etape.suggeres(en: ici, valides: coches) : []
+        let enCours = ficheImposee == nil ? prefs.quetesEnCours[String(fiche.id)] : nil
+        let suggeres = ficheImposee == nil ? etape.suggeres(en: ici, valides: coches, enCours: enCours) : []
+        let aFaire = ficheImposee == nil ? lecture.aFaire(fiche.id) : []
         return VStack(alignment: .leading, spacing: metriques.ecartLignes) {
             if plusieurs {
                 HStack(spacing: 6) {
@@ -292,8 +296,9 @@ struct QueteVue: View {
                     .padding(.bottom, 2)
             }
             ForEach(etape.objectifs, id: \.id) { objectif in
-                ligneObjectif(objectif, quete: fiche.id, valide: coches.contains(objectif.id),
-                              suggere: suggeres.contains(objectif.id))
+                ligneObjectif(objectif, quete: fiche.id,
+                              etat: .init(valide: coches.contains(objectif.id), suggere: suggeres.contains(objectif.id),
+                                          enCours: enCours == objectif.id, aFaire: aFaire.contains(objectif.id)))
             }
             if !etape.recompenses.vides {
                 Text(L("quete.recompenses", Self.recompenses(etape.recompenses)))
@@ -331,36 +336,57 @@ struct QueteVue: View {
 
     private static func idLigne(_ objectif: FicheQuete.Objectif) -> String { "objectif:\(objectif.id)" }
 
+    /// Ce qu'on sait d'un objectif, du plus sûr au moins sûr : fait (coche
+    /// verte), le perso sur sa carte (`suggere`, coche violette qui propose
+    /// de valider), en cours (le dernier dont on a copié le trajet : coche en
+    /// cible, texte appuyé), encore à faire d'après le suivi du jeu lu tout à
+    /// l'heure (`aFaire`, trait et fond ambre). Fait, il n'est rien d'autre.
+    private struct EtatObjectif {
+        let valide: Bool
+        let suggere: Bool
+        let enCours: Bool
+        let aFaire: Bool
+
+        var icone: String {
+            valide ? "checkmark.circle.fill" : suggere ? "location.circle.fill"
+                : enCours ? "smallcircle.filled.circle" : "circle"
+        }
+
+        var teinte: Color {
+            valide ? Couleurs.accent : suggere ? Couleurs.suggestion : enCours ? Color.primary : Color.secondary
+        }
+    }
+
     /// La coche, puis le texte, et dessous sa position : toujours là, c'est
-    /// ce qu'on vient chercher. Un objectif situé copie son trajet et se
-    /// coche ; la coche seule se décoche. Fait, il reste à sa place — l'ordre
-    /// de la quête ne bouge pas — sur une ligne grisée, sans sa position, une
-    /// fois le « Copié » passé. La vue de la carte paraît en grand au survol
-    /// de la ligne, en vignette avec `quetesVignettes`. `suggere` : le perso
-    /// se tient sur sa carte (`FicheQuete.Etape.suggeres`) — la coche passe
-    /// au violet et propose de valider.
-    private func ligneObjectif(_ objectif: FicheQuete.Objectif, quete: Int, valide: Bool,
-                               suggere: Bool) -> some View {
+    /// ce qu'on vient chercher. Un clic sur la ligne copie le trajet et met
+    /// l'objectif en cours ; seule la coche valide ou dévalide. Fait, il reste
+    /// à sa place — l'ordre de la quête ne bouge pas — sur une ligne grisée,
+    /// sans sa position, une fois le « Copié » passé. La vue de la carte paraît
+    /// en grand au survol de la ligne, en vignette avec `quetesVignettes`.
+    private func ligneObjectif(_ objectif: FicheQuete.Objectif, quete: Int, etat: EtatObjectif) -> some View {
         let id = Self.idLigne(objectif)
+        let valide = etat.valide, suggere = etat.suggere && !valide
         let replie = valide && copiee != id
         return HStack(alignment: .firstTextBaseline, spacing: 2) {
-            Button { QuetePanel.shared.cocher(objectif.id, de: quete, !valide) } label: {
-                Image(systemName: valide ? "checkmark.circle.fill" : suggere ? "location.circle.fill" : "circle")
+            Button { prefs.cocher(objectif.id, de: quete, !valide) } label: {
+                Image(systemName: etat.icone)
                     .font(.system(size: metriques.coche))
-                    .foregroundStyle(valide ? Couleurs.accent : suggere ? Couleurs.suggestion : Color.secondary)
+                    .foregroundStyle(etat.teinte)
                     .frame(width: Self.colonneCoche)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help(suggere ? L("quete.suggestion.aide") : "")
-            let action: (() -> Void)? = objectif.position.map { position in
-                {
+            .help(suggere ? L("quete.suggestion.aide") : etat.aFaire && !valide ? L("quete.aFaire.aide") : "")
+            // Fait et sans trajet, la ligne n'a plus rien à faire.
+            let action: (() -> Void)? = valide && objectif.position == nil ? nil : {
+                if let position = objectif.position {
                     ZaapClipboard.shared.copierTrajet(vers: (position.x, position.y))
-                    QuetePanel.shared.cocher(objectif.id, de: quete, true)
                     signaler(id)
                 }
+                prefs.mettreEnCours(objectif.id, de: quete)
             }
-            ligneCopiable(id: id, aide: L("quete.copierTrajet"), action: action) {
+            ligneCopiable(id: id, aide: objectif.position == nil ? L("quete.enCours.aide") : L("quete.copierTrajet"),
+                          action: action) {
                 VStack(alignment: .leading, spacing: 1) {
                     if replie {
                         Text(objectif.texte)
@@ -370,7 +396,7 @@ struct QueteVue: View {
                             .truncationMode(.tail)
                     } else {
                         Text(objectif.texte)
-                            .font(.system(size: metriques.texte))
+                            .font(.system(size: metriques.texte, weight: etat.enCours && !valide ? .semibold : .regular))
                             .foregroundStyle(valide ? Color.secondary : Color.primary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -396,8 +422,17 @@ struct QueteVue: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        // Sur la ligne entière, coche comprise : le bouton d'un objectif non
-        // situé est désactivé, et n'aurait pas de survol.
+        .background {
+            if etat.aFaire, !valide {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Couleurs.ambre.opacity(0.12))
+                    .overlay(alignment: .leading) {
+                        Capsule().fill(Couleurs.ambre).frame(width: Self.traitAFaire).padding(.vertical, 2)
+                    }
+            }
+        }
+        // Sur la ligne entière, coche comprise : le bouton d'une ligne faite
+        // et non située est désactivé, et n'aurait pas de survol.
         .apercuCarteAuSurvol(objectif.carte)
     }
 

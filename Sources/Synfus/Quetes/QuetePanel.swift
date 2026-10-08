@@ -70,15 +70,6 @@ final class QuetePanel: NSObject, ObservableObject {
         return montree.flatMap { epinglees.contains($0) ? $0 : nil } ?? epinglees.last
     }
 
-    /// Coche ou décoche un objectif ; les coches sont gardées par quête.
-    func cocher(_ objectif: Int, de quete: Int, _ valide: Bool) {
-        let prefs = Preferences.shared
-        let avant = prefs.quetesValides[String(quete)] ?? []
-        guard avant.contains(objectif) != valide else { return }
-        let apres = valide ? avant + [objectif] : avant.filter { $0 != objectif }
-        prefs.quetesValides[String(quete)] = apres.isEmpty ? nil : apres
-    }
-
     /// Retire l'onglet ; le panneau se ferme avec le dernier.
     func desepingler(_ id: Int) {
         let prefs = Preferences.shared
@@ -160,7 +151,7 @@ extension QuetePanel {
         menu.autoenablesItems = false
         for element in MenuQuetes.elements(
             epinglees: prefs.quetesEpinglees, montree: idMontre, reconnues: lecture.reconnues,
-            etat: lecture.etat, actives: Set(MenuQuetes.Option.allCases.filter { prefs[keyPath: Self.reglage($0)] }),
+            etat: lecture.etat, coches: lecture.cochesLues, actives: Set(MenuQuetes.Option.allCases.filter { prefs[keyPath: Self.reglage($0)] }),
             nom: { store.nom($0) ?? "…" }) {
             switch element {
             case .titre(let titre):
@@ -208,6 +199,7 @@ extension QuetePanel {
         case .compact: \.quetesCompact
         case .consigne: \.quetesConsigne
         case .masquerObjets: \.quetesMasquerObjets
+        case .cocherSuivi: \.quetesCocherSuivi
         }
     }
 }

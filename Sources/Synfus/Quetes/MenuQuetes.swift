@@ -23,36 +23,43 @@ enum MenuQuetes {
         case separateur
     }
 
-    /// Les interrupteurs de l'affichage repris de l'onglet Quêtes, dans
-    /// l'ordre du menu.
+    /// Les interrupteurs repris de l'onglet Quêtes : celui du suivi dans sa
+    /// section, ceux de l'affichage en pied (`affichage`, dans l'ordre).
     enum Option: CaseIterable {
-        case compact, consigne, masquerObjets
+        case compact, consigne, masquerObjets, cocherSuivi
+
+        static let affichage: [Option] = [.compact, .consigne, .masquerObjets]
 
         var titre: String {
             switch self {
             case .compact: L("quetes.compact")
             case .consigne: L("quetes.consigne")
             case .masquerObjets: L("quetes.masquerObjets")
+            case .cocherSuivi: L("quetes.cocherSuivi")
             }
         }
     }
 
+    /// `coches` : les objectifs que la dernière lecture du suivi a cochés ;
     /// `actives` : les options allumées.
     static func elements(epinglees: [Int], montree: Int?, reconnues: [SuiviQuetes.Reconnue],
-                         etat: LectureSuivi.Etat, actives: Set<Option>, nom: (Int) -> String) -> [Element] {
+                         etat: LectureSuivi.Etat, coches: Int, actives: Set<Option>,
+                         nom: (Int) -> String) -> [Element] {
         var elements: [Element] = [.titre(L("quete.menu.epinglees"))]
         elements += epinglees.isEmpty
             ? [.message(L("quete.menu.aucune"))]
             : epinglees.map { .epinglee(id: $0, nom: nom($0), montree: $0 == montree) }
         if let montree, epinglees.contains(montree) { elements.append(.desepingler(id: montree, nom: nom(montree))) }
         if epinglees.count > 1 { elements.append(.toutDesepingler) }
-        elements += [.separateur, .titre(L("quete.menu.suivi")), .lireSuivi(enCours: etat == .enCours)]
+        elements += [.separateur, .titre(L("quete.menu.suivi")), .lireSuivi(enCours: etat == .enCours),
+                     .option(.cocherSuivi, actif: actives.contains(.cocherSuivi))]
         elements += reconnues.map { reconnue in
             let titre = reconnue.etape.map { L("quete.menu.reconnueEtape", nom(reconnue.id), $0 + 1) } ?? nom(reconnue.id)
             return .reconnue(reconnue, titre: titre, epinglee: epinglees.contains(reconnue.id))
         }
         if let message = message(etat, reconnues: reconnues) { elements.append(.message(message)) }
-        return elements + [.separateur] + Option.allCases.map { .option($0, actif: actives.contains($0)) }
+        if etat == .lu, coches > 0 { elements.append(.message(L("quete.suivi.coches", nombre: coches, coches))) }
+        return elements + [.separateur] + Option.affichage.map { .option($0, actif: actives.contains($0)) }
     }
 
     /// Les quêtes que le suivi montre et que le panneau n'a pas encore : ce

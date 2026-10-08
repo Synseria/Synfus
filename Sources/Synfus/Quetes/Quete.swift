@@ -233,12 +233,17 @@ struct FicheQuete: Equatable, Sendable {
         /// `position` : ceux de cette carte encore à faire, s'ils sont le
         /// prochain à faire de l'étape ou le seul de l'étape sur cette carte.
         /// Autrement, on n'y est peut-être que de passage : la carte revient
-        /// plus loin dans l'étape, pour un autre objectif.
-        func suggeres(en position: PNJ.Position?, valides: Set<Int>) -> Set<Int> {
+        /// plus loin dans l'étape, pour un autre objectif. L'objectif en cours
+        /// — celui dont on a copié le trajet — l'est dès qu'on est sur sa
+        /// carte, quels que soient son rang et ses voisins : on y allait.
+        func suggeres(en position: PNJ.Position?, valides: Set<Int>, enCours: Int?) -> Set<Int> {
             guard let position else { return [] }
             let prochain = objectifs.first { !valides.contains($0.id) }?.id
             let ici = objectifs.filter { $0.position == position }
-            return Set(ici.filter { !valides.contains($0.id) && ($0.id == prochain || ici.count == 1) }.map(\.id))
+            let proposes = ici.filter {
+                !valides.contains($0.id) && ($0.id == prochain || $0.id == enCours || ici.count == 1)
+            }
+            return Set(proposes.map(\.id))
         }
     }
 
