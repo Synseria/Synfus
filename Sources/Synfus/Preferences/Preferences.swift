@@ -191,6 +191,18 @@ final class Preferences: ObservableObject {
     /// Les objets de quête hors des ressources à réunir : ils ne s'achètent pas.
     @Published var quetesMasquerObjets: Bool = false { didSet { save() } }
 
+    /// Le panneau des quêtes resserré : il tient au-dessus du jeu sans en
+    /// cacher trop (`MetriquesQuete`).
+    @Published var quetesCompact: Bool = true { didSet { save() } }
+
+    /// La consigne de l'étape, au-dessus de ses objectifs : souvent redite par
+    /// les objectifs eux-mêmes.
+    @Published var quetesConsigne: Bool = true { didSet { save() } }
+
+    /// La vue de la carte en vignette à côté de chaque objectif ; sans elle,
+    /// elle ne paraît qu'en grand, au survol de la ligne.
+    @Published var quetesVignettes: Bool = false { didSet { save() } }
+
     /// Raccourci de la palette. ⌘: par défaut (génération 7).
     @Published var paletteHotKey: HotKey? { didSet { save() } }
 
@@ -477,6 +489,9 @@ final class Preferences: ObservableObject {
         .facultatif("quetesValides", \.quetesValides),
         .facultatif("quetesBouton", \.quetesBouton),
         .facultatif("quetesMasquerObjets", \.quetesMasquerObjets),
+        .facultatif("quetesCompact", \.quetesCompact),
+        .facultatif("quetesConsigne", \.quetesConsigne),
+        .facultatif("quetesVignettes", \.quetesVignettes),
         .facultatif("zaapsVueCarte", \.vuesCartes),
     ]
 
