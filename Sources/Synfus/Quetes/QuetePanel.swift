@@ -83,6 +83,13 @@ final class QuetePanel: NSObject, ObservableObject {
         if prefs.quetesEpinglees.isEmpty { fermer() }
     }
 
+    /// Retire toutes les quêtes et cache le panneau.
+    func toutDesepingler() {
+        Preferences.shared.quetesEpinglees = []
+        montree = nil
+        fermer()
+    }
+
     /// Cache le panneau ; les quêtes restent épinglées pour la prochaine fois.
     func fermer() {
         ouvert = false
@@ -157,6 +164,12 @@ extension QuetePanel {
                 let item = CibleMenu.shared.element(nom) { QuetePanel.shared.montrer(id) }
                 item.state = montree ? .on : .off
                 menu.addItem(item)
+            case .desepingler(let id, let nom):
+                let item = CibleMenu.shared.element(L("quete.menu.desepingler", nom)) { QuetePanel.shared.desepingler(id) }
+                item.image = NSImage(systemSymbolName: "pin.slash", accessibilityDescription: nil)
+                menu.addItem(item)
+            case .toutDesepingler:
+                menu.addItem(CibleMenu.shared.element(L("quete.menu.toutDesepingler")) { QuetePanel.shared.toutDesepingler() })
             case .lireSuivi(let enCours):
                 let item = CibleMenu.shared.element(enCours ? L("quete.suivi.enCours") : L("quete.suivi.lire")) { lecture.lire() }
                 item.image = NSImage(systemSymbolName: "text.viewfinder", accessibilityDescription: nil)
