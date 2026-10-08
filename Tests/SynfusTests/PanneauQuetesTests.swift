@@ -3,7 +3,7 @@ import Testing
 @testable import Synfus
 
 /// Le panneau des quêtes : ses poignées de redimensionnement, le menu de son
-/// en-tête, le repli des objectifs faits et le mode compact.
+/// en-tête (clic ou glisser), le repli des objectifs faits et le mode compact.
 struct PanneauQuetesTests {
     private let depart = NSRect(x: 100, y: 200, width: 360, height: 480)
     private let minimum = NSSize(width: 280, height: 200)
@@ -25,6 +25,20 @@ struct PanneauQuetesTests {
         let cadre = BordsPanneau([.gauche, .bas]).cadre(depart, decalage: CGVector(dx: 500, dy: 500), minimum: minimum)
         #expect(cadre.size == minimum)
         #expect(cadre.maxX == depart.maxX && cadre.maxY == depart.maxY)
+    }
+
+    @Test("Sur le titre de l'en-tête, un appui qui tremble reste un clic, un mouvement franc déplace")
+    func clicOuGlisser() {
+        let appui = NSPoint(x: 50, y: 50)
+        let glisse = { (dx: CGFloat, dy: CGFloat) in
+            WindowDragArea.estUnGlisser(depuis: appui, jusqua: NSPoint(x: appui.x + dx, y: appui.y + dy))
+        }
+        #expect(!glisse(0, 0))
+        #expect(!glisse(2, -2))
+        #expect(!glisse(WindowDragArea.seuilGlisser, 0))
+        #expect(glisse(3, 1))
+        #expect(glisse(-4, 0))
+        #expect(glisse(0, 12))
     }
 
     private func nom(_ id: Int) -> String { "Q\(id)" }

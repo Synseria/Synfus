@@ -38,12 +38,16 @@ struct BoutonEnTete: View {
 }
 
 /// L'en-tête d'une ligne d'un panneau posé sur le jeu : l'icône, le titre,
-/// l'espace libre, les boutons. Seuls l'icône et l'espace libre déplacent le
-/// panneau : `WindowDragArea` est une `NSView`, et posée sous un bouton
-/// SwiftUI d'un panneau jamais clé, c'est elle qui reçoit le clic.
+/// l'espace libre, les boutons. Tout, sauf les boutons, déplace le panneau ;
+/// avec `menu`, un clic sur le titre l'ouvre et seul un glisser le déplace
+/// (`WindowDragArea`). La zone est posée par-dessus l'icône et le titre — une
+/// image ou un texte au-dessus d'une `NSView` lui prennent le clic — et jamais
+/// sur un bouton, qu'elle priverait du sien.
 struct EnTetePanneau<Titre: View, Boutons: View>: View {
     let icone: String
     let teinte: Color
+    /// Le menu qu'ouvre un clic sur le titre.
+    var menu: (@MainActor () -> NSMenu)?
     @ViewBuilder let titre: Titre
     @ViewBuilder let boutons: Boutons
 
@@ -54,10 +58,15 @@ struct EnTetePanneau<Titre: View, Boutons: View>: View {
                 .padding(.leading, 10)
                 .padding(.trailing, 4)
                 .frame(maxHeight: .infinity)
-                .background(WindowDragArea())
+                .overlay(WindowDragArea())
             // Le titre d'abord : sans priorité, la zone de glisser, flexible
             // elle aussi, lui prenait la moitié de la place et le tronquait.
-            titre.layoutPriority(1)
+            // Une seule zone sur tout le titre, indicateur de lecture compris :
+            // le menu s'ouvre sous son bord gauche.
+            HStack(spacing: 0) { titre }
+                .frame(maxHeight: .infinity)
+                .overlay(WindowDragArea(menu: menu))
+                .layoutPriority(1)
             WindowDragArea().frame(minWidth: 4, maxWidth: .infinity, maxHeight: .infinity)
             HStack(spacing: 4) { boutons }
                 .padding(.vertical, 3)
