@@ -3,6 +3,11 @@ import Foundation
 /// Les quêtes du jeu et les PNJ qu'elles situent, telles que DofusDB les
 /// donne (`QuetesDofusDB`). Pur : des noms, des coordonnées, des quantités.
 struct Quetes: Codable, Equatable, Sendable {
+    /// La forme du fichier gardé sur le disque : une autre (ancienne) n'est
+    /// pas relue, les quêtes se retéléchargent — sans quoi un cache d'avant
+    /// un nouveau champ le laisserait vide trente jours.
+    static let formatActuel = 2
+    let format: Int
     let date: Date
     let quetes: [Quete]
     let pnjs: [PNJ]
@@ -16,6 +21,9 @@ struct Quetes: Codable, Equatable, Sendable {
     /// La catégorie de chaque objet cité (« Ressource », « Consommable »,
     /// « Objet de quête »…), par identifiant d'objet.
     let categoriesObjets: [String: [String: String]]
+    /// Les émotes et titres que des étapes donnent, par identifiant.
+    let emotes: [String: [String: String]]
+    let titres: [String: [String: String]]
 
     /// Moins de quêtes que cela : une réponse tronquée.
     static let minimumPlausible = 500
@@ -78,19 +86,59 @@ struct Quete: Codable, Equatable, Sendable {
     let groupe: Bool
     /// Passe par un donjon.
     let donjon: Bool
+    /// Les quêtes à finir avant celle-ci.
+    let prerequis: [Int]
     let etapes: [EtapeQuete]
 }
 
 struct EtapeQuete: Codable, Equatable, Sendable {
     let noms: [String: String]
+    /// Ce que le jeu dit de l'étape, la consigne en clair.
+    let descriptions: [String: String]
     let objectifs: [ObjectifQuete]
+    let recompenses: RecompensesEtape
+}
+
+/// Ce qu'une étape rapporte à un perso de son niveau optimal.
+struct RecompensesEtape: Codable, Equatable, Sendable {
+    struct Objet: Codable, Equatable, Sendable {
+        let objet: Int
+        let quantite: Int
+    }
+
+    static let aucune = RecompensesEtape(niveau: 0, experience: 0, kamas: 0, objets: [], emotes: [], titres: [])
+
+    let niveau: Int
+    let experience: Int
+    let kamas: Int
+    let objets: [Objet]
+    let emotes: [Int]
+    let titres: [Int]
+
+    /// La formule du client : `niveau × (100 + 2 niveau)² / 20 × durée × ratio`,
+    /// sans bonus d'expérience.
+    static func experience(niveau: Int, duree: Double, ratio: Double) -> Int {
+        let niveau = Double(niveau)
+        return Int((niveau * (100 + 2 * niveau) * (100 + 2 * niveau) / 20 * duree * ratio).rounded(.down))
+    }
+
+    /// La formule du client : `(niveau² + 20 niveau − 20) × ratio × durée`.
+    static func kamas(niveau: Int, duree: Double, ratio: Double) -> Int {
+        let niveau = Double(niveau)
+        return max(Int(((niveau * niveau + 20 * niveau - 20) * ratio * duree).rounded(.down)), 0)
+    }
 }
 
 struct ObjectifQuete: Codable, Equatable, Sendable {
+    /// L'identifiant DofusDB : ce qu'on retient d'un objectif validé, stable
+    /// d'une mise à jour des quêtes à l'autre, contrairement à son rang.
+    let id: Int
     /// Le texte du jeu, renvois compris (`{item,1746}`), par langue.
     let textes: [String: String]
     let x: Int?
     let y: Int?
+    /// La carte où il se passe, pour en montrer la vue.
+    let carte: Int?
     /// L'objet à ramener et combien — les ressources de la quête.
     let objet: Int?
     let quantite: Int?
@@ -134,21 +182,50 @@ struct FicheQuete: Equatable, Sendable {
     }
 
     struct Objectif: Equatable, Sendable {
+        let id: Int
         let texte: String
         let position: PNJ.Position?
+        let carte: Int?
+    }
+
+    struct Recompenses: Equatable, Sendable {
+        /// Le niveau auquel expérience et kamas sont comptés.
+        let niveau: Int
+        let experience: Int
+        let kamas: Int
+        let objets: [Ressource]
+        let emotes: [String]
+        let titres: [String]
+
+        var vides: Bool {
+            experience == 0 && kamas == 0 && objets.isEmpty && emotes.isEmpty && titres.isEmpty
+        }
     }
 
     struct Etape: Equatable, Sendable {
         let nom: String
+        let description: String?
         let objectifs: [Objectif]
+        let recompenses: Recompenses
     }
 
+    /// Une quête qui s'ouvre une fois celle-ci finie.
+    struct Suivante: Equatable, Sendable {
+        let id: Int
+        let nom: String
+        let niveau: Int
+    }
+
+    let id: Int
     let nom: String
+    /// Le nom français, celui des guides (Dofus pour les noobs).
+    let nomFrancais: String
     let niveau: Int
     let groupe: Bool
     let donjon: Bool
     let ressources: [Ressource]
     let etapes: [Etape]
+    let suivantes: [Suivante]
 }
 
 extension Quetes {
@@ -158,21 +235,49 @@ extension Quetes {
 
     func fiche(_ quete: Quete, en langue: Langue) -> FicheQuete {
         FicheQuete(
+            id: quete.id,
             nom: Lieu.traduit(quete.noms, langue) ?? "?",
+            nomFrancais: Lieu.traduit(quete.noms, .fr) ?? "",
             niveau: quete.niveau,
             groupe: quete.groupe,
             donjon: quete.donjon,
-            ressources: Self.ressources(quete).map {
-                FicheQuete.Ressource(nom: nomObjet($0.objet, en: langue), quantite: $0.quantite,
-                                     categorie: categoriesObjets[String($0.objet)].flatMap { Lieu.traduit($0, langue) })
-            },
+            ressources: Self.ressources(quete).map { ressource($0.objet, $0.quantite, en: langue) },
             etapes: quete.etapes.map { etape in
-                FicheQuete.Etape(nom: Lieu.traduit(etape.noms, langue) ?? "", objectifs: etape.objectifs.map { objectif in
-                    var position: PNJ.Position?
-                    if let x = objectif.x, let y = objectif.y { position = PNJ.Position(x: x, y: y) }
-                    return FicheQuete.Objectif(
-                        texte: texte(Lieu.traduit(objectif.textes, langue) ?? "", en: langue), position: position)
-                })
+                let description = texte(Lieu.traduit(etape.descriptions, langue) ?? "", en: langue)
+                return FicheQuete.Etape(
+                    nom: Lieu.traduit(etape.noms, langue) ?? "",
+                    description: description.isEmpty ? nil : description,
+                    objectifs: etape.objectifs.map { objectif in
+                        var position: PNJ.Position?
+                        if let x = objectif.x, let y = objectif.y { position = PNJ.Position(x: x, y: y) }
+                        return FicheQuete.Objectif(
+                            id: objectif.id, texte: texte(Lieu.traduit(objectif.textes, langue) ?? "", en: langue),
+                            position: position, carte: objectif.carte)
+                    },
+                    recompenses: recompenses(etape.recompenses, en: langue))
+            },
+            suivantes: suivantes(de: quete.id).map {
+                FicheQuete.Suivante(id: $0.id, nom: Lieu.traduit($0.noms, langue) ?? "?", niveau: $0.niveau)
             })
+    }
+
+    /// Les quêtes qui demandent celle-ci, la plus basse d'abord.
+    func suivantes(de id: Int) -> [Quete] {
+        quetes.filter { $0.prerequis.contains(id) }.sorted { ($0.niveau, $0.id) < ($1.niveau, $1.id) }
+    }
+
+    private func ressource(_ objet: Int, _ quantite: Int, en langue: Langue) -> FicheQuete.Ressource {
+        FicheQuete.Ressource(nom: nomObjet(objet, en: langue), quantite: quantite,
+                             categorie: categoriesObjets[String(objet)].flatMap { Lieu.traduit($0, langue) })
+    }
+
+    private func recompenses(_ recompenses: RecompensesEtape, en langue: Langue) -> FicheQuete.Recompenses {
+        func noms(_ ids: [Int], _ table: [String: [String: String]]) -> [String] {
+            ids.compactMap { table[String($0)].flatMap { Lieu.traduit($0, langue) } }
+        }
+        return FicheQuete.Recompenses(
+            niveau: recompenses.niveau, experience: recompenses.experience, kamas: recompenses.kamas,
+            objets: recompenses.objets.map { ressource($0.objet, $0.quantite, en: langue) },
+            emotes: noms(recompenses.emotes, emotes), titres: noms(recompenses.titres, titres))
     }
 }
