@@ -144,7 +144,7 @@ final class Preferences: ObservableObject {
     @Published var zaapGainMinimal: Int = ItineraireZaap.gainParDefaut { didSet { save() } }
 
     /// Passer par le zaap que le jeu rattache à la sous-zone visée, même plus
-    /// loin qu'un autre (`ItineraireZaap.zaap(vers:)`).
+    /// loin qu'un autre, jusqu'à `ItineraireZaap.ecartZaapDuJeu` (`ItineraireZaap.zaap(vers:)`).
     @Published var zaapDuJeu: Bool = true { didSet { save() } }
 
     /// Les zaaps ajoutés à la main.
