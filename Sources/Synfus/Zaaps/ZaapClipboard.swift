@@ -92,7 +92,7 @@ final class ZaapClipboard: ObservableObject {
         let prefs = Preferences.shared
         return ItineraireZaap.reecrire(texte, depuis: LecteurEcran.shared.positionDuPersoDevant,
                                        gainMinimal: prefs.zaapGainMinimal, zaaps: prefs.zaapsActifs,
-                                       reseau: CarteStore.shared.reseau)
+                                       zaapDuJeu: prefs.zaapDuJeu, reseau: CarteStore.shared.reseau)
     }
 
     /// Notre propre copie n'est pas une nouvelle copie à examiner.

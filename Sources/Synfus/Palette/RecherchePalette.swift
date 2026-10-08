@@ -118,6 +118,7 @@ struct ContextePalette: Sendable {
     /// Les derniers textes copiés depuis la palette, le plus récent d'abord.
     var recents: [String] = []
     var gainMinimal = ItineraireZaap.gainParDefaut
+    var zaapDuJeu = true
     /// `/invite A; /invite B` pour l'équipe active, déjà composé.
     var invitationEquipe: String?
     var invitations: [(nom: String, commande: String)] = []
@@ -333,7 +334,8 @@ enum RecherchePalette {
     private static func trajet(vers cible: (x: Int, y: Int), _ contexte: ContextePalette) -> String {
         let travel = ItineraireZaap.travel(vers: cible)
         return ItineraireZaap.reecrire(travel, depuis: contexte.position, gainMinimal: contexte.gainMinimal,
-                                       zaaps: contexte.zaaps, reseau: contexte.reseau) ?? travel
+                                       zaaps: contexte.zaaps, zaapDuJeu: contexte.zaapDuJeu,
+                                       reseau: contexte.reseau) ?? travel
     }
 
     private static func distanceVers(_ lieu: Lieu, _ contexte: ContextePalette) -> Int? {
