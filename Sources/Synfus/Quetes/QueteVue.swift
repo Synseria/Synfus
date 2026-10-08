@@ -78,24 +78,19 @@ struct QueteVue: View {
     // MARK: - En-tête du panneau
 
     /// Une seule ligne : le menu des quêtes au nom de la montrée, puis de quoi
-    /// la désépingler et cacher le panneau. Tout le fond déplace le panneau.
+    /// la désépingler et cacher le panneau. L'espace libre déplace le panneau
+    /// (`EnTetePanneau`).
     private var enTete: some View {
         let montree = ficheImposee?.id ?? panneau.idMontre
-        return HStack(spacing: 4) {
-            Image(systemName: "scroll").foregroundStyle(Couleurs.accent)
+        return EnTetePanneau(icone: "scroll", teinte: Couleurs.accent) {
             menuQuetes(titre: ficheImposee?.nom ?? montree.flatMap { store.nom($0) } ?? L("quete.menu.titre"))
-            if lecture.etat == .enCours { ProgressView().controlSize(.mini) }
-            Spacer(minLength: 0)
+            if lecture.etat == .enCours { ProgressView().controlSize(.mini).padding(.leading, 4) }
+        } boutons: {
             if let montree {
                 BoutonEnTete(icone: "xmark", aide: L("quete.desepingler")) { QuetePanel.shared.desepingler(montree) }
             }
             BoutonEnTete(icone: "minus", aide: L("quete.fermer")) { QuetePanel.shared.fermer() }
         }
-        .font(.system(size: 12))
-        .padding(.leading, 10)
-        .padding(.trailing, 4)
-        .padding(.vertical, 3)
-        .background(WindowDragArea())
     }
 
     /// Le nom de la quête montrée, ▾ : le menu (`QuetePanel.menu`). Une
