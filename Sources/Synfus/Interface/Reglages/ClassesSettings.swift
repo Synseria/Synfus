@@ -1,23 +1,22 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Onglet Classes : icônes fournies par l'utilisateur, une par classe.
+/// Onglet Classes : la liste tirée de DofusDB et l'icône de chaque classe —
+/// l'emblème de DofusDB, ou celle de l'utilisateur, qui prime.
 struct ClassesSettings: View {
-    @ObservedObject private var icons = ClassIconStore.shared
+    @ObservedObject private var icons = ClassesStore.shared
 
-    /// Synfus n'embarque aucune image de classe : les portraits du jeu
-    /// appartiennent à Ankama. Chacun met donc les siennes, par glisser-déposer
-    /// ou en remplissant le dossier à la main.
     var body: some View {
         PageReglages(titre: L("reglages.classes"), sousTitre: L("classes.sousTitre")) {
             Section {
+                SourceClasses()
                 Ligne(titre: L("classes.dossier"), sousTexte: L("classes.mentionAnkama")) {
                     HStack(spacing: 8) {
                         Button(L("classes.recharger")) { icons.reloadAll() }
                         Button(L("classes.ouvrirDossier")) { NSWorkspace.shared.open(icons.directory) }
                     }
                 }
-                ForEach(DofusClass.breeds) { breed in
+                ForEach(icons.catalogue.breeds) { breed in
                     classRow(breed)
                 }
             } header: {
@@ -28,6 +27,7 @@ struct ClassesSettings: View {
 
     private func classRow(_ breed: DofusClass.Breed) -> some View {
         let custom = icons.icon(forKey: breed.key)
+        let provenance = icons.provenance(forKey: breed.key)
 
         return HStack(spacing: 10) {
             ZStack {
@@ -39,7 +39,7 @@ struct ClassesSettings: View {
                         .clipShape(Circle())
                 } else {
                     Circle().fill(breed.color)
-                    Text(String(breed.key.prefix(2)).capitalized)
+                    Text(icons.catalogue.abbreviation(for: breed.label))
                         .font(.system(size: 10, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
                 }
@@ -50,7 +50,12 @@ struct ClassesSettings: View {
 
             Spacer()
 
-            if custom != nil, !icons.isBundled(forKey: breed.key) {
+            if custom != nil, let provenance {
+                Text(provenance == .tienne ? L("classes.provenance.tienne") : L("classes.provenance.dofusdb"))
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+            if provenance == .tienne {
                 Button(L("classes.retirer")) { icons.removeIcon(forKey: breed.key) }
             }
             Button(custom == nil ? L("classes.choisir") : L("classes.remplacer")) { chooseIcon(for: breed) }

@@ -4,7 +4,7 @@ struct BarView: View {
     @ObservedObject private var manager = WindowManager.shared
     @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var watcher = AttentionWatcher.shared
-    @ObservedObject private var icons = ClassIconStore.shared
+    @ObservedObject private var icons = ClassesStore.shared
     @ObservedObject private var lecteur = LecteurEcran.shared
     @ObservedObject private var invitations = InvitationClipboard.shared
     @ObservedObject private var zaaps = ZaapClipboard.shared
@@ -282,8 +282,8 @@ struct BarView: View {
                     .scaledToFill()
                     .clipShape(Circle())
             } else {
-                Circle().fill(DofusClass.color(for: className))
-                Text(DofusClass.abbreviation(for: className))
+                Circle().fill(icons.catalogue.color(for: className))
+                Text(icons.catalogue.abbreviation(for: className))
                     .font(.system(size: 9, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
             }
