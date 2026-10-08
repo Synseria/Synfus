@@ -140,6 +140,10 @@ final class Preferences: ObservableObject {
     /// Les cartes que le zaap doit épargner pour être proposé.
     @Published var zaapGainMinimal: Int = ItineraireZaap.gainParDefaut { didSet { save() } }
 
+    /// Passer par le zaap que le jeu rattache à la sous-zone visée, même plus
+    /// loin qu'un autre (`ItineraireZaap.zaap(vers:)`).
+    @Published var zaapDuJeu: Bool = true { didSet { save() } }
+
     /// Les zaaps ajoutés à la main.
     @Published var zaapsAjoutes: [Zaap] = [] { didSet { save() } }
 
@@ -449,6 +453,7 @@ final class Preferences: ObservableObject {
         .facultatif("zaapBouton", \.zaapBouton),
         .facultatif("zaapAuto", \.zaapAuto),
         .facultatif("zaapGainMinimal", \.zaapGainMinimal),
+        .facultatif("zaapDuJeu", \.zaapDuJeu),
         .facultatif("zaapsAjoutes", \.zaapsAjoutes),
         .facultatif("zaapsChoix", \.zaapsChoix),
         .facultatif("zaapsFavoris", \.zaapsFavoris),
