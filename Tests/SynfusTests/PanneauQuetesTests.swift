@@ -84,4 +84,25 @@ struct PanneauQuetesTests {
         #expect(MetriquesQuete.compact != .confort)
         #expect(MetriquesQuete.pour(compact: true) == .compact && MetriquesQuete.pour(compact: false) == .confort)
     }
+
+    /// [0,4] trois fois (aller voir, inspecter, revenir), puis [0,9] une fois :
+    /// sur [0,4], seul le prochain à faire est proposé ; sur [0,9], le seul
+    /// de sa carte l'est même s'il n'est pas le prochain.
+    @Test("« Tu y es » : le prochain objectif de la carte, ou le seul de sa carte")
+    func suggestion() {
+        let ici = PNJ.Position(x: 0, y: 4), ailleurs = PNJ.Position(x: 0, y: 9)
+        let etape = FicheQuete.Etape(
+            nom: "E", description: nil,
+            objectifs: [(1, ici), (2, ici), (3, nil), (4, ici), (5, ailleurs)].map {
+                FicheQuete.Objectif(id: $0.0, texte: "O\($0.0)", position: $0.1, carte: nil)
+            },
+            recompenses: .init(niveau: 1, experience: 0, kamas: 0, objets: [], emotes: [], titres: []))
+        #expect(etape.suggeres(en: ici, valides: []) == [1])
+        #expect(etape.suggeres(en: ici, valides: [1]) == [2])
+        // Le prochain est ailleurs (3, non situé) : [0,4] n'est pas à valider.
+        #expect(etape.suggeres(en: ici, valides: [1, 2]).isEmpty)
+        #expect(etape.suggeres(en: ailleurs, valides: []) == [5])
+        #expect(etape.suggeres(en: ailleurs, valides: [5]).isEmpty)
+        #expect(etape.suggeres(en: nil, valides: []).isEmpty)
+    }
 }

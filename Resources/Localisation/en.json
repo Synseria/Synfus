@@ -415,6 +415,8 @@
   "quete.recompenses": "Rewards: %@",
   "quete.ressource": "%@ × %lld",
   "quete.ressources": "Resources to gather",
+  "quete.suggestion": "You're here — done?",
+  "quete.suggestion.aide": "Your character is on this map: click the check mark to complete the objective.",
   "quete.suivantes": "Next",
   "quete.suivi.enCours": "Reading tracker…",
   "quete.suivi.illisible": "Nothing to read: no character in front, or Screen Recording is not allowed (Settings › Screen reading).",

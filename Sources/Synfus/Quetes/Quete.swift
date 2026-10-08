@@ -228,6 +228,18 @@ struct FicheQuete: Equatable, Sendable {
         let description: String?
         let objectifs: [Objectif]
         let recompenses: Recompenses
+
+        /// Les objectifs à proposer de cocher quand le perso se tient en
+        /// `position` : ceux de cette carte encore à faire, s'ils sont le
+        /// prochain à faire de l'étape ou le seul de l'étape sur cette carte.
+        /// Autrement, on n'y est peut-être que de passage : la carte revient
+        /// plus loin dans l'étape, pour un autre objectif.
+        func suggeres(en position: PNJ.Position?, valides: Set<Int>) -> Set<Int> {
+            guard let position else { return [] }
+            let prochain = objectifs.first { !valides.contains($0.id) }?.id
+            let ici = objectifs.filter { $0.position == position }
+            return Set(ici.filter { !valides.contains($0.id) && ($0.id == prochain || ici.count == 1) }.map(\.id))
+        }
     }
 
     /// Ce qu'il faut pour commencer la quête, au-delà des quêtes à finir.
