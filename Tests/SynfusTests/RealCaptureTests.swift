@@ -61,14 +61,14 @@ struct RealCaptureTests {
         let png = try zoneLue(.positionParDefaut)
         let moteur = MoteurOCR()
         await moteur.prechauffer()
-        guard case .lue(let signature, let lignes, let duree, _) = await moteur.lire(png: png, precedente: nil, couleur: false)
+        guard case .lue(let signature, let lignes, let duree, _) = await moteur.lire(png: png, precedente: nil, mesure: .zone)
         else { Issue.record("rien lu"); return }
         print("OCR \(Int(duree * 1000)) ms : \(lignes)")
         let position = PositionCarte.lire(lignes)
         print("position : \(position?.coordonnees ?? "—") — \(position?.zone ?? "—")")
         #expect(position != nil)
         // La même image ne repasse pas par l'OCR.
-        guard case .inchangee = await moteur.lire(png: png, precedente: signature, couleur: false) else {
+        guard case .inchangee = await moteur.lire(png: png, precedente: signature, mesure: .zone) else {
             Issue.record("la signature n'a pas reconnu la même image"); return
         }
     }
@@ -78,7 +78,7 @@ struct RealCaptureTests {
         let png = try zoneLue(.combatParDefaut)
         let moteur = MoteurOCR()
         await moteur.prechauffer()
-        guard case .lue(let signature, let lignes, let duree, let bouton) = await moteur.lire(png: png, precedente: nil, couleur: true)
+        guard case .lue(let signature, let lignes, let duree, let bouton) = await moteur.lire(png: png, precedente: nil, mesure: .bouton)
         else { Issue.record("rien lu"); return }
         let constat = LectureCombat.classer(lignes: lignes, couleur: bouton ?? signature.couleur ?? 0)
         print("OCR \(Int(duree * 1000)) ms : \(lignes) — zone colorée \(Int((signature.couleur ?? 0) * 100)) %, bouton \(bouton.map { "\(Int($0 * 100)) %" } ?? "—") → \(constat)")
@@ -96,9 +96,14 @@ struct RealCaptureTests {
         let quetes = try #require(QuetesDofusDB.gardees(), "aucune quête gardée : ouvrir une fois la palette de l'app")
         let moteur = MoteurOCR()
         await moteur.prechauffer()
-        guard case .lue(_, let lignes, let duree, _) = await moteur.lire(png: png, precedente: nil, couleur: false)
+        guard case .lue(let signature, let lignes, let duree, _) = await moteur.lire(png: png, precedente: nil, mesure: .lignes)
         else { Issue.record("rien lu"); return }
-        print("OCR \(Int(duree * 1000)) ms : \(lignes)")
+        print("OCR \(Int(duree * 1000)) ms : \(lignes) — cadre \(signature.cadre.map { "\($0)" } ?? "—")"
+              + "\(signature.auBord ? ", au bord" : ""), \(signature.empreinte.cases.count(where: \.self)) cases allumées")
+        // La même image ne repasse pas par l'OCR.
+        guard case .inchangee = await moteur.lire(png: png, precedente: signature, mesure: .lignes) else {
+            Issue.record("la signature n'a pas reconnu la même image"); return
+        }
         let debut = Date()
         let reconnues = SuiviQuetes.reconnaitre(lignes, dans: quetes).reconnues
         let noms = reconnues.map { reconnue in

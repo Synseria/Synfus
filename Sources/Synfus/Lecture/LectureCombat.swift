@@ -14,9 +14,10 @@ import Foundation
 /// La couleur se mesure (`ratioColore`, sur le seul corps du bouton,
 /// `corpsDuBouton`), le texte se lit : « tour » sur un bouton coloré, c'est
 /// mon tour ; sur un bouton gris, celui d'un autre.
-/// Le décompte n'est lu qu'au changement d'état — le chiffre est vert,
-/// sous le seuil de l'`EmpreinteTexte`, et ne relance pas l'OCR chaque
-/// seconde : l'échéance est calculée une fois, le compte à rebours est local.
+/// Le décompte n'est lu qu'au changement d'état — la signature du combat ne
+/// regarde que le corps du bouton (`MesureSignature.bouton`), le décompte
+/// au-dessus ne relance pas l'OCR chaque seconde : l'échéance est calculée
+/// une fois, le compte à rebours est local.
 enum LectureCombat {
     enum Genre: Equatable, Sendable {
         case horsCombat
