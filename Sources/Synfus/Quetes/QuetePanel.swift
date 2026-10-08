@@ -95,7 +95,7 @@ final class QuetePanel: NSObject, ObservableObject {
     /// Cache le panneau ; les quêtes restent épinglées pour la prochaine fois.
     func fermer() {
         ouvert = false
-        cacher()
+        appliquer(force: false)
     }
 
     /// À chaque changement d'app active (`force`) et par le filet de
@@ -106,18 +106,18 @@ final class QuetePanel: NSObject, ObservableObject {
         appliquer(force: force)
     }
 
+    /// Montré, il fait lire le suivi du jeu au tour, si l'enregistrement de
+    /// l'écran est déjà permis ; caché, plus rien n'est lu pour lui.
     private func appliquer(force: Bool) {
-        if PanneauxJeu.visible(ouvert: ouvert) || (ouvert && impose) {
+        let montre = PanneauxJeu.visible(ouvert: ouvert) || (ouvert && impose)
+        if montre {
             let panel = panel ?? construire()
             if force || !panel.isVisible { panel.orderFrontRegardless() }
         } else if panel?.isVisible == true {
-            cacher()
+            panel?.orderOut(nil)
+            ApercuCarte.shared.cacher()
         }
-    }
-
-    private func cacher() {
-        panel?.orderOut(nil)
-        ApercuCarte.shared.cacher()
+        LecteurEcran.shared.suivreQuetes(montre && WindowPreviewService.shared.authorized)
     }
 
     private func construire() -> NSPanel {

@@ -49,6 +49,31 @@ struct HistoriqueSuiviTests {
         #expect(disparues(avant, lu([(3, 1), (1, 2)])).isEmpty)
     }
 
+    @Test("Une lecture vide est la dernière du perso, mais la suivante se compare à celle qui voyait le suivi")
+    func lectureVide() {
+        var historique = HistoriqueSuivi()
+        let t0 = Date(timeIntervalSince1970: 1_000_000)
+        _ = historique.noter(lu([(1, 2), (2, 2), (3, 1)]), perso: "Aeryn", date: t0)
+        // Une fenêtre du jeu sur le suivi : rien n'en est déduit.
+        #expect(historique.noter(lu([]), perso: "Aeryn", date: t0 + 3).isEmpty)
+        #expect(historique.derniere("Aeryn") == lu([]))
+        #expect(historique.derniere("Nova") == nil)
+        #expect(historique.noter(lu([(1, 2), (3, 1)]), perso: "Aeryn", date: t0 + 6) == [2])
+    }
+
+    @Test("Relue à l'identique, une lecture ne change rien ; passé la redatation, elle se redate")
+    func relecture() {
+        var historique = HistoriqueSuivi()
+        let t0 = Date(timeIntervalSince1970: 1_000_000)
+        _ = historique.noter(lu([(1, 2)], etapes: [1: 3]), perso: "Aeryn", date: t0)
+        let avant = historique
+        _ = historique.noter(lu([(1, 2)], etapes: [1: 3]), perso: "Aeryn", date: t0 + 30)
+        #expect(historique == avant)
+        _ = historique.noter(lu([(1, 2)], etapes: [1: 3]), perso: "Aeryn", date: t0 + HistoriqueSuivi.redatation)
+        #expect(historique.persos(1, etape: 3, seule: false, maintenant: t0 + HistoriqueSuivi.memoire).map(\.perso)
+                == ["Aeryn"])
+    }
+
     @Test("Chaque perso a ses lectures : une quête absente du suivi d'un autre n'est pas sortie")
     func parPerso() {
         var historique = HistoriqueSuivi()
