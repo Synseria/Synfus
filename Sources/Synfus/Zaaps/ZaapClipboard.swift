@@ -1,8 +1,8 @@
 import AppKit
 import Combine
 
-/// Le seul foyer des trajets copiés : passer un `/travel` copié par le zaap le
-/// plus proche de sa cible (au raccourci, au bouton de la barre, ou de lui-même
+/// Le seul foyer des trajets copiés : passer un `/travel` copié par le zaap de
+/// sa cible (au raccourci, au bouton de la barre, ou de lui-même
 /// à chaque copie, `zaapAuto`), copier le trajet vers une case ou un `/zaap`.
 /// La décision et les commandes sont dans `ItineraireZaap` ; ici, le
 /// presse-papiers et le retour visuel.
@@ -91,7 +91,8 @@ final class ZaapClipboard: ObservableObject {
     private func itineraire(_ texte: String) -> String? {
         let prefs = Preferences.shared
         return ItineraireZaap.reecrire(texte, depuis: LecteurEcran.shared.positionDuPersoDevant,
-                                       gainMinimal: prefs.zaapGainMinimal, zaaps: prefs.zaapsActifs)
+                                       gainMinimal: prefs.zaapGainMinimal, zaaps: prefs.zaapsActifs,
+                                       reseau: CarteStore.shared.reseau)
     }
 
     /// Notre propre copie n'est pas une nouvelle copie à examiner.

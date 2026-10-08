@@ -8,6 +8,11 @@ struct Lieu: Codable, Hashable, Sendable {
     let y: Int
     /// La carte du monde (`worldMapId`), cf. `Zaap.monde`.
     let monde: Int
+    /// La carte du jeu où il se trouve (`mapId`) : sa vue chez DofusDB, et le
+    /// zaap qu'une sous-zone désigne (`SousZoneCarte.zaap`).
+    let idCarte: Int
+    /// Sa sous-zone (`subareaId`), nœud du graphe des sous-zones.
+    let idSousZone: Int
     /// La catégorie DofusDB (`categoryId`), cf. `CategorieLieu`.
     let categorie: Int
     /// Par code de langue, comme tous les noms ci-dessous.

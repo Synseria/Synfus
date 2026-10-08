@@ -6,8 +6,9 @@ import Testing
 /// assez de cartes.
 struct ItineraireZaapTests {
 
-    /// Les zaaps actifs d'une installation neuve.
+    /// Les zaaps actifs d'une installation neuve, et les sous-zones de la carte intégrée.
     private let zaaps = CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [], choix: [:])
+    private let reseau = ReseauSousZones(Carte.integree)
 
     private func position(_ x: Int, _ y: Int, zone: String? = nil) -> PositionCarte {
         PositionCarte(x: x, y: y, zone: zone)
@@ -27,33 +28,33 @@ struct ItineraireZaapTests {
                       "voir /travel -2,0", "/travel -2,0 merci", "/travel -2,0\n/travel 3,4",
                       "/travel -2", "/travel 999,0", "/traveler 1,2"] {
             #expect(ItineraireZaap.cible(dans: texte) == nil, "\(texte)")
-            #expect(ItineraireZaap.reecrire(texte, depuis: position(-30, 30), gainMinimal: 1, zaaps: zaaps) == nil, "\(texte)")
+            #expect(ItineraireZaap.reecrire(texte, depuis: position(-30, 30), gainMinimal: 1, zaaps: zaaps, reseau: reseau) == nil, "\(texte)")
         }
     }
 
     @Test("Loin de la cible et près d'un zaap : le zaap précède le /travel tel quel")
     func reecrit() {
         // Cible à deux cartes du zaap de Coin des Bouftous (5,7).
-        let texte = ItineraireZaap.reecrire("/travel 6,8", depuis: position(-30, -40), gainMinimal: 5, zaaps: zaaps)
+        let texte = ItineraireZaap.reecrire("/travel 6,8", depuis: position(-30, -40), gainMinimal: 5, zaaps: zaaps, reseau: reseau)
         #expect(texte == "/zaap 5,7 ; /travel 6,8")
     }
 
     @Test("Un gain sous le seuil laisse le presse-papiers intact")
     func seuil() {
-        // Depuis -2,0 (zaap d'Amakna) vers 3,-3 : 8 cartes à pied, 2 depuis
-        // le zaap du Château (3,-5) — 6 de gagnées.
-        #expect(ItineraireZaap.reecrire("/travel 3,-3", depuis: position(-2, 0), gainMinimal: 6, zaaps: zaaps)
-                == "/zaap 3,-5 ; /travel 3,-3")
-        #expect(ItineraireZaap.reecrire("/travel 3,-3", depuis: position(-2, 0), gainMinimal: 7, zaaps: zaaps) == nil)
+        // Depuis -2,0 (zaap d'Amakna) vers 3,-4 : 9 cartes à pied, 1 depuis
+        // le zaap du Château (3,-5) — 8 de gagnées.
+        #expect(ItineraireZaap.reecrire("/travel 3,-4", depuis: position(-2, 0), gainMinimal: 8, zaaps: zaaps, reseau: reseau)
+                == "/zaap 3,-5 ; /travel 3,-4")
+        #expect(ItineraireZaap.reecrire("/travel 3,-4", depuis: position(-2, 0), gainMinimal: 9, zaaps: zaaps, reseau: reseau) == nil)
     }
 
     @Test("Sans position, ou hors du Monde des Douze, rien n'est réécrit")
     func sansPosition() {
-        #expect(ItineraireZaap.reecrire("/travel 6,8", depuis: nil, gainMinimal: 1, zaaps: zaaps) == nil)
+        #expect(ItineraireZaap.reecrire("/travel 6,8", depuis: nil, gainMinimal: 1, zaaps: zaaps, reseau: reseau) == nil)
         #expect(ItineraireZaap.reecrire("/travel 6,8", depuis: position(-30, -40, zone: "Incarnam (Pâturages)"),
-                                        gainMinimal: 1, zaaps: zaaps) == nil)
+                                        gainMinimal: 1, zaaps: zaaps, reseau: reseau) == nil)
         #expect(ItineraireZaap.reecrire("/travel 6,8", depuis: position(-30, -40, zone: "Montagne des Koalaks"),
-                                        gainMinimal: 1, zaaps: zaaps) != nil)
+                                        gainMinimal: 1, zaaps: zaaps, reseau: reseau) != nil)
     }
 
     @Test("La liste intégrée : aucun zaap en double, ceux d'une autre carte inactifs")
@@ -64,9 +65,13 @@ struct ItineraireZaapTests {
         let incarnam = try? #require(Carte.integree.zaaps.first { $0.monde == 2 && $0.x == 3 && $0.y == 0 })
         #expect(incarnam.map { CatalogueZaaps.estActif($0, choix: [:]) } == false)
         #expect(zaaps.allSatisfy { $0.monde == Zaap.mondeDesDouze })
-        // Sans cela, un /travel 3,-1 d'Amakna passerait par le cimetière d'Incarnam.
-        #expect(ItineraireZaap.reecrire("/travel 3,-1", depuis: position(-40, 20), gainMinimal: 1, zaaps: zaaps)
+        // Sans cela, un /travel 3,-1 d'Amakna passerait par le cimetière
+        // d'Incarnam (3,0) à vol d'oiseau ; par les sous-zones, c'est le
+        // zaap du Village d'Amakna.
+        #expect(ItineraireZaap.reecrire("/travel 3,-1", depuis: position(-40, 20), gainMinimal: 1, zaaps: zaaps, reseau: .vide)
                 == "/zaap 3,-5 ; /travel 3,-1")
+        #expect(ItineraireZaap.reecrire("/travel 3,-1", depuis: position(-40, 20), gainMinimal: 1, zaaps: zaaps, reseau: reseau)
+                == "/zaap -2,0 ; /travel 3,-1")
     }
 
     @Test("Un zaap décoché n'est plus proposé, un zaap d'une autre carte coché l'est")
@@ -87,7 +92,7 @@ struct ItineraireZaapTests {
         #expect(tous.count == Carte.integree.zaaps.count + 1)
         #expect(tous.first { $0.cle == doublon.cle }?.nom(en: .fr) == "Village d'Amakna")
         let actifs = CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [nouveau], choix: [:])
-        #expect(ItineraireZaap.reecrire("/travel 51,50", depuis: position(0, 0), gainMinimal: 5, zaaps: actifs)
+        #expect(ItineraireZaap.reecrire("/travel 51,50", depuis: position(0, 0), gainMinimal: 5, zaaps: actifs, reseau: reseau)
                 == "/zaap 50,50 ; /travel 51,50")
     }
 
@@ -133,5 +138,63 @@ struct ItineraireZaapTests {
         let zaaps = [astrub, bouftous, amakna]
         #expect(CatalogueZaaps.parDistance(zaaps, depuis: nil) == zaaps)
         #expect(CatalogueZaaps.parDistance(zaaps, depuis: position(4, 6, zone: "Incarnam")) == zaaps)
+    }
+
+    // MARK: - Sous-zones
+
+    @Test("Le zaap de la sous-zone visée, pas le plus proche à vol d'oiseau derrière la montagne")
+    func zaapDeLaSousZone() {
+        // [-20,9], Territoire des dragodindes sauvages : Sidimote [-25,12] est
+        // à huit cartes mais sans chemin ; le jeu y rattache le zaap des
+        // Koalaks [-16,1].
+        let astrub = position(5, -18)
+        #expect(ItineraireZaap.reecrire("/travel -20,9", depuis: astrub, gainMinimal: 5, zaaps: zaaps, reseau: reseau)
+                == "/zaap -16,1 ; /travel -20,9")
+        #expect(ItineraireZaap.reecrire("/travel -20,9", depuis: astrub, gainMinimal: 5, zaaps: zaaps, reseau: .vide)
+                == "/zaap -25,12 ; /travel -20,9")
+    }
+
+    /// 1 ─ 2 ─ 3, et 4 isolée ; la cible [0,0] est dans la sous-zone 1, qui
+    /// désigne le zaap A.
+    private let petitReseau = ReseauSousZones(Carte(
+        date: .now, lieux: [],
+        sousZones: [SousZoneCarte(id: 1, zaap: 100, voisines: [2]), SousZoneCarte(id: 2, zaap: nil, voisines: [1, 3]),
+                    SousZoneCarte(id: 3, zaap: nil, voisines: [2]), SousZoneCarte(id: 4, zaap: nil, voisines: [])],
+        cases: ["0,0": 1, "1,0": 1, "5,0": 2, "9,0": 3, "30,0": 3, "40,0": 4]))
+    private let zaapA = Zaap(20, 0, noms: ["fr": "A"], idCarte: 100, idSousZone: 3)
+    private let zaapB = Zaap(9, 0, noms: ["fr": "B"], idCarte: 200, idSousZone: 3)
+    private let zaapC = Zaap(5, 0, noms: ["fr": "C"], idCarte: 300, idSousZone: 2)
+    private let zaapD = Zaap(1, 1, noms: ["fr": "D"], idCarte: 400, idSousZone: 4)
+
+    private func choisi(_ cible: (Int, Int), _ zaaps: [Zaap]) -> String? {
+        ItineraireZaap.zaap(vers: cible, parmi: zaaps, reseau: petitReseau)?.nom(en: .fr)
+    }
+
+    @Test("Le zaap associé l'emporte, même plus loin qu'un autre")
+    func associe() {
+        #expect(choisi((0, 0), [zaapB, zaapC, zaapD, zaapA]) == "A")
+    }
+
+    @Test("Associé inactif : le moins de sous-zones à traverser, puis le moins de cartes")
+    func sauts() {
+        // D est à deux cartes mais dans une sous-zone isolée ; C, à une
+        // sous-zone ; B, à deux.
+        #expect(choisi((0, 0), [zaapB, zaapC, zaapD]) == "C")
+        #expect(choisi((0, 0), [zaapB, zaapD]) == "B")
+        // Deux zaaps dans la même sous-zone : le plus proche de la cible.
+        let loin = Zaap(30, 0, noms: ["fr": "Loin"], idSousZone: 3)
+        #expect(choisi((1, 0), [loin, zaapB]) == "B")
+    }
+
+    @Test("Un ajout à la main se situe par ses coordonnées")
+    func ajoutSitue() {
+        let ajout = Zaap(9, 0, noms: ["fr": "Ajout"])
+        #expect(choisi((0, 0), [zaapD, ajout]) == "Ajout")
+    }
+
+    @Test("Cible hors du relevé, ou aucun zaap joignable : le plus proche à vol d'oiseau")
+    func volDOiseau() {
+        #expect(choisi((60, 0), [zaapB, zaapC]) == "B")
+        #expect(choisi((40, 0), [zaapB, zaapC]) == "B")
     }
 }

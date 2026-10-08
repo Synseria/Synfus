@@ -11,6 +11,7 @@ struct RecherchePaletteTests {
         contexte.position = position
         contexte.zaaps = CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [], choix: [:])
         contexte.lieux = Carte.integree.lieux
+        contexte.reseau = ReseauSousZones(Carte.integree)
         contexte.etiquettes = etiquettes
         contexte.favoris = favoris
         contexte.invitationEquipe = "/invite Brok; /invite Cid"
