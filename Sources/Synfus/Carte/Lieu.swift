@@ -1,6 +1,7 @@
 /// Un repère de la carte du jeu — zaap, banque, hôtel de vente, atelier,
 /// donjon, transport… — tel que DofusDB le donne (`hints`), avec sa zone et sa
-/// sous-zone. Des coordonnées et des noms, aucun visuel du jeu.
+/// sous-zone. Des coordonnées, des noms et des identifiants d'images, aucun
+/// visuel du jeu.
 struct Lieu: Codable, Hashable, Sendable {
     /// L'identifiant du repère chez DofusDB, stable d'une liste à l'autre.
     let id: Int
@@ -15,6 +16,8 @@ struct Lieu: Codable, Hashable, Sendable {
     let idSousZone: Int
     /// La catégorie DofusDB (`categoryId`), cf. `CategorieLieu`.
     let categorie: Int
+    /// Son pictogramme sur la carte du jeu (`gfx`), cf. `DofusDB.pictogramme`.
+    let gfx: Int?
     /// Par code de langue, comme tous les noms ci-dessous.
     let noms: [String: String]
     let zone: [String: String]

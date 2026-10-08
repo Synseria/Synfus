@@ -12,6 +12,7 @@ enum CarteDofusDB {
         let mapId: Int
         let worldMapId: Int
         let categoryId: Int
+        let gfx: Int?
         let subareaId: Int
         let name: DofusDB.Noms
     }
@@ -68,12 +69,12 @@ enum CarteDofusDB {
 
     /// La plus récente de la carte gardée et de la carte intégrée : une mise à
     /// jour de Synfus peut apporter une liste plus fraîche que le disque. Une
-    /// carte gardée d'un format antérieur (sans sous-zones) ne se décode pas :
-    /// l'intégrée la remplace, jusqu'au prochain téléchargement qui l'écrase.
+    /// carte gardée d'un autre format (`Carte.formatActuel`) cède la place à
+    /// l'intégrée, jusqu'au prochain téléchargement qui l'écrase.
     static func retenue(gardee donnees: Data?, integree: Carte) -> Carte {
         guard let donnees,
               let gardee = try? JSONDecoder().decode(Carte.self, from: donnees),
-              gardee.date > integree.date
+              gardee.format == Carte.formatActuel, gardee.date > integree.date
         else { return integree }
         return gardee
     }
@@ -108,7 +109,7 @@ enum CarteDofusDB {
             let sz = sousZone[repere.subareaId]
             return Lieu(id: repere.id, x: repere.x, y: repere.y, monde: repere.worldMapId,
                         idCarte: repere.mapId, idSousZone: repere.subareaId,
-                        categorie: repere.categoryId, noms: repere.name.parLangue,
+                        categorie: repere.categoryId, gfx: repere.gfx, noms: repere.name.parLangue,
                         zone: sz.flatMap { zone[$0.areaId] } ?? [:], sousZone: sz?.name.parLangue ?? [:])
         }
         let parCase = sousZoneParCase(cases)

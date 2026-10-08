@@ -5,6 +5,11 @@ import Foundation
 /// liste, une seule mise à jour —, et les sous-zones du Monde des Douze qui
 /// choisissent le zaap d'un `/travel` (`ReseauSousZones`).
 struct Carte: Codable, Equatable, Sendable {
+    /// La forme du fichier : une carte gardée d'une autre (ancienne) ne se
+    /// relit pas, l'intégrée la remplace — sans quoi un cache d'avant un
+    /// nouveau champ le laisserait vide jusqu'au prochain téléchargement.
+    static let formatActuel = 2
+    var format = Carte.formatActuel
     let date: Date
     let lieux: [Lieu]
     /// Les sous-zones du Monde des Douze, triées par identifiant.
