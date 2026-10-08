@@ -367,21 +367,6 @@ final class DiagnosticLecture: ObservableObject {
     private init() {}
 }
 
-/// Ce qui décide de relancer l'OCR : le texte clair, et pour le bouton de
-/// combat, sa couleur — le même « Fin de tour » blanc passe du gris à la
-/// couleur sans qu'un pixel clair ne bouge.
-struct SignatureZone: Equatable, Sendable {
-    let empreinte: EmpreinteTexte
-    /// Part colorée de la zone entière, pour les zones où la couleur compte.
-    let couleur: Double?
-
-    func semblable(a autre: SignatureZone) -> Bool {
-        guard empreinte.semblable(a: autre.empreinte) else { return false }
-        guard let couleur, let autre = autre.couleur else { return true }
-        return (couleur >= LectureCombat.seuilSignature) == (autre >= LectureCombat.seuilSignature)
-    }
-}
-
 /// L'OCR, hors du main actor. Sans état : il reçoit un PNG et la signature
 /// précédente, rend la signature et — seulement si elle a changé — les
 /// lignes lues. Il n'en entre et n'en sort que des valeurs `Sendable`.
