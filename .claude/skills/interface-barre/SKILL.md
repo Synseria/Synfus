@@ -22,9 +22,13 @@ sa bascule). Toute nouvelle option suit la règle.
   `.nonactivatingPanel` qui **peut** devenir key, pour taper l'indice sans activer Synfus.
 - Panneau des quêtes (`Quetes/QuetePanel`) : sans bordure, jamais clé, jamais zoomé. Pas de
   barre de titre, même transparente : elle mange les clics du haut et zoome au double-clic.
-  Bords et coins par `PoigneeRedimension` (ceux du système sont trop minces sans bordure).
-  En-tête des panneaux de jeu : `EnTetePanneau` (quêtes, chasse) — `WindowDragArea` sur l'icône
-  et l'espace libre seulement, jamais sous un bouton (une `NSView` dessous lui prend le clic).
+  Pas `.resizable` : les bords du système, invisibles et sans curseur pour une app inactive,
+  chevauchaient nos poignées et le haut de l'en-tête. Bords et coins par `PoigneeRedimension`
+  seule ; cadre relu par `setFrameUsingName(_:force: true)`. En-tête des panneaux de jeu :
+  `EnTetePanneau` (quêtes, chasse) — `WindowDragArea` **par-dessus** l'icône, le titre et l'espace
+  libre (une image ou un texte au-dessus d'une `NSView` lui prend le clic), jamais sur un bouton.
+  Avec `menu` (titre des quêtes) : un clic ouvre un `NSMenu` en `popUp`, un glisser de plus de
+  3 pt (`estUnGlisser`) remet l'appui d'origine à `performDrag`.
   Tailles de la fiche : `MetriquesQuete` (confort ou compact), aucune taille en dur dans `QueteVue`.
 - Niveau `.statusBar`, pas `.floating` (qui disparaît sous un espace plein écran) ;
   `.stationary` volontairement absent du `collectionBehavior`.
