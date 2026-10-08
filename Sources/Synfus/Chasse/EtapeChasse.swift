@@ -125,8 +125,8 @@ enum EtapeChasse {
     /// reconnaît à son nom, à une faute d'OCR près — sauf « horreur », le mot
     /// français, à une lettre lui aussi.
     static func estPhorreur(_ texte: String) -> Bool {
-        let normalise = IndicesChasse.normaliser(texte)
+        let normalise = Ressemblance.normaliser(texte)
         if normalise.contains("phorreur") { return true }
-        return !normalise.contains("horreur") && IndicesChasse.distanceDansTexte("phorreur", normalise) <= 1
+        return !normalise.contains("horreur") && Ressemblance.distanceDansTexte("phorreur", normalise) <= 1
     }
 }
