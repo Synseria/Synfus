@@ -24,6 +24,7 @@ enum QuetesDofusDB {
         let stepIds: [Int]?
         let startPosition: [Depart]?
         let need: Besoins?
+        let startCriterion: String?
         let steps: [EtapeAPI]?
     }
 
@@ -203,9 +204,11 @@ enum QuetesDofusDB {
         let sousZones: [SousZoneAPI] = try await parIdentifiants("subareas", idsSousZones)
         let zones: [Nomme] = try await parIdentifiants("areas", Set(sousZones.map(\.areaId)))
         let types: [TypeObjetAPI] = try await DofusDB.toutes("item-types", [])
+        let metiers: [Nomme] = try await DofusDB.toutes("jobs", DofusDB.selection(["id", "name"]))
+        let camps: [Nomme] = try await DofusDB.toutes("alignment-sides", DofusDB.selection(["id", "name"]))
         let cites = Cites(objets: try await objets, monstres: try await monstres, pnjs: try await pnjs,
                           cartes: cartes, sousZones: sousZones, zones: zones, types: types,
-                          emotes: try await emotes, titres: try await titres)
+                          emotes: try await emotes, titres: try await titres, metiers: metiers, camps: camps)
         return assembler(quetes: quetes, cites: cites, date: maintenant)
     }
 
@@ -240,6 +243,8 @@ enum QuetesDofusDB {
         var types: [TypeObjetAPI] = []
         var emotes: [Nomme] = []
         var titres: [TitreAPI] = []
+        var metiers: [Nomme] = []
+        var camps: [Nomme] = []
     }
 
     static func assembler(quetes: [QueteAPI], cites: Cites, date: Date) -> Quetes {
@@ -277,7 +282,7 @@ enum QuetesDofusDB {
                 }
             return Quete(id: api.id, noms: api.name.parLangue, niveau: api.levelMin ?? 0,
                          groupe: api.isPartyQuest ?? false, donjon: api.isDungeonQuest ?? false,
-                         prerequis: api.need?.quests ?? [], etapes: etapes)
+                         prerequis: api.need?.quests ?? [], critere: api.startCriterion, etapes: etapes)
         }
         func noms(_ liste: [Nomme]) -> [String: [String: String]] {
             Dictionary(liste.map { (String($0.id), $0.name.parLangue) }, uniquingKeysWith: { a, _ in a })
@@ -307,7 +312,8 @@ enum QuetesDofusDB {
         return Quetes(format: Quetes.formatActuel, date: date, quetes: modeles, pnjs: situes, objets: noms(objets),
                       monstres: noms(monstres), nomsPNJ: noms(pnjs), sousZones: lieux, famillesObjets: famillesObjets, familles: familles,
                       emotes: noms(cites.emotes),
-                      titres: Dictionary(cites.titres.map { (String($0.id), $0.nameMale.parLangue) }, uniquingKeysWith: { a, _ in a }))
+                      titres: Dictionary(cites.titres.map { (String($0.id), $0.nameMale.parLangue) }, uniquingKeysWith: { a, _ in a }),
+                      metiers: noms(cites.metiers), camps: noms(cites.camps))
     }
 
     private static func parIdentifiants<Element: Decodable & Sendable>(_ chemin: String, _ ids: Set<Int>) async throws -> [Element] {

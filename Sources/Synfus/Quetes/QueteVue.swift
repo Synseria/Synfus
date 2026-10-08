@@ -164,7 +164,29 @@ struct QueteVue: View {
             }
             .font(.system(size: 10))
             .foregroundStyle(.secondary)
+            if let exigences = Self.exigences(fiche.exigences, classes: ClassesStore.shared.catalogue) {
+                Label(L("quete.exigences", exigences), systemImage: "lock")
+                    .font(.system(size: 10))
+                    .foregroundStyle(Couleurs.ambre)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
+    }
+
+    /// « Roublard · dès le niveau 110 · Alchimiste niveau 80 · Bontarien, alignement 20 ».
+    static func exigences(_ exigences: [FicheQuete.Exigence], classes: DofusClass.Catalogue) -> String? {
+        let parties = exigences.compactMap { exigence -> String? in
+            switch exigence {
+            case .classe(let id): return classes.breed(idDofusDB: id)?.nomLocalise ?? "#\(id)"
+            case .niveau(let niveau): return L("quete.exigence.niveau", niveau)
+            case .metier(let nom, let niveau): return L("quete.exigence.metier", nom, niveau)
+            case .alignement(let camp?, let niveau?): return L("quete.exigence.alignement", camp, niveau)
+            case .alignement(let camp?, nil): return camp
+            case .alignement(nil, let niveau?): return L("quete.exigence.alignementSeul", niveau)
+            case .alignement(nil, nil): return nil
+            }
+        }
+        return parties.isEmpty ? nil : parties.joined(separator: " · ")
     }
 
     private func badge(_ texte: String, icone: String) -> some View {
