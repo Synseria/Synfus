@@ -89,9 +89,9 @@ enum CarteDofusDB {
         let reperes: [Repere] = try await DofusDB.toutes("hints", [])
         let cases: [Case] = try await DofusDB.toutesEnParallele(
             "map-positions", [URLQueryItem(name: "worldMap", value: "\(Zaap.mondeDesDouze)")] + DofusDB.selection(Case.champs))
-        let sousZones: [SousZone] = try await parIdentifiants(
+        let sousZones: [SousZone] = try await DofusDB.parIdentifiants(
             "subareas", reperes.map(\.subareaId) + cases.map(\.subAreaId), DofusDB.selection(SousZone.champs))
-        let zones: [Zone] = try await parIdentifiants("areas", sousZones.map(\.areaId))
+        let zones: [Zone] = try await DofusDB.parIdentifiants("areas", sousZones.map(\.areaId))
         let carte = assembler(date: maintenant, reperes: reperes, sousZones: sousZones, zones: zones, cases: cases)
         guard carte.lieux.count >= Carte.minimumPlausible else { throw Echec.listeSuspecte(carte.lieux.count) }
         guard carte.cases.count >= Carte.minimumCasesPlausible else { throw Echec.casesSuspectes(carte.cases.count) }
@@ -171,17 +171,5 @@ enum CarteDofusDB {
             }
         }
         dispatchMain()
-    }
-
-    private static func parIdentifiants<Element: Decodable>(
-        _ chemin: String, _ ids: [Int], _ filtres: [URLQueryItem] = []
-    ) async throws -> [Element] {
-        let ids = Array(Set(ids)).sorted()
-        var elements: [Element] = []
-        for debut in stride(from: 0, to: ids.count, by: DofusDB.parPage) {
-            let lot = ids[debut..<min(debut + DofusDB.parPage, ids.count)]
-            elements += try await DofusDB.toutes(chemin, filtres + lot.map { URLQueryItem(name: "id[$in][]", value: "\($0)") })
-        }
-        return elements
     }
 }
