@@ -132,6 +132,7 @@ enum QuetesDofusDB {
     /// Un type d'objet et sa grande famille (« Ressource », « Consommable »…).
     struct TypeObjetAPI: Decodable, Sendable {
         struct Famille: Decodable, Sendable {
+            let id: Int
             let name: DofusDB.Noms
         }
 
@@ -296,13 +297,15 @@ enum QuetesDofusDB {
         let lieux = Dictionary(sousZones.map {
             (String($0.id), SousZoneNommee(noms: $0.name.parLangue, zone: nomsZones[String($0.areaId)] ?? [:]))
         }, uniquingKeysWith: { a, _ in a })
-        let familles = Dictionary(types.compactMap { type in type.superType.map { (type.id, $0.name.parLangue) } },
-                                  uniquingKeysWith: { a, _ in a })
-        let categories = Dictionary(objets.compactMap { objet in
-            objet.typeId.flatMap { familles[$0] }.map { (String(objet.id), $0) }
+        let familleDuType = Dictionary(types.compactMap { type in type.superType.map { (type.id, $0) } },
+                                       uniquingKeysWith: { a, _ in a })
+        let famillesObjets = Dictionary(objets.compactMap { objet in
+            objet.typeId.flatMap { familleDuType[$0] }.map { (String(objet.id), $0.id) }
         }, uniquingKeysWith: { a, _ in a })
+        let familles = Dictionary(familleDuType.values.map { (String($0.id), $0.name.parLangue) },
+                                  uniquingKeysWith: { a, _ in a })
         return Quetes(format: Quetes.formatActuel, date: date, quetes: modeles, pnjs: situes, objets: noms(objets),
-                      monstres: noms(monstres), nomsPNJ: noms(pnjs), sousZones: lieux, categoriesObjets: categories,
+                      monstres: noms(monstres), nomsPNJ: noms(pnjs), sousZones: lieux, famillesObjets: famillesObjets, familles: familles,
                       emotes: noms(cites.emotes),
                       titres: Dictionary(cites.titres.map { (String($0.id), $0.nameMale.parLangue) }, uniquingKeysWith: { a, _ in a }))
     }

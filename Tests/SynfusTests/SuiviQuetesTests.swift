@@ -18,7 +18,7 @@ struct SuiviQuetesTests {
         Quetes(format: Quetes.formatActuel, date: .now, quetes: liste, pnjs: [],
                objets: ["20": ["fr": "Âme de Gelée Royale Bleuet"]], monstres: [:],
                nomsPNJ: ["10": ["fr": "Meuh Sieurchance"], "11": ["fr": "Assistante d'Otomaï"]],
-               sousZones: [:], categoriesObjets: [:], emotes: [:], titres: [:])
+               sousZones: [:], famillesObjets: [:], familles: [:], emotes: [:], titres: [:])
     }
 
     /// Les quêtes de la capture de l'utilisateur ; « L'éternelle moisson » a

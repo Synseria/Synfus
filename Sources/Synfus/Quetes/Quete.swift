@@ -6,7 +6,7 @@ struct Quetes: Codable, Equatable, Sendable {
     /// La forme du fichier gardé sur le disque : une autre (ancienne) n'est
     /// pas relue, les quêtes se retéléchargent — sans quoi un cache d'avant
     /// un nouveau champ le laisserait vide trente jours.
-    static let formatActuel = 2
+    static let formatActuel = 3
     let format: Int
     let date: Date
     let quetes: [Quete]
@@ -18,12 +18,18 @@ struct Quetes: Codable, Equatable, Sendable {
     let nomsPNJ: [String: [String: String]]
     /// Les sous-zones où les quêtes placent des PNJ, et leur zone.
     let sousZones: [String: SousZoneNommee]
-    /// La catégorie de chaque objet cité (« Ressource », « Consommable »,
-    /// « Objet de quête »…), par identifiant d'objet.
-    let categoriesObjets: [String: [String: String]]
+    /// La grande famille de chaque objet cité (`superTypeId` de DofusDB),
+    /// par identifiant d'objet, et le nom de chaque famille (« Ressource »,
+    /// « Consommable », « Objet de quête »…).
+    let famillesObjets: [String: Int]
+    let familles: [String: [String: String]]
     /// Les émotes et titres que des étapes donnent, par identifiant.
     let emotes: [String: [String: String]]
     let titres: [String: [String: String]]
+
+    /// La famille « Objet de quête » de DofusDB (`item-super-types`) : un
+    /// identifiant, pas un nom, qui change avec la langue.
+    static let familleObjetDeQuete = 14
 
     /// Moins de quêtes que cela : une réponse tronquée.
     static let minimumPlausible = 500
@@ -182,6 +188,9 @@ struct FicheQuete: Equatable, Sendable {
         let quantite: Int
         /// « Ressource », « Consommable », « Objet de quête »…
         let categorie: String?
+        /// Remis par un PNJ ou ramassé en chemin, il ne s'achète pas : on
+        /// peut le masquer des ressources à réunir.
+        let objetDeQuete: Bool
     }
 
     struct Objectif: Equatable, Sendable {
@@ -270,8 +279,10 @@ extension Quetes {
     }
 
     private func ressource(_ objet: Int, _ quantite: Int, en langue: Langue) -> FicheQuete.Ressource {
-        FicheQuete.Ressource(nom: nomObjet(objet, en: langue), quantite: quantite,
-                             categorie: categoriesObjets[String(objet)].flatMap { Lieu.traduit($0, langue) })
+        let famille = famillesObjets[String(objet)]
+        return FicheQuete.Ressource(nom: nomObjet(objet, en: langue), quantite: quantite,
+                                    categorie: famille.flatMap { familles[String($0)] }.flatMap { Lieu.traduit($0, langue) },
+                                    objetDeQuete: famille == Self.familleObjetDeQuete)
     }
 
     private func recompenses(_ recompenses: RecompensesEtape, en langue: Langue) -> FicheQuete.Recompenses {

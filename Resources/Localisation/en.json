@@ -413,6 +413,8 @@
   "quetes.compte": "%lld quests",
   "quetes.filtrer": "Filter: quest name",
   "quetes.maj.suspecte": "DofusDB only returned %lld quests, the current ones are kept.",
+  "quetes.masquerObjets": "Hide quest items",
+  "quetes.masquerObjets.sousTexte": "From the resources to gather: they can't be bought, an NPC hands them over or you pick them up on the way.",
   "quetes.ouvrir": "Open",
   "quetes.sousTitre": "A quest opens in a transparent panel above the game: resources and routes in one click.",
   "raccourci.aucun": "None",

@@ -413,6 +413,8 @@
   "quetes.compte": "%lld misiones",
   "quetes.filtrer": "Filtrar: nombre de la misión",
   "quetes.maj.suspecte": "DofusDB solo devolvió %lld misiones, se conservan las actuales.",
+  "quetes.masquerObjets": "Ocultar los objetos de misión",
+  "quetes.masquerObjets.sousTexte": "De los recursos que reunir: no se compran, un PNJ los entrega o se recogen por el camino.",
   "quetes.ouvrir": "Abrir",
   "quetes.sousTitre": "Una misión se abre en un panel transparente sobre el juego: recursos y trayectos en un clic.",
   "raccourci.aucun": "Ninguno",

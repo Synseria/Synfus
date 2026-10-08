@@ -413,6 +413,8 @@
   "quetes.compte": "%lld quêtes",
   "quetes.filtrer": "Filtrer : nom de la quête",
   "quetes.maj.suspecte": "DofusDB n'a rendu que %lld quêtes, les quêtes actuelles sont gardées.",
+  "quetes.masquerObjets": "Masquer les objets de quête",
+  "quetes.masquerObjets.sousTexte": "Des ressources à réunir : ils ne s'achètent pas, un PNJ les remet ou on les ramasse en chemin.",
   "quetes.ouvrir": "Ouvrir",
   "quetes.sousTitre": "Une quête s'ouvre dans un panneau transparent au-dessus du jeu : ressources et trajets d'un clic.",
   "raccourci.aucun": "Aucun",
