@@ -45,9 +45,9 @@ final class LectureSuivi: ObservableObject {
             guard let quetes = await QuetesStore.shared.chargees() else { etat = .sansQuetes; return }
             // Deux mille noms dans trois langues, comparés à chaque ligne :
             // hors du main actor.
-            reconnues = await Task.detached { SuiviQuetes.reconnaitre(lignes, dans: quetes) }.value
+            reconnues = await Task.detached { SuiviQuetes.reconnaitre(lignes, dans: quetes) }.value.reconnues
             let prefs = Preferences.shared
-            cochesLues = prefs.quetesCocherSuivi ? reconnues.reduce(0) { $0 + prefs.cocher($1.faits, de: $1.id) } : 0
+            cochesLues = reconnues.reduce(0) { $0 + prefs.appliquer($1) }
             etat = .lu
             rafraichir()
         }

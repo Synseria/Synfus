@@ -18,6 +18,9 @@ enum SuiviQuetes {
         /// s'y reconnaît mieux que les autres ; jamais pour une quête d'une
         /// seule étape.
         let etape: Int?
+        /// L'étape est établie (`SuiviObjectifs.Lecture.sure`), pas seulement
+        /// la plus probable : le panneau y avance.
+        let etapeSure: Bool
         /// Les objectifs de l'étape que le suivi montre, donc encore à faire,
         /// dans l'ordre de l'écran.
         let aFaire: [Int]
@@ -25,12 +28,25 @@ enum SuiviQuetes {
         /// douteuse (`SuiviObjectifs`).
         let faits: [Int]
 
-        init(id: Int, etape: Int?, aFaire: [Int] = [], faits: [Int] = []) {
+        init(id: Int, etape: Int?, etapeSure: Bool = false, aFaire: [Int] = [], faits: [Int] = []) {
             self.id = id
             self.etape = etape
+            self.etapeSure = etape != nil && etapeSure
             self.aFaire = aFaire
             self.faits = faits
         }
+    }
+
+    /// Une lecture du suivi : les quêtes reconnues, et la place que chacune
+    /// tient à l'écran — ce qui dit si une quête absente a pu être poussée
+    /// hors de la zone ou absorbée par sa voisine (`HistoriqueSuivi`).
+    struct Lu: Equatable, Sendable {
+        let reconnues: [Reconnue]
+        /// Les lignes d'objectifs sous chaque quête, dans l'ordre de `reconnues`.
+        let lignes: [Int]
+        /// Les lignes lues avant le premier titre : l'en-tête du suivi, ou les
+        /// objectifs d'une quête dont le titre s'est mal lu.
+        let entete: Int
     }
 
     /// Ce que le panneau propose au plus.
@@ -51,9 +67,10 @@ enum SuiviQuetes {
         let forme: Ressemblance.Forme
     }
 
-    static func reconnaitre(_ lignes: [String], dans quetes: Quetes) -> [Reconnue] {
+    static func reconnaitre(_ lignes: [String], dans quetes: Quetes) -> Lu {
         let noms = noms(quetes)
         var groupes: [(titre: Nom, objectifs: [String])] = []
+        var entete = 0
         // `nil` : les lignes lues n'appartiennent à aucune quête retenue —
         // l'en-tête du suivi, ou une quête vue deux fois ou au-delà de la limite.
         var courant: Int?
@@ -69,17 +86,20 @@ enum SuiviQuetes {
                 }
             } else if let courant {
                 groupes[courant].objectifs.append(texte)
+            } else if groupes.isEmpty {
+                entete += 1
             }
         }
-        return groupes.map { groupe in
+        let reconnues = groupes.map { groupe in
             let quete = groupe.titre.quete, langue = groupe.titre.langue
             if let lue = SuiviObjectifs.lire(groupe.objectifs, quete: quete, langue: langue, dans: quetes) {
-                return Reconnue(id: quete.id, etape: quete.etapes.count > 1 ? lue.etape : nil,
+                return Reconnue(id: quete.id, etape: quete.etapes.count > 1 ? lue.etape : nil, etapeSure: lue.sure,
                                 aFaire: lue.aFaire, faits: lue.faits)
             }
             return Reconnue(id: quete.id, etape: etapeParRenvois(quete, langue: langue, objectifs: groupe.objectifs,
                                                                  dans: quetes))
         }
+        return Lu(reconnues: reconnues, lignes: groupes.map(\.objectifs.count), entete: entete)
     }
 
     /// Les noms de toutes les quêtes, dans chaque langue de l'app : celle du

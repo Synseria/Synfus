@@ -77,7 +77,7 @@ struct SuiviObjectifsTests {
         sousZones: [:], famillesObjets: [:], familles: [:], emotes: [:], titres: [:], metiers: [:], camps: [:])
 
     private func lu(_ lignes: [String]) -> [SuiviQuetes.Reconnue] {
-        SuiviQuetes.reconnaitre(lignes, dans: Self.jeu)
+        SuiviQuetes.reconnaitre(lignes, dans: Self.jeu).reconnues
     }
 
     @Test("La capture réelle : les objectifs montrés à faire, ceux d'avant faits, étapes d'avant comprises")
@@ -106,9 +106,9 @@ struct SuiviObjectifsTests {
             .init(id: 456, etape: nil, aFaire: [3105], faits: [3099, 3100, 3101, 3102, 3103, 3104]),
             .init(id: 2442, etape: nil, aFaire: [18460], faits: [18459]),
             // « VOIR PLUS » cache la suite, pas ce qui précède.
-            .init(id: 439, etape: 0, aFaire: [2269, 2270, 2271], faits: [2266, 2267, 2268]),
+            .init(id: 439, etape: 0, etapeSure: true, aFaire: [2269, 2270, 2271], faits: [2266, 2267, 2268]),
             .init(id: 1467, etape: nil, aFaire: [8166], faits: [8154, 8155, 8156]),
-            .init(id: 157, etape: 1, aFaire: [625, 5504], faits: [621, 5500, 622]),
+            .init(id: 157, etape: 1, etapeSure: true, aFaire: [625, 5504], faits: [621, 5500, 622]),
         ])
     }
 
@@ -118,7 +118,7 @@ struct SuiviObjectifsTests {
                             "Rapporter 1 âme de Gelee Royaie Menthe à Assistante d'Otomaï"])
         // Rakoopeur et Scarabosse, entre les deux, ne sont pas montrés : peut-être
         // pas encore ouverts, rien n'en est déduit.
-        #expect(reconnues == [.init(id: 439, etape: 0, aFaire: [2270, 2273], faits: [2266, 2267, 2268, 2269])])
+        #expect(reconnues == [.init(id: 439, etape: 0, etapeSure: true, aFaire: [2270, 2273], faits: [2266, 2267, 2268, 2269])])
     }
 
     /// « Le commandant » : Aller voir Ymagiroh (1), Ramener (2), Aller voir
@@ -169,8 +169,8 @@ struct SuiviObjectifsTests {
         ], pnjs: [], objets: [:], monstres: [:], nomsPNJ: [:], sousZones: [:], famillesObjets: [:], familles: [:],
         emotes: [:], titres: [:], metiers: [:], camps: [:])
         let reconnues = SuiviQuetes.reconnaitre(["Le bricoleur", "Parler à Bob le Bricoleur",
-                                                 "Ramener à Danathor : x1 Pensée perdue"], dans: jeu)
-        #expect(reconnues == [.init(id: 902, etape: 1, aFaire: [32, 33], faits: [31])])
+                                                 "Ramener à Danathor : x1 Pensée perdue"], dans: jeu).reconnues
+        #expect(reconnues == [.init(id: 902, etape: 1, etapeSure: false, aFaire: [32, 33], faits: [31])])
     }
 
     @Test("Deux étapes qui se lisent aussi bien : ni étape ni objectif")
