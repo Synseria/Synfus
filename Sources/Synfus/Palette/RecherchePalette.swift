@@ -279,7 +279,7 @@ enum RecherchePalette {
     static func quetes(_ contexte: ContextePalette) -> [EntreePalette] {
         (contexte.quetes?.quetes ?? []).map { quete in
             EntreePalette(id: "quete:\(quete.id)", genre: .quete, titre: Lieu.traduit(quete.noms, contexte.langue) ?? "?",
-                          sousTitre: L("palette.quete.resume", quete.niveau, quete.etapes.count),
+                          sousTitre: L("palette.quete.resume", nombre: quete.etapes.count, quete.niveau, quete.etapes.count),
                           effet: .ouvrirQuete(quete.id))
         }
     }
@@ -297,9 +297,10 @@ enum RecherchePalette {
                     [Lieu.traduit($0.noms, contexte.langue), Lieu.traduit($0.zone, contexte.langue)]
                         .compactMap { $0 }.joined(separator: " · ")
                 } ?? inconnu
+                let nombre = passage.quetes
                 let sousTitre = rang == 0 && pnj.passages.count > 1
-                    ? L("palette.pnj.habituel", lieu, passage.quetes)
-                    : rang == 0 ? L("palette.pnj.cite", lieu, passage.quetes) : L("palette.pnj.aussi", lieu, passage.quetes)
+                    ? L("palette.pnj.habituel", nombre: nombre, lieu, nombre)
+                    : rang == 0 ? L("palette.pnj.cite", nombre: nombre, lieu, nombre) : L("palette.pnj.aussi", nombre: nombre, lieu, nombre)
                 return EntreePalette(id: "pnj:\(pnj.id):\(position.x),\(position.y)", genre: .pnj,
                                      titre: Lieu.traduit(pnj.noms, contexte.langue) ?? "?", sousTitre: sousTitre,
                                      detail: Coordonnees.texte(position.x, position.y), distance: distance(vers: position, contexte),

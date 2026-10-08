@@ -9,6 +9,7 @@ struct QuetesTests {
     /// récompense ; et la quête qui la suit.
     static let page = """
     {"total":2,"data":[{"id":18,"name":{"fr":"Wogew l'hewmite","en":"Wogew the Hewmit"},"levelMin":70,"isPartyQuest":true,
+      "startCriterion":"PL>59&PG=13&PJ>26,79&Ps=1&Pa>19&(Qf=1|Qa=2)",
       "stepIds":[57,55],"startPosition":[{"mapId":160695296,"npcId":196}],"need":{"quests":[]},
       "steps":[
         {"id":55,"name":{"fr":"Le sang du wabbit GM"},"optimalLevel":70,"duration":1,
@@ -37,7 +38,7 @@ struct QuetesTests {
             return nomme
         }
         let type = try JSONDecoder().decode(QuetesDofusDB.TypeObjetAPI.self,
-                                            from: Data(#"{"id":137,"superType":{"name":{"fr":"Objet de quête"}}}"#.utf8))
+                                            from: Data(#"{"id":137,"superType":{"id":14,"name":{"fr":"Objet de quête"}}}"#.utf8))
         let carte = try JSONDecoder().decode(QuetesDofusDB.CarteAPI.self,
                                              from: Data(#"{"id":160695296,"posX":-1,"posY":-39,"subAreaId":56}"#.utf8))
         let sousZone = try JSONDecoder().decode(QuetesDofusDB.SousZoneAPI.self,
@@ -46,7 +47,8 @@ struct QuetesTests {
             objets: [try nomme(1746, "Sang de Wabbit GM", type: 137), try nomme(1747, "Analyse de sang")],
             monstres: [try nomme(182, "Wabbit GM")],
             pnjs: [try nomme(119, "Otomaï"), try nomme(196, "Wogew")], cartes: [carte],
-            sousZones: [sousZone], zones: [try nomme(0, "Amakna")], types: [type], emotes: [try nomme(11, "Pierre")])
+            sousZones: [sousZone], zones: [try nomme(0, "Amakna")], types: [type], emotes: [try nomme(11, "Pierre")],
+            metiers: [try nomme(26, "Alchimiste")], camps: [try nomme(1, "Bontarien")])
         return QuetesDofusDB.assembler(quetes: api, cites: cites, date: .now)
     }
 
@@ -112,13 +114,28 @@ struct QuetesTests {
     @Test("La fiche : ressources additionnées, objectifs résolus, carte quand elle est connue")
     func fiche() throws {
         let fiche = try #require(try Self.quetes().fiche(18, en: .fr))
-        #expect(fiche.ressources == [FicheQuete.Ressource(nom: "Sang de Wabbit GM", quantite: 5, categorie: "Objet de quête")])
+        #expect(fiche.ressources == [FicheQuete.Ressource(nom: "Sang de Wabbit GM", quantite: 5, categorie: "Objet de quête",
+                                                     objetDeQuete: true)])
         #expect(fiche.groupe && !fiche.donjon)
+        #expect(fiche.exigences == [.classe(13), .niveau(60), .metier("Alchimiste", niveau: 80),
+                                    .alignement(camp: "Bontarien", niveau: 20)])
         #expect(fiche.etapes.map(\.nom) == ["Analyse de sang", "Le sang du wabbit GM"])
         let otomai = try #require(fiche.etapes[1].objectifs.first { $0.texte.contains("Otomaï") })
         #expect(otomai.position == PNJ.Position(x: -2, y: -4))
         #expect(fiche.etapes[0].objectifs[1].position == nil)
         #expect(fiche.nomFrancais == "Wogew l'hewmite")
+    }
+
+    @Test("Les exigences en une ligne, la classe nommée par le catalogue des classes")
+    @MainActor
+    func exigences() throws {
+        let fiche = try #require(try Self.quetes().fiche(18, en: .fr))
+        let roublard = try #require(DofusClass.Catalogue.integre.breed(idDofusDB: 13)).nomLocalise
+        #expect(QueteVue.exigences(fiche.exigences, classes: .integre) == [
+            roublard, L("quete.exigence.niveau", 60), L("quete.exigence.metier", "Alchimiste", 80),
+            L("quete.exigence.alignement", "Bontarien", 20),
+        ].joined(separator: " · "))
+        #expect(QueteVue.exigences([.alignement(camp: nil, niveau: nil)], classes: .integre) == nil)
     }
 
     @Test("La fiche d'une étape : sa consigne résolue, la vue de ses cartes connues, ses récompenses")
@@ -133,7 +150,7 @@ struct QuetesTests {
         #expect(fiche.etapes[0].description == nil)
         #expect(sang.recompenses == FicheQuete.Recompenses(
             niveau: 70, experience: 201_600, kamas: 6_280,
-            objets: [FicheQuete.Ressource(nom: "Analyse de sang", quantite: 1, categorie: nil)],
+            objets: [FicheQuete.Ressource(nom: "Analyse de sang", quantite: 1, categorie: nil, objetDeQuete: false)],
             emotes: ["Pierre"], titres: []))
         #expect(fiche.etapes[0].recompenses.vides)
     }

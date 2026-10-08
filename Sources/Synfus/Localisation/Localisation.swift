@@ -30,6 +30,12 @@ enum Langue: String, CaseIterable, Identifiable, Sendable {
         }
         return .fr
     }
+
+    /// Le nombre se dit-il au singulier ? En français 0 et 1 (« 0 étape »),
+    /// en anglais et en espagnol 1 seul.
+    func singulier(_ nombre: Int) -> Bool {
+        self == .fr ? (0...1).contains(nombre) : nombre == 1
+    }
 }
 
 /// La table des libellés d'une langue, `clé → texte`, avec le français en
@@ -49,6 +55,13 @@ struct Localisation: Sendable {
     /// elle-même — visible, donc corrigeable.
     func texte(_ cle: String) -> String {
         textes[cle] ?? repli[cle] ?? cle
+    }
+
+    /// Le texte d'une clé qui s'accorde à un nombre : `<clé>.un` quand la
+    /// langue le dit au singulier, la clé elle-même sinon. Deux phrases
+    /// entières plutôt qu'un « s » ajouté : l'accord ne touche pas que le nom.
+    func texte(_ cle: String, nombre: Int) -> String {
+        langue.singulier(nombre) ? texte(cle + ".un") : texte(cle)
     }
 
     /// Lit `<dossier>/<code>.json`. `nil` si le fichier manque ou est illisible.
@@ -90,4 +103,10 @@ func L(_ cle: String) -> String {
 /// Le libellé d'une clé, avec ses arguments (`%@`, `%lld`).
 func L(_ cle: String, _ arguments: CVarArg...) -> String {
     String(format: L10n.courante.texte(cle), arguments: arguments)
+}
+
+/// Le libellé d'une clé accordé à `nombre` (`<clé>.un` au singulier). Les
+/// arguments se passent tous, `nombre` compris quand il s'affiche.
+func L(_ cle: String, nombre: Int, _ arguments: CVarArg...) -> String {
+    String(format: L10n.courante.texte(cle, nombre: nombre), arguments: arguments)
 }

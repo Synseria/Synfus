@@ -59,7 +59,7 @@ struct CapturesTests {
     private static func sansCartes(_ fiche: FicheQuete) -> FicheQuete {
         FicheQuete(
             id: fiche.id, nom: fiche.nom, nomFrancais: fiche.nomFrancais, niveau: fiche.niveau, groupe: fiche.groupe,
-            donjon: fiche.donjon, ressources: fiche.ressources,
+            donjon: fiche.donjon, exigences: fiche.exigences, ressources: fiche.ressources,
             etapes: fiche.etapes.map { etape in
                 FicheQuete.Etape(nom: etape.nom, description: etape.description, objectifs: etape.objectifs.map {
                     FicheQuete.Objectif(id: $0.id, texte: $0.texte, position: $0.position, carte: nil)
