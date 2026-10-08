@@ -246,35 +246,6 @@ private final class CibleMenu: NSObject {
     }
 }
 
-/// Ouvre un `NSMenu` sous la vue au clic. Plutôt qu'un `Menu` SwiftUI : un
-/// `popUp` suit la souris dans un panneau jamais clé d'une app inactive sans
-/// activer Synfus, comme le menu de la barre de menus.
-struct DeclencheurMenu: NSViewRepresentable {
-    let fabrique: @MainActor () -> NSMenu
-
-    func makeNSView(context _: Context) -> Declencheur { Declencheur(fabrique: fabrique) }
-    func updateNSView(_ vue: Declencheur, context _: Context) { vue.fabrique = fabrique }
-
-    final class Declencheur: NSView {
-        var fabrique: @MainActor () -> NSMenu
-
-        init(fabrique: @escaping @MainActor () -> NSMenu) {
-            self.fabrique = fabrique
-            super.init(frame: .zero)
-        }
-
-        @available(*, unavailable)
-        required init?(coder _: NSCoder) { nil }
-
-        override func acceptsFirstMouse(for _: NSEvent?) -> Bool { true }
-        override var mouseDownCanMoveWindow: Bool { false }
-
-        override func mouseDown(with _: NSEvent) {
-            fabrique().popUp(positioning: nil, at: NSPoint(x: 0, y: isFlipped ? bounds.maxY + 2 : -2), in: self)
-        }
-    }
-}
-
 /// Les bords qu'une poignée déplace. Le haut n'en est pas : c'est l'en-tête,
 /// qui déplace le panneau.
 struct BordsPanneau: OptionSet, Sendable {
