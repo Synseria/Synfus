@@ -110,6 +110,8 @@ struct ContextePalette: Sendable {
     var position: PositionCarte?
     /// Les zaaps actifs.
     var zaaps: [Zaap] = []
+    /// D'où partir vers une case : `ItineraireZaap.zaap(vers:)`.
+    var reseau = ReseauSousZones.vide
     var lieux: [Lieu] = []
     var etiquettes: [String: String] = [:]
     var favoris: Set<String> = []
@@ -331,7 +333,7 @@ enum RecherchePalette {
     private static func trajet(vers cible: (x: Int, y: Int), _ contexte: ContextePalette) -> String {
         let travel = ItineraireZaap.travel(vers: cible)
         return ItineraireZaap.reecrire(travel, depuis: contexte.position, gainMinimal: contexte.gainMinimal,
-                                       zaaps: contexte.zaaps) ?? travel
+                                       zaaps: contexte.zaaps, reseau: contexte.reseau) ?? travel
     }
 
     private static func distanceVers(_ lieu: Lieu, _ contexte: ContextePalette) -> Int? {

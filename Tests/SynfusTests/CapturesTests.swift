@@ -16,6 +16,7 @@ struct CapturesTests {
         contexte.position = PositionCarte(x: -2, y: 0, zone: "Amakna (Village d'Amakna)")
         contexte.zaaps = CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [], choix: [:])
         contexte.lieux = Carte.integree.lieux
+        contexte.reseau = ReseauSousZones(Carte.integree)
         contexte.etiquettes = ["1:-78,-41": "Fri 1", "1:-77,-73": "Fri 2", "1:39,-82": "Fri 3",
                                "1:-2,0": "Village", "1:-16,1": "Koalak", "1:5,7": "Bouftou",
                                "1:-31,-56": "Bonta", "1:-26,37": "Brâk"]

@@ -8,16 +8,21 @@ final class CarteStore: ObservableObject {
     static let shared = CarteStore()
 
     @Published private(set) var carte: Carte {
-        didSet { zaaps = carte.zaaps }
+        didSet {
+            zaaps = carte.zaaps
+            reseau = ReseauSousZones(carte)
+        }
     }
     /// Tirés de la carte une fois, pas à chaque lecture : la palette, la
     /// réécriture du `/travel` et les réglages les relisent souvent.
     private(set) var zaaps: [Zaap]
+    private(set) var reseau: ReseauSousZones
 
     private init() {
         let carte = CarteDofusDB.locale()
         self.carte = carte
         zaaps = carte.zaaps
+        reseau = ReseauSousZones(carte)
     }
 
     func start() {
