@@ -218,6 +218,34 @@ struct LectureCombatTests {
         #expect(!EtatCombat.horsCombat.enCombat)
     }
 
+    @Test("Un combat commencé puis fini compte là où le perso se tient, jusqu'à ce qu'il change de carte")
+    func finDeCombat() {
+        let ici = PositionCarte(x: 4, y: -2, zone: "Amakna"), luAutrement = PositionCarte(x: 4, y: -2, zone: "Amakn")
+        let ailleurs = PositionCarte(x: 5, y: -2, zone: "Amakna")
+        var fins = FinsDeCombat()
+        fins.combat("Aeryn", avant: .horsCombat, apres: .placement, ici: ici)
+        fins.combat("Aeryn", avant: .placement, apres: .monTour(fin: nil), ici: ici)
+        #expect(!fins.fini("Aeryn", en: ici))
+        fins.combat("Aeryn", avant: .monTour(fin: nil), apres: .horsCombat, ici: ici)
+        #expect(fins.fini("Aeryn", en: ici))
+        #expect(fins.fini("Aeryn", en: luAutrement))
+        #expect(!fins.fini("Nova", en: ici))
+        // Une lecture sans coordonnées ne déplace pas le perso.
+        fins.position("Aeryn", nil)
+        #expect(fins.fini("Aeryn", en: ici))
+        // Perdu : renvoyé ailleurs, la fin ne compte plus, même de retour ici.
+        fins.position("Aeryn", ailleurs)
+        #expect(!fins.fini("Aeryn", en: ailleurs))
+        #expect(!fins.fini("Aeryn", en: ici))
+        // Sorti du placement : rien n'est vaincu.
+        fins.combat("Nova", avant: .placement, apres: .horsCombat, ici: ici)
+        #expect(!fins.fini("Nova", en: ici))
+        // Le bouton caché un instant : le retour en combat efface la fin.
+        fins.combat("Nova", avant: .pasMonTour, apres: .horsCombat, ici: ici)
+        fins.combat("Nova", avant: .horsCombat, apres: .pasMonTour, ici: ici)
+        #expect(!fins.fini("Nova", en: ici))
+    }
+
     @Test("Le même texte passé du gris à la couleur relance l'OCR")
     func signature() {
         let empreinte = EmpreinteTexte(cases: Array(repeating: false, count: EmpreinteTexte.colonnes * EmpreinteTexte.lignes))

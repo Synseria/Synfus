@@ -419,6 +419,7 @@
   "quete.ressources": "Recursos a reunir",
   "quete.suggestion": "Estás aquí — ¿hecho?",
   "quete.suggestion.aide": "El personaje está en este mapa: un clic en la marca valida el objetivo.",
+  "quete.suggestion.combat.aide": "Un combate acaba de terminar en este mapa: un clic en la marca valida el objetivo.",
   "quete.suivantes": "A continuación",
   "quete.suivi.coches": "%lld objetivos marcados según el seguimiento",
   "quete.suivi.coches.un": "%lld objetivo marcado según el seguimiento",

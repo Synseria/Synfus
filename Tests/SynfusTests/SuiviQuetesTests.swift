@@ -6,7 +6,7 @@ import Testing
 /// icônes lues comme des lettres, objectifs sur deux lignes.
 struct SuiviQuetesTests {
     private static func objectif(_ id: Int, _ texte: String) -> ObjectifQuete {
-        ObjectifQuete(id: id, textes: ["fr": texte], x: nil, y: nil, carte: nil, objet: nil, quantite: nil)
+        ObjectifQuete(id: id, textes: ["fr": texte], x: nil, y: nil, carte: nil, objet: nil, quantite: nil, type: nil)
     }
 
     private static func quete(_ id: Int, _ noms: [String: String], etapes: [[ObjectifQuete]] = [[]]) -> Quete {

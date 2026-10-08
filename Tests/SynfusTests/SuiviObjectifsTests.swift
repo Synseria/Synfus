@@ -7,7 +7,7 @@ import Testing
 /// d'une vraie capture du suivi.
 struct SuiviObjectifsTests {
     private static func objectif(_ id: Int, _ texte: String) -> ObjectifQuete {
-        ObjectifQuete(id: id, textes: ["fr": texte], x: nil, y: nil, carte: nil, objet: nil, quantite: nil)
+        ObjectifQuete(id: id, textes: ["fr": texte], x: nil, y: nil, carte: nil, objet: nil, quantite: nil, type: nil)
     }
 
     private static func quete(_ id: Int, _ nom: String, _ etapes: [[ObjectifQuete]]) -> Quete {

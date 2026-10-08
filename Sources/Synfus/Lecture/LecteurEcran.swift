@@ -79,6 +79,8 @@ final class LecteurEcran: ObservableObject {
     /// Dernier état de combat connu de chaque perso, par nom. Celui d'un perso
     /// qui n'est pas devant date de la dernière fois qu'il l'a été.
     @Published private(set) var combats: [String: EtatCombat] = [:]
+    /// Les persos dont un combat vient de finir là où ils sont encore.
+    @Published private(set) var finsDeCombat = FinsDeCombat()
 
     private let moteur = MoteurOCR()
     private let diagnostic = DiagnosticLecture.shared
@@ -191,6 +193,11 @@ final class LecteurEcran: ObservableObject {
     /// reçoit le prochain collage, même si l'on vient de copier ailleurs.
     var positionDuPersoDevant: PositionCarte? {
         persoDevant.flatMap { releves[$0]?.position }
+    }
+
+    /// Le perso devant vient de finir un combat sur la carte où il se tient.
+    var combatFiniDevant: Bool {
+        persoDevant.map { finsDeCombat.fini($0, en: releves[$0]?.position) } ?? false
     }
 
     /// Au survol d'une pastille : la position de ce perso-là, si elle n'a pas
@@ -309,6 +316,9 @@ final class LecteurEcran: ObservableObject {
         // Une lecture sans coordonnées — écran de chargement, fenêtre du jeu
         // posée sur le coin — garde la dernière position connue.
         releves[nom] = Releve(position: lue ?? releves[nom]?.position, lignes: lignes, date: Date())
+        var fins = finsDeCombat
+        fins.position(nom, lue)
+        if fins != finsDeCombat { finsDeCombat = fins }
     }
 
     private func appliquerCombat(_ lignes: [String], couleur: Double, nom: String) {
@@ -316,6 +326,9 @@ final class LecteurEcran: ObservableObject {
         diagnostic.etat = .actif
         let constat = LectureCombat.classer(lignes: lignes, couleur: couleur)
         let etat = EtatCombat.depuis(constat, avant: combats[nom], maintenant: Date())
+        var fins = finsDeCombat
+        fins.combat(nom, avant: combats[nom], apres: etat, ici: releves[nom]?.position)
+        if fins != finsDeCombat { finsDeCombat = fins }
         if combats[nom] != etat { combats[nom] = etat }
     }
 }

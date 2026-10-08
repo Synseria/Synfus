@@ -96,7 +96,7 @@ struct CapturesTests {
             donjon: fiche.donjon, exigences: fiche.exigences, ressources: fiche.ressources,
             etapes: fiche.etapes.map { etape in
                 FicheQuete.Etape(nom: etape.nom, description: etape.description, objectifs: etape.objectifs.map {
-                    FicheQuete.Objectif(id: $0.id, texte: $0.texte, position: $0.position, carte: nil)
+                    FicheQuete.Objectif(id: $0.id, texte: $0.texte, position: $0.position, carte: nil, combat: $0.combat)
                 }, recompenses: etape.recompenses)
             },
             suivantes: fiche.suivantes)
