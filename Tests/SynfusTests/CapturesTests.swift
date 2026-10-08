@@ -24,7 +24,33 @@ struct CapturesTests {
         contexte.recents = ["/zaap -31,-56 ; /travel -31,-57", "/invite Brok; /invite Cid", "%pos%"]
         contexte.invitationEquipe = "/invite Brok; /invite Cid"
         contexte.invitations = [(nom: "Brok", commande: "/invite Brok"), (nom: "Cid", commande: "/invite Cid")]
+        contexte.quetes = QuetesDofusDB.gardees()
         return contexte
+    }
+
+    /// Une équipe d'exemple, pour la barre et l'onglet Raccourcis.
+    private func equipe() {
+        let persos = [("Syn-App", "Feca"), ("Syn-Ops", "Huppermage"), ("Brok", "Iop"), ("Cid", "Eniripsa")]
+        WindowManager.shared.poserPourCaptures(persos.enumerated().map { rang, perso in
+            let pid = pid_t(90_000 + rang)
+            return DofusClient(pid: pid, slotKey: "\(pid)#0", axWindow: .application(pid),
+                               rawTitle: "\(perso.0) - \(perso.1) - 3.6.8.8 - Release", name: perso.0,
+                               characterClass: perso.1, dormant: false)
+        })
+        // Le premier au premier plan : sa pastille est celle qu'on voit allumée.
+        WindowManager.shared.frontmostPID = 90_000
+        WindowManager.shared.frontmostIsDofus = true
+    }
+
+    @Test("Capture de la barre", .enabled(if: dossier != nil))
+    func barre() throws {
+        let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
+        equipe()
+        let vue = BarView()
+            .padding(24)
+            .background(Color(red: 0.11, green: 0.11, blue: 0.13))
+            .environment(\.colorScheme, .dark)
+        try ecrire(vue, vers: dossier.appending(path: "barre.png"))
     }
 
     @Test("Captures de la palette", .enabled(if: dossier != nil))
@@ -32,7 +58,7 @@ struct CapturesTests {
         let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
         try FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)
         for (nom, requete) in [("palette-zaaps", ""), ("palette-travel", "/travel banque bonta"),
-                               ("palette-commandes", "/")] {
+                               ("palette-commandes", "/"), ("palette-quetes", "/quete âme")] {
             let modele = PaletteModele(contexte: contexte(), requete: requete)
             let vue = PaletteVue(modele: modele)
                 .padding(24)
@@ -45,9 +71,17 @@ struct CapturesTests {
     @Test("Capture d'une quête ouverte", .enabled(if: dossier != nil))
     func quete() throws {
         let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
-        let fiche = Self.sansCartes(try #require(try QuetesTests.quetes().fiche(18, en: .fr)))
-        let vue = QueteVue(ficheImposee: fiche, etapeImposee: 1, validesImposes: [101])
-            .frame(width: 360, height: 420)
+        // Une vraie quête si celles de DofusDB sont sur la machine, sinon
+        // celle des tests : des textes et des coordonnées, aucun visuel.
+        let gardees = QuetesDofusDB.gardees()
+        let reelle = gardees.flatMap { quetes in
+            quetes.quetes.first { $0.noms["fr"] == "L'éternelle moisson" }.map { quetes.fiche($0, en: .fr) }
+        }
+        let fiche = Self.sansCartes(try reelle ?? #require(try QuetesTests.quetes().fiche(18, en: .fr)))
+        let premier = fiche.etapes.first?.objectifs.first?.id
+        let vue = QueteVue(ficheImposee: fiche, etapeImposee: reelle == nil ? 1 : 0,
+                           validesImposes: reelle == nil ? [101] : Set(premier.map { [$0] } ?? []))
+            .frame(width: 360, height: 560)
             .padding(24)
             .background(Color(red: 0.11, green: 0.11, blue: 0.13))
             .environment(\.colorScheme, .dark)
@@ -71,6 +105,8 @@ struct CapturesTests {
     @Test("Capture du panneau de chasse", .enabled(if: dossier != nil))
     func chasse() throws {
         let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
+        ChasseModele.shared.departX = -2
+        ChasseModele.shared.departY = 0
         let vue = ChasseVue()
             .padding(24)
             .background(Color(red: 0.11, green: 0.11, blue: 0.13))
@@ -82,7 +118,9 @@ struct CapturesTests {
     func reglages() throws {
         let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
         try FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)
-        for (nom, section) in [("reglages", SettingsSection.general), ("reglages-zaaps", .zaaps)] {
+        equipe()
+        for (nom, section) in [("reglages-zaaps", SettingsSection.zaaps),
+                               ("reglages-raccourcis", .raccourcis), ("reglages-lecture", .lecture)] {
             let vue = SettingsView(section: section)
                 .background(Color(nsColor: .windowBackgroundColor))
                 .environment(\.colorScheme, .dark)
@@ -93,7 +131,7 @@ struct CapturesTests {
     /// Par une fenêtre hors écran : `ImageRenderer` ne dessine ni champ de
     /// texte ni défilement, qui sont des vues AppKit.
     private func ecrire(_ vue: some View, vers url: URL) throws {
-        _ = NSApplication.shared
+        NSApplication.shared.appearance = NSAppearance(named: .darkAqua)
         let hote = NSHostingView(rootView: vue)
         hote.frame = NSRect(origin: .zero, size: hote.fittingSize)
         let fenetre = NSWindow(contentRect: hote.frame, styleMask: .borderless, backing: .buffered, defer: false)

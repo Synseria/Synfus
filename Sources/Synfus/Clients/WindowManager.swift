@@ -110,6 +110,16 @@ final class WindowManager: ObservableObject {
 
     private init() {}
 
+    #if DEBUG
+    /// Des persos fictifs pour les captures de la documentation
+    /// (`CapturesTests`) : sans inventaire, la barre ne dirait qu'« aucun perso ».
+    func poserPourCaptures(_ clients: [DofusClient]) {
+        accessibilityGranted = true
+        self.clients = clients
+        effectif = clients
+    }
+    #endif
+
     func start() {
         accessibilityGranted = AXIsProcessTrusted()
 

@@ -61,6 +61,8 @@ SYNFUS_CAPTURE=~/Library/Logs/Synfus/captures/x.png sh test.sh RealCapture   # O
   plusieurs clients serait un multiplicateur, interdit par les CGU de Dofus.
 - **Aucun visuel du jeu dans le dépôt ni le bundle** (CGU Dofus, art. 13.2) : seulement des URL
   de DofusDB, téléchargées par l'app dans les caches de l'utilisateur (skill `marque-assets`).
+  Les captures de `docs/screenshots` (`SYNFUS_CAPTURES=$PWD/docs/screenshots sh test.sh
+  CapturesTests`, à part, écran allumé) s'en passent d'office : `Ressources.visuelsDuJeu`.
 - **Identité TCC** : `signature.sh` choisit Developer ID, puis Apple Development de l'équipe
   `339WUY8TXY`, puis tout autre Apple Development, puis « Synfus Dev »
   (`Tools/make-signing-identity.sh`), puis ad hoc (CI). Changer d'identité ou de `BUNDLE_ID`
