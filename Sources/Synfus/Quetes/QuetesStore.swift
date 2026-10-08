@@ -30,6 +30,8 @@ final class QuetesStore: ObservableObject {
     @Published private(set) var chargement = false
     @Published private(set) var echec: String?
     private var lues = false
+    /// Le téléchargement lancé par `preparer`, qu'attend `chargees`.
+    private var telechargement: Task<Void, Never>?
 
     private init() {}
 
@@ -48,8 +50,20 @@ final class QuetesStore: ObservableObject {
             lues = true
             quetes = QuetesDofusDB.gardees()
         }
-        guard !chargement, DofusDB.perimee(depuis: quetes?.date, maintenant: Date()) else { return }
-        Task { try? await mettreAJour() }
+        guard !chargement, telechargement == nil, DofusDB.perimee(depuis: quetes?.date, maintenant: Date())
+        else { return }
+        telechargement = Task {
+            try? await mettreAJour()
+            telechargement = nil
+        }
+    }
+
+    /// Les quêtes, après le téléchargement s'il n'y en a encore aucune — pour
+    /// qui en a besoin tout de suite, comme la lecture du suivi.
+    func chargees() async -> Quetes? {
+        preparer()
+        if quetes == nil { await telechargement?.value }
+        return quetes
     }
 
     func mettreAJour() async throws {

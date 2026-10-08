@@ -3,24 +3,40 @@ import Combine
 import ImageIO
 import Vision
 
-/// Ce qu'on lit dans la fenêtre du jeu, et où.
+/// Ce qu'on lit dans la fenêtre du jeu, et où. Chaque genre a sa zone, son
+/// défaut et son réglage : la table est ici, nulle part ailleurs.
 enum GenreLecture: String, CaseIterable, Sendable {
     /// Le nom de la zone et les coordonnées, en haut à gauche.
     case position
     /// Le bouton « Fin de tour » et son décompte, en bas à droite par défaut.
     case combat
-    /// Le suivi de chasse au trésor, à gauche par défaut — lu à la demande
-    /// seulement (`lireUneFois`), jamais au tour.
+    /// Le suivi de chasse au trésor, à gauche par défaut.
     case chasse
+    /// Le suivi de quêtes du jeu, à gauche par défaut. Chasse et quêtes ne
+    /// sont lues qu'à la demande (`lireUneFois`), jamais au tour : un suivi
+    /// ne change que de la main du joueur, et sa zone est grande.
+    case quetes
 
-    @MainActor var zone: ZoneEcran {
-        let prefs = Preferences.shared
+    var parDefaut: ZoneEcran {
         switch self {
-        case .position: return prefs.zonePosition ?? .positionParDefaut
-        case .combat: return prefs.zoneCombat ?? .combatParDefaut
-        case .chasse: return prefs.zoneChasse ?? .chasseParDefaut
+        case .position: return .positionParDefaut
+        case .combat: return .combatParDefaut
+        case .chasse: return .chasseParDefaut
+        case .quetes: return .quetesParDefaut
         }
     }
+
+    /// Le réglage de la zone calibrée ; `nil` y vaut le défaut.
+    @MainActor var reglage: ReferenceWritableKeyPath<Preferences, ZoneEcran?> {
+        switch self {
+        case .position: return \.zonePosition
+        case .combat: return \.zoneCombat
+        case .chasse: return \.zoneChasse
+        case .quetes: return \.zoneQuetes
+        }
+    }
+
+    @MainActor var zone: ZoneEcran { Preferences.shared[keyPath: reglage] ?? parDefaut }
 }
 
 /// Lit l'écran du jeu : la position du perso, et son état de combat.
@@ -91,7 +107,7 @@ final class LecteurEcran: ObservableObject {
             switch $0 {
             case .position: return prefs.lirePosition
             case .combat: return prefs.lireCombat
-            case .chasse: return false
+            case .chasse, .quetes: return false
             }
         }
     }
@@ -228,7 +244,7 @@ final class LecteurEcran: ObservableObject {
             switch await moteur.lire(png: png, precedente: precedente, couleur: genre == .combat) {
             case .illisible:
                 diagnostic.etat = .echecCapture("PNG illisible")
-            case .inchangee(let signature):
+            case .inchangee:
                 // Rien de neuf, mais le relevé reste vrai à cet instant.
                 vuLe[cle] = Date()
                 diagnostic.sautes += 1
@@ -242,7 +258,7 @@ final class LecteurEcran: ObservableObject {
                 switch genre {
                 case .position: appliquerPosition(lignes, nom: nom)
                 case .combat: appliquerCombat(lignes, couleur: couleurBouton ?? signature.couleur ?? 0, nom: nom)
-                case .chasse: break
+                case .chasse, .quetes: break
                 }
             }
         }
@@ -275,6 +291,16 @@ final class LecteurEcran: ObservableObject {
         else { return nil }
         diagnostic.lignes[genre] = lignes
         return lignes
+    }
+
+    /// L'OCR d'une zone déjà découpée — l'essai du calibrage, sur la capture
+    /// gardée : même moteur, même encadrement que le tour. La couleur est
+    /// celle du bouton de combat, sinon de la zone (cf. `pomper`).
+    func lire(png: Data, genre: GenreLecture) async -> (lignes: [String], couleur: Double)? {
+        guard case .lue(let signature, let lignes, _, let bouton)
+                = await moteur.lire(png: png, precedente: nil, couleur: genre == .combat)
+        else { return nil }
+        return (lignes, bouton ?? signature.couleur ?? 0)
     }
 
     private func appliquerPosition(_ lignes: [String], nom: String) {
