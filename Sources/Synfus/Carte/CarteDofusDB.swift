@@ -59,7 +59,7 @@ enum CarteDofusDB {
 
     /// `~/Library/Application Support/Synfus/Carte.json`
     private static var fichier: URL {
-        AnkamaAssets.supportDirectory.appending(path: "Carte.json", directoryHint: .notDirectory)
+        Ressources.dossierUtilisateur.appending(path: "Carte.json", directoryHint: .notDirectory)
     }
 
     static func locale() -> Carte {

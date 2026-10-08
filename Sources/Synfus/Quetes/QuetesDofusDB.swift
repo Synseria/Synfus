@@ -164,7 +164,7 @@ enum QuetesDofusDB {
 
     /// `~/Library/Application Support/Synfus/Quetes.json`
     private static var fichier: URL {
-        AnkamaAssets.supportDirectory.appending(path: "Quetes.json", directoryHint: .notDirectory)
+        Ressources.dossierUtilisateur.appending(path: "Quetes.json", directoryHint: .notDirectory)
     }
 
     /// `nil` aussi pour un fichier d'une autre forme : il se retélécharge.
