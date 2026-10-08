@@ -23,7 +23,7 @@ struct PNJSettings: View {
                     ForEach(Array(pnj.passages.enumerated()), id: \.offset) { rang, passage in
                         HStack(spacing: 8) {
                             Text(lieu(passage, langue)).foregroundStyle(rang == 0 ? Color.primary : Color.secondary)
-                            Text(L("pnj.quetes", passage.quetes)).font(.system(size: 11)).foregroundStyle(.secondary)
+                            Text(L("pnj.quetes", nombre: passage.quetes, passage.quetes)).font(.system(size: 11)).foregroundStyle(.secondary)
                             Spacer()
                             BoutonTrajet(x: passage.position.x, y: passage.position.y)
                         }

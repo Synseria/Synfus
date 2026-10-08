@@ -20,7 +20,7 @@ struct QuetesSettings: View {
                 .cadreDeListe(premiere: true, derniere: affichees.isEmpty)
             ForEach(affichees, id: \.element.id) { rang, quete in
                 Ligne(titre: Lieu.traduit(quete.noms, langue) ?? "?",
-                      sousTexte: L("quete.niveau", quete.niveau, quete.etapes.count)) {
+                      sousTexte: L("quete.niveau", nombre: quete.etapes.count, quete.niveau, quete.etapes.count)) {
                     Button(L("quetes.ouvrir")) { QuetePanel.shared.ouvrir(quete.id) }
                 }
                 .cadreDeListe(premiere: false, derniere: rang == affichees.count - 1 && quetes.count <= Self.limite)

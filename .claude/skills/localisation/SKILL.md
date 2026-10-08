@@ -19,6 +19,9 @@ user-invocable: false
   convertir `pid_t` en `Int`).
 - **Une seule chaîne par libellé** : une aide composée en `"…" + "…"` se traduit mal et casse
   l'ordre des arguments.
+- **Pluriel** : `L("quete.niveau", nombre: n, niveau, n)` prend `<clé>.un` quand la langue dit
+  `n` au singulier (`Langue.singulier` : 0 et 1 en français, 1 en anglais et en espagnol), la
+  clé sinon — deux phrases entières, jamais un « (s) ». Les arguments se passent tous.
 - `SynfusMark`, que `Tools/AppIconExport.swift` compile seul, n'appelle pas `L()`.
 - Restent en français : journaux et sorties `--dump-*`.
 
