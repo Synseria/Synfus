@@ -4,9 +4,9 @@ import SwiftUI
 /// suivi lu à l'écran), puis les ressources à réunir, l'étape en cours
 /// (consigne, objectifs, récompenses) et les quêtes qui s'ouvrent ensuite. Un
 /// clic sur une ressource copie son nom (pour l'hôtel de vente), sur un
-/// objectif situé son trajet, zaap compris — et le coche. Les objectifs
-/// faits se replient en une ligne ; au survol d'un objectif, la vue de sa
-/// carte en grand. Tailles : `MetriquesQuete`.
+/// objectif situé son trajet, zaap compris — et le coche. Un objectif fait
+/// reste à sa place, grisé, sur une ligne ; au survol d'un objectif, la vue
+/// de sa carte en grand. Tailles : `MetriquesQuete`.
 struct QueteVue: View {
     @ObservedObject private var panneau = QuetePanel.shared
     @ObservedObject private var store = QuetesStore.shared
@@ -15,8 +15,6 @@ struct QueteVue: View {
     /// La ligne qui vient d'être copiée, le temps de le dire.
     @State private var copiee: String?
     @State private var guideEnCours = false
-    /// Les quêtes dont les objectifs faits sont dépliés, le temps de la session.
-    @State private var faitsDeplies: Set<Int> = []
     /// Une fiche donnée (captures de la documentation) ; `nil` : celles du panneau.
     var ficheImposee: FicheQuete?
     /// L'étape montrée et les objectifs cochés de la fiche donnée.
@@ -29,7 +27,7 @@ struct QueteVue: View {
 
     private var metriques: MetriquesQuete { .pour(compact: prefs.quetesCompact) }
 
-    /// La colonne des coches, que la ligne des faits repliés partage.
+    /// La colonne des coches.
     private static let colonneCoche: CGFloat = 18
 
     var body: some View {
@@ -266,8 +264,6 @@ struct QueteVue: View {
         let rang = min(rangEtape(fiche), fiche.etapes.count - 1)
         let etape = fiche.etapes[rang]
         let coches = valides(fiche.id)
-        let garde = etape.objectifs.first { Self.idLigne($0) == copiee }?.id
-        let (aFaire, faits) = Self.repli(etape.objectifs, valides: coches, garde: garde)
         return VStack(alignment: .leading, spacing: metriques.ecartLignes) {
             if plusieurs {
                 HStack(spacing: 6) {
@@ -292,16 +288,8 @@ struct QueteVue: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.bottom, 2)
             }
-            ForEach(aFaire, id: \.id) { objectif in
+            ForEach(etape.objectifs, id: \.id) { objectif in
                 ligneObjectif(objectif, quete: fiche.id, valide: coches.contains(objectif.id))
-            }
-            if !faits.isEmpty {
-                ligneFaits(faits.count, quete: fiche.id)
-                if faitsDeplies.contains(fiche.id) {
-                    ForEach(faits, id: \.id) { objectif in
-                        ligneObjectif(objectif, quete: fiche.id, valide: true)
-                    }
-                }
             }
             if !etape.recompenses.vides {
                 Text(L("quete.recompenses", Self.recompenses(etape.recompenses)))
@@ -337,24 +325,17 @@ struct QueteVue: View {
         return parties.joined(separator: " · ")
     }
 
-    /// Les objectifs à faire, dans leur ordre, et les faits, repliés sous une
-    /// ligne. `garde`, l'objectif qui vient d'être copié — et coché —, reste à
-    /// sa place le temps de le dire.
-    static func repli(_ objectifs: [FicheQuete.Objectif], valides: Set<Int>,
-                      garde: Int?) -> (aFaire: [FicheQuete.Objectif], faits: [FicheQuete.Objectif]) {
-        let aFaire = objectifs.filter { !valides.contains($0.id) || $0.id == garde }
-        let faits = objectifs.filter { valides.contains($0.id) && $0.id != garde }
-        return (aFaire, faits)
-    }
-
     private static func idLigne(_ objectif: FicheQuete.Objectif) -> String { "objectif:\(objectif.id)" }
 
     /// La coche, puis le texte, et dessous sa position : toujours là, c'est
     /// ce qu'on vient chercher. Un objectif situé copie son trajet et se
-    /// coche ; la coche seule se décoche. La vue de la carte paraît en grand
-    /// au survol de la ligne, en vignette avec `quetesVignettes`.
+    /// coche ; la coche seule se décoche. Fait, il reste à sa place — l'ordre
+    /// de la quête ne bouge pas — sur une ligne grisée, sans sa position, une
+    /// fois le « Copié » passé. La vue de la carte paraît en grand au survol
+    /// de la ligne, en vignette avec `quetesVignettes`.
     private func ligneObjectif(_ objectif: FicheQuete.Objectif, quete: Int, valide: Bool) -> some View {
         let id = Self.idLigne(objectif)
+        let replie = valide && copiee != id
         return HStack(alignment: .firstTextBaseline, spacing: 2) {
             Button { QuetePanel.shared.cocher(objectif.id, de: quete, !valide) } label: {
                 Image(systemName: valide ? "checkmark.circle.fill" : "circle")
@@ -373,19 +354,29 @@ struct QueteVue: View {
             }
             ligneCopiable(id: id, aide: L("quete.copierTrajet"), action: action) {
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(objectif.texte)
-                        .font(.system(size: metriques.texte))
-                        .foregroundStyle(valide ? Color.secondary : Color.primary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    HStack(spacing: 6) {
-                        if let position = objectif.position {
-                            detail(id: id, Coordonnees.texte(position.x, position.y), monospace: true)
-                        } else {
-                            detail(id: id, L("quete.nonSitue"), monospace: false)
-                        }
-                        Spacer(minLength: 0)
-                        if prefs.quetesVignettes, let carte = objectif.carte {
-                            MiniatureCarte(carte: carte, taille: metriques.vignette, agrandir: false)
+                    if replie {
+                        Text(objectif.texte)
+                            .font(.system(size: metriques.texte))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    } else {
+                        Text(objectif.texte)
+                            .font(.system(size: metriques.texte))
+                            .foregroundStyle(valide ? Color.secondary : Color.primary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    if !replie {
+                        HStack(spacing: 6) {
+                            if let position = objectif.position {
+                                detail(id: id, Coordonnees.texte(position.x, position.y), monospace: true)
+                            } else {
+                                detail(id: id, L("quete.nonSitue"), monospace: false)
+                            }
+                            Spacer(minLength: 0)
+                            if prefs.quetesVignettes, let carte = objectif.carte {
+                                MiniatureCarte(carte: carte, taille: metriques.vignette, agrandir: false)
+                            }
                         }
                     }
                 }
@@ -395,32 +386,6 @@ struct QueteVue: View {
         // Sur la ligne entière, coche comprise : le bouton d'un objectif non
         // situé est désactivé, et n'aurait pas de survol.
         .apercuCarteAuSurvol(objectif.carte)
-    }
-
-    /// « ✓ 3 faits › » : un clic déplie ou replie les objectifs faits.
-    private func ligneFaits(_ nombre: Int, quete: Int) -> some View {
-        let deplies = faitsDeplies.contains(quete)
-        return Button {
-            if deplies { faitsDeplies.remove(quete) } else { faitsDeplies.insert(quete) }
-        } label: {
-            HStack(alignment: .firstTextBaseline, spacing: 2) {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: metriques.coche))
-                    .foregroundStyle(Couleurs.accent)
-                    .frame(width: Self.colonneCoche)
-                HStack(spacing: 4) {
-                    Text(L("quete.faits", nombre: nombre, nombre)).font(.system(size: metriques.texte))
-                    Image(systemName: deplies ? "chevron.down" : "chevron.right")
-                        .font(.system(size: metriques.icone, weight: .semibold))
-                }
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, metriques.ligneHorizontale)
-                Spacer(minLength: 0)
-            }
-            .padding(.vertical, metriques.ligneVerticale)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
     }
 
     private func valides(_ quete: Int) -> Set<Int> {
