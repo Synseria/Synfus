@@ -29,7 +29,7 @@ struct CarteZaapReglages: View {
                     Text(L("zaap.autreCarte")).foregroundStyle(.orange)
                 }
                 Spacer(minLength: 0)
-                Text("\(zaap.x),\(zaap.y)").font(.system(size: 11, design: .monospaced))
+                Text(Coordonnees.texte(zaap.x, zaap.y)).font(.system(size: 11, design: .monospaced))
             }
             .font(.system(size: 11))
             .foregroundStyle(.secondary)

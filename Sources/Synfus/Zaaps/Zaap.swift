@@ -40,6 +40,6 @@ struct Zaap: Codable, Hashable, Sendable {
     /// la main — pour y retrouver son activation.
     var cle: String { "\(monde):\(x),\(y)" }
 
-    func nom(en langue: Langue) -> String { Lieu.traduit(noms, langue) ?? "\(x),\(y)" }
+    func nom(en langue: Langue) -> String { Lieu.traduit(noms, langue) ?? Coordonnees.texte(x, y) }
     func zone(en langue: Langue) -> String? { Lieu.traduit(zone, langue) }
 }
