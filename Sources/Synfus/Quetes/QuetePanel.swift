@@ -22,6 +22,10 @@ private final class PanneauQuetes: NSPanel {
 final class QuetePanel: NSObject, ObservableObject {
     static let shared = QuetePanel()
 
+    /// Assez étroit pour ne masquer qu'un coin du jeu : la fiche passe ses
+    /// étiquettes à la ligne plutôt que de déborder.
+    static let tailleMinimale = NSSize(width: 220, height: 200)
+
     /// La quête montrée parmi les épinglées.
     @Published private(set) var montree: Int?
     /// Voulu ouvert, qu'il soit à l'écran ou caché derrière une autre app.
@@ -126,7 +130,7 @@ final class QuetePanel: NSObject, ObservableObject {
             defer: false
         )
         panel.contentView = NSHostingView(rootView: QueteVue())
-        panel.minSize = NSSize(width: 280, height: 200)
+        panel.minSize = Self.tailleMinimale
         panel.isFloatingPanel = true
         panel.level = .statusBar
         panel.hidesOnDeactivate = false
@@ -156,7 +160,8 @@ extension QuetePanel {
         menu.autoenablesItems = false
         for element in MenuQuetes.elements(
             epinglees: prefs.quetesEpinglees, montree: idMontre, reconnues: lecture.reconnues,
-            etat: lecture.etat, masquerObjets: prefs.quetesMasquerObjets, nom: { store.nom($0) ?? "…" }) {
+            etat: lecture.etat, actives: Set(MenuQuetes.Option.allCases.filter { prefs[keyPath: Self.reglage($0)] }),
+            nom: { store.nom($0) ?? "…" }) {
             switch element {
             case .titre(let titre):
                 menu.addItem(.sectionHeader(title: titre))
@@ -184,8 +189,8 @@ extension QuetePanel {
                 let item = NSMenuItem(title: texte, action: nil, keyEquivalent: "")
                 item.isEnabled = false
                 menu.addItem(item)
-            case .masquerObjets(let actif):
-                let item = CibleMenu.shared.element(L("quetes.masquerObjets")) { prefs.quetesMasquerObjets = !actif }
+            case .option(let option, let actif):
+                let item = CibleMenu.shared.element(option.titre) { prefs[keyPath: Self.reglage(option)] = !actif }
                 item.state = actif ? .on : .off
                 menu.addItem(item)
             case .separateur:
@@ -193,6 +198,17 @@ extension QuetePanel {
             }
         }
         return menu
+    }
+}
+
+extension QuetePanel {
+    /// Le réglage derrière une option du menu.
+    private static func reglage(_ option: MenuQuetes.Option) -> ReferenceWritableKeyPath<Preferences, Bool> {
+        switch option {
+        case .compact: \.quetesCompact
+        case .consigne: \.quetesConsigne
+        case .masquerObjets: \.quetesMasquerObjets
+        }
     }
 }
 

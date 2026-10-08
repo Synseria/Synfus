@@ -18,13 +18,28 @@ enum MenuQuetes {
         case reconnue(SuiviQuetes.Reconnue, titre: String, epinglee: Bool)
         /// Ce que la dernière lecture a donné, faute de quête.
         case message(String)
-        /// L'interrupteur des objets de quête dans les ressources.
-        case masquerObjets(Bool)
+        /// Un interrupteur de l'affichage, coché quand il est actif.
+        case option(Option, actif: Bool)
         case separateur
     }
 
+    /// Les interrupteurs de l'affichage repris de l'onglet Quêtes, dans
+    /// l'ordre du menu.
+    enum Option: CaseIterable {
+        case compact, consigne, masquerObjets
+
+        var titre: String {
+            switch self {
+            case .compact: L("quetes.compact")
+            case .consigne: L("quetes.consigne")
+            case .masquerObjets: L("quetes.masquerObjets")
+            }
+        }
+    }
+
+    /// `actives` : les options allumées.
     static func elements(epinglees: [Int], montree: Int?, reconnues: [SuiviQuetes.Reconnue],
-                         etat: LectureSuivi.Etat, masquerObjets: Bool, nom: (Int) -> String) -> [Element] {
+                         etat: LectureSuivi.Etat, actives: Set<Option>, nom: (Int) -> String) -> [Element] {
         var elements: [Element] = [.titre(L("quete.menu.epinglees"))]
         elements += epinglees.isEmpty
             ? [.message(L("quete.menu.aucune"))]
@@ -37,7 +52,7 @@ enum MenuQuetes {
             return .reconnue(reconnue, titre: titre, epinglee: epinglees.contains(reconnue.id))
         }
         if let message = message(etat, reconnues: reconnues) { elements.append(.message(message)) }
-        return elements + [.separateur, .masquerObjets(masquerObjets)]
+        return elements + [.separateur] + Option.allCases.map { .option($0, actif: actives.contains($0)) }
     }
 
     /// Les quêtes que le suivi montre et que le panneau n'a pas encore : ce

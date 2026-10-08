@@ -14,10 +14,22 @@ struct QuetesSettings: View {
         let affichees = Array(quetes.prefix(Self.limite).enumerated())
         PageListe(titre: L("reglages.quetes"), sousTitre: L("quetes.sousTitre")) {
             SourceQuetes().cadreDeListe(premiere: true, derniere: false)
-            Interrupteur(titre: L("quetes.bouton"), isOn: $prefs.quetesBouton).cadreDeListe(premiere: false, derniere: false)
+            Interrupteur(titre: L("quetes.bouton"), isOn: $prefs.quetesBouton).cadreDeListe(premiere: false, derniere: true)
+            EnTeteListe(titre: L("quetes.panneau"))
+            Interrupteur(titre: L("quetes.compact"), sousTexte: L("quetes.compact.sousTexte"), isOn: $prefs.quetesCompact)
+                .cadreDeListe(premiere: true, derniere: false)
+            Interrupteur(titre: L("quetes.consigne"), sousTexte: L("quetes.consigne.sousTexte"), isOn: $prefs.quetesConsigne)
+                .cadreDeListe(premiere: false, derniere: false)
             Interrupteur(titre: L("quetes.masquerObjets"), sousTexte: L("quetes.masquerObjets.sousTexte"),
                          isOn: $prefs.quetesMasquerObjets)
-                .cadreDeListe(premiere: false, derniere: true)
+                .cadreDeListe(premiere: false, derniere: false)
+            // Les vignettes ne servent que si les vues des cartes sont là.
+            InterrupteurVuesCartes().cadreDeListe(premiere: false, derniere: !prefs.vuesCartes)
+            if prefs.vuesCartes {
+                Interrupteur(titre: L("quetes.vignettes"), sousTexte: L("quetes.vignettes.sousTexte"),
+                             isOn: $prefs.quetesVignettes)
+                    .cadreDeListe(premiere: false, derniere: true)
+            }
             EnTeteListe(titre: L("quetes.compte", quetes.count))
             ChampFiltre(invite: L("quetes.filtrer"), texte: $filtre)
                 .cadreDeListe(premiere: true, derniere: affichees.isEmpty)

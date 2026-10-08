@@ -23,6 +23,9 @@ sa bascule). Toute nouvelle option suit la règle.
 - Panneau des quêtes (`Quetes/QuetePanel`) : sans bordure, jamais clé, jamais zoomé. Pas de
   barre de titre, même transparente : elle mange les clics du haut et zoome au double-clic.
   Bords et coins par `PoigneeRedimension` (ceux du système sont trop minces sans bordure).
+  En-tête des panneaux de jeu : `EnTetePanneau` (quêtes, chasse) — `WindowDragArea` sur l'icône
+  et l'espace libre seulement, jamais sous un bouton (une `NSView` dessous lui prend le clic).
+  Tailles de la fiche : `MetriquesQuete` (confort ou compact), aucune taille en dur dans `QueteVue`.
 - Niveau `.statusBar`, pas `.floating` (qui disparaît sous un espace plein écran) ;
   `.stationary` volontairement absent du `collectionBehavior`.
 - Déplacement par `performDrag(with:)` (`WindowDragArea`), pas par `DragGesture` (en retard sur
@@ -61,7 +64,8 @@ sa bascule). Toute nouvelle option suit la règle.
   panneau des quêtes) : réduite hors main (`ImagesDofusDB`, `cote`, cache borné), masquée par
   `vuesCartes` (clé de sauvegarde `zaapsVueCarte`, qui masque aussi le fond des zaaps), agrandie
   au survol par `ApercuCarte` — panneau sans bordure, jamais clé, `ignoresMouseEvents`, posé à
-  côté de la fenêtre sous la souris. Une fenêtre qui se cache sans détruire ses vues (palette,
+  côté de la fenêtre sous la souris. Un survol sans vignette (ligne d'objectif des quêtes) passe
+  par le même `apercuCarteAuSurvol`. Une fenêtre qui se cache sans détruire ses vues (palette,
   réglages, quêtes) appelle `ApercuCarte.shared.cacher()`, sans compter sur `onDisappear`.
 - Pictogramme d'un lieu : `PictogrammeLieu` (`Lieu.gfx`), le symbole en repli.
 
