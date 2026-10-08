@@ -24,7 +24,7 @@ Scripts, signature, version (dernier tag `vX.Y.Z`), lots et publication suivent 
 commune : **skill `livraison`**. `--publish` (depuis `main` propre, refuse une version sans section
 dans `CHANGELOG.md`) teste, pousse `main` et le tag, puis **publie depuis ce Mac**
 (`PUBLICATION_PAR_CI=0`, le runner n'a pas Xcode 27) : `Tools/publier-release.sh` compile arm64 +
-x86_64 en `DISTRIBUTION=1` (ad hoc, sans visuel du jeu), fait DMG, SHA256 et release GitHub, notes
+x86_64 en `DISTRIBUTION=1` (ad hoc), fait DMG, SHA256 et release GitHub, notes
 tirées de `CHANGELOG.md`. `release.yml` ne fait que rejouer ce script.
 
 Diagnostic en ligne de commande, **par le binaire installé** — l'autorisation Accessibilité est
@@ -51,7 +51,7 @@ SYNFUS_CAPTURE=~/Library/Logs/Synfus/captures/x.png sh test.sh RealCapture   # O
   correction touche un chemin, vérifier que son jumeau en bénéficie. Foyers : lecture AX
   `AccessibilityReader` ; processus Dofus `DofusProcesses` ; titres `WindowTitle` ; fermeture
   `ClientTerminator` ; presse-papiers `PressePapiers` ; API DofusDB `DofusDB` ; effectif `republierEffectif` ; classes
-  `DofusClass` ; marque `SynfusMark` ; libellés `L()` ; texte lu comparé à des noms `Ressemblance` ;
+  `ClassesStore.catalogue` ; marque `SynfusMark` ; libellés `L()` ; texte lu comparé à des noms `Ressemblance` ;
   zones de lecture `GenreLecture`.
 - Les constantes `extern CFStringRef` de l'Accessibilité (`kAXTrustedCheckOptionPrompt`,
   `"AXFullScreen"`…) sont refusées par la concurrence stricte : citer leur valeur littérale.
@@ -59,8 +59,8 @@ SYNFUS_CAPTURE=~/Library/Logs/Synfus/captures/x.png sh test.sh RealCapture   # O
   position et taille, écrit le presse-papiers, termine des processus — jamais un clic ni une
   touche synthétisés, jamais de `CGEventTap`, aucun délai randomisé. Rejouer une action sur
   plusieurs clients serait un multiplicateur, interdit par les CGU de Dofus.
-- **Aucun visuel du jeu dans le dépôt** (CGU Dofus, art. 13.2) : seulement des URL, copie faite
-  par l'utilisateur (skill `marque-assets`).
+- **Aucun visuel du jeu dans le dépôt ni le bundle** (CGU Dofus, art. 13.2) : seulement des URL
+  de DofusDB, téléchargées par l'app dans les caches de l'utilisateur (skill `marque-assets`).
 - **Identité TCC** : `signature.sh` choisit Developer ID, puis Apple Development de l'équipe
   `339WUY8TXY`, puis tout autre Apple Development, puis « Synfus Dev »
   (`Tools/make-signing-identity.sh`), puis ad hoc (CI). Changer d'identité ou de `BUNDLE_ID`
@@ -79,14 +79,14 @@ Point d'entrée `SynfusMain` (`App/App.swift`). Composants : singletons `@MainAc
 la plupart `ObservableObject`. `applicationDidFinishLaunching` démarre, dans l'ordre :
 `WindowManager` → `FreezeWatcher` → `HotKeyManager.rebind()` → `MenuBarController` →
 `AttentionWatcher` → `ClickAdvanceWatcher` → `FloatingBarController` → `LecteurEcran` →
-`CarteStore` → `ZaapClipboard`.
+`CarteStore` → `ClassesStore` → `ZaapClipboard`.
 
 `Sources/Synfus/` est rangé par domaine (SwiftPM compile les sous-dossiers sans déclaration). Un
 nouveau fichier va dans le dossier de son domaine ; un fichier sans domaine en annonce un nouveau.
 
 | Dossier | Contenu |
 | --- | --- |
-| `App/` | Point d'entrée et `--dump-*`, intégrité du bundle, démarrage automatique, `PressePapiers`, `DofusDB` (client de l'API) |
+| `App/` | Point d'entrée et `--dump-*`, intégrité du bundle, démarrage automatique, `PressePapiers`, `DofusDB` (client de l'API), `ImagesDofusDB`, `Ressources` (bundle, dossier de l'utilisateur) |
 | `Accessibilite/` | `AccessibilityReader` (lecture AX, `DofusProcesses`), `--dump-windows`, `CrossSpaceTitles` |
 | `Clients/` | `DofusClient`, `WindowTitle`, `ClientMemory`, `Equipes`, `Rotation` (purs) ; `WindowManager` (+`PremierPlan`, `+Effectif`, `+Focus`, `+Fermeture`), `ClientInventoryEngine`, `ClientTerminator`, `FreezeWatcher` |
 | `Invitations/` | `/invite Nom` : `InvitationComposer` (pur), `InvitationClipboard` |
@@ -101,7 +101,7 @@ nouveau fichier va dans le dossier de son domaine ; un fichier sans domaine en a
 | `Apercus/` | Captures ScreenCaptureKit, panneau d'aperçu |
 | `Lecture/` | OCR position, combat, suivis de chasse et de quêtes : `ZoneEcran`, `PositionCarte`, `LectureCombat`, `LumaBitmap`, `Ressemblance` (purs), `LecteurEcran` (+ `GenreLecture`, `DiagnosticLecture`, `MoteurOCR`), `CapturesCalibrage` |
 | `Preferences/` | `Preferences`, protocole `PreferencesStore` |
-| `Classes/` | `DofusClass`, icônes utilisateur, visuels Ankama locaux |
+| `Classes/` | `DofusClass` (table intégrée, `Catalogue`, purs), `ClassesDofusDB` (liste `breeds`, cache disque, fusion), `ClassesStore` (emblèmes DofusDB ou icône de l'utilisateur) |
 | `Marque/` | La Couvée : `SynfusMark` (CoreGraphics pur), `SynfusGlyph` |
 | `Localisation/` | `L()`, choix de langue ; tables dans `Resources/Localisation/` |
 | `Interface/` | `MenuBarController`, `ConfirmationFermeture` ; `Barre/` (barre flottante) ; `Reglages/` (une vue par onglet) |
@@ -118,4 +118,4 @@ nouveau fichier va dans le dossier de son domaine ; un fichier sans domaine en a
 | `interface-barre` | barre flottante, réglages, menu, aperçus, rangement des fenêtres |
 | `localisation` | tout libellé visible, tables JSON |
 | `preferences` | ajouter ou changer un réglage, un défaut |
-| `marque-assets` | classes, icônes, visuels Ankama, marque et icône de l'app |
+| `marque-assets` | classes et leurs emblèmes, visuels du jeu, marque et icône de l'app |

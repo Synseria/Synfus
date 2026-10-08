@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Les briques des onglets de données (Zaaps, Lieux, Quêtes, PNJ) : d'où
+/// Les briques des onglets de données (Zaaps, Lieux, Quêtes, PNJ, Classes) : d'où
 /// vient la liste et le bouton qui la met à jour, l'étiquette, le favori.
 
 /// La carte du jeu (zaaps et lieux) : sa date, son contenu, sa mise à jour.
@@ -51,6 +51,28 @@ struct SourceQuetes: View {
         if let echec = quetes.echec { return L("zaap.maj.echec", echec) }
         guard let date = quetes.quetes?.date else { return L("palette.reglages.quetes.aucune") }
         return L("palette.reglages.quetes.date", date.formatted(date: .abbreviated, time: .shortened))
+    }
+}
+
+/// Les classes (noms et emblèmes) : date, contenu, mise à jour.
+struct SourceClasses: View {
+    @ObservedObject private var classes = ClassesStore.shared
+
+    var body: some View {
+        Ligne(titre: titre, sousTexte: L("classes.maj.contenu", classes.catalogue.breeds.count),
+              aide: L("classes.maj.aide")) {
+            HStack(spacing: 8) {
+                if classes.chargement { ProgressView().controlSize(.small) }
+                Button(L("classes.maj")) { Task { try? await classes.mettreAJour() } }
+                    .disabled(classes.chargement)
+            }
+        }
+    }
+
+    private var titre: String {
+        if let echec = classes.echec { return L("zaap.maj.echec", echec) }
+        guard let date = classes.date else { return L("classes.maj.aucune") }
+        return L("classes.maj.date", date.formatted(date: .abbreviated, time: .shortened))
     }
 }
 

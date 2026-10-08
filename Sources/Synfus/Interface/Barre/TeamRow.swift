@@ -25,7 +25,7 @@ struct TeamSectorView: View {
     /// de dépôt se vise mieux qu'un onglet se lit.
     let agrandi: Bool
     let action: () -> Void
-    @ObservedObject private var icons = ClassIconStore.shared
+    @ObservedObject private var icons = ClassesStore.shared
     @State private var survole = false
 
     /// Ce qu'un point a besoin de savoir d'un membre.
@@ -95,7 +95,7 @@ struct TeamSectorView: View {
                     .scaledToFill()
                     .clipShape(Circle())
             } else {
-                Circle().fill(DofusClass.color(for: membre.classe))
+                Circle().fill(icons.catalogue.color(for: membre.classe))
             }
         }
         .frame(width: 12, height: 12)

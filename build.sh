@@ -10,7 +10,7 @@
 # Trois variables d'environnement, pour la publication :
 #   VERSION=0.0.1   numéro inscrit dans l'Info.plist (défaut : dernier tag git)
 #   ARCH=x86_64     architecture cible (défaut : celle de la machine)
-#   DISTRIBUTION=1  build à publier : signé ad hoc, sans aucun visuel du jeu
+#   DISTRIBUTION=1  build à publier : signé ad hoc
 [ -n "${BASH_VERSION:-}" ] || exec /bin/bash "$0" "$@"
 case ":${SHELLOPTS:-}:" in *:posix:*) exec /bin/bash "$0" "$@" ;; esac
 set -euo pipefail
@@ -140,13 +140,6 @@ fi
 # Les libellés de l'interface (une table JSON par langue), la carte intégrée.
 cp -R "Resources/Localisation" "$APP/Contents/Resources/Localisation"
 cp "Resources/Carte.json" "$APP/Contents/Resources/Carte.json"
-
-# Les visuels Ankama, s'ils ont été téléchargés (Tools/fetch-ankama-assets.sh) :
-# embarqués dans ce build-ci, pour cette machine — le dossier est ignoré par
-# Git et la CI ne l'a pas, les releases restent sans visuel du jeu.
-if [ -d "Resources/Ankama" ] && [ "${DISTRIBUTION:-0}" != "1" ]; then
-    cp -R "Resources/Ankama" "$APP/Contents/Resources/Ankama"
-fi
 
 echo "==> Signature"
 signer "$APP" "$BUNDLE_ID"

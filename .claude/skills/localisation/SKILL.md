@@ -1,6 +1,6 @@
 ---
 name: localisation
-description: Interface en français, anglais et espagnol — L("clé"), tables JSON de Resources/Localisation, choix de langue, LocalisationTests. Charger avant d'ajouter ou modifier un libellé visible, une vue, une clé de fr/en/es.json, Localisation/ (Localisation.swift, LangueReglage, DofusClass+Localisation) ou un test qui compare un libellé.
+description: Interface en français, anglais et espagnol — L("clé"), tables JSON de Resources/Localisation, choix de langue, LocalisationTests. Charger avant d'ajouter ou modifier un libellé visible, une vue, une clé de fr/en/es.json, Localisation/ (Localisation.swift, LangueReglage) ou un test qui compare un libellé.
 user-invocable: false
 ---
 
@@ -19,8 +19,7 @@ user-invocable: false
   convertir `pid_t` en `Int`).
 - **Une seule chaîne par libellé** : une aide composée en `"…" + "…"` se traduit mal et casse
   l'ordre des arguments.
-- Les types que `Tools/` compile seuls (`DofusClass`, `SynfusMark`) n'appellent pas `L()` ;
-  leur nom localisé vit dans une extension de `Localisation/` (`DofusClass+Localisation.swift`).
+- `SynfusMark`, que `Tools/AppIconExport.swift` compile seul, n'appelle pas `L()`.
 - Restent en français : journaux et sorties `--dump-*`.
 
 ## Mécanique
@@ -33,8 +32,8 @@ user-invocable: false
   français à défaut), qui suit le choix par app de Réglages Système grâce à
   `CFBundleLocalizations` (Info.plist de `build.sh`). Le réglage « Langue » de l'onglet Général
   écrit `AppleLanguages` dans le domaine de l'app (`LangueReglage`) et propose de relancer.
-- Les noms de classe du **titre de fenêtre** sont dans la langue du jeu : voir skill
-  `marque-assets` (`DofusClass.Breed`).
+- Les noms de classe viennent de DofusDB (table intégrée hors ligne), pas des tables : voir
+  skill `marque-assets`.
 
 ## Tests
 
