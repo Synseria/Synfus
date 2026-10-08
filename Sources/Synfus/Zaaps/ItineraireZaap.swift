@@ -52,21 +52,31 @@ enum ItineraireZaap {
         zaaps.min { distance(($0.x, $0.y), cible) < distance(($1.x, $1.y), cible) }
     }
 
+    /// Les cartes que le zaap des sous-zones voisines doit épargner, jusqu'à
+    /// la cible, pour l'emporter sur celui que désigne le jeu.
+    static let ecartZaapDuJeu = 5
+
     /// Le zaap d'où rejoindre la cible. Le plus proche à vol d'oiseau peut
-    /// être derrière une montagne : d'abord, avec `zaapDuJeu`, celui que le
-    /// jeu associe à la sous-zone de la cible, s'il est actif — parfois loin,
-    /// mais l'autopilote connaît des raccourcis que la carte ne dit pas ;
-    /// sinon le plus proche en sous-zones traversées (à égalité, en cartes) ;
-    /// sinon — cible hors du Monde des Douze relevé, sous-zone isolée — le plus
-    /// proche à vol d'oiseau.
+    /// être derrière une montagne : le plus proche en sous-zones traversées (à
+    /// égalité, en cartes). Avec `zaapDuJeu`, plutôt celui que le jeu associe
+    /// à la sous-zone de la cible, s'il est actif — l'autopilote connaît des
+    /// raccourcis que la carte ne dit pas —, sauf si celui des sous-zones
+    /// épargne au moins `ecartZaapDuJeu` cartes : une grande sous-zone peut se
+    /// voir rattacher un zaap lointain. Sans sous-zone joignable — cible hors
+    /// du Monde des Douze relevé, sous-zone isolée —, le plus proche à vol d'oiseau.
     static func zaap(vers cible: (x: Int, y: Int), parmi zaaps: ZaapsSitues, zaapDuJeu: Bool) -> Zaap? {
         guard let depart = zaaps.reseau.sousZone(cible.x, cible.y) else {
             return zaapLePlusProche(de: cible, parmi: zaaps.liste)
         }
+        let voisin = parLesSousZones(depuis: depart, vers: cible, parmi: zaaps)
         if zaapDuJeu, let associe = zaaps.reseau.zaapAssocie(depart).flatMap(zaaps.zaap(carte:)) {
-            return associe
+            // Le vol d'oiseau ne détrône pas le jeu : il ignore les montagnes.
+            guard let voisin,
+                  distance((associe.x, associe.y), cible) - distance((voisin.x, voisin.y), cible) >= ecartZaapDuJeu
+            else { return associe }
+            return voisin
         }
-        return parLesSousZones(depuis: depart, vers: cible, parmi: zaaps) ?? zaapLePlusProche(de: cible, parmi: zaaps.liste)
+        return voisin ?? zaapLePlusProche(de: cible, parmi: zaaps.liste)
     }
 
     /// Le plus proche de la cible parmi les zaaps du premier cercle de
