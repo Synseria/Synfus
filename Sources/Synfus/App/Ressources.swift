@@ -4,6 +4,12 @@ import Foundation
 /// `build.sh`), sinon dans `Resources/` du dépôt — pour `swift run` et les
 /// tests, où il n'y a pas de bundle.
 enum Ressources {
+    /// `~/Library/Application Support/Synfus` : ce que Synfus garde d'un
+    /// lancement à l'autre (listes de DofusDB, icônes de l'utilisateur).
+    static let dossierUtilisateur: URL = FileManager.default
+        .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        .appending(path: "Synfus", directoryHint: .isDirectory)
+
     static func url(_ chemin: String) -> URL? {
         if let bundle = Bundle.main.resourceURL?.appending(path: chemin),
            FileManager.default.fileExists(atPath: bundle.path) {

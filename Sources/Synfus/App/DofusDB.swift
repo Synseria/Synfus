@@ -1,7 +1,7 @@
 import Foundation
 
-/// L'API publique de DofusDB, la seule source réseau de Synfus : zaaps et
-/// indices de chasse en viennent. Une requête, la pagination et la
+/// L'API publique de DofusDB, la seule source réseau de Synfus : carte,
+/// quêtes, indices de chasse et classes en viennent. Une requête, la pagination et la
 /// péremption des listes gardées, écrites une fois.
 enum DofusDB {
     struct Page<Element: Decodable>: Decodable {
@@ -10,7 +10,7 @@ enum DofusDB {
     }
 
     /// Un nom traduit tel que l'API le donne ; Synfus ne parle que fr, en et es.
-    struct Noms: Decodable, Sendable {
+    struct Noms: Codable, Sendable {
         let fr: String?
         let en: String?
         let es: String?
@@ -36,6 +36,11 @@ enum DofusDB {
     /// La vue d'une carte du jeu, en demi-taille (`ImagesDofusDB` la garde).
     static func imageCarte(_ carte: Int) -> URL {
         api.appending(path: "img/maps/0.5/\(carte).jpg")
+    }
+
+    /// L'emblème d'une classe, par son identifiant DofusDB (`ImagesDofusDB` le garde).
+    static func emblemeClasse(_ classe: Int) -> URL {
+        api.appending(path: "img/breeds/symbol_\(classe).png")
     }
 
     /// Jamais téléchargée (`nil`), ou trop vieille.

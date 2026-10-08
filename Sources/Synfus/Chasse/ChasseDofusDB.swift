@@ -33,7 +33,7 @@ enum ChasseDofusDB {
 
     /// `~/Library/Application Support/Synfus/IndicesChasse.json`
     private static var fichier: URL {
-        AnkamaAssets.supportDirectory.appending(path: "IndicesChasse.json", directoryHint: .notDirectory)
+        Ressources.dossierUtilisateur.appending(path: "IndicesChasse.json", directoryHint: .notDirectory)
     }
 
     private static func lire() -> Releve? {

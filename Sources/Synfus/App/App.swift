@@ -24,6 +24,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         FloatingBarController.shared.apply()
         LecteurEcran.shared.start()
         CarteStore.shared.start()
+        ClassesStore.shared.start()
         QuetesStore.shared.preparer()
         PaletteModele.shared.prechauffer()
         ZaapClipboard.shared.start()
