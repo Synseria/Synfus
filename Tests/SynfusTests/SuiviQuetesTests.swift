@@ -10,7 +10,7 @@ struct SuiviQuetesTests {
     }
 
     private static func quete(_ id: Int, _ noms: [String: String], etapes: [[ObjectifQuete]] = [[]]) -> Quete {
-        Quete(id: id, noms: noms, niveau: 1, groupe: false, donjon: false, prerequis: [],
+        Quete(id: id, noms: noms, niveau: 1, groupe: false, donjon: false, prerequis: [], critere: nil,
               etapes: etapes.map { EtapeQuete(noms: [:], descriptions: [:], objectifs: $0, recompenses: .aucune) })
     }
 
@@ -18,7 +18,8 @@ struct SuiviQuetesTests {
         Quetes(format: Quetes.formatActuel, date: .now, quetes: liste, pnjs: [],
                objets: ["20": ["fr": "Âme de Gelée Royale Bleuet"]], monstres: [:],
                nomsPNJ: ["10": ["fr": "Meuh Sieurchance"], "11": ["fr": "Assistante d'Otomaï"]],
-               sousZones: [:], categoriesObjets: [:], emotes: [:], titres: [:])
+               sousZones: [:], famillesObjets: [:], familles: [:], emotes: [:], titres: [:],
+               metiers: [:], camps: [:])
     }
 
     /// Les quêtes de la capture de l'utilisateur ; « L'éternelle moisson » a

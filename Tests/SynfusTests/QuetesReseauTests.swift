@@ -26,6 +26,10 @@ struct QuetesReseauTests {
         #expect(etapes.contains { !$0.recompenses.emotes.isEmpty } && quetes.emotes.isEmpty == false)
         #expect(etapes.contains { !$0.recompenses.titres.isEmpty } && quetes.titres.isEmpty == false)
         #expect(quetes.suivantes(de: 55).map(\.id).contains(56))
+        #expect(quetes.familles[String(Quetes.familleObjetDeQuete)] != nil)
+        #expect(quetes.quetes.contains { quete in quetes.fiche(quete, en: .fr).ressources.contains(where: \.objetDeQuete) })
+        #expect(quetes.quetes.contains { ConditionsQuete.lire($0.critere).classe != nil })
+        #expect(quetes.metiers["26"] != nil && quetes.camps["1"] != nil)
 
         var contexte = ContextePalette()
         contexte.lieux = Carte.integree.lieux
