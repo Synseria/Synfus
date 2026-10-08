@@ -26,6 +26,8 @@
   "barre.glisser": "Drag to move the bar",
   "barre.inviter": "Invite %@",
   "barre.paletteAide": "Palette: zaaps, places, commands — shortcut: %@",
+  "barre.panneauxSeulementDofus": "Panels only in front of Dofus",
+  "barre.panneauxSeulementDofus.sousTexte": "Quests and treasure hunt hide when another app comes to the front, and come back with the game.",
   "barre.passageAuto.actif": "Auto-switch on — Synfus switches to the character whose icon bounces (%@)",
   "barre.passageAuto.inactif": "Auto-switch off — the character is only flagged (%@)",
   "barre.quetesAide": "Pinned quests: resources, objectives and routes.",

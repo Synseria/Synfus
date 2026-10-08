@@ -39,6 +39,9 @@ final class Preferences: ObservableObject {
     /// N'afficher la barre que lorsque Dofus est au premier plan.
     @Published var barOnlyWithDofus: Bool = false { didSet { save() } }
 
+    /// Les panneaux du jeu (quêtes, chasse) ne se montrent que devant Dofus.
+    @Published var panneauxSeulementDofus: Bool = true { didSet { save() } }
+
     /// Aperçu de la fenêtre au survol d'une pastille. Désactivé par défaut :
     /// la première capture réclame l'autorisation « Enregistrement de l'écran »,
     /// et une mise à jour n'a pas à faire surgir une demande que personne n'a
@@ -431,6 +434,7 @@ final class Preferences: ObservableObject {
         .optionnel("toggleAutoFocus", \.toggleAutoFocus),
         .optionnel("toggleBar", \.toggleBar),
         .facultatif("barOnlyWithDofus", \.barOnlyWithDofus),
+        .facultatif("panneauxSeulementDofus", \.panneauxSeulementDofus),
         .facultatif("autoCenterBar", \.autoCenterBar),
         .facultatif("menuBarIcon", \.menuBarIcon),
         .facultatif("showPreviewOnHover", \.showPreviewOnHover),

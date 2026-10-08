@@ -98,11 +98,7 @@ final class QuetePanel: NSObject, ObservableObject {
     }
 
     private func appliquer(force: Bool) {
-        let devant = FloatingBarController.computeVisibility(
-            barVisible: ouvert, onlyWithDofus: true,
-            frontPID: WindowManager.shared.frontmostPID, frontIsDofus: WindowManager.shared.frontmostIsDofus,
-            ownPID: ProcessInfo.processInfo.processIdentifier)
-        if devant || (ouvert && impose) {
+        if PanneauxJeu.visible(ouvert: ouvert) || (ouvert && impose) {
             let panel = panel ?? construire()
             if force || !panel.isVisible { panel.orderFrontRegardless() }
         } else if panel?.isVisible == true {
