@@ -263,10 +263,12 @@ enum QuetesDofusDB {
                                                 (deja?.quetes ?? []).union([quete]))
         }
         let modeles = quetes.map { api -> Quete in
+            var departs: [DepartQuete] = []
             for depart in api.startPosition ?? [] {
                 let carte = carteParId[depart.mapId]
-                situer(depart.npcId, carte.map { PNJ.Position(x: $0.posX, y: $0.posY) }, carte: carte?.id,
-                       carte?.subAreaId, api.id)
+                let position = carte.map { PNJ.Position(x: $0.posX, y: $0.posY) }
+                situer(depart.npcId, position, carte: carte?.id, carte?.subAreaId, api.id)
+                if let position { departs.append(DepartQuete(pnj: depart.npcId, position: position, sousZone: carte?.subAreaId)) }
             }
             let ordre = api.stepIds ?? []
             let etapes = (api.steps ?? [])
@@ -287,7 +289,8 @@ enum QuetesDofusDB {
                 }
             return Quete(id: api.id, noms: api.name.parLangue, niveau: api.levelMin ?? 0,
                          groupe: api.isPartyQuest ?? false, donjon: api.isDungeonQuest ?? false,
-                         prerequis: api.need?.quests ?? [], critere: api.startCriterion, etapes: etapes)
+                         prerequis: api.need?.quests ?? [], critere: api.startCriterion, etapes: etapes,
+                         departs: departs)
         }
         func noms(_ liste: [Nomme]) -> [String: [String: String]] {
             Dictionary(liste.map { (String($0.id), $0.name.parLangue) }, uniquingKeysWith: { a, _ in a })

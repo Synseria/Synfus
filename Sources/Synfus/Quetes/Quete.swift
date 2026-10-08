@@ -6,7 +6,7 @@ struct Quetes: Codable, Equatable, Sendable {
     /// La forme du fichier gardé sur le disque : une autre (ancienne) n'est
     /// pas relue, les quêtes se retéléchargent — sans quoi un cache d'avant
     /// un nouveau champ le laisserait vide trente jours.
-    static let formatActuel = 6
+    static let formatActuel = 7
     let format: Int
     let date: Date
     let quetes: [Quete]
@@ -104,6 +104,16 @@ struct Quete: Codable, Equatable, Sendable {
     /// (`startCriterion`, lu par `ConditionsQuete`).
     let critere: String?
     let etapes: [EtapeQuete]
+    /// Où elle commence : le PNJ qui la donne et sa case (`startPosition`).
+    var departs: [DepartQuete] = []
+}
+
+struct DepartQuete: Codable, Equatable, Sendable {
+    let pnj: Int
+    let position: PNJ.Position
+    /// Ce qui distingue une case du Monde des Douze de son homonyme
+    /// d'Incarnam (`QuetesIci`).
+    let sousZone: Int?
 }
 
 struct EtapeQuete: Codable, Equatable, Sendable {
