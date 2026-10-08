@@ -24,7 +24,7 @@ struct SuiviQuetesTests {
 
     /// Les quêtes de la capture de l'utilisateur ; « L'éternelle moisson » a
     /// deux étapes, la seconde ramène l'âme à l'assistante.
-    private static let jeu = quetes([
+    private static let jeu = SuiviQuetes.Index(quetes([
         quete(1, ["fr": "Pense-bête", "en": "Reminder"]),
         quete(2, ["fr": "La raison du plus fort"]),
         quete(3, ["fr": "L'éternelle moisson"], etapes: [
@@ -35,7 +35,7 @@ struct SuiviQuetesTests {
         quete(5, ["fr": "La voie du guerrier"]),
         quete(6, ["fr": "La voie"]),
         quete(8, ["fr": "Ogre"]),
-    ])
+    ]))
 
     @Test("Les titres du suivi, dans l'ordre de l'écran, malgré les fautes et les icônes")
     func titres() {
@@ -78,7 +78,7 @@ struct SuiviQuetesTests {
     func limite() {
         let liste = (1...12).map { Self.quete($0, ["fr": "Quête numéro \($0) du suivi"]) }
         let lignes = ["Quête numéro 1 du suivi"] + liste.map { $0.noms["fr"]! }
-        let reconnues = SuiviQuetes.reconnaitre(lignes, dans: Self.quetes(liste)).reconnues
+        let reconnues = SuiviQuetes.reconnaitre(lignes, dans: .init(Self.quetes(liste))).reconnues
         #expect(reconnues.map(\.id) == Array(1...SuiviQuetes.limite))
     }
 
@@ -97,10 +97,10 @@ struct SuiviQuetesTests {
 
     @Test("Deux étapes qui citent le même PNJ ne désignent rien")
     func etapeAmbigue() {
-        let jeu = Self.quetes([Self.quete(7, ["fr": "Le retour de la bergère"], etapes: [
+        let jeu = SuiviQuetes.Index(Self.quetes([Self.quete(7, ["fr": "Le retour de la bergère"], etapes: [
             [Self.objectif(71, "Aller voir {npc,10}")],
             [Self.objectif(72, "Ramener à {npc,10} : x1 {item,20}")],
-        ])])
+        ])]))
         let reconnues = SuiviQuetes.reconnaitre(["Le retour de la bergere", "Aller voir Meuh Sieurchance"], dans: jeu).reconnues
         #expect(reconnues == [.init(id: 7, etape: 0, etapeSure: true, aFaire: [71])])
         let ambigue = SuiviQuetes.reconnaitre(["Le retour de la bergere", "Meuh Sieurchance"], dans: jeu).reconnues

@@ -61,14 +61,36 @@ enum SuiviQuetes {
     /// commun pour désigner une étape.
     static let longueurRenvoi = 6
 
-    private struct Nom {
+    fileprivate struct Nom: Sendable {
         let quete: Quete
         let langue: Langue
         let forme: Ressemblance.Forme
     }
 
-    static func reconnaitre(_ lignes: [String], dans quetes: Quetes) -> Lu {
-        let noms = noms(quetes)
+    /// Les noms de toutes les quêtes, dans chaque langue de l'app — celle du
+    /// jeu peut différer de celle de l'interface —, prêts à comparer. Deux
+    /// mille quêtes dans trois langues : bâti une fois par jeu de quêtes
+    /// (`LectureSuivi`), pas à chaque lecture.
+    struct Index: Sendable {
+        let quetes: Quetes
+        fileprivate let noms: [Nom]
+
+        init(_ quetes: Quetes) {
+            self.quetes = quetes
+            noms = quetes.quetes.flatMap { quete in
+                var vus: Set<String> = []
+                return Langue.allCases.compactMap { langue -> Nom? in
+                    guard let brut = quete.noms[langue.rawValue] else { return nil }
+                    let nom = Ressemblance.normaliser(brut)
+                    guard nom.count >= 3, vus.insert(nom).inserted else { return nil }
+                    return Nom(quete: quete, langue: langue, forme: Ressemblance.Forme(nom))
+                }
+            }
+        }
+    }
+
+    static func reconnaitre(_ lignes: [String], dans index: Index) -> Lu {
+        let noms = index.noms, quetes = index.quetes
         var groupes: [(titre: Nom, objectifs: [String])] = []
         var entete = 0
         // `nil` : les lignes lues n'appartiennent à aucune quête retenue —
@@ -100,20 +122,6 @@ enum SuiviQuetes {
                                                                  dans: quetes))
         }
         return Lu(reconnues: reconnues, lignes: groupes.map(\.objectifs.count), entete: entete)
-    }
-
-    /// Les noms de toutes les quêtes, dans chaque langue de l'app : celle du
-    /// jeu peut différer de celle de l'interface.
-    private static func noms(_ quetes: Quetes) -> [Nom] {
-        quetes.quetes.flatMap { quete in
-            var vus: Set<String> = []
-            return Langue.allCases.compactMap { langue -> Nom? in
-                guard let brut = quete.noms[langue.rawValue] else { return nil }
-                let nom = Ressemblance.normaliser(brut)
-                guard nom.count >= 3, vus.insert(nom).inserted else { return nil }
-                return Nom(quete: quete, langue: langue, forme: Ressemblance.Forme(nom))
-            }
-        }
     }
 
     /// Le nom que la ligne porte, au plus près ; à écart égal, le plus long
