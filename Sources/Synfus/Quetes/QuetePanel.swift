@@ -59,6 +59,13 @@ final class QuetePanel: NSObject, ObservableObject {
 
     func montrer(_ id: Int) { montree = id }
 
+    /// La quête à l'écran : la montrée si elle est encore épinglée, sinon la
+    /// dernière épinglée.
+    var idMontre: Int? {
+        let epinglees = Preferences.shared.quetesEpinglees
+        return montree.flatMap { epinglees.contains($0) ? $0 : nil } ?? epinglees.last
+    }
+
     /// Coche ou décoche un objectif ; les coches sont gardées par quête.
     func cocher(_ objectif: Int, de quete: Int, _ valide: Bool) {
         let prefs = Preferences.shared
@@ -134,6 +141,99 @@ final class QuetePanel: NSObject, ObservableObject {
         }
         self.panel = panel
         return panel
+    }
+}
+
+// MARK: - Menu de l'en-tête
+
+extension QuetePanel {
+    /// Le menu de l'en-tête (`MenuQuetes`), construit à chaque ouverture.
+    func menu() -> NSMenu {
+        let lecture = LectureSuivi.shared
+        let store = QuetesStore.shared
+        let menu = NSMenu()
+        menu.autoenablesItems = false
+        for element in MenuQuetes.elements(
+            epinglees: Preferences.shared.quetesEpinglees, montree: idMontre, reconnues: lecture.reconnues,
+            etat: lecture.etat, nom: { store.nom($0) ?? "…" }) {
+            switch element {
+            case .titre(let titre):
+                menu.addItem(.sectionHeader(title: titre))
+            case .epinglee(let id, let nom, let montree):
+                let item = CibleMenu.shared.element(nom) { QuetePanel.shared.montrer(id) }
+                item.state = montree ? .on : .off
+                menu.addItem(item)
+            case .lireSuivi(let enCours):
+                let item = CibleMenu.shared.element(enCours ? L("quete.suivi.enCours") : L("quete.suivi.lire")) { lecture.lire() }
+                item.image = NSImage(systemSymbolName: "text.viewfinder", accessibilityDescription: nil)
+                item.isEnabled = !enCours
+                menu.addItem(item)
+            case .reconnue(let reconnue, let titre, let epinglee):
+                let item = CibleMenu.shared.element(titre) { lecture.choisir(reconnue) }
+                item.image = epinglee ? NSImage(systemSymbolName: "pin.fill", accessibilityDescription: nil) : nil
+                item.indentationLevel = 1
+                menu.addItem(item)
+            case .message(let texte):
+                let item = NSMenuItem(title: texte, action: nil, keyEquivalent: "")
+                item.isEnabled = false
+                menu.addItem(item)
+            case .separateur:
+                menu.addItem(.separator())
+            }
+        }
+        return menu
+    }
+}
+
+/// Les éléments du menu portent leur action (`representedObject`) : le menu
+/// se reconstruit à chaque ouverture, une cible commune les déclenche.
+@MainActor
+private final class CibleMenu: NSObject {
+    static let shared = CibleMenu()
+
+    private final class Action {
+        let agir: @MainActor () -> Void
+        init(_ agir: @escaping @MainActor () -> Void) { self.agir = agir }
+    }
+
+    func element(_ titre: String, agir: @escaping @MainActor () -> Void) -> NSMenuItem {
+        let item = NSMenuItem(title: titre, action: #selector(declencher(_:)), keyEquivalent: "")
+        item.target = self
+        item.representedObject = Action(agir)
+        return item
+    }
+
+    @objc private func declencher(_ item: NSMenuItem) {
+        (item.representedObject as? Action)?.agir()
+    }
+}
+
+/// Ouvre un `NSMenu` sous la vue au clic. Plutôt qu'un `Menu` SwiftUI : un
+/// `popUp` suit la souris dans un panneau jamais clé d'une app inactive sans
+/// activer Synfus, comme le menu de la barre de menus.
+struct DeclencheurMenu: NSViewRepresentable {
+    let fabrique: @MainActor () -> NSMenu
+
+    func makeNSView(context _: Context) -> Declencheur { Declencheur(fabrique: fabrique) }
+    func updateNSView(_ vue: Declencheur, context _: Context) { vue.fabrique = fabrique }
+
+    final class Declencheur: NSView {
+        var fabrique: @MainActor () -> NSMenu
+
+        init(fabrique: @escaping @MainActor () -> NSMenu) {
+            self.fabrique = fabrique
+            super.init(frame: .zero)
+        }
+
+        @available(*, unavailable)
+        required init?(coder _: NSCoder) { nil }
+
+        override func acceptsFirstMouse(for _: NSEvent?) -> Bool { true }
+        override var mouseDownCanMoveWindow: Bool { false }
+
+        override func mouseDown(with _: NSEvent) {
+            fabrique().popUp(positioning: nil, at: NSPoint(x: 0, y: isFlipped ? bounds.maxY + 2 : -2), in: self)
+        }
     }
 }
 

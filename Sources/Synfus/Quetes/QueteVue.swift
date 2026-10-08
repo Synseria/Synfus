@@ -1,9 +1,10 @@
 import SwiftUI
 
-/// Les quêtes épinglées : un onglet par quête, le suivi du jeu lu à l'écran,
-/// puis les ressources à réunir, l'étape en cours (consigne, objectifs,
-/// récompenses) et les quêtes qui s'ouvrent ensuite. Un clic sur une ressource copie son nom (pour l'hôtel
-/// de vente), sur un objectif situé son trajet, zaap compris — et le coche.
+/// Les quêtes épinglées : un en-tête d'une ligne (le menu des quêtes et du
+/// suivi lu à l'écran), puis les ressources à réunir, l'étape en cours
+/// (consigne, objectifs, récompenses) et les quêtes qui s'ouvrent ensuite. Un
+/// clic sur une ressource copie son nom (pour l'hôtel de vente), sur un
+/// objectif situé son trajet, zaap compris — et le coche.
 struct QueteVue: View {
     @ObservedObject private var panneau = QuetePanel.shared
     @ObservedObject private var store = QuetesStore.shared
@@ -18,20 +19,14 @@ struct QueteVue: View {
     var etapeImposee = 0
     var validesImposes: Set<Int> = []
 
-    private var idMontre: Int? { panneau.montree ?? prefs.quetesEpinglees.last }
-
     private var fiche: FicheQuete? {
-        ficheImposee ?? idMontre.flatMap { store.fiche($0) }
+        ficheImposee ?? panneau.idMontre.flatMap { store.fiche($0) }
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            onglets
+            enTete
             Divider()
-            if ficheImposee == nil {
-                suivi
-                Divider()
-            }
             if let fiche {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 12) {
@@ -79,115 +74,62 @@ struct QueteVue: View {
             .padding(2)
     }
 
-    // MARK: - Onglets
+    // MARK: - En-tête du panneau
 
-    /// Une pastille par quête épinglée, sur autant de lignes qu'il faut :
-    /// tout le fond de la bande déplace le panneau (une liste qui défile
-    /// garderait le glisser pour elle).
-    private var onglets: some View {
-        HStack(alignment: .top, spacing: 6) {
-            Image(systemName: "scroll").foregroundStyle(Couleurs.accent).padding(.top, 3)
-            RangeeQuiPasse(espacement: 4) {
-                if let ficheImposee {
-                    onglet(id: ficheImposee.id, nom: ficheImposee.nom, choisi: true)
-                } else {
-                    ForEach(prefs.quetesEpinglees, id: \.self) { id in
-                        onglet(id: id, nom: store.nom(id) ?? "…", choisi: id == idMontre)
-                    }
-                }
-            }
+    /// Une seule ligne : le menu des quêtes au nom de la montrée, puis de quoi
+    /// la désépingler et cacher le panneau. Tout le fond déplace le panneau.
+    private var enTete: some View {
+        let montree = ficheImposee?.id ?? panneau.idMontre
+        return HStack(spacing: 4) {
+            Image(systemName: "scroll").foregroundStyle(Couleurs.accent)
+            menuQuetes(titre: ficheImposee?.nom ?? montree.flatMap { store.nom($0) } ?? L("quete.menu.titre"))
+            if lecture.etat == .enCours { ProgressView().controlSize(.mini) }
             Spacer(minLength: 0)
-            Button { QuetePanel.shared.fermer() } label: {
-                Image(systemName: "minus.circle.fill").foregroundStyle(.secondary)
+            if let montree {
+                boutonEnTete("xmark", aide: L("quete.desepingler")) { QuetePanel.shared.desepingler(montree) }
             }
-            .buttonStyle(.plain)
-            .help(L("quete.fermer"))
-            .padding(.top, 2)
+            boutonEnTete("minus", aide: L("quete.fermer")) { QuetePanel.shared.fermer() }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
+        .font(.system(size: 12))
+        .padding(.leading, 10)
+        .padding(.trailing, 4)
+        .padding(.vertical, 3)
         .background(WindowDragArea())
     }
 
-    private func onglet(id: Int, nom: String, choisi: Bool) -> some View {
-        HStack(spacing: 4) {
-            Text(nom).lineLimit(1)
-            Button { QuetePanel.shared.desepingler(id) } label: {
-                Image(systemName: "xmark").font(.system(size: 8, weight: .bold))
+    /// Le nom de la quête montrée, ▾ : le menu (`QuetePanel.menu`). Une
+    /// pastille y compte les quêtes du suivi que le panneau n'a pas encore.
+    private func menuQuetes(titre: String) -> some View {
+        let nouvelles = MenuQuetes.nouvelles(lecture.reconnues, epinglees: prefs.quetesEpinglees)
+        return HStack(spacing: 4) {
+            Text(titre).font(.system(size: 12, weight: .semibold)).lineLimit(1).truncationMode(.tail)
+            Image(systemName: "chevron.down").font(.system(size: 8, weight: .bold)).foregroundStyle(.secondary)
+            if nouvelles > 0, ficheImposee == nil {
+                Text("\(nouvelles)")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 4)
+                    .background(Capsule().fill(Couleurs.accent))
+                    .help(L("quete.menu.nouvelles"))
             }
-            .buttonStyle(.plain)
-            .help(L("quete.desepingler"))
         }
-        .font(.system(size: 11, weight: choisi ? .semibold : .regular))
-        .foregroundStyle(choisi ? Color.white : Color.primary)
-        .padding(.horizontal, 8)
+        .padding(.horizontal, 6)
         .padding(.vertical, 3)
-        .background(Capsule().fill(choisi ? Couleurs.accent : Color.primary.opacity(0.08)))
-        .onTapGesture { QuetePanel.shared.montrer(id) }
+        .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.06)))
+        .overlay { if ficheImposee == nil { DeclencheurMenu { QuetePanel.shared.menu() } } }
     }
 
-    // MARK: - Suivi du jeu
-
-    /// Le suivi de quêtes du jeu : le bouton qui le lit, puis les quêtes
-    /// reconnues — un clic épingle et montre, à l'étape lue.
-    private var suivi: some View {
-        HStack(alignment: .top, spacing: 8) {
-            Button { LectureSuivi.shared.lire() } label: {
-                HStack(spacing: 3) {
-                    if lecture.etat == .enCours {
-                        ProgressView().controlSize(.mini)
-                    } else {
-                        Image(systemName: "text.viewfinder")
-                    }
-                    Text(L("quete.suivi.lire")).lineLimit(1)
-                }
-                .fixedSize()
-            }
-            .buttonStyle(.borderless)
-            .disabled(lecture.etat == .enCours)
-            .padding(.top, 2)
-            if let message = messageSuivi {
-                Text(message)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 2)
-            } else {
-                RangeeQuiPasse(espacement: 4) {
-                    ForEach(lecture.reconnues, id: \.id) { pastille($0) }
-                }
-            }
-            Spacer(minLength: 0)
-        }
-        .font(.system(size: 10))
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-    }
-
-    private var messageSuivi: String? {
-        switch lecture.etat {
-        case .jamaisLu, .enCours: return nil
-        case .illisible: return L("quete.suivi.illisible")
-        case .sansQuetes: return L("palette.quetes.chargement")
-        case .lu: return lecture.reconnues.isEmpty ? L("quete.suivi.rien") : nil
-        }
-    }
-
-    private func pastille(_ reconnue: SuiviQuetes.Reconnue) -> some View {
-        let epinglee = prefs.quetesEpinglees.contains(reconnue.id)
-        return Button { LectureSuivi.shared.choisir(reconnue) } label: {
-            HStack(spacing: 3) {
-                if epinglee { Image(systemName: "pin.fill").font(.system(size: 8)) }
-                Text(store.nom(reconnue.id) ?? "…").lineLimit(1)
-                if let etape = reconnue.etape {
-                    Text(L("quete.suivi.etape", etape + 1)).foregroundStyle(.secondary)
-                }
-            }
-            .padding(.horizontal, 7)
-            .padding(.vertical, 2)
-            .background(Capsule().fill(Couleurs.accent.opacity(epinglee ? 0.08 : 0.18)))
-            .contentShape(Capsule())
+    /// Un bouton d'en-tête : une cible de 22 pt, quelle que soit l'icône.
+    private func boutonEnTete(_ icone: String, aide: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icone)
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(.secondary)
+                .frame(width: 22, height: 22)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .help(aide)
     }
 
     // MARK: - En-tête
@@ -487,56 +429,5 @@ private struct TitreAvantIcone: LabelStyle {
             configuration.title
             configuration.icon
         }
-    }
-}
-
-/// Des vues côte à côte, qui passent à la ligne quand la largeur manque.
-private struct RangeeQuiPasse: Layout {
-    let espacement: CGFloat
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache _: inout ()) -> CGSize {
-        let lignes = disposer(subviews, largeur: proposal.width ?? .infinity)
-        let largeur = lignes.map { $0.largeur }.max() ?? 0
-        let hauteur = lignes.map(\.hauteur).reduce(0, +) + espacement * CGFloat(max(lignes.count - 1, 0))
-        return CGSize(width: proposal.width.map { min($0, largeur) } ?? largeur, height: hauteur)
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal _: ProposedViewSize, subviews: Subviews, cache _: inout ()) {
-        var y = bounds.minY
-        for ligne in disposer(subviews, largeur: bounds.width) {
-            var x = bounds.minX
-            for indice in ligne.indices {
-                let taille = subviews[indice].sizeThatFits(.unspecified)
-                let largeur = min(taille.width, bounds.width)
-                subviews[indice].place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(width: largeur, height: taille.height))
-                x += largeur + espacement
-            }
-            y += ligne.hauteur + espacement
-        }
-    }
-
-    private struct Ligne {
-        var indices: [Int] = []
-        var largeur: CGFloat = 0
-        var hauteur: CGFloat = 0
-    }
-
-    private func disposer(_ subviews: Subviews, largeur maximale: CGFloat) -> [Ligne] {
-        var lignes: [Ligne] = []
-        var courante = Ligne()
-        for indice in subviews.indices {
-            let taille = subviews[indice].sizeThatFits(.unspecified)
-            let largeur = min(taille.width, maximale)
-            let ajout = courante.indices.isEmpty ? largeur : courante.largeur + espacement + largeur
-            if !courante.indices.isEmpty, ajout > maximale {
-                lignes.append(courante)
-                courante = Ligne()
-            }
-            courante.largeur = courante.indices.isEmpty ? largeur : courante.largeur + espacement + largeur
-            courante.hauteur = max(courante.hauteur, taille.height)
-            courante.indices.append(indice)
-        }
-        if !courante.indices.isEmpty { lignes.append(courante) }
-        return lignes
     }
 }
