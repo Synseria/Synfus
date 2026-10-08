@@ -169,6 +169,13 @@ final class Preferences: ObservableObject {
     /// L'étape où l'on en est de chaque quête, par identifiant de quête.
     @Published var quetesEtape: [String: Int] = [:] { didSet { save() } }
 
+    /// Les objectifs cochés de chaque quête (identifiants DofusDB), par
+    /// identifiant de quête.
+    @Published var quetesValides: [String: [Int]] = [:] { didSet { save() } }
+
+    /// Le bouton des quêtes dans la barre.
+    @Published var quetesBouton: Bool = true { didSet { save() } }
+
     /// Raccourci de la palette. ⌘: par défaut (génération 7).
     @Published var paletteHotKey: HotKey? { didSet { save() } }
 
@@ -469,6 +476,8 @@ final class Preferences: ObservableObject {
         .facultatif("quetesEpinglees", \.quetesEpinglees),
         .facultatif("quetesEtape", \.quetesEtape),
         .facultatif("chasseBouton", \.chasseBouton),
+        .facultatif("quetesValides", \.quetesValides),
+        .facultatif("quetesBouton", \.quetesBouton),
     ]
 
     /// Génération du jeu de raccourcis par défaut appliqué à la sauvegarde.
