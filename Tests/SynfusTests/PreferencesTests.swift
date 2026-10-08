@@ -473,6 +473,7 @@ struct PreferencesTests {
      "paletteHotKey":{"keyCode":47,"modifiers":256},"paletteRecents":["/zaap 5,7"],"paletteTri":"type","quetesEpinglees":[18,42],"quetesEtape":{"18":2},
      "quetesValides":{"18":[102,104]},"quetesBouton":false,"quetesMasquerObjets":true,
      "quetesCompact":false,"quetesConsigne":false,"quetesVignettes":true,
+     "quetesEnCours":{"18":104},"quetesCocherSuivi":false,
      "equipes":[{"membres":["Aeryn"]},{"membres":["Nova"]}],
      "hotKeys":[{"keyCode":18,"modifiers":256},null,{"keyCode":20,"modifiers":2048},null,null,null,null,null,null,null],
      "inviteFormat":"/w %nom go","inviteGroupee":true,
@@ -559,6 +560,8 @@ struct PreferencesTests {
         #expect(prefs.quetesCompact == false)
         #expect(prefs.quetesConsigne == false)
         #expect(prefs.quetesVignettes == true)
+        #expect(prefs.quetesEnCours == ["18": 104])
+        #expect(prefs.quetesCocherSuivi == false)
         #expect(prefs.chasseHotKey == HotKey(keyCode: 5, modifiers: 2048))
         #expect(prefs.chasseBouton == false)
         #expect(prefs.vuesCartes == false)
@@ -623,6 +626,8 @@ struct PreferencesTests {
         prefs.quetesCompact = false
         prefs.quetesConsigne = false
         prefs.quetesVignettes = true
+        prefs.quetesEnCours = ["18": 104]
+        prefs.quetesCocherSuivi = false
         prefs.chasseHotKey = HotKey(keyCode: 5, modifiers: 2048)
         prefs.chasseBouton = false
         prefs.vuesCartes = false
@@ -656,7 +661,8 @@ struct PreferencesTests {
          "zaapGainMinimal":5,"zaapDuJeu":true,"zaapsAjoutes":[],"zaapsChoix":{},"zaapsFavoris":[],"zaapsVueCarte":true,
          "lieuxFavoris":[],"paletteRecents":[],"paletteTri":"proximite","quetesEpinglees":[],"quetesEtape":{},
          "quetesValides":{},"quetesBouton":true,"quetesMasquerObjets":false,
-         "quetesCompact":true,"quetesConsigne":true,"quetesVignettes":false}
+         "quetesCompact":true,"quetesConsigne":true,"quetesVignettes":false,
+         "quetesEnCours":{},"quetesCocherSuivi":true}
         """
         #expect(canonique(store.donnees(pour: Preferences.key)) == canonique(Data(attendu.utf8)))
     }
@@ -756,5 +762,30 @@ extension PreferencesTests {
         let choisie = relue(invite: #"{"keyCode":34,"modifiers":256}"#)
         #expect(choisie.inviteHotKey == HotKey(keyCode: 34, modifiers: 256))
         #expect(choisie.paletteHotKey == HotKey.defaultPalette)
+    }
+}
+
+/// Les coches et l'objectif en cours des quêtes (`CochesQuete`).
+extension PreferencesTests {
+    @Test("La lecture du suivi coche sans décocher ; cocher l'objectif en cours l'efface")
+    func cochesQuete() {
+        let (prefs, _) = neuves()
+        prefs.cocher(3, de: 18, true)
+        prefs.mettreEnCours(5, de: 18)
+        #expect(prefs.quetesEnCours == ["18": 5])
+        // Un objectif fait ne se met pas en cours.
+        prefs.mettreEnCours(3, de: 18)
+        #expect(prefs.quetesEnCours == ["18": 5])
+        #expect(prefs.cocher([1, 3, 5, 1], de: 18) == 2)
+        #expect(prefs.quetesValides == ["18": [3, 1, 5]])
+        #expect(prefs.quetesEnCours.isEmpty)
+        #expect(prefs.cocher([1], de: 18) == 0)
+        prefs.mettreEnCours(7, de: 18)
+        prefs.mettreEnCours(8, de: 18)
+        #expect(prefs.quetesEnCours == ["18": 8])
+        prefs.cocher(3, de: 18, false)
+        prefs.cocher(1, de: 18, false)
+        prefs.cocher(5, de: 18, false)
+        #expect(prefs.quetesValides.isEmpty)
     }
 }
