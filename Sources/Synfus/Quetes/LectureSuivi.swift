@@ -65,10 +65,6 @@ final class LectureSuivi: ObservableObject {
             }
     }
 
-    /// Les objectifs de la quête que le suivi du perso devant montre encore à
-    /// faire, tant que sa lecture est fraîche.
-    func aFaire(_ quete: Int) -> Set<Int> { Set(reconnue(quete)?.aFaire ?? []) }
-
     /// Ce que la lecture fraîche du perso devant dit de la quête.
     func reconnue(_ quete: Int) -> SuiviQuetes.Reconnue? {
         fraiche ? reconnues.first { $0.id == quete } : nil
