@@ -6,7 +6,7 @@ struct Quetes: Codable, Equatable, Sendable {
     /// La forme du fichier gardé sur le disque : une autre (ancienne) n'est
     /// pas relue, les quêtes se retéléchargent — sans quoi un cache d'avant
     /// un nouveau champ le laisserait vide trente jours.
-    static let formatActuel = 4
+    static let formatActuel = 5
     let format: Int
     let date: Date
     let quetes: [Quete]
@@ -175,6 +175,9 @@ struct PNJ: Codable, Equatable, Sendable {
 
     struct Passage: Codable, Equatable, Sendable {
         let position: Position
+        /// La carte du jeu où les quêtes le placent, pour en montrer la vue ;
+        /// la première que DofusDB connaît, quand plusieurs partagent la case.
+        let carte: Int?
         let sousZone: Int?
         /// Combien de quêtes le placent ici.
         let quetes: Int

@@ -251,19 +251,21 @@ enum QuetesDofusDB {
         let (objets, monstres, pnjs) = (cites.objets, cites.monstres, cites.pnjs)
         let (cartes, sousZones, zones, types) = (cites.cartes, cites.sousZones, cites.zones, cites.types)
         let carteParId = Dictionary(cartes.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
-        /// Par PNJ, par case : la sous-zone et les quêtes qui l'y placent.
-        var vus: [Int: [PNJ.Position: (sousZone: Int?, quetes: Set<Int>)]] = [:]
+        /// Par PNJ, par case : la carte, la sous-zone et les quêtes qui l'y placent.
+        var vus: [Int: [PNJ.Position: (carte: Int?, sousZone: Int?, quetes: Set<Int>)]] = [:]
         var ordre: [Int: [PNJ.Position]] = [:]
-        func situer(_ pnj: Int, _ position: PNJ.Position?, _ sousZone: Int?, _ quete: Int) {
+        func situer(_ pnj: Int, _ position: PNJ.Position?, carte: Int?, _ sousZone: Int?, _ quete: Int) {
             guard let position else { return }
             if vus[pnj]?[position] == nil { ordre[pnj, default: []].append(position) }
             let deja = vus[pnj]?[position]
-            vus[pnj, default: [:]][position] = (deja?.sousZone ?? sousZone, (deja?.quetes ?? []).union([quete]))
+            vus[pnj, default: [:]][position] = (deja?.carte ?? carte, deja?.sousZone ?? sousZone,
+                                                (deja?.quetes ?? []).union([quete]))
         }
         let modeles = quetes.map { api -> Quete in
             for depart in api.startPosition ?? [] {
                 let carte = carteParId[depart.mapId]
-                situer(depart.npcId, carte.map { PNJ.Position(x: $0.posX, y: $0.posY) }, carte?.subAreaId, api.id)
+                situer(depart.npcId, carte.map { PNJ.Position(x: $0.posX, y: $0.posY) }, carte: carte?.id,
+                       carte?.subAreaId, api.id)
             }
             let ordre = api.stepIds ?? []
             let etapes = (api.steps ?? [])
@@ -271,10 +273,11 @@ enum QuetesDofusDB {
                 .map { etape in
                     let objectifs = (etape.objectives ?? []).map { objectif in
                         let position = objectif.position
-                        if let pnj = objectif.pnj { situer(pnj, position, objectif.map?.subAreaId, api.id) }
                         // Une carte que DofusDB ne connaît pas n'a pas de vue à montrer.
+                        let carte = objectif.map == nil ? nil : objectif.mapId
+                        if let pnj = objectif.pnj { situer(pnj, position, carte: carte, objectif.map?.subAreaId, api.id) }
                         return ObjectifQuete(id: objectif.id, textes: objectif.text.parLangue, x: position?.x, y: position?.y,
-                                             carte: objectif.map == nil ? nil : objectif.mapId,
+                                             carte: carte,
                                              objet: objectif.aRamener?.objet, quantite: objectif.aRamener?.quantite)
                     }
                     return EtapeQuete(noms: etape.name.parLangue, descriptions: etape.description?.parLangue ?? [:],
@@ -291,7 +294,8 @@ enum QuetesDofusDB {
             guard let positions = ordre[pnj.id], let releves = vus[pnj.id] else { return nil }
             let passages = positions.enumerated()
                 .map { rang, position in
-                    (rang, PNJ.Passage(position: position, sousZone: releves[position]?.sousZone,
+                    (rang, PNJ.Passage(position: position, carte: releves[position]?.carte,
+                                       sousZone: releves[position]?.sousZone,
                                        quetes: releves[position]?.quetes.count ?? 0))
                 }
                 .sorted { $0.1.quetes != $1.1.quetes ? $0.1.quetes > $1.1.quetes : $0.0 < $1.0 }
