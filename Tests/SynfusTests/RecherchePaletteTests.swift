@@ -74,6 +74,24 @@ struct RecherchePaletteTests {
         #expect(tout[..<monstre].allSatisfy { !$0.genre.enDernier } && tout[monstre...].allSatisfy(\.genre.enDernier))
     }
 
+    @Test("Un PNJ sur une carte intérieure est dit « intérieur » : /travel mène devant")
+    func interieur() throws {
+        var avecQuetes = contexte()
+        let passage = { (carte: Int) in PNJ.Passage(position: .init(x: -32, y: -57), carte: carte, sousZone: nil, quetes: 1) }
+        avecQuetes.quetes = Quetes(
+            format: Quetes.formatActuel, date: .now, quetes: [],
+            pnjs: [PNJ(id: 6309, noms: ["fr": "Amayiro"], passages: [passage(217318404)]),
+                   PNJ(id: 1, noms: ["fr": "Dehors"], passages: [passage(1)])],
+            objets: [:], monstres: [:], nomsPNJ: [:], sousZones: [:], famillesObjets: [:], familles: [:], emotes: [:],
+            titres: [:], metiers: [:], camps: [:])
+        avecQuetes.interieurs = CartesInterieures(date: .now, cartes: [217318404])
+        let pnjs = RecherchePalette.pnjs(avecQuetes)
+        #expect(pnjs.map(\.interieur) == [true, false])
+        #expect(!CartesInterieures.vide.contient(nil) && avecQuetes.interieurs.contient(217318404))
+        let donnees = try JSONEncoder().encode(avecQuetes.interieurs)
+        #expect(CartesInterieures.relire(donnees) == avecQuetes.interieurs && CartesInterieures.relire(Data("{}".utf8)) == nil)
+    }
+
     @Test("Un lieu porte sa carte et son pictogramme, un zaap sa carte : la liste en montre la vue")
     func vuesDesCartes() throws {
         let banque = try #require(Carte.integree.lieux.first { $0.nom(en: .fr) == "Banque" && $0.zone(en: .fr) == "Bonta" })

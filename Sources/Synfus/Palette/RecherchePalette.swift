@@ -123,6 +123,8 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
     var pictogramme: Int?
     /// Sur la case du perso : une quête qui y commence, un PNJ, un lieu.
     var ici = false
+    /// Sa carte n'est pas en extérieur : le trajet mène devant le bâtiment.
+    var interieur = false
     let effet: Effet
 }
 
@@ -135,6 +137,7 @@ struct ContextePalette: Sendable {
     /// Le réseau de `zaaps`, une seule source : il situe aussi ce qui est ici.
     var reseau: ReseauSousZones { zaaps.reseau }
     var lieux: [Lieu] = []
+    var interieurs = CartesInterieures.vide
     var etiquettes: [String: String] = [:]
     var favoris: Set<String> = []
     /// Les derniers textes copiés depuis la palette, le plus récent d'abord.
@@ -265,6 +268,7 @@ enum RecherchePalette {
                 carte: lieu.idCarte, pictogramme: lieu.gfx,
                 ici: contexte.position.map { QuetesIci.ici(PNJ.Position(x: lieu.x, y: lieu.y), sousZone: lieu.idSousZone,
                                                           perso: $0, reseau: contexte.reseau) } ?? false,
+                interieur: contexte.interieurs.contient(lieu.idCarte),
                 effet: lieu.monde == Zaap.mondeDesDouze ? .trajet(x: lieu.x, y: lieu.y)
                                                         : .copier(ItineraireZaap.travel(vers: (lieu.x, lieu.y))))
         }
@@ -376,6 +380,7 @@ enum RecherchePalette {
                                      ici: contexte.position.map {
                                          QuetesIci.ici(position, sousZone: passage.sousZone, perso: $0, reseau: contexte.reseau)
                                      } ?? false,
+                                     interieur: contexte.interieurs.contient(passage.carte),
                                      effet: .trajet(x: position.x, y: position.y))
             }
         }
