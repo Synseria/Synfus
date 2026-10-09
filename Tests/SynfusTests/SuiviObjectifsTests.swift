@@ -58,6 +58,11 @@ struct SuiviObjectifsTests {
             quete(901, "Les jumelles", [
                 [objectif(11, "Aller voir {npc,11}")], [objectif(12, "Aller voir {npc,11}")],
             ]),
+            quete(902, "Chasse au Skeunk", [[
+                ObjectifQuete(id: 31, textes: ["fr": "Vaincre x8 {monster,40} sur la carte {map,216531204} en un seul combat"],
+                              x: -25, y: 33, carte: 216531204, objet: nil, quantite: nil, type: 16),
+                objectif(32, "Retourner voir {npc,9}"),
+            ]]),
         ],
         pnjs: [],
         objets: ["1": ["fr": "Pensée perdue"], "2": ["fr": "Document Compromettant"]],
@@ -78,6 +83,14 @@ struct SuiviObjectifsTests {
 
     private func lu(_ lignes: [String], coupe: Bool = false) -> [SuiviQuetes.Reconnue] {
         SuiviQuetes.reconnaitre(lignes, coupe: coupe, dans: Self.jeu).reconnues
+    }
+
+    /// Le jeu écrit une carte citée par ses coordonnées, comme un monstre par
+    /// son nom entre crochets : le texte comparé les porte aussi.
+    @Test("Un objectif qui cite une carte se lit par ses coordonnées")
+    func carteCitee() {
+        let lues = lu(["Chasse au Skeunk", "Vaincre x8 [Skeunk] sur la carte [-25,33] en un", "seul combat"])
+        #expect(lues.map(\.id) == [902] && lues.first?.aFaire == [31] && lues.first?.faits == [])
     }
 
     @Test("La capture réelle : les objectifs montrés à faire, ceux d'avant faits, étapes d'avant comprises")
