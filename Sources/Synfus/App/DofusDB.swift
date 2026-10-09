@@ -54,6 +54,13 @@ enum DofusDB {
         return maintenant.timeIntervalSince(date) > peremption
     }
 
+    /// Une liste lue hors du fil principal ne remplace que plus vieille
+    /// qu'elle : la lecture du disque, finie après un téléchargement, ne le
+    /// défait pas.
+    static func remplace(_ date: Date, enPlace: Date?) -> Bool {
+        date > enPlace ?? .distantPast
+    }
+
     static func page<Element: Decodable>(_ chemin: String, _ filtres: [URLQueryItem]) async throws -> Page<Element> {
         var url = URLComponents(url: api.appending(path: chemin), resolvingAgainstBaseURL: false)!
         url.queryItems = filtres
