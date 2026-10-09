@@ -51,6 +51,26 @@ struct CaptureUniqueTests {
         }
     }
 
+    /// La fenêtre du banc de l'utilisateur (VS Code, 1728 × 1084 pt) : le
+    /// contenu de 1056 pt ramené à 1080 px fait 1767 px de large — l'échelle
+    /// suit la hauteur, pas la largeur. Chaque zone reste dans le contenu.
+    @Test("Chaque zone du banc tombe dans le contenu de la fenêtre")
+    func zonesDansLaFenetre() throws {
+        let fenetre = CGSize(width: 1728, height: 1084)
+        let reglage = CaptureContenu(pleinEcran: false, normaliser: true)
+        let contenu = ZoneEcran.contenu(fenetre: fenetre, barreTitre: 28, pleinEcran: false)
+        let entiere = GeometrieCapture(fenetre: fenetre, region: ZoneEcran.entiere.rect, contenu: reglage,
+                                       maxWidth: nil, natif: 2, barreTitre: 28)
+        #expect(entiere.largeur == 1767 && entiere.hauteur == 1080)
+        for zone in BancCaptures.zones(8) {
+            let g = GeometrieCapture(fenetre: fenetre, region: zone.rect, contenu: reglage, maxWidth: nil,
+                                     natif: 2, barreTitre: 28)
+            let source = try #require(g.source)
+            #expect(contenu.insetBy(dx: -0.001, dy: -0.001).contains(source), "\(zone)")
+            #expect(g.largeur > 0 && g.hauteur > 0)
+        }
+    }
+
     @Test("Deux zones jointives restent jointives une fois découpées")
     func jointives() {
         let taille = CGSize(width: 1729, height: 1080)
