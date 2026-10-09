@@ -60,10 +60,10 @@ struct BounceDetector {
     private enum State {
         case resting
         /// Montée détectée, trop modeste pour conclure ; on attend le retour.
-        case inFlight(sinceTick: Int)
+        case inFlight(since: TimeInterval)
         /// Rebond déjà annoncé. On attend le retour au repos pour se réarmer,
         /// sans réannoncer à chaque tour du même saut.
-        case announced(sinceTick: Int)
+        case announced(since: TimeInterval)
     }
 
     /// Amplitude minimale du saut, en points. Le relevé montre une montée de plus
@@ -87,8 +87,9 @@ struct BounceDetector {
     private let returnTolerance: CGFloat = 3
 
     /// Au-delà, la montée n'était pas un rebond mais un déplacement durable de
-    /// l'icône : 1,5 s à 10 Hz, alors qu'un saut dure environ une seconde.
-    private let maxFlightTicks = 15
+    /// l'icône, alors qu'un saut dure environ une seconde. En secondes et non
+    /// en tours : la sonde change de cadence (`AttentionWatcher`).
+    private let maxFlight: TimeInterval = 1.5
 
     /// Écart maximal entre les déplacements de deux icônes pour les considérer
     /// solidaires, donc emportées par un mouvement du Dock entier.
@@ -99,12 +100,24 @@ struct BounceDetector {
     private var restingY: [String: CGFloat] = [:]
     private var restingSize: [String: CGSize] = [:]
     private var states: [String: State] = [:]
-    private var tick = 0
 
-    /// Avale un relevé et rend les rangs dont le rebond vient de s'achever.
-    mutating func ingest(_ snapshot: Snapshot) -> [Int] {
-        tick += 1
+    /// Une icône est montée sans qu'on puisse encore conclure : la sonde
+    /// resserre sa cadence pour voir le retour plus tôt.
+    var suspect: Bool {
+        states.values.contains { if case .inFlight = $0 { true } else { false } }
+    }
 
+    /// Au calme, cinq relevés par seconde suffisent : un saut reste au-dessus
+    /// de `jumpThreshold` près de 0,4 s (relevé du 03/08), deux tours au moins.
+    /// Monté sans conclure, dix : le retour, qui conclut, se voit plus tôt.
+    static let cadenceCalme: TimeInterval = 0.2
+    static let cadenceSuspecte: TimeInterval = 0.1
+
+    var cadence: TimeInterval { suspect ? Self.cadenceSuspecte : Self.cadenceCalme }
+
+    /// Avale le relevé pris à l'instant `now` (horloge monotone, en secondes)
+    /// et rend les rangs dont le rebond vient de s'achever.
+    mutating func ingest(_ snapshot: Snapshot, at now: TimeInterval) -> [Int] {
         // Un client vient de se lancer ou de se fermer : les rangs se décalent, et
         // toutes les positions de repos deviennent caduques. On repart à zéro, les
         // références se reprendront au premier tour où les icônes seront visibles.
@@ -167,9 +180,9 @@ struct BounceDetector {
                     // de magnification quand le curseur frôle le Dock sans y entrer.
                     if decisive {
                         triggered.append(rank)
-                        states[key] = .announced(sinceTick: tick)
+                        states[key] = .announced(since: now)
                     } else if abs(size.height - baseSize.height) <= 1 {
-                        states[key] = .inFlight(sinceTick: tick)
+                        states[key] = .inFlight(since: now)
                     }
                 } else {
                     // Repos : on suit le y le plus grand, donc la position la plus
@@ -179,7 +192,7 @@ struct BounceDetector {
                 }
 
             case .inFlight(let since):
-                if tick - since > maxFlightTicks {
+                if now - since > maxFlight {
                     // Trop long pour un saut : l'icône a été déplacée pour de bon.
                     restingY[key] = y
                     restingSize[key] = size
@@ -187,7 +200,7 @@ struct BounceDetector {
                 } else if decisive {
                     // La montée s'est amplifiée jusqu'à ne plus laisser de doute.
                     triggered.append(rank)
-                    states[key] = .announced(sinceTick: tick)
+                    states[key] = .announced(since: now)
                 } else if delta <= returnTolerance {
                     // Montée puis retour : c'est bien un rebond.
                     triggered.append(rank)
@@ -199,7 +212,7 @@ struct BounceDetector {
                 // Le rebond est dit. Il reste à retomber pour pouvoir en
                 // reconnaître un suivant — et, s'il ne retombe pas, à admettre
                 // que l'icône a bougé pour de bon et à s'y recaler.
-                if tick - since > maxFlightTicks {
+                if now - since > maxFlight {
                     restingY[key] = y
                     restingSize[key] = size
                     states[key] = .resting

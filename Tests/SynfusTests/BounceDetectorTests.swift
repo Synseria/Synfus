@@ -1,5 +1,6 @@
 import Testing
 import CoreGraphics
+import Foundation
 @testable import Synfus
 
 /// Le détecteur est une machine à états pure : on peut lui rejouer un Dock
@@ -29,21 +30,27 @@ struct BounceDetectorTests {
         )
     }
 
-    /// Rejoue une suite de relevés et rend tous les rangs déclenchés.
+    /// Rejoue une suite de relevés pris tous les `pas` secondes et rend tous
+    /// les rangs déclenchés. Un même détecteur rejoué deux fois poursuit son
+    /// horloge : `depart` la décale.
     private func rejouer(
         _ detecteur: inout BounceDetector,
-        _ releves: [BounceDetector.Snapshot]
+        _ releves: [BounceDetector.Snapshot],
+        pas: TimeInterval = 0.1,
+        depart: TimeInterval = 0
     ) -> [Int] {
-        releves.flatMap { detecteur.ingest($0) }
+        releves.enumerated().flatMap { detecteur.ingest($1, at: depart + Double($0) * pas) }
     }
 
-    /// Indice du relevé qui a déclenché — c'est-à-dire le délai, en tours de
-    /// 0,1 s. Ce que le résultat seul ne dit pas.
+    /// Indice du relevé qui a déclenché — c'est-à-dire le délai, en tours.
+    /// Ce que le résultat seul ne dit pas.
     private func tourDeDeclenchement(
         _ detecteur: inout BounceDetector,
-        _ releves: [BounceDetector.Snapshot]
+        _ releves: [BounceDetector.Snapshot],
+        pas: TimeInterval = 0.1
     ) -> Int? {
-        for (index, releve) in releves.enumerated() where !detecteur.ingest(releve).isEmpty {
+        for (index, releve) in releves.enumerated()
+        where !detecteur.ingest(releve, at: Double(index) * pas).isEmpty {
             return index
         }
         return nil
@@ -67,9 +74,52 @@ struct BounceDetectorTests {
     @Test("Une montée qui ne redescend jamais n'est pas un rebond")
     func monteeSansRetour() {
         var detecteur = BounceDetector()
-        // Une icône déplacée pour de bon : le vol expire au bout de 15 tours.
+        // Une icône déplacée pour de bon : le vol expire au bout de 1,5 s.
         let releves = [releve([900]), releve([900])] + Array(repeating: releve([850]), count: 20)
         #expect(rejouer(&detecteur, releves).isEmpty)
+    }
+
+    // MARK: - La cadence de la sonde
+
+    /// Le relevé du 03/08 pris à 5 Hz, quelle que soit la phase : un tour sur
+    /// deux de la suite à 10 Hz. Le saut tient au-dessus du seuil assez
+    /// longtemps pour qu'au moins un relevé le voie.
+    @Test("À 5 Hz, le rebond réel se voit encore, quelle que soit la phase")
+    func rebondA5Hz() {
+        let repos = Array(repeating: [CGFloat(1117), 1117], count: 4)
+        for phase in 0..<2 {
+            let suite = repos + Self.relevéDu3Aout.enumerated().filter { $0.offset % 2 == phase }.map(\.element)
+            var detecteur = BounceDetector()
+            #expect(rejouer(&detecteur, suite.map(releveReel), pas: 0.2) == [1], "phase \(phase)")
+        }
+    }
+
+    @Test("Un saut modeste vu à 5 Hz rend la sonde suspecte, puis conclut au retour")
+    func sautModesteA5Hz() {
+        var detecteur = BounceDetector()
+        #expect(rejouer(&detecteur, [releve([900], bandeau: 900), releve([900], bandeau: 900)], pas: 0.2).isEmpty)
+        #expect(detecteur.cadence == BounceDetector.cadenceCalme)
+        // 12 points sur 52 : sous `certaintyRatio`, il faut le retour.
+        #expect(detecteur.ingest(releve([888], bandeau: 900), at: 0.4).isEmpty)
+        #expect(detecteur.suspect)
+        #expect(detecteur.cadence == BounceDetector.cadenceSuspecte)
+        #expect(detecteur.ingest(releve([900], bandeau: 900), at: 0.5) == [0])
+        #expect(detecteur.cadence == BounceDetector.cadenceCalme)
+    }
+
+    @Test("Le vol expire au bout de 1,5 s, quelle que soit la cadence")
+    func expirationEnSecondes() {
+        // 2 tours d'amorçage puis une montée qui ne redescend pas, à 5 Hz :
+        // en tours de 0,1 s, l'expiration aurait attendu 3 s.
+        var detecteur = BounceDetector()
+        _ = rejouer(&detecteur, [releve([900]), releve([900])], pas: 0.2)
+        _ = detecteur.ingest(releve([850]), at: 0.4)
+        _ = detecteur.ingest(releve([850]), at: 1.8)
+        #expect(detecteur.suspect)
+        _ = detecteur.ingest(releve([850]), at: 2.0)
+        #expect(!detecteur.suspect)
+        // Recalé sur sa nouvelle place : le retour n'est plus un rebond.
+        #expect(detecteur.ingest(releve([900]), at: 2.2).isEmpty)
     }
 
     // MARK: - Le masquage automatique du Dock
@@ -152,7 +202,7 @@ struct BounceDetectorTests {
 
         declenches = rejouer(&detecteur, [
             releve([830, 830]), releve([830, 830]), releve([900, 900]),
-        ])
+        ], depart: 1)
         #expect(declenches.isEmpty)
     }
 
@@ -190,9 +240,9 @@ struct BounceDetectorTests {
         var detecteur = BounceDetector()
         var declenches = rejouer(&detecteur, [releve([900]), releve([900])])
         // Un second client apparaît : les rangs se décalent, tout est repris.
-        declenches += rejouer(&detecteur, [releve([900, 960]), releve([900, 960])])
+        declenches += rejouer(&detecteur, [releve([900, 960]), releve([900, 960])], depart: 1)
         // C'est le deuxième qui réclame l'attention.
-        declenches += rejouer(&detecteur, [releve([900, 910]), releve([900, 960])])
+        declenches += rejouer(&detecteur, [releve([900, 910]), releve([900, 960])], depart: 2)
         #expect(declenches == [1])
     }
 

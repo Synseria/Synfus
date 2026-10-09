@@ -5,7 +5,7 @@ import ApplicationServices
 /// découverte structurelle du Dock ou se contenter du relevé géométrique.
 ///
 /// Logique pure, sans Accessibilité, donc testée : c'est elle qui fixe le coût
-/// de la boucle à 10 Hz.
+/// de la boucle à 5 Hz (10 Hz quand un rebond se prépare).
 enum DockRefreshPolicy {
 
     /// Âge au-delà duquel une structure est redécouverte quoi qu'il arrive. Un
@@ -17,7 +17,7 @@ enum DockRefreshPolicy {
 
     /// Une structure qui ne compte pas une icône par processus — client qui se
     /// lance, dont l'icône n'est pas encore « lancée » — se retente à ce
-    /// rythme : à chaque tour, un écart durable coûterait le tour complet dix
+    /// rythme : à chaque tour, un écart durable coûterait le tour complet cinq
     /// fois par seconde.
     static let incompleteRetry: TimeInterval = 1
 
