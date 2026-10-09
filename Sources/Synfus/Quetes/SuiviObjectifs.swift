@@ -133,7 +133,7 @@ enum SuiviObjectifs {
     }
 
     private static func forme(_ objectif: ObjectifQuete, langue: Langue, dans quetes: Quetes) -> Ressemblance.Forme {
-        Ressemblance.Forme(Ressemblance.normaliser(quetes.texte(Lieu.traduit(objectif.textes, langue) ?? "", en: langue)))
+        Ressemblance.Forme(Ressemblance.normaliser(quetes.texte(objectif, en: langue)))
     }
 
     /// L'étape lue se distingue-t-elle de l'autre ? Aucune ligne ne se lit

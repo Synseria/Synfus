@@ -58,7 +58,10 @@ struct QuetesTests {
         let quete = try #require(quetes.quetes.first)
         #expect(quete.etapes.map { $0.noms["fr"] } == ["Analyse de sang", "Le sang du wabbit GM"])
         #expect(quetes.texte("Ramener à {npc,119} : x3 {item,1746}", en: .fr) == "Ramener à Otomaï : x3 Sang de Wabbit GM")
-        #expect(quetes.texte("Découvrir la carte : {map,99}", en: .fr) == "Découvrir la carte : [map]")
+        #expect(quetes.texte("Découvrir la carte : {map,99}", en: .fr) == "Découvrir la carte : " + L("quete.carte.inconnue"))
+        let vaincre = ObjectifQuete(id: 9927, textes: ["fr": "Vaincre x8 {monster,182} sur la carte {map,216531204} en un seul combat"],
+                                    x: -25, y: 33, carte: 216531204, objet: nil, quantite: nil, type: 16)
+        #expect(quetes.texte(vaincre, en: .fr) == "Vaincre x8 Wabbit GM sur la carte [-25,33] en un seul combat")
         #expect(quetes.texte("Découvrir la zone {subarea,10}", en: .fr) == "Découvrir la zone Village d'Amakna")
         #expect(quetes.texte("Découvrir la zone {subarea,11}", en: .fr) == "Découvrir la zone [subarea]")
         let renvois = QuetesDofusDB.renvois(

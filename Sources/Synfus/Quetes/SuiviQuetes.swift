@@ -271,7 +271,10 @@ enum SuiviQuetes {
     private static func points(_ objectif: ObjectifQuete, langue: Langue, bloc: String, quetes: Quetes) -> Int {
         guard let modele = Lieu.traduit(objectif.textes, langue) else { return 0 }
         var cites: [String] = []
+        // Les coordonnées d'une carte ne sont pas un nom cité : trop courtes
+        // et trop communes pour désigner une étape.
         let complet = Ressemblance.normaliser(Quetes.resoudre(modele) { genre, id in
+            guard genre != "map" else { return Quetes.nomCarte(objectif.position) }
             let nom = quetes.nomRenvoi(genre, id, en: langue)
             if let nom { cites.append(Ressemblance.normaliser(nom)) }
             return nom
