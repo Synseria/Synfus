@@ -10,6 +10,7 @@
 # identité de signature. Les bancs de calibrage restent à part :
 #   SYNFUS_CAPTURE=~/Library/Logs/Synfus/captures/x.png sh test.sh RealCapture
 #   SYNFUS_QUETES="$HOME/Library/Application Support/Synfus/Quetes.json" sh test.sh SimulationSuivi
+#   SYNFUS_QUETES="$HOME/Library/Application Support/Synfus/Quetes.json" sh test.sh BancDonnees
 [ -n "${BASH_VERSION:-}" ] || exec /bin/bash "$0" "$@"
 case ":${SHELLOPTS:-}:" in *:posix:*) exec /bin/bash "$0" "$@" ;; esac
 set -uo pipefail
@@ -19,7 +20,7 @@ cd "$(dirname "$0")"
 FILTRES=(); BRUT=()
 while [ $# -gt 0 ]; do
     case "$1" in
-        -h|--help) sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h|--help) sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         --) shift; BRUT+=("$@"); break ;;
         *) FILTRES+=("$1") ;;
     esac
