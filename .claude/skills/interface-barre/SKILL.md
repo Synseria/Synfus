@@ -75,6 +75,9 @@ sa bascule). Toute nouvelle option suit la règle.
   par le même `apercuCarteAuSurvol`. Une fenêtre qui se cache sans détruire ses vues (palette,
   réglages, quêtes) appelle `ApercuCarte.shared.cacher()`, sans compter sur `onDisappear`.
 - Pictogramme d'un lieu : `PictogrammeLieu` (`Lieu.gfx`), le symbole en repli.
+- Palette : un trajet affiche `itineraire` (`ItineraireZaap.trajet`, « via X · N cartes »), le tri
+  garde la distance à pied ; `EtiquetteInterieur` (cartes `CarteStore.interieurs`) ; almanax en
+  tête de la grille sans saisie (`AlmanaxVue`).
 
 ## Réglages et menu
 
