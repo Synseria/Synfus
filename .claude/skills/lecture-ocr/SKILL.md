@@ -7,9 +7,10 @@ user-invocable: false
 # Lecture de l'écran
 
 `Sources/Synfus/Lecture/LecteurEcran.swift` lit, dans la fenêtre du perso au premier plan, la
-**position** (haut gauche) et le **combat** (bas droite par défaut) une fois par seconde, le
-**suivi de quêtes** toutes les trois secondes tant que le panneau des quêtes est montré ; la
-chasse à la demande.
+**position** (haut gauche) chaque seconde, le **combat** (bas droite par défaut) toutes les trois
+secondes hors combat et chaque seconde dès qu'un combat ou un placement est vu, jusqu'à sa fin
+(`GenreLecture.intervalle(combat:)`), le **suivi de quêtes** toutes les trois secondes tant que le
+panneau des quêtes est montré ; la chasse à la demande.
 Réglages `lirePosition` / `lireCombat` éteints par défaut : l'enregistrement de l'écran n'est
 demandé que par leur bascule et par la capture du calibrage, jamais par un panneau.
 
@@ -28,6 +29,13 @@ demandé que par leur bascule et par la capture du calibrage, jamais par un pann
   (`EtatCombat.monTour(fin:)`, gardée à 1,5 s près) ; suivis, cadre des lignes lues (+1½ ligne
   vers le bas), grille fine 5 × 3 px au seuil 180 — la grille fixe d'une zone haute ne voit pas
   une ligne (mesuré). `auBord` : le texte touche le bas de la zone.
+- Une capture par perso et par tour : `pomper` prend les demandes du même perso
+  (`FileLecture.extraire`), `capturer(client, genres)` — seul chemin — suit `PlanCapture` : une zone,
+  capture de la région ; dès `seuilCaptureUnique` (2) zones, le contenu entier (`ZoneEcran.entiere`)
+  découpé (`CapturesCalibrage.decouper`, sans copie). Mesuré (`Synfus --banc-captures`) : 43 contre
+  67 ms à deux zones, 54 contre 166 à huit, 7,4 Mo le temps du tour. Une découpe retient l'image
+  entière : le Diagnostic n'en garde qu'une copie (`CapturesCalibrage.copie`). Géométrie unique
+  `GeometrieCapture` ; `ZoneEcran.pixels` arrondit chaque bord.
 - Inventaire ScreenCaptureKit gardé (`captureImage(…, inventaireGarde:)`) ; la capture arrive à
   `MoteurOCR` en `CGImage`, jamais en PNG — le seul PNG est la capture du calibrage, sur disque.
 - Le premier OCR `.accurate` charge le modèle, long à froid : `MoteurOCR.prechauffer()` le
