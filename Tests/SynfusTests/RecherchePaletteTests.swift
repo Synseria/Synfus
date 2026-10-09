@@ -32,6 +32,28 @@ struct RecherchePaletteTests {
         #expect(entrees.dropFirst().first?.cle == amakna)
     }
 
+    @Test("Sans rien taper : les lieux et PNJ favoris avec les zaaps favoris, du plus proche, puis les autres zaaps")
+    func grilleDesFavoris() throws {
+        let banque = try #require(Carte.integree.lieux.first { $0.nom(en: .fr) == "Banque" && $0.zone(en: .fr) == "Bonta" })
+        var avecQuetes = contexte(etiquettes: ["pnj:6309": "Ama"], favoris: ["1:-31,-56", banque.cle, "pnj:6309"])
+        let passage = { (x: Int, y: Int, quetes: Int) in PNJ.Passage(position: .init(x: x, y: y), carte: nil, sousZone: nil, quetes: quetes) }
+        avecQuetes.quetes = Quetes(
+            format: Quetes.formatActuel, date: .now, quetes: [],
+            pnjs: [PNJ(id: 6309, noms: ["fr": "Amayiro"], passages: [passage(-32, -57, 101), passage(0, 0, 1)])],
+            objets: [:], monstres: [:], nomsPNJ: [:], sousZones: [:], famillesObjets: [:], familles: [:], emotes: [:],
+            titres: [:], metiers: [:], camps: [:])
+        let entrees = RecherchePalette.entrees("", avecQuetes)
+        let favoris = entrees.prefix { $0.favori }
+        #expect(Set(favoris.compactMap(\.cle)) == ["1:-31,-56", banque.cle, "pnj:6309"])
+        #expect(favoris.compactMap(\.distance) == favoris.compactMap(\.distance).sorted())
+        // Le PNJ n'y paraît qu'une fois, à sa case habituelle, avec son étiquette.
+        let amayiro = try #require(favoris.first { $0.genre == .pnj })
+        #expect(amayiro.detail == Coordonnees.texte(-32, -57) && amayiro.etiquette == "Ama")
+        #expect(entrees.dropFirst(favoris.count).allSatisfy { $0.genre == .zaap && !$0.favori })
+        // Ses deux cases se cherchent, étoilées l'une et l'autre.
+        #expect(RecherchePalette.entrees("amayiro", avecQuetes).filter(\.favori).count == 2)
+    }
+
     @Test("Un lieu porte sa carte et son pictogramme, un zaap sa carte : la liste en montre la vue")
     func vuesDesCartes() throws {
         let banque = try #require(Carte.integree.lieux.first { $0.nom(en: .fr) == "Banque" && $0.zone(en: .fr) == "Bonta" })

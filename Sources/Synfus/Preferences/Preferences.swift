@@ -165,8 +165,12 @@ final class Preferences: ObservableObject {
     /// Les lieux de la carte mis en avant dans la palette, par `Lieu.cle`.
     @Published var lieuxFavoris: [String] = [] { didSet { save() } }
 
-    /// Les étiquettes libres (« Fri 1 », « Bouftou »), par `Zaap.cle` ou
-    /// `Lieu.cle` : la palette les cherche avant les noms.
+    /// Les PNJ mis en avant dans la palette, par `PNJ.cle` (l'identifiant
+    /// DofusDB, stable d'un téléchargement à l'autre).
+    @Published var pnjsFavoris: [String] = [] { didSet { save() } }
+
+    /// Les étiquettes libres (« Fri 1 », « Bouftou »), par `Zaap.cle`,
+    /// `Lieu.cle` ou `PNJ.cle` : la palette les cherche avant les noms.
     @Published var etiquettes: [String: String] = [:] { didSet { save() } }
 
     /// Les derniers textes copiés depuis la palette, le plus récent d'abord.
@@ -499,6 +503,7 @@ final class Preferences: ObservableObject {
         .facultatif("zaapsFavoris", \.zaapsFavoris),
         .optionnel("chasseHotKey", \.chasseHotKey),
         .facultatif("lieuxFavoris", \.lieuxFavoris),
+        .facultatif("pnjsFavoris", \.pnjsFavoris),
         .facultatif("etiquettes", \.etiquettes),
         .optionnel("paletteHotKey", \.paletteHotKey),
         .facultatif("paletteRecents", \.paletteRecents),

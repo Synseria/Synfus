@@ -232,6 +232,11 @@ struct PNJ: Codable, Equatable, Sendable {
     let noms: [String: String]
     /// Le plus cité d'abord.
     let passages: [Passage]
+
+    /// Ce qu'un favori ou une étiquette désigne : l'identifiant DofusDB, pas
+    /// une case — un PNJ en a plusieurs.
+    var cle: String { Self.prefixeCle + "\(id)" }
+    static let prefixeCle = "pnj:"
 }
 
 /// Une quête prête à montrer : noms résolus dans la langue, ressources

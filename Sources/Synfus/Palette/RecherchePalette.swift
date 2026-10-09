@@ -155,9 +155,11 @@ enum RecherchePalette {
             RecherchePalette.classer(fiches, mots, tri: tri)
         }
         if texte.isEmpty {
-            // La grille des zaaps, favoris d'abord puis du plus proche — sauf
-            // filtre sur une autre famille, montrée entière.
-            if filtre == .tout || filtre == .zaaps { return index.zaaps.map(\.entree) }
+            // La grille : tous les favoris d'abord — zaaps, lieux, PNJ —, puis
+            // les autres zaaps du plus proche ; sauf filtre sur une famille,
+            // montrée entière.
+            if filtre == .tout { return index.accueil }
+            if filtre == .zaaps { return index.zaaps.map(\.entree) }
             return classer(index.tout.filter { filtre.garde($0.entree) }, [])
         }
         if texte.hasPrefix("%") { return variables(texte) }
@@ -220,6 +222,16 @@ enum RecherchePalette {
                 itineraire: itineraire(trajet, contexte.langue), cle: zaap.cle,
                 carte: zaap.idCarte, effet: .trajet(x: zaap.x, y: zaap.y))
         }
+    }
+
+    /// Sans rien taper : les favoris, du plus proche au plus loin, puis les
+    /// autres zaaps. Un PNJ n'y paraît qu'à sa position habituelle.
+    static func accueil(_ contexte: ContextePalette, zaaps: [EntreePalette], lieux: [EntreePalette]) -> [EntreePalette] {
+        let favorisPNJ = pnjs(contexte, seulement: contexte.favoris.filter { $0.hasPrefix(PNJ.prefixeCle) })
+        let favoris = (zaaps + lieux + favorisPNJ).filter(\.favori).enumerated().sorted { a, b in
+            comparerDistances(a.element, b.element) ?? (a.offset < b.offset)
+        }
+        return favoris.map(\.element) + zaaps.filter { !$0.favori }
     }
 
     /// Favoris d'abord, puis du plus proche au plus loin.
@@ -301,12 +313,14 @@ enum RecherchePalette {
     }
 
     /// Un PNJ par position connue, avec sa zone : celle que le plus de quêtes
-    /// citent est dite habituelle, les autres « aussi ici ».
-    static func pnjs(_ contexte: ContextePalette) -> [EntreePalette] {
+    /// citent est dite habituelle, les autres « aussi ici ». `seulement` : ces
+    /// PNJ (`PNJ.cle`), à leur position habituelle.
+    static func pnjs(_ contexte: ContextePalette, seulement: Set<String>? = nil) -> [EntreePalette] {
         guard let quetes = contexte.quetes else { return [] }
         let inconnu = L("palette.pnj")
-        return quetes.pnjs.flatMap { pnj in
-            pnj.passages.enumerated().map { rang, passage in
+        let choisis = seulement.map { cles in quetes.pnjs.filter { cles.contains($0.cle) } } ?? quetes.pnjs
+        return choisis.flatMap { pnj in
+            pnj.passages.prefix(seulement == nil ? .max : 1).enumerated().map { rang, passage in
                 let position = passage.position
                 let sousZone = passage.sousZone.flatMap { quetes.sousZones[String($0)] }
                 let lieu = sousZone.map {
@@ -320,9 +334,11 @@ enum RecherchePalette {
                 let trajet = trajetVers((position.x, position.y), contexte)
                 return EntreePalette(id: "pnj:\(pnj.id):\(position.x),\(position.y)", genre: .pnj,
                                      titre: Lieu.traduit(pnj.noms, contexte.langue) ?? "?", sousTitre: sousTitre,
+                                     etiquette: contexte.etiquettes[pnj.cle],
                                      detail: Coordonnees.texte(position.x, position.y),
+                                     favori: contexte.favoris.contains(pnj.cle),
                                      distance: aPied(vers: (position.x, position.y), contexte),
-                                     itineraire: itineraire(trajet, contexte.langue), carte: passage.carte,
+                                     itineraire: itineraire(trajet, contexte.langue), cle: pnj.cle, carte: passage.carte,
                                      ici: contexte.position.map {
                                          QuetesIci.ici(position, sousZone: passage.sousZone, perso: $0, reseau: contexte.reseau)
                                      } ?? false,
@@ -618,6 +634,9 @@ final class IndexPalette {
     private(set) lazy var lieux = fiches(RecherchePalette.lieux(contexte))
     private(set) lazy var quetes = fiches(RecherchePalette.quetes(contexte))
     private(set) lazy var pnjs = fiches(RecherchePalette.pnjs(contexte))
+    /// La grille, quand rien n'est tapé.
+    private(set) lazy var accueil = RecherchePalette.accueil(contexte, zaaps: zaaps.map(\.entree),
+                                                            lieux: lieux.map(\.entree))
     /// Sans préfixe : zaaps, lieux, quêtes, PNJ, gestes, dernières copies.
     private(set) lazy var tout = zaaps + lieux + quetes + pnjs + fiches(RecherchePalette.divers(contexte))
 
