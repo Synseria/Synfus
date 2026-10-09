@@ -357,7 +357,8 @@ struct PreferencesTests {
 
         let relues = Preferences.forTesting(store: store)
         #expect(relues.zaapsFavoris == ["1:5,-18", "1:99,99", "1:-2,0"])
-        #expect(relues.zaapsFavorisConnus.map(\.cle) == ["1:5,-18", "1:-2,0"])
+        // La carte du store se lit en tâche de fond au lancement : celle du dépôt.
+        #expect(CatalogueZaaps.favoris(relues.zaapsFavoris, parmi: Carte.integree.zaaps).map(\.cle) == ["1:5,-18", "1:-2,0"])
     }
 
     @Test("Les réglages d'aperçu se relisent après un redémarrage")
