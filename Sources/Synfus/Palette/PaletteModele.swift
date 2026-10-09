@@ -39,12 +39,14 @@ final class PaletteModele: ObservableObject {
     /// l'autre et préparés hors du fil principal (`prechauffer`) : la première
     /// lettre tapée ne paie plus la normalisation de tout le jeu.
     private var champsConnus: [String: RecherchePalette.Champs] = [:]
+    private var prechauffe: Task<Void, Never>?
     /// Le contexte imposé (tests, captures de la documentation) ; `nil` : celui
     /// du moment, relu à chaque ouverture.
     private let contexteImpose: ContextePalette?
 
-    /// Les quêtes arrivent après l'ouverture la première fois : la recherche
-    /// en cours les reçoit dès qu'elles sont là.
+    /// La carte et les quêtes arrivent après le lancement, et les quêtes
+    /// après l'ouverture la première fois : la recherche en cours les reçoit
+    /// dès qu'elles sont là, et leurs textes se normalisent d'avance.
     private init() {
         contexteImpose = nil
         QuetesStore.shared.$quetes
@@ -58,17 +60,32 @@ final class PaletteModele: ObservableObject {
                 }
             }
             .store(in: &abonnements)
+        // Publiée avant d'être affectée, la carte se relit au tour suivant,
+        // avec les zaaps qu'on en tire.
+        CarteStore.shared.$carte
+            .dropFirst()
+            .sink { _ in
+                Task { @MainActor in
+                    PaletteModele.shared.rafraichir()
+                    PaletteModele.shared.prechauffer()
+                }
+            }
+            .store(in: &abonnements)
     }
 
     /// Normalise d'avance, en tâche de fond, les textes de tout ce que la
-    /// palette cherche — au lancement, et quand les quêtes arrivent.
+    /// palette cherche — quand la carte ou les quêtes arrivent. Une préchauffe
+    /// attend la précédente : la dernière, qui voit tout, finit la dernière.
     func prechauffer() {
         guard contexteImpose == nil else { return }
-        let contexte = Self.contexteCourant()
-        let connus = champsConnus
-        Task.detached(priority: .utility) {
-            let champs = IndexPalette.champs(de: contexte, connus: connus)
-            await MainActor.run { PaletteModele.shared.champsConnus = champs }
+        let precedente = prechauffe
+        prechauffe = Task {
+            await precedente?.value
+            let contexte = Self.contexteCourant()
+            let connus = champsConnus
+            champsConnus = await Task.detached(priority: .utility) {
+                IndexPalette.champs(de: contexte, connus: connus)
+            }.value
         }
     }
 

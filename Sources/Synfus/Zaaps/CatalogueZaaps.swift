@@ -35,24 +35,24 @@ enum CatalogueZaaps {
     /// rien dire : position inconnue ou hors du Monde des Douze, zaap sur une
     /// autre carte du monde.
     static func distance(de zaap: Zaap, depuis position: PositionCarte?) -> Int? {
-        guard let position, !ItineraireZaap.horsDuMondeDesDouze(position.zone),
-              zaap.monde == Zaap.mondeDesDouze
-        else { return nil }
-        return ItineraireZaap.distance((position.x, position.y), (zaap.x, zaap.y))
+        guard let depart = ItineraireZaap.rejoindre(position), zaap.monde == Zaap.mondeDesDouze else { return nil }
+        return ItineraireZaap.distance(depart, (zaap.x, zaap.y))
     }
 
     /// Du plus proche au plus loin ; ceux sans distance ferment la marche dans
-    /// leur ordre, et sans position tout garde l'ordre donné.
+    /// leur ordre, et sans position tout garde l'ordre donné. Chaque distance
+    /// est comptée une fois, pas à chaque comparaison.
     static func parDistance(_ zaaps: [Zaap], depuis position: PositionCarte?) -> [Zaap] {
         zaaps.enumerated()
+            .map { (rang: $0.offset, zaap: $0.element, distance: distance(de: $0.element, depuis: position)) }
             .sorted { a, b in
-                switch (distance(de: a.element, depuis: position), distance(de: b.element, depuis: position)) {
+                switch (a.distance, b.distance) {
                 case let (da?, db?) where da != db: return da < db
                 case (_?, nil): return true
                 case (nil, _?): return false
-                default: return a.offset < b.offset
+                default: return a.rang < b.rang
                 }
             }
-            .map(\.element)
+            .map(\.zaap)
     }
 }

@@ -15,9 +15,20 @@ import Foundation
 struct PositionCarte: Equatable, Sendable {
     let x: Int
     let y: Int
-    /// Le nom de la zone, tel que lu — l'OCR le tronque parfois, il n'est là
-    /// que pour être montré.
+    /// Le nom de la zone, tel que lu — l'OCR le tronque parfois : montré, et
+    /// lu seulement pour sa région (`horsDuMondeDesDouze`).
     let zone: String?
+    /// Tranché une fois, à la lecture : les distances de la palette et de la
+    /// barre le redemandent pour chaque entrée, et la règle compare une
+    /// trentaine de noms sans accents ni casse (`ItineraireZaap`).
+    let horsDuMondeDesDouze: Bool
+
+    init(x: Int, y: Int, zone: String?) {
+        self.x = x
+        self.y = y
+        self.zone = zone
+        horsDuMondeDesDouze = ItineraireZaap.horsDuMondeDesDouze(zone)
+    }
 
     var coordonnees: String { Coordonnees.texte(x, y) }
 

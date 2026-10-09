@@ -25,6 +25,17 @@ struct TourneeTests {
         #expect(ordre(depuis: (0, 0), loin, ids: [1, 2, 3]) == [2, 3, 1])
     }
 
+    @Test("Le dernier calcul gardé : rendu tel quel sous la même clé, refait sous une autre")
+    func dernierCalcul() {
+        var gardee = DernierCalcul<[Int], [Int]>()
+        var calculs = 0
+        func ordre(_ cle: [Int]) -> [Int] { gardee.valeur(pour: cle) { calculs += 1; return cle.reversed() } }
+        #expect(ordre([1, 2]) == [2, 1] && ordre([1, 2]) == [2, 1] && calculs == 1)
+        #expect(ordre([1, 3]) == [3, 1] && calculs == 2)
+        // Seul le dernier est gardé : revenir à une clé d'avant la refait.
+        #expect(ordre([1, 2]) == [2, 1] && calculs == 3)
+    }
+
     @Test("Un objectif : rien à ordonner ; à coût égal, l'ordre donné")
     func bords() {
         let cases = Self.cases([(1, 1, 0), (2, -1, 0)])

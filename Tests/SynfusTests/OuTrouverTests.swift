@@ -32,7 +32,7 @@ struct OuTrouverTests {
     }
 
     private func situer(_ repaire: RepaireMonstre, depuis: (x: Int, y: Int)?) -> OuTrouver.Situation? {
-        OuTrouver.situer(repaire, depuis: depuis, reseau: reseau, lieux: Self.carte.lieux)
+        OuTrouver.situer(repaire, depuis: depuis, reseau: reseau, reperes: ReperesCarte(Self.carte.lieux))
     }
 
     @Test("L'index inverse de la carte : les cases d'une sous-zone, et son monde")
@@ -63,12 +63,25 @@ struct OuTrouverTests {
         #expect(situer(repaire(.donjon, 2, nom: "Expédition - Antre du Dragon Cochon", entree: 5), depuis: nil) == nil)
     }
 
+    @Test("Les repères indexés : à clé égale le premier de la carte, un donjon seulement parmi les donjons")
+    func reperes() {
+        let donjon = CategorieLieu.donjon.rawValue
+        let reperes = ReperesCarte([Self.lieu(1, 0, 0, carte: 7, sousZone: 3, nom: "Antre"),
+                                    Self.lieu(2, 1, 1, carte: 8, sousZone: 3, categorie: donjon, nom: "Antre"),
+                                    Self.lieu(3, 2, 2, carte: 9, sousZone: 4, categorie: donjon, nom: "Antre"),
+                                    Self.lieu(4, 3, 3, carte: 8, sousZone: 4, categorie: donjon, nom: "Château")])
+        #expect(reperes.lieu(sousZone: 3)?.id == 1 && reperes.lieu(sousZone: 4)?.id == 3 && reperes.lieu(sousZone: 5) == nil)
+        #expect(reperes.donjon(carte: 8)?.id == 2 && reperes.donjon(carte: 7) == nil)
+        #expect(reperes.donjon(nom: "ANTRE")?.id == 2 && reperes.donjon(nom: "chateau")?.id == 4)
+    }
+
     @Test("Les repaires du plus proche au plus loin, zaaps compris ; sans coût après, dans l'ordre ; introuvables écartés")
     func ordreDesRepaires() {
         let repaires = [repaire(.sousZone, 8, nom: "Ailleurs"), repaire(.sousZone, 99, nom: "Nulle part"),
                         repaire(.sousZone, 6, nom: "Loin"), repaire(.sousZone, 5, nom: "Près")]
         // Un coût où 10,10 est plus proche que 4,0 (un zaap y mène).
-        let situes = OuTrouver.situes(repaires, depuis: (8, 0), reseau: reseau, lieux: Self.carte.lieux) { cible in
+        let situes = OuTrouver.situes(repaires, depuis: (8, 0), reseau: reseau,
+                                      reperes: ReperesCarte(Self.carte.lieux)) { cible in
             cible == (10, 10) ? 1 : ItineraireZaap.distance((8, 0), cible)
         }
         #expect(situes.map { $0.repaire.noms["fr"] } == ["Loin", "Près", "Ailleurs"])

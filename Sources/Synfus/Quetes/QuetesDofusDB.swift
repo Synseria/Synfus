@@ -201,7 +201,7 @@ enum QuetesDofusDB {
         async let monstres: [Nomme] = parIdentifiants("monsters", renvois.monstres)
         async let pnjs: [Nomme] = parIdentifiants("npcs", renvois.pnjs.union(departs.map(\.npcId)))
         let cartes: [CarteAPI] = try await parIdentifiants("map-positions", Set(departs.map(\.mapId)))
-        let idsSousZones = Set(objectifs.compactMap { $0.map?.subAreaId } + cartes.compactMap(\.subAreaId))
+        let idsSousZones = renvois.sousZones.union(objectifs.compactMap { $0.map?.subAreaId } + cartes.compactMap(\.subAreaId))
         let sousZones: [SousZoneAPI] = try await parIdentifiants("subareas", idsSousZones)
         let zones: [Nomme] = try await parIdentifiants("areas", Set(sousZones.map(\.areaId)))
         let types: [TypeObjetAPI] = try await DofusDB.toutes("item-types", [])
@@ -214,8 +214,9 @@ enum QuetesDofusDB {
     }
 
     /// Les identifiants cités : par les paramètres, et par les renvois du texte.
-    static func renvois(_ objectifs: [ObjectifAPI]) -> (objets: Set<Int>, monstres: Set<Int>, pnjs: Set<Int>) {
-        var objets: Set<Int> = [], monstres: Set<Int> = [], pnjs: Set<Int> = []
+    static func renvois(_ objectifs: [ObjectifAPI])
+        -> (objets: Set<Int>, monstres: Set<Int>, pnjs: Set<Int>, sousZones: Set<Int>) {
+        var objets: Set<Int> = [], monstres: Set<Int> = [], pnjs: Set<Int> = [], sousZones: Set<Int> = []
         for objectif in objectifs {
             if let ramener = objectif.aRamener { objets.insert(ramener.objet) }
             if let pnj = objectif.pnj { pnjs.insert(pnj) }
@@ -225,12 +226,13 @@ enum QuetesDofusDB {
                 case "item": objets.insert(id)
                 case "monster": monstres.insert(id)
                 case "npc": pnjs.insert(id)
+                case "subarea": sousZones.insert(id)
                 default: break
                 }
                 return nil
             }
         }
-        return (objets, monstres, pnjs)
+        return (objets, monstres, pnjs, sousZones)
     }
 
     /// Ce que les quêtes citent, téléchargé à part : leurs noms, cartes et zones.
