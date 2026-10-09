@@ -50,6 +50,17 @@ enum CapturesCalibrage {
         return Capture(image: image, date: date ?? .distantPast)
     }
 
+    /// Une image redessinée dans sa propre mémoire : une découpe partage les
+    /// pixels de l'image entière, et la garder la garderait tout entière.
+    static func copie(_ image: CGImage) -> CGImage? {
+        guard let contexte = CGContext(data: nil, width: image.width, height: image.height, bitsPerComponent: 8,
+                                       bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
+                                       bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        else { return nil }
+        contexte.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+        return contexte.makeImage()
+    }
+
     /// La zone découpée dans une capture du contenu entier.
     static func decouper(_ zone: ZoneEcran, dans image: CGImage) -> CGImage? {
         image.cropping(to: zone.pixels(dans: CGSize(width: image.width, height: image.height)))

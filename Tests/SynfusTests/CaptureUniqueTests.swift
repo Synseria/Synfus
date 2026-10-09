@@ -10,14 +10,24 @@ struct CaptureUniqueTests {
 
     // MARK: - La règle
 
-    @Test("Sous le seuil, une capture par zone ; au seuil, une capture entière")
+    @Test("Une zone seule est capturée seule ; dès deux, une capture entière")
     func plan() {
         #expect(PlanCapture.pour([.position]) == .parZone)
-        #expect(PlanCapture.pour([.position, .combat]) == .parZone)
+        #expect(PlanCapture.pour([.position, .combat]) == .entiere)
         #expect(PlanCapture.pour([.position, .combat, .quetes]) == .entiere)
         // Un genre demandé deux fois reste une zone.
-        #expect(PlanCapture.pour([.position, .position, .combat]) == .parZone)
-        #expect(PlanCapture.pour([.position, .combat], seuil: 2) == .entiere)
+        #expect(PlanCapture.pour([.position, .position]) == .parZone)
+        #expect(PlanCapture.pour([.position, .combat], seuil: 3) == .parZone)
+    }
+
+    @Test("La file part par perso : la première demande et toutes celles du même perso, dans l'ordre")
+    func lotParPerso() {
+        let file = [("Ana", 1), ("Bob", 2), ("Ana", 3), ("Cid", 4), ("Bob", 5)]
+        let (lot, reste) = FileLecture.extraire(file) { $0.0 == $1.0 }
+        #expect(lot.map(\.1) == [1, 3])
+        #expect(reste.map(\.1) == [2, 4, 5])
+        let vide = FileLecture.extraire([(String, Int)]()) { $0.0 == $1.0 }
+        #expect(vide.lot.isEmpty && vide.reste.isEmpty)
     }
 
     // MARK: - La découpe
@@ -101,6 +111,26 @@ struct CaptureUniqueTests {
             #expect(donnees[y * ligne + x * pas] == UInt8(Int(attendu.minX) + x))
             #expect(donnees[y * ligne + x * pas + 1] == UInt8(Int(attendu.minY) + y))
         }
+    }
+
+    @Test("La copie d'une découpe a ses pixels et sa propre mémoire, à sa taille")
+    func copieDUneDecoupe() throws {
+        let (w, h) = (400, 300)
+        var octets = [UInt8](repeating: 0, count: w * h * 4)
+        for y in 0..<h { for x in 0..<w { octets[(y * w + x) * 4] = UInt8(x % 256); octets[(y * w + x) * 4 + 3] = 255 } }
+        let image = try #require(octets.withUnsafeMutableBytes { tampon -> CGImage? in
+            CGContext(data: tampon.baseAddress, width: w, height: h, bitsPerComponent: 8, bytesPerRow: w * 4,
+                      space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)?
+                .makeImage()
+        })
+        let coupe = try #require(CapturesCalibrage.decouper(.positionParDefaut, dans: image))
+        let copie = try #require(CapturesCalibrage.copie(coupe))
+        #expect(copie.width == coupe.width && copie.height == coupe.height)
+        let donnees = try #require(copie.dataProvider?.data as Data?)
+        #expect(donnees.count == copie.bytesPerRow * copie.height)
+        #expect(donnees.count < w * h * 4 / 4)
+        let attendu = ZoneEcran.positionParDefaut.pixels(dans: CGSize(width: w, height: h))
+        #expect(donnees[(copie.width - 1) * 4] == UInt8((Int(attendu.minX) + copie.width - 1) % 256))
     }
 
     // MARK: - Le dépouillement du banc
