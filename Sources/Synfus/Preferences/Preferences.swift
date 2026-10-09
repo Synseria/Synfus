@@ -224,6 +224,9 @@ final class Preferences: ObservableObject {
     @Published var chasseBouton: Bool = true { didSet { save() } }
 
     private var loading = false
+    /// Dans `enUneEcriture` : les `save()` attendent sa fin, et n'en font qu'un.
+    private var ecritureDifferee = false
+    private var aEcrire = false
 
     /// Clé unique sous laquelle tout est sérialisé, dans le domaine
     /// `UserDefaults` de l'app — lui-même nommé d'après le `BUNDLE_ID`.
@@ -514,8 +517,24 @@ final class Preferences: ObservableObject {
     /// lecture (`adoptDefaults`).
     private static let cleGeneration: Cle = "defaultsVersion"
 
+    /// Plusieurs réglages changés par un même geste — une coche, une lecture
+    /// du suivi — ne s'écrivent qu'une fois : chaque écriture encode tout en
+    /// JSON et passe par `cfprefsd`. Imbriqués, les lots n'en font qu'un.
+    func enUneEcriture<Resultat>(_ modifier: () -> Resultat) -> Resultat {
+        guard !ecritureDifferee else { return modifier() }
+        ecritureDifferee = true
+        let resultat = modifier()
+        ecritureDifferee = false
+        if aEcrire {
+            aEcrire = false
+            save()
+        }
+        return resultat
+    }
+
     private func save() {
         guard !loading else { return }
+        guard !ecritureDifferee else { aEcrire = true; return }
         if let data = try? JSONEncoder().encode(Ecriture(prefs: self)) {
             store.enregistrer(data, pour: Self.key)
         }
