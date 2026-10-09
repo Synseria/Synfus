@@ -8,55 +8,70 @@ import ApplicationServices
 /// de la boucle à 10 Hz.
 enum DockRefreshPolicy {
 
-    /// Âge au-delà duquel une structure est redécouverte quoi qu'il arrive.
-    /// Un filet : la structure devrait déjà se périmer par le compte de
-    /// processus ou par une lecture qui échoue, mais un Dock relancé ou une
-    /// icône réordonnée par l'utilisateur ne préviennent pas.
-    static let maxAge: TimeInterval = 2
+    /// Âge au-delà duquel une structure est redécouverte quoi qu'il arrive. Un
+    /// filet seulement : les icônes Dofus ne changent qu'avec les processus
+    /// (`pids`), un Dock relancé fait échouer la lecture légère, et une icône
+    /// déplacée par l'utilisateur garde son élément — le rang se recalcule
+    /// à chaque relevé.
+    static let maxAge: TimeInterval = 30
+
+    /// Une structure qui ne compte pas une icône par processus — client qui se
+    /// lance, dont l'icône n'est pas encore « lancée » — se retente à ce
+    /// rythme : à chaque tour, un écart durable coûterait le tour complet dix
+    /// fois par seconde.
+    static let incompleteRetry: TimeInterval = 1
 
     /// - Parameters:
     ///   - cachedItems: nombre d'icônes en cache, `nil` sans structure (premier
     ///     tour, ou tour précédent sans Dock).
-    ///   - dofusProcesses: nombre de pids Dofus distincts connus de
-    ///     `WindowManager` — chaque processus lancé a son icône.
+    ///   - builtFor: les processus Dofus pour lesquels la structure a été bâtie.
+    ///   - pids: les processus Dofus vivants connus de `WindowManager` —
+    ///     chaque processus lancé a son icône.
     ///   - age: ancienneté de la structure.
-    static func needsFullTour(cachedItems: Int?, dofusProcesses: Int, age: TimeInterval,
-                              maxAge: TimeInterval = maxAge) -> Bool {
+    static func needsFullTour(cachedItems: Int?, builtFor: Set<pid_t>, pids: Set<pid_t>,
+                              age: TimeInterval) -> Bool {
         guard let cachedItems else { return true }
-        if cachedItems != dofusProcesses { return true }
+        // Un client lancé, fermé, ou l'un remplacé par l'autre : les rangs changent.
+        if builtFor != pids { return true }
+        if cachedItems != pids.count { return age >= incompleteRetry }
         return age >= maxAge
     }
 }
 
-/// Lit la géométrie du Dock en réutilisant, d'un tour à l'autre, les éléments
-/// AX découverts au tour complet précédent.
+/// Lit la géométrie du Dock hors du main actor, en réutilisant d'un tour à
+/// l'autre les éléments AX découverts au tour complet précédent.
 ///
-/// En régime permanent, un tour ne coûte plus qu'un aller-retour par icône
-/// Dofus et un pour le bandeau, contre plusieurs dizaines quand `inventory()`
-/// refaisait toute la découverte — dix fois par seconde, cela se sentait dans
-/// les raccourcis et la barre.
-@MainActor
-final class DockGeometryReader {
+/// En régime permanent, un tour ne coûte qu'un aller-retour par icône Dofus et
+/// un pour le bandeau ; le tour complet en coûte plusieurs dizaines. Chacun est
+/// un IPC synchrone vers le Dock, borné à 1 s : sur main, un Dock occupé — une
+/// animation d'espace, Mission Control — figeait la barre et les raccourcis
+/// dix fois par seconde. Exécuteur propre, comme `ClientInventoryEngine` : ces
+/// attentes n'ont rien à faire sur le pool coopératif.
+///
+/// Il n'en sort que des valeurs (`DockInspector.Inventory`) ; la structure en
+/// cache, éléments AX compris, ne quitte jamais l'acteur.
+actor DockGeometryReader {
+    private let queue = DispatchSerialQueue(label: "fr.synseria.synfus.dock", qos: .userInitiated)
+    nonisolated var unownedExecutor: UnownedSerialExecutor { queue.asUnownedSerialExecutor() }
+
     private var structure: DockInspector.Structure?
 
-    /// Le relevé du tour. `dofusProcesses` sert à périmer la structure sans
-    /// attendre le filet des deux secondes : un client lancé ou fermé change le
-    /// nombre d'icônes, et les rangs avec.
-    func read(dofusProcesses: Int, now: Date = Date()) -> DockInspector.Inventory {
-        let cachedItems = structure?.items.count
+    /// Le relevé du tour. `pids` périme la structure sans attendre le filet :
+    /// un client lancé ou fermé change les icônes, et les rangs avec.
+    func read(pids: Set<pid_t>, now: Date = Date()) -> DockInspector.Inventory {
         let age = structure.map { now.timeIntervalSince($0.date) } ?? .infinity
 
-        if !DockRefreshPolicy.needsFullTour(cachedItems: cachedItems,
-                                            dofusProcesses: dofusProcesses, age: age),
+        if !DockRefreshPolicy.needsFullTour(cachedItems: structure?.items.count,
+                                            builtFor: structure?.pids ?? [], pids: pids, age: age),
            let structure,
            let inventory = DockInspector.geometry(of: structure) {
             return inventory
         }
 
-        // Tour complet — premier tour, effectif changé, structure trop vieille, ou
-        // lecture légère en échec : un élément invalidé ne répond plus, et il
-        // faut le retrouver plutôt que le réinterroger en boucle.
-        structure = DockInspector.discoverStructure(now: now)
+        // Tour complet — premier tour, processus changés, structure incomplète
+        // ou trop vieille, ou lecture légère en échec : un élément invalidé ne
+        // répond plus, et il faut le retrouver plutôt que le réinterroger.
+        structure = DockInspector.discoverStructure(pids: pids, now: now)
         guard let structure, let inventory = DockInspector.geometry(of: structure)
         else { return DockInspector.Inventory(items: [], strip: nil) }
         return inventory

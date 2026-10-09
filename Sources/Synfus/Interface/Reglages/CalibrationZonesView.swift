@@ -227,12 +227,12 @@ struct CalibrationZonesView: View {
         else { echec = L("calibration.aucunPerso"); return }
         // Le contenu entier, sans barre de titre et à l'échelle de la
         // lecture : c'est le repère des zones et ce que l'OCR recevra.
-        guard let png = await WindowPreviewService.shared.captureData(
+        guard let image = await WindowPreviewService.shared.captureImage(
             client, region: CGRect(x: 0, y: 0, width: 1, height: 1), maxWidth: nil, inventaireGarde: false,
             contenu: CaptureContenu(pleinEcran: client.pleinEcran, normaliser: true))
         else { echec = WindowPreviewService.shared.lastCaptureError ?? L("calibration.echec"); return }
         do {
-            try CapturesCalibrage.garder(png, pour: genre)
+            try CapturesCalibrage.garder(image, pour: genre)
         } catch {
             echec = error.localizedDescription
         }
@@ -251,14 +251,14 @@ struct CalibrationZonesView: View {
     /// relancé à chaque tracé : on voit tout de suite si la zone convient.
     private func essayer() {
         essaiEnCours?.cancel()
-        guard let capture, let png = CapturesCalibrage.decouper(genre.zone, dans: capture.image) else {
+        guard let capture, let zone = CapturesCalibrage.decouper(genre.zone, dans: capture.image) else {
             essai = nil
             essaiEnCours = nil
             return
         }
         let genre = genre
         essaiEnCours = Task {
-            let lu = await LecteurEcran.shared.lire(png: png, genre: genre)
+            let lu = await LecteurEcran.shared.lire(image: zone, genre: genre)
             let compris = await comprendre(lu?.lignes ?? [], couleur: lu?.couleur ?? 0)
             guard !Task.isCancelled else { return }
             essai = Essai(lignes: lu?.lignes ?? [], compris: compris)
