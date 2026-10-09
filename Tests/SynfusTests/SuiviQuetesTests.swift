@@ -110,6 +110,47 @@ struct SuiviQuetesTests {
         #expect(premiere == [.init(id: 3, etape: 0)])
     }
 
+    @Test("Des quêtes homonymes : les objectifs désignent la bonne, sinon aucune n'est cochée")
+    func homonymes() {
+        let nowel = { (id: Int, monstre: String) in
+            Self.quete(id, ["fr": "Joyeux Nowel"], etapes: [[
+                Self.objectif(id * 10, "Vaincre x1 \(monstre) en un seul combat"), Self.objectif(id * 10 + 1, "Aller voir {npc,10}"),
+            ]])
+        }
+        let jeu = SuiviQuetes.Index(Self.quetes([nowel(20, "Tofu Royal"), nowel(21, "Bouftou Royal")]))
+        let vaincre = SuiviQuetes.reconnaitre(["Joyeux Nowel", "Vaincre x1 Bouftou Royal en un seul combat"], dans: jeu)
+        #expect(vaincre.reconnues == [.init(id: 21, etape: nil, aFaire: [210], nonMontres: [211])])
+        // « Aller voir » est le même partout : le combat de l'une ne se coche pas pour l'autre.
+        let allerVoir = SuiviQuetes.reconnaitre(["Joyeux Nowel", "Aller voir Meuh Sieurchance"], dans: jeu)
+        #expect(allerVoir.reconnues == [.init(id: 20, etape: nil)])
+        // Deux à l'écran : deux quêtes, pas une vue deux fois.
+        let deux = SuiviQuetes.reconnaitre(["Joyeux Nowel", "Aller voir Meuh Sieurchance",
+                                            "Joyeux Nowel", "Vaincre x1 Tofu Royal en un seul combat"], dans: jeu)
+        #expect(deux.reconnues == [.init(id: 21, etape: nil), .init(id: 20, etape: nil, aFaire: [200], nonMontres: [201])])
+    }
+
+    @Test("Un titre à une faute de plusieurs noms : les objectifs départagent, sinon rien n'est coché")
+    func offrandes() {
+        let offrande = { (id: Int, dieu: String) in
+            Self.quete(id, ["fr": "Offrande à \(dieu)"], etapes: [[
+                Self.objectif(id * 10, "Aller voir \(dieu)"), Self.objectif(id * 10 + 1, "Prier devant l'autel de l'automne"),
+            ]])
+        }
+        let jeu = SuiviQuetes.Index(Self.quetes([offrande(30, "Bii"), offrande(31, "Blid")]))
+        // « Bli » : « Bii » ou « Blid » à une faute ; « Aller voir Bii » tranche.
+        #expect(SuiviQuetes.reconnaitre(["Offrande à Bli", "Aller voir Bii"], dans: jeu).reconnues
+                == [.init(id: 30, etape: nil, aFaire: [300], nonMontres: [301])])
+        #expect(SuiviQuetes.reconnaitre(["Offrande à Bli", "Prier devant l'autel de l'automne"], dans: jeu).reconnues
+                == [.init(id: 31, etape: nil)])
+        // Lu sans faute, « Blid » est à deux fautes : le nom seul désigne.
+        #expect(SuiviQuetes.reconnaitre(["Offrande à Bii", "Prier devant l'autel de l'automne"], dans: jeu).reconnues
+                == [.init(id: 30, etape: nil, aFaire: [301], faits: [300])])
+        // « Bix » à une faute : le nom le mieux lu montre, sans rien cocher.
+        let voisins = SuiviQuetes.Index(Self.quetes([offrande(30, "Bii"), offrande(32, "Bix")]))
+        #expect(SuiviQuetes.reconnaitre(["Offrande à Bii", "Prier devant l'autel de l'automne"], dans: voisins).reconnues
+                == [.init(id: 30, etape: nil, aFaire: [301])])
+    }
+
     @Test("Deux étapes qui citent le même PNJ ne désignent rien")
     func etapeAmbigue() {
         let jeu = SuiviQuetes.Index(Self.quetes([Self.quete(7, ["fr": "Le retour de la bergère"], etapes: [
