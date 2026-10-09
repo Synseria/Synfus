@@ -23,14 +23,18 @@ observe la géométrie AX des icônes du Dock (`DockInspector`), dix fois par se
 
 ## Coût — rien ne se relit s'il ne change pas
 
-- `DockGeometryReader` garde la structure (`DockInspector.Structure`) et, en régime
-  permanent, ne lit que position et taille en **un** IPC par icône. Le tour complet revient
-  au premier tour, quand le nombre de pids Dofus diffère du cache, quand une lecture échoue,
-  et en filet périodique : `DockRefreshPolicy` (pur, testé).
+- `DockGeometryReader` est un **acteur** à exécuteur propre (comme `ClientInventoryEngine`) :
+  aucun IPC vers le Dock sur main ; un relevé à la fois, un Dock lent fait sauter des tours. Il
+  garde la structure (`DockInspector.Structure`, bâtie pour un ensemble de pids) et, en régime
+  permanent, ne lit que position et taille en **un** IPC par icône. Le tour complet revient au
+  premier tour, quand l'ensemble des pids Dofus change, quand une lecture échoue, chaque seconde
+  tant que la structure ne compte pas une icône par processus, et en filet toutes les 30 s :
+  `DockRefreshPolicy` (pur, testé).
 - `AttentionDiagnostics` (appariement, relevé) est un objet séparé observé par les seuls
   réglages : sur `AttentionWatcher`, il réévaluerait la barre, qui n'a besoin que
   d'`alerting`, à chaque mouvement du Dock. Chaînes recomposées seulement si le relevé change.
-- Le tour sort avant d'interroger le Dock quand aucun perso n'est connecté.
+- Le minuteur ne tourne que s'il y a un perso et que l'action n'est pas « Ignorer »
+  (`AttentionAction.veilleLeDock`) ; désarmé, le détecteur repart de zéro.
 
 ## Appariement — une hypothèse, exposée au Diagnostic
 
