@@ -75,9 +75,13 @@ final class OuTrouverStore: ObservableObject {
         }
     }
 
+    /// Toute la clé de `DernierCalcul`.
     private struct CleRepaires: Equatable {
+        // periphery:ignore - lu par l'Equatable synthétisé, que Periphery ne voit pas
         let fiche: FicheMonstre
+        // periphery:ignore - lu par l'Equatable synthétisé
         let depart: PNJ.Position?
+        // periphery:ignore - lu par l'Equatable synthétisé
         let revision: Int
     }
 
