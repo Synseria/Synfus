@@ -76,7 +76,7 @@ demande (`lireUneFois`, même `capturer` et même `MoteurOCR`).
   objectifs ouverts, tout ordre ; sans lecture et après la coupure → le prochain non coché ou
   celui en cours ; « Vaincre… » : un combat fini sur sa carte, à tout rang sauf si le suivi le
   tait. Une lecture passe par
-  `Preferences.appliquer` (`CochesQuete`, seul chemin) : faits cochés si `quetesCocherSuivi`, jamais
+  `Preferences.appliquer` (`CochesQuete`, seul chemin, la lecture entière en une écriture) : faits cochés si `quetesCocherSuivi`, jamais
   de décoche, jamais un objectif décoché à la main (`quetesDecoches`, oublié quand le suivi le
   remontre ouvert) ; une étape **sûre** (`Lecture.sure`) après celle du panneau l'y fait avancer.
 - Par perso (`lireUneFois` rend le perso lu) : `HistoriqueSuivi` (pur, en mémoire). Persos lus à

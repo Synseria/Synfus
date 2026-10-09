@@ -14,7 +14,8 @@ user-invocable: false
 - Aucune migration depuis les anciens identifiants (`fr.dofusyn.DofuSyn`, `fr.synfus.Synfus`) :
   choix assumé. Le fichier de préférences est nommé d'après le `BUNDLE_ID`.
 - Chaque `@Published` appelle `save()` dans son `didSet` ; `loading` bloque les écritures
-  pendant le chargement.
+  pendant le chargement. Un geste qui change plusieurs réglages (coche, lecture du suivi) passe
+  par `enUneEcriture` : une seule écriture, imbriquée ou non.
 
 ## Ajouter un réglage
 
