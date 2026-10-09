@@ -193,8 +193,10 @@ struct QuetesTests {
 
     @Test("Le jeu en vigueur : une quête par identifiant, les listes des réglages triées, dans sa langue")
     func enVigueur() throws {
-        let enVigueur = QuetesEnVigueur(try Self.quetes(), langue: .en)
-        #expect(enVigueur.quete(19)?.niveau == 80 && enVigueur.quete(20) == nil)
+        var enVigueur = QuetesEnVigueur(try Self.quetes(), langue: .en)
+        let fiche = enVigueur.fiche(18)
+        #expect(fiche?.nom == "Wogew the Hewmit" && fiche == enVigueur.quetes.fiche(18, en: .en))
+        #expect(enVigueur.fiche(18) == fiche && enVigueur.fiche(20) == nil)
         #expect(enVigueur.nom(18) == "Wogew the Hewmit" && enVigueur.nom(19) == "La suite")
         #expect(enVigueur.quetesTriees.map(\.id) == [18, 19])
         #expect(enVigueur.pnjsTries.map { $0.noms["fr"] } == ["Otomaï", "Wogew"])

@@ -24,8 +24,7 @@ final class QuetesStore: ObservableObject {
     var pnjsTries: [PNJ] { enVigueur?.pnjsTries ?? [] }
 
     func fiche(_ id: Int) -> FicheQuete? {
-        guard let enVigueur, let quete = enVigueur.quete(id) else { return nil }
-        return enVigueur.quetes.fiche(quete, en: enVigueur.langue)
+        enVigueur?.fiche(id)
     }
 
     func nom(_ id: Int) -> String? {
