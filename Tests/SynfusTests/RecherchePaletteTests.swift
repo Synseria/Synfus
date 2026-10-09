@@ -63,6 +63,22 @@ struct RecherchePaletteTests {
         #expect(texte.hasPrefix("/zaap -31,-56 ; /travel "))
     }
 
+    @Test("Une ligne de trajet dit le zaap retenu et les cartes, ou les cartes à pied")
+    func itineraire() throws {
+        let bonta = try #require(premiere("/travel banque bonta", contexte()))
+        let texte = try #require(RecherchePalette.texte(de: bonta.effet, contexte()))
+        #expect(texte.hasPrefix("/zaap -31,-56 ; "))
+        let cartes = ItineraireZaap.distance((-31, -56), try #require(ItineraireZaap.cible(dans: String(texte.dropFirst(16)))))
+        #expect(bonta.itineraire == L("palette.trajet.via", nombre: cartes, "Cœur immaculé", cartes))
+        let amakna = try #require(RecherchePalette.lieux(contexte()).first {
+            $0.titre == "Banque" && $0.detail == Coordonnees.texte(2, -2)
+        })
+        #expect(amakna.distance == 6 && amakna.itineraire == L("palette.trajet.aPied", nombre: 6, 6))
+        #expect(RecherchePalette.texte(de: amakna.effet, contexte()) == "/travel 2,-2")
+        // Sans position, ni cartes ni zaap : rien à dire.
+        #expect(premiere("/travel banque bonta", contexte(position: nil))?.itineraire == nil)
+    }
+
     @Test("Les surnoms des joueurs : fm, hdv conso")
     func surnoms() {
         #expect(premiere("/travel fm", contexte())?.titre == "Atelier des forgemages")
