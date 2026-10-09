@@ -94,6 +94,14 @@ enum SynfusMain {
             WindowDump.runCommandLine()
         }
 
+        // Banc de la capture : --banc-captures <nom d'app ou pid> [tours]
+        if let index = CommandLine.arguments.firstIndex(of: "--banc-captures"),
+           index + 1 < CommandLine.arguments.count {
+            let arguments = CommandLine.arguments
+            let tours = index + 2 < arguments.count ? Int(arguments[index + 2]) ?? 30 : 30
+            BancCaptures.runCommandLine(cible: arguments[index + 1], tours: tours)
+        }
+
         // Relevé de la carte intégrée : --exporter-carte Resources/Carte.json
         if let index = CommandLine.arguments.firstIndex(of: "--exporter-carte"),
            index + 1 < CommandLine.arguments.count {

@@ -1,7 +1,6 @@
 import Testing
 import Foundation
 import AppKit
-import ImageIO
 @testable import Synfus
 
 /// Le localisateur sur une **vraie** capture, hors dépôt : le chemin vient de
@@ -28,33 +27,20 @@ struct RealCaptureTests {
         guard ProcessInfo.processInfo.environment["SYNFUS_ZONE_ENTIERE"] == "1" else {
             return try zoneCapturee(Self.zoneImposee ?? parDefaut)
         }
-        let path = (try #require(Self.capturePath) as NSString).expandingTildeInPath
-        let source = try #require(CGImageSourceCreateWithURL(URL(fileURLWithPath: path) as CFURL, nil))
-        return try #require(CGImageSourceCreateImageAtIndex(source, 0, nil))
+        let chemin = try #require(Self.capturePath)
+        return try #require(SimulationCapture.charger(chemin))
     }
 
     /// Ce que fait la capture de la lecture de l'écran, rejoué sur un PNG de
-    /// fenêtre en Retina : la zone prise dans le contenu (sans barre de titre,
-    /// sauf `SYNFUS_PLEIN_ECRAN=1`), ramenée à la hauteur de référence.
+    /// fenêtre en Retina (`SimulationCapture`), sans barre de titre sauf
+    /// `SYNFUS_PLEIN_ECRAN=1`.
     private func zoneCapturee(_ zone: ZoneEcran) throws -> CGImage {
-        let path = (try #require(Self.capturePath) as NSString).expandingTildeInPath
-        let source = try #require(CGImageSourceCreateWithURL(URL(fileURLWithPath: path) as CFURL, nil))
-        let pleine = try #require(CGImageSourceCreateImageAtIndex(source, 0, nil))
+        let chemin = try #require(Self.capturePath)
+        let pleine = try #require(SimulationCapture.charger(chemin))
         let pleinEcran = ProcessInfo.processInfo.environment["SYNFUS_PLEIN_ECRAN"] == "1"
-        let points = CGSize(width: CGFloat(pleine.width) / 2, height: CGFloat(pleine.height) / 2)
-        let contenu = ZoneEcran.contenu(fenetre: points, barreTitre: 28, pleinEcran: pleinEcran)
-        let rect = ZoneEcran.source(zone.rect, contenu: contenu)
-        let pixels = CGRect(x: rect.minX * 2, y: rect.minY * 2, width: rect.width * 2, height: rect.height * 2).integral
-        let coin = try #require(pleine.cropping(to: pixels))
-        let echelle = ZoneEcran.echelle(hauteurContenu: contenu.height, plafond: 2)
-        let (w, h) = (Int(rect.width * echelle), Int(rect.height * echelle))
-        let contexte = try #require(CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,
-                                              space: CGColorSpaceCreateDeviceRGB(),
-                                              bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
-        contexte.interpolationQuality = .high
-        contexte.draw(coin, in: CGRect(x: 0, y: 0, width: w, height: h))
-        Sortie.dire("zone \(w) × \(h) px")
-        return try #require(contexte.makeImage())
+        let image = try #require(SimulationCapture.zone(zone, dans: pleine, pleinEcran: pleinEcran))
+        Sortie.dire("zone \(image.width) × \(image.height) px")
+        return image
     }
 
     @Test("La position est lue sur la capture fournie", .enabled(if: capturePath != nil))
