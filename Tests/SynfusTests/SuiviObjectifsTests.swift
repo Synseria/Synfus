@@ -132,20 +132,39 @@ struct SuiviObjectifsTests {
         let ymagiroh = "Aller voir Commandant Ymagiroh"
         // Tronquée, la liste ne tait rien après son dernier objectif montré.
         func taits(_ entiere: [Int], _ coupee: [Int]) -> [Int] { tronque ? coupee : entiere }
-        // Seul, il peut être le premier : rien n'est fait.
-        #expect(lu([ymagiroh]) == .init(id: 900, etape: nil, aFaire: [1], faits: [], nonMontres: taits([2, 3, 4, 5], [])))
-        // Avant « Vaincre » : le premier ou le deuxième, le plus tôt l'emporte.
+        // Seul, il peut être le premier : rien n'est fait. Ou le dernier :
+        // rien n'est sûrement tu.
+        #expect(lu([ymagiroh]) == .init(id: 900, etape: nil, aFaire: [1], faits: []))
+        // Avant « Vaincre » : le premier ou le deuxième, le plus tôt l'emporte ;
+        // seul le dernier est sûrement tu.
         #expect(lu([ymagiroh, "Vaincre x1 Directeur Grunob en un seul combat"])
-                == .init(id: 900, etape: nil, aFaire: [1, 4], faits: [], nonMontres: taits([2, 3, 5], [2, 3])))
+                == .init(id: 900, etape: nil, aFaire: [1, 4], faits: [], nonMontres: taits([5], [])))
         // Après « Ramener » : le deuxième ou le troisième, et ce qui précède « Ramener » est fait.
         #expect(lu(["Ramener à Commandant Ymagiroh : x1 Pensée perdue", ymagiroh])
-                == .init(id: 900, etape: nil, aFaire: [2, 3], faits: [1], nonMontres: taits([4, 5], [])))
+                == .init(id: 900, etape: nil, aFaire: [2, 3], faits: [1], nonMontres: taits([4], [])))
         // Après « Vaincre » : forcément le dernier.
         #expect(lu(["Vaincre x1 Directeur Grunob en un seul combat", ymagiroh])
                 == .init(id: 900, etape: nil, aFaire: [4, 5], faits: [1, 2, 3]))
-        // Deux fois : les deux premiers.
+        // Deux fois : les deux premiers, ou n'importe quels deux — seul le
+        // « Vaincre » est sûrement tu.
         #expect(lu([ymagiroh, ymagiroh])
-                == .init(id: 900, etape: nil, aFaire: [1, 3], faits: [], nonMontres: taits([2, 4, 5], [2])))
+                == .init(id: 900, etape: nil, aFaire: [1, 3], faits: [], nonMontres: taits([4], [])))
+    }
+
+    @Test("Une suite d'objectifs répétée plus loin dans l'étape : rien n'en est tu ni fait")
+    func suiteRepetee() {
+        let jeu = SuiviQuetes.Index(Quetes(format: Quetes.formatActuel, date: .now, quetes: [
+            Self.quete(905, "La pêche", [[
+                Self.objectif(71, "Aller voir Mage Ax"), Self.objectif(72, "Escorter Mage Ax jusqu'à Sufokia"),
+                Self.objectif(73, "Aller voir Greu Nouille"),
+                Self.objectif(74, "Aller voir Mage Ax"), Self.objectif(75, "Escorter Mage Ax jusqu'à Sufokia"),
+            ]]),
+        ], pnjs: [], objets: [:], monstres: [:], nomsPNJ: [:], sousZones: [:], famillesObjets: [:], familles: [:],
+        emotes: [:], titres: [:], metiers: [:], camps: [:]))
+        // Les deux premiers, ou les deux derniers : « Aller voir Greu Nouille »
+        // n'est pas sûrement tu.
+        let lu = SuiviQuetes.reconnaitre(["La pêche", "Aller voir Mage Ax", "Escorter Mage Ax jusqu'à Sufokia"], dans: jeu)
+        #expect(lu.reconnues == [.init(id: 905, etape: nil, aFaire: [71, 72], faits: [])])
     }
 
     @Test("Une ligne non reconnue avant le premier objectif empêche de conclure, après non")
@@ -178,6 +197,29 @@ struct SuiviObjectifsTests {
         #expect(reconnues == [.init(id: 902, etape: 1, etapeSure: false, aFaire: [32, 33], faits: [31])])
     }
 
+    @Test("Une quantité qu'une faute changerait ne prouve ni les objectifs d'avant ni l'étape")
+    func quantites() {
+        let jeu = SuiviQuetes.Index(Quetes(format: Quetes.formatActuel, date: .now, quetes: [
+            Self.quete(903, "Le marchand", [
+                [Self.objectif(41, "Ramener à Danathor : x3 Pensée perdue"), Self.objectif(42, "Aller voir Mage Ax"),
+                 Self.objectif(43, "Ramener à Danathor : x5 Pensée perdue")],
+                [Self.objectif(51, "Ramener à Danathor : x8 Pensée perdue")],
+            ]),
+        ], pnjs: [], objets: [:], monstres: [:], nomsPNJ: [:], sousZones: [:], famillesObjets: [:], familles: [:],
+        emotes: [:], titres: [:], metiers: [:], camps: [:]))
+        func lu(_ lignes: [String]) -> [SuiviQuetes.Reconnue] {
+            SuiviQuetes.reconnaitre(["Le marchand"] + lignes, dans: jeu).reconnues
+        }
+        // « x5 » se lit à une faute de « x3 » et de « x8 » : ni les deux premiers
+        // faits, ni l'étape établie.
+        #expect(lu(["Ramener à Danathor : x5 Pensée perdue"]) == [.init(id: 903, etape: 0, aFaire: [43], faits: [])])
+        #expect(lu(["Ramener à Danathor : x3 Pensée perdue"]) == [.init(id: 903, etape: 0, aFaire: [41], faits: [])])
+        // Après « Aller voir », « x5 » ne peut être « x3 » : l'ordre de l'étape
+        // le place, et la ligne que la seconde étape n'explique pas l'établit.
+        #expect(lu(["Aller voir Mage Ax", "Ramener à Danathor : x5 Pensée perdue"])
+                == [.init(id: 903, etape: 0, etapeSure: true, aFaire: [42, 43], faits: [41])])
+    }
+
     @Test("Deux étapes qui se lisent aussi bien : ni étape ni objectif")
     func etapeIncertaine() {
         #expect(lu(["Les jumelles", "Aller voir Commandant Ymagiroh"]) == [.init(id: 901, etape: nil)])
@@ -186,7 +228,7 @@ struct SuiviObjectifsTests {
     @Test("Deux objectifs voisins ne se fondent pas en un")
     func voisins() {
         #expect(lu(["Le commandant", "Ramener à Commandant Ymagiroh : x1 Pensée perdue", "Aller voir Commandant Ymagiroh"])
-                == [.init(id: 900, etape: nil, aFaire: [2, 3], faits: [1], nonMontres: [4, 5])])
+                == [.init(id: 900, etape: nil, aFaire: [2, 3], faits: [1], nonMontres: [4])])
     }
 
     @Test("Le texte au bas de la zone : la dernière quête lue ne tait rien après son dernier objectif")

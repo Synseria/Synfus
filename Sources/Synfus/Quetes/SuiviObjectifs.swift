@@ -15,8 +15,8 @@ import Foundation
 enum SuiviObjectifs {
     struct Lecture: Equatable, Sendable {
         let etape: Int
-        /// Aucune autre étape ne lit mieux une seule ligne : l'étape est
-        /// établie, le panneau peut y avancer.
+        /// Aucune autre étape ne lit mieux une seule ligne, ni aussi bien à une
+        /// faute près : l'étape est établie, le panneau peut y avancer.
         let sure: Bool
         let aFaire: [Int]
         let faits: [Int]
@@ -35,6 +35,9 @@ enum SuiviObjectifs {
     static let caracteresParFaute = 5
     /// En deçà, une ligne n'est que du bruit (icône, « 0/1 »).
     static let lettresMinimum = 3
+    /// Ce qu'une faute d'OCR peut déplacer : deux objectifs, deux étapes qui
+    /// ne se lisent pas plus différemment ne s'excluent pas (« x3 » et « x5 »).
+    static let marge = 1
     /// La ligne qui coupe la liste, dans les langues du jeu.
     static let troncatures = ["voir plus", "see more", "show more", "ver mas", "mostrar mas"]
 
@@ -61,9 +64,8 @@ enum SuiviObjectifs {
         let etape = quete.etapes[rang]
         let affectes = parEtape[rang].sorted { $0.debut < $1.debut }
         let aFaire = affectes.map { etape.objectifs[$0.objectif].id }
-        let couts = Self.couts(parEtape[rang], lignes: lues.count)
         let sure = parEtape.indices.allSatisfy { autre in
-            autre == rang || zip(couts, Self.couts(parEtape[autre], lignes: lues.count)).allSatisfy { $0 <= $1 }
+            autre == rang || distincte(parEtape[rang], de: parEtape[autre], lignes: lues.count)
         }
         // L'écran doit suivre l'ordre de l'étape, sur quoi repose la déduction,
         // et le premier objectif montré être la première ligne : une ligne
@@ -73,23 +75,43 @@ enum SuiviObjectifs {
             return Lecture(etape: rang, sure: sure, aFaire: aFaire, faits: [], nonMontres: [])
         }
         let avant = sure ? quete.etapes[..<rang].flatMap { $0.objectifs.map(\.id) } : []
+        // Le premier objectif montré peut tenir plusieurs rangs (`places`) :
+        // seul ce qui précède le plus tôt est fait.
+        let places = Self.places(affectes)
+        let fait = places[0].first ?? premier.objectif
         // Ce que l'écran tait après le premier objectif montré n'est pas
         // ouvert — ou fait hors de l'ordre —, jusqu'à la coupure ; au-delà,
-        // rien n'est su. Une ligne incomprise pourrait être l'un d'eux.
+        // rien n'est su. Une ligne incomprise pourrait être l'un d'eux, et ce
+        // qu'un objectif montré peut être ne l'est pas ; ce qui précède le
+        // plus tard du premier est peut-être fait.
         var nonMontres: [Int] = []
-        if couts.allSatisfy(\.isFinite) {
-            let dernier = coupee || lues.count < lignes.count ? rangs.last ?? premier.objectif : etape.objectifs.count - 1
-            nonMontres = (premier.objectif...dernier).filter { !rangs.contains($0) }.map { etape.objectifs[$0].id }
+        if affectes.reduce(0, { $0 + $1.fin - $1.debut }) == lues.count {
+            let montrables = Set(places.joined())
+            let debut = places[0].last ?? premier.objectif
+            let dernier = coupee || lues.count < lignes.count ? places[places.count - 1].first ?? premier.objectif
+                : etape.objectifs.count - 1
+            if debut <= dernier {
+                nonMontres = (debut...dernier).filter { !montrables.contains($0) }.map { etape.objectifs[$0].id }
+            }
         }
         return Lecture(etape: rang, sure: sure, aFaire: aFaire,
-                       faits: avant + etape.objectifs[..<premier.objectif].map(\.id), nonMontres: nonMontres)
+                       faits: avant + etape.objectifs[..<fait].map(\.id), nonMontres: nonMontres)
+    }
+
+    /// L'étape lue se distingue-t-elle de l'autre ? Aucune ligne ne se lit
+    /// mieux dans l'autre — un texte répété d'étape en étape (« Retourner
+    /// voir Maître des clefs ») ne la désigne pas, mais ne la dément pas non
+    /// plus —, et l'autre laisse une ligne inexpliquée ou y fait plus de
+    /// `marge` fautes de plus : une faute d'OCR ne la ferait pas lire.
+    private static func distincte(_ lue: [Affectation], de autre: [Affectation], lignes: Int) -> Bool {
+        guard zip(couts(lue, lignes: lignes), couts(autre, lignes: lignes)).allSatisfy({ $0 <= $1 }) else { return false }
+        func couvertes(_ affectes: [Affectation]) -> Int { affectes.reduce(0) { $0 + $1.fin - $1.debut } }
+        func fautes(_ affectes: [Affectation]) -> Int { affectes.reduce(0) { $0 + $1.cout } }
+        return couvertes(autre) < couvertes(lue) || fautes(autre) - fautes(lue) > marge
     }
 
     /// Ce que coûte chaque ligne lue, par caractère, dans l'affectation d'une
-    /// étape ; une ligne qu'elle n'explique pas coûte l'infini. L'étape est
-    /// sûre quand aucune autre ne lit mieux une seule ligne : un texte
-    /// répété d'étape en étape (« Retourner voir Maître des clefs ») ne la
-    /// désigne pas, mais ne la dément pas non plus.
+    /// étape ; une ligne qu'elle n'explique pas coûte l'infini.
     private static func couts(_ affectes: [Affectation], lignes: Int) -> [Double] {
         var couts = [Double](repeating: .infinity, count: lignes)
         for affectation in affectes {
@@ -126,6 +148,10 @@ enum SuiviObjectifs {
         /// Les caractères de l'objectif que la fenêtre explique : le score de
         /// l'étape.
         var explique: Int { longueur - cout }
+        /// Les objectifs que la fenêtre lit à `marge` fautes près, le sien
+        /// compris, dans l'ordre de l'étape : une faute d'OCR, ou un doublon,
+        /// et ce pourrait être l'un d'eux.
+        var possibles: [Int] = []
     }
 
     private static func fenetres(_ lignes: [String]) -> [Fenetre] {
@@ -141,7 +167,8 @@ enum SuiviObjectifs {
     /// Une ligne ↔ un objectif au plus, le mieux lu d'abord. À lecture égale
     /// — le même texte à plusieurs rangs (« Aller voir Jykel » deux fois) —
     /// le rang qui garde l'écran dans l'ordre de l'étape, puis le plus tôt :
-    /// il laisse le moins d'objectifs passer pour faits.
+    /// il laisse le moins d'objectifs passer pour faits. Ce qui s'y lirait
+    /// presque aussi bien reste possible.
     private static func affecter(_ fenetres: [Fenetre], objectifs: [Ressemblance.Forme]) -> [Affectation] {
         var candidats: [Affectation] = []
         for fenetre in fenetres {
@@ -152,6 +179,7 @@ enum SuiviObjectifs {
                 }
             }
         }
+        let tous = candidats
         var retenues: [Affectation] = []
         while !candidats.isEmpty {
             let choix = candidats.min { a, b in
@@ -165,7 +193,31 @@ enum SuiviObjectifs {
             retenues.append(choix)
             candidats.removeAll { $0.objectif == choix.objectif || ($0.debut < choix.fin && choix.debut < $0.fin) }
         }
-        return retenues
+        return retenues.map { retenue in
+            var possible = retenue
+            possible.possibles = Set(tous.filter { $0.debut == retenue.debut && $0.cout <= retenue.cout + marge }
+                .map(\.objectif)).union([retenue.objectif]).sorted()
+            return possible
+        }
+    }
+
+    /// Les rangs que chaque objectif montré peut tenir, dans l'ordre de
+    /// l'écran (`affectes`, rangés) : après le plus tôt que permettent ceux
+    /// d'avant, avant le plus tard que permettent ceux d'après. « Aller
+    /// voir Pollie », « Escorter Pollie » à plusieurs rangs : toute la suite
+    /// peut glisser ensemble.
+    private static func places(_ affectes: [Affectation]) -> [[Int]] {
+        var plusTot: [Int] = []
+        for affectation in affectes {
+            plusTot.append(affectation.possibles.first { $0 > plusTot.last ?? -1 } ?? affectation.objectif)
+        }
+        var plusTard = [Int](repeating: .max, count: affectes.count + 1)
+        for rang in affectes.indices.reversed() {
+            plusTard[rang] = affectes[rang].possibles.last { $0 < plusTard[rang + 1] } ?? affectes[rang].objectif
+        }
+        return affectes.indices.map { rang in
+            affectes[rang].possibles.filter { (rang == 0 || $0 > plusTot[rang - 1]) && $0 < plusTard[rang + 1] }
+        }
     }
 
     /// Placée là, l'affectation garde-t-elle l'ordre de l'écran dans l'étape ?
