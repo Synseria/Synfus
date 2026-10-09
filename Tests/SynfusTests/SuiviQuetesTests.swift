@@ -69,6 +69,21 @@ struct SuiviQuetesTests {
         #expect(SuiviQuetes.reconnaitre(lignes, dans: Self.jeu).reconnues.map(\.id) == [1])
     }
 
+    @Test("La fin d'un objectif replié n'est pas le titre court d'une autre quête")
+    func finDObjectif() {
+        let jeu = SuiviQuetes.Index(Self.quetes([
+            Self.quete(10, ["fr": "Qui a la plus grosse ?"], etapes: [[
+                Self.objectif(101, "Aller voir Assistant de Deks"),
+                Self.objectif(102, "Ramener à Assistant de Deks : x1 Caisse de pièces de rechange"),
+            ]]),
+            Self.quete(11, ["fr": "Chargez !", "en": "Charge!"]),
+        ]))
+        let lu = SuiviQuetes.reconnaitre(["Qui a la plus grosse ?", "Ramener à Assistant de Deks : x1 Caisse de pièces",
+                                          "de rechange"], dans: jeu)
+        #expect(lu.reconnues == [.init(id: 10, etape: nil, aFaire: [102], faits: [101])])
+        #expect(SuiviQuetes.reconnaitre(["Charge! 8"], dans: jeu).reconnues.map(\.id) == [11])
+    }
+
     @Test("Le titre dans une autre langue que celle de l'interface")
     func langue() {
         #expect(SuiviQuetes.reconnaitre(["Reminder"], dans: Self.jeu).reconnues.map(\.id) == [1])

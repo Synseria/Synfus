@@ -9,8 +9,8 @@ import Foundation
 /// Vision écorche plus que le reste, suivi d'icônes (groupe, donjon) lues
 /// parfois comme des lettres — puis ses objectifs, une épingle devant, souvent
 /// sur deux lignes. Une ligne de titre **est** un nom de quête à quelques
-/// fautes près, elle ne fait pas que le contenir : sans quoi un objectif qui
-/// cite une quête passerait pour elle.
+/// fautes près, qui l'ouvre, elle ne fait pas que le contenir : sans quoi un
+/// objectif qui cite une quête passerait pour elle.
 enum SuiviQuetes {
     struct Reconnue: Equatable, Sendable {
         let id: Int
@@ -150,7 +150,7 @@ enum SuiviQuetes {
             let ecart = tolerance == 0
                 ? (texte.scalaires.starts(with: candidat.forme.scalaires)
                     && (texte.longueur == longueur || texte.scalaires[longueur] == 32) ? 0 : 1)
-                : Ressemblance.distanceDansTexte(candidat.forme, texte, auPlus: borne)
+                : Ressemblance.distanceAuDebut(candidat.forme, texte, auPlus: borne)
             guard let ecart, ecart <= tolerance else { continue }
             if let actuel = meilleur,
                (actuel.ecart, -actuel.nom.forme.longueur) <= (ecart, -longueur) { continue }
