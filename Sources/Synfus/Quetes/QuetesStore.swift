@@ -38,10 +38,14 @@ final class QuetesStore: ObservableObject {
         lues = true
         let langue = L10n.courante.langue
         preparation = Task {
-            if lire, let gardees = await Task.detached(priority: .userInitiated, operation: {
-                QuetesDofusDB.gardees().map { QuetesEnVigueur($0, langue: langue) }
-            }).value {
-                publier(gardees)
+            if lire {
+                // Le panneau et la palette disent « chargement », pas « aucune ».
+                chargement = true
+                let gardees = await Task.detached(priority: .userInitiated) {
+                    QuetesDofusDB.gardees().map { QuetesEnVigueur($0, langue: langue) }
+                }.value
+                chargement = false
+                if let gardees { publier(gardees) }
             }
             if DofusDB.perimee(depuis: quetes?.date, maintenant: Date()) { try? await mettreAJour() }
             preparation = nil
