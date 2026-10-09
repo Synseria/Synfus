@@ -140,15 +140,18 @@ enum SuiviQuetes {
         for candidat in noms {
             let longueur = candidat.forme.longueur
             let tolerance = longueur < longueurFloue ? 0 : longueur / 4
+            // Plus loin que le meilleur nom trouvé, un nom ne l'emporte pas :
+            // la distance s'arrête là (chaque ligne lue contre six mille noms).
+            let borne = min(tolerance, meilleur?.ecart ?? tolerance)
             guard texte.longueur <= longueur + tolerance + surplusTitre,
                   longueur <= texte.longueur + tolerance,
-                  !candidat.forme.tropLoin(de: texte, tolerance: tolerance)
+                  !candidat.forme.tropLoin(de: texte, tolerance: borne)
             else { continue }
             let ecart = tolerance == 0
                 ? (texte.scalaires.starts(with: candidat.forme.scalaires)
                     && (texte.longueur == longueur || texte.scalaires[longueur] == 32) ? 0 : 1)
-                : Ressemblance.distanceDansTexte(candidat.forme, texte)
-            guard ecart <= tolerance else { continue }
+                : Ressemblance.distanceDansTexte(candidat.forme, texte, auPlus: borne)
+            guard let ecart, ecart <= tolerance else { continue }
             if let actuel = meilleur,
                (actuel.ecart, -actuel.nom.forme.longueur) <= (ecart, -longueur) { continue }
             meilleur = (candidat, ecart)

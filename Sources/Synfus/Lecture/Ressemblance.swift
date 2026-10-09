@@ -25,12 +25,16 @@ enum Ressemblance {
         let scalaires: [UInt32]
         /// Combien de chaque lettre (a-z), chiffre, espace, autre.
         private let compte: [Int]
+        private let paires: Paires
 
         init(_ normalise: String) {
             scalaires = normalise.unicodeScalars.map(\.value)
             var compte = [Int](repeating: 0, count: Self.cases)
             for valeur in scalaires { compte[Self.casier(valeur)] += 1 }
             self.compte = compte
+            var paires = Paires()
+            for (gauche, droite) in zip(scalaires, scalaires.dropFirst()) { paires.inserer(gauche, droite) }
+            self.paires = paires
         }
 
         var longueur: Int { scalaires.count }
@@ -47,15 +51,40 @@ enum Ressemblance {
         }
 
         /// `distanceDansTexte(self, texte)` dépasse-t-elle sûrement
-        /// `tolerance` ? Chaque caractère du motif absent du texte coûte au
-        /// moins une édition.
+        /// `tolerance` ? Une édition brise au plus deux paires de caractères
+        /// voisins du motif (lemme des q-grammes), et chaque caractère du
+        /// motif absent du texte coûte au moins une édition.
         func tropLoin(de texte: Forme, tolerance: Int) -> Bool {
+            if paires.absentes(de: texte.paires) > 2 * tolerance { return true }
             var manque = 0
             for indice in 0..<Self.cases where compte[indice] > texte.compte[indice] {
                 manque += compte[indice] - texte.compte[indice]
                 if manque > tolerance { return true }
             }
             return false
+        }
+    }
+
+    /// Des paires de caractères voisins, hachées sur 256 bits : une paire
+    /// dont le bit manque à l'autre texte n'y est pas. Quatre mots comparés
+    /// écartent l'essentiel des six mille noms qu'une ligne lue ne porte pas.
+    private struct Paires: Sendable {
+        private var bits: (UInt64, UInt64, UInt64, UInt64) = (0, 0, 0, 0)
+
+        mutating func inserer(_ gauche: UInt32, _ droite: UInt32) {
+            let rang = Int((gauche &* 31 &+ droite) & 255)
+            let bit = UInt64(1) << UInt64(rang & 63)
+            switch rang >> 6 {
+            case 0: bits.0 |= bit
+            case 1: bits.1 |= bit
+            case 2: bits.2 |= bit
+            default: bits.3 |= bit
+            }
+        }
+
+        func absentes(de autre: Paires) -> Int {
+            (bits.0 & ~autre.bits.0).nonzeroBitCount + (bits.1 & ~autre.bits.1).nonzeroBitCount
+                + (bits.2 & ~autre.bits.2).nonzeroBitCount + (bits.3 & ~autre.bits.3).nonzeroBitCount
         }
     }
 
