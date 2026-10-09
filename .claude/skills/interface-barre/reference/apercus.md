@@ -11,6 +11,8 @@
   des deux côtés — sont écartés
   (info-bulles et panneaux hors écran du même processus). Deux vraies fenêtres de jeu dans un
   processus : on renonce — mieux vaut aucun aperçu que celui du mauvais perso.
+- Géométrie d'une capture (source en points, taille en pixels) : `GeometrieCapture`, seul calcul,
+  partagé par le moteur, la lecture de l'écran et `--banc-captures`.
 - `PreviewCaptureEngine` (actor) garde l'inventaire `SCShareableContent`, bien plus coûteux que
   la capture, **sans âge** : il sert tant qu'il trouve la fenêtre et que le serveur de fenêtres
   la connaît encore (`WindowPreviewService.cible`, `CGWindowListCreateDescriptionFromArray` par

@@ -7,7 +7,9 @@ user-invocable: false
 # Détection d'attention
 
 Aucune API publique ne dit qu'une *autre* app réclame l'attention : `AttentionWatcher`
-observe la géométrie AX des icônes du Dock (`DockInspector`), dix fois par seconde.
+observe la géométrie AX des icônes du Dock (`DockInspector`), cinq fois par seconde au calme, dix
+dès qu'une icône est montée sans conclure (`BounceDetector.suspect`, `cadence`) — un saut reste
+~0,4 s au-dessus du seuil, deux relevés à 5 Hz.
 
 ## Décision — `Sources/Synfus/Attention/BounceDetector.swift`
 
@@ -15,6 +17,8 @@ observe la géométrie AX des icônes du Dock (`DockInspector`), dix fois par se
   `certaintyRatio` ; mesure de l'**écart icône ↔ bandeau**, pas de la position à l'écran)
   sont expliquées en tête du fichier. `BounceDetectorTests` rejoue des relevés réels —
   toute retouche d'un seuil passe par eux.
+- Le détecteur compte en **secondes** (`ingest(_:at:)`, horloge monotone, vol expiré à 1,5 s),
+  jamais en tours : la cadence change en route.
 - En masquage automatique, les icônes reposent **sous** le bord de l'écran : une position de
   repos n'a pas à tenir dans l'écran.
 - Le survol est écarté par `mouseInDock`, sur le **bandeau entier** : un Dock masqué se

@@ -33,6 +33,9 @@ liée à l'identité signée, celui de `.build/` ne l'a pas :
 ```sh
 /Applications/Synfus.app/Contents/MacOS/Synfus --dump-dock dofus 30   # attributs AX du Dock
 /Applications/Synfus.app/Contents/MacOS/Synfus --dump-windows         # fenêtres AX des clients
+# Coût capture par zone / entière, relevé dans $TMPDIR/synfus-banc-captures.txt. Par `open` :
+# l'autorisation d'enregistrer l'écran est celle du processus responsable, pas du terminal.
+open -n -W -a /Applications/Synfus.app --args --banc-captures Code 30
 SYNFUS_CAPTURE=~/Library/Logs/Synfus/captures/x.png sh test.sh RealCapture   # OCR sur une capture
 ```
 
