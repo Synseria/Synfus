@@ -84,6 +84,23 @@ struct SuiviQuetesTests {
         #expect(SuiviQuetes.reconnaitre(["Charge! 8"], dans: jeu).reconnues.map(\.id) == [11])
     }
 
+    @Test("Un objectif replié qui finit par le nom d'une quête : sa fin, pas un titre ; après un objectif entier, un titre")
+    func finEnNomDeQuete() {
+        let jeu = SuiviQuetes.Index(Self.quetes([
+            Self.quete(12, ["fr": "Le marché"], etapes: [[
+                Self.objectif(121, "Aller voir Meuh Sieurchance"),
+                Self.objectif(122, "Parler au marchand du village pour récupérer l'équipement"),
+            ]]),
+            Self.quete(13, ["fr": "L'équipe ment"]),
+        ]))
+        let replie = SuiviQuetes.reconnaitre(["Le marché", "Parler au marchand du village pour récupérer",
+                                              "l'équipement"], dans: jeu)
+        #expect(replie.reconnues == [.init(id: 12, etape: nil, aFaire: [122], faits: [121])])
+        let entier = SuiviQuetes.reconnaitre(["Le marché", "Parler au marchand du village pour récupérer l'équipement",
+                                              "L'équipe ment"], dans: jeu)
+        #expect(entier.reconnues.map(\.id) == [12, 13])
+    }
+
     @Test("Le titre dans une autre langue que celle de l'interface")
     func langue() {
         #expect(SuiviQuetes.reconnaitre(["Reminder"], dans: Self.jeu).reconnues.map(\.id) == [1])
@@ -149,6 +166,23 @@ struct SuiviQuetesTests {
         let voisins = SuiviQuetes.Index(Self.quetes([offrande(30, "Bii"), offrande(32, "Bix")]))
         #expect(SuiviQuetes.reconnaitre(["Offrande à Bii", "Prier devant l'autel de l'automne"], dans: voisins).reconnues
                 == [.init(id: 30, etape: nil, aFaire: [301])])
+    }
+
+    @Test("Un objectif qui porte le nom d'une autre quête n'en est le titre que si elle explique la suite")
+    func objectifNommeCommeUneQuete() {
+        let jeu = SuiviQuetes.Index(Self.quetes([
+            Self.quete(14, ["fr": "Une affaire de gaz"], etapes: [[
+                Self.objectif(141, "Aller voir Meuh Sieurchance"), Self.objectif(142, "Lâcher les gaz"),
+                Self.objectif(143, "Retourner voir Meuh Sieurchance"),
+            ]]),
+            Self.quete(15, ["fr": "Lâcher les gaz"], etapes: [[Self.objectif(151, "Aller voir Assistante d'Otomaï")]]),
+        ]))
+        let objectif = SuiviQuetes.reconnaitre(["Une affaire de gaz", "Lâcher les gaz", "Retourner voir Meuh Sieurchance"],
+                                               dans: jeu)
+        #expect(objectif.reconnues == [.init(id: 14, etape: nil, aFaire: [142, 143], faits: [141])])
+        let titre = SuiviQuetes.reconnaitre(["Une affaire de gaz", "Aller voir Meuh Sieurchance", "Lâcher les gaz",
+                                             "Aller voir Assistante d'Otomaï"], dans: jeu)
+        #expect(titre.reconnues.map(\.id) == [14, 15])
     }
 
     @Test("Deux étapes qui citent le même PNJ ne désignent rien")

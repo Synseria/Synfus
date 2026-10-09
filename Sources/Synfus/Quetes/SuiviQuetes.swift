@@ -114,9 +114,9 @@ enum SuiviQuetes {
         var groupes: [Groupe] = []
         var entete = 0
         let textes = lignes.map(Ressemblance.normaliser).filter { !$0.isEmpty }
-        for texte in textes {
+        for (rang, texte) in textes.enumerated() {
             let titres = titres(Ressemblance.Forme(texte), parmi: index.noms)
-            if !titres.isEmpty {
+            if !titres.isEmpty, !estObjectif(textes[rang...], du: groupes.last, plutotQue: titres, dans: index.quetes) {
                 groupes.append(Groupe(titres: titres))
             } else if groupes.isEmpty {
                 entete += 1
@@ -143,6 +143,26 @@ enum SuiviQuetes {
             comptes.append(groupe.objectifs.count)
         }
         return Lu(reconnues: reconnues, lignes: comptes, entete: entete)
+    }
+
+    /// La ligne qui porte un nom de quête, la première de `suite`, est-elle
+    /// un objectif du groupe en cours ? Elle achève un objectif replié
+    /// (« L'équipe ment » sous « … récupérer »), ou en commence un que la
+    /// quête nommée ne prolonge pas : « Lâcher les gaz », objectif d'une
+    /// quête et nom d'une autre, n'en est le titre que si celle-ci explique
+    /// la ligne d'après.
+    private static func estObjectif(_ suite: ArraySlice<String>, du groupe: Groupe?, plutotQue titres: [Titre],
+                                    dans quetes: Quetes) -> Bool {
+        guard let groupe, let ligne = suite.first else { return false }
+        let fenetre = Array(suite.prefix(SuiviObjectifs.lignesParObjectif))
+        let apres = Array(suite.dropFirst().prefix(SuiviObjectifs.lignesParObjectif))
+        func lit(_ lignes: [String], _ nom: Nom) -> Bool {
+            SuiviObjectifs.lit(lignes, quete: nom.quete, langue: nom.langue, dans: quetes)
+        }
+        return groupe.titres.map(\.nom).contains { nom in
+            SuiviObjectifs.prolonge(groupe.objectifs, par: ligne, quete: nom.quete, langue: nom.langue, dans: quetes)
+                || lit(fenetre, nom) && (apres.isEmpty || !titres.contains { lit(apres, $0.nom) })
+        }
     }
 
     /// Ce qu'un groupe désigne : une quête, ou des homonymes que ses
