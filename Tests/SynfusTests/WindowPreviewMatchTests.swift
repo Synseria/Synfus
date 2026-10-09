@@ -98,4 +98,34 @@ struct WindowPreviewMatchTests {
         ]
         #expect(WindowPreviewService.match(pid: 42, title: "Trois", among: candidats) == nil)
     }
+
+    // MARK: - Inventaire gardé
+
+    /// L'inventaire n'a pas d'âge : il sert tant qu'il trouve la fenêtre et que
+    /// le serveur de fenêtres la connaît encore, à la taille qu'il en donne.
+    @Test("Une fenêtre redimensionnée depuis l'inventaire se capture à sa taille actuelle")
+    func tailleActuelle() throws {
+        let candidats = [Candidat(pid: 42, title: "Syn-App - Feca - 3.6.7.7 - Release", windowID: 7)]
+        let cible = try #require(WindowPreviewService.cible(
+            pid: 42, title: "Syn-App - Feca - 3.6.7.7 - Release", among: candidats,
+            tailleActuelle: { $0 == 7 ? CGSize(width: 1920, height: 1080) : nil }))
+        #expect(cible.index == 0)
+        #expect(cible.taille == CGSize(width: 1920, height: 1080))
+    }
+
+    @Test("Une fenêtre fermée depuis l'inventaire le fait refaire")
+    func fenetreFermee() {
+        let candidats = [Candidat(pid: 42, title: "Syn-App - Feca - 3.6.7.7 - Release", windowID: 7)]
+        #expect(WindowPreviewService.cible(
+            pid: 42, title: "Syn-App - Feca - 3.6.7.7 - Release", among: candidats,
+            tailleActuelle: { _ in nil }) == nil)
+    }
+
+    @Test("Un client lancé depuis l'inventaire le fait refaire")
+    func clientLanceDepuis() {
+        let candidats = [Candidat(pid: 42, title: "Syn-App - Feca - 3.6.7.7 - Release", windowID: 7)]
+        #expect(WindowPreviewService.cible(
+            pid: 43, title: "Autre - Iop - 3.6.7.7 - Release", among: candidats,
+            tailleActuelle: { _ in CGSize(width: 1280, height: 720) }) == nil)
+    }
 }
