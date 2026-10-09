@@ -9,8 +9,8 @@ import Foundation
 /// Vision écorche plus que le reste, suivi d'icônes (groupe, donjon) lues
 /// parfois comme des lettres — puis ses objectifs, une épingle devant, souvent
 /// sur deux lignes. Une ligne de titre **est** un nom de quête à quelques
-/// fautes près, elle ne fait pas que le contenir : sans quoi un objectif qui
-/// cite une quête passerait pour elle.
+/// fautes près, qui l'ouvre, elle ne fait pas que le contenir : sans quoi un
+/// objectif qui cite une quête passerait pour elle.
 enum SuiviQuetes {
     struct Reconnue: Equatable, Sendable {
         let id: Int
@@ -95,65 +95,158 @@ enum SuiviQuetes {
         }
     }
 
+    /// Un nom que porte une ligne, et à combien de fautes.
+    private struct Titre {
+        let nom: Nom
+        let ecart: Int
+    }
+
+    /// Une ligne de titre et les lignes lues dessous.
+    private struct Groupe {
+        /// Les noms que la ligne porte, le plus près d'abord (`titres`).
+        let titres: [Titre]
+        var objectifs: [String] = []
+    }
+
     /// `coupe` : le texte lu touche le bas de la zone (`SignatureZone.auBord`),
     /// les objectifs de la dernière quête lue peuvent continuer dessous.
     static func reconnaitre(_ lignes: [String], coupe: Bool = false, dans index: Index) -> Lu {
-        let noms = index.noms, quetes = index.quetes
-        var groupes: [(titre: Nom, objectifs: [String])] = []
+        var groupes: [Groupe] = []
         var entete = 0
-        // `nil` : les lignes lues n'appartiennent à aucune quête retenue —
-        // l'en-tête du suivi, ou une quête vue deux fois ou au-delà de la limite.
-        var courant: Int?
-        for ligne in lignes {
-            let texte = Ressemblance.normaliser(ligne)
-            guard !texte.isEmpty else { continue }
-            if let titre = titre(Ressemblance.Forme(texte), parmi: noms) {
-                if groupes.count < limite, !groupes.contains(where: { $0.titre.quete.id == titre.quete.id }) {
-                    groupes.append((titre, []))
-                    courant = groupes.count - 1
-                } else {
-                    courant = nil
-                }
-            } else if let courant {
-                groupes[courant].objectifs.append(texte)
+        let textes = lignes.map(Ressemblance.normaliser).filter { !$0.isEmpty }
+        for (rang, texte) in textes.enumerated() {
+            let titres = titres(Ressemblance.Forme(texte), parmi: index.noms)
+            if !titres.isEmpty, !estObjectif(textes[rang...], du: groupes.last, plutotQue: titres, dans: index.quetes) {
+                groupes.append(Groupe(titres: titres))
             } else if groupes.isEmpty {
                 entete += 1
+            } else {
+                groupes[groupes.count - 1].objectifs.append(texte)
             }
         }
-        let reconnues = groupes.enumerated().map { rang, groupe in
-            let quete = groupe.titre.quete, langue = groupe.titre.langue
-            if let lue = SuiviObjectifs.lire(groupe.objectifs, coupee: coupe && rang == groupes.count - 1,
-                                             quete: quete, langue: langue, dans: quetes) {
-                return Reconnue(id: quete.id, etape: quete.etapes.count > 1 ? lue.etape : nil, etapeSure: lue.sure,
-                                aFaire: lue.aFaire, faits: lue.faits, nonMontres: lue.nonMontres)
-            }
-            return Reconnue(id: quete.id, etape: etapeParRenvois(quete, langue: langue, objectifs: groupe.objectifs,
-                                                                 dans: quetes))
+        let designees = groupes.enumerated().map { rang, groupe in
+            designer(groupe, coupee: coupe && rang == groupes.count - 1, dans: index.quetes)
         }
-        return Lu(reconnues: reconnues, lignes: groupes.map(\.objectifs.count), entete: entete)
+        // Des homonymes indistincts prennent ce que les autres groupes
+        // laissent. Une quête vue deux fois, ou au-delà de la limite : ses
+        // lignes ne sont à personne.
+        let designes = Set(designees.compactMap { if case .quete(let reconnue) = $0 { reconnue.id } else { nil } })
+        var reconnues: [Reconnue] = [], comptes: [Int] = []
+        for (groupe, designee) in zip(groupes, designees) where reconnues.count < limite {
+            let libre = { (id: Int) in !reconnues.contains { $0.id == id } }
+            let reconnue: Reconnue? = switch designee {
+            case .quete(let reconnue): libre(reconnue.id) ? reconnue : nil
+            case .homonymes(let ids): ids.first { libre($0) && !designes.contains($0) }.map { Reconnue(id: $0, etape: nil) }
+            }
+            guard let reconnue else { continue }
+            reconnues.append(reconnue)
+            comptes.append(groupe.objectifs.count)
+        }
+        return Lu(reconnues: reconnues, lignes: comptes, entete: entete)
     }
 
-    /// Le nom que la ligne porte, au plus près ; à écart égal, le plus long
-    /// (« La voie du guerrier » plutôt que « La voie »).
-    private static func titre(_ texte: Ressemblance.Forme, parmi noms: [Nom]) -> Nom? {
-        var meilleur: (nom: Nom, ecart: Int)?
+    /// La ligne qui porte un nom de quête, la première de `suite`, est-elle
+    /// un objectif du groupe en cours ? Elle achève un objectif replié
+    /// (« L'équipe ment » sous « … récupérer »), ou en commence un que la
+    /// quête nommée ne prolonge pas : « Lâcher les gaz », objectif d'une
+    /// quête et nom d'une autre, n'en est le titre que si celle-ci explique
+    /// la ligne d'après.
+    private static func estObjectif(_ suite: ArraySlice<String>, du groupe: Groupe?, plutotQue titres: [Titre],
+                                    dans quetes: Quetes) -> Bool {
+        guard let groupe, let ligne = suite.first else { return false }
+        let fenetre = Array(suite.prefix(SuiviObjectifs.lignesParObjectif))
+        let apres = Array(suite.dropFirst().prefix(SuiviObjectifs.lignesParObjectif))
+        func lit(_ lignes: [String], _ nom: Nom) -> Bool {
+            SuiviObjectifs.lit(lignes, quete: nom.quete, langue: nom.langue, dans: quetes)
+        }
+        return groupe.titres.map(\.nom).contains { nom in
+            SuiviObjectifs.prolonge(groupe.objectifs, par: ligne, quete: nom.quete, langue: nom.langue, dans: quetes)
+                || lit(fenetre, nom) && (apres.isEmpty || !titres.contains { lit(apres, $0.nom) })
+        }
+    }
+
+    /// Ce qu'un groupe désigne : une quête, ou des homonymes que ses
+    /// objectifs ne départagent pas.
+    private enum Designee {
+        case quete(Reconnue)
+        case homonymes([Int])
+    }
+
+    /// La quête du groupe, et ce que ses objectifs en disent. Plusieurs noms
+    /// (homonymes, « Joyeux Nowel » trente-quatre fois ; ou à une faute
+    /// près) : celle dont une étape se lit le mieux sous le titre. À égalité,
+    /// le nom le mieux lu s'il l'est seul, pour montrer ses objectifs mais
+    /// jamais en cocher — cocher l'une pour l'autre serait faux ; sinon
+    /// aucune. Aucun objectif lu : le nom le mieux lu, s'il l'est seul.
+    private static func designer(_ groupe: Groupe, coupee: Bool, dans quetes: Quetes) -> Designee {
+        let candidats = groupe.titres.map(\.nom)
+        let lectures = candidats.map {
+            SuiviObjectifs.lire(groupe.objectifs, coupee: coupee, quete: $0.quete, langue: $0.langue, dans: quetes)
+        }
+        let scores = lectures.map { $0?.explique ?? 0 }
+        let meilleur = scores.max() ?? 0
+        let egaux = meilleur > 0 ? scores.indices.filter { scores[$0] == meilleur }
+            : groupe.titres.indices.filter { groupe.titres[$0].ecart == groupe.titres[0].ecart }
+        guard let rang = egaux.first, egaux.count == 1 else {
+            if let rang = egaux.first, let lue = lectures[rang],
+               egaux.dropFirst().allSatisfy({ groupe.titres[$0].ecart > groupe.titres[rang].ecart }) {
+                let quete = candidats[rang].quete
+                return .quete(Reconnue(id: quete.id, etape: quete.etapes.count > 1 ? lue.etape : nil,
+                                       aFaire: lue.aFaire, nonMontres: lue.nonMontres))
+            }
+            return .homonymes(egaux.map { candidats[$0].quete.id })
+        }
+        let quete = candidats[rang].quete
+        guard let lue = lectures[rang] else {
+            let etape = etapeParRenvois(quete, langue: candidats[rang].langue, objectifs: groupe.objectifs, dans: quetes)
+            return .quete(Reconnue(id: quete.id, etape: etape))
+        }
+        return .quete(Reconnue(id: quete.id, etape: quete.etapes.count > 1 ? lue.etape : nil, etapeSure: lue.sure,
+                               aFaire: lue.aFaire, faits: lue.faits, nonMontres: lue.nonMontres))
+    }
+
+    /// Les noms que la ligne porte, le plus près d'abord, et ceux qu'une
+    /// faute d'OCR de plus en ferait lire (`SuiviObjectifs.marge`) : trois
+    /// cent soixante-dix « Offrande à … » ne diffèrent que d'un nom court, et
+    /// des homonymes, pas du tout — leurs objectifs départagent. Un nom qui
+    /// n'est que le début d'un autre, aussi bien lu, s'efface devant lui
+    /// (« La voie » devant « La voie du guerrier »).
+    private static func titres(_ texte: Ressemblance.Forme, parmi noms: [Nom]) -> [Titre] {
+        var trouves: [Titre] = []
+        var meilleur: Int?
         for candidat in noms {
             let longueur = candidat.forme.longueur
             let tolerance = longueur < longueurFloue ? 0 : longueur / 4
+            // Plus loin que le meilleur nom trouvé, à la marge près, un nom
+            // n'est pas retenu : la distance s'arrête là (chaque ligne lue
+            // contre six mille noms).
+            let borne = min(tolerance, (meilleur ?? tolerance) + SuiviObjectifs.marge)
             guard texte.longueur <= longueur + tolerance + surplusTitre,
                   longueur <= texte.longueur + tolerance,
-                  !candidat.forme.tropLoin(de: texte, tolerance: tolerance)
+                  !candidat.forme.tropLoin(de: texte, tolerance: borne)
             else { continue }
             let ecart = tolerance == 0
                 ? (texte.scalaires.starts(with: candidat.forme.scalaires)
                     && (texte.longueur == longueur || texte.scalaires[longueur] == 32) ? 0 : 1)
-                : Ressemblance.distanceDansTexte(candidat.forme, texte)
-            guard ecart <= tolerance else { continue }
-            if let actuel = meilleur,
-               (actuel.ecart, -actuel.nom.forme.longueur) <= (ecart, -longueur) { continue }
-            meilleur = (candidat, ecart)
+                : Ressemblance.distanceAuDebut(candidat.forme, texte, auPlus: borne)
+            guard let ecart, ecart <= tolerance else { continue }
+            trouves.append(Titre(nom: candidat, ecart: ecart))
+            meilleur = min(meilleur ?? ecart, ecart)
         }
-        return meilleur?.nom
+        guard let meilleur else { return [] }
+        let proches = trouves.filter { $0.ecart <= meilleur + SuiviObjectifs.marge }
+        return proches.enumerated()
+            .filter { _, court in
+                !proches.contains { long in long.ecart <= court.ecart && Self.debut(court.nom.forme, de: long.nom.forme) }
+            }
+            .sorted { ($0.element.ecart, -$0.element.nom.forme.longueur, $0.offset)
+                < ($1.element.ecart, -$1.element.nom.forme.longueur, $1.offset) }
+            .map(\.element)
+    }
+
+    /// `court` ouvre-t-il `long`, mot pour mot ?
+    private static func debut(_ court: Ressemblance.Forme, de long: Ressemblance.Forme) -> Bool {
+        long.longueur > court.longueur && long.scalaires.starts(with: court.scalaires) && long.scalaires[court.longueur] == 32
     }
 
     // MARK: - Étape

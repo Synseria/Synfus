@@ -8,7 +8,7 @@ import ImageIO
 /// `SYNFUS_CAPTURE`, le test est ignoré sans elle. C'est le banc de calibrage
 /// des seuils, à lancer à la main :
 ///
-///     SYNFUS_CAPTURE=~/Library/Logs/Synfus/captures/x.png swift test --filter RealCapture
+///     SYNFUS_CAPTURE=~/Library/Logs/Synfus/captures/x.png sh test.sh RealCapture
 ///
 /// Une capture du calibrage (`~/Library/Caches/Synfus/Calibrage/<genre>.png`)
 /// est déjà le contenu à l'échelle de la lecture : `SYNFUS_PLEIN_ECRAN=1`.
@@ -52,7 +52,7 @@ struct RealCaptureTests {
         contexte.interpolationQuality = .high
         contexte.draw(coin, in: CGRect(x: 0, y: 0, width: w, height: h))
         let reduite = try #require(contexte.makeImage())
-        print("zone \(w) × \(h) px")
+        Sortie.dire("zone \(w) × \(h) px")
         return try #require(NSBitmapImageRep(cgImage: reduite).representation(using: .png, properties: [:]))
     }
 
@@ -63,9 +63,9 @@ struct RealCaptureTests {
         await moteur.prechauffer()
         guard case .lue(let signature, let lignes, let duree, _) = await moteur.lire(png: png, precedente: nil, mesure: .zone)
         else { Issue.record("rien lu"); return }
-        print("OCR \(Int(duree * 1000)) ms : \(lignes)")
+        Sortie.dire("OCR \(Int(duree * 1000)) ms : \(lignes)")
         let position = PositionCarte.lire(lignes)
-        print("position : \(position?.coordonnees ?? "—") — \(position?.zone ?? "—")")
+        Sortie.dire("position : \(position?.coordonnees ?? "—") — \(position?.zone ?? "—")")
         #expect(position != nil)
         // La même image ne repasse pas par l'OCR.
         guard case .inchangee = await moteur.lire(png: png, precedente: signature, mesure: .zone) else {
@@ -81,7 +81,7 @@ struct RealCaptureTests {
         guard case .lue(let signature, let lignes, let duree, let bouton) = await moteur.lire(png: png, precedente: nil, mesure: .bouton)
         else { Issue.record("rien lu"); return }
         let constat = LectureCombat.classer(lignes: lignes, couleur: bouton ?? signature.couleur ?? 0)
-        print("OCR \(Int(duree * 1000)) ms : \(lignes) — zone colorée \(Int((signature.couleur ?? 0) * 100)) %, bouton \(bouton.map { "\(Int($0 * 100)) %" } ?? "—") → \(constat)")
+        Sortie.dire("OCR \(Int(duree * 1000)) ms : \(lignes) — zone colorée \(Int((signature.couleur ?? 0) * 100)) %, bouton \(bouton.map { "\(Int($0 * 100)) %" } ?? "—") → \(constat)")
         if let attendu = ProcessInfo.processInfo.environment["SYNFUS_COMBAT_ATTENDU"] {
             #expect("\(constat.genre)" == attendu)
         }
@@ -98,7 +98,7 @@ struct RealCaptureTests {
         await moteur.prechauffer()
         guard case .lue(let signature, let lignes, let duree, _) = await moteur.lire(png: png, precedente: nil, mesure: .lignes)
         else { Issue.record("rien lu"); return }
-        print("OCR \(Int(duree * 1000)) ms : \(lignes) — cadre \(signature.cadre.map { "\($0)" } ?? "—")"
+        Sortie.dire("OCR \(Int(duree * 1000)) ms : \(lignes) — cadre \(signature.cadre.map { "\($0)" } ?? "—")"
               + "\(signature.auBord ? ", au bord" : ""), \(signature.empreinte.cases.count(where: \.self)) cases allumées")
         // La même image ne repasse pas par l'OCR.
         guard case .inchangee = await moteur.lire(png: png, precedente: signature, mesure: .lignes) else {
@@ -111,7 +111,7 @@ struct RealCaptureTests {
         let noms = reconnues.map { reconnue in
             quetes.quetes.first { $0.id == reconnue.id }.flatMap { Lieu.traduit($0.noms, .fr) } ?? "#\(reconnue.id)"
         }
-        print("index en \(Int(indexe.timeIntervalSince(debut) * 1000)) ms, reconnues en "
+        Sortie.dire("index en \(Int(indexe.timeIntervalSince(debut) * 1000)) ms, reconnues en "
               + "\(Int(Date().timeIntervalSince(indexe) * 1000)) ms : "
               + zip(noms, reconnues).map {
                   "\($0) (étape \($1.etape.map { String($0 + 1) } ?? "—"), à faire \($1.aFaire), faits \($1.faits), "
