@@ -125,6 +125,9 @@ final class WindowPreviewService: ObservableObject {
         /// À l'écran (sur un espace visible) ou non. Un client garde parfois
         /// une fenêtre de jeu fantôme hors écran, du même titre que la vraie.
         var onScreen = true
+        /// L'identifiant du serveur de fenêtres, ce qui permet de la retrouver
+        /// sans refaire l'inventaire.
+        var windowID: CGWindowID = 0
 
         /// Un client de jeu occupe forcément une bonne part de l'écran. Le seuil
         /// est celui d'`AccessibilityReader.isGameWindow`, pour que les deux côtés
@@ -176,6 +179,21 @@ final class WindowPreviewService: ObservableObject {
         // bon, tantôt cassé, réparé en fermant la fenêtre.
         let visible = byName.filter { candidates[$0].onScreen }
         return visible.count == 1 ? visible[0] : nil
+    }
+
+    /// La fenêtre d'un perso dans un inventaire, et sa taille **actuelle**.
+    ///
+    /// L'inventaire ne se refait pas sur son âge : ce qu'il dit d'une fenêtre
+    /// qui y figure ne vieillit que par sa taille, que le serveur de fenêtres
+    /// rend par identifiant (`tailleActuelle`, `nil` si elle n'existe plus).
+    /// `nil` — perso absent de l'inventaire (client lancé depuis, titre changé
+    /// d'une fenêtre jumelle), fenêtre fermée — : l'inventaire est à refaire.
+    nonisolated static func cible(pid: pid_t, title: String, among candidates: [Candidate],
+                                  tailleActuelle: (CGWindowID) -> CGSize?) -> (index: Int, taille: CGSize)? {
+        guard let index = match(pid: pid, title: title, among: candidates),
+              let taille = tailleActuelle(candidates[index].windowID)
+        else { return nil }
+        return (index, taille)
     }
 
     // MARK: - Autorisation
@@ -248,17 +266,15 @@ enum CaptureFailure: Error, CustomStringConvertible, Sendable {
 ///
 /// Ce qu'il apporte, c'est la **mémoire de l'inventaire**. `SCShareableContent`
 /// fait le tour de toutes les fenêtres du système et coûte bien plus que la
-/// capture elle-même ; le panneau d'aperçu se rafraîchit chaque seconde tant
-/// qu'il est ouvert, et refaisait ce tour à chaque fois. Les fenêtres de jeu ne
-/// naissent pas toutes les secondes : l'inventaire est gardé et ne se refait
-/// que s'il date de plus de `maxAge`, ou si un perso demandé n'y trouve pas sa
-/// fenêtre — un client qui vient de se connecter, ou dont la fenêtre a changé.
+/// capture elle-même ; l'aperçu et la lecture de l'écran capturent chaque
+/// seconde. Les fenêtres de jeu ne naissent pas toutes les secondes :
+/// l'inventaire est gardé tant qu'il trouve la fenêtre demandée et que le
+/// serveur de fenêtres la connaît encore (`WindowPreviewService.cible`), et
+/// refait sinon — un client qui vient de se connecter, une fenêtre fermée, une
+/// capture refusée.
 private actor PreviewCaptureEngine {
     private var content: SCShareableContent?
-    private var inventoriedAt: Date = .distantPast
 
-    /// Au-delà, l'inventaire est réputé périmé.
-    private static let maxAge: TimeInterval = 3
     /// Largeur maximale d'une vignette. Capturer en pleine résolution pour
     /// afficher 240 points coûterait cher sans rien apporter.
     static let thumbnailWidth = 480
@@ -269,14 +285,14 @@ private actor PreviewCaptureEngine {
         var captured: [String: Data] = [:]
         var pending = requests
 
-        // Premier passage sur l'inventaire en mémoire, s'il est encore frais.
-        if let content, Date().timeIntervalSince(inventoriedAt) < Self.maxAge {
+        // Premier passage sur l'inventaire en mémoire.
+        if let content {
             captured = await shots(pending, in: content)
             pending = pending.filter { captured[$0.key] == nil }
         }
         guard !pending.isEmpty else { return captured }
 
-        // Inventaire périmé, ou un perso sans fenêtre dedans : on refait le
+        // Pas d'inventaire, ou un perso sans fenêtre dedans : on refait le
         // tour, une fois, pour les seuls persos qui restent.
         //
         // `onScreenWindowsOnly: false` est indispensable : un client sur un
@@ -285,7 +301,6 @@ private actor PreviewCaptureEngine {
             false, onScreenWindowsOnly: false
         ) else { return captured }
         content = fresh
-        inventoriedAt = Date()
 
         captured.merge(await shots(pending, in: fresh)) { _, new in new }
         return captured
@@ -293,12 +308,11 @@ private actor PreviewCaptureEngine {
 
     /// Une capture, avec sa raison d'échec. L'inventaire est refait — c'est
     /// une demande explicite, la fraîcheur prime — sauf si `inventaireGarde`
-    /// autorise celui en mémoire, encore frais, qui y trouve la fenêtre.
+    /// autorise celui en mémoire, s'il y trouve la fenêtre.
     func captureOne(_ request: PreviewRequest, inventaireGarde: Bool = false) async -> Result<Data, CaptureFailure> {
-        if inventaireGarde, let content, Date().timeIntervalSince(inventoriedAt) < Self.maxAge,
-           let index = WindowPreviewService.match(pid: request.pid, title: request.title,
-                                                  among: Self.candidates(content)),
-           let data = try? await shotThrowing(of: content.windows[index], request: request) {
+        if inventaireGarde, let content, let cible = Self.cible(request, in: content),
+           let data = try? await shotThrowing(of: content.windows[cible.index], taille: cible.taille,
+                                              request: request) {
             return .success(data)
         }
         let fresh: SCShareableContent
@@ -308,15 +322,13 @@ private actor PreviewCaptureEngine {
             return .failure(.inventory(error.localizedDescription))
         }
         content = fresh
-        inventoriedAt = Date()
-        let candidates = Self.candidates(fresh)
-        guard let index = WindowPreviewService.match(pid: request.pid, title: request.title, among: candidates)
-        else {
-            let same = candidates.filter { $0.pid == request.pid }
+        guard let cible = Self.cible(request, in: fresh) else {
+            let same = Self.candidates(fresh).filter { $0.pid == request.pid }
             return .failure(.notFound(sameProcess: same.count, gameSized: same.filter(\.isGameSized).count))
         }
         do {
-            return .success(try await shotThrowing(of: fresh.windows[index], request: request))
+            return .success(try await shotThrowing(of: fresh.windows[cible.index], taille: cible.taille,
+                                                   request: request))
         } catch {
             return .failure(.screenshot(error.localizedDescription))
         }
@@ -326,8 +338,28 @@ private actor PreviewCaptureEngine {
     private static func candidates(_ content: SCShareableContent) -> [WindowPreviewService.Candidate] {
         content.windows.map {
             WindowPreviewService.Candidate(pid: $0.owningApplication?.processID ?? -1,
-                                           title: $0.title, size: $0.frame.size, onScreen: $0.isOnScreen)
+                                           title: $0.title, size: $0.frame.size, onScreen: $0.isOnScreen,
+                                           windowID: $0.windowID)
         }
+    }
+
+    private static func cible(_ request: PreviewRequest, in content: SCShareableContent) -> (index: Int, taille: CGSize)? {
+        WindowPreviewService.cible(pid: request.pid, title: request.title, among: candidates(content),
+                                   tailleActuelle: tailleActuelle)
+    }
+
+    /// La taille d'une fenêtre en ce moment, par le serveur de fenêtres —
+    /// hors écran comprise, contrairement à `CGWindowListCopyWindowInfo`
+    /// limité à une fenêtre ; `nil` si elle n'existe plus. Un dixième de
+    /// milliseconde (mesuré), là où l'inventaire fait le tour de tout le système.
+    private static func tailleActuelle(_ fenetre: CGWindowID) -> CGSize? {
+        var identifiants: [UnsafeRawPointer?] = [UnsafeRawPointer(bitPattern: UInt(fenetre))]
+        guard let tableau = CFArrayCreate(nil, &identifiants, 1, nil),
+              let infos = CGWindowListCreateDescriptionFromArray(tableau) as? [[String: Any]],
+              let bornes = infos.first?[kCGWindowBounds as String] as? NSDictionary,
+              let cadre = CGRect(dictionaryRepresentation: bornes)
+        else { return nil }
+        return cadre.size
     }
 
     /// Le déroulé est séquentiel à dessein : les captures ne peuvent pas partir
@@ -339,28 +371,27 @@ private actor PreviewCaptureEngine {
 
         var captured: [String: Data] = [:]
         for request in requests {
-            guard let index = WindowPreviewService.match(
-                pid: request.pid, title: request.title, among: candidates
+            guard let cible = WindowPreviewService.cible(
+                pid: request.pid, title: request.title, among: candidates, tailleActuelle: Self.tailleActuelle
             ) else { continue }
-            if let data = await shot(of: content.windows[index], request: request) {
+            if let data = try? await shotThrowing(of: content.windows[cible.index], taille: cible.taille,
+                                                  request: request) {
                 captured[request.key] = data
             }
         }
         return captured
     }
 
-    private func shot(of window: SCWindow, request: PreviewRequest) async -> Data? {
-        try? await shotThrowing(of: window, request: request)
-    }
-
     private enum ShotError: Error { case encoding }
 
-    private func shotThrowing(of window: SCWindow, request: PreviewRequest) async throws -> Data {
+    /// `taille` : celle de la fenêtre en ce moment, pas celle de l'inventaire
+    /// — une fenêtre agrandie depuis décalerait toutes les zones.
+    private func shotThrowing(of window: SCWindow, taille: CGSize, request: PreviewRequest) async throws -> Data {
         let configuration = SCStreamConfiguration()
         // La zone demandée d'abord — en points de la fenêtre —, puis l'échelle :
         // une capture d'une seule zone pèse cent fois moins qu'une
         // fenêtre entière, et c'est ce qui rend supportable une lecture répétée.
-        var size = window.frame.size
+        var size = taille
         var hauteurContenu = size.height
         if let region = request.region {
             var cadre = CGRect(origin: .zero, size: size)
