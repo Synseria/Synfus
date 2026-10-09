@@ -71,11 +71,28 @@ enum PlanCapture: Equatable {
     /// découpe par zone (`CGImage.cropping`, sans copie des pixels).
     case entiere
 
-    /// Provisoire : à fixer d'après `Synfus --banc-captures`.
-    static let seuilCaptureUnique = 3
+    /// Mesuré par `Synfus --banc-captures` (fenêtre de 1728 × 1084 pt) : dès
+    /// deux zones, l'entière coûte moins — 43 ms de mur et 11 ms de CPU
+    /// (Synfus + replayd) contre 67 et 18, l'écart grandissant avec les zones
+    /// (54 contre 166 ms à huit) —, pour 7,4 Mo d'image le temps du tour. Une
+    /// zone seule reste capturée seule : le cas le plus fréquent, et le plus
+    /// léger.
+    static let seuilCaptureUnique = 2
 
     static func pour(_ genres: [GenreLecture], seuil: Int = seuilCaptureUnique) -> PlanCapture {
         Set(genres).count >= seuil ? .entiere : .parZone
+    }
+}
+
+/// La file des lectures : la première demande et toutes celles du même perso
+/// partent ensemble, dans l'ordre de la file. Pur.
+enum FileLecture {
+    static func extraire<Demande>(_ file: [Demande],
+                                  memePerso: (Demande, Demande) -> Bool) -> (lot: [Demande], reste: [Demande]) {
+        guard let premiere = file.first else { return ([], []) }
+        var lot: [Demande] = [], reste: [Demande] = []
+        for demande in file { if memePerso(premiere, demande) { lot.append(demande) } else { reste.append(demande) } }
+        return (lot, reste)
     }
 }
 
@@ -300,46 +317,57 @@ final class LecteurEcran: ObservableObject {
         file.append((client, genre))
     }
 
+    /// La première demande de la file et toutes celles du même perso, en une
+    /// capture (`PlanCapture`) ; puis l'OCR de chaque genre, l'un après l'autre.
     private func pomper() {
         guard !busy, timer != nil, !file.isEmpty else { return }
-        let (client, genre) = file.removeFirst()
+        let (lot, reste) = FileLecture.extraire(file) { $0.client.slotKey == $1.client.slotKey }
+        file = reste
+        let client = lot[0].client, genres = lot.map(\.genre)
         let previews = WindowPreviewService.shared
         guard previews.authorized else { file = []; diagnostic.etat = .nonAutorise; return }
 
         busy = true
-        let nom = client.name
-        let cle = cle(genre, nom)
-        let precedente = signatures[cle]
         Task {
             defer {
                 busy = false
                 pomper()
             }
-            guard let image = await capturer(client, [genre])[genre] else {
-                diagnostic.etat = .echecCapture(previews.lastCaptureError ?? "?")
-                return
-            }
-            switch await moteur.lire(image: image, precedente: precedente, mesure: genre.mesure) {
-            case .illisible:
-                diagnostic.etat = .echecCapture("image illisible")
-            case .inchangee:
-                // Rien de neuf, mais le relevé reste vrai à cet instant.
-                vuLe[cle] = Date()
-                diagnostic.sautes += 1
-                diagnostic.etat = .actif
-                if genre == .quetes { LectureSuivi.shared.confirmer(nom) }
-            case .lue(let signature, let lignes, let duree, let couleurBouton):
-                signatures[cle] = signature
-                vuLe[cle] = Date()
-                diagnostic.lectures += 1
-                diagnostic.derniereDuree = duree
-                diagnostic.lignes[genre] = lignes
-                switch genre {
-                case .position: appliquerPosition(lignes, nom: nom)
-                case .combat: appliquerCombat(lignes, couleur: couleurBouton ?? signature.couleur ?? 0, nom: nom)
-                case .quetes: LectureSuivi.shared.recevoir(lignes, coupe: signature.auBord, perso: nom)
-                case .chasse: break
+            // L'image entière, s'il y en a une, ne vit que le temps de ce lot :
+            // les découpes la retiennent, le Diagnostic en garde des copies.
+            let images = await capturer(client, genres)
+            for genre in genres {
+                guard let image = images[genre] else {
+                    diagnostic.etat = .echecCapture(previews.lastCaptureError ?? "?")
+                    continue
                 }
+                await lire(image, genre, nom: client.name)
+            }
+        }
+    }
+
+    private func lire(_ image: CGImage, _ genre: GenreLecture, nom: String) async {
+        let cle = cle(genre, nom)
+        switch await moteur.lire(image: image, precedente: signatures[cle], mesure: genre.mesure) {
+        case .illisible:
+            diagnostic.etat = .echecCapture("image illisible")
+        case .inchangee:
+            // Rien de neuf, mais le relevé reste vrai à cet instant.
+            vuLe[cle] = Date()
+            diagnostic.sautes += 1
+            diagnostic.etat = .actif
+            if genre == .quetes { LectureSuivi.shared.confirmer(nom) }
+        case .lue(let signature, let lignes, let duree, let couleurBouton):
+            signatures[cle] = signature
+            vuLe[cle] = Date()
+            diagnostic.lectures += 1
+            diagnostic.derniereDuree = duree
+            diagnostic.lignes[genre] = lignes
+            switch genre {
+            case .position: appliquerPosition(lignes, nom: nom)
+            case .combat: appliquerCombat(lignes, couleur: couleurBouton ?? signature.couleur ?? 0, nom: nom)
+            case .quetes: LectureSuivi.shared.recevoir(lignes, coupe: signature.auBord, perso: nom)
+            case .chasse: break
             }
         }
     }
@@ -352,7 +380,8 @@ final class LecteurEcran: ObservableObject {
         let service = WindowPreviewService.shared
         let contenu = CaptureContenu(pleinEcran: client.pleinEcran, normaliser: true)
         var images: [GenreLecture: CGImage] = [:]
-        switch PlanCapture.pour(genres) {
+        let plan = PlanCapture.pour(genres)
+        switch plan {
         case .parZone:
             for genre in genres {
                 images[genre] = await service.captureImage(client, region: genre.zone.rect, maxWidth: nil,
@@ -365,7 +394,12 @@ final class LecteurEcran: ObservableObject {
             for genre in genres { images[genre] = CapturesCalibrage.decouper(genre.zone, dans: entiere) }
         }
         guard !images.isEmpty else { return [:] }
-        for (genre, image) in images { diagnostic.captures[genre] = NSImage(cgImage: image, size: .zero) }
+        for (genre, image) in images {
+            // Une découpe retient toute l'image entière : le Diagnostic, qui la
+            // garde jusqu'au prochain tour, n'en reçoit qu'une copie.
+            guard let vignette = plan == .entiere ? CapturesCalibrage.copie(image) : image else { continue }
+            diagnostic.captures[genre] = NSImage(cgImage: vignette, size: .zero)
+        }
         diagnostic.dernierPerso = client.name
         return images
     }
