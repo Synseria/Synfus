@@ -14,6 +14,8 @@ final class OuTrouverStore: ObservableObject {
     private var lu = false
     /// La demande en cours de chaque sujet, qu'attend `charge`.
     private var demandes: [OuTrouver.Sujet: Task<Void, Never>] = [:]
+    /// Par monstre (`repaires`).
+    private var repairesGardes: [Int: DernierCalcul<CleRepaires, [RepaireSitue]>] = [:]
 
     private init() {}
 
@@ -58,15 +60,25 @@ final class OuTrouverStore: ObservableObject {
 
     // MARK: - Repaires
 
-    /// De quoi situer les repaires depuis la position du perso, le plus
-    /// proche d'abord — carte et réglages lus une fois pour tous.
-    func situeur(depuis perso: PositionCarte?) -> (FicheMonstre) -> [RepaireSitue] {
+    /// Les repaires du monstre situés depuis la position du perso, le plus
+    /// proche d'abord. La vue les redemande à chaque rendu, pour chaque
+    /// lâcheur : gardés sous la fiche, la case du perso et la révision des
+    /// trajets (réglages, carte).
+    func repaires(_ fiche: FicheMonstre, depuis perso: PositionCarte?) -> [RepaireSitue] {
         let depart = ItineraireZaap.rejoindre(perso)
-        let reseau = CarteStore.shared.reseau, lieux = CarteStore.shared.carte.lieux
-        let cout = ZaapClipboard.shared.cout(depuis: perso)
-        return { fiche in
-            OuTrouver.situes(fiche.repaires, depuis: depart, reseau: reseau, lieux: lieux, cartes: { cout?($0) })
+        let cle = CleRepaires(fiche: fiche, depart: depart.map { PNJ.Position(x: $0.x, y: $0.y) },
+                              revision: ZaapClipboard.shared.revisionTrajets)
+        return repairesGardes[fiche.id, default: DernierCalcul()].valeur(pour: cle) {
+            let cout = ZaapClipboard.shared.cout(depuis: perso)
+            return OuTrouver.situes(fiche.repaires, depuis: depart, reseau: CarteStore.shared.reseau,
+                                    reperes: CarteStore.shared.reperes, cartes: { cout?($0) })
         }
+    }
+
+    private struct CleRepaires: Equatable {
+        let fiche: FicheMonstre
+        let depart: PNJ.Position?
+        let revision: Int
     }
 
     /// Copie le trajet vers le repaire, zaap compris dans le Monde des Douze.
@@ -78,7 +90,9 @@ final class OuTrouverStore: ObservableObject {
     /// Le trajet vers le repaire le plus proche du monstre ; `false` si rien
     /// ne le situe ou que DofusDB n'a pas répondu.
     func copierLePlusProche(monstre id: Int) async -> Bool {
-        guard let fiche = await monstreCharge(id), let premier = situeur(depuis: LecteurEcran.shared.positionDuPersoDevant)(fiche).first else { return false }
+        guard let fiche = await monstreCharge(id),
+              let premier = repaires(fiche, depuis: LecteurEcran.shared.positionDuPersoDevant).first
+        else { return false }
         copierTrajet(premier)
         return true
     }

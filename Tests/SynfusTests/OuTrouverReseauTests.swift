@@ -15,7 +15,7 @@ struct OuTrouverReseauTests {
         #expect(fiche.noms["fr"] == "Minotot")
         #expect(fiche.repaires.contains { $0.genre == .donjon && $0.noms["fr"] == "Salle du Minotot" })
         let situes = OuTrouver.situes(fiche.repaires, depuis: (0, 0), reseau: ReseauSousZones(Carte.integree),
-                                      lieux: Carte.integree.lieux) { ItineraireZaap.distance((0, 0), $0) }
+                                      reperes: ReperesCarte(Carte.integree.lieux)) { ItineraireZaap.distance((0, 0), $0) }
         #expect(situes.contains { $0.situation == .init(x: -42, y: -17, monde: Zaap.mondeDesDouze) })
     }
 
