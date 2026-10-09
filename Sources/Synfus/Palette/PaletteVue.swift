@@ -258,7 +258,7 @@ private struct CarteZaap: View {
                 .font(.system(size: 12, weight: .semibold))
                 .lineLimit(1)
             HStack(spacing: 4) {
-                Text(entree.sousTitre ?? "")
+                Text(entree.itineraire ?? entree.sousTitre ?? "")
                     .lineLimit(1)
                     .foregroundStyle(.secondary)
                 Spacer(minLength: 0)
@@ -301,8 +301,16 @@ private struct LigneResultat: View {
                         Image(systemName: "star.fill").font(.system(size: 9)).foregroundStyle(Couleurs.ambre)
                     }
                 }
-                if let sousTitre = entree.sousTitre {
-                    Text(sousTitre).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
+                if entree.sousTitre != nil || entree.itineraire != nil {
+                    HStack(spacing: 6) {
+                        if let sousTitre = entree.sousTitre { Text(sousTitre).foregroundStyle(.secondary) }
+                        // Le zaap retenu, à lire avant d'Entrée : le trajet copié y passe.
+                        if let itineraire = entree.itineraire {
+                            Text(itineraire).foregroundStyle(Couleurs.accent).layoutPriority(1)
+                        }
+                    }
+                    .font(.system(size: 11))
+                    .lineLimit(1)
                 }
             }
             Spacer(minLength: 8)
