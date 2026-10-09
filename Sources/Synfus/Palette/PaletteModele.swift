@@ -114,7 +114,10 @@ final class PaletteModele: ObservableObject {
     var recents: [EntreePalette] { RecherchePalette.recents(contexte) }
 
     func ouvrir() {
-        if contexteImpose == nil { QuetesStore.shared.preparer() }
+        if contexteImpose == nil {
+            QuetesStore.shared.preparer()
+            AlmanaxStore.shared.preparer()
+        }
         contexte = contexteImpose ?? Self.contexteCourant()
         filtre = .tout
         tri = contexteImpose == nil ? Preferences.shared.paletteTri : tri

@@ -6,6 +6,7 @@ import SwiftUI
 struct PaletteVue: View {
     @ObservedObject var modele = PaletteModele.shared
     @ObservedObject private var quetes = QuetesStore.shared
+    @ObservedObject private var almanax = AlmanaxStore.shared
     @FocusState private var champ: Champ?
 
     private enum Champ { case recherche, etiquette }
@@ -99,6 +100,9 @@ struct PaletteVue: View {
             ScrollViewReader { defilement in
                 ScrollView {
                     VStack(alignment: .leading, spacing: 10) {
+                        if modele.enGrille, let jour = almanax.almanax {
+                            AlmanaxVue(almanax: jour) { modele.copier($0) }
+                        }
                         if modele.enGrille, !modele.recents.isEmpty { recents }
                         if modele.enGrille { grille } else { liste }
                     }
