@@ -15,6 +15,7 @@ final class CarteStore: ObservableObject {
     private var indexee = CarteIndexee(.vide)
     var zaaps: [Zaap] { indexee.zaaps }
     var reseau: ReseauSousZones { indexee.reseau }
+    var reperes: ReperesCarte { indexee.reperes }
 
     private init() {}
 
@@ -47,10 +48,12 @@ private struct CarteIndexee: Sendable {
     let carte: Carte
     let zaaps: [Zaap]
     let reseau: ReseauSousZones
+    let reperes: ReperesCarte
 
     init(_ carte: Carte) {
         self.carte = carte
         zaaps = carte.zaaps
         reseau = ReseauSousZones(carte)
+        reperes = ReperesCarte(carte.lieux)
     }
 }
