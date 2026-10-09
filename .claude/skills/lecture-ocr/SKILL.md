@@ -45,19 +45,29 @@ demande (`lireUneFois`, même `capturer` et même `MoteurOCR`).
   `LectureSuivi.traiter` — `lire()` (bouton, ouverture), `recevoir` (tour, `.lue`), `confirmer`
   (tour, `.inchangee` : la lecture tient) — vers `SuiviQuetes.reconnaitre` (pur, hors main, sur
   `SuiviQuetes.Index` bâti une fois par jeu de quêtes) : une ligne de titre **est** un nom de quête
-  (tolérance n/4, `surplusTitre` pour les icônes), pas seulement le contient ; ordre de
-  l'écran, sans doublon, 10 au plus.
-- Objectifs : `SuiviObjectifs` (pur). Le suivi montre les objectifs **actifs** de l'étape,
-  dans son ordre, souvent sur deux lignes (fenêtres de 1 à 3 lignes), coupés par « VOIR
-  PLUS… ». Affectation une fenêtre ↔ un objectif, la mieux lue d'abord (fautes n/5, débordement
-  compté), doublons de texte départagés par l'ordre puis le plus tôt. L'étape : celle qui
-  explique le plus de caractères, unique ; à défaut d'objectif lu en entier, les noms cités
-  (`etapeParRenvois`). **Faits = ce qui précède le premier objectif montré** (« VOIR PLUS »
-  coupe la fin, jamais le début), jamais ce qui suit ni les trous (pas encore ouverts :
-  « Pense-bête » n'en montre qu'un sur neuf) ; seulement si l'écran suit l'ordre de l'étape et
-  commence par un objectif reconnu. Les étapes d'avant aussi, si aucune autre étape ne lit mieux
-  une ligne. Doublon ambigu : la première occurrence possible (prudent). Distance bornée
-  (`distanceDansTexte(_:_:auPlus:)`, Ukkonen) : vingt étapes de vingt « Rapporter 1 âme… ».
+  **calé au début** (tolérance n/4, `Ressemblance.distanceAuDebut`, `surplusTitre` pour les icônes
+  à droite), pas seulement le contient. Les noms lus à `SuiviObjectifs.marge` faute près du meilleur
+  sont tous candidats (« Joyeux Nowel » ×34, « Offrande à … » ×373) : l'étape qui explique le mieux
+  les lignes désigne la quête ; à égalité, le nom le mieux lu, s'il l'est seul, montre sans cocher,
+  sinon la première quête libre, sans étape ni objectif. Une ligne qui achève un objectif commencé
+  au-dessus, ou en est un sans que la quête nommée explique la ligne d'après, n'est pas un titre
+  (`SuiviObjectifs.prolonge`, `lit`). Ordre de l'écran, sans doublon, 10 au plus.
+- Objectifs : `SuiviObjectifs` (pur). Le suivi montre les objectifs **actifs** de l'étape, dans
+  son ordre, souvent sur deux lignes (fenêtres de 1 à 3 lignes), coupés par « VOIR PLUS… ».
+  Affectation une fenêtre ↔ un objectif, la mieux lue d'abord (fautes n/5, débordement compté),
+  doublons départagés par l'ordre puis le plus tôt ; chaque objectif montré garde ses **rangs
+  possibles** (lus à `marge` = 1 faute près, l'ordre de l'écran gardé — une suite répétée glisse
+  d'un bloc). L'étape : celle qui explique le plus de caractères, unique ; deux à égalité : aucune,
+  et les noms cités ne tranchent pas. **Sûre** si chaque autre laisse une ligne inexpliquée ou y fait
+  plus de `marge` fautes de plus (« x3 » / « x5 »). Sans objectif lu en entier, les noms cités
+  (`etapeParRenvois`), jamais sûre. **Faits = ce qui précède le plus tôt des rangs possibles du
+  premier objectif montré** (« VOIR PLUS » coupe la fin, jamais le début), jamais ce qui suit ni
+  les trous (« Pense-bête » n'en montre qu'un sur neuf) ; seulement si l'écran suit l'ordre de
+  l'étape et commence par un objectif reconnu ; les étapes d'avant si l'étape est sûre.
+  `nonMontres` : après le plus tard des rangs possibles du premier, jusqu'à la coupure, sans rien
+  de ce qu'un objectif montré peut être. Distance bornée (`distanceDansTexte(_:_:auPlus:)`,
+  Ukkonen) : vingt étapes de vingt « Rapporter 1 âme… ». Limite connue : une ligne que l'OCR perd
+  fait passer son objectif pour fait (banc : ~0,7 % des lectures « ensemble »).
 - Panneau : tout vient de la lecture du **perso devant** (`persoDevant` publié), fraîche si
   l'écran l'a montrée — lue ou confirmée — il y a moins de 10 min. `aFaire` ambre ; `nonMontres`
   (ce que le suivi tait après le premier objectif montré, jusqu'à « VOIR PLUS… » ou `auBord`,
@@ -78,7 +88,8 @@ demande (`lireUneFois`, même `capturer` et même `MoteurOCR`).
 - Objectifs ouverts ensemble (plusieurs `aFaire`) : ordre libre, numérotés au plus court
   (`Tournee`, coût `ItineraireZaap.cartes` par `ZaapClipboard.tournee`).
 - Comparaison tolérante commune (chasse, quêtes) : `Ressemblance` (normalisation, distance de
-  Sellers, `Forme` préparée et borne `tropLoin` — deux mille noms par ligne lue).
+  Sellers, libre ou calée au début, `Forme` préparée et borne basse `tropLoin` — paires voisines
+  puis lettres — six mille noms par ligne lue).
 
 ## Calibrage — `CalibrationZonesView(genre:)`
 
@@ -114,3 +125,12 @@ pose la zone ; l'essai (`LecteurEcran.lire(png:genre:)`) relit la zone découpé
 ignoré), `SYNFUS_PLEIN_ECRAN=1` (aussi pour une capture du calibrage), `SYNFUS_ZONE=x,y,l,h`,
 `SYNFUS_ZONE_ENTIERE=1` (capture déjà recadrée), `SYNFUS_COMBAT_ATTENDU=monTour`,
 `SYNFUS_QUETES_ATTENDUES="Pense-bête|…"` (quêtes de `Quetes.json` de l'app).
+
+`SimulationSuiviTests` rejoue le suivi sur tout le catalogue : `SYNFUS_QUETES=<Quetes.json de
+l'app>` (obligatoire, sinon ignoré ; ~20 min en debug). Chaque étape, chaque nombre de faits, en
+file / ensemble / progressif ; 2 à 4 quêtes empilées, repliées à la largeur de la capture réelle,
+« VOIR PLUS… » après 3 objectifs ; sans bruit puis bruit à graine fixe (lettres, accents, épingle,
+icônes, repli, ligne perdue). Mesures : titres, étapes (fausses, sûres fausses), **faits faux —
+zéro sans bruit**, rappel, `aFaire`, `nonMontres`, objectifs ouverts tus, temps d'un écran de dix
+quêtes. Tout changement de `SuiviQuetes`, `SuiviObjectifs` ou `Ressemblance` se juge dessus. Les
+bancs impriment sous « ▸ » (`Sortie.dire`), que `test.sh` laisse passer.
