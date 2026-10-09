@@ -39,7 +39,16 @@ enum GenreLecture: String, CaseIterable, Sendable {
     @MainActor var zone: ZoneEcran { Preferences.shared[keyPath: reglage] ?? parDefaut }
 
     /// Au tour, une capture du même perso au plus toutes les tant de secondes.
-    var intervalle: TimeInterval { self == .quetes ? 3 : 1 }
+    /// Le combat, hors combat, toutes les trois : on n'y entre que par un
+    /// placement, qui dure bien plus ; vu en cours (`enCombat`), chaque
+    /// seconde jusqu'à ce que la lecture le dise fini — son tour en dépend.
+    func intervalle(combat: EtatCombat?) -> TimeInterval {
+        switch self {
+        case .position, .chasse: return 1
+        case .quetes: return 3
+        case .combat: return combat?.enCombat == true ? 1 : 3
+        }
+    }
 
     /// Ce que la signature regarde pour relancer l'OCR.
     var mesure: MesureSignature {
@@ -70,7 +79,8 @@ enum GenreLecture: String, CaseIterable, Sendable {
 /// - **L'inventaire ScreenCaptureKit gardé** (`inventaireGarde`).
 ///
 /// Seul le perso au premier plan est lu en continu, une fois par seconde (le
-/// suivi de quêtes toutes les trois) : en plein écran, macOS ne redessine pas
+/// combat toutes les trois hors combat, le suivi de quêtes toutes les trois,
+/// cf. `GenreLecture.intervalle`) : en plein écran, macOS ne redessine pas
 /// les autres fenêtres. Les autres le sont
 /// au survol de leur pastille (position, relevé de plus de 10 s) et par
 /// « Tout lire » dans le Diagnostic — réglages ouverts, Synfus est devant et
@@ -219,7 +229,7 @@ final class LecteurEcran: ObservableObject {
             return
         }
         if persoDevant != client.name { persoDevant = client.name }
-        for genre in genresActifs { demander(client, genre) }
+        for genre in genresActifs where perime(genre, client.name) { demander(client, genre) }
         if suiviMontre, QuetesStore.shared.quetes != nil, perime(.quetes, client.name) { demander(client, .quetes) }
         pomper()
     }
@@ -227,7 +237,8 @@ final class LecteurEcran: ObservableObject {
     /// La dernière capture de ce genre chez ce perso a son intervalle, à la
     /// tolérance du minuteur près.
     private func perime(_ genre: GenreLecture, _ nom: String) -> Bool {
-        vuLe[cle(genre, nom)].map { Date().timeIntervalSince($0) >= genre.intervalle - Self.intervalle / 2 } ?? true
+        let intervalle = genre.intervalle(combat: combats[nom])
+        return vuLe[cle(genre, nom)].map { Date().timeIntervalSince($0) >= intervalle - Self.intervalle / 2 } ?? true
     }
 
     /// La position du dernier perso lu au premier plan — celui dont le tchat

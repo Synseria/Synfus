@@ -263,6 +263,17 @@ struct LectureCombatTests {
         #expect(corps == CGRect(x: 0, y: 32, width: 115, height: 56))
     }
 
+    @Test("Le combat se lit toutes les 3 s hors combat, chaque seconde dès qu'il est vu et jusqu'à sa fin")
+    func rythmeDuCombat() {
+        #expect(GenreLecture.combat.intervalle(combat: nil) == 3)
+        #expect(GenreLecture.combat.intervalle(combat: .horsCombat) == 3)
+        #expect(GenreLecture.combat.intervalle(combat: .placement) == 1)
+        #expect(GenreLecture.combat.intervalle(combat: .monTour(fin: nil)) == 1)
+        #expect(GenreLecture.combat.intervalle(combat: .pasMonTour) == 1)
+        #expect(GenreLecture.position.intervalle(combat: .placement) == 1)
+        #expect(GenreLecture.quetes.intervalle(combat: .pasMonTour) == 3)
+    }
+
     @Test("Un tour qui continue garde son échéance ; un nouveau décompte la remplace")
     func echeance() {
         let t0 = Date(timeIntervalSince1970: 1000)
