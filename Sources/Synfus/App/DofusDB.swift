@@ -1,7 +1,7 @@
 import Foundation
 
 /// L'API publique de DofusDB, la seule source réseau de Synfus : carte,
-/// quêtes, indices de chasse et classes en viennent. Une requête, la pagination et la
+/// quêtes, indices de chasse, classes et almanax en viennent. Une requête, la pagination et la
 /// péremption des listes gardées, écrites une fois.
 enum DofusDB {
     struct Page<Element: Decodable>: Decodable {
@@ -48,6 +48,11 @@ enum DofusDB {
         api.appending(path: "img/breeds/symbol_\(classe).png")
     }
 
+    /// L'icône d'un objet, par son `iconId`.
+    static func imageObjet(_ icone: Int) -> URL {
+        api.appending(path: "img/items/\(icone).png")
+    }
+
     /// Jamais téléchargée (`nil`), ou trop vieille.
     static func perimee(depuis date: Date?, maintenant: Date) -> Bool {
         guard let date else { return true }
@@ -62,13 +67,19 @@ enum DofusDB {
     }
 
     static func page<Element: Decodable>(_ chemin: String, _ filtres: [URLQueryItem]) async throws -> Page<Element> {
+        try await reponse(chemin, filtres)
+    }
+
+    /// Une réponse entière, telle que l'API la rend : une page, ou un seul
+    /// élément (`almanax`).
+    static func reponse<Reponse: Decodable>(_ chemin: String, _ filtres: [URLQueryItem]) async throws -> Reponse {
         var url = URLComponents(url: api.appending(path: chemin), resolvingAgainstBaseURL: false)!
         url.queryItems = filtres
         let (donnees, reponse) = try await URLSession.shared.data(from: url.url!)
         if let http = reponse as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
             throw URLError(.badServerResponse)
         }
-        return try JSONDecoder().decode(Page<Element>.self, from: donnees)
+        return try JSONDecoder().decode(Reponse.self, from: donnees)
     }
 
     /// Toutes les pages, plusieurs à la fois : la première dit le total, les

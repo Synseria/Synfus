@@ -39,9 +39,27 @@ struct Quetes: Codable, Equatable, Sendable {
     static let minimumPlausible = 500
 
     /// « Ramener à {npc,119} : x1 {item,1746} » → « Ramener à Otomaï : x1 Sang de Wabbit GM ».
-    /// Un renvoi inconnu reste lisible : son seul type, entre crochets.
-    func texte(_ modele: String, en langue: Langue) -> String {
-        Self.resoudre(modele) { nomRenvoi($0, $1, en: langue) }
+    /// Un renvoi inconnu reste lisible : son seul type, entre crochets. Une
+    /// carte (`{map,…}`) s'écrit par ses coordonnées, `carte`, comme le jeu la
+    /// montre — DofusDB n'a pas de nom de carte.
+    func texte(_ modele: String, en langue: Langue, carte: PNJ.Position? = nil) -> String {
+        Self.resoudre(modele) { genre, id in
+            genre == "map" ? Self.nomCarte(carte) : nomRenvoi(genre, id, en: langue)
+        }
+    }
+
+    /// Le texte d'un objectif dans la langue, sa carte par les coordonnées de
+    /// l'objectif : celles que DofusDB lui donne sont celles de la carte qu'il
+    /// cite (vérifié sur tout le catalogue, même quand l'identifiant de carte
+    /// diffère d'un étage).
+    func texte(_ objectif: ObjectifQuete, en langue: Langue) -> String {
+        texte(Lieu.traduit(objectif.textes, langue) ?? "", en: langue, carte: objectif.position)
+    }
+
+    /// Sans coordonnées, un mot neutre (« la carte indiquée ») plutôt que
+    /// « [map] ».
+    static func nomCarte(_ position: PNJ.Position?) -> String {
+        position.map { Coordonnees.texte($0.x, $0.y) } ?? L("quete.carte.inconnue")
     }
 
     /// Le nom d'un renvoi (`item`, `monster`, `npc`, `subarea`), `nil` s'il
@@ -179,6 +197,11 @@ struct ObjectifQuete: Codable, Equatable, Sendable {
     static let typesCombat: Set<Int> = [6, 7, 11, 13, 14, 16]
 
     var combat: Bool { type.map(Self.typesCombat.contains) ?? false }
+
+    var position: PNJ.Position? {
+        guard let x, let y else { return nil }
+        return PNJ.Position(x: x, y: y)
+    }
 }
 
 struct SousZoneNommee: Codable, Equatable, Sendable {
@@ -209,6 +232,11 @@ struct PNJ: Codable, Equatable, Sendable {
     let noms: [String: String]
     /// Le plus cité d'abord.
     let passages: [Passage]
+
+    /// Ce qu'un favori ou une étiquette désigne : l'identifiant DofusDB, pas
+    /// une case — un PNJ en a plusieurs.
+    var cle: String { Self.prefixeCle + "\(id)" }
+    static let prefixeCle = "pnj:"
 }
 
 /// Une quête prête à montrer : noms résolus dans la langue, ressources
@@ -357,11 +385,9 @@ extension Quetes {
                     nom: Lieu.traduit(etape.noms, langue) ?? "",
                     description: description.isEmpty ? nil : description,
                     objectifs: etape.objectifs.map { objectif in
-                        var position: PNJ.Position?
-                        if let x = objectif.x, let y = objectif.y { position = PNJ.Position(x: x, y: y) }
-                        return FicheQuete.Objectif(
-                            id: objectif.id, texte: texte(Lieu.traduit(objectif.textes, langue) ?? "", en: langue),
-                            position: position, carte: objectif.carte, combat: objectif.combat,
+                        FicheQuete.Objectif(
+                            id: objectif.id, texte: texte(objectif, en: langue),
+                            position: objectif.position, carte: objectif.carte, combat: objectif.combat,
                             sujet: Self.sujet(objectif))
                     },
                     recompenses: recompenses(etape.recompenses, en: langue))

@@ -101,12 +101,32 @@ enum ItineraireZaap {
         return zaap
     }
 
-    /// Les cartes à traverser de `depart` à `cible`, par le zaap s'il est utile
-    /// (`zaapUtile`) : le coût d'un trajet copié.
+    /// Un trajet copié : le zaap pris, s'il l'est, et les cartes à traverser.
+    struct Trajet: Equatable, Sendable {
+        let zaap: Zaap?
+        let cartes: Int
+    }
+
+    /// Le trajet de `depart` à `cible`, par le zaap s'il est utile (`zaapUtile`).
+    static func trajet(depuis depart: (x: Int, y: Int), vers cible: (x: Int, y: Int), zaap: Zaap?,
+                       gainMinimal: Int) -> Trajet {
+        let par = zaapUtile(depuis: depart, vers: cible, zaap: zaap, gainMinimal: gainMinimal)
+        return Trajet(zaap: par, cartes: distance(par.map { ($0.x, $0.y) } ?? depart, cible))
+    }
+
+    /// Le trajet qu'un `/travel` vers `cible` copié depuis `position` suivrait
+    /// (`reecrire`) ; `nil` hors du Monde des Douze ou sans position.
+    static func trajet(vers cible: (x: Int, y: Int), depuis position: PositionCarte?, gainMinimal: Int,
+                       zaaps: ZaapsSitues, zaapDuJeu: Bool) -> Trajet? {
+        guard let depart = rejoindre(position) else { return nil }
+        return trajet(depuis: depart, vers: cible, zaap: zaap(vers: cible, parmi: zaaps, zaapDuJeu: zaapDuJeu),
+                      gainMinimal: gainMinimal)
+    }
+
+    /// Les cartes à traverser de `depart` à `cible` : le coût d'un trajet copié.
     static func cartes(depuis depart: (x: Int, y: Int), vers cible: (x: Int, y: Int), zaap: Zaap?,
                        gainMinimal: Int) -> Int {
-        let par = zaapUtile(depuis: depart, vers: cible, zaap: zaap, gainMinimal: gainMinimal)
-        return distance(par.map { ($0.x, $0.y) } ?? depart, cible)
+        trajet(depuis: depart, vers: cible, zaap: zaap, gainMinimal: gainMinimal).cartes
     }
 
     /// `/zaap x,y ; /travel a,b` si le zaap retenu pour la cible (`zaap(vers:)`)
@@ -114,10 +134,9 @@ enum ItineraireZaap {
     static func reecrire(
         _ texte: String, depuis position: PositionCarte?, gainMinimal: Int, zaaps: ZaapsSitues, zaapDuJeu: Bool
     ) -> String? {
-        guard let cible = cible(dans: texte), let depart = rejoindre(position),
-              let zaap = zaapUtile(depuis: depart, vers: cible,
-                                   zaap: Self.zaap(vers: cible, parmi: zaaps, zaapDuJeu: zaapDuJeu),
-                                   gainMinimal: gainMinimal)
+        guard let cible = cible(dans: texte),
+              let zaap = trajet(vers: cible, depuis: position, gainMinimal: gainMinimal, zaaps: zaaps,
+                                zaapDuJeu: zaapDuJeu)?.zaap
         else { return nil }
         let travel = texte.trimmingCharacters(in: .whitespacesAndNewlines)
         // L'espace avant le « ; » : sans elle, le jeu lit mal l'enchaînement.

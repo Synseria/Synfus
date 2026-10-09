@@ -32,6 +32,66 @@ struct RecherchePaletteTests {
         #expect(entrees.dropFirst().first?.cle == amakna)
     }
 
+    @Test("Sans rien taper : les lieux et PNJ favoris avec les zaaps favoris, du plus proche, puis les autres zaaps")
+    func grilleDesFavoris() throws {
+        let banque = try #require(Carte.integree.lieux.first { $0.nom(en: .fr) == "Banque" && $0.zone(en: .fr) == "Bonta" })
+        var avecQuetes = contexte(etiquettes: ["pnj:6309": "Ama"], favoris: ["1:-31,-56", banque.cle, "pnj:6309"])
+        let passage = { (x: Int, y: Int, quetes: Int) in PNJ.Passage(position: .init(x: x, y: y), carte: nil, sousZone: nil, quetes: quetes) }
+        avecQuetes.quetes = Quetes(
+            format: Quetes.formatActuel, date: .now, quetes: [],
+            pnjs: [PNJ(id: 6309, noms: ["fr": "Amayiro"], passages: [passage(-32, -57, 101), passage(0, 0, 1)])],
+            objets: [:], monstres: [:], nomsPNJ: [:], sousZones: [:], famillesObjets: [:], familles: [:], emotes: [:],
+            titres: [:], metiers: [:], camps: [:])
+        let entrees = RecherchePalette.entrees("", avecQuetes)
+        let favoris = entrees.prefix { $0.favori }
+        #expect(Set(favoris.compactMap(\.cle)) == ["1:-31,-56", banque.cle, "pnj:6309"])
+        #expect(favoris.compactMap(\.distance) == favoris.compactMap(\.distance).sorted())
+        // Le PNJ n'y paraît qu'une fois, à sa case habituelle, avec son étiquette.
+        let amayiro = try #require(favoris.first { $0.genre == .pnj })
+        #expect(amayiro.detail == Coordonnees.texte(-32, -57) && amayiro.etiquette == "Ama")
+        #expect(entrees.dropFirst(favoris.count).allSatisfy { $0.genre == .zaap && !$0.favori })
+        // Ses deux cases se cherchent, étoilées l'une et l'autre.
+        #expect(RecherchePalette.entrees("amayiro", avecQuetes).filter(\.favori).count == 2)
+    }
+
+    @Test("Monstres et objets du catalogue des quêtes : leur filtre, Entrée déplie où les trouver, après le reste dans « Tout »")
+    func monstresEtObjets() throws {
+        var avecQuetes = contexte()
+        avecQuetes.quetes = Quetes(
+            format: Quetes.formatActuel, date: .now, quetes: [], pnjs: [],
+            objets: ["7294": ["fr": "Poils de Pétartifoux"], "2179": ["fr": "Dent de dragodinde"]],
+            monstres: ["792": ["fr": "Bworkette"], "100": ["fr": "Amakna Bwork"]], nomsPNJ: [:], sousZones: [:],
+            famillesObjets: ["2179": 9], familles: ["9": ["fr": "Ressource"]], emotes: [:], titres: [:], metiers: [:], camps: [:])
+        let monstres = RecherchePalette.entrees("", avecQuetes, filtre: .monstres)
+        #expect(monstres.map(\.titre) == ["Amakna Bwork", "Bworkette"])
+        #expect(monstres.last?.effet == .ouTrouver(.monstre(792)) && RecherchePalette.texte(de: .ouTrouver(.monstre(792)), avecQuetes) == nil)
+        let objets = RecherchePalette.entrees("", avecQuetes, filtre: .objets)
+        #expect(objets.map(\.sousTitre) == ["Ressource", L("palette.objet")])
+        #expect(objets.first?.effet == .ouTrouver(.objet(2179)))
+        // « amakna » : zaaps et lieux d'abord, le monstre après.
+        let tout = RecherchePalette.entrees("amakna", avecQuetes)
+        let monstre = try #require(tout.firstIndex { $0.genre == .monstre })
+        #expect(tout[..<monstre].allSatisfy { !$0.genre.enDernier } && tout[monstre...].allSatisfy(\.genre.enDernier))
+    }
+
+    @Test("Un PNJ sur une carte intérieure est dit « intérieur » : /travel mène devant")
+    func interieur() throws {
+        var avecQuetes = contexte()
+        let passage = { (carte: Int) in PNJ.Passage(position: .init(x: -32, y: -57), carte: carte, sousZone: nil, quetes: 1) }
+        avecQuetes.quetes = Quetes(
+            format: Quetes.formatActuel, date: .now, quetes: [],
+            pnjs: [PNJ(id: 6309, noms: ["fr": "Amayiro"], passages: [passage(217318404)]),
+                   PNJ(id: 1, noms: ["fr": "Dehors"], passages: [passage(1)])],
+            objets: [:], monstres: [:], nomsPNJ: [:], sousZones: [:], famillesObjets: [:], familles: [:], emotes: [:],
+            titres: [:], metiers: [:], camps: [:])
+        avecQuetes.interieurs = CartesInterieures(date: .now, cartes: [217318404])
+        let pnjs = RecherchePalette.pnjs(avecQuetes)
+        #expect(pnjs.map(\.interieur) == [true, false])
+        #expect(!CartesInterieures.vide.contient(nil) && avecQuetes.interieurs.contient(217318404))
+        let donnees = try JSONEncoder().encode(avecQuetes.interieurs)
+        #expect(CartesInterieures.relire(donnees) == avecQuetes.interieurs && CartesInterieures.relire(Data("{}".utf8)) == nil)
+    }
+
     @Test("Un lieu porte sa carte et son pictogramme, un zaap sa carte : la liste en montre la vue")
     func vuesDesCartes() throws {
         let banque = try #require(Carte.integree.lieux.first { $0.nom(en: .fr) == "Banque" && $0.zone(en: .fr) == "Bonta" })
@@ -61,6 +121,22 @@ struct RecherchePaletteTests {
         #expect(entree.sousTitre?.contains("Bonta") == true)
         let texte = try #require(RecherchePalette.texte(de: entree.effet, contexte()))
         #expect(texte.hasPrefix("/zaap -31,-56 ; /travel "))
+    }
+
+    @Test("Une ligne de trajet dit le zaap retenu et les cartes, ou les cartes à pied")
+    func itineraire() throws {
+        let bonta = try #require(premiere("/travel banque bonta", contexte()))
+        let texte = try #require(RecherchePalette.texte(de: bonta.effet, contexte()))
+        #expect(texte.hasPrefix("/zaap -31,-56 ; "))
+        let cartes = ItineraireZaap.distance((-31, -56), try #require(ItineraireZaap.cible(dans: String(texte.dropFirst(16)))))
+        #expect(bonta.itineraire == L("palette.trajet.via", nombre: cartes, "Cœur immaculé", cartes))
+        let amakna = try #require(RecherchePalette.lieux(contexte()).first {
+            $0.titre == "Banque" && $0.detail == Coordonnees.texte(2, -2)
+        })
+        #expect(amakna.distance == 6 && amakna.itineraire == L("palette.trajet.aPied", nombre: 6, 6))
+        #expect(RecherchePalette.texte(de: amakna.effet, contexte()) == "/travel 2,-2")
+        // Sans position, ni cartes ni zaap : rien à dire.
+        #expect(premiere("/travel banque bonta", contexte(position: nil))?.itineraire == nil)
     }
 
     @Test("Les surnoms des joueurs : fm, hdv conso")
