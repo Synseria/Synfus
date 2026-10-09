@@ -28,7 +28,8 @@ demandé que par leur bascule et par la capture du calibrage, jamais par un pann
   (`EtatCombat.monTour(fin:)`, gardée à 1,5 s près) ; suivis, cadre des lignes lues (+1½ ligne
   vers le bas), grille fine 5 × 3 px au seuil 180 — la grille fixe d'une zone haute ne voit pas
   une ligne (mesuré). `auBord` : le texte touche le bas de la zone.
-- Inventaire ScreenCaptureKit gardé (`captureData(…, inventaireGarde:)`).
+- Inventaire ScreenCaptureKit gardé (`captureImage(…, inventaireGarde:)`) ; la capture arrive à
+  `MoteurOCR` en `CGImage`, jamais en PNG — le seul PNG est la capture du calibrage, sur disque.
 - Le premier OCR `.accurate` charge le modèle, long à froid : `MoteurOCR.prechauffer()` le
   paie à l'activation.
 
@@ -97,7 +98,8 @@ Onglet Lecture de l'écran, une ligne par genre (défaut / calibrée). Chaque ge
 (l'élément n'est visible qu'en combat, en chasse, suivi ouvert) : prise après 5 s de compte à
 rebours sur le perso devant, contenu entier à l'échelle de la lecture, gardée dans
 `~/Library/Caches/Synfus/Calibrage/<genre>.png` (`CapturesCalibrage`, jamais le dépôt). Un tracé
-pose la zone ; l'essai (`LecteurEcran.lire(png:genre:)`) relit la zone découpée et l'interprète.
+pose la zone ; l'essai (`LecteurEcran.lire(image:genre:)`) relit la zone découpée sans réencodage
+(`CapturesCalibrage.decouper`) et l'interprète.
 
 ## Combat — `LectureCombat.swift` (pur)
 

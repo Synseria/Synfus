@@ -11,11 +11,13 @@
   des deux côtés — sont écartés
   (info-bulles et panneaux hors écran du même processus). Deux vraies fenêtres de jeu dans un
   processus : on renonce — mieux vaut aucun aperçu que celui du mauvais perso.
-- `PreviewCaptureEngine` (actor) garde l'inventaire `SCShareableContent`, bien plus coûteux
-  que la capture ; il ne le refait que s'il est vieux de plus de 3 s ou si un perso n'y trouve
-  pas sa fenêtre, et une fois par rafraîchissement pour tous. N'en sort que du **PNG** : ni
-  `SCWindow` ni `CGImage` ne franchissent la frontière. Captures séquentielles, faute de
-  pouvoir passer un `SCWindow` à une tâche fille.
+- `PreviewCaptureEngine` (actor) garde l'inventaire `SCShareableContent`, bien plus coûteux que
+  la capture, **sans âge** : il sert tant qu'il trouve la fenêtre et que le serveur de fenêtres
+  la connaît encore (`WindowPreviewService.cible`, `CGWindowListCreateDescriptionFromArray` par
+  identifiant, hors écran comprise), qui en donne aussi la taille actuelle ; il se refait sur un
+  perso absent, une fenêtre fermée ou une capture refusée, une fois pour tous. N'en sort que des
+  `CGImage` (Sendable) : ni `SCWindow` ni `SCShareableContent` ne franchissent la frontière.
+  Captures séquentielles, faute de pouvoir passer un `SCWindow` à une tâche fille.
 - Le survol **préchauffe** : `BarView.hover` lance `refresh` dès l'entrée si aucune vignette
   n'est connue et si l'autorisation est déjà accordée — `refresh` ne la demande jamais.
 - Vignette de **taille fixe**, hauteur comprise : le panneau ne dépend pas de l'instant où la
