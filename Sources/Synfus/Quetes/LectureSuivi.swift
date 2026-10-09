@@ -123,7 +123,7 @@ final class LectureSuivi: ObservableObject {
 
     private func noter(_ lu: SuiviQuetes.Lu, perso: String, demandee: Bool) {
         let prefs = Preferences.shared
-        let coches = lu.reconnues.reduce(0) { $0 + prefs.appliquer($1) }
+        let coches = prefs.appliquer(lu.reconnues)
         if demandee || coches > 0, cochesLues != coches { cochesLues = coches }
         // Un client pas encore connecté n'a pas de nom de perso à qui
         // rapporter son suivi.

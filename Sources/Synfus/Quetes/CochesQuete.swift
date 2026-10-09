@@ -2,32 +2,39 @@ import Foundation
 
 /// Les coches, les décoches, l'objectif en cours et l'étape d'une quête,
 /// gardés par quête dans les préférences : le seul chemin qui les écrit, à la
-/// main comme à la lecture du suivi.
+/// main comme à la lecture du suivi. Un geste touche jusqu'à trois de ces
+/// réglages : il ne les écrit qu'une fois (`enUneEcriture`).
 extension Preferences {
     /// Coche ou décoche à la main. Coché, il n'est plus en cours ; décoché, il
     /// est retenu : la lecture suivante, qui le tient peut-être encore pour
     /// fait, ne le recoche pas.
     func cocher(_ objectif: Int, de quete: Int, _ valide: Bool) {
         let cle = String(quete)
-        if valide {
-            if (quetesDecoches[cle] ?? []).contains(objectif) { quetesDecoches[cle] = Self.sans([objectif], quetesDecoches[cle]) }
-            ajouter([objectif], de: quete)
-            return
+        enUneEcriture {
+            if valide {
+                if (quetesDecoches[cle] ?? []).contains(objectif) { quetesDecoches[cle] = Self.sans([objectif], quetesDecoches[cle]) }
+                ajouter([objectif], de: quete)
+                return
+            }
+            guard (quetesValides[cle] ?? []).contains(objectif) else { return }
+            quetesValides[cle] = Self.sans([objectif], quetesValides[cle])
+            if !(quetesDecoches[cle] ?? []).contains(objectif) { quetesDecoches[cle, default: []].append(objectif) }
         }
-        guard (quetesValides[cle] ?? []).contains(objectif) else { return }
-        quetesValides[cle] = Self.sans([objectif], quetesValides[cle])
-        if !(quetesDecoches[cle] ?? []).contains(objectif) { quetesDecoches[cle, default: []].append(objectif) }
     }
 
-    /// Ce qu'une lecture du suivi dit d'une quête. Ses objectifs montrés
-    /// ouverts ne sont plus des décoches : le jeu dit lui-même qu'ils restent
-    /// à faire. Ses faits se cochent (`quetesCocherSuivi`), jamais ceux
-    /// décochés à la main, et rien ne se décoche. Une étape établie après
-    /// celle que montre le panneau l'y fait avancer, jamais reculer : le
-    /// suivi d'un perso en retard ne ramène pas en arrière. Rend combien
-    /// d'objectifs se sont cochés.
+    /// Ce qu'une lecture du suivi dit des quêtes qu'il montre, écrit d'un
+    /// coup. Pour chacune : ses objectifs montrés ouverts ne sont plus des
+    /// décoches — le jeu dit lui-même qu'ils restent à faire. Ses faits se
+    /// cochent (`quetesCocherSuivi`), jamais ceux décochés à la main, et rien
+    /// ne se décoche. Une étape établie après celle que montre le panneau l'y
+    /// fait avancer, jamais reculer : le suivi d'un perso en retard ne ramène
+    /// pas en arrière. Rend combien d'objectifs se sont cochés.
     @discardableResult
-    func appliquer(_ lue: SuiviQuetes.Reconnue) -> Int {
+    func appliquer(_ lues: [SuiviQuetes.Reconnue]) -> Int {
+        enUneEcriture { lues.reduce(0) { $0 + appliquer(lue: $1) } }
+    }
+
+    private func appliquer(lue: SuiviQuetes.Reconnue) -> Int {
         let cle = String(lue.id)
         if let decoches = quetesDecoches[cle], decoches.contains(where: lue.aFaire.contains) {
             quetesDecoches[cle] = Self.sans(lue.aFaire, decoches)

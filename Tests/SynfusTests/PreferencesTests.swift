@@ -10,11 +10,15 @@ struct PreferencesTests {
     /// de la machine, et ne laissent aucun domaine derrière eux.
     private final class StockageMemoire: PreferencesStore {
         private var contenu: [String: Data] = [:]
+        private(set) var ecritures = 0
 
         init(_ initial: [String: Data] = [:]) { contenu = initial }
 
         func donnees(pour cle: String) -> Data? { contenu[cle] }
-        func enregistrer(_ donnees: Data, pour cle: String) { contenu[cle] = donnees }
+        func enregistrer(_ donnees: Data, pour cle: String) {
+            contenu[cle] = donnees
+            ecritures += 1
+        }
     }
 
     /// Réglages neufs, adossés à un stockage vide.
@@ -783,10 +787,10 @@ extension PreferencesTests {
         // Un objectif fait ne se met pas en cours.
         prefs.mettreEnCours(3, de: 18)
         #expect(prefs.quetesEnCours == ["18": 5])
-        #expect(prefs.appliquer(lue(faits: [1, 3, 5, 1])) == 2)
+        #expect(prefs.appliquer([lue(faits: [1, 3, 5, 1])]) == 2)
         #expect(prefs.quetesValides == ["18": [3, 1, 5]])
         #expect(prefs.quetesEnCours.isEmpty)
-        #expect(prefs.appliquer(lue(faits: [1])) == 0)
+        #expect(prefs.appliquer([lue(faits: [1])]) == 0)
         prefs.mettreEnCours(7, de: 18)
         prefs.mettreEnCours(8, de: 18)
         #expect(prefs.quetesEnCours == ["18": 8])
@@ -795,23 +799,23 @@ extension PreferencesTests {
         prefs.cocher(5, de: 18, false)
         #expect(prefs.quetesValides.isEmpty)
         prefs.quetesCocherSuivi = false
-        #expect(prefs.appliquer(lue(faits: [9])) == 0)
+        #expect(prefs.appliquer([lue(faits: [9])]) == 0)
         #expect(prefs.quetesValides.isEmpty)
     }
 
     @Test("Décoché à la main, un objectif ne se recoche plus à la lecture, jusqu'à ce que le suivi le remontre ouvert")
     func decoches() {
         let (prefs, _) = neuves()
-        prefs.appliquer(lue(faits: [1, 2]))
+        prefs.appliquer([lue(faits: [1, 2])])
         prefs.cocher(2, de: 18, false)
         #expect(prefs.quetesDecoches == ["18": [2]])
-        #expect(prefs.appliquer(lue(faits: [1, 2])) == 0)
+        #expect(prefs.appliquer([lue(faits: [1, 2])]) == 0)
         #expect(prefs.quetesValides == ["18": [1]])
         // Le suivi le montre ouvert : la décoche est oubliée, il se cochera
         // quand le suivi le dira fait.
-        prefs.appliquer(lue(aFaire: [2, 3]))
+        prefs.appliquer([lue(aFaire: [2, 3])])
         #expect(prefs.quetesDecoches.isEmpty)
-        #expect(prefs.appliquer(lue(faits: [1, 2])) == 1)
+        #expect(prefs.appliquer([lue(faits: [1, 2])]) == 1)
         // Recoché à la main : plus de décoche.
         prefs.cocher(2, de: 18, false)
         prefs.cocher(2, de: 18, true)
@@ -819,16 +823,41 @@ extension PreferencesTests {
         #expect(prefs.quetesValides == ["18": [1, 2]])
     }
 
+    @Test("Un geste, une écriture : la coche qui touche trois réglages, la lecture de plusieurs quêtes")
+    func uneEcritureParGeste() {
+        let (prefs, store) = neuves()
+        prefs.appliquer([lue(faits: [1, 2])])
+        prefs.cocher(2, de: 18, false)
+        prefs.mettreEnCours(2, de: 18)
+        // Recocher efface la décoche, coche et n'est plus en cours.
+        var avant = store.ecritures
+        prefs.cocher(2, de: 18, true)
+        #expect(store.ecritures == avant + 1)
+        #expect(prefs.quetesDecoches.isEmpty && prefs.quetesValides == ["18": [1, 2]] && prefs.quetesEnCours.isEmpty)
+        avant = store.ecritures
+        let coches = prefs.appliquer([lue(18, etape: 1, sure: true, faits: [3]), lue(19, faits: [4, 5]), lue(20, aFaire: [6])])
+        #expect(coches == 3 && store.ecritures == avant + 1)
+        #expect(prefs.quetesEtape == ["18": 1] && prefs.quetesValides["19"] == [4, 5])
+        // Rien de changé, rien d'écrit.
+        avant = store.ecritures
+        prefs.appliquer([lue(19, faits: [4])])
+        prefs.cocher(9, de: 30, false)
+        #expect(store.ecritures == avant)
+        // Hors d'un lot, chaque réglage s'écrit encore de lui-même.
+        prefs.quetesCompact.toggle()
+        #expect(store.ecritures == avant + 1)
+    }
+
     @Test("Une étape établie après celle du panneau l'y fait avancer, jamais reculer ; une étape probable, non")
     func avanceeEtape() {
         let (prefs, _) = neuves()
-        prefs.appliquer(lue(etape: 2, sure: false))
+        prefs.appliquer([lue(etape: 2, sure: false)])
         #expect(prefs.quetesEtape.isEmpty)
-        prefs.appliquer(lue(etape: 2, sure: true))
+        prefs.appliquer([lue(etape: 2, sure: true)])
         #expect(prefs.quetesEtape == ["18": 2])
-        prefs.appliquer(lue(etape: 1, sure: true))
+        prefs.appliquer([lue(etape: 1, sure: true)])
         #expect(prefs.quetesEtape == ["18": 2])
-        prefs.appliquer(lue(etape: 0, sure: true))
+        prefs.appliquer([lue(etape: 0, sure: true)])
         #expect(prefs.quetesEtape == ["18": 2])
     }
 }
