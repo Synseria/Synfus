@@ -185,6 +185,18 @@ struct SuiviQuetesTests {
         #expect(titre.reconnues.map(\.id) == [14, 15])
     }
 
+    @Test("Un objectif lu en entier dans deux étapes : les noms cités ne tranchent pas")
+    func memeObjectifDeuxEtapes() {
+        let jeu = SuiviQuetes.Index(Self.quetes([Self.quete(16, ["fr": "Le retour du berger"], etapes: [
+            [Self.objectif(161, "Aller voir {npc,10}")],
+            [Self.objectif(162, "Aller voir {npc,10}"), Self.objectif(163, "Ramener à {npc,10} : x1 {item,20}")],
+        ])]))
+        // La seconde étape cite deux fois Meuh Sieurchance, mais le suivi ne
+        // dit pas laquelle est ouverte.
+        #expect(SuiviQuetes.reconnaitre(["Le retour du berger", "Aller voir Meuh Sieurchance"], dans: jeu).reconnues
+                == [.init(id: 16, etape: nil)])
+    }
+
     @Test("Deux étapes qui citent le même PNJ ne désignent rien")
     func etapeAmbigue() {
         let jeu = SuiviQuetes.Index(Self.quetes([Self.quete(7, ["fr": "Le retour de la bergère"], etapes: [
