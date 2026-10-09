@@ -84,7 +84,7 @@ final class WindowPreviewService: ObservableObject {
     ///
     /// `maxWidth` borne la largeur en pixels (`nil` : résolution native).
     /// `inventaireGarde` : se contenter de l'inventaire ScreenCaptureKit en
-    /// mémoire s'il est frais et y trouve la fenêtre — une lecture répétée
+    /// mémoire s'il y trouve la fenêtre (`cible`) — une lecture répétée
     /// chaque seconde n'a pas à refaire le tour de toutes les fenêtres du
     /// système, qui coûte bien plus que la capture.
     /// `contenu` : la région se lit dans le **contenu** de la fenêtre, sans sa
