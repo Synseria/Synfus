@@ -25,9 +25,20 @@ enum CapturesCalibrage {
         dossier.appending(path: "\(genre.rawValue).png", directoryHint: .notDirectory)
     }
 
-    static func garder(_ png: Data, pour genre: GenreLecture) throws {
+    /// Le seul PNG de la lecture : la capture qui reste sur disque. Le tour
+    /// passe la sienne à l'OCR telle quelle.
+    static func garder(_ image: CGImage, pour genre: GenreLecture) throws {
+        guard let donnees = png(image) else { throw CocoaError(.fileWriteUnknown) }
         try FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)
-        try png.write(to: fichier(genre), options: .atomic)
+        try donnees.write(to: fichier(genre), options: .atomic)
+    }
+
+    static func png(_ image: CGImage) -> Data? {
+        let donnees = NSMutableData()
+        guard let destination = CGImageDestinationCreateWithData(donnees, UTType.png.identifier as CFString, 1, nil)
+        else { return nil }
+        CGImageDestinationAddImage(destination, image, nil)
+        return CGImageDestinationFinalize(destination) ? donnees as Data : nil
     }
 
     static func gardee(_ genre: GenreLecture) -> Capture? {
@@ -39,14 +50,8 @@ enum CapturesCalibrage {
         return Capture(image: image, date: date ?? .distantPast)
     }
 
-    /// La zone découpée dans une capture du contenu entier, en PNG.
-    static func decouper(_ zone: ZoneEcran, dans image: CGImage) -> Data? {
-        let rect = zone.pixels(dans: CGSize(width: image.width, height: image.height))
-        guard let coupe = image.cropping(to: rect) else { return nil }
-        let donnees = NSMutableData()
-        guard let destination = CGImageDestinationCreateWithData(donnees, UTType.png.identifier as CFString, 1, nil)
-        else { return nil }
-        CGImageDestinationAddImage(destination, coupe, nil)
-        return CGImageDestinationFinalize(destination) ? donnees as Data : nil
+    /// La zone découpée dans une capture du contenu entier.
+    static func decouper(_ zone: ZoneEcran, dans image: CGImage) -> CGImage? {
+        image.cropping(to: zone.pixels(dans: CGSize(width: image.width, height: image.height)))
     }
 }
