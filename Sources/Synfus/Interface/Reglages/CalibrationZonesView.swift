@@ -228,7 +228,7 @@ struct CalibrationZonesView: View {
         // Le contenu entier, sans barre de titre et à l'échelle de la
         // lecture : c'est le repère des zones et ce que l'OCR recevra.
         guard let image = await WindowPreviewService.shared.captureImage(
-            client, region: CGRect(x: 0, y: 0, width: 1, height: 1), maxWidth: nil, inventaireGarde: false,
+            client, region: ZoneEcran.entiere.rect, maxWidth: nil, inventaireGarde: false,
             contenu: CaptureContenu(pleinEcran: client.pleinEcran, normaliser: true))
         else { echec = WindowPreviewService.shared.lastCaptureError ?? L("calibration.echec"); return }
         do {

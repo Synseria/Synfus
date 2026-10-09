@@ -60,6 +60,25 @@ enum GenreLecture: String, CaseIterable, Sendable {
     }
 }
 
+/// Comment capturer les zones dues au même tour chez un perso. Une capture
+/// ScreenCaptureKit a un coût fixe (aller-retour avec le serveur de fenêtres)
+/// et un coût qui suit les pixels : au-delà d'un nombre de zones, une seule
+/// capture du contenu entier, découpée, revient moins cher que plusieurs.
+enum PlanCapture: Equatable {
+    /// Une capture par zone, de la zone seule.
+    case parZone
+    /// Une capture du contenu entier à l'échelle de référence, puis une
+    /// découpe par zone (`CGImage.cropping`, sans copie des pixels).
+    case entiere
+
+    /// Provisoire : à fixer d'après `Synfus --banc-captures`.
+    static let seuilCaptureUnique = 3
+
+    static func pour(_ genres: [GenreLecture], seuil: Int = seuilCaptureUnique) -> PlanCapture {
+        Set(genres).count >= seuil ? .entiere : .parZone
+    }
+}
+
 /// Lit l'écran du jeu : la position du perso, et son état de combat.
 ///
 /// Le coût est tenu par quatre choix, mesurés sur de vraies captures :
@@ -296,7 +315,7 @@ final class LecteurEcran: ObservableObject {
                 busy = false
                 pomper()
             }
-            guard let image = await capturer(client, genre) else {
+            guard let image = await capturer(client, [genre])[genre] else {
                 diagnostic.etat = .echecCapture(previews.lastCaptureError ?? "?")
                 return
             }
@@ -325,16 +344,30 @@ final class LecteurEcran: ObservableObject {
         }
     }
 
-    /// Le seul chemin de capture d'une zone : à l'échelle de référence, et
-    /// montrée au Diagnostic telle que l'OCR la reçoit.
-    private func capturer(_ client: DofusClient, _ genre: GenreLecture) async -> CGImage? {
-        guard let image = await WindowPreviewService.shared.captureImage(
-            client, region: genre.zone.rect, maxWidth: nil, inventaireGarde: true,
-            contenu: CaptureContenu(pleinEcran: client.pleinEcran, normaliser: true))
-        else { return nil }
-        diagnostic.captures[genre] = NSImage(cgImage: image, size: .zero)
+    /// Le seul chemin de capture des zones d'un perso : à l'échelle de
+    /// référence, selon `PlanCapture`, et montrées au Diagnostic telles que
+    /// l'OCR les reçoit. Une zone manquante n'a pas pu être capturée
+    /// (`lastCaptureError`).
+    private func capturer(_ client: DofusClient, _ genres: [GenreLecture]) async -> [GenreLecture: CGImage] {
+        let service = WindowPreviewService.shared
+        let contenu = CaptureContenu(pleinEcran: client.pleinEcran, normaliser: true)
+        var images: [GenreLecture: CGImage] = [:]
+        switch PlanCapture.pour(genres) {
+        case .parZone:
+            for genre in genres {
+                images[genre] = await service.captureImage(client, region: genre.zone.rect, maxWidth: nil,
+                                                           inventaireGarde: true, contenu: contenu)
+            }
+        case .entiere:
+            guard let entiere = await service.captureImage(client, region: ZoneEcran.entiere.rect, maxWidth: nil,
+                                                           inventaireGarde: true, contenu: contenu)
+            else { return [:] }
+            for genre in genres { images[genre] = CapturesCalibrage.decouper(genre.zone, dans: entiere) }
+        }
+        guard !images.isEmpty else { return [:] }
+        for (genre, image) in images { diagnostic.captures[genre] = NSImage(cgImage: image, size: .zero) }
         diagnostic.dernierPerso = client.name
-        return image
+        return images
     }
 
     /// Une lecture à la demande, hors du tour et sans signature précédente :
@@ -350,7 +383,7 @@ final class LecteurEcran: ObservableObject {
         let devant = manager.clients.first(where: { manager.isFrontmost($0) })
         guard WindowPreviewService.shared.authorized,
               let client = devant ?? manager.clients.first(where: { $0.name == persoDevant }),
-              let image = await capturer(client, genre),
+              let image = await capturer(client, [genre])[genre],
               case .lue(let signature, let lignes, _, _) = await moteur.lire(image: image, precedente: nil,
                                                                              mesure: genre.mesure)
         else { return nil }
