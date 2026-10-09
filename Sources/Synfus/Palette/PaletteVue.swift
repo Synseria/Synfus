@@ -104,7 +104,8 @@ struct PaletteVue: View {
                     }
                     .padding(10)
                 }
-                .frame(height: modele.enGrille ? 300 : min(CGFloat(modele.entrees.count) * 44 + 20, 380))
+                .frame(height: modele.enGrille ? 300
+                       : modele.deplie != nil ? 380 : min(CGFloat(modele.entrees.count) * 44 + 20, 380))
                 .onChange(of: modele.selection) { _, index in
                     guard modele.entrees.indices.contains(index) else { return }
                     defilement.scrollTo(modele.entrees[index].id)
@@ -148,10 +149,17 @@ struct PaletteVue: View {
     private var liste: some View {
         LazyVStack(spacing: 2) {
             ForEach(Array(modele.entrees.enumerated()), id: \.element.id) { index, entree in
-                LigneResultat(entree: entree, choisie: index == modele.selection)
+                let deplie = modele.deplie == entree.id
+                LigneResultat(entree: entree, choisie: index == modele.selection, deplie: deplie)
                     .id(entree.id)
                     .onTapGesture { modele.executer(entree) }
                     .contextMenu { menu(entree) }
+                if deplie, case .ouTrouver(let sujet) = entree.effet {
+                    OuTrouverVue(sujet: sujet, metriques: .confort)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.leading, 48)
+                        .padding(.bottom, 6)
+                }
             }
         }
     }
@@ -163,6 +171,9 @@ struct PaletteVue: View {
                 modele.basculerFavori(entree)
             }
             Button(L("palette.etiquette.modifier")) { modele.commencerEtiquette(entree) }
+        }
+        if entree.genre == .objet {
+            Button(L("quete.copierNom")) { modele.copier(entree.titre) }
         }
     }
 
@@ -213,6 +224,7 @@ struct PaletteVue: View {
         case .completer: return L("palette.touche.completer")
         case .action: return L("palette.touche.faire")
         case .ouvrirQuete: return L("palette.touche.ouvrir")
+        case .ouTrouver: return L("palette.touche.ouTrouver")
         }
     }
 
@@ -282,6 +294,7 @@ private struct CarteZaap: View {
 private struct LigneResultat: View {
     let entree: EntreePalette
     let choisie: Bool
+    var deplie = false
 
     var body: some View {
         HStack(spacing: 12) {
@@ -321,6 +334,12 @@ private struct LigneResultat: View {
                     .lineLimit(1)
             }
             if let carte = entree.carte { MiniatureCarte(carte: carte, taille: Self.vignette) }
+            if case .ouTrouver = entree.effet {
+                Image(systemName: deplie ? "chevron.down" : "chevron.right")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 14)
+            }
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
@@ -343,6 +362,8 @@ private struct LigneResultat: View {
         case .recent: return "clock.arrow.circlepath"
         case .quete: return "scroll"
         case .pnj: return "person.wave.2"
+        case .monstre: return "pawprint"
+        case .objet: return "bag"
         }
     }
 }

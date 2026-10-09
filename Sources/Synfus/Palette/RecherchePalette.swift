@@ -19,7 +19,7 @@ enum ActionPalette: CaseIterable, Sendable {
 /// Ce que Tab fait défiler : la famille de résultats montrée, ou ce qui est
 /// sur la case du perso (`ici`) : quêtes qui y commencent, PNJ, lieux.
 enum FiltrePalette: CaseIterable, Sendable {
-    case tout, zaaps, lieux, quetes, pnj, ici
+    case tout, zaaps, lieux, quetes, pnj, monstres, objets, ici
 
     var titre: String {
         switch self {
@@ -28,6 +28,8 @@ enum FiltrePalette: CaseIterable, Sendable {
         case .lieux: return L("palette.filtre.lieux")
         case .quetes: return L("palette.filtre.quetes")
         case .pnj: return L("palette.filtre.pnj")
+        case .monstres: return L("palette.filtre.monstres")
+        case .objets: return L("palette.filtre.objets")
         case .ici: return L("palette.filtre.ici")
         }
     }
@@ -39,6 +41,8 @@ enum FiltrePalette: CaseIterable, Sendable {
         case .lieux: return entree.genre == .lieu
         case .quetes: return entree.genre == .quete
         case .pnj: return entree.genre == .pnj
+        case .monstres: return entree.genre == .monstre
+        case .objets: return entree.genre == .objet
         case .ici: return entree.ici
         }
     }
@@ -70,7 +74,13 @@ enum TriPalette: String, CaseIterable, Codable, Sendable {
 
 /// Une ligne de la palette, et ce qu'Entrée en fait.
 struct EntreePalette: Equatable, Identifiable, Sendable {
-    enum Genre: Equatable, Sendable { case zaap, lieu, commande, variable, perso, action, recent, quete, pnj }
+    enum Genre: Equatable, Sendable {
+        case zaap, lieu, commande, variable, perso, action, recent, quete, pnj, monstre, objet
+
+        /// Monstres et objets se cherchent par milliers : dans « Tout », après
+        /// le reste, pour ne pas noyer zaaps et lieux.
+        var enDernier: Bool { self == .monstre || self == .objet }
+    }
 
     enum Effet: Equatable, Sendable {
         /// Pose le texte dans le presse-papiers et ferme.
@@ -79,6 +89,8 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
         case completer(String)
         /// Ouvre la quête dans son panneau : étapes, objectifs, ressources.
         case ouvrirQuete(Int)
+        /// Déplie sous la ligne où trouver le monstre ou l'objet (`OuTrouverVue`).
+        case ouTrouver(OuTrouver.Sujet)
         /// Copie le trajet vers la case, zaap compris s'il vaut le coup —
         /// calculé seulement pour l'entrée choisie (`texte(de:)`).
         case trajet(x: Int, y: Int)
@@ -188,7 +200,7 @@ enum RecherchePalette {
         switch effet {
         case .copier(let texte): return texte
         case .trajet(let x, let y): return trajet(vers: (x, y), contexte)
-        case .completer, .action, .ouvrirQuete: return nil
+        case .completer, .action, .ouvrirQuete, .ouTrouver: return nil
         }
     }
 
@@ -310,6 +322,28 @@ enum RecherchePalette {
                           ici: contexte.position.map { QuetesIci.commenceIci(quete, perso: $0, reseau: contexte.reseau) } ?? false,
                           effet: .ouvrirQuete(quete.id))
         }
+    }
+
+    /// Les monstres et les objets que citent les quêtes, du catalogue déjà
+    /// téléchargé ; Entrée déplie où les trouver.
+    static func monstres(_ contexte: ContextePalette) -> [EntreePalette] {
+        (contexte.quetes?.monstres ?? [:]).compactMap { id, noms in
+            guard let numero = Int(id), let nom = Lieu.traduit(noms, contexte.langue) else { return nil }
+            return EntreePalette(id: "monstre:\(id)", genre: .monstre, titre: nom, sousTitre: L("palette.monstre"),
+                                 effet: .ouTrouver(.monstre(numero)))
+        }
+        .alphabetiques()
+    }
+
+    static func objets(_ contexte: ContextePalette) -> [EntreePalette] {
+        guard let quetes = contexte.quetes else { return [] }
+        return quetes.objets.compactMap { id, noms in
+            guard let numero = Int(id), let nom = Lieu.traduit(noms, contexte.langue) else { return nil }
+            let famille = quetes.famillesObjets[id].flatMap { quetes.familles[String($0)] }.flatMap { Lieu.traduit($0, contexte.langue) }
+            return EntreePalette(id: "objet:\(id)", genre: .objet, titre: nom, sousTitre: famille ?? L("palette.objet"),
+                                 effet: .ouTrouver(.objet(numero)))
+        }
+        .alphabetiques()
     }
 
     /// Un PNJ par position connue, avec sa zone : celle que le plus de quêtes
@@ -438,6 +472,7 @@ enum RecherchePalette {
             let (fa, fb) = (fiches[a.rang], fiches[b.rang])
             let (ea, eb) = (fa.entree, fb.entree)
             if (ea.genre == .zaap) != (eb.genre == .zaap) { return ea.genre == .zaap }
+            if ea.genre.enDernier != eb.genre.enDernier { return eb.genre.enDernier }
             if ea.favori != eb.favori { return ea.favori }
             if let ordre = comparer(fa, fb, tri) { return ordre }
             if a.score != b.score { return a.score > b.score }
@@ -501,6 +536,8 @@ enum RecherchePalette {
         case .perso: return 1
         case .quete: return 120
         case .pnj: return 130
+        case .monstre: return 140
+        case .objet: return 150
         case .lieu: return 10 + (entree.categorie ?? 99)
         case .action: return 200
         case .recent: return 300
@@ -612,6 +649,16 @@ enum RecherchePalette {
     }
 }
 
+private extension Array where Element == EntreePalette {
+    /// Par titre, comme le tri alphabétique : une famille listée sans rien
+    /// taper se parcourt dans l'ordre — un dictionnaire n'en a pas.
+    func alphabetiques() -> [EntreePalette] {
+        map { (RecherchePalette.Champs.cleAlphabetique(RecherchePalette.normaliser($0.titre)), $0) }
+            .sorted { $0.0 < $1.0 }
+            .map(\.1)
+    }
+}
+
 /// Les fiches d'un contexte, construites une fois puis cherchées à chaque
 /// frappe : normaliser des milliers de noms (quêtes, PNJ) à chaque lettre
 /// rendrait la palette poussive.
@@ -637,8 +684,11 @@ final class IndexPalette {
     /// La grille, quand rien n'est tapé.
     private(set) lazy var accueil = RecherchePalette.accueil(contexte, zaaps: zaaps.map(\.entree),
                                                             lieux: lieux.map(\.entree))
-    /// Sans préfixe : zaaps, lieux, quêtes, PNJ, gestes, dernières copies.
-    private(set) lazy var tout = zaaps + lieux + quetes + pnjs + fiches(RecherchePalette.divers(contexte))
+    private(set) lazy var monstres = fiches(RecherchePalette.monstres(contexte))
+    private(set) lazy var objets = fiches(RecherchePalette.objets(contexte))
+    /// Sans préfixe : zaaps, lieux, quêtes, PNJ, gestes, dernières copies,
+    /// monstres et objets.
+    private(set) lazy var tout = zaaps + lieux + quetes + pnjs + fiches(RecherchePalette.divers(contexte)) + monstres + objets
 
     /// Les champs de toutes les fiches, à garder pour l'index suivant.
     static func champs(de contexte: ContextePalette, connus: [String: RecherchePalette.Champs] = [:])
