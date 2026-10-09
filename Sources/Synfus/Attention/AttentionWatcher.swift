@@ -27,6 +27,12 @@ enum AttentionAction: String, Codable, CaseIterable, Identifiable {
             return L("attention.basculer.aide")
         }
     }
+
+    /// Le Dock n'est relevé que s'il y a un perso à signaler et une suite à
+    /// donner : sinon le minuteur ne tourne même pas.
+    func veilleLeDock(persos: Int) -> Bool {
+        self != .ignore && persos > 0
+    }
 }
 
 /// Détecte les rebonds d'icône dans le Dock.
@@ -43,8 +49,8 @@ final class AttentionWatcher: ObservableObject {
     /// Persos actuellement en train de réclamer l'attention.
     @Published private(set) var alerting: Set<String> = []
 
-    /// Le lecteur du Dock, qui garde les éléments AX d'un tour à l'autre : en
-    /// régime permanent, le tour ne relit que les positions et tailles.
+    /// Le lecteur du Dock, hors main, qui garde les éléments AX d'un tour à
+    /// l'autre : en régime permanent, le tour ne relit que positions et tailles.
     private let dockReader = DockGeometryReader()
     private let diagnostics = AttentionDiagnostics.shared
 
@@ -52,13 +58,18 @@ final class AttentionWatcher: ObservableObject {
     /// retriés à chaque tour : la liste ne change qu'à l'inventaire, dix fois
     /// moins souvent que ce tour ne passe.
     private var sortedClients: [DofusClient] = []
-    private var clientsSubscription: AnyCancellable?
+    /// Le réglage tel qu'émis : `@Published` publie avant d'affecter.
+    private var action: AttentionAction = .ignore
+    private var subscriptions: Set<AnyCancellable> = []
 
     /// Relevé du tour précédent. Les chaînes du Diagnostic ne sont recomposées
     /// que si les valeurs numériques ont bougé.
     private var lastInventory: DockInspector.Inventory?
 
     private var timer: Timer?
+    /// Un relevé à la fois : un Dock lent fait sauter des tours plutôt que
+    /// d'empiler des lectures.
+    private var readInFlight = false
     private var detector = BounceDetector()
     private var lastTrigger: [String: Date] = [:]
 
@@ -69,10 +80,9 @@ final class AttentionWatcher: ObservableObject {
     private init() {}
 
     func start() {
-        timer?.invalidate()
         // `@Published` émet la nouvelle valeur avant de l'affecter : c'est bien
         // elle que l'on trie, pas la précédente.
-        clientsSubscription = WindowManager.shared.$clients.sink { [weak self] clients in
+        WindowManager.shared.$clients.sink { [weak self] clients in
             MainActor.assumeIsolated {
                 guard let self else { return }
                 self.sortedClients = clients.sorted { $0.pid < $1.pid }
@@ -82,12 +92,17 @@ final class AttentionWatcher: ObservableObject {
                 let vivants = Set(clients.map(\.slotKey))
                 let purge = self.alerting.intersection(vivants)
                 if purge != self.alerting { self.alerting = purge }
+                self.reviewArming()
             }
         }
-        // 0,1 s : le saut dure environ une seconde, on le voit largement.
-        timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.tick() }
+        .store(in: &subscriptions)
+        Preferences.shared.$attentionAction.removeDuplicates().sink { [weak self] action in
+            MainActor.assumeIsolated {
+                self?.action = action
+                self?.reviewArming()
+            }
         }
+        .store(in: &subscriptions)
     }
 
     /// Le perso vient d'être regardé : on éteint son alerte.
@@ -96,30 +111,49 @@ final class AttentionWatcher: ObservableObject {
         alerting.remove(client.slotKey)
     }
 
+    /// Sans perso connecté, ou réglage sur « Ignorer », le minuteur s'arrête :
+    /// dix réveils par seconde pour ne rien relever.
+    private func reviewArming() {
+        guard action.veilleLeDock(persos: sortedClients.count) else { return disarm() }
+        guard timer == nil else { return }
+        // 0,1 s : le saut dure environ une seconde, on le voit largement. La
+        // tolérance laisse le système grouper ce réveil sans rien manquer.
+        timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.tick() }
+        }
+        timer?.tolerance = 0.02
+    }
+
+    private func disarm() {
+        guard let timer else { return }
+        timer.invalidate()
+        self.timer = nil
+        // Au réarmement, les positions de repos d'avant ne disent plus rien.
+        detector = BounceDetector()
+        lastInventory = nil
+        diagnostics.update(pairing: [])
+        diagnostics.update(pairingReliable: true)
+        if !alerting.isEmpty { alerting.removeAll() }
+    }
+
     private func tick() {
-        let action = Preferences.shared.attentionAction
-        guard action != .ignore else {
-            if !alerting.isEmpty { alerting.removeAll() }
-            return
+        guard !readInFlight else { return }
+        readInFlight = true
+        // Un processus, une icône : les processus vivants périment la structure
+        // en cache dès qu'un client se lance ou se ferme. `clients` ne suffirait
+        // pas : un client au login sur un autre bureau a une icône sans avoir
+        // de perso, et le cache serait périmé à jamais.
+        let pids = WindowManager.shared.liveDofusPIDs
+        Task {
+            let inventory = await dockReader.read(pids: pids)
+            readInFlight = false
+            // Désarmé pendant la lecture : plus rien à signaler.
+            guard timer != nil else { return }
+            ingest(inventory, pids: pids)
         }
+    }
 
-        // Sans perso à signaler, il n'y a rien à détecter : inutile d'aller
-        // interroger le Dock par l'Accessibilité dix fois par seconde alors que
-        // Dofus n'est même pas lancé.
-        let clients = sortedClients
-        guard !clients.isEmpty else {
-            diagnostics.update(pairing: [])
-            diagnostics.update(pairingReliable: true)
-            if !alerting.isEmpty { alerting.removeAll() }
-            return
-        }
-
-        // Un processus, une icône : le compte de processus vivants périme la
-        // structure en cache dès qu'un client se lance ou se ferme. Celui de
-        // `clients` ne suffirait pas : un client au login sur un autre bureau
-        // a une icône sans avoir de perso, et le cache serait périmé à jamais.
-        let processes = WindowManager.shared.liveDofusPIDs.count
-        let inventory = dockReader.read(dofusProcesses: processes)
+    private func ingest(_ inventory: DockInspector.Inventory, pids: Set<pid_t>) {
         let items = inventory.items
 
         // Les icônes du Dock s'ajoutent dans l'ordre de lancement des apps, tout
@@ -132,9 +166,8 @@ final class AttentionWatcher: ObservableObject {
         // Ce tour de boucle passe dix fois par seconde : rien n'est republié
         // sans avoir changé, et les chaînes du Diagnostic ne sont même pas
         // recomposées tant que le relevé est numériquement le même.
-        let pids = WindowManager.shared.liveDofusPIDs
         let apparies = DockPairing.apparier(nombreIcones: items.count,
-                                            pidsVivants: pids, clients: clients)
+                                            pidsVivants: pids, clients: sortedClients)
         diagnostics.update(pairing: zip(items, apparies).map {
             AttentionDiagnostics.Pair(dock: $0.key, character: $1?.name ?? L("attention.appariement.sansPerso"))
         })

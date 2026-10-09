@@ -46,7 +46,7 @@ SYNFUS_CAPTURE=~/Library/Logs/Synfus/captures/x.png sh test.sh RealCapture   # O
   `MainActor.assumeIsolated` ; le callback C de `HotKeyManager` par `DispatchQueue.main.async`.
   Seules exceptions, des **acteurs sans état partagé** pour le travail bloquant, où n'entrent et
   ne sortent que des valeurs `Sendable` : `ClientInventoryEngine` (inventaire AX),
-  `PreviewCaptureEngine` (captures), `MoteurOCR` (Vision).
+  `DockGeometryReader` (relevé AX du Dock), `PreviewCaptureEngine` (captures), `MoteurOCR` (Vision).
 - **Un seul foyer par logique.** Avant d'écrire une fonction, chercher celle qui existe ; quand une
   correction touche un chemin, vérifier que son jumeau en bénéficie. Foyers : lecture AX
   `AccessibilityReader` ; processus Dofus `DofusProcesses` ; titres `WindowTitle` ; fermeture

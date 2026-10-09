@@ -19,7 +19,7 @@ enum DockInspector {
     /// Géométrie d'une icône du Dock. C'est tout ce dont le détecteur de rebond
     /// a besoin : quand une app réclame l'attention, le Dock fait monter son
     /// icône et l'expose réellement — `AXPosition.y` diminue le temps du saut.
-    struct Item: Equatable {
+    struct Item: Equatable, Sendable {
         let position: CGPoint
         let size: CGSize
         /// Rang d'affichage, de gauche à droite.
@@ -41,7 +41,7 @@ enum DockInspector {
     private static let applicationDockItem = "AXApplicationDockItem"
 
     /// Ce qu'un tour d'inspection rapporte du Dock.
-    struct Inventory: Equatable {
+    struct Inventory: Equatable, Sendable {
         /// Icônes des clients Dofus lancés, de gauche à droite.
         let items: [Item]
         /// Cadre du **bandeau** entier — la liste qui héberge les icônes, toutes
@@ -77,6 +77,9 @@ enum DockInspector {
         /// Icônes des clients Dofus lancés, dans l'ordre d'abscisse à la
         /// découverte. L'ordre de rang est recalculé à chaque relevé.
         let items: [(title: String, element: AXHandle)]
+        /// Les processus Dofus vivants à la découverte : d'autres, et les
+        /// icônes ne sont plus les mêmes.
+        let pids: Set<pid_t>
         let date: Date
     }
 
@@ -90,7 +93,7 @@ enum DockInspector {
 
     /// Le tour complet : retrouve les éléments AX des icônes Dofus et du bandeau.
     /// Rend `nil` si le Dock n'est pas lancé.
-    static func discoverStructure(now: Date) -> Structure? {
+    static func discoverStructure(pids: Set<pid_t>, now: Date) -> Structure? {
         guard let axDock = runningDock() else { return nil }
 
         var items: [(title: String, x: CGFloat, element: AXHandle)] = []
@@ -117,6 +120,7 @@ enum DockInspector {
         return Structure(
             strip: strip,
             items: items.sorted { $0.x < $1.x }.map { ($0.title, $0.element) },
+            pids: pids,
             date: now
         )
     }
