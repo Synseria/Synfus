@@ -55,10 +55,7 @@ enum SuiviObjectifs {
         guard !lues.isEmpty else { return nil }
         let fenetres = Self.fenetres(lues)
         let parEtape = quete.etapes.map { etape in
-            affecter(fenetres, objectifs: etape.objectifs.map { objectif in
-                let modele = Lieu.traduit(objectif.textes, langue) ?? ""
-                return Ressemblance.Forme(Ressemblance.normaliser(quetes.texte(modele, en: langue)))
-            })
+            affecter(fenetres, objectifs: etape.objectifs.map { forme($0, langue: langue, dans: quetes) })
         }
         let scores = parEtape.map { $0.reduce(0) { $0 + $1.explique } }
         guard let meilleur = scores.max(), meilleur > 0, scores.count(where: { $0 == meilleur }) == 1,
@@ -99,6 +96,39 @@ enum SuiviObjectifs {
         }
         return Lecture(etape: rang, sure: sure, aFaire: aFaire,
                        faits: avant + etape.objectifs[..<fait].map(\.id), nonMontres: nonMontres, explique: meilleur)
+    }
+
+    /// `ligne` achève-t-elle un objectif de la quête que les dernières
+    /// `lignes` commencent ? Le titre court d'une autre quête peut finir un
+    /// objectif replié (« L'équipe ment » sous « … récupérer » pour
+    /// « … récupérer l'équipement ») ; après un objectif entier, il déborde.
+    static func prolonge(_ lignes: [String], par ligne: String, quete: Quete, langue: Langue,
+                         dans quetes: Quetes) -> Bool {
+        let objectifs = quete.etapes.flatMap(\.objectifs).map { forme($0, langue: langue, dans: quetes) }
+        return (1..<lignesParObjectif).contains { taille in
+            guard taille <= lignes.count else { return false }
+            let debut = lignes.suffix(taille).joined(separator: " ")
+            let sans = Ressemblance.Forme(debut), avec = Ressemblance.Forme(debut + " " + ligne)
+            return objectifs.contains { objectif in
+                guard let cout = cout(objectif, avec) else { return false }
+                return cout < Self.cout(objectif, sans) ?? .max
+            }
+        }
+    }
+
+    /// Un objectif de la quête, d'une étape quelconque, se lit-il en entier
+    /// au début de `lignes` (sur une à `lignesParObjectif` lignes) ?
+    static func lit(_ lignes: [String], quete: Quete, langue: Langue, dans quetes: Quetes) -> Bool {
+        guard !lignes.isEmpty else { return false }
+        let objectifs = quete.etapes.flatMap(\.objectifs).map { forme($0, langue: langue, dans: quetes) }
+        return (1...min(lignesParObjectif, lignes.count)).contains { taille in
+            let fenetre = Ressemblance.Forme(lignes.prefix(taille).joined(separator: " "))
+            return objectifs.contains { cout($0, fenetre) != nil }
+        }
+    }
+
+    private static func forme(_ objectif: ObjectifQuete, langue: Langue, dans quetes: Quetes) -> Ressemblance.Forme {
+        Ressemblance.Forme(Ressemblance.normaliser(quetes.texte(Lieu.traduit(objectif.textes, langue) ?? "", en: langue)))
     }
 
     /// L'étape lue se distingue-t-elle de l'autre ? Aucune ligne ne se lit
