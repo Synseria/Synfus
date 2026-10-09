@@ -35,7 +35,8 @@ enum AttentionAction: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-/// Détecte les rebonds d'icône dans le Dock.
+/// Détecte les rebonds d'icône dans le Dock, à la cadence que le détecteur
+/// demande (`BounceDetector.cadence`).
 ///
 /// Aucune API publique ne signale qu'une *autre* app réclame l'attention. En
 /// revanche le Dock anime l'icône, et il expose sa position animée via
@@ -55,7 +56,7 @@ final class AttentionWatcher: ObservableObject {
     private let diagnostics = AttentionDiagnostics.shared
 
     /// Persos triés par pid croissant, tenus à jour par abonnement plutôt que
-    /// retriés à chaque tour : la liste ne change qu'à l'inventaire, dix fois
+    /// retriés à chaque tour : la liste ne change qu'à l'inventaire, bien
     /// moins souvent que ce tour ne passe.
     private var sortedClients: [DofusClient] = []
     /// Le réglage tel qu'émis : `@Published` publie avant d'affecter.
@@ -112,16 +113,21 @@ final class AttentionWatcher: ObservableObject {
     }
 
     /// Sans perso connecté, ou réglage sur « Ignorer », le minuteur s'arrête :
-    /// dix réveils par seconde pour ne rien relever.
+    /// cinq réveils par seconde pour ne rien relever.
     private func reviewArming() {
         guard action.veilleLeDock(persos: sortedClients.count) else { return disarm() }
         guard timer == nil else { return }
-        // 0,1 s : le saut dure environ une seconde, on le voit largement. La
-        // tolérance laisse le système grouper ce réveil sans rien manquer.
-        timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+        arm(every: detector.cadence)
+    }
+
+    /// La tolérance, un cinquième du pas, laisse le système grouper ce réveil
+    /// sans rien manquer.
+    private func arm(every interval: TimeInterval) {
+        timer?.invalidate()
+        timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tick() }
         }
-        timer?.tolerance = 0.02
+        timer?.tolerance = interval / 5
     }
 
     private func disarm() {
@@ -163,7 +169,7 @@ final class AttentionWatcher: ObservableObject {
         // à l'écran de connexion a son icône sans avoir de perso, et zipper les
         // deux listes décalait tous les rangs suivants (cf. `DockPairing`).
         //
-        // Ce tour de boucle passe dix fois par seconde : rien n'est republié
+        // Ce tour de boucle passe cinq à dix fois par seconde : rien n'est republié
         // sans avoir changé, et les chaînes du Diagnostic ne sont même pas
         // recomposées tant que le relevé est numériquement le même.
         let apparies = DockPairing.apparier(nombreIcones: items.count,
@@ -193,10 +199,11 @@ final class AttentionWatcher: ObservableObject {
             lastTrigger = lastTrigger.filter { vivantes.contains($0.key) }
         }
 
-        for rank in detector.ingest(snapshot) where rank < items.count {
+        for rank in detector.ingest(snapshot, at: ProcessInfo.processInfo.systemUptime) where rank < items.count {
             guard let client = apparies[rank] else { continue }
             trigger(client, action: action, key: items[rank].key)
         }
+        if let timer, timer.timeInterval != detector.cadence { arm(every: detector.cadence) }
     }
 
     /// Une ligne lisible : où est le bandeau, et de combien chaque icône s'en
