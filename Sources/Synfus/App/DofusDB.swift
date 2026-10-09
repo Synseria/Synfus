@@ -33,7 +33,7 @@ enum DofusDB {
         champs.map { URLQueryItem(name: "$select[]", value: $0) }
     }
 
-    /// La vue d'une carte du jeu, en demi-taille (`ImagesDofusDB` la garde).
+    /// La vue d'une carte du jeu, en demi-taille : 955 × 485 pixels (`VueCarte` la réduit).
     static func imageCarte(_ carte: Int) -> URL {
         api.appending(path: "img/maps/0.5/\(carte).jpg")
     }
