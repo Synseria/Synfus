@@ -15,6 +15,8 @@ struct QueteVue: View {
     @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var lecture = LectureSuivi.shared
     @ObservedObject private var lecteur = LecteurEcran.shared
+    /// Les cartes intérieures, venues après la carte.
+    @ObservedObject private var cartes = CarteStore.shared
     /// La ligne qui vient d'être copiée, le temps de le dire.
     @State private var copiee: String?
     @State private var guideEnCours = false
@@ -552,6 +554,9 @@ struct QueteVue: View {
                                 }
                                 if let position = objectif.position {
                                     detail(id: id, Coordonnees.texte(position.x, position.y), monospace: true)
+                                    if cartes.interieurs.contient(objectif.carte), copiee != id {
+                                        EtiquetteInterieur(taille: metriques.detail)
+                                    }
                                     if suggere, copiee != id {
                                         Text(L("quete.suggestion"))
                                             .font(.system(size: metriques.detail, weight: .semibold))

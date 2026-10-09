@@ -6,6 +6,7 @@ import SwiftUI
 struct PaletteVue: View {
     @ObservedObject var modele = PaletteModele.shared
     @ObservedObject private var quetes = QuetesStore.shared
+    @ObservedObject private var almanax = AlmanaxStore.shared
     @FocusState private var champ: Champ?
 
     private enum Champ { case recherche, etiquette }
@@ -99,12 +100,16 @@ struct PaletteVue: View {
             ScrollViewReader { defilement in
                 ScrollView {
                     VStack(alignment: .leading, spacing: 10) {
+                        if modele.enGrille, let jour = almanax.almanax {
+                            AlmanaxVue(almanax: jour) { modele.copier($0) }
+                        }
                         if modele.enGrille, !modele.recents.isEmpty { recents }
                         if modele.enGrille { grille } else { liste }
                     }
                     .padding(10)
                 }
-                .frame(height: modele.enGrille ? 300 : min(CGFloat(modele.entrees.count) * 44 + 20, 380))
+                .frame(height: modele.enGrille ? 300
+                       : modele.deplie != nil ? 380 : min(CGFloat(modele.entrees.count) * 44 + 20, 380))
                 .onChange(of: modele.selection) { _, index in
                     guard modele.entrees.indices.contains(index) else { return }
                     defilement.scrollTo(modele.entrees[index].id)
@@ -148,10 +153,17 @@ struct PaletteVue: View {
     private var liste: some View {
         LazyVStack(spacing: 2) {
             ForEach(Array(modele.entrees.enumerated()), id: \.element.id) { index, entree in
-                LigneResultat(entree: entree, choisie: index == modele.selection)
+                let deplie = modele.deplie == entree.id
+                LigneResultat(entree: entree, choisie: index == modele.selection, deplie: deplie)
                     .id(entree.id)
                     .onTapGesture { modele.executer(entree) }
                     .contextMenu { menu(entree) }
+                if deplie, case .ouTrouver(let sujet) = entree.effet {
+                    OuTrouverVue(sujet: sujet, metriques: .confort)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.leading, 48)
+                        .padding(.bottom, 6)
+                }
             }
         }
     }
@@ -163,6 +175,9 @@ struct PaletteVue: View {
                 modele.basculerFavori(entree)
             }
             Button(L("palette.etiquette.modifier")) { modele.commencerEtiquette(entree) }
+        }
+        if entree.genre == .objet {
+            Button(L("quete.copierNom")) { modele.copier(entree.titre) }
         }
     }
 
@@ -213,6 +228,7 @@ struct PaletteVue: View {
         case .completer: return L("palette.touche.completer")
         case .action: return L("palette.touche.faire")
         case .ouvrirQuete: return L("palette.touche.ouvrir")
+        case .ouTrouver: return L("palette.touche.ouTrouver")
         }
     }
 
@@ -258,7 +274,7 @@ private struct CarteZaap: View {
                 .font(.system(size: 12, weight: .semibold))
                 .lineLimit(1)
             HStack(spacing: 4) {
-                Text(entree.sousTitre ?? "")
+                Text(entree.itineraire ?? entree.sousTitre ?? "")
                     .lineLimit(1)
                     .foregroundStyle(.secondary)
                 Spacer(minLength: 0)
@@ -282,6 +298,7 @@ private struct CarteZaap: View {
 private struct LigneResultat: View {
     let entree: EntreePalette
     let choisie: Bool
+    var deplie = false
 
     var body: some View {
         HStack(spacing: 12) {
@@ -300,9 +317,18 @@ private struct LigneResultat: View {
                     if entree.favori {
                         Image(systemName: "star.fill").font(.system(size: 9)).foregroundStyle(Couleurs.ambre)
                     }
+                    if entree.interieur { EtiquetteInterieur(taille: 10) }
                 }
-                if let sousTitre = entree.sousTitre {
-                    Text(sousTitre).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
+                if entree.sousTitre != nil || entree.itineraire != nil {
+                    HStack(spacing: 6) {
+                        if let sousTitre = entree.sousTitre { Text(sousTitre).foregroundStyle(.secondary) }
+                        // Le zaap retenu, à lire avant d'Entrée : le trajet copié y passe.
+                        if let itineraire = entree.itineraire {
+                            Text(itineraire).foregroundStyle(Couleurs.accent).layoutPriority(1)
+                        }
+                    }
+                    .font(.system(size: 11))
+                    .lineLimit(1)
                 }
             }
             Spacer(minLength: 8)
@@ -313,6 +339,12 @@ private struct LigneResultat: View {
                     .lineLimit(1)
             }
             if let carte = entree.carte { MiniatureCarte(carte: carte, taille: Self.vignette) }
+            if case .ouTrouver = entree.effet {
+                Image(systemName: deplie ? "chevron.down" : "chevron.right")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 14)
+            }
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
@@ -335,7 +367,25 @@ private struct LigneResultat: View {
         case .recent: return "clock.arrow.circlepath"
         case .quete: return "scroll"
         case .pnj: return "person.wave.2"
+        case .monstre: return "pawprint"
+        case .objet: return "bag"
         }
+    }
+}
+
+/// Une carte qui n'est pas en extérieur : `/travel` mène devant, il reste
+/// à entrer. La palette et le panneau des quêtes la disent pareil.
+struct EtiquetteInterieur: View {
+    let taille: CGFloat
+
+    var body: some View {
+        Text(L("carte.interieur"))
+            .font(.system(size: taille, weight: .medium))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 4)
+            .overlay(Capsule().strokeBorder(Color.secondary.opacity(0.5)))
+            .lineLimit(1)
+            .help(L("carte.interieur.aide"))
     }
 }
 

@@ -165,8 +165,12 @@ final class Preferences: ObservableObject {
     /// Les lieux de la carte mis en avant dans la palette, par `Lieu.cle`.
     @Published var lieuxFavoris: [String] = [] { didSet { save() } }
 
-    /// Les étiquettes libres (« Fri 1 », « Bouftou »), par `Zaap.cle` ou
-    /// `Lieu.cle` : la palette les cherche avant les noms.
+    /// Les PNJ mis en avant dans la palette, par `PNJ.cle` (l'identifiant
+    /// DofusDB, stable d'un téléchargement à l'autre).
+    @Published var pnjsFavoris: [String] = [] { didSet { save() } }
+
+    /// Les étiquettes libres (« Fri 1 », « Bouftou »), par `Zaap.cle`,
+    /// `Lieu.cle` ou `PNJ.cle` : la palette les cherche avant les noms.
     @Published var etiquettes: [String: String] = [:] { didSet { save() } }
 
     /// Les derniers textes copiés depuis la palette, le plus récent d'abord.
@@ -192,6 +196,12 @@ final class Preferences: ObservableObject {
     /// Les objectifs décochés à la main, par identifiant de quête : la lecture
     /// du suivi ne les recoche pas, tant qu'il ne les remontre pas ouverts.
     @Published var quetesDecoches: [String: [Int]] = [:] { didSet { save() } }
+
+    /// Les objectifs que la lecture du suivi a cochés d'elle-même, par
+    /// identifiant de quête : seuls ceux-là se décochent quand le suivi les
+    /// remontre ouverts. Une coche posée à la main, ou d'avant ce réglage,
+    /// n'y est pas.
+    @Published var quetesCochesLues: [String: [Int]] = [:] { didSet { save() } }
 
     /// Les objectifs que le suivi du jeu montre faits se cochent à sa lecture.
     @Published var quetesCocherSuivi: Bool = true { didSet { save() } }
@@ -493,6 +503,7 @@ final class Preferences: ObservableObject {
         .facultatif("zaapsFavoris", \.zaapsFavoris),
         .optionnel("chasseHotKey", \.chasseHotKey),
         .facultatif("lieuxFavoris", \.lieuxFavoris),
+        .facultatif("pnjsFavoris", \.pnjsFavoris),
         .facultatif("etiquettes", \.etiquettes),
         .optionnel("paletteHotKey", \.paletteHotKey),
         .facultatif("paletteRecents", \.paletteRecents),
@@ -509,6 +520,7 @@ final class Preferences: ObservableObject {
         .facultatif("quetesEnCours", \.quetesEnCours),
         .facultatif("quetesCocherSuivi", \.quetesCocherSuivi),
         .facultatif("quetesDecoches", \.quetesDecoches),
+        .facultatif("quetesCochesLues", \.quetesCochesLues),
         .facultatif("zaapsVueCarte", \.vuesCartes),
     ]
 

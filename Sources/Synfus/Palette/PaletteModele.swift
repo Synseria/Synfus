@@ -15,9 +15,12 @@ final class PaletteModele: ObservableObject {
         didSet {
             guard requete != oldValue else { return }
             selection = 0
+            deplie = nil
             recalculer()
         }
     }
+    /// L'entrée dont « Où trouver » est déplié sous la ligne (monstre, objet).
+    @Published private(set) var deplie: String?
     @Published private(set) var entrees: [EntreePalette] = []
     /// La famille montrée, que Tab fait défiler ; revient à « Tout » à
     /// chaque ouverture.
@@ -111,13 +114,17 @@ final class PaletteModele: ObservableObject {
     var recents: [EntreePalette] { RecherchePalette.recents(contexte) }
 
     func ouvrir() {
-        if contexteImpose == nil { QuetesStore.shared.preparer() }
+        if contexteImpose == nil {
+            QuetesStore.shared.preparer()
+            AlmanaxStore.shared.preparer()
+        }
         contexte = contexteImpose ?? Self.contexteCourant()
         filtre = .tout
         tri = contexteImpose == nil ? Preferences.shared.paletteTri : tri
         edition = nil
         requete = ""
         selection = 0
+        deplie = nil
         recalculer()
         ouverture += 1
     }
@@ -146,6 +153,7 @@ final class PaletteModele: ObservableObject {
         }
         filtre = filtre.suivant(arriere ? -1 : 1)
         selection = 0
+        deplie = nil
         recalculer()
     }
 
@@ -185,11 +193,9 @@ final class PaletteModele: ObservableObject {
         switch entree.effet {
         case .copier, .trajet:
             guard let texte = texteACopier(entree) else { return }
-            PressePapiers.copier(texte)
-            if contexteImpose == nil {
-                Preferences.shared.paletteRecents = RecherchePalette.noterRecent(texte, dans: Preferences.shared.paletteRecents)
-            }
-            PalettePanel.shared.fermer()
+            copier(texte)
+        case .ouTrouver:
+            deplie = deplie == entree.id ? nil : entree.id
         case .completer(let texte):
             requete = texte
         case .ouvrirQuete(let id):
@@ -199,6 +205,15 @@ final class PaletteModele: ObservableObject {
             PalettePanel.shared.fermer()
             faire(action)
         }
+    }
+
+    /// Copie, retient parmi les dernières copies et ferme.
+    func copier(_ texte: String) {
+        PressePapiers.copier(texte)
+        if contexteImpose == nil {
+            Preferences.shared.paletteRecents = RecherchePalette.noterRecent(texte, dans: Preferences.shared.paletteRecents)
+        }
+        PalettePanel.shared.fermer()
     }
 
     private func faire(_ action: ActionPalette) {
@@ -260,8 +275,9 @@ final class PaletteModele: ObservableObject {
         contexte.position = LecteurEcran.shared.positionDuPersoDevant
         contexte.zaaps = ZaapClipboard.shared.zaapsSitues
         contexte.lieux = CarteStore.shared.carte.lieux
+        contexte.interieurs = CarteStore.shared.interieurs
         contexte.etiquettes = prefs.etiquettes
-        contexte.favoris = Set(prefs.zaapsFavoris + prefs.lieuxFavoris)
+        contexte.favoris = prefs.favoris
         contexte.recents = prefs.paletteRecents
         contexte.quetes = QuetesStore.shared.quetes
         contexte.gainMinimal = prefs.zaapGainMinimal
