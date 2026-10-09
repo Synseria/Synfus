@@ -83,12 +83,17 @@ final class ChasseModele: ObservableObject {
 
     // MARK: - Lecture de l'écran
 
+    /// La reconnaissance cherche chaque nom d'indice, à quelques fautes près,
+    /// dans chaque ligne lue : un dixième de seconde, hors du fil principal.
     func lire() {
         guard !lectureEnCours, !indices.isEmpty else { return }
         lectureEnCours = true
+        let indices = indices
         Task {
             let lignes = await LecteurEcran.shared.lireUneFois(.chasse)?.lignes ?? []
-            lues = EtapeChasse.ciblesLues(dans: lignes, parmi: indices)
+            lues = await Task.detached(priority: .userInitiated) {
+                EtapeChasse.ciblesLues(dans: lignes, parmi: indices)
+            }.value
             rienLu = lues.isEmpty
             lectureEnCours = false
             if let derniere = lues.last { choisir(derniere) }
