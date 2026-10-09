@@ -1,7 +1,6 @@
 import AppKit
 import ImageIO
 import SwiftUI
-import UniformTypeIdentifiers
 
 /// Les images que DofusDB héberge (vues des cartes, pictogrammes des repères,
 /// emblèmes de classe), téléchargées à la demande et gardées dans les caches
@@ -21,15 +20,16 @@ final class ImagesDofusDB {
         var cle: NSString { "\(cote ?? 0) \(url.absoluteString)" as NSString }
     }
 
-    /// Les images telles quelles : peu nombreuses (emblèmes, pictogrammes,
-    /// vues agrandies), et gardées pour de bon — `ClassesStore` ne redemande
-    /// pas un emblème déjà venu.
+    /// Les images telles quelles : petites et peu nombreuses (emblèmes,
+    /// pictogrammes), gardées pour de bon — `ClassesStore` ne redemande pas un
+    /// emblème déjà venu. Une vue de carte n'y entre jamais : `VueCarte` la
+    /// demande réduite.
     private var memoire: [URL: NSImage] = [:]
-    /// Les copies réduites, bornées : une liste qu'on fait défiler en montre
-    /// des centaines, et une vue de carte décodée pèse plus d'un mégaoctet.
+    /// Les copies réduites, bornées en octets décodés : une liste qu'on fait
+    /// défiler en montre des centaines, une vue de carte entière pèse 1,8 Mo.
     private let reduites: NSCache<NSString, NSImage> = {
         let cache = NSCache<NSString, NSImage>()
-        cache.countLimit = 400
+        cache.totalCostLimit = 64 << 20
         return cache
     }()
     private var enCours: [Demande: Task<NSImage?, Never>] = [:]
@@ -44,8 +44,8 @@ final class ImagesDofusDB {
         enMemoire(Demande(url: url, cote: cote))
     }
 
-    /// Du cache disque, sinon du réseau ; `nil` si DofusDB ne l'a pas. Réduite
-    /// hors du fil principal quand `cote` est donné.
+    /// Du cache disque, sinon du réseau ; `nil` si DofusDB ne l'a pas. Décodée
+    /// — et réduite quand `cote` est donné — hors du fil principal.
     func charger(_ url: URL, cote: Int? = nil) async -> NSImage? {
         let demande = Demande(url: url, cote: cote)
         if let image = enMemoire(demande) { return image }
@@ -69,19 +69,22 @@ final class ImagesDofusDB {
         let url = demande.url
         let fichier = dossier.appending(path: url.pathComponents.suffix(2).joined(separator: "-"))
         let tache = Task<NSImage?, Never> {
-            let donnees = await Task.detached { () -> Data? in
-                let original = await Self.original(url, fichier: fichier, reseauDAbord: reseauDAbord)
-                guard let original, let cote = demande.cote else { return original }
-                return Self.reduire(original, cote: cote) ?? original
+            let decodee = await Task.detached { () -> CGImage? in
+                guard let original = await Self.original(url, fichier: fichier, reseauDAbord: reseauDAbord) else { return nil }
+                return Self.decoder(original, cote: demande.cote)
             }.value
-            return donnees.flatMap(NSImage.init(data:))
+            guard let decodee else { return nil }
+            let image = NSImage(cgImage: decodee, size: .zero)
+            if demande.cote == nil {
+                memoire[url] = image
+            } else {
+                reduites.setObject(image, forKey: demande.cle, cost: decodee.bytesPerRow * decodee.height)
+            }
+            return image
         }
         enCours[demande] = tache
         let image = await tache.value
         enCours[demande] = nil
-        if let image {
-            if demande.cote == nil { memoire[url] = image } else { reduites.setObject(image, forKey: demande.cle) }
-        }
         return image
     }
 
@@ -97,20 +100,19 @@ final class ImagesDofusDB {
         return recues
     }
 
-    /// Une copie de `cote` pixels au plus, en PNG : ImageIO ne décode que ce
-    /// qu'il faut, et le fil principal n'a plus qu'une petite image à lire.
-    nonisolated private static func reduire(_ donnees: Data, cote: Int) -> Data? {
+    /// Les pixels, décodés ici : une image lue paresseusement se décoderait au
+    /// premier dessin, sur le fil principal. Avec `cote`, `cote` pixels au plus
+    /// sur le plus grand côté, jamais agrandie.
+    nonisolated static func decoder(_ donnees: Data, cote: Int?) -> CGImage? {
+        guard let source = CGImageSourceCreateWithData(donnees as CFData, nil) else { return nil }
+        guard let cote else {
+            return CGImageSourceCreateImageAtIndex(source, 0, [kCGImageSourceShouldCacheImmediately: true] as CFDictionary)
+        }
         let options = [kCGImageSourceCreateThumbnailFromImageAlways: true,
                        kCGImageSourceCreateThumbnailWithTransform: true,
+                       kCGImageSourceShouldCacheImmediately: true,
                        kCGImageSourceThumbnailMaxPixelSize: cote] as CFDictionary
-        guard let source = CGImageSourceCreateWithData(donnees as CFData, nil),
-              let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options)
-        else { return nil }
-        let sortie = NSMutableData()
-        guard let destination = CGImageDestinationCreateWithData(sortie, UTType.png.identifier as CFString, 1, nil)
-        else { return nil }
-        CGImageDestinationAddImage(destination, image, nil)
-        return CGImageDestinationFinalize(destination) ? sortie as Data : nil
+        return CGImageSourceCreateThumbnailAtIndex(source, 0, options)
     }
 }
 
