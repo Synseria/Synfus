@@ -7,7 +7,7 @@ enum QuetesIci {
     static func ici(_ position: PNJ.Position, sousZone: Int?, perso: PositionCarte, reseau: ReseauSousZones) -> Bool {
         guard position.x == perso.x, position.y == perso.y else { return false }
         guard let sousZone else { return true }
-        return reseau.estDuMondeDesDouze(sousZone) != ItineraireZaap.horsDuMondeDesDouze(perso.zone)
+        return reseau.estDuMondeDesDouze(sousZone) != perso.horsDuMondeDesDouze
     }
 
     /// Une quête commence ici si l'un de ses départs y est.
