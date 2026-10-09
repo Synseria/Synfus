@@ -64,8 +64,11 @@ sa bascule). Toute nouvelle option suit la règle.
 
 ## Vues des cartes — `Interface/ImagesCarte.swift`
 
-- Toute vue de carte en vignette passe par `MiniatureCarte` (palette, onglets Lieux et PNJ,
-  panneau des quêtes) : réduite hors main (`ImagesDofusDB`, `cote`, cache borné), masquée par
+- Toute vue de carte passe par `VueCarte` (deux pixels par point de son plus grand côté, jamais
+  l'image entière) : `MiniatureCarte` (palette, onglets Lieux et PNJ, panneau des quêtes),
+  `FondCarte` (cases de zaaps), `ApercuCarte`. `ImagesDofusDB` décode hors main (ImageIO) et
+  range les copies réduites dans un `NSCache` borné à 64 Mo décodés ; seules les images sans
+  `cote` — emblèmes, pictogrammes, petits et en nombre fini — restent à vie. Masquée par
   `vuesCartes` (clé de sauvegarde `zaapsVueCarte`, qui masque aussi le fond des zaaps), agrandie
   au survol par `ApercuCarte` — panneau sans bordure, jamais clé, `ignoresMouseEvents`, posé à
   côté de la fenêtre sous la souris. Un survol sans vignette (ligne d'objectif des quêtes) passe
