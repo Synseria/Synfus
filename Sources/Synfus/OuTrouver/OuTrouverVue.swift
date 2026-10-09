@@ -55,7 +55,7 @@ struct OuTrouverVue: View {
 
     @ViewBuilder
     private func monstre(_ fiche: FicheMonstre) -> some View {
-        let repaires = store.situeur(depuis: lecteur.positionDuPersoDevant)(fiche)
+        let repaires = store.repaires(fiche, depuis: lecteur.positionDuPersoDevant)
         if repaires.isEmpty { Text(L("ouTrouver.introuvable")) }
         ForEach(Array(repaires.prefix(tout ? .max : Self.premiers).enumerated()), id: \.offset) { _, repaire in
             ligne(repaire, cle: "m\(fiche.id)")
@@ -68,7 +68,8 @@ struct OuTrouverVue: View {
     @ViewBuilder
     private func objet(_ sources: SourcesObjet) -> some View {
         if let recette = sources.recette { self.recette(recette) }
-        let lacheurs = OuTrouver.lacheurs(sources, situer: store.situeur(depuis: lecteur.positionDuPersoDevant))
+        let position = lecteur.positionDuPersoDevant
+        let lacheurs = OuTrouver.lacheurs(sources) { store.repaires($0, depuis: position) }
         ForEach(Array(lacheurs.prefix(tout ? .max : Self.premiers).enumerated()), id: \.offset) { _, element in
             lacheur(element.lacheur, element.repaires)
         }

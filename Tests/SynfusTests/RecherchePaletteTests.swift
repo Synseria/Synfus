@@ -152,4 +152,26 @@ struct RecherchePaletteTests {
         let categories = RecherchePalette.entrees("", contexte(), filtre: .lieux, tri: .type).compactMap(\.categorie)
         #expect(categories == categories.sorted())
     }
+
+    @Test("Les premiers d'une liste : ceux du tri complet, ex aequo dans leur ordre d'arrivée")
+    func premiers() {
+        var generateur = SystemRandomNumberGenerator()
+        for _ in 0..<200 {
+            let nombres = (0..<Int.random(in: 0...60, using: &generateur)).map { _ in Int.random(in: 0...15, using: &generateur) }
+            let elements = Array(nombres.enumerated())
+            for limite in [0, 1, 5, 30, 80] {
+                let attendus = elements.sorted { $0.element < $1.element }.prefix(limite).map(\.offset)
+                #expect(RecherchePalette.premiers(elements, limite) { $0.element < $1.element }.map(\.offset) == attendus)
+            }
+        }
+    }
+
+    @Test("La clé alphabétique range comme localizedStandardCompare : casse, accents, nombres")
+    func cleAlphabetique() {
+        let titres = ["zaap 10", "Zaap 9", "École", "Ecaflip", "Enutrof", "Éther", "bonta", "Bonta 2", "L'Arche", "Lac",
+                      "Œil de Vortex", "Ouginak", "Cœur", "Coffre"]
+        let cle = { RecherchePalette.Champs(titre: $0).cleAlphabetique }
+        let attendu = titres.sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+        #expect(titres.sorted { cle($0) < cle($1) } == attendu)
+    }
 }

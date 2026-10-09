@@ -61,7 +61,7 @@ final class ApercuCarte {
     }
 
     private func vue(_ carte: Int) -> some View {
-        ImageDofusDB(url: DofusDB.imageCarte(carte))
+        VueCarte(carte: carte, cote: max(Self.taille.width, Self.taille.height))
             .aspectRatio(contentMode: .fit)
             .background(Color.black.opacity(0.6))
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
@@ -92,6 +92,20 @@ final class ApercuCarte {
     }
 }
 
+/// La vue d'une carte du jeu, réduite à ce qu'elle occupe : deux pixels par
+/// point de son plus grand côté (`cote`), jamais plus que l'image. Le seul
+/// chemin des vues de carte vers `ImagesDofusDB` : entière, une vue décodée
+/// pèse 1,8 Mo et resterait en mémoire pour de bon.
+struct VueCarte: View {
+    let carte: Int
+    /// En points.
+    let cote: CGFloat
+
+    var body: some View {
+        ImageDofusDB(url: DofusDB.imageCarte(carte), cote: Int(2 * cote))
+    }
+}
+
 /// La vue d'une carte en vignette, réduite hors du fil principal ; au survol,
 /// en grand (`apercuCarteAuSurvol`), sauf quand c'est la ligne qui la porte
 /// qui l'agrandit. Rien quand les vues des cartes sont coupées
@@ -104,8 +118,7 @@ struct MiniatureCarte: View {
 
     var body: some View {
         if prefs.vuesCartes, Ressources.visuelsDuJeu {
-            // Deux pixels par point : nette sur un écran Retina.
-            ImageDofusDB(url: DofusDB.imageCarte(carte), cote: Int(2 * max(taille.width, taille.height)))
+            VueCarte(carte: carte, cote: max(taille.width, taille.height))
                 .aspectRatio(contentMode: .fill)
                 .frame(width: taille.width, height: taille.height)
                 .background(Color.primary.opacity(0.08))
@@ -145,12 +158,15 @@ struct FondCarte: View {
     @ObservedObject private var prefs = Preferences.shared
     @Environment(\.colorScheme) private var apparence
     private let forme = RoundedRectangle(cornerRadius: 9, style: .continuous)
+    /// Plus large qu'une case de la grille (palette : 4 au rang sur 660 pt ;
+    /// réglages : 3), que l'image remplit.
+    private static let cote: CGFloat = 200
 
     var body: some View {
         if prefs.vuesCartes, Ressources.visuelsDuJeu, let carte {
             let sombre = apparence == .dark
             Color(white: sombre ? 0.17 : 0.95)
-                .overlay { ImageDofusDB(url: DofusDB.imageCarte(carte)).scaledToFill().opacity(0.25) }
+                .overlay { VueCarte(carte: carte, cote: Self.cote).scaledToFill().opacity(0.25) }
                 .overlay {
                     LinearGradient(colors: [.clear, Color(white: sombre ? 0.12 : 1).opacity(0.7)],
                                    startPoint: .top, endPoint: .bottom)

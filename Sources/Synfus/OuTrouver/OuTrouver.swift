@@ -26,19 +26,17 @@ enum OuTrouver {
     /// DofusDB est souvent la première salle, sur la carte du donjon même.
     /// `nil` : rien ne le situe (expéditions, monstres de quête).
     static func situer(_ repaire: RepaireMonstre, depuis depart: Case?, reseau: ReseauSousZones,
-                       lieux: [Lieu]) -> Situation? {
+                       reperes: ReperesCarte) -> Situation? {
         let lieu: Lieu?
         switch repaire.genre {
         case .sousZone:
             if let proche = laPlusProche(reseau.cases(repaire.id), de: depart) {
                 return Situation(x: proche.x, y: proche.y, monde: Zaap.mondeDesDouze)
             }
-            lieu = lieux.first { $0.idSousZone == repaire.id }
+            lieu = reperes.lieu(sousZone: repaire.id)
         case .donjon:
-            let donjons = lieux.filter { $0.categorie == CategorieLieu.donjon.rawValue }
-            let nom = repaire.noms[Langue.fr.rawValue].map(RecherchePalette.normaliser)
-            lieu = donjons.first { repaire.entree != nil && $0.idCarte == repaire.entree }
-                ?? donjons.first { nom != nil && $0.noms[Langue.fr.rawValue].map(RecherchePalette.normaliser) == nom }
+            lieu = repaire.entree.flatMap(reperes.donjon(carte:))
+                ?? repaire.noms[Langue.fr.rawValue].flatMap(reperes.donjon(nom:))
         }
         return lieu.map { Situation(x: $0.x, y: $0.y, monde: $0.monde) }
     }
@@ -55,10 +53,10 @@ enum OuTrouver {
     /// coût d'un trajet copié, zaaps compris) ; sans coût — position inconnue,
     /// autre monde —, après, dans l'ordre donné. Un repaire que rien ne situe
     /// est laissé de côté.
-    static func situes(_ repaires: [RepaireMonstre], depuis depart: Case?, reseau: ReseauSousZones, lieux: [Lieu],
-                       cartes: (Case) -> Int?) -> [RepaireSitue] {
+    static func situes(_ repaires: [RepaireMonstre], depuis depart: Case?, reseau: ReseauSousZones,
+                       reperes: ReperesCarte, cartes: (Case) -> Int?) -> [RepaireSitue] {
         repaires.compactMap { repaire in
-            situer(repaire, depuis: depart, reseau: reseau, lieux: lieux).map { situation in
+            situer(repaire, depuis: depart, reseau: reseau, reperes: reperes).map { situation in
                 RepaireSitue(repaire: repaire, situation: situation,
                              cartes: situation.monde == Zaap.mondeDesDouze ? cartes((situation.x, situation.y)) : nil)
             }

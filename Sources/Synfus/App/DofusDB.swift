@@ -33,7 +33,7 @@ enum DofusDB {
         champs.map { URLQueryItem(name: "$select[]", value: $0) }
     }
 
-    /// La vue d'une carte du jeu, en demi-taille (`ImagesDofusDB` la garde).
+    /// La vue d'une carte du jeu, en demi-taille : 955 × 485 pixels (`VueCarte` la réduit).
     static func imageCarte(_ carte: Int) -> URL {
         api.appending(path: "img/maps/0.5/\(carte).jpg")
     }
@@ -52,6 +52,13 @@ enum DofusDB {
     static func perimee(depuis date: Date?, maintenant: Date) -> Bool {
         guard let date else { return true }
         return maintenant.timeIntervalSince(date) > peremption
+    }
+
+    /// Une liste lue hors du fil principal ne remplace que plus vieille
+    /// qu'elle : la lecture du disque, finie après un téléchargement, ne le
+    /// défait pas.
+    static func remplace(_ date: Date, enPlace: Date?) -> Bool {
+        date > enPlace ?? .distantPast
     }
 
     static func page<Element: Decodable>(_ chemin: String, _ filtres: [URLQueryItem]) async throws -> Page<Element> {

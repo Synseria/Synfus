@@ -1,9 +1,12 @@
 import AppKit
+import ImageIO
 import Testing
+import UniformTypeIdentifiers
 @testable import Synfus
 
 /// Où se pose la vue agrandie d'une carte : à côté de la fenêtre de sa
-/// vignette, sinon à gauche de la souris, toujours dans l'écran.
+/// vignette, sinon à gauche de la souris, toujours dans l'écran. Et la taille
+/// à laquelle ses images se décodent.
 struct ApercuCarteTests {
     private let ecran = NSRect(x: 0, y: 0, width: 1440, height: 900)
     private let taille = NSSize(width: 638, height: 438)
@@ -31,5 +34,30 @@ struct ApercuCarteTests {
         #expect(haut.maxY == ecran.maxY)
         let milieu = ApercuCarte.cadre(taille: taille, fenetre: nil, souris: NSPoint(x: 1000, y: 450), ecran: ecran)
         #expect(milieu.midY == 450)
+    }
+
+    /// Un JPEG de 300 × 150, dessiné en mémoire.
+    private static func jpeg() throws -> Data {
+        let contexte = try #require(CGContext(data: nil, width: 300, height: 150, bitsPerComponent: 8, bytesPerRow: 0,
+                                              space: CGColorSpaceCreateDeviceRGB(),
+                                              bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue))
+        contexte.setFillColor(CGColor(red: 0.2, green: 0.5, blue: 0.4, alpha: 1))
+        contexte.fill(CGRect(x: 0, y: 0, width: 300, height: 150))
+        let image = try #require(contexte.makeImage())
+        let sortie = NSMutableData()
+        let destination = try #require(CGImageDestinationCreateWithData(sortie, UTType.jpeg.identifier as CFString, 1, nil))
+        CGImageDestinationAddImage(destination, image, nil)
+        #expect(CGImageDestinationFinalize(destination))
+        return sortie as Data
+    }
+
+    @Test("Une image de DofusDB décodée réduite à son côté, jamais agrandie ; entière sans côté")
+    func decodage() throws {
+        let donnees = try Self.jpeg()
+        let reduite = try #require(ImagesDofusDB.decoder(donnees, cote: 64))
+        #expect(reduite.width == 64 && reduite.height == 32)
+        #expect(ImagesDofusDB.decoder(donnees, cote: 1000)?.width == 300)
+        #expect(ImagesDofusDB.decoder(donnees, cote: nil).map { [$0.width, $0.height] } == [300, 150])
+        #expect(ImagesDofusDB.decoder(Data("pas une image".utf8), cote: 64) == nil)
     }
 }

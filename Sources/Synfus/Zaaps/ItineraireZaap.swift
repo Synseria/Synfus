@@ -21,7 +21,7 @@ enum ItineraireZaap {
     /// La case où rejoindre un perso d'après sa position lue — `nil` hors du
     /// Monde des Douze : un `/travel` y viserait la case homonyme d'Amakna.
     static func rejoindre(_ position: PositionCarte?) -> (x: Int, y: Int)? {
-        guard let position, !horsDuMondeDesDouze(position.zone) else { return nil }
+        guard let position, !position.horsDuMondeDesDouze else { return nil }
         return (position.x, position.y)
     }
 

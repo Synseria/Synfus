@@ -27,7 +27,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         CarteStore.shared.start()
         ClassesStore.shared.start()
         QuetesStore.shared.preparer()
-        PaletteModele.shared.prechauffer()
+        // Abonnée à la carte et aux quêtes, lues en tâche de fond : elle en
+        // normalisera les textes dès leur arrivée.
+        _ = PaletteModele.shared
         ZaapClipboard.shared.start()
 
         if !AXIsProcessTrusted() {
