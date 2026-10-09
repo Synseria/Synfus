@@ -1,6 +1,5 @@
 import AppKit
 import Combine
-import ImageIO
 import Vision
 
 /// Ce qu'on lit dans la fenêtre du jeu, et où. Chaque genre a sa zone, son
@@ -286,13 +285,13 @@ final class LecteurEcran: ObservableObject {
                 busy = false
                 pomper()
             }
-            guard let png = await capturer(client, genre) else {
+            guard let image = await capturer(client, genre) else {
                 diagnostic.etat = .echecCapture(previews.lastCaptureError ?? "?")
                 return
             }
-            switch await moteur.lire(png: png, precedente: precedente, mesure: genre.mesure) {
+            switch await moteur.lire(image: image, precedente: precedente, mesure: genre.mesure) {
             case .illisible:
-                diagnostic.etat = .echecCapture("PNG illisible")
+                diagnostic.etat = .echecCapture("image illisible")
             case .inchangee:
                 // Rien de neuf, mais le relevé reste vrai à cet instant.
                 vuLe[cle] = Date()
@@ -317,14 +316,14 @@ final class LecteurEcran: ObservableObject {
 
     /// Le seul chemin de capture d'une zone : à l'échelle de référence, et
     /// montrée au Diagnostic telle que l'OCR la reçoit.
-    private func capturer(_ client: DofusClient, _ genre: GenreLecture) async -> Data? {
-        guard let png = await WindowPreviewService.shared.captureData(
+    private func capturer(_ client: DofusClient, _ genre: GenreLecture) async -> CGImage? {
+        guard let image = await WindowPreviewService.shared.captureImage(
             client, region: genre.zone.rect, maxWidth: nil, inventaireGarde: true,
             contenu: CaptureContenu(pleinEcran: client.pleinEcran, normaliser: true))
         else { return nil }
-        diagnostic.captures[genre] = NSImage(data: png)
+        diagnostic.captures[genre] = NSImage(cgImage: image, size: .zero)
         diagnostic.dernierPerso = client.name
-        return png
+        return image
     }
 
     /// Une lecture à la demande, hors du tour et sans signature précédente :
@@ -340,8 +339,8 @@ final class LecteurEcran: ObservableObject {
         let devant = manager.clients.first(where: { manager.isFrontmost($0) })
         guard WindowPreviewService.shared.authorized,
               let client = devant ?? manager.clients.first(where: { $0.name == persoDevant }),
-              let png = await capturer(client, genre),
-              case .lue(let signature, let lignes, _, _) = await moteur.lire(png: png, precedente: nil,
+              let image = await capturer(client, genre),
+              case .lue(let signature, let lignes, _, _) = await moteur.lire(image: image, precedente: nil,
                                                                              mesure: genre.mesure)
         else { return nil }
         if devant != nil, persoDevant != client.name { persoDevant = client.name }
@@ -354,9 +353,9 @@ final class LecteurEcran: ObservableObject {
     /// L'OCR d'une zone déjà découpée — l'essai du calibrage, sur la capture
     /// gardée : même moteur, même encadrement que le tour. La couleur est
     /// celle du bouton de combat, sinon de la zone (cf. `pomper`).
-    func lire(png: Data, genre: GenreLecture) async -> (lignes: [String], couleur: Double)? {
+    func lire(image: CGImage, genre: GenreLecture) async -> (lignes: [String], couleur: Double)? {
         guard case .lue(let signature, let lignes, _, let bouton)
-                = await moteur.lire(png: png, precedente: nil, mesure: genre.mesure)
+                = await moteur.lire(image: image, precedente: nil, mesure: genre.mesure)
         else { return nil }
         return (lignes, bouton ?? signature.couleur ?? 0)
     }
@@ -418,9 +417,9 @@ final class DiagnosticLecture: ObservableObject {
     private init() {}
 }
 
-/// L'OCR, hors du main actor. Sans état : il reçoit un PNG et la signature
-/// précédente, rend la signature et — seulement si elle a changé — les
-/// lignes lues. Il n'en entre et n'en sort que des valeurs `Sendable`.
+/// L'OCR, hors du main actor. Sans état : il reçoit l'image capturée et la
+/// signature précédente, rend la signature et — seulement si elle a changé —
+/// les lignes lues. Il n'en entre et n'en sort que des valeurs `Sendable`.
 actor MoteurOCR {
     enum Resultat: Sendable {
         case illisible
@@ -450,11 +449,8 @@ actor MoteurOCR {
         return requete
     }
 
-    func lire(png: Data, precedente: SignatureZone?, mesure: MesureSignature) -> Resultat {
-        guard let source = CGImageSourceCreateWithData(png as CFData, nil),
-              let image = CGImageSourceCreateImageAtIndex(source, 0, nil),
-              let luma = LumaBitmap(cgImage: image)
-        else { return .illisible }
+    func lire(image: CGImage, precedente: SignatureZone?, mesure: MesureSignature) -> Resultat {
+        guard let luma = LumaBitmap(cgImage: image) else { return .illisible }
         let rgba = mesure == .bouton ? Self.rgba(image) : nil
         let couleur = rgba.map { LectureCombat.ratioColore(rgba: $0, largeur: image.width) }
         let signature = SignatureZone(luma, mesure: mesure, cadre: precedente?.cadre, couleur: couleur,

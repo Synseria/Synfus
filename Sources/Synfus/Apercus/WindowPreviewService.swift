@@ -62,8 +62,8 @@ final class WindowPreviewService: ObservableObject {
             let captured = await engine.capture(requests)
             for request in requests {
                 inFlight.remove(request.key)
-                if let data = captured[request.key], let image = NSImage(data: data) {
-                    previews[request.key] = image
+                if let image = captured[request.key] {
+                    previews[request.key] = NSImage(cgImage: image, size: .zero)
                     if unmatched.contains(request.key) { unmatched.remove(request.key) }
                 } else {
                     unmatched.insert(request.key)
@@ -76,8 +76,9 @@ final class WindowPreviewService: ObservableObject {
         refresh([client])
     }
 
-    /// Une capture à la demande, hors vignettes, rendue en PNG — pour qui la
-    /// traite hors du main actor, comme la lecture de l'écran. `region` limite
+    /// Une capture à la demande, hors vignettes — pour qui la traite hors du
+    /// main actor, comme la lecture de l'écran : une `CGImage` est immuable et
+    /// `Sendable`, rien ne la réencode en chemin. `region` limite
     /// la capture à une zone de la fenêtre, en fractions de sa largeur et de sa
     /// hauteur, origine en haut à gauche.
     ///
@@ -89,15 +90,15 @@ final class WindowPreviewService: ObservableObject {
     /// `contenu` : la région se lit dans le **contenu** de la fenêtre, sans sa
     /// barre de titre (cf. `ZoneEcran`) ; `normaliser` ramène alors le contenu
     /// à `ZoneEcran.hauteurReference` pixels, et `maxWidth` est ignoré.
-    func captureData(_ client: DofusClient, region: CGRect?, maxWidth: Int?,
-                     inventaireGarde: Bool, contenu: CaptureContenu? = nil) async -> Data? {
+    func captureImage(_ client: DofusClient, region: CGRect?, maxWidth: Int?,
+                      inventaireGarde: Bool, contenu: CaptureContenu? = nil) async -> CGImage? {
         guard authorized else { lastCaptureError = "enregistrement de l'écran non autorisé"; return nil }
         let request = PreviewRequest(key: client.slotKey, pid: client.pid, title: client.rawTitle,
                                      maxWidth: maxWidth, region: region, contenu: contenu)
         switch await engine.captureOne(request, inventaireGarde: inventaireGarde) {
-        case .success(let data):
+        case .success(let image):
             if lastCaptureError != nil { lastCaptureError = nil }
-            return data
+            return image
         case .failure(let failure):
             lastCaptureError = failure.description
             return nil
@@ -260,9 +261,9 @@ enum CaptureFailure: Error, CustomStringConvertible, Sendable {
 
 /// Inventaire ScreenCaptureKit et captures, hors du main actor.
 ///
-/// La règle d'isolation est celle d'avant, déplacée autour de cet acteur : il
-/// n'en entre que des requêtes et il n'en sort que des PNG. `SCWindow`,
-/// `SCShareableContent` et `CGImage` ne franchissent jamais sa frontière.
+/// Il n'en entre que des requêtes et il n'en sort que des `CGImage`, immuables
+/// et `Sendable` ; `SCWindow` et `SCShareableContent` ne franchissent jamais
+/// sa frontière.
 ///
 /// Ce qu'il apporte, c'est la **mémoire de l'inventaire**. `SCShareableContent`
 /// fait le tour de toutes les fenêtres du système et coûte bien plus que la
@@ -279,10 +280,10 @@ private actor PreviewCaptureEngine {
     /// afficher 240 points coûterait cher sans rien apporter.
     static let thumbnailWidth = 480
 
-    /// Rend les PNG des persos retrouvés, par clé. Un perso absent du résultat
-    /// n'a pas de fenêtre capturable — l'appariement est une hypothèse.
-    func capture(_ requests: [PreviewRequest]) async -> [String: Data] {
-        var captured: [String: Data] = [:]
+    /// Rend les images des persos retrouvés, par clé. Un perso absent du
+    /// résultat n'a pas de fenêtre capturable — l'appariement est une hypothèse.
+    func capture(_ requests: [PreviewRequest]) async -> [String: CGImage] {
+        var captured: [String: CGImage] = [:]
         var pending = requests
 
         // Premier passage sur l'inventaire en mémoire.
@@ -309,11 +310,11 @@ private actor PreviewCaptureEngine {
     /// Une capture, avec sa raison d'échec. L'inventaire est refait — c'est
     /// une demande explicite, la fraîcheur prime — sauf si `inventaireGarde`
     /// autorise celui en mémoire, s'il y trouve la fenêtre.
-    func captureOne(_ request: PreviewRequest, inventaireGarde: Bool = false) async -> Result<Data, CaptureFailure> {
+    func captureOne(_ request: PreviewRequest, inventaireGarde: Bool = false) async -> Result<CGImage, CaptureFailure> {
         if inventaireGarde, let content, let cible = Self.cible(request, in: content),
-           let data = try? await shotThrowing(of: content.windows[cible.index], taille: cible.taille,
-                                              request: request) {
-            return .success(data)
+           let image = try? await shotThrowing(of: content.windows[cible.index], taille: cible.taille,
+                                               request: request) {
+            return .success(image)
         }
         let fresh: SCShareableContent
         do {
@@ -366,27 +367,25 @@ private actor PreviewCaptureEngine {
     /// en parallèle sans faire traverser un `SCWindow` — qui n'est pas
     /// `Sendable` — vers une tâche fille. Ce n'est de toute façon pas là qu'est
     /// le coût, l'inventaire l'emporte de loin.
-    private func shots(_ requests: [PreviewRequest], in content: SCShareableContent) async -> [String: Data] {
+    private func shots(_ requests: [PreviewRequest], in content: SCShareableContent) async -> [String: CGImage] {
         let candidates = Self.candidates(content)
 
-        var captured: [String: Data] = [:]
+        var captured: [String: CGImage] = [:]
         for request in requests {
             guard let cible = WindowPreviewService.cible(
                 pid: request.pid, title: request.title, among: candidates, tailleActuelle: Self.tailleActuelle
             ) else { continue }
-            if let data = try? await shotThrowing(of: content.windows[cible.index], taille: cible.taille,
-                                                  request: request) {
-                captured[request.key] = data
+            if let image = try? await shotThrowing(of: content.windows[cible.index], taille: cible.taille,
+                                                   request: request) {
+                captured[request.key] = image
             }
         }
         return captured
     }
 
-    private enum ShotError: Error { case encoding }
-
     /// `taille` : celle de la fenêtre en ce moment, pas celle de l'inventaire
     /// — une fenêtre agrandie depuis décalerait toutes les zones.
-    private func shotThrowing(of window: SCWindow, taille: CGSize, request: PreviewRequest) async throws -> Data {
+    private func shotThrowing(of window: SCWindow, taille: CGSize, request: PreviewRequest) async throws -> CGImage {
         let configuration = SCStreamConfiguration()
         // La zone demandée d'abord — en points de la fenêtre —, puis l'échelle :
         // une capture d'une seule zone pèse cent fois moins qu'une
@@ -420,16 +419,10 @@ private actor PreviewCaptureEngine {
         configuration.height = Int((size.height * scale).rounded())
         configuration.showsCursor = false
 
-        let image = try await SCScreenshotManager.captureImage(
+        return try await SCScreenshotManager.captureImage(
             contentFilter: SCContentFilter(desktopIndependentWindow: window),
             configuration: configuration
         )
-        guard let data = Self.png(from: image) else { throw ShotError.encoding }
-        return data
-    }
-
-    private static func png(from image: CGImage) -> Data? {
-        NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:])
     }
 
     /// Le facteur Retina de l'écran principal — lu sur main, `NSScreen` y vit.
