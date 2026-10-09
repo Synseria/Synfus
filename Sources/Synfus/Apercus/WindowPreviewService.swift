@@ -386,53 +386,75 @@ private actor PreviewCaptureEngine {
     /// `taille` : celle de la fenêtre en ce moment, pas celle de l'inventaire
     /// — une fenêtre agrandie depuis décalerait toutes les zones.
     private func shotThrowing(of window: SCWindow, taille: CGSize, request: PreviewRequest) async throws -> CGImage {
-        let configuration = SCStreamConfiguration()
-        // La zone demandée d'abord — en points de la fenêtre —, puis l'échelle :
-        // une capture d'une seule zone pèse cent fois moins qu'une
-        // fenêtre entière, et c'est ce qui rend supportable une lecture répétée.
-        var size = taille
+        let geometrie = GeometrieCapture(fenetre: taille, region: request.region, contenu: request.contenu,
+                                         maxWidth: request.maxWidth, natif: await GeometrieCapture.natif,
+                                         barreTitre: await GeometrieCapture.barreTitre)
+        return try await SCScreenshotManager.captureImage(
+            contentFilter: SCContentFilter(desktopIndependentWindow: window),
+            configuration: geometrie.configuration
+        )
+    }
+}
+
+/// Ce que ScreenCaptureKit capture d'une fenêtre : le rectangle source, en
+/// points de la fenêtre, et la taille de l'image en pixels. Pur — le seul
+/// endroit où se calcule la géométrie d'une capture, que la découpe d'une
+/// capture entière (`ZoneEcran.pixels`) doit retrouver au pixel près.
+struct GeometrieCapture: Equatable {
+    /// `nil` : la fenêtre entière.
+    let source: CGRect?
+    let largeur: Int
+    let hauteur: Int
+
+    /// La zone demandée d'abord — en points de la fenêtre —, puis l'échelle :
+    /// une capture d'une seule zone pèse cent fois moins qu'une fenêtre
+    /// entière. La lecture de l'écran ramène le contenu à une hauteur fixe,
+    /// les vignettes bornent la largeur ; sinon, résolution native.
+    init(fenetre: CGSize, region: CGRect?, contenu: CaptureContenu?, maxWidth: Int?,
+         natif: CGFloat, barreTitre: CGFloat) {
+        var size = fenetre
         var hauteurContenu = size.height
-        if let region = request.region {
+        var source: CGRect?
+        if let region {
             var cadre = CGRect(origin: .zero, size: size)
-            if let contenu = request.contenu {
-                cadre = ZoneEcran.contenu(fenetre: size, barreTitre: await Self.barreTitre,
-                                          pleinEcran: contenu.pleinEcran)
+            if let contenu {
+                cadre = ZoneEcran.contenu(fenetre: size, barreTitre: barreTitre, pleinEcran: contenu.pleinEcran)
                 hauteurContenu = cadre.height
             }
             let rect = ZoneEcran.source(region, contenu: cadre)
-            configuration.sourceRect = rect
+            source = rect
             size = rect.size
         }
-        // La lecture de l'écran ramène le contenu à une hauteur fixe, les
-        // vignettes bornent la largeur ; sinon, résolution native (deux pixels
-        // par point en Retina).
-        let natif = await Self.backingScale
         let scale: CGFloat
-        if request.contenu?.normaliser == true {
+        if contenu?.normaliser == true {
             scale = ZoneEcran.echelle(hauteurContenu: hauteurContenu, plafond: natif)
-        } else if let maxWidth = request.maxWidth {
+        } else if let maxWidth {
             scale = min(1, CGFloat(maxWidth) / max(size.width, 1))
         } else {
             scale = natif
         }
-        configuration.width = Int((size.width * scale).rounded())
-        configuration.height = Int((size.height * scale).rounded())
-        configuration.showsCursor = false
+        self.source = source
+        largeur = Int((size.width * scale).rounded())
+        hauteur = Int((size.height * scale).rounded())
+    }
 
-        return try await SCScreenshotManager.captureImage(
-            contentFilter: SCContentFilter(desktopIndependentWindow: window),
-            configuration: configuration
-        )
+    var configuration: SCStreamConfiguration {
+        let configuration = SCStreamConfiguration()
+        if let source { configuration.sourceRect = source }
+        configuration.width = largeur
+        configuration.height = hauteur
+        configuration.showsCursor = false
+        return configuration
     }
 
     /// Le facteur Retina de l'écran principal — lu sur main, `NSScreen` y vit.
-    @MainActor private static var backingScale: CGFloat {
+    @MainActor static var natif: CGFloat {
         NSScreen.main?.backingScaleFactor ?? 2
     }
 
     /// Hauteur d'une barre de titre standard, telle qu'AppKit la dessine sur
     /// ce système — celle du client en fenêtré.
-    @MainActor private static var barreTitre: CGFloat {
+    @MainActor static var barreTitre: CGFloat {
         NSWindow.frameRect(forContentRect: .zero, styleMask: .titled).height
     }
 }

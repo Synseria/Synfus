@@ -48,13 +48,21 @@ struct ZoneEcran: Codable, Equatable, Sendable {
     /// gras et plus haut pour cinq quêtes et leurs objectifs. Estimé.
     static let quetesParDefaut = ZoneEcran(x: 0, y: 0.10, largeur: 0.28, hauteur: 0.62)
 
+    /// Le contenu entier : la capture du calibrage, et celle qu'on découpe
+    /// quand plusieurs zones sont dues au même tour (`PlanCapture.entiere`).
+    static let entiere = ZoneEcran(x: 0, y: 0, largeur: 1, hauteur: 1)
+
     /// En deçà, un tracé est un clic, pas une zone.
     static let tailleMinimale = 0.01
 
-    /// La zone en pixels d'une image du contenu entier, arrondie au pixel.
+    /// La zone en pixels d'une image du contenu entier : chaque bord arrondi
+    /// au plus proche, comme la taille d'une capture de la zone seule
+    /// (`GeometrieCapture`) — à un pixel près, la découpe est cette capture,
+    /// et deux zones jointives restent jointives.
     func pixels(dans taille: CGSize) -> CGRect {
-        CGRect(x: x * taille.width, y: y * taille.height,
-               width: largeur * taille.width, height: hauteur * taille.height).integral
+        let gauche = (x * taille.width).rounded(), haut = (y * taille.height).rounded()
+        let droite = ((x + largeur) * taille.width).rounded(), bas = ((y + hauteur) * taille.height).rounded()
+        return CGRect(x: gauche, y: haut, width: droite - gauche, height: bas - haut)
     }
 
     /// La zone ramenée dans le contenu, et à une taille lisible.

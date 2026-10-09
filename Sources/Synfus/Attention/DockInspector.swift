@@ -68,8 +68,8 @@ enum DockInspector {
     /// stables tant qu'aucun client ne se lance ni ne se ferme ; seules leur
     /// position et leur taille bougent. Retrouver ces éléments coûte cher —
     /// enfants du Dock, enfants de chaque liste, titre de **chaque** icône, puis
-    /// sous-rôle et état de lancement des icônes Dofus — et dix fois par seconde,
-    /// cela ferait trente à cinquante allers-retours vers le Dock. D'où ce cache,
+    /// sous-rôle et état de lancement des icônes Dofus — et cinq fois par seconde,
+    /// cela ferait quinze à vingt-cinq allers-retours vers le Dock. D'où ce cache,
     /// tenu par `DockGeometryReader`, qui n'est reconstruit qu'à bon escient.
     struct Structure {
         /// La liste qui héberge les icônes Dofus, quand elle a pu être lue.
