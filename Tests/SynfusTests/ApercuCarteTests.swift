@@ -5,7 +5,8 @@ import UniformTypeIdentifiers
 @testable import Synfus
 
 /// Où se pose la vue agrandie d'une carte : à côté de la fenêtre de sa
-/// vignette, sinon à gauche de la souris, toujours dans l'écran.
+/// vignette, sinon à gauche de la souris, toujours dans l'écran. Et la taille
+/// à laquelle ses images se décodent.
 struct ApercuCarteTests {
     private let ecran = NSRect(x: 0, y: 0, width: 1440, height: 900)
     private let taille = NSSize(width: 638, height: 438)
