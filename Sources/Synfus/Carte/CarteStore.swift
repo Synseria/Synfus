@@ -16,6 +16,9 @@ final class CarteStore: ObservableObject {
     var zaaps: [Zaap] { indexee.zaaps }
     var reseau: ReseauSousZones { indexee.reseau }
     var reperes: ReperesCarte { indexee.reperes }
+    /// Les cartes intérieures, à part de la carte : relues du disque,
+    /// redemandées comme elle tous les `DofusDB.peremption`.
+    @Published private(set) var interieurs = CartesInterieures.vide
 
     private init() {}
 
@@ -25,6 +28,13 @@ final class CarteStore: ObservableObject {
             guard DofusDB.perimee(depuis: carte.date, maintenant: Date()) else { return }
             try? await mettreAJour()
         }
+        Task {
+            if let gardee = await Task.detached(priority: .utility, operation: { CartesInterieures.gardee() }).value {
+                interieurs = gardee
+            }
+            guard DofusDB.perimee(depuis: interieurs.date, maintenant: Date()) else { return }
+            await mettreAJourInterieurs()
+        }
     }
 
     func mettreAJour() async throws {
@@ -33,6 +43,13 @@ final class CarteStore: ObservableObject {
             try? CarteDofusDB.garder(nouvelle)
             return CarteIndexee(nouvelle)
         }.value)
+    }
+
+    /// Un échec garde la liste en place ; elle se redemande au lancement suivant.
+    private func mettreAJourInterieurs() async {
+        guard let nouveaux = try? await CartesInterieures.telecharger() else { return }
+        interieurs = nouveaux
+        Task.detached(priority: .utility) { try? nouveaux.garder() }
     }
 
     /// Les index avant la carte : qui reçoit la publication relit le store.

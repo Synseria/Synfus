@@ -58,6 +58,8 @@
   "calibration.essai.quete": "%@ (etapa %lld)",
   "calibration.terminer": "Listo",
   "calibration.titre": "Calibrar — %@",
+  "carte.interieur": "interior",
+  "carte.interieur.aide": "En un mapa interior: el trayecto lleva delante; entra en el edificio.",
   "carte.maj.casesSuspectes": "DofusDB solo devolvió %lld casillas del Mundo de los Doce, se conserva el mapa actual.",
   "carte.maj.suspecte": "DofusDB solo devolvió %lld lugares, se conserva el mapa actual.",
   "chasse.aide": "Un panel flotante: el punto de partida (tu posición leída), una dirección (botones o flechas del teclado) y la pista (escrita, o leída en pantalla) dan el mapa siguiente según DofusDB, y se copia su /travel — por un zaap si ahorra bastantes mapas. Synfus no valida nada ni envía nada al juego: pega, camina y valida tú mismo. El panel toma el teclado sin salir del juego; un clic en el juego se lo devuelve.",

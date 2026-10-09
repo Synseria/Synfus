@@ -275,6 +275,7 @@ final class PaletteModele: ObservableObject {
         contexte.position = LecteurEcran.shared.positionDuPersoDevant
         contexte.zaaps = ZaapClipboard.shared.zaapsSitues
         contexte.lieux = CarteStore.shared.carte.lieux
+        contexte.interieurs = CarteStore.shared.interieurs
         contexte.etiquettes = prefs.etiquettes
         contexte.favoris = prefs.favoris
         contexte.recents = prefs.paletteRecents

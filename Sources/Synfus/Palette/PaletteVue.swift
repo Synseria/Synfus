@@ -317,6 +317,7 @@ private struct LigneResultat: View {
                     if entree.favori {
                         Image(systemName: "star.fill").font(.system(size: 9)).foregroundStyle(Couleurs.ambre)
                     }
+                    if entree.interieur { EtiquetteInterieur(taille: 10) }
                 }
                 if entree.sousTitre != nil || entree.itineraire != nil {
                     HStack(spacing: 6) {
@@ -369,6 +370,22 @@ private struct LigneResultat: View {
         case .monstre: return "pawprint"
         case .objet: return "bag"
         }
+    }
+}
+
+/// Une carte qui n'est pas en extérieur : `/travel` mène devant, il reste
+/// à entrer. La palette et le panneau des quêtes la disent pareil.
+struct EtiquetteInterieur: View {
+    let taille: CGFloat
+
+    var body: some View {
+        Text(L("carte.interieur"))
+            .font(.system(size: taille, weight: .medium))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 4)
+            .overlay(Capsule().strokeBorder(Color.secondary.opacity(0.5)))
+            .lineLimit(1)
+            .help(L("carte.interieur.aide"))
     }
 }
 
