@@ -327,8 +327,8 @@ enum RecherchePalette {
     }
 
     private static func distance(vers position: PNJ.Position, _ contexte: ContextePalette) -> Int? {
-        guard let depuis = contexte.position, !ItineraireZaap.horsDuMondeDesDouze(depuis.zone) else { return nil }
-        return ItineraireZaap.distance((depuis.x, depuis.y), (position.x, position.y))
+        guard let depuis = ItineraireZaap.rejoindre(contexte.position) else { return nil }
+        return ItineraireZaap.distance(depuis, (position.x, position.y))
     }
 
     /// Les dernières copies : au-dessus des zaaps quand rien n'est tapé, et
@@ -356,10 +356,9 @@ enum RecherchePalette {
     }
 
     private static func distanceVers(_ lieu: Lieu, _ contexte: ContextePalette) -> Int? {
-        guard let position = contexte.position, !ItineraireZaap.horsDuMondeDesDouze(position.zone),
-              lieu.monde == Zaap.mondeDesDouze
+        guard let depuis = ItineraireZaap.rejoindre(contexte.position), lieu.monde == Zaap.mondeDesDouze
         else { return nil }
-        return ItineraireZaap.distance((position.x, position.y), (lieu.x, lieu.y))
+        return ItineraireZaap.distance(depuis, (lieu.x, lieu.y))
     }
 
     // MARK: - Correspondance

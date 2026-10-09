@@ -112,6 +112,14 @@ struct ItineraireZaapTests {
         #expect(ItineraireZaap.rejoindre(nil) == nil)
     }
 
+    @Test("La région de la zone lue, tranchée à la lecture : sans casse ni accents, au début du nom seulement")
+    func horsDuMondeDesDouze() {
+        #expect(position(0, 0, zone: "incarnam (Paturages)").horsDuMondeDesDouze)
+        #expect(position(0, 0, zone: "Ecaflipus").horsDuMondeDesDouze)
+        #expect(!position(0, 0, zone: "Amakna (Incarnam)").horsDuMondeDesDouze)
+        #expect(!position(0, 0, zone: nil).horsDuMondeDesDouze)
+    }
+
     // MARK: - Favoris
 
     private let bouftous = Zaap(5, 7, noms: ["fr": "Coin des Bouftous"])
