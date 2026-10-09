@@ -14,7 +14,8 @@ import Foundation
 /// le panneau le met en retrait, et ne le propose pas de cocher.
 enum SuiviObjectifs {
     struct Lecture: Equatable, Sendable {
-        let etape: Int
+        /// `nil` : deux étapes s'y lisent aussi bien.
+        let etape: Int?
         /// Aucune autre étape ne lit mieux une seule ligne, ni aussi bien à une
         /// faute près : l'étape est établie, le panneau peut y avancer.
         let sure: Bool
@@ -47,7 +48,7 @@ enum SuiviObjectifs {
     /// `lignes` : normalisées (`Ressemblance.normaliser`), dans l'ordre de
     /// l'écran ; `coupee` : la zone lue a pu couper la fin de la liste, comme
     /// « VOIR PLUS… ». `nil` : aucun objectif d'aucune étape ne s'y lit en
-    /// entier, ou deux étapes s'y lisent aussi bien.
+    /// entier.
     static func lire(_ lignes: [String], coupee: Bool = false, quete: Quete, langue: Langue,
                      dans quetes: Quetes) -> Lecture? {
         let lignes = lignes.filter { $0.count { $0.isLetter } >= lettresMinimum }
@@ -58,9 +59,13 @@ enum SuiviObjectifs {
             affecter(fenetres, objectifs: etape.objectifs.map { forme($0, langue: langue, dans: quetes) })
         }
         let scores = parEtape.map { $0.reduce(0) { $0 + $1.explique } }
-        guard let meilleur = scores.max(), meilleur > 0, scores.count(where: { $0 == meilleur }) == 1,
-              let rang = scores.firstIndex(of: meilleur)
-        else { return nil }
+        guard let meilleur = scores.max(), meilleur > 0 else { return nil }
+        // Deux étapes qui se lisent aussi bien (« Aller voir Amayiro » ici et
+        // là) : ni l'une ni l'autre — les noms qu'elles citent n'en diraient
+        // pas plus.
+        guard scores.count(where: { $0 == meilleur }) == 1, let rang = scores.firstIndex(of: meilleur) else {
+            return Lecture(etape: nil, sure: false, aFaire: [], faits: [], nonMontres: [], explique: meilleur)
+        }
         let etape = quete.etapes[rang]
         let affectes = parEtape[rang].sorted { $0.debut < $1.debut }
         let aFaire = affectes.map { etape.objectifs[$0.objectif].id }
