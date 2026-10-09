@@ -23,6 +23,9 @@ enum SuiviObjectifs {
         /// Ce que l'écran tait d'une lecture entière : pas encore ouvert, ou
         /// fait hors de l'ordre.
         let nonMontres: [Int]
+        /// Les caractères que l'étape explique : ce qui départage des quêtes
+        /// homonymes.
+        let explique: Int
     }
 
     /// Un objectif tient au plus sur autant de lignes.
@@ -72,7 +75,7 @@ enum SuiviObjectifs {
         // illisible avant lui pourrait être un objectif plus tôt, encore ouvert.
         let rangs = affectes.map(\.objectif)
         guard let premier = affectes.first, premier.debut == 0, rangs == rangs.sorted() else {
-            return Lecture(etape: rang, sure: sure, aFaire: aFaire, faits: [], nonMontres: [])
+            return Lecture(etape: rang, sure: sure, aFaire: aFaire, faits: [], nonMontres: [], explique: meilleur)
         }
         let avant = sure ? quete.etapes[..<rang].flatMap { $0.objectifs.map(\.id) } : []
         // Le premier objectif montré peut tenir plusieurs rangs (`places`) :
@@ -95,7 +98,7 @@ enum SuiviObjectifs {
             }
         }
         return Lecture(etape: rang, sure: sure, aFaire: aFaire,
-                       faits: avant + etape.objectifs[..<fait].map(\.id), nonMontres: nonMontres)
+                       faits: avant + etape.objectifs[..<fait].map(\.id), nonMontres: nonMontres, explique: meilleur)
     }
 
     /// L'étape lue se distingue-t-elle de l'autre ? Aucune ligne ne se lit
