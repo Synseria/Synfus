@@ -23,24 +23,28 @@ final class ZaapClipboard: ObservableObject {
     private static let dureeSignal: Duration = .seconds(1.2)
     private static let intervalleVeille: TimeInterval = 0.5
 
-    /// L'index de `zaapsSitues`, jeté à chaque changement de réglage ou de carte.
-    private var zaapsSituesGardes: ZaapsSitues?
+    /// Change avec tout réglage et toute carte : ce qu'on tire des trajets se
+    /// garde sous cette révision — l'index des zaaps, la dernière tournée, les
+    /// repaires situés (`OuTrouverStore`).
+    private(set) var revisionTrajets = 0
+    private var zaapsSituesGardes = DernierCalcul<Int, ZaapsSitues>()
+    /// Le panneau des quêtes la redemande à chaque rendu : jusqu'à 5 040 ordres essayés.
+    private var tourneeGardee = DernierCalcul<[Int], [Int]>()
 
     private init() {
-        // `objectWillChange` part avant l'affectation : l'index, rebâti à la
-        // lecture suivante, voit toujours la nouvelle valeur.
+        // `objectWillChange` part avant l'affectation : ce qui se rebâtit à la
+        // lecture suivante voit toujours la nouvelle valeur.
         Preferences.shared.objectWillChange.merge(with: CarteStore.shared.objectWillChange)
-            .sink { [weak self] in MainActor.assumeIsolated { self?.zaapsSituesGardes = nil } }
+            .sink { [weak self] in MainActor.assumeIsolated { self?.revisionTrajets &+= 1 } }
             .store(in: &subscriptions)
     }
 
     /// Les zaaps actifs sur le réseau des sous-zones : ce que lisent la
     /// réécriture, les coûts et la palette, indexé une fois par liste et par carte.
     var zaapsSitues: ZaapsSitues {
-        if let gardes = zaapsSituesGardes { return gardes }
-        let situes = ZaapsSitues(Preferences.shared.zaapsActifs, reseau: CarteStore.shared.reseau)
-        zaapsSituesGardes = situes
-        return situes
+        zaapsSituesGardes.valeur(pour: revisionTrajets) {
+            ZaapsSitues(Preferences.shared.zaapsActifs, reseau: CarteStore.shared.reseau)
+        }
     }
 
     func start() {
@@ -82,13 +86,16 @@ final class ZaapClipboard: ObservableObject {
     /// trajet (`Tournee`). `nil` : position inconnue, ou hors du Monde des Douze.
     func tournee(_ cases: [(id: Int, x: Int, y: Int)]) -> [Int]? {
         guard let depart = ItineraireZaap.rejoindre(LecteurEcran.shared.positionDuPersoDevant) else { return nil }
-        let couts = Couts()
-        let parId = Dictionary(cases.map { ($0.id, (x: $0.x, y: $0.y)) }, uniquingKeysWith: { a, _ in a })
-        let zaapDe = parId.mapValues(couts.zaap)
-        func cout(_ depuis: (x: Int, y: Int), _ vers: Int) -> Int {
-            couts.depuis(depuis, vers: parId[vers]!, zaap: zaapDe[vers] ?? nil)
+        let cle = [revisionTrajets, depart.x, depart.y] + cases.flatMap { [$0.id, $0.x, $0.y] }
+        return tourneeGardee.valeur(pour: cle) {
+            let couts = Couts()
+            let parId = Dictionary(cases.map { ($0.id, (x: $0.x, y: $0.y)) }, uniquingKeysWith: { a, _ in a })
+            let zaapDe = parId.mapValues(couts.zaap)
+            func cout(_ depuis: (x: Int, y: Int), _ vers: Int) -> Int {
+                couts.depuis(depuis, vers: parId[vers]!, zaap: zaapDe[vers] ?? nil)
+            }
+            return Tournee.ordre(cases.map(\.id), depuisLeDepart: { cout(depart, $0) }, entre: { cout(parId[$0]!, $1) })
         }
-        return Tournee.ordre(cases.map(\.id), depuisLeDepart: { cout(depart, $0) }, entre: { cout(parId[$0]!, $1) })
     }
 
     /// Le coût d'un trajet selon les réglages du moment, lus une fois (sur
