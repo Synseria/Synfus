@@ -59,10 +59,15 @@ struct QuetesTests {
         #expect(quete.etapes.map { $0.noms["fr"] } == ["Analyse de sang", "Le sang du wabbit GM"])
         #expect(quetes.texte("Ramener à {npc,119} : x3 {item,1746}", en: .fr) == "Ramener à Otomaï : x3 Sang de Wabbit GM")
         #expect(quetes.texte("Découvrir la carte : {map,99}", en: .fr) == "Découvrir la carte : [map]")
+        #expect(quetes.texte("Découvrir la zone {subarea,10}", en: .fr) == "Découvrir la zone Village d'Amakna")
+        #expect(quetes.texte("Découvrir la zone {subarea,11}", en: .fr) == "Découvrir la zone [subarea]")
         let renvois = QuetesDofusDB.renvois(
             try JSONDecoder().decode(DofusDB.Page<QuetesDofusDB.QueteAPI>.self, from: Data(Self.page.utf8))
                 .data.flatMap { ($0.steps ?? []).flatMap { $0.objectives ?? [] } })
         #expect(renvois.objets == [1746] && renvois.monstres == [182] && renvois.pnjs == [119, 196])
+        let decouverte = try JSONDecoder().decode(QuetesDofusDB.ObjectifAPI.self, from: Data(
+            #"{"id":105,"className":"QuestObjectiveDiscoverSubAreaData","text":{"fr":"Découvrir la zone {subarea,233}"}}"#.utf8))
+        #expect(QuetesDofusDB.renvois([decouverte]).sousZones == [233])
     }
 
     @Test("Les ressources de la quête s'additionnent d'une étape à l'autre")

@@ -16,7 +16,8 @@ struct Quetes: Codable, Equatable, Sendable {
     let objets: [String: [String: String]]
     let monstres: [String: [String: String]]
     let nomsPNJ: [String: [String: String]]
-    /// Les sous-zones où les quêtes placent des PNJ, et leur zone.
+    /// Les sous-zones où les quêtes placent des PNJ ou que citent leurs
+    /// objectifs, et leur zone.
     let sousZones: [String: SousZoneNommee]
     /// La grande famille de chaque objet cité (`superTypeId` de DofusDB),
     /// par identifiant d'objet, et le nom de chaque famille (« Ressource »,
@@ -43,12 +44,14 @@ struct Quetes: Codable, Equatable, Sendable {
         Self.resoudre(modele) { nomRenvoi($0, $1, en: langue) }
     }
 
-    /// Le nom d'un renvoi (`item`, `monster`, `npc`), `nil` s'il est inconnu.
+    /// Le nom d'un renvoi (`item`, `monster`, `npc`, `subarea`), `nil` s'il
+    /// est inconnu.
     func nomRenvoi(_ genre: String, _ id: String, en langue: Langue) -> String? {
         let noms: [String: String]? = switch genre {
         case "item": objets[id]
         case "monster": monstres[id]
         case "npc": nomsPNJ[id]
+        case "subarea": sousZones[id]?.noms
         default: nil
         }
         return noms.flatMap { Lieu.traduit($0, langue) }
