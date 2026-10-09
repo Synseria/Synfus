@@ -478,7 +478,7 @@ struct PreferencesTests {
      "paletteHotKey":{"keyCode":47,"modifiers":256},"paletteRecents":["/zaap 5,7"],"paletteTri":"type","quetesEpinglees":[18,42],"quetesEtape":{"18":2},
      "quetesValides":{"18":[102,104]},"quetesBouton":false,"quetesMasquerObjets":true,
      "quetesCompact":false,"quetesConsigne":false,"quetesVignettes":true,
-     "quetesEnCours":{"18":104},"quetesCocherSuivi":false,"quetesDecoches":{"18":[103]},
+     "quetesEnCours":{"18":104},"quetesCocherSuivi":false,"quetesDecoches":{"18":[103]},"quetesCochesLues":{"18":[104]},
      "equipes":[{"membres":["Aeryn"]},{"membres":["Nova"]}],
      "hotKeys":[{"keyCode":18,"modifiers":256},null,{"keyCode":20,"modifiers":2048},null,null,null,null,null,null,null],
      "inviteFormat":"/w %nom go","inviteGroupee":true,
@@ -568,6 +568,7 @@ struct PreferencesTests {
         #expect(prefs.quetesEnCours == ["18": 104])
         #expect(prefs.quetesCocherSuivi == false)
         #expect(prefs.quetesDecoches == ["18": [103]])
+        #expect(prefs.quetesCochesLues == ["18": [104]])
         #expect(prefs.chasseHotKey == HotKey(keyCode: 5, modifiers: 2048))
         #expect(prefs.chasseBouton == false)
         #expect(prefs.vuesCartes == false)
@@ -635,6 +636,7 @@ struct PreferencesTests {
         prefs.quetesEnCours = ["18": 104]
         prefs.quetesCocherSuivi = false
         prefs.quetesDecoches = ["18": [103]]
+        prefs.quetesCochesLues = ["18": [104]]
         prefs.chasseHotKey = HotKey(keyCode: 5, modifiers: 2048)
         prefs.chasseBouton = false
         prefs.vuesCartes = false
@@ -669,7 +671,7 @@ struct PreferencesTests {
          "lieuxFavoris":[],"paletteRecents":[],"paletteTri":"proximite","quetesEpinglees":[],"quetesEtape":{},
          "quetesValides":{},"quetesBouton":true,"quetesMasquerObjets":false,
          "quetesCompact":true,"quetesConsigne":true,"quetesVignettes":false,
-         "quetesEnCours":{},"quetesCocherSuivi":true,"quetesDecoches":{}}
+         "quetesEnCours":{},"quetesCocherSuivi":true,"quetesDecoches":{},"quetesCochesLues":{}}
         """
         #expect(canonique(store.donnees(pour: Preferences.key)) == canonique(Data(attendu.utf8)))
     }
@@ -824,7 +826,41 @@ extension PreferencesTests {
         #expect(prefs.quetesValides == ["18": [1, 2]])
     }
 
-    @Test("Un geste, une écriture : la coche qui touche trois réglages, la lecture de plusieurs quêtes")
+    @Test("Le suivi qui remontre ouvert un objectif coché par une lecture le décoche : ligne perdue par l'OCR, puis relue")
+    func ligneRelue() {
+        let (prefs, _) = neuves()
+        // La ligne de l'objectif 2 perdue : il passe pour fait.
+        #expect(prefs.appliquer([lue(aFaire: [3], faits: [1, 2])]) == 2)
+        #expect(prefs.quetesValides == ["18": [1, 2]] && prefs.quetesCochesLues == ["18": [1, 2]])
+        // Relue : il est ouvert, il se décoche ; 1 reste fait.
+        #expect(prefs.appliquer([lue(aFaire: [2, 3], faits: [1])]) == 0)
+        #expect(prefs.quetesValides == ["18": [1]] && prefs.quetesCochesLues == ["18": [1]])
+        #expect(prefs.quetesDecoches.isEmpty)
+        // Fait pour de bon, il se recoche à la lecture suivante.
+        #expect(prefs.appliquer([lue(aFaire: [3], faits: [1, 2])]) == 1)
+        #expect(prefs.quetesValides == ["18": [1, 2]])
+    }
+
+    @Test("Une coche posée à la main, ou d'une sauvegarde d'avant, ne se décoche jamais à la lecture")
+    func cocheALaMainGardee() throws {
+        let (prefs, _) = neuves()
+        prefs.cocher(2, de: 18, true)
+        prefs.appliquer([lue(aFaire: [2])])
+        #expect(prefs.quetesValides == ["18": [2]])
+        // Cochée par une lecture, puis décochée et recochée à la main : à la main.
+        prefs.appliquer([lue(faits: [1])])
+        prefs.cocher(1, de: 18, false)
+        prefs.cocher(1, de: 18, true)
+        prefs.appliquer([lue(aFaire: [1])])
+        #expect(prefs.quetesValides == ["18": [2, 1]] && prefs.quetesCochesLues.isEmpty)
+        // Une sauvegarde sans l'origine des coches : toutes tenues pour posées à la main.
+        let ancien = #"{"characterOrder":[],"hotKeys":[],"barVisible":true,"showNumbers":true,"quetesValides":{"18":[5]}}"#
+        let relue = Preferences.forTesting(store: StockageMemoire([Preferences.key: Data(ancien.utf8)]))
+        relue.appliquer([lue(aFaire: [5])])
+        #expect(relue.quetesValides == ["18": [5]])
+    }
+
+    @Test("Un geste, une écriture : la coche qui touche plusieurs réglages, la lecture de plusieurs quêtes")
     func uneEcritureParGeste() {
         let (prefs, store) = neuves()
         prefs.appliquer([lue(faits: [1, 2])])
