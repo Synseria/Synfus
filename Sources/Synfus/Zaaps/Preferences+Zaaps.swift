@@ -11,17 +11,23 @@ extension Preferences {
 
     var zaapsFavorisConnus: [Zaap] { CatalogueZaaps.favoris(zaapsFavoris, parmi: zaapsConnus) }
 
-    /// Un favori, zaap (`Zaap.cle`) ou lieu (`Lieu.cle`) : chacun sa liste,
-    /// un seul chemin pour les tenir.
+    /// Un favori, zaap (`Zaap.cle`), lieu (`Lieu.cle`) ou PNJ (`PNJ.cle`) :
+    /// chacun sa liste, un seul chemin pour les tenir.
     func estFavori(_ cle: String) -> Bool {
-        (cle.hasPrefix(Lieu.prefixeCle) ? lieuxFavoris : zaapsFavoris).contains(cle)
+        self[keyPath: Self.favoris(cle)].contains(cle)
     }
 
     func basculerFavori(_ cle: String) {
-        if cle.hasPrefix(Lieu.prefixeCle) {
-            if lieuxFavoris.contains(cle) { lieuxFavoris.removeAll { $0 == cle } } else { lieuxFavoris.append(cle) }
-        } else {
-            if zaapsFavoris.contains(cle) { zaapsFavoris.removeAll { $0 == cle } } else { zaapsFavoris.append(cle) }
-        }
+        let liste = Self.favoris(cle)
+        if self[keyPath: liste].contains(cle) { self[keyPath: liste].removeAll { $0 == cle } } else { self[keyPath: liste].append(cle) }
+    }
+
+    /// Tous les favoris, pour la palette.
+    var favoris: Set<String> { Set(zaapsFavoris + lieuxFavoris + pnjsFavoris) }
+
+    private static func favoris(_ cle: String) -> ReferenceWritableKeyPath<Preferences, [String]> {
+        if cle.hasPrefix(Lieu.prefixeCle) { return \.lieuxFavoris }
+        if cle.hasPrefix(PNJ.prefixeCle) { return \.pnjsFavoris }
+        return \.zaapsFavoris
     }
 }

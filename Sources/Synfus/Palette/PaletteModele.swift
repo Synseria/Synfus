@@ -261,7 +261,7 @@ final class PaletteModele: ObservableObject {
         contexte.zaaps = ZaapClipboard.shared.zaapsSitues
         contexte.lieux = CarteStore.shared.carte.lieux
         contexte.etiquettes = prefs.etiquettes
-        contexte.favoris = Set(prefs.zaapsFavoris + prefs.lieuxFavoris)
+        contexte.favoris = prefs.favoris
         contexte.recents = prefs.paletteRecents
         contexte.quetes = QuetesStore.shared.quetes
         contexte.gainMinimal = prefs.zaapGainMinimal

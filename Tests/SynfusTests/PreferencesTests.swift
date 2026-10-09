@@ -474,7 +474,7 @@ struct PreferencesTests {
      "chasseBouton":false,"chasseHotKey":{"keyCode":5,"modifiers":2048},
      "cycleNext":{"keyCode":122,"modifiers":0},"cyclePrevious":{"keyCode":120,"modifiers":0},
      "defaultsVersion":7,"equipeSuivanteHotKey":{"keyCode":17,"modifiers":256},
-     "etiquettes":{"1:-78,-41":"Fri 1"},"lieuxFavoris":["lieu:2738"],
+     "etiquettes":{"1:-78,-41":"Fri 1"},"lieuxFavoris":["lieu:2738"],"pnjsFavoris":["pnj:6309"],
      "paletteHotKey":{"keyCode":47,"modifiers":256},"paletteRecents":["/zaap 5,7"],"paletteTri":"type","quetesEpinglees":[18,42],"quetesEtape":{"18":2},
      "quetesValides":{"18":[102,104]},"quetesBouton":false,"quetesMasquerObjets":true,
      "quetesCompact":false,"quetesConsigne":false,"quetesVignettes":true,
@@ -554,6 +554,7 @@ struct PreferencesTests {
         #expect(prefs.zaapsFavoris == ["1:5,-18", "1:-2,0"])
         #expect(prefs.etiquettes == ["1:-78,-41": "Fri 1"])
         #expect(prefs.lieuxFavoris == ["lieu:2738"])
+        #expect(prefs.pnjsFavoris == ["pnj:6309"])
         #expect(prefs.paletteHotKey == HotKey(keyCode: 47, modifiers: 256))
         #expect(prefs.paletteRecents == ["/zaap 5,7"])
         #expect(prefs.paletteTri == .type)
@@ -622,6 +623,7 @@ struct PreferencesTests {
         prefs.zaapsFavoris = ["1:5,-18", "1:-2,0"]
         prefs.etiquettes = ["1:-78,-41": "Fri 1"]
         prefs.lieuxFavoris = ["lieu:2738"]
+        prefs.pnjsFavoris = ["pnj:6309"]
         prefs.paletteHotKey = HotKey(keyCode: 47, modifiers: 256)
         prefs.paletteRecents = ["/zaap 5,7"]
         prefs.paletteTri = .type
@@ -668,7 +670,7 @@ struct PreferencesTests {
          "showClasses":true,"showNumbers":true,"showPreviewOnHover":false,
          "signalerBascule":true,"zaapAuto":false,"zaapBouton":true,
          "zaapGainMinimal":5,"zaapDuJeu":true,"zaapsAjoutes":[],"zaapsChoix":{},"zaapsFavoris":[],"zaapsVueCarte":true,
-         "lieuxFavoris":[],"paletteRecents":[],"paletteTri":"proximite","quetesEpinglees":[],"quetesEtape":{},
+         "lieuxFavoris":[],"pnjsFavoris":[],"paletteRecents":[],"paletteTri":"proximite","quetesEpinglees":[],"quetesEtape":{},
          "quetesValides":{},"quetesBouton":true,"quetesMasquerObjets":false,
          "quetesCompact":true,"quetesConsigne":true,"quetesVignettes":false,
          "quetesEnCours":{},"quetesCocherSuivi":true,"quetesDecoches":{},"quetesCochesLues":{}}
@@ -749,6 +751,19 @@ struct PreferencesTests {
         let prefs = Preferences.forTesting(store: store)
         #expect(prefs.barOrigin == nil)
         #expect(prefs.hotKeys[1] == nil)
+    }
+}
+
+/// Les favoris de la palette, chacun dans sa liste.
+extension PreferencesTests {
+    @Test("Un favori va dans la liste de son genre : zaap, lieu ou PNJ, et en ressort")
+    func favorisParGenre() {
+        let (prefs, _) = neuves()
+        for cle in ["1:5,7", "lieu:2738", "pnj:6309"] { prefs.basculerFavori(cle) }
+        #expect(prefs.zaapsFavoris == ["1:5,7"] && prefs.lieuxFavoris == ["lieu:2738"] && prefs.pnjsFavoris == ["pnj:6309"])
+        #expect(prefs.favoris == ["1:5,7", "lieu:2738", "pnj:6309"] && prefs.estFavori("pnj:6309"))
+        prefs.basculerFavori("pnj:6309")
+        #expect(prefs.pnjsFavoris.isEmpty && !prefs.estFavori("pnj:6309"))
     }
 }
 
