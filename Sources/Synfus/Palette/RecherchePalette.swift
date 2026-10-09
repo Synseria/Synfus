@@ -390,41 +390,68 @@ enum RecherchePalette {
 
     /// Garde les entrées dont chaque mot tapé trouve un écho, puis les range :
     /// les zaaps devant, les favoris en tête de chaque famille, puis le tri ;
-    /// à égalité, la meilleure correspondance (étiquette, nom, zone).
+    /// à égalité, la meilleure correspondance (étiquette, nom, zone). Seules
+    /// les `limite` premières sont rangées (`premiers`) : une lettre en retient
+    /// des milliers.
     private static func classer(_ fiches: [Fiche], _ mots: [String], tri: TriPalette) -> [EntreePalette] {
-        let retenues = fiches.enumerated().compactMap { rang, fiche -> (entree: EntreePalette, score: Int, rang: Int)? in
+        var retenues: [(rang: Int, score: Int)] = []
+        retenues.reserveCapacity(fiches.count)
+        for (rang, fiche) in fiches.enumerated() {
             var score = 0
-            for mot in mots {
+            let garde = mots.allSatisfy { mot in
                 let points = fiche.champs.points(mot)
-                guard points > 0 else { return nil }
                 score += points
+                return points > 0
             }
-            return (fiche.entree, score, rang)
+            if garde { retenues.append((rang, score)) }
         }
-        return retenues
-            .sorted { a, b in
-                let (ea, eb) = (a.entree, b.entree)
-                if (ea.genre == .zaap) != (eb.genre == .zaap) { return ea.genre == .zaap }
-                if ea.favori != eb.favori { return ea.favori }
-                if let ordre = comparer(ea, eb, tri) { return ordre }
-                if a.score != b.score { return a.score > b.score }
-                return a.rang < b.rang
+        return premiers(retenues, limite) { a, b in
+            let (fa, fb) = (fiches[a.rang], fiches[b.rang])
+            let (ea, eb) = (fa.entree, fb.entree)
+            if (ea.genre == .zaap) != (eb.genre == .zaap) { return ea.genre == .zaap }
+            if ea.favori != eb.favori { return ea.favori }
+            if let ordre = comparer(fa, fb, tri) { return ordre }
+            if a.score != b.score { return a.score > b.score }
+            return a.rang < b.rang
+        }
+        .map { fiches[$0.rang].entree }
+    }
+
+    /// Les `limite` premiers d'`elements` selon `avant` : ce que donnerait
+    /// `sorted(by: avant).prefix(limite)` pour un ordre total, sans trier ce
+    /// qui ne sera pas montré. Une insertion dichotomique dans les retenus ;
+    /// un élément qui ne bat pas le dernier ne coûte qu'une comparaison.
+    static func premiers<Element>(_ elements: [Element], _ limite: Int,
+                                  avant: (Element, Element) -> Bool) -> [Element] {
+        guard limite > 0 else { return [] }
+        guard elements.count > limite else { return elements.sorted(by: avant) }
+        var retenus: [Element] = []
+        retenus.reserveCapacity(limite + 1)
+        for element in elements {
+            if retenus.count == limite, !avant(element, retenus[limite - 1]) { continue }
+            // Après ceux qu'il ne précède pas : à égalité, l'ordre d'arrivée.
+            var bas = 0, haut = retenus.count
+            while bas < haut {
+                let milieu = (bas + haut) / 2
+                if avant(element, retenus[milieu]) { haut = milieu } else { bas = milieu + 1 }
             }
-            .prefix(limite)
-            .map(\.entree)
+            retenus.insert(element, at: bas)
+            if retenus.count > limite { retenus.removeLast() }
+        }
+        return retenus
     }
 
     /// `nil` à égalité.
-    private static func comparer(_ a: EntreePalette, _ b: EntreePalette, _ tri: TriPalette) -> Bool? {
+    private static func comparer(_ a: Fiche, _ b: Fiche, _ tri: TriPalette) -> Bool? {
         switch tri {
         case .proximite:
-            return comparerDistances(a, b)
+            return comparerDistances(a.entree, b.entree)
         case .alphabetique:
-            let ordre = a.titre.localizedStandardCompare(b.titre)
-            return ordre == .orderedSame ? comparerDistances(a, b) : ordre == .orderedAscending
+            let (ca, cb) = (a.champs.cleAlphabetique, b.champs.cleAlphabetique)
+            return ca == cb ? comparerDistances(a.entree, b.entree) : ca < cb
         case .type:
-            let (ta, tb) = (rangDeType(a), rangDeType(b))
-            return ta != tb ? ta < tb : comparerDistances(a, b)
+            let (ta, tb) = (rangDeType(a.entree), rangDeType(b.entree))
+            return ta != tb ? ta < tb : comparerDistances(a.entree, b.entree)
         }
     }
 
@@ -466,6 +493,14 @@ enum RecherchePalette {
         let titre: [String]
         let lieu: [String]
         let surnoms: [String]
+        /// Le titre rangé comme `localizedStandardCompare` le rangerait — sans
+        /// casse ni accents, les nombres par leur valeur —, comparé par `<` :
+        /// le tri alphabétique ne compare plus de textes localisés à chaque frappe.
+        let cleAlphabetique: String
+        /// Les mots du titre et du lieu bout à bout, séparés d'un caractère
+        /// qu'aucun mot tapé ne contient : un seul passage pour un mot cherché
+        /// au milieu d'un autre.
+        private let interieur: String
 
         /// Tout ce dont les champs dépendent : une entrée qui garde sa clé garde ses champs.
         static func cle(_ entree: EntreePalette) -> String {
@@ -486,7 +521,26 @@ enum RecherchePalette {
             self.lieu = RecherchePalette.mots(lieu ?? "")
             surnoms = RecherchePalette.surnoms.filter { nom.contains($0.motif) }.flatMap(\.mots)
                 + (categorie.flatMap { RecherchePalette.motsDeCategorie[$0] } ?? [])
+            cleAlphabetique = Self.cleAlphabetique(nom)
+            interieur = (self.titre + self.lieu).joined(separator: "\u{1F}")
         }
+
+        /// Chaque suite de chiffres calée à droite sur `chiffres` : « 9 » avant « 10 ».
+        static func cleAlphabetique(_ normalise: String) -> String {
+            var cle = "", nombre = ""
+            func verser() {
+                guard !nombre.isEmpty else { return }
+                cle += String(repeating: "0", count: max(chiffres - nombre.count, 0)) + nombre
+                nombre = ""
+            }
+            for caractere in normalise {
+                if caractere.isASCII, caractere.isNumber { nombre.append(caractere) } else { verser(); cle.append(caractere) }
+            }
+            verser()
+            return cle
+        }
+
+        private static let chiffres = 6
 
         /// Chaque mot tapé trouve un écho.
         func garde(_ mots: [String]) -> Bool {
@@ -499,7 +553,7 @@ enum RecherchePalette {
             if titre.contains(where: { $0.hasPrefix(mot) }) { return 60 }
             if surnoms.contains(mot) { return 50 }
             if lieu.contains(where: { $0.hasPrefix(mot) }) { return 40 }
-            if mot.count >= 3, (titre + lieu).contains(where: { $0.contains(mot) }) { return 20 }
+            if mot.count >= 3, interieur.contains(mot) { return 20 }
             return 0
         }
     }
