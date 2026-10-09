@@ -191,6 +191,23 @@ struct QuetesTests {
         #expect(quetes.fiche(19, en: .fr)?.suivantes == [])
     }
 
+    @Test("Le jeu en vigueur : une quête par identifiant, les listes des réglages triées, dans sa langue")
+    func enVigueur() throws {
+        let enVigueur = QuetesEnVigueur(try Self.quetes(), langue: .en)
+        #expect(enVigueur.quete(19)?.niveau == 80 && enVigueur.quete(20) == nil)
+        #expect(enVigueur.nom(18) == "Wogew the Hewmit" && enVigueur.nom(19) == "La suite")
+        #expect(enVigueur.quetesTriees.map(\.id) == [18, 19])
+        #expect(enVigueur.pnjsTries.map { $0.noms["fr"] } == ["Otomaï", "Wogew"])
+    }
+
+    @Test("Une liste lue ne remplace qu'une plus vieille : la lecture du disque ne défait pas un téléchargement")
+    func remplacement() {
+        let hier = Date(timeIntervalSinceNow: -86_400)
+        #expect(DofusDB.remplace(hier, enPlace: nil))
+        #expect(DofusDB.remplace(.now, enPlace: hier))
+        #expect(!DofusDB.remplace(hier, enPlace: .now) && !DofusDB.remplace(hier, enPlace: hier))
+    }
+
     @Test("Un fichier de quêtes d'une autre forme n'est pas relu : il se retélécharge")
     func ancienFormat() throws {
         let donnees = try JSONEncoder().encode(try Self.quetes())
