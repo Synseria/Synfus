@@ -462,7 +462,7 @@
   "quete.toutCopier": "Copiar todo",
   "quetes.bouton": "Botón en la barra",
   "quetes.cocherSuivi": "Marcar según el seguimiento",
-  "quetes.cocherSuivi.sousTexte": "Al leer el seguimiento de misiones del juego, se marcan los objetivos anteriores al primero que muestra (un clic los desmarca). Los que muestra se resaltan.",
+  "quetes.cocherSuivi.sousTexte": "Al leer el seguimiento de misiones del juego, se marcan los objetivos anteriores al primero que muestra (un clic los desmarca), y se desmarcan si vuelve a mostrarlos abiertos — nunca uno marcado a mano. Los que muestra se resaltan.",
   "quetes.compact": "Modo compacto",
   "quetes.compact.sousTexte": "Texto más pequeño y líneas más juntas: el panel tapa menos el juego.",
   "quetes.compte": "%lld misiones",

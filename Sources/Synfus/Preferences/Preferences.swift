@@ -193,6 +193,12 @@ final class Preferences: ObservableObject {
     /// du suivi ne les recoche pas, tant qu'il ne les remontre pas ouverts.
     @Published var quetesDecoches: [String: [Int]] = [:] { didSet { save() } }
 
+    /// Les objectifs que la lecture du suivi a cochés d'elle-même, par
+    /// identifiant de quête : seuls ceux-là se décochent quand le suivi les
+    /// remontre ouverts. Une coche posée à la main, ou d'avant ce réglage,
+    /// n'y est pas.
+    @Published var quetesCochesLues: [String: [Int]] = [:] { didSet { save() } }
+
     /// Les objectifs que le suivi du jeu montre faits se cochent à sa lecture.
     @Published var quetesCocherSuivi: Bool = true { didSet { save() } }
 
@@ -509,6 +515,7 @@ final class Preferences: ObservableObject {
         .facultatif("quetesEnCours", \.quetesEnCours),
         .facultatif("quetesCocherSuivi", \.quetesCocherSuivi),
         .facultatif("quetesDecoches", \.quetesDecoches),
+        .facultatif("quetesCochesLues", \.quetesCochesLues),
         .facultatif("zaapsVueCarte", \.vuesCartes),
     ]
 

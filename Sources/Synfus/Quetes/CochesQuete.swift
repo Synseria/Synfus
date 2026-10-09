@@ -2,15 +2,19 @@ import Foundation
 
 /// Les coches, les décoches, l'objectif en cours et l'étape d'une quête,
 /// gardés par quête dans les préférences : le seul chemin qui les écrit, à la
-/// main comme à la lecture du suivi. Un geste touche jusqu'à trois de ces
+/// main comme à la lecture du suivi. Un geste touche plusieurs de ces
 /// réglages : il ne les écrit qu'une fois (`enUneEcriture`).
 extension Preferences {
     /// Coche ou décoche à la main. Coché, il n'est plus en cours ; décoché, il
     /// est retenu : la lecture suivante, qui le tient peut-être encore pour
-    /// fait, ne le recoche pas.
+    /// fait, ne le recoche pas. Dans les deux cas, la coche n'est plus celle
+    /// d'une lecture : le suivi ne la défera pas.
     func cocher(_ objectif: Int, de quete: Int, _ valide: Bool) {
         let cle = String(quete)
         enUneEcriture {
+            if (quetesCochesLues[cle] ?? []).contains(objectif) {
+                quetesCochesLues[cle] = Self.sans([objectif], quetesCochesLues[cle])
+            }
             if valide {
                 if (quetesDecoches[cle] ?? []).contains(objectif) { quetesDecoches[cle] = Self.sans([objectif], quetesDecoches[cle]) }
                 ajouter([objectif], de: quete)
@@ -24,11 +28,13 @@ extension Preferences {
 
     /// Ce qu'une lecture du suivi dit des quêtes qu'il montre, écrit d'un
     /// coup. Pour chacune : ses objectifs montrés ouverts ne sont plus des
-    /// décoches — le jeu dit lui-même qu'ils restent à faire. Ses faits se
-    /// cochent (`quetesCocherSuivi`), jamais ceux décochés à la main, et rien
-    /// ne se décoche. Une étape établie après celle que montre le panneau l'y
-    /// fait avancer, jamais reculer : le suivi d'un perso en retard ne ramène
-    /// pas en arrière. Rend combien d'objectifs se sont cochés.
+    /// décoches — le jeu dit lui-même qu'ils restent à faire —, et ceux
+    /// qu'une lecture avait cochés se décochent : une ligne que l'OCR avait
+    /// perdue l'avait fait passer pour faite. Une coche posée à la main ne se
+    /// décoche jamais. Ses faits se cochent (`quetesCocherSuivi`), jamais ceux
+    /// décochés à la main. Une étape établie après celle que montre le
+    /// panneau l'y fait avancer, jamais reculer : le suivi d'un perso en
+    /// retard ne ramène pas en arrière. Rend combien d'objectifs se sont cochés.
     @discardableResult
     func appliquer(_ lues: [SuiviQuetes.Reconnue]) -> Int {
         enUneEcriture { lues.reduce(0) { $0 + appliquer(lue: $1) } }
@@ -39,10 +45,17 @@ extension Preferences {
         if let decoches = quetesDecoches[cle], decoches.contains(where: lue.aFaire.contains) {
             quetesDecoches[cle] = Self.sans(lue.aFaire, decoches)
         }
+        if let lues = quetesCochesLues[cle], lues.contains(where: lue.aFaire.contains) {
+            let rouverts = lues.filter(lue.aFaire.contains)
+            quetesCochesLues[cle] = Self.sans(rouverts, lues)
+            quetesValides[cle] = Self.sans(rouverts, quetesValides[cle])
+        }
         if lue.etapeSure, let etape = lue.etape, etape > quetesEtape[cle] ?? 0 { quetesEtape[cle] = etape }
         guard quetesCocherSuivi else { return 0 }
         let decoches = quetesDecoches[cle] ?? []
-        return ajouter(lue.faits.filter { !decoches.contains($0) }, de: lue.id)
+        let coches = ajouter(lue.faits.filter { !decoches.contains($0) }, de: lue.id)
+        if !coches.isEmpty { quetesCochesLues[cle, default: []] += coches }
+        return coches.count
     }
 
     /// L'objectif devient celui en cours de sa quête, à la place du précédent.
@@ -53,9 +66,9 @@ extension Preferences {
         quetesEnCours[cle] = objectif
     }
 
-    /// Coche sans jamais décocher ; rend combien ne l'étaient pas.
+    /// Coche sans jamais décocher ; rend ceux qui ne l'étaient pas.
     @discardableResult
-    private func ajouter(_ objectifs: [Int], de quete: Int) -> Int {
+    private func ajouter(_ objectifs: [Int], de quete: Int) -> [Int] {
         let cle = String(quete)
         let avant = quetesValides[cle] ?? []
         var nouveaux: [Int] = []
@@ -64,7 +77,7 @@ extension Preferences {
         }
         if !nouveaux.isEmpty { quetesValides[cle] = avant + nouveaux }
         if let enCours = quetesEnCours[cle], objectifs.contains(enCours) { quetesEnCours[cle] = nil }
-        return nouveaux.count
+        return nouveaux
     }
 
     /// La liste privée de `retires` ; `nil` quand elle se vide, pour ne pas
