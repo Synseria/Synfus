@@ -54,6 +54,26 @@ struct RecherchePaletteTests {
         #expect(RecherchePalette.entrees("amayiro", avecQuetes).filter(\.favori).count == 2)
     }
 
+    @Test("Monstres et objets du catalogue des quêtes : leur filtre, Entrée déplie où les trouver, après le reste dans « Tout »")
+    func monstresEtObjets() throws {
+        var avecQuetes = contexte()
+        avecQuetes.quetes = Quetes(
+            format: Quetes.formatActuel, date: .now, quetes: [], pnjs: [],
+            objets: ["7294": ["fr": "Poils de Pétartifoux"], "2179": ["fr": "Dent de dragodinde"]],
+            monstres: ["792": ["fr": "Bworkette"], "100": ["fr": "Amakna Bwork"]], nomsPNJ: [:], sousZones: [:],
+            famillesObjets: ["2179": 9], familles: ["9": ["fr": "Ressource"]], emotes: [:], titres: [:], metiers: [:], camps: [:])
+        let monstres = RecherchePalette.entrees("", avecQuetes, filtre: .monstres)
+        #expect(monstres.map(\.titre) == ["Amakna Bwork", "Bworkette"])
+        #expect(monstres.last?.effet == .ouTrouver(.monstre(792)) && RecherchePalette.texte(de: .ouTrouver(.monstre(792)), avecQuetes) == nil)
+        let objets = RecherchePalette.entrees("", avecQuetes, filtre: .objets)
+        #expect(objets.map(\.sousTitre) == ["Ressource", L("palette.objet")])
+        #expect(objets.first?.effet == .ouTrouver(.objet(2179)))
+        // « amakna » : zaaps et lieux d'abord, le monstre après.
+        let tout = RecherchePalette.entrees("amakna", avecQuetes)
+        let monstre = try #require(tout.firstIndex { $0.genre == .monstre })
+        #expect(tout[..<monstre].allSatisfy { !$0.genre.enDernier } && tout[monstre...].allSatisfy(\.genre.enDernier))
+    }
+
     @Test("Un lieu porte sa carte et son pictogramme, un zaap sa carte : la liste en montre la vue")
     func vuesDesCartes() throws {
         let banque = try #require(Carte.integree.lieux.first { $0.nom(en: .fr) == "Banque" && $0.zone(en: .fr) == "Bonta" })
