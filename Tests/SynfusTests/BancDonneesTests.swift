@@ -136,8 +136,8 @@ struct BancDonneesTests {
 
     private final class Stockage: PreferencesStore {
         private(set) var ecritures = 0
-        func donnees(pour cle: String) -> Data? { nil }
-        func enregistrer(_ donnees: Data, pour cle: String) { ecritures += 1 }
+        func donnees(pour _: String) -> Data? { nil }
+        func enregistrer(_: Data, pour _: String) { ecritures += 1 }
     }
 
     @Test("Coches : une écriture des réglages, une coche, une lecture du suivi", .enabled(if: chemin != nil))
