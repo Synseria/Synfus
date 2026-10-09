@@ -39,7 +39,16 @@ enum GenreLecture: String, CaseIterable, Sendable {
     @MainActor var zone: ZoneEcran { Preferences.shared[keyPath: reglage] ?? parDefaut }
 
     /// Au tour, une capture du même perso au plus toutes les tant de secondes.
-    var intervalle: TimeInterval { self == .quetes ? 3 : 1 }
+    /// Le combat, hors combat, toutes les trois : on n'y entre que par un
+    /// placement, qui dure bien plus ; vu en cours (`enCombat`), chaque
+    /// seconde jusqu'à ce que la lecture le dise fini — son tour en dépend.
+    func intervalle(combat: EtatCombat?) -> TimeInterval {
+        switch self {
+        case .position, .chasse: return 1
+        case .quetes: return 3
+        case .combat: return combat?.enCombat == true ? 1 : 3
+        }
+    }
 
     /// Ce que la signature regarde pour relancer l'OCR.
     var mesure: MesureSignature {
@@ -48,6 +57,25 @@ enum GenreLecture: String, CaseIterable, Sendable {
         case .combat: return .bouton
         case .chasse, .quetes: return .lignes
         }
+    }
+}
+
+/// Comment capturer les zones dues au même tour chez un perso. Une capture
+/// ScreenCaptureKit a un coût fixe (aller-retour avec le serveur de fenêtres)
+/// et un coût qui suit les pixels : au-delà d'un nombre de zones, une seule
+/// capture du contenu entier, découpée, revient moins cher que plusieurs.
+enum PlanCapture: Equatable {
+    /// Une capture par zone, de la zone seule.
+    case parZone
+    /// Une capture du contenu entier à l'échelle de référence, puis une
+    /// découpe par zone (`CGImage.cropping`, sans copie des pixels).
+    case entiere
+
+    /// Provisoire : à fixer d'après `Synfus --banc-captures`.
+    static let seuilCaptureUnique = 3
+
+    static func pour(_ genres: [GenreLecture], seuil: Int = seuilCaptureUnique) -> PlanCapture {
+        Set(genres).count >= seuil ? .entiere : .parZone
     }
 }
 
@@ -70,7 +98,8 @@ enum GenreLecture: String, CaseIterable, Sendable {
 /// - **L'inventaire ScreenCaptureKit gardé** (`inventaireGarde`).
 ///
 /// Seul le perso au premier plan est lu en continu, une fois par seconde (le
-/// suivi de quêtes toutes les trois) : en plein écran, macOS ne redessine pas
+/// combat toutes les trois hors combat, le suivi de quêtes toutes les trois,
+/// cf. `GenreLecture.intervalle`) : en plein écran, macOS ne redessine pas
 /// les autres fenêtres. Les autres le sont
 /// au survol de leur pastille (position, relevé de plus de 10 s) et par
 /// « Tout lire » dans le Diagnostic — réglages ouverts, Synfus est devant et
@@ -219,7 +248,7 @@ final class LecteurEcran: ObservableObject {
             return
         }
         if persoDevant != client.name { persoDevant = client.name }
-        for genre in genresActifs { demander(client, genre) }
+        for genre in genresActifs where perime(genre, client.name) { demander(client, genre) }
         if suiviMontre, QuetesStore.shared.quetes != nil, perime(.quetes, client.name) { demander(client, .quetes) }
         pomper()
     }
@@ -227,7 +256,8 @@ final class LecteurEcran: ObservableObject {
     /// La dernière capture de ce genre chez ce perso a son intervalle, à la
     /// tolérance du minuteur près.
     private func perime(_ genre: GenreLecture, _ nom: String) -> Bool {
-        vuLe[cle(genre, nom)].map { Date().timeIntervalSince($0) >= genre.intervalle - Self.intervalle / 2 } ?? true
+        let intervalle = genre.intervalle(combat: combats[nom])
+        return vuLe[cle(genre, nom)].map { Date().timeIntervalSince($0) >= intervalle - Self.intervalle / 2 } ?? true
     }
 
     /// La position du dernier perso lu au premier plan — celui dont le tchat
@@ -285,7 +315,7 @@ final class LecteurEcran: ObservableObject {
                 busy = false
                 pomper()
             }
-            guard let image = await capturer(client, genre) else {
+            guard let image = await capturer(client, [genre])[genre] else {
                 diagnostic.etat = .echecCapture(previews.lastCaptureError ?? "?")
                 return
             }
@@ -314,16 +344,30 @@ final class LecteurEcran: ObservableObject {
         }
     }
 
-    /// Le seul chemin de capture d'une zone : à l'échelle de référence, et
-    /// montrée au Diagnostic telle que l'OCR la reçoit.
-    private func capturer(_ client: DofusClient, _ genre: GenreLecture) async -> CGImage? {
-        guard let image = await WindowPreviewService.shared.captureImage(
-            client, region: genre.zone.rect, maxWidth: nil, inventaireGarde: true,
-            contenu: CaptureContenu(pleinEcran: client.pleinEcran, normaliser: true))
-        else { return nil }
-        diagnostic.captures[genre] = NSImage(cgImage: image, size: .zero)
+    /// Le seul chemin de capture des zones d'un perso : à l'échelle de
+    /// référence, selon `PlanCapture`, et montrées au Diagnostic telles que
+    /// l'OCR les reçoit. Une zone manquante n'a pas pu être capturée
+    /// (`lastCaptureError`).
+    private func capturer(_ client: DofusClient, _ genres: [GenreLecture]) async -> [GenreLecture: CGImage] {
+        let service = WindowPreviewService.shared
+        let contenu = CaptureContenu(pleinEcran: client.pleinEcran, normaliser: true)
+        var images: [GenreLecture: CGImage] = [:]
+        switch PlanCapture.pour(genres) {
+        case .parZone:
+            for genre in genres {
+                images[genre] = await service.captureImage(client, region: genre.zone.rect, maxWidth: nil,
+                                                           inventaireGarde: true, contenu: contenu)
+            }
+        case .entiere:
+            guard let entiere = await service.captureImage(client, region: ZoneEcran.entiere.rect, maxWidth: nil,
+                                                           inventaireGarde: true, contenu: contenu)
+            else { return [:] }
+            for genre in genres { images[genre] = CapturesCalibrage.decouper(genre.zone, dans: entiere) }
+        }
+        guard !images.isEmpty else { return [:] }
+        for (genre, image) in images { diagnostic.captures[genre] = NSImage(cgImage: image, size: .zero) }
         diagnostic.dernierPerso = client.name
-        return image
+        return images
     }
 
     /// Une lecture à la demande, hors du tour et sans signature précédente :
@@ -339,7 +383,7 @@ final class LecteurEcran: ObservableObject {
         let devant = manager.clients.first(where: { manager.isFrontmost($0) })
         guard WindowPreviewService.shared.authorized,
               let client = devant ?? manager.clients.first(where: { $0.name == persoDevant }),
-              let image = await capturer(client, genre),
+              let image = await capturer(client, [genre])[genre],
               case .lue(let signature, let lignes, _, _) = await moteur.lire(image: image, precedente: nil,
                                                                              mesure: genre.mesure)
         else { return nil }

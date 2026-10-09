@@ -9,6 +9,7 @@
 # Les tests portent sur la logique pure : ni Accessibilité, ni écran, ni
 # identité de signature. Les bancs de calibrage restent à part :
 #   SYNFUS_CAPTURE=~/Library/Logs/Synfus/captures/x.png sh test.sh RealCapture
+#   SYNFUS_CAPTURES_DOSSIER=~/Library/Logs/Synfus/captures sh test.sh decoupeLueCommeCapture
 #   SYNFUS_QUETES="$HOME/Library/Application Support/Synfus/Quetes.json" sh test.sh SimulationSuivi
 #   SYNFUS_QUETES="$HOME/Library/Application Support/Synfus/Quetes.json" sh test.sh BancDonnees
 [ -n "${BASH_VERSION:-}" ] || exec /bin/bash "$0" "$@"
@@ -20,7 +21,7 @@ cd "$(dirname "$0")"
 FILTRES=(); BRUT=()
 while [ $# -gt 0 ]; do
     case "$1" in
-        -h|--help) sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h|--help) sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         --) shift; BRUT+=("$@"); break ;;
         *) FILTRES+=("$1") ;;
     esac
