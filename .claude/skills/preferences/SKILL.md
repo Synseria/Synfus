@@ -39,6 +39,9 @@ la sauvegarde distingue aussi « jamais eu ce réglage » de « effacé exprès 
 
 ## Pièges
 
+- Favoris : `estFavori`/`basculerFavori` répartissent par préfixe — `lieu:` → `lieuxFavoris`,
+  `pnj:` → `pnjsFavoris`, sinon `zaapsFavoris`.
+
 - `hotKeys` a toujours dix emplacements (`completerHotKeys` au chargement) ; combien servent
   dépend de l'effectif (skill `raccourcis`), aucun réglage ne le fixe.
 - `characterOrder` ne reçoit que des noms persistables ; `purgeOrder` et `forget` gardent
