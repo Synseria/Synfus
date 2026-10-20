@@ -141,10 +141,17 @@ struct ChasseVue: View {
                 .buttonStyle(.plain)
             }
             if modele.indices.isEmpty {
-                Text(modele.chargementIndices ? L("chasse.indices.chargement")
-                     : L("chasse.indices.echec", modele.echecIndices ?? "?"))
-                    .font(.system(size: 10))
-                    .foregroundStyle(modele.chargementIndices ? Color.secondary : Color.orange)
+                if let echec = modele.echecIndices, !modele.chargementIndices {
+                    HStack(spacing: 6) {
+                        Text(L("chasse.indices.echec", echec))
+                            .font(.system(size: 10))
+                            .foregroundStyle(.orange)
+                        Button(L("quete.reessayer")) { Task { await modele.chargerIndices(forcer: true) } }
+                            .controlSize(.mini)
+                    }
+                } else {
+                    Text(L("chasse.indices.chargement")).font(.system(size: 10)).foregroundStyle(.secondary)
+                }
             }
         }
     }
@@ -155,7 +162,12 @@ struct ChasseVue: View {
     private var lus: some View {
         VStack(alignment: .leading, spacing: 3) {
             if modele.rienLu {
-                Text(L("chasse.rienLu")).font(.system(size: 10)).foregroundStyle(.secondary)
+                HStack(spacing: 6) {
+                    Text(L("chasse.rienLu")).font(.system(size: 10)).foregroundStyle(.secondary)
+                    Button(L("lecture.ouvrir")) { SettingsWindowController.shared.show(section: .lecture) }
+                        .controlSize(.mini)
+                        .help(L("chasse.lire.aide"))
+                }
             }
             ForEach(modele.lues, id: \.self) { cible in
                 Button { modele.choisir(cible) } label: {
@@ -200,9 +212,12 @@ struct ChasseVue: View {
                 }
                 Spacer()
                 if case .trouve = constat.resultat {
-                    Button { modele.copier() } label: { Image(systemName: "doc.on.doc") }
-                        .buttonStyle(.borderless)
-                        .help(L("chasse.copier"))
+                    Button { modele.copier() } label: {
+                        Image(systemName: modele.copieRecente ? "checkmark" : "doc.on.doc")
+                            .foregroundStyle(modele.copieRecente ? Couleurs.accent : Color.secondary)
+                    }
+                    .buttonStyle(.borderless)
+                    .help(L("chasse.copier"))
                 }
             }
             .padding(10)

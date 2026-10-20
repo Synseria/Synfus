@@ -97,7 +97,7 @@ enum MenuQuetes {
         switch etat {
         case .jamaisLu, .enCours: return nil
         case .illisible: return L("quete.suivi.illisible")
-        case .sansQuetes: return L("palette.quetes.chargement")
+        case .sansQuetes: return L("quete.suivi.sansQuetes")
         case .lu: return reconnues.isEmpty ? L("quete.suivi.rien") : nil
         }
     }

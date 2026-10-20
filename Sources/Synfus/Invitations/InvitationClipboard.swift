@@ -28,7 +28,7 @@ final class InvitationClipboard: ObservableObject {
     func copierSuivante() {
         let manager = WindowManager.shared
         if Preferences.shared.inviteGroupee {
-            copierTout(manager)
+            copierEquipe()
             return
         }
         if tourEnCours, let chef = chefPID, !manager.effectif.contains(where: { $0.pid == chef }) {
@@ -53,8 +53,10 @@ final class InvitationClipboard: ObservableObject {
         signaler(manager.effectif.filter { WindowTitle.characterName(fromTitle: $0.rawTitle) == nom })
     }
 
-    /// Sans tour : le chef est celui qui est devant, à chaque appui.
-    private func copierTout(_ manager: WindowManager) {
+    /// Toute l'équipe en une ligne, sans tour : le chef est celui qui est
+    /// devant, à chaque appui — le raccourci (`inviteGroupee`) et la palette.
+    func copierEquipe() {
+        let manager = WindowManager.shared
         tourEnCours = false
         let candidats = InvitationComposer.candidats(manager.effectif, chefPID: manager.frontmostPID)
         guard let texte = InvitationComposer.groupee(format: Preferences.shared.inviteFormat, noms: candidats)

@@ -158,7 +158,7 @@ struct BoutonTrajet: View {
             .foregroundStyle(copie ? Couleurs.accent : Color.secondary)
         }
         .buttonStyle(.borderless)
-        .help(L("quete.copierTrajet"))
+        .help(dansLesDouze ? L("ouTrouver.copierTrajet") : L("trajet.copier.horsDesDouze"))
     }
 }
 
