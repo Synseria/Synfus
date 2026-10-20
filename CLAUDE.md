@@ -109,7 +109,7 @@ nouveau fichier va dans le dossier de son domaine ; un fichier sans domaine en a
 | `Raccourcis/` | Raccourcis Carbon, enregistreur, conflits, enchaînement au clic |
 | `Rangement/` | `LayoutComputer` (pur), `WindowArranger` |
 | `Apercus/` | Captures ScreenCaptureKit, panneau d'aperçu |
-| `Lecture/` | OCR position, combat, suivis de chasse et de quêtes : `ZoneEcran`, `PositionCarte`, `LectureCombat`, `LumaBitmap`, `Ressemblance` (purs), `LecteurEcran` (+ `GenreLecture`, `DiagnosticLecture`, `MoteurOCR`), `CapturesCalibrage` |
+| `Lecture/` | OCR position, combat, suivis de chasse et de quêtes, vie et tchat : `ZoneEcran`, `PositionCarte`, `LectureCombat`, `LumaBitmap`, `Ressemblance`, `DetectionZones` (purs), `LecteurEcran` (+ `GenreLecture`, `DiagnosticLecture`, `MoteurOCR`), `CapturesCalibrage`, `AutoCalibrage` (zones retrouvées sur une capture) |
 | `Preferences/` | `Preferences`, protocole `PreferencesStore` |
 | `Classes/` | `DofusClass` (table intégrée, `Catalogue`, purs), `ClassesDofusDB` (liste `breeds`, cache disque, fusion), `ClassesStore` (emblèmes DofusDB ou icône de l'utilisateur) |
 | `Marque/` | La Couvée : `SynfusMark` (CoreGraphics pur), `SynfusGlyph` |

@@ -64,14 +64,13 @@ struct CalibrationZonesView: View {
     @State private var trace: CGRect?
     @State private var essai: Essai?
     @State private var essaiEnCours: Task<Void, Never>?
+    @State private var detection: Task<Void, Never>?
 
     private struct Essai {
         let lignes: [String]
         let compris: String
     }
 
-    /// Le temps de revenir au jeu et d'y ouvrir l'élément.
-    private static let delai = 5
     private static let largeurImage: CGFloat = 640
     private static let hauteurImage: CGFloat = 400
 
@@ -99,8 +98,12 @@ struct CalibrationZonesView: View {
                     decompte == nil ? lancer() : annuler()
                 }
                 .disabled(decompte == nil && manager.clients.isEmpty)
+                Button(L("calibration.detecter")) { detecter() }
+                    .disabled(capture == nil || detection != nil)
+                    .help(L("calibration.detecter.aide"))
                 Button(L("calibration.defaut")) { poser(nil) }
                     .disabled(prefs[keyPath: genre.reglage] == nil)
+                if detection != nil { ProgressView().controlSize(.small) }
                 Spacer()
                 Button(L("calibration.terminer")) { dismiss() }
                     .keyboardShortcut(.defaultAction)
@@ -115,6 +118,7 @@ struct CalibrationZonesView: View {
         .onDisappear {
             attente?.cancel()
             essaiEnCours?.cancel()
+            detection?.cancel()
         }
     }
 
@@ -206,13 +210,8 @@ struct CalibrationZonesView: View {
         guard service.authorized else { service.requestAuthorization(); return }
         echec = nil
         attente = Task {
-            for reste in stride(from: Self.delai, to: 0, by: -1) {
-                decompte = reste
-                try? await Task.sleep(for: .seconds(1))
-                if Task.isCancelled { decompte = nil; return }
-            }
+            guard await AutoCalibrage.decompter(tic: { decompte = $0 }) else { return }
             await capturer()
-            decompte = nil
             attente = nil
             // Le joueur est dans le jeu : on lui rend la capture.
             SettingsWindowController.shared.show()
@@ -225,18 +224,12 @@ struct CalibrationZonesView: View {
         decompte = nil
     }
 
-    /// Le perso devant à la fin du décompte — celui où l'on vient d'ouvrir
-    /// l'élément —, sinon celui qui a une fenêtre à l'écran.
     private func capturer() async {
-        guard let client = manager.clients.first(where: { manager.isFrontmost($0) })
-                ?? manager.clients.first(where: { !$0.dormant }) ?? manager.clients.first
-        else { echec = L("calibration.aucunPerso"); return }
-        // Le contenu entier, sans barre de titre et à l'échelle de la
-        // lecture : c'est le repère des zones et ce que l'OCR recevra.
-        guard let image = await WindowPreviewService.shared.captureImage(
-            client, region: ZoneEcran.entiere.rect, maxWidth: nil, inventaireGarde: false,
-            contenu: CaptureContenu(pleinEcran: client.pleinEcran, normaliser: true))
-        else { echec = WindowPreviewService.shared.lastCaptureError ?? L("calibration.echec"); return }
+        let image: CGImage
+        switch await AutoCalibrage.capturer() {
+        case .success(let capturee): image = capturee
+        case .failure(let erreur): echec = erreur.message; return
+        }
         do {
             try CapturesCalibrage.garder(image, pour: genre)
         } catch {
@@ -247,6 +240,20 @@ struct CalibrationZonesView: View {
     }
 
     // MARK: - Zone et essai
+
+    /// La zone retrouvée sur la capture gardée, sans tracé.
+    private func detecter() {
+        guard let image = capture?.image else { return }
+        echec = nil
+        let genre = genre
+        detection = Task {
+            let zones = await AutoCalibrage.detecter(sur: image)
+            detection = nil
+            guard let zone = zones[genre] else { echec = L("calibration.detecter.rien"); return }
+            trace = nil
+            poser(zone)
+        }
+    }
 
     private func poser(_ zone: ZoneEcran?) {
         prefs[keyPath: genre.reglage] = zone

@@ -145,6 +145,12 @@ enum SuiviQuetes {
         return Lu(reconnues: reconnues, lignes: comptes, entete: entete)
     }
 
+    /// Les rangs des lignes qui portent un nom de quête, sans rien en
+    /// conclure : où se tient le suivi à l'écran (`DetectionZones`).
+    static func rangsDeTitres(_ lignes: [String], dans index: Index) -> Set<Int> {
+        Set(lignes.indices.filter { !titres(Ressemblance.Forme(Ressemblance.normaliser(lignes[$0])), parmi: index.noms).isEmpty })
+    }
+
     /// La ligne qui porte un nom de quête, la première de `suite`, est-elle
     /// un objectif du groupe en cours ? Elle achève un objectif replié
     /// (« L'équipe ment » sous « … récupérer »), ou en commence un que la
