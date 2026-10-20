@@ -90,10 +90,11 @@ enum ClientMemory {
         var silentPIDs: Set<pid_t>
     }
 
-    /// Retient les persos vus, oublie les processus morts, ressuscite les
-    /// silencieux depuis la mémoire, puis fabrique les dormants découverts à
-    /// travers les espaces — pour les seuls pids **encore** sans mémoire, et
-    /// en datant tous ceux qui ont été lus, titre ou non.
+    /// Retient les persos vus, oublie les processus morts et ceux revenus au
+    /// login, ressuscite les silencieux depuis la mémoire, puis fabrique les
+    /// dormants découverts à travers les espaces — pour les seuls pids
+    /// **encore** sans mémoire, et en datant tous ceux qui ont été lus, titre
+    /// ou non.
     static func consolidate(
         _ result: InventoryResult,
         remembered: [pid_t: [DofusClient]],
@@ -105,7 +106,13 @@ enum ClientMemory {
         for (pid, clients) in Dictionary(grouping: result.found, by: \.pid) {
             memory[pid] = clients
         }
-        memory = memory.filter { result.livePIDs.contains($0.key) }
+        // Un client qui répond sans perso est au login : garder son ancien
+        // perso le ressusciterait dès qu'il se tait (espace inactif), et
+        // bloquerait la découverte à travers les espaces.
+        let foundPIDs = Set(result.found.map(\.pid))
+        memory = memory.filter { pid, _ in
+            result.livePIDs.contains(pid) && (!result.talkativePIDs.contains(pid) || foundPIDs.contains(pid))
+        }
 
         var checked = crossSpaceChecked.filter { result.livePIDs.contains($0.key) }
         for pid in result.crossSpaceProbed { checked[pid] = now }
