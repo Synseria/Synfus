@@ -6,7 +6,7 @@ struct Quetes: Codable, Equatable, Sendable {
     /// La forme du fichier gardé sur le disque : une autre (ancienne) n'est
     /// pas relue, les quêtes se retéléchargent — sans quoi un cache d'avant
     /// un nouveau champ le laisserait vide trente jours.
-    static let formatActuel = 7
+    static let formatActuel = 8
     let format: Int
     let date: Date
     let quetes: [Quete]
@@ -190,6 +190,9 @@ struct ObjectifQuete: Codable, Equatable, Sendable {
     let quantite: Int?
     /// Le genre d'objectif de DofusDB (`typeId`, liste `quest-objective-types`).
     let type: Int?
+    /// La sous-zone de sa carte : ce qui distingue une case d'Incarnam de son
+    /// homonyme d'Amakna (`ReseauSousZones.horsDesDouze`).
+    var sousZone: Int?
 
     /// Les genres « Vaincre… » : monstres en un ou plusieurs combats (6, 14),
     /// sur une carte (16), monstre à vaincre (7), éliminer (13), joueur en
@@ -269,6 +272,7 @@ struct FicheQuete: Equatable, Sendable {
         /// Le monstre qu'il cite, sinon l'objet qu'il cite sans le faire
         /// ramener (celui-là est dans les ressources) : où le trouver.
         var sujet: OuTrouver.Sujet?
+        var sousZone: Int?
     }
 
     struct Recompenses: Equatable, Sendable {
@@ -392,7 +396,7 @@ extension Quetes {
                         FicheQuete.Objectif(
                             id: objectif.id, texte: texte(objectif, en: langue),
                             position: objectif.position, carte: objectif.carte, combat: objectif.combat,
-                            sujet: Self.sujet(objectif))
+                            sujet: Self.sujet(objectif), sousZone: objectif.sousZone)
                     },
                     recompenses: recompenses(etape.recompenses, en: langue))
             },

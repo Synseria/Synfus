@@ -284,7 +284,7 @@ enum QuetesDofusDB {
                         return ObjectifQuete(id: objectif.id, textes: objectif.text.parLangue, x: position?.x, y: position?.y,
                                              carte: carte,
                                              objet: objectif.aRamener?.objet, quantite: objectif.aRamener?.quantite,
-                                             type: objectif.typeId)
+                                             type: objectif.typeId, sousZone: objectif.map?.subAreaId)
                     }
                     return EtapeQuete(noms: etape.name.parLangue, descriptions: etape.description?.parLangue ?? [:],
                                       objectifs: objectifs, recompenses: etape.recompenses)
