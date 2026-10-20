@@ -339,7 +339,8 @@ struct QueteVue: View {
         let nonOuverts = etape.nonOuverts(valides: coches, lu: lu)
         let lus = ficheImposee == nil
             ? lecture.historique.persos(fiche.id, etape: rang, seule: !plusieurs, maintenant: Date()) : []
-        let tournee = ficheImposee == nil ? Self.tournee(etape, aFaire: aFaire, valides: coches) : []
+        let tournee = ficheImposee == nil
+            ? Self.tournee(etape, aFaire: aFaire, valides: coches, reseau: CarteStore.shared.reseau) : []
         let numeros = Dictionary(uniqueKeysWithValues: tournee.enumerated().map { ($1, $0 + 1) })
         return VStack(alignment: .leading, spacing: metriques.ecartLignes) {
             if plusieurs {
@@ -450,10 +451,13 @@ struct QueteVue: View {
     /// Les objectifs que le suivi montre ouverts ensemble, situés, dans l'ordre
     /// le plus court depuis le perso (`ZaapClipboard.tournee`) : le suivi
     /// n'affiche que les objectifs ouverts, plusieurs à la fois se font dans
-    /// n'importe quel ordre. Un seul : rien à ordonner.
-    private static func tournee(_ etape: FicheQuete.Etape, aFaire: Set<Int>, valides: Set<Int>) -> [Int] {
+    /// n'importe quel ordre. Un seul : rien à ordonner. Hors du Monde des
+    /// Douze, aucun coût ne se compte : ceux-là restent hors de l'ordre.
+    private static func tournee(_ etape: FicheQuete.Etape, aFaire: Set<Int>, valides: Set<Int>,
+                                reseau: ReseauSousZones) -> [Int] {
         let ouverts = etape.objectifs.compactMap { objectif -> (id: Int, x: Int, y: Int)? in
-            guard aFaire.contains(objectif.id), !valides.contains(objectif.id), let position = objectif.position
+            guard aFaire.contains(objectif.id), !valides.contains(objectif.id), let position = objectif.position,
+                  !reseau.horsDesDouze(objectif.sousZone)
             else { return nil }
             return (objectif.id, position.x, position.y)
         }
@@ -466,9 +470,8 @@ struct QueteVue: View {
     private func copierTrajet(_ objectif: FicheQuete.Objectif, quete: Int) {
         let id = Self.idLigne(objectif)
         if let position = objectif.position {
-            // Un objectif ne garde pas sa sous-zone : supposé des Douze, comme
-            // la tournée qui l'ordonne.
-            ZaapClipboard.shared.copierTrajet(vers: (position.x, position.y), dansLesDouze: true)
+            ZaapClipboard.shared.copierTrajet(vers: (position.x, position.y),
+                                              dansLesDouze: !CarteStore.shared.reseau.horsDesDouze(objectif.sousZone))
             signaler(id)
         } else if case .monstre(let monstre)? = objectif.sujet {
             Task { if await OuTrouverStore.shared.copierLePlusProche(monstre: monstre) { signaler(id) } }
