@@ -20,6 +20,9 @@ sa bascule). Toute nouvelle option suit la règle.
 - `NSPanel` non activable (`canBecomeKey = false`, `FloatingBarController`) : un overlay de jeu
   ne capte jamais le clavier. Seule exception, le panneau de chasse (`Chasse/ChassePanel`) :
   `.nonactivatingPanel` qui **peut** devenir key, pour taper l'indice sans activer Synfus.
+- Panneaux du jeu (quêtes, chasse, boss) : leur visibilité passe par `PanneauxJeu.revoir`, le
+  seul endroit qui les énumère. Panneau d'aide aux boss (`Boss/BossPanel`) : jamais clé, taille
+  de son contenu (skill `aide-boss`).
 - Panneau des quêtes (`Quetes/QuetePanel`) : sans bordure, jamais clé, jamais zoomé. Pas de
   barre de titre, même transparente : elle mange les clics du haut et zoome au double-clic.
   Pas `.resizable` : les bords du système, invisibles et sans curseur pour une app inactive,
