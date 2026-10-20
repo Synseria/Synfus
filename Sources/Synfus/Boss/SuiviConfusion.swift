@@ -87,23 +87,19 @@ struct SuiviConfusion: Equatable, Sendable {
 
     // MARK: - Lectures
 
-    /// L'état de combat lu chez `perso`.
-    mutating func combat(_ perso: String, etat: EtatCombat, le date: Date) {
+    /// L'état de combat lu chez `perso`, et celui d'avant : un nouveau tour
+    /// (`EtatCombat.nouveauTour`) clôt le précédent, même sans bouton gris vu.
+    mutating func combat(_ perso: String, avant: EtatCombat?, apres: EtatCombat, le date: Date) {
         var suivi = persos[perso] ?? Perso()
-        switch etat {
-        case .monTour:
-            if suivi.debutTour == nil {
-                suivi.oublierLeTour()
-                suivi.debutTour = date
-                suivi.vieDebutTour = suivi.vie
-            }
-        case .pasMonTour, .placement:
+        if EtatCombat.nouveauTour(avant: avant, apres: apres) {
             if suivi.debutTour != nil { suivi.finTour = date }
             suivi.oublierLeTour()
-        case .horsCombat:
+            suivi.debutTour = date
+            suivi.vieDebutTour = suivi.vie
+        } else if !apres.enCombat || apres == .pasMonTour || apres == .placement {
             if suivi.debutTour != nil { suivi.finTour = date }
             suivi.oublierLeTour()
-            anonyme = nil
+            if apres == .horsCombat { anonyme = nil }
         }
         persos[perso] = suivi
     }

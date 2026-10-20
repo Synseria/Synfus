@@ -223,29 +223,6 @@ extension QuetePanel {
     }
 }
 
-/// Les éléments du menu portent leur action (`representedObject`) : le menu
-/// se reconstruit à chaque ouverture, une cible commune les déclenche.
-@MainActor
-private final class CibleMenu: NSObject {
-    static let shared = CibleMenu()
-
-    private final class Action {
-        let agir: @MainActor () -> Void
-        init(_ agir: @escaping @MainActor () -> Void) { self.agir = agir }
-    }
-
-    func element(_ titre: String, agir: @escaping @MainActor () -> Void) -> NSMenuItem {
-        let item = NSMenuItem(title: titre, action: #selector(declencher(_:)), keyEquivalent: "")
-        item.target = self
-        item.representedObject = Action(agir)
-        return item
-    }
-
-    @objc private func declencher(_ item: NSMenuItem) {
-        (item.representedObject as? Action)?.agir()
-    }
-}
-
 /// Les bords qu'une poignée déplace. Le haut n'en est pas : c'est l'en-tête,
 /// qui déplace le panneau.
 struct BordsPanneau: OptionSet, Sendable {

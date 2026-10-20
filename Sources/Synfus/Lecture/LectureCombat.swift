@@ -128,6 +128,18 @@ enum EtatCombat: Equatable, Sendable {
     /// il redonne la même échéance à une seconde près.
     static let ecartEcheance: TimeInterval = 1.5
 
+    /// Le perso commence-t-il un tour ? En entrant dans `monTour`, ou d'un
+    /// `monTour` à l'autre quand l'échéance change : la lecture du perso devant
+    /// manque souvent le bouton gris entre deux de ses tours (le passage
+    /// automatique bascule ailleurs dès la fin), mais un nouveau décompte
+    /// donne une nouvelle échéance — `depuis` garde l'ancienne à l'arrondi près.
+    static func nouveauTour(avant: EtatCombat?, apres: EtatCombat) -> Bool {
+        guard case .monTour(let fin) = apres else { return false }
+        guard case .monTour(let ancienne)? = avant else { return true }
+        guard let fin, let ancienne else { return false }
+        return abs(fin.timeIntervalSince(ancienne)) > ecartEcheance
+    }
+
     /// Le constat d'une lecture, compte tenu de l'état d'avant : un tour qui
     /// continue garde son échéance si le décompte n'a pas été relu, ou relu
     /// à l'arrondi près — sans quoi l'état changerait à chaque lecture et la
