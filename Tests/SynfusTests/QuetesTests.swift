@@ -139,6 +139,8 @@ struct QuetesTests {
         #expect(fiche.etapes.map(\.nom) == ["Analyse de sang", "Le sang du wabbit GM"])
         let otomai = try #require(fiche.etapes[1].objectifs.first { $0.texte.contains("Otomaï") })
         #expect(otomai.position == PNJ.Position(x: -2, y: -4))
+        // Sa sous-zone suit : elle dit si la case est des Douze.
+        #expect(otomai.sousZone == 10)
         #expect(fiche.etapes[0].objectifs[1].position == nil)
         #expect(fiche.nomFrancais == "Wogew l'hewmite")
     }
