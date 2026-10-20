@@ -109,14 +109,8 @@ final class QuetePanel: NSObject, ObservableObject {
     /// Montré, il fait lire le suivi du jeu au tour, si l'enregistrement de
     /// l'écran est déjà permis ; caché, plus rien n'est lu pour lui.
     private func appliquer(force: Bool) {
-        let montre = PanneauxJeu.visible(ouvert: ouvert) || (ouvert && impose)
-        if montre {
-            let panel = panel ?? construire()
-            if force || !panel.isVisible { panel.orderFrontRegardless() }
-        } else if panel?.isVisible == true {
-            panel?.orderOut(nil)
-            ApercuCarte.shared.cacher()
-        }
+        let montre = PanneauxJeu.appliquer(&panel, ouvert: ouvert, impose: impose, force: force,
+                                           construire: construire, cache: { ApercuCarte.shared.cacher() })
         LecteurEcran.shared.suivreQuetes(montre && WindowPreviewService.shared.authorized)
     }
 
@@ -143,7 +137,6 @@ final class QuetePanel: NSObject, ObservableObject {
            let ecran = NSScreen.main?.visibleFrame {
             panel.setFrameTopLeftPoint(NSPoint(x: ecran.maxX - 384, y: ecran.maxY - 80))
         }
-        self.panel = panel
         return panel
     }
 }
@@ -303,7 +296,7 @@ struct PoigneeRedimension: NSViewRepresentable {
     func makeNSView(context _: Context) -> NSView { Poignee(bords: bords) }
     func updateNSView(_: NSView, context _: Context) {}
 
-    private final class Poignee: NSView {
+    private final class Poignee: VueACurseur {
         private let bords: BordsPanneau
 
         init(bords: BordsPanneau) {
@@ -314,26 +307,7 @@ struct PoigneeRedimension: NSViewRepresentable {
         @available(*, unavailable)
         required init?(coder _: NSCoder) { nil }
 
-        override func acceptsFirstMouse(for _: NSEvent?) -> Bool { true }
-        override var mouseDownCanMoveWindow: Bool { false }
-
-        // Le panneau n'est jamais clé et Synfus n'est pas l'app active : ni
-        // `cursorRects` ni `cursorUpdate`, une zone de suivi qui pose le
-        // curseur elle-même (cf. `WindowDragArea`).
-        override func updateTrackingAreas() {
-            super.updateTrackingAreas()
-            for area in trackingAreas { removeTrackingArea(area) }
-            addTrackingArea(NSTrackingArea(rect: bounds,
-                                           options: [.mouseEnteredAndExited, .mouseMoved, .activeAlways, .inVisibleRect],
-                                           owner: self, userInfo: nil))
-        }
-
-        override func viewDidMoveToWindow() {
-            super.viewDidMoveToWindow()
-            if window != nil { CurseurArrierePlan.autoriser() }
-        }
-
-        private var curseur: NSCursor {
+        override var curseur: NSCursor {
             if #available(macOS 15.0, *) {
                 let position: NSCursor.FrameResizePosition = switch bords {
                 case .gauche: .left
@@ -350,10 +324,6 @@ struct PoigneeRedimension: NSViewRepresentable {
             default: return .crosshair
             }
         }
-
-        override func mouseEntered(with _: NSEvent) { curseur.set() }
-        override func mouseMoved(with _: NSEvent) { curseur.set() }
-        override func mouseExited(with _: NSEvent) { NSCursor.arrow.set() }
 
         override func mouseDown(with _: NSEvent) {
             guard let window else { return }

@@ -37,7 +37,7 @@ struct WindowDragArea: NSViewRepresentable {
     func makeNSView(context _: Context) -> DragView { DragView(fabriqueMenu: menu) }
     func updateNSView(_ nsView: DragView, context _: Context) { nsView.fabriqueMenu = menu }
 
-    final class DragView: NSView {
+    final class DragView: VueACurseur {
         var fabriqueMenu: (@MainActor () -> NSMenu)?
 
         init(fabriqueMenu: (@MainActor () -> NSMenu)?) {
@@ -48,32 +48,8 @@ struct WindowDragArea: NSViewRepresentable {
         @available(*, unavailable)
         required init?(coder _: NSCoder) { nil }
 
-        override func acceptsFirstMouse(for _: NSEvent?) -> Bool { true }
-        override var mouseDownCanMoveWindow: Bool { false }
-
-        /// Le curseur dit ce que la zone fait : main ouverte au survol, fermée
-        /// pendant le glisser. Les `cursorRects` seuls ne suffisent pas sur un
-        /// panneau non-clé — une zone de suivi les remplace.
-        override func updateTrackingAreas() {
-            super.updateTrackingAreas()
-            for area in trackingAreas { removeTrackingArea(area) }
-            addTrackingArea(NSTrackingArea(rect: bounds,
-                                           options: [.mouseEnteredAndExited, .mouseMoved, .activeAlways, .inVisibleRect],
-                                           owner: self, userInfo: nil))
-        }
-
-        override func viewDidMoveToWindow() {
-            super.viewDidMoveToWindow()
-            if window != nil { CurseurArrierePlan.autoriser() }
-        }
-
-        // `cursorUpdate` n'est pas livré à un panneau qui n'est jamais clé :
-        // on pose le curseur nous-mêmes à l'entrée, et on le rend à la sortie.
-        // Et on le repose à chaque mouvement : le jeu, au premier plan,
-        // réimpose le sien en continu.
-        override func mouseEntered(with _: NSEvent) { NSCursor.openHand.set() }
-        override func mouseMoved(with _: NSEvent) { NSCursor.openHand.set() }
-        override func mouseExited(with _: NSEvent) { NSCursor.arrow.set() }
+        /// Main ouverte au survol, fermée pendant le glisser.
+        override var curseur: NSCursor { .openHand }
 
         override func mouseDown(with event: NSEvent) {
             guard let window else { return }
@@ -98,6 +74,37 @@ struct WindowDragArea: NSViewRepresentable {
             window.performDrag(with: appui)
         }
     }
+}
+
+/// Une vue qui pose son curseur dans un panneau jamais clé d'une app inactive
+/// — zone de glisser, poignées du panneau des quêtes. Ni `cursorRects` ni
+/// `cursorUpdate` n'y sont livrés : une zone de suivi active en permanence
+/// pose `curseur` à l'entrée et le repose à chaque mouvement (le jeu, au
+/// premier plan, réimpose le sien en continu), la flèche à la sortie. Le
+/// premier clic agit (`acceptsFirstMouse`) : sans lui, il ne servirait qu'à
+/// « réveiller » le panneau.
+class VueACurseur: NSView {
+    var curseur: NSCursor { .arrow }
+
+    override func acceptsFirstMouse(for _: NSEvent?) -> Bool { true }
+    override var mouseDownCanMoveWindow: Bool { false }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        for area in trackingAreas { removeTrackingArea(area) }
+        addTrackingArea(NSTrackingArea(rect: bounds,
+                                       options: [.mouseEnteredAndExited, .mouseMoved, .activeAlways, .inVisibleRect],
+                                       owner: self, userInfo: nil))
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if window != nil { CurseurArrierePlan.autoriser() }
+    }
+
+    override func mouseEntered(with _: NSEvent) { curseur.set() }
+    override func mouseMoved(with _: NSEvent) { curseur.set() }
+    override func mouseExited(with _: NSEvent) { NSCursor.arrow.set() }
 }
 
 /// Permet à Synfus de poser le curseur alors qu'il n'est pas l'app active.

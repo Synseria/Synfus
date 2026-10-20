@@ -152,6 +152,7 @@ final class WindowManager: ObservableObject {
         // millisecondes à répondre. La barre n'a pas à attendre cela.
         for note in [NSWorkspace.didActivateApplicationNotification,
                      NSWorkspace.didDeactivateApplicationNotification] {
+            // swiftlint:disable:next discarded_notification_center_observer - singleton, observé toute la vie de l'app
             center.addObserver(forName: note, object: nil, queue: .main) { [weak self] notification in
                 // La notification elle-même ne peut pas franchir la frontière du
                 // main actor sous concurrence stricte : on en tire tout de suite
@@ -188,6 +189,7 @@ final class WindowManager: ObservableObject {
 
         for note in [NSWorkspace.didLaunchApplicationNotification,
                      NSWorkspace.didTerminateApplicationNotification] {
+            // swiftlint:disable:next discarded_notification_center_observer - singleton, observé toute la vie de l'app
             center.addObserver(forName: note, object: nil, queue: .main) { [weak self] _ in
                 MainActor.assumeIsolated {
                     self?.refreshSoon()
@@ -198,6 +200,7 @@ final class WindowManager: ObservableObject {
 
         // Passer en plein écran ou changer de bureau ne réactive aucune app : sans
         // cette notification, la barre resterait derrière le nouvel espace.
+        // swiftlint:disable:next discarded_notification_center_observer - singleton, observé toute la vie de l'app
         center.addObserver(
             forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main
         ) { [weak self] _ in
