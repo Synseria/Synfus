@@ -55,7 +55,7 @@ SYNFUS_CAPTURE=~/Library/Logs/Synfus/captures/x.png sh test.sh RealCapture   # O
   `AccessibilityReader` ; processus Dofus `DofusProcesses` ; titres `WindowTitle` ; fermeture
   `ClientTerminator` ; presse-papiers `PressePapiers` ; API DofusDB `DofusDB` (lots d'identifiants : `parIdentifiants`) ; images du jeu `ImagesDofusDB` (vues de carte : `VueCarte`, toujours réduites) ; effectif `republierEffectif` ; coût d'un trajet depuis le perso `ZaapClipboard` (`cout(depuis:)`, `tournee`) ; zaaps actifs indexés `ZaapClipboard.zaapsSitues` ; classes
   `ClassesStore.catalogue` ; marque `SynfusMark` ; libellés `L()` ; texte lu comparé à des noms `Ressemblance` ;
-  zones de lecture `GenreLecture` ; coches, décoches, objectif en cours et étape des quêtes `Preferences.cocher` / `appliquer` (`CochesQuete`) ; coût d'un trajet `ItineraireZaap.cartes` ;
+  zones de lecture `GenreLecture` ; coches, décoches, objectif en cours et étape des quêtes `Preferences.cocher` / `appliquer` (`CochesQuete`) ; coût d'un trajet `ItineraireZaap.cartes` ; distance à pied `ItineraireZaap.aPied` ; case hors du Monde des Douze `ReseauSousZones.horsDesDouze` (une entrée de palette vers une case : `versCase`) ;
   plusieurs réglages d'un geste, une écriture `Preferences.enUneEcriture` ; résultat redemandé à chaque rendu
   `DernierCalcul` (sous la clé de ses entrées ; réglages des trajets et carte : `ZaapClipboard.revisionTrajets`).
 - Les constantes `extern CFStringRef` de l'Accessibilité (`kAXTrustedCheckOptionPrompt`,

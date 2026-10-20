@@ -466,7 +466,9 @@ struct QueteVue: View {
     private func copierTrajet(_ objectif: FicheQuete.Objectif, quete: Int) {
         let id = Self.idLigne(objectif)
         if let position = objectif.position {
-            ZaapClipboard.shared.copierTrajet(vers: (position.x, position.y))
+            // Un objectif ne garde pas sa sous-zone : supposé des Douze, comme
+            // la tournée qui l'ordonne.
+            ZaapClipboard.shared.copierTrajet(vers: (position.x, position.y), dansLesDouze: true)
             signaler(id)
         } else if case .monstre(let monstre)? = objectif.sujet {
             Task { if await OuTrouverStore.shared.copierLePlusProche(monstre: monstre) { signaler(id) } }

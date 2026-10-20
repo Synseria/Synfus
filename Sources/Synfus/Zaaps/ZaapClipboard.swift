@@ -62,11 +62,12 @@ final class ZaapClipboard: ObservableObject {
 
     /// Copie `/travel x,y`, précédé du zaap qui fait gagner assez de cartes
     /// depuis le perso devant — le même calcul que pour un `/travel` copié.
-    /// Hors du Monde des Douze (`monde`), le `/travel` seul : ses coordonnées
-    /// recoupent celles d'Amakna, un zaap d'Amakna y mènerait à tort.
-    func copierTrajet(vers cible: (x: Int, y: Int), monde: Int = Zaap.mondeDesDouze) {
+    /// Hors du Monde des Douze, le `/travel` seul : ses coordonnées recoupent
+    /// celles d'Amakna, un zaap d'Amakna y mènerait à tort. Chaque appelant
+    /// dit où est la case : un oubli copierait ce zaap-là.
+    func copierTrajet(vers cible: (x: Int, y: Int), dansLesDouze: Bool) {
         let travel = ItineraireZaap.travel(vers: cible)
-        guard monde == Zaap.mondeDesDouze, let nouveau = itineraire(travel) else { return poser(travel) }
+        guard dansLesDouze, let nouveau = itineraire(travel) else { return poser(travel) }
         poser(nouveau)
         signaler()
     }
