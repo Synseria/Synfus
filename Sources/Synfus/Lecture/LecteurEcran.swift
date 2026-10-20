@@ -168,6 +168,7 @@ final class LecteurEcran: ObservableObject {
     /// la vie et le tchat aussi pendant un combat.
     private var bossMontre = false
     private var prechauffe = false
+    private var prechauffage: Task<Void, Never>?
     /// Lectures demandées, dans l'ordre — le tour, un survol, le bouton du
     /// Diagnostic. Une à la fois : l'OCR est séquentiel.
     private var file: [(client: DofusClient, genre: GenreLecture)] = []
@@ -259,12 +260,17 @@ final class LecteurEcran: ObservableObject {
         // vingt-huit secondes sur une machine froide. On le paie ici, une
         // fois, plutôt qu'au premier relevé, qui semblait ne jamais venir.
         diagnostic.etat = .preparation
+        // Une seule, même réarmé pendant qu'elle dure (un panneau caché puis
+        // remontré) : la seconde relâcherait `busy` au milieu d'un lot, et
+        // deux lots partiraient ensemble.
+        guard prechauffage == nil else { return }
         busy = true
-        Task {
+        prechauffage = Task {
             await moteur.prechauffer()
             prechauffe = true
+            prechauffage = nil
             busy = false
-            diagnostic.etat = .attente
+            diagnostic.etat = timer == nil ? .eteint : .attente
             pomper()
         }
     }
