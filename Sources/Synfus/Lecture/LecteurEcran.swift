@@ -467,6 +467,12 @@ final class LecteurEcran: ObservableObject {
         return (client.name, lignes, signature.auBord)
     }
 
+    /// Chaque texte du contenu entier et son cadre — la détection des zones
+    /// (`AutoCalibrage`), par le même moteur que le tour.
+    func textes(image: CGImage) async -> [DetectionZones.TexteVu] {
+        await moteur.textes(image: image)
+    }
+
     /// L'OCR d'une zone déjà découpée — l'essai du calibrage, sur la capture
     /// gardée : même moteur, même encadrement que le tour. La couleur est
     /// celle du bouton de combat, sinon de la zone (cf. `pomper`).
@@ -618,6 +624,26 @@ actor MoteurOCR {
         }
         let lue = SignatureZone(luma, mesure: mesure, cadre: cadre, couleur: couleur, auBord: auBord)
         return .lue(lue, lignes, Date().timeIntervalSince(debut), couleurBouton: couleurBouton)
+    }
+
+    /// Chaque texte du contenu entier et son cadre, en fractions de l'image,
+    /// origine en haut à gauche : ce que `DetectionZones` reconnaît.
+    func textes(image: CGImage) -> [DetectionZones.TexteVu] {
+        let requete = Self.requete()
+        let encadree = Self.encadree(image)
+        guard (try? VNImageRequestHandler(cgImage: encadree ?? image).perform([requete])) != nil else { return [] }
+        let marge = encadree == nil ? 0 : CGFloat(Self.marge)
+        let (l, h) = (CGFloat(image.width), CGFloat(image.height))
+        let (lp, hp) = (l + 2 * marge, h + 2 * marge)
+        return (requete.results ?? [])
+            .sorted { $0.boundingBox.midY > $1.boundingBox.midY }
+            .compactMap { observation in
+                guard let texte = observation.topCandidates(1).first?.string else { return nil }
+                let boite = observation.boundingBox
+                let cadre = CGRect(x: (boite.minX * lp - marge) / l, y: ((1 - boite.maxY) * hp - marge) / h,
+                                   width: boite.width * lp / l, height: boite.height * hp / h)
+                return DetectionZones.TexteVu(texte: texte, cadre: cadre)
+            }
     }
 
     /// L'image posée sur une marge sombre. Une zone serrée coupe le texte au

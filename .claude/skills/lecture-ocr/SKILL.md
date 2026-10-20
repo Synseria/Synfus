@@ -103,6 +103,20 @@ panneau est montré et l'écran déjà autorisé (`QuetePanel` → `suivreQuetes
   Sellers, libre ou calée au début, `Forme` préparée et borne basse `tropLoin` — paires voisines
   puis lettres — six mille noms par ligne lue).
 
+## Détection des zones — `DetectionZones` (pur), `AutoCalibrage`
+
+« Détecter » (onglet Lecture, et par genre dans la feuille de calibrage, sur sa capture) : le
+contenu entier capturé (`AutoCalibrage.capturer`, seul chemin des captures de calibrage), son
+OCR (`MoteurOCR.textes` : texte et cadre en fractions), puis chaque élément reconnu à ce qu'il
+dit — coordonnées en haut à gauche (forme seule : « 316, 1 » pour « -16, 1 » sur l'écran entier),
+lignes horodatées en bas (`Harebourg.heure`, crochets lus « ( » ou « 1 »), pourcentage au bas
+du centre, bouton court sans heure (une ligne du tchat cite « Fin de tour »), noms de quêtes
+(`SuiviQuetes.rangsDeTitres`) et indices (`ChasseModele.rangsDIndices`) à gauche. Marges : au
+moins la largeur du défaut (noms de zone plus longs, tchat qui s'allonge), le bas du défaut pour
+les suivis, la hauteur du défaut pour le tchat. Une zone trouvée remplace le réglage, sa
+capture est gardée ; un élément absent garde la sienne. Banc : `detectionSurCaptures`
+(`SYNFUS_CAPTURES_DOSSIER`) — trouvée, puis relue comme le tour la lirait.
+
 ## Calibrage — `CalibrationZonesView(genre:)`
 
 Onglet Lecture de l'écran, une ligne par genre (défaut / calibrée). Chaque genre a sa capture

@@ -9,6 +9,9 @@ struct LectureSettings: View {
     @ObservedObject private var previews = WindowPreviewService.shared
     @ObservedObject private var lecture = DiagnosticLecture.shared
     @State private var calibrage: GenreLecture?
+    @State private var detection: Task<Void, Never>?
+    @State private var decompte: Int?
+    @State private var resultat: String?
 
     var body: some View {
         PageReglages(titre: L("reglages.lecture"), sousTitre: L("lecture.sousTitre"),
@@ -30,6 +33,15 @@ struct LectureSettings: View {
             // Chasse et suivi de quêtes se lisent à la demande, depuis leur
             // panneau : leurs zones se calibrent même lecture éteinte.
             Section {
+                Ligne(titre: L("lecture.detecter"), sousTexte: resultat ?? L("lecture.detecter.sousTexte")) {
+                    HStack(spacing: 8) {
+                        if detection != nil, decompte == nil { ProgressView().controlSize(.small) }
+                        Button(decompte.map { L("calibration.decompte", $0) } ?? L("lecture.detecter.bouton")) {
+                            detection == nil ? detecter() : annuler()
+                        }
+                        .disabled(manager.clients.isEmpty || (detection != nil && decompte == nil))
+                    }
+                }
                 ForEach(GenreLecture.allCases) { genre in
                     Ligne(titre: genre.libelle,
                           sousTexte: prefs[keyPath: genre.reglage] == nil
@@ -53,6 +65,43 @@ struct LectureSettings: View {
             }
         }
         .sheet(item: $calibrage) { CalibrationZonesView(genre: $0) }
+    }
+
+    /// Après le décompte (le temps de revenir au jeu), une capture du perso
+    /// devant, et chaque élément qu'elle montre trouve sa zone.
+    private func detecter() {
+        previews.refreshAuthorization()
+        guard previews.authorized else { previews.requestAuthorization(); return }
+        resultat = nil
+        detection = Task {
+            defer { detection = nil }
+            guard await AutoCalibrage.decompter(tic: { decompte = $0 }) else { return }
+            switch await AutoCalibrage.capturer() {
+            case .failure(let echec):
+                resultat = echec.message
+            case .success(let image):
+                let zones = await AutoCalibrage.detecter(sur: image)
+                AutoCalibrage.appliquer(zones, capture: image)
+                resultat = Self.resume(zones)
+            }
+            // Le joueur est dans le jeu : on lui rend le résultat.
+            SettingsWindowController.shared.show()
+        }
+    }
+
+    private func annuler() {
+        detection?.cancel()
+        detection = nil
+        decompte = nil
+    }
+
+    /// Ce qui a été trouvé, ce qui n'était pas à l'écran.
+    private static func resume(_ zones: [GenreLecture: ZoneEcran]) -> String {
+        let trouvees = GenreLecture.allCases.filter { zones[$0] != nil }.map(\.libelle)
+        let absentes = GenreLecture.allCases.filter { zones[$0] == nil }.map(\.libelle)
+        guard !trouvees.isEmpty else { return L("lecture.detecter.rien") }
+        guard !absentes.isEmpty else { return L("lecture.detecter.tout", trouvees.joined(separator: ", ")) }
+        return L("lecture.detecter.resultat", trouvees.joined(separator: ", "), absentes.joined(separator: ", "))
     }
 
     private func activation(_ chemin: ReferenceWritableKeyPath<Preferences, Bool>) -> Binding<Bool> {
