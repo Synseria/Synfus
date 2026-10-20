@@ -64,6 +64,20 @@ struct ConsolidationTests {
         #expect(c.clients.map(\.name) == ["Brok"])
     }
 
+    @Test("Un client revenu au login oublie son perso, même s'il se tait ensuite")
+    func loginOublieLaMemoire() {
+        let brok = client(pid: 20, nom: "Brok")
+        // Il répond, sans perso : l'écran de connexion.
+        let login = result(found: [], live: [20], talkative: [20])
+        let c = ClientMemory.consolidate(login, remembered: [20: [brok]], crossSpaceChecked: [:], now: t0)
+        #expect(c.clients.isEmpty)
+        #expect(c.remembered[20] == nil)
+        // Passé sur un espace inactif : rien à ressusciter.
+        let muet = result(found: [], live: [20], talkative: [], mute: [20])
+        let ensuite = ClientMemory.consolidate(muet, remembered: c.remembered, crossSpaceChecked: [:], now: t0)
+        #expect(ensuite.clients.isEmpty)
+    }
+
     @Test("Un perso vu remplace la mémoire de son processus")
     func vuRemplaceLaMemoire() {
         let ancien = client(pid: 20, nom: "Brok")
