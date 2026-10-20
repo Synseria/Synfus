@@ -135,16 +135,11 @@ enum FileLecture {
 final class LecteurEcran: ObservableObject {
     static let shared = LecteurEcran()
 
-    struct Releve: Equatable {
-        var position: PositionCarte?
-        /// Les lignes brutes du dernier OCR — pour le Diagnostic.
-        var lignes: [String]
-    }
-
-    /// Dernière position de chaque perso, par nom. Ne change qu'au
-    /// changement de carte : la barre peut l'observer sans se redessiner à
-    /// chaque seconde — les compteurs vivent dans `DiagnosticLecture`.
-    @Published private(set) var releves: [String: Releve] = [:]
+    /// Dernière position lue de chaque perso, par nom. Ne change qu'au
+    /// changement de carte : la barre, les quêtes et les aperçus l'observent
+    /// sans se redessiner à chaque relecture — lignes brutes et compteurs
+    /// vivent dans `DiagnosticLecture`.
+    @Published private(set) var positions: [String: PositionCarte] = [:]
     /// Dernier état de combat connu de chaque perso, par nom. Celui d'un perso
     /// qui n'est pas devant date de la dernière fois qu'il l'a été.
     @Published private(set) var combats: [String: EtatCombat] = [:]
@@ -312,12 +307,12 @@ final class LecteurEcran: ObservableObject {
     /// La position du dernier perso lu au premier plan — celui dont le tchat
     /// reçoit le prochain collage, même si l'on vient de copier ailleurs.
     var positionDuPersoDevant: PositionCarte? {
-        persoDevant.flatMap { releves[$0]?.position }
+        persoDevant.flatMap { positions[$0] }
     }
 
     /// Le perso devant vient de finir un combat sur la carte où il se tient.
     var combatFiniDevant: Bool {
-        persoDevant.map { finsDeCombat.fini($0, en: releves[$0]?.position) } ?? false
+        persoDevant.map { finsDeCombat.fini($0, en: positions[$0]) } ?? false
     }
 
     /// Au survol d'une pastille : la position de ce perso-là, si elle n'a pas
@@ -477,8 +472,8 @@ final class LecteurEcran: ObservableObject {
         diagnostic.etat = lue == nil ? .sansCoordonnees : .actif
         // Une lecture sans coordonnées — écran de chargement, fenêtre du jeu
         // posée sur le coin — garde la dernière position connue.
-        let releve = Releve(position: lue ?? releves[nom]?.position, lignes: lignes)
-        if releves[nom] != releve { releves[nom] = releve }
+        diagnostic.lignesPosition[nom] = lignes
+        if let lue, positions[nom] != lue { positions[nom] = lue }
         var fins = finsDeCombat
         fins.position(nom, lue)
         if fins != finsDeCombat { finsDeCombat = fins }
@@ -490,7 +485,7 @@ final class LecteurEcran: ObservableObject {
         let constat = LectureCombat.classer(lignes: lignes, couleur: couleur)
         let etat = EtatCombat.depuis(constat, avant: combats[nom], maintenant: Date())
         var fins = finsDeCombat
-        fins.combat(nom, avant: combats[nom], apres: etat, ici: releves[nom]?.position)
+        fins.combat(nom, avant: combats[nom], apres: etat, ici: positions[nom])
         if fins != finsDeCombat { finsDeCombat = fins }
         if combats[nom] != etat { combats[nom] = etat }
     }
@@ -522,6 +517,9 @@ final class DiagnosticLecture: ObservableObject {
     /// quand rien n'est lu : la zone tombe-t-elle au bon endroit ?
     @Published var captures: [GenreLecture: NSImage] = [:]
     @Published var lignes: [GenreLecture: [String]] = [:]
+    /// Les lignes de la dernière lecture de position de chaque perso, même
+    /// sans coordonnées : ce que Vision a vu quand elles manquent.
+    @Published var lignesPosition: [String: [String]] = [:]
     /// Part colorée du bouton à la dernière lecture de combat — est-il le mien ?
     @Published var couleur: Double?
     @Published var dernierPerso: String?
