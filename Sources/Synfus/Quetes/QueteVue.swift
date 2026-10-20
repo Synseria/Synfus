@@ -409,26 +409,28 @@ struct QueteVue: View {
                     .padding(.top, metriques.ecartLignes)
             }
             if plusieurs, rang < fiche.etapes.count - 1 {
-                HStack {
-                    Spacer()
-                    let suivante = Button {
-                        changerEtape(fiche, rang + 1)
-                        remontees += 1
-                    } label: {
-                        Label(L("quete.etapeSuivante"), systemImage: "chevron.right")
-                            .labelStyle(TitreAvantIcone())
-                    }
-                    .controlSize(.small)
-                    // Tous ses objectifs cochés : l'étape suivante se montre.
-                    if etape.objectifs.allSatisfy({ coches.contains($0.id) }) {
-                        suivante.buttonStyle(.borderedProminent)
-                    } else {
-                        suivante
-                    }
-                }
-                .padding(.top, metriques.ecartLignes)
+                etapeSuivante(fiche, rang: rang, achevee: etape.objectifs.allSatisfy { coches.contains($0.id) })
             }
         }
+    }
+
+    /// « Étape suivante », en pied ; en avant quand tous les objectifs de
+    /// l'étape sont cochés.
+    @ViewBuilder
+    private func etapeSuivante(_ fiche: FicheQuete, rang: Int, achevee: Bool) -> some View {
+        let bouton = Button {
+            changerEtape(fiche, rang + 1)
+            remontees += 1
+        } label: {
+            Label(L("quete.etapeSuivante"), systemImage: "chevron.right")
+                .labelStyle(TitreAvantIcone())
+        }
+        .controlSize(.small)
+        HStack {
+            Spacer()
+            if achevee { bouton.buttonStyle(.borderedProminent) } else { bouton }
+        }
+        .padding(.top, metriques.ecartLignes)
     }
 
     /// Combien de persos leur suivi du jeu montre à cette étape ; au survol,

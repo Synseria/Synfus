@@ -173,16 +173,18 @@ struct ShortcutRow: View {
     /// Cette combinaison est donnée à un autre geste : le système n'en
     /// enregistre qu'une, et rien ne le disait ligne par ligne.
     var conflit = false
+    /// Le système l'a refusée : une autre app la tient déjà.
+    var refuse = false
     let hotKey: Binding<HotKey?>
 
     var body: some View {
         Ligne(titre: label, detail: detail, aide: help) {
             HStack(spacing: 6) {
-                if conflit {
+                if conflit || refuse {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.system(size: 11))
                         .foregroundStyle(.orange)
-                        .help(L("raccourcis.conflit"))
+                        .help(conflit ? L("raccourcis.conflit") : L("raccourcis.refuse"))
                 }
                 ShortcutRecorder(hotKey: hotKey, allowsBareKeys: allowsBareKeys)
             }
@@ -201,11 +203,13 @@ struct RaccourciReglable: View {
     /// Après l'enregistrement (demander une autorisation…).
     var apres: (HotKey?) -> Void = { _ in }
     @ObservedObject private var prefs = Preferences.shared
+    @ObservedObject private var hotKeys = HotKeyManager.shared
 
     var body: some View {
         let valeur = prefs[keyPath: chemin]
         ShortcutRow(label: label, detail: detail, help: help,
                     conflit: valeur.map(HotKeyConflicts.doublons(prefs.raccourcisGlobaux).contains) ?? false,
+                    refuse: valeur.map(hotKeys.rejected.contains) ?? false,
                     hotKey: Binding(get: { prefs[keyPath: chemin] }, set: { nouvelle in
                         prefs[keyPath: chemin] = nouvelle
                         HotKeyManager.shared.rebind()

@@ -102,6 +102,10 @@ struct HarebourgVue: View {
         .font(.system(size: 11))
         .foregroundStyle(.secondary)
         .fixedSize(horizontal: false, vertical: true)
+        if enCombat, aide.vieLue == nil {
+            Button(L("lecture.ouvrir")) { SettingsWindowController.shared.show(section: .lecture) }
+                .controlSize(.small)
+        }
     }
 
     // MARK: - À la main

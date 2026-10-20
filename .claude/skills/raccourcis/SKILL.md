@@ -17,7 +17,9 @@ user-invocable: false
   un moniteur de clavier).
 - `rebind()` réenregistre tout après chaque modification de préférence, et quand l'effectif
   change de taille (`republierEffectif`) : l'accès direct n'enregistre qu'un emplacement par
-  perso de l'effectif — ⌘6 reste aux autres apps tant qu'il n'y a pas de sixième perso.
+  perso de l'effectif — ⌘6 reste aux autres apps tant qu'il n'y a pas de sixième perso. Les
+  autres raccourcis sont une table (`gestes`, un geste par ligne) : un nouveau raccourci s'y
+  ajoute, et dans `Preferences.raccourcisGlobaux` et `resetShortcuts`.
 - `HotKey` stocke des **keycodes de position**, pas des caractères.
 - Deux territoires, règle du jeu par défaut : la rangée de chiffres (`digitRow`) est à
   l'accès direct (⌘1…⌘0) ; toute la navigation est sur la touche sous Échap
@@ -34,7 +36,8 @@ user-invocable: false
 - `ShortcutRecording` (dans `ShortcutRecorder.swift`) tient l'**unique** moniteur local et le
   champ qui a la parole : un seul champ enregistre à la fois.
 - `HotKeyConflicts` (pur, testé) rend les combinaisons en double ; la ligne concernée porte un
-  avertissement (`@Published`, il suit les modifications).
+  avertissement (`@Published`, il suit les modifications), comme celle que macOS a refusée
+  (`HotKeyManager.rejected` : une autre app la tient) — dans tous les onglets.
 
 ## Enchaîner au clic — `ClickAdvanceWatcher.swift`
 

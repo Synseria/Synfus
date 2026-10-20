@@ -162,7 +162,12 @@ struct ChasseVue: View {
     private var lus: some View {
         VStack(alignment: .leading, spacing: 3) {
             if modele.rienLu {
-                Text(L("chasse.rienLu")).font(.system(size: 10)).foregroundStyle(.secondary)
+                HStack(spacing: 6) {
+                    Text(L("chasse.rienLu")).font(.system(size: 10)).foregroundStyle(.secondary)
+                    Button(L("lecture.ouvrir")) { SettingsWindowController.shared.show(section: .lecture) }
+                        .controlSize(.mini)
+                        .help(L("chasse.lire.aide"))
+                }
             }
             ForEach(modele.lues, id: \.self) { cible in
                 Button { modele.choisir(cible) } label: {

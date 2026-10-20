@@ -48,55 +48,37 @@ final class HotKeyManager: ObservableObject {
                 WindowManager.shared.focus(slot: slot)
             }
         }
-        if let next = prefs.cycleNext {
-            register(next) { WindowManager.shared.cycle(by: 1) }
-        }
-        if let previous = prefs.cyclePrevious {
-            register(previous) { WindowManager.shared.cycle(by: -1) }
-        }
-        if let toggle = prefs.toggleAutoFocus {
-            register(toggle) {
+        // Un geste par raccourci, une ligne chacun : celui qu'on ajoute ne
+        // s'oublie pas ici.
+        let gestes: [(HotKey?, () -> Void)] = [
+            (prefs.cycleNext, { WindowManager.shared.cycle(by: 1) }),
+            (prefs.cyclePrevious, { WindowManager.shared.cycle(by: -1) }),
+            (prefs.toggleAutoFocus, {
                 let prefs = Preferences.shared
                 prefs.attentionAction = prefs.attentionAction == .focus ? .highlight : .focus
                 FloatingBarController.shared.flashAutoFocusState()
-            }
+            }),
+            (prefs.toggleBar, { FloatingBarController.shared.toggle() }),
+            (prefs.arrangeHotKey, { Task { await WindowArranger.shared.appliquerDerniere() } }),
+            (prefs.sessionHotKey, { WindowManager.shared.lancerSession() }),
+            (prefs.equipeSuivanteHotKey, { WindowManager.shared.equipeSuivante() }),
+            (prefs.inviteHotKey, { InvitationClipboard.shared.copierSuivante() }),
+            (prefs.paletteHotKey, { PalettePanel.shared.basculer() }),
+            (prefs.zaapHotKey, { ZaapClipboard.shared.optimiser() }),
+            (prefs.chasseHotKey, { ChassePanel.shared.basculer() }),
+            (prefs.quetesHotKey, { QuetePanel.shared.basculer() }),
+            (prefs.bossHotKey, { BossPanel.shared.basculer() }),
+        ]
+        for (hotKey, geste) in gestes {
+            if let hotKey { register(hotKey, action: geste) }
         }
-        if let toggle = prefs.toggleBar {
-            register(toggle) { FloatingBarController.shared.toggle() }
-        }
-        if let arrange = prefs.arrangeHotKey {
-            register(arrange) { Task { await WindowArranger.shared.appliquerDerniere() } }
-        }
-        if let session = prefs.sessionHotKey {
-            register(session) { WindowManager.shared.lancerSession() }
-        }
+        // Le seul à maintenir : l'aperçu d'ensemble tant que la touche reste enfoncée.
         if let preview = prefs.previewHotKey {
             register(preview) {
                 PreviewPanelController.shared.showGrid(WindowManager.shared.effectif)
             } onRelease: {
                 PreviewPanelController.shared.hide()
             }
-        }
-        if let suivante = prefs.equipeSuivanteHotKey {
-            register(suivante) { WindowManager.shared.equipeSuivante() }
-        }
-        if let invite = prefs.inviteHotKey {
-            register(invite) { InvitationClipboard.shared.copierSuivante() }
-        }
-        if let palette = prefs.paletteHotKey {
-            register(palette) { PalettePanel.shared.basculer() }
-        }
-        if let zaap = prefs.zaapHotKey {
-            register(zaap) { ZaapClipboard.shared.optimiser() }
-        }
-        if let chasse = prefs.chasseHotKey {
-            register(chasse) { ChassePanel.shared.basculer() }
-        }
-        if let quetes = prefs.quetesHotKey {
-            register(quetes) { QuetePanel.shared.basculer() }
-        }
-        if let boss = prefs.bossHotKey {
-            register(boss) { BossPanel.shared.basculer() }
         }
     }
 
