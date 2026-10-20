@@ -21,7 +21,7 @@ enum GroupeReglages: CaseIterable {
 enum SettingsSection: String, CaseIterable, Identifiable {
     case general, barre
     case raccourcis, attention, enchainer, invitations
-    case palette, trajets, chasse
+    case palette, trajets, chasse, boss
     case zaaps, lieux, quetes, pnj
     case persos, classes
     case lecture, diagnostic
@@ -32,7 +32,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         switch self {
         case .general, .barre: return .synfus
         case .raccourcis, .attention, .enchainer, .invitations: return .clavier
-        case .palette, .trajets, .chasse: return .jeu
+        case .palette, .trajets, .chasse, .boss: return .jeu
         case .zaaps, .lieux, .quetes, .pnj: return .donnees
         case .persos, .classes: return .persos
         case .lecture, .diagnostic: return .avance
@@ -50,6 +50,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .palette: return L("reglages.palette")
         case .trajets: return L("reglages.trajets")
         case .chasse: return L("chasse.titre")
+        case .boss: return L("boss.titre")
         case .zaaps: return L("reglages.zaaps")
         case .lieux: return L("reglages.lieux")
         case .quetes: return L("reglages.quetes")
@@ -72,6 +73,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .palette: return "command"
         case .trajets: return "arrow.triangle.turn.up.right.diamond"
         case .chasse: return "map"
+        case .boss: return "scope"
         case .zaaps: return "point.3.connected.trianglepath.dotted"
         case .lieux: return "mappin.and.ellipse"
         case .quetes: return "scroll"
@@ -162,6 +164,7 @@ struct SettingsView: View {
         case .palette: PaletteSettings()
         case .trajets: TrajetsSettings()
         case .chasse: ChasseSettings()
+        case .boss: BossSettings()
         case .zaaps: ZaapsSettings()
         case .lieux: LieuxSettings()
         case .quetes: QuetesSettings()

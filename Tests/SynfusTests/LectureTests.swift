@@ -274,6 +274,16 @@ struct LectureCombatTests {
         #expect(GenreLecture.quetes.intervalle(combat: .pasMonTour) == 3)
     }
 
+    @Test("La vie et le tchat de l'aide aux boss se lisent chaque seconde, dans le contenu")
+    func vieEtTchat() {
+        for genre in [GenreLecture.vie, .tchat] {
+            #expect(genre.intervalle(combat: .monTour(fin: nil)) == 1)
+            #expect(genre.parDefaut.bornee() == genre.parDefaut)
+        }
+        #expect(GenreLecture.vie.mesure == .zone)
+        #expect(GenreLecture.tchat.mesure == .lignes)
+    }
+
     @Test("Un tour qui continue garde son échéance ; un nouveau décompte la remplace")
     func echeance() {
         let t0 = Date(timeIntervalSince1970: 1000)
