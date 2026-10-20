@@ -45,7 +45,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Menu applicatif minimal : sans lui, ⌘Q et ⌘W ne fonctionneraient pas
-    /// lorsque la fenêtre de réglages est au premier plan.
+    /// lorsque la fenêtre de réglages est au premier plan — ni ⌘C, ⌘V, ⌘A et
+    /// ⌘Z dans les champs (palette, chasse, réglages) : un champ de texte ne
+    /// les reçoit que par le menu Édition.
     private func buildApplicationMenu() {
         let mainMenu = NSMenu()
 
@@ -62,6 +64,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         appMenu.addItem(withTitle: L("menu.quitter"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appMenuItem.submenu = appMenu
         mainMenu.addItem(appMenuItem)
+
+        let editionItem = NSMenuItem()
+        let edition = NSMenu(title: L("menu.edition"))
+        edition.addItem(withTitle: L("menu.annuler"), action: Selector(("undo:")), keyEquivalent: "z")
+        edition.addItem(withTitle: L("menu.retablir"), action: Selector(("redo:")), keyEquivalent: "Z")
+        edition.addItem(.separator())
+        edition.addItem(withTitle: L("menu.couper"), action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        edition.addItem(withTitle: L("menu.copier"), action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        edition.addItem(withTitle: L("menu.coller"), action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        edition.addItem(withTitle: L("menu.toutSelectionner"), action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        editionItem.submenu = edition
+        mainMenu.addItem(editionItem)
 
         let windowMenuItem = NSMenuItem()
         let windowMenu = NSMenu(title: L("menu.fenetre"))

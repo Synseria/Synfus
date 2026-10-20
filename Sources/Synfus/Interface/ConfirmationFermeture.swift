@@ -16,11 +16,16 @@ enum ConfirmationFermeture {
 
     private static func confirmer(nombre: Int) -> Bool {
         let alerte = NSAlert()
-        alerte.messageText = L("fermeture.confirmation", nombre)
+        alerte.messageText = L("fermeture.confirmation", nombre: nombre, nombre)
         alerte.informativeText = L("fermeture.confirmation.detail")
         alerte.alertStyle = .warning
-        alerte.addButton(withTitle: L("menu.fermerTous"))
-        alerte.addButton(withTitle: L("commun.annuler"))
+        let fermer = alerte.addButton(withTitle: L("menu.fermerTous"))
+        let annuler = alerte.addButton(withTitle: L("commun.annuler"))
+        // Entrée annule : le joueur qui tape Entrée pour ouvrir le tchat au
+        // moment où l'alerte paraît ne doit pas fermer ses huit comptes.
+        fermer.keyEquivalent = ""
+        fermer.hasDestructiveAction = true
+        annuler.keyEquivalent = "\r"
         // L'app tourne en accessory : sans activation, l'alerte s'ouvrirait
         // derrière le jeu, et Synfus paraîtrait ne rien faire.
         NSApp.activate(ignoringOtherApps: true)
