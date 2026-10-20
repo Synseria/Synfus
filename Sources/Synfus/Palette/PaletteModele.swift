@@ -47,9 +47,9 @@ final class PaletteModele: ObservableObject {
     /// du moment, relu à chaque ouverture.
     private let contexteImpose: ContextePalette?
 
-    /// La carte et les quêtes arrivent après le lancement, et les quêtes
-    /// après l'ouverture la première fois : la recherche en cours les reçoit
-    /// dès qu'elles sont là, et leurs textes se normalisent d'avance.
+    /// La carte et les quêtes arrivent après le lancement, lues ou
+    /// téléchargées en tâche de fond : la recherche en cours les reçoit dès
+    /// qu'elles sont là, et leurs textes se normalisent d'avance.
     private init() {
         contexteImpose = nil
         QuetesStore.shared.$quetes
