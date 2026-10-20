@@ -77,13 +77,31 @@ struct QueteVue: View {
         .bordsRedimensionnables(coin: poignee)
     }
 
-    /// Sans quête épinglée : où en trouver une.
+    /// Sans quête épinglée : celles que le suivi du jeu montre, à épingler
+    /// d'un clic, et où en chercher une autre. Quêtes indisponibles : pourquoi,
+    /// et de quoi réessayer.
     private var vide: some View {
         VStack(spacing: 10) {
-            Text(store.chargement ? L("palette.quetes.chargement") : L("quete.aucune"))
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+            if store.quetes == nil, !store.chargement, let echec = store.echec {
+                Text(L("quete.indisponible", echec))
+                    .font(.system(size: 12))
+                    .foregroundStyle(.orange)
+                    .multilineTextAlignment(.center)
+                Button(L("quete.reessayer")) { Task { try? await store.mettreAJour() } }
+            } else {
+                Text(store.chargement ? L("palette.quetes.chargement") : L("quete.aucune"))
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                let lues = lecture.reconnues.compactMap { reconnue in store.nom(reconnue.id).map { (reconnue, $0) } }
+                if !lues.isEmpty {
+                    Text(L("quete.vide.suivi")).font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary)
+                    ForEach(lues, id: \.0.id) { reconnue, nom in
+                        Button { lecture.choisir(reconnue) } label: { Label(nom, systemImage: "pin") }
+                            .buttonStyle(.borderless)
+                    }
+                }
+            }
             Button(L("quete.chercher")) {
                 PalettePanel.shared.ouvrir()
                 PaletteModele.shared.requete = "/quete "
@@ -115,7 +133,7 @@ struct QueteVue: View {
             if lecture.etat == .enCours { ProgressView().controlSize(.mini).padding(.leading, 4) }
         } boutons: {
             if let montree {
-                BoutonEnTete(icone: "xmark", aide: L("quete.desepingler")) { QuetePanel.shared.desepingler(montree) }
+                BoutonEnTete(icone: "pin.slash", aide: L("quete.desepingler")) { QuetePanel.shared.desepingler(montree) }
             }
             BoutonEnTete(icone: "minus", aide: L("quete.fermer")) { QuetePanel.shared.fermer() }
         }
@@ -257,7 +275,7 @@ struct QueteVue: View {
             HStack {
                 titreSection(L("quete.ressources"))
                 Spacer()
-                Button(L("quete.toutCopier")) {
+                Button(copiee == "ressources" ? L("quete.copie") : L("quete.toutCopier")) {
                     copier(ressources.map { L("quete.ressource", $0.nom, $0.quantite) }.joined(separator: ", "),
                            ligne: "ressources")
                 }
@@ -393,7 +411,7 @@ struct QueteVue: View {
             if plusieurs, rang < fiche.etapes.count - 1 {
                 HStack {
                     Spacer()
-                    Button {
+                    let suivante = Button {
                         changerEtape(fiche, rang + 1)
                         remontees += 1
                     } label: {
@@ -401,6 +419,12 @@ struct QueteVue: View {
                             .labelStyle(TitreAvantIcone())
                     }
                     .controlSize(.small)
+                    // Tous ses objectifs cochés : l'étape suivante se montre.
+                    if etape.objectifs.allSatisfy({ coches.contains($0.id) }) {
+                        suivante.buttonStyle(.borderedProminent)
+                    } else {
+                        suivante
+                    }
                 }
                 .padding(.top, metriques.ecartLignes)
             }
@@ -474,7 +498,8 @@ struct QueteVue: View {
                                               dansLesDouze: !CarteStore.shared.reseau.horsDesDouze(objectif.sousZone))
             signaler(id)
         } else if case .monstre(let monstre)? = objectif.sujet {
-            Task { if await OuTrouverStore.shared.copierLePlusProche(monstre: monstre) { signaler(id) } }
+            // Rien qui le situe, ou DofusDB muet : un bip plutôt que rien.
+            Task { if await OuTrouverStore.shared.copierLePlusProche(monstre: monstre) { signaler(id) } else { NSSound.beep() } }
         }
         prefs.mettreEnCours(objectif.id, de: quete)
     }
