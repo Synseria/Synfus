@@ -10,6 +10,7 @@ struct DiagnosticSettings: View {
     @ObservedObject private var arranger = WindowArranger.shared
     @ObservedObject private var freezes = FreezeWatcher.shared
     @ObservedObject private var lecteur = LecteurEcran.shared
+    @ObservedObject private var lecture = DiagnosticLecture.shared
     @ObservedObject private var prefs = Preferences.shared
 
     var body: some View {
@@ -118,12 +119,13 @@ struct DiagnosticSettings: View {
     /// si les coordonnées manquent, c'est elle qui dit ce que Vision a vu.
     @ViewBuilder
     private func positionLine(for client: DofusClient) -> some View {
-        if let releve = lecteur.releves[client.name] {
-            Text(L("diagnostic.position.ligne", PositionCarte.libelle(releve.position)))
+        if let lignes = lecture.lignesPosition[client.name] {
+            let position = lecteur.positions[client.name]
+            Text(L("diagnostic.position.ligne", PositionCarte.libelle(position)))
                 .font(.system(size: 10, design: .monospaced))
-                .foregroundStyle(releve.position == nil ? Color.orange : Color.secondary)
+                .foregroundStyle(position == nil ? Color.orange : Color.secondary)
                 .textSelection(.enabled)
-            Text(L("diagnostic.position.brut", releve.lignes.joined(separator: " ⏎ ")))
+            Text(L("diagnostic.position.brut", lignes.joined(separator: " ⏎ ")))
                 .font(.system(size: 10, design: .monospaced))
                 .foregroundStyle(.tertiary)
                 .textSelection(.enabled)
