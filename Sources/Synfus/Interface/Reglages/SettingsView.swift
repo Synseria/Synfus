@@ -86,12 +86,28 @@ enum SettingsSection: String, CaseIterable, Identifiable {
     }
 }
 
-struct SettingsView: View {
-    @State private var section: SettingsSection
+/// L'onglet montré : d'autres écrans y mènent d'un clic
+/// (`SettingsWindowController.show(section:)`) plutôt que de dire
+/// « Réglages › … ».
+@MainActor
+final class OngletReglages: ObservableObject {
+    static let shared = OngletReglages()
 
-    init(section: SettingsSection = .general) {
-        _section = State(initialValue: section)
+    @Published var section: SettingsSection
+
+    init(_ section: SettingsSection = .general) {
+        self.section = section
     }
+}
+
+struct SettingsView: View {
+    @ObservedObject private var onglet: OngletReglages
+
+    init(onglet: OngletReglages = .shared) {
+        self.onglet = onglet
+    }
+
+    private var section: SettingsSection { onglet.section }
 
     /// Barre latérale à gauche, contenu à droite : les quatre sections en
     /// onglets faisaient défiler des formulaires interminables — le menu
@@ -132,7 +148,7 @@ struct SettingsView: View {
 
     private func sidebarRow(_ item: SettingsSection) -> some View {
         Button {
-            section = item
+            onglet.section = item
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: item.icon).frame(width: 18)

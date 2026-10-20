@@ -96,6 +96,10 @@ sa bascule). Toute nouvelle option suit la règle.
   maison. Libellés sans deux-points ni « / ». Couleurs : `Couleurs` (accent vert d'eau, ambre). `SettingsWindowController` doit appeler
   `NSApp.activate(ignoringOtherApps:)` (app accessory) ; la fenêtre s'ouvre sous la barre
   (`visibleBarFrame`), au centre sinon.
+- Un message qui dit « Réglages › … » s'accompagne d'un bouton qui y mène :
+  `SettingsWindowController.show(section:)` (`OngletReglages`, l'onglet montré).
+- Le menu applicatif a un menu Édition : sans lui, aucun champ (palette, chasse, réglages) ne
+  reçoit ⌘C, ⌘V, ⌘A, ⌘Z. « Fermer tous » : Entrée annule.
 - `MenuBarController` reconstruit le menu à chaque ouverture (`menuNeedsUpdate`), sur
   `effectif` (les numéros de la barre). Les raccourcis y sont du texte attribué : ce sont des raccourcis Carbon
   globaux, pas des key equivalents.

@@ -29,7 +29,7 @@ struct CharactersSettings: View {
                     Button(L("persos.oublierHorsLigne")) { confirmerOubli = true }
                         .disabled(horsLigne.isEmpty)
                         .confirmationDialog(
-                            L("persos.oublierHorsLigne.confirmation", horsLigne.count),
+                            L("persos.oublierHorsLigne.confirmation", nombre: horsLigne.count, horsLigne.count),
                             isPresented: $confirmerOubli, titleVisibility: .visible
                         ) {
                             Button(L("persos.oublierHorsLigne"), role: .destructive) {

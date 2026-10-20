@@ -98,14 +98,21 @@ struct PaletteVue: View {
     @ViewBuilder
     private var resultats: some View {
         if modele.entrees.isEmpty {
-            Text(quetes.chargement && quetes.quetes == nil ? L("palette.quetes.chargement")
-                 : modele.filtre == .ici && !modele.positionConnue
-                    ? (Preferences.shared.lirePosition ? L("palette.ici.pasEncore") : L("palette.ici.sansPosition"))
-                    : L("palette.aucun"))
-                .font(.system(size: 13))
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity)
-                .frame(height: 120)
+            let sansLecture = modele.filtre == .ici && !modele.positionConnue && !Preferences.shared.lirePosition
+            VStack(spacing: 8) {
+                Text(quetes.chargement && quetes.quetes == nil ? L("palette.quetes.chargement")
+                     : modele.filtre == .ici && !modele.positionConnue
+                        ? (sansLecture ? L("palette.ici.sansPosition") : L("palette.ici.pasEncore"))
+                        : L("palette.aucun"))
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                if sansLecture {
+                    Button(L("lecture.ouvrir")) { SettingsWindowController.shared.show(section: .lecture) }
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 120)
         } else {
             ScrollViewReader { defilement in
                 ScrollView {

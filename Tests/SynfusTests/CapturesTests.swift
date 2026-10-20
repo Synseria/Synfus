@@ -121,7 +121,7 @@ struct CapturesTests {
         equipe()
         for (nom, section) in [("reglages-zaaps", SettingsSection.zaaps),
                                ("reglages-raccourcis", .raccourcis), ("reglages-lecture", .lecture)] {
-            let vue = SettingsView(section: section)
+            let vue = SettingsView(onglet: OngletReglages(section))
                 .background(Color(nsColor: .windowBackgroundColor))
                 .environment(\.colorScheme, .dark)
             try ecrire(vue, vers: dossier.appending(path: nom + ".png"))
