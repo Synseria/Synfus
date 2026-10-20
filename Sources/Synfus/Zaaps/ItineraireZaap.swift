@@ -25,6 +25,14 @@ enum ItineraireZaap {
         return (position.x, position.y)
     }
 
+    /// Les cartes à pied du perso jusqu'à une case — `nil` si l'un ou l'autre
+    /// est hors du Monde des Douze, ou la position inconnue : les coordonnées
+    /// d'Incarnam recoupent celles d'Amakna sans en être.
+    static func aPied(depuis position: PositionCarte?, vers cible: (x: Int, y: Int), dansLesDouze: Bool) -> Int? {
+        guard dansLesDouze, let depart = rejoindre(position) else { return nil }
+        return distance(depart, cible)
+    }
+
     /// La case visée par `/travel x,y` — aussi `x y`, `[x,y]` ou `x, y`, les
     /// formes que copient les sites de cartes. Rien d'autre sur la ligne.
     static func cible(dans texte: String) -> (x: Int, y: Int)? {

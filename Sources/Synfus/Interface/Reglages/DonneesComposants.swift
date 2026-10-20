@@ -134,15 +134,17 @@ struct BoutonFavori: View {
     }
 }
 
-/// Copier le trajet vers une case, zaap compris — le geste des listes.
+/// Copier le trajet vers une case, zaap compris dans le Monde des Douze — le
+/// geste des listes.
 struct BoutonTrajet: View {
     let x: Int
     let y: Int
+    let dansLesDouze: Bool
     @State private var copie = false
 
     var body: some View {
         Button {
-            ZaapClipboard.shared.copierTrajet(vers: (x, y))
+            ZaapClipboard.shared.copierTrajet(vers: (x, y), dansLesDouze: dansLesDouze)
             copie = true
             Task {
                 try? await Task.sleep(for: .seconds(1.2))
