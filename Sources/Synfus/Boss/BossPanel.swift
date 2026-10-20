@@ -50,13 +50,7 @@ final class BossPanel: NSObject, ObservableObject {
     }
 
     private func appliquer(force: Bool) {
-        let montre = PanneauxJeu.visible(ouvert: ouvert) || (ouvert && impose)
-        if montre {
-            let panel = panel ?? construire()
-            if force || !panel.isVisible { panel.orderFrontRegardless() }
-        } else if panel?.isVisible == true {
-            panel?.orderOut(nil)
-        }
+        let montre = PanneauxJeu.appliquer(&panel, ouvert: ouvert, impose: impose, force: force, construire: construire)
         LecteurEcran.shared.suivreBoss(montre && WindowPreviewService.shared.authorized)
     }
 
@@ -81,7 +75,6 @@ final class BossPanel: NSObject, ObservableObject {
         if !panel.setFrameAutosaveName("BossPanel") || panel.frame.origin == .zero, let ecran = NSScreen.main?.visibleFrame {
             panel.setFrameTopLeftPoint(NSPoint(x: ecran.midX + 220, y: ecran.maxY - 80))
         }
-        self.panel = panel
         return panel
     }
 }

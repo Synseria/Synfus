@@ -5,7 +5,7 @@ import Foundation
 /// est persistée, c'est elle que rejoue le raccourci global.
 enum Disposition: String, Codable, CaseIterable, Identifiable {
     /// Colonnes égales, pleine hauteur.
-    case coteACote
+    case coteACote // swiftlint:disable:this raw_value_for_camel_cased_codable_enum - le nom du cas est la valeur sauvegardée
     /// Grille approximativement carrée, dernière rangée alignée à gauche.
     case mosaique
     /// Le perso au premier plan en grand, les autres en colonne de vignettes.

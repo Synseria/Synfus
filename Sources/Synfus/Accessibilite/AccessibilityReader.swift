@@ -199,6 +199,7 @@ enum AccessibilityReader {
 
     private static func point(_ raw: AnyObject) -> CGPoint? {
         guard CFGetTypeID(raw) == AXValueGetTypeID() else { return nil }
+        // swiftlint:disable:next force_cast - type CF vérifié juste au-dessus ; `as?` ne s'applique pas aux types CF
         let value = raw as! AXValue
         var point = CGPoint.zero
         guard AXValueGetType(value) == .cgPoint, AXValueGetValue(value, .cgPoint, &point) else { return nil }
@@ -207,6 +208,7 @@ enum AccessibilityReader {
 
     private static func size(_ raw: AnyObject) -> CGSize? {
         guard CFGetTypeID(raw) == AXValueGetTypeID() else { return nil }
+        // swiftlint:disable:next force_cast - type CF vérifié juste au-dessus ; `as?` ne s'applique pas aux types CF
         let value = raw as! AXValue
         var size = CGSize.zero
         guard AXValueGetType(value) == .cgSize, AXValueGetValue(value, .cgSize, &size) else { return nil }
