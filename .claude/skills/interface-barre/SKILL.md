@@ -18,8 +18,9 @@ sa bascule). Toute nouvelle option suit la règle.
 ## Barre flottante — `Interface/Barre/`
 
 - `NSPanel` non activable (`canBecomeKey = false`, `FloatingBarController`) : un overlay de jeu
-  ne capte jamais le clavier. Seule exception, le panneau de chasse (`Chasse/ChassePanel`) :
-  `.nonactivatingPanel` qui **peut** devenir key, pour taper l'indice sans activer Synfus.
+  ne capte jamais le clavier. Seules exceptions, la palette (`Palette/PalettePanel`) et le
+  panneau de chasse (`Chasse/ChassePanel`) : `.nonactivatingPanel` qui **peuvent** devenir key,
+  pour taper sans activer Synfus.
 - Panneaux du jeu (quêtes, chasse, boss) : leur visibilité passe par `PanneauxJeu.revoir`, le
   seul endroit qui les énumère. Panneau d'aide aux boss (`Boss/BossPanel`) : jamais clé, taille
   de son contenu (skill `aide-boss`).
@@ -96,5 +97,5 @@ sa bascule). Toute nouvelle option suit la règle.
   `NSApp.activate(ignoringOtherApps:)` (app accessory) ; la fenêtre s'ouvre sous la barre
   (`visibleBarFrame`), au centre sinon.
 - `MenuBarController` reconstruit le menu à chaque ouverture (`menuNeedsUpdate`), sur
-  `clients` tel quel. Les raccourcis y sont du texte attribué : ce sont des raccourcis Carbon
+  `effectif` (les numéros de la barre). Les raccourcis y sont du texte attribué : ce sont des raccourcis Carbon
   globaux, pas des key equivalents.

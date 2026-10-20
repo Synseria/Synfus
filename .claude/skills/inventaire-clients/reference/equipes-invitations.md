@@ -8,8 +8,8 @@ La vue des équipes (seconde rangée de la barre, glisser-déposer) est dans le 
 - Une équipe est une **appartenance, pas un ordre** : une liste de noms ⊆ `characterOrder` ;
   l'effectif garde l'ordre de la barre. Au plus `Equipes.maximum`. Ni nom ni couleur.
 - Un seul foyer de calcul de `effectif` : `republierEffectif` (`WindowManager+Effectif.swift`),
-  appelé à chaque publication de `clients` et par un `CombineLatest` sur les préférences — qui
-  lit les valeurs **émises**, car `@Published` publie avant d'affecter. Rien n'est republié
+  appelé à chaque publication de `clients` et par un abonnement à `prefs.$equipes` — qui lit
+  la valeur **émise**, car `@Published` publie avant d'affecter. Rien n'est republié
   sans changement.
 - `equipeActive` est un état de session, jamais persisté : Synfus démarre sur « Tous ». Un
   index orphelin ramène à « Tous » (`activeValide`).
@@ -31,8 +31,8 @@ La vue des équipes (seconde rangée de la barre, glisser-déposer) est dans le 
 - Le chef est **fixé au premier appui** et le reste jusqu'au dernier invité (`tourTermine`)
   ou s'il quitte l'effectif : avec le passage automatique, Synfus bascule sur l'invité qui
   rebondit, et le tour réinviterait sinon le chef.
-- Raccourci `inviteHotKey` (⌘:, keycode 47 — choix de l'utilisateur malgré le conflit avec
-  « Orthographe et grammaire » des apps de texte). Le clic droit d'une pastille copie
+- Raccourci `inviteHotKey` (⇧⌘:, keycode 47 ; ⌘: est la palette depuis la génération 7 de
+  défauts, qui l'offre aussi). Le clic droit d'une pastille copie
   l'invitation de ce perso sans toucher au tour.
 - `inviteGroupee` : le raccourci copie toute l'équipe en une ligne, `/invite A; /invite B`
   (`InvitationComposer.groupee`) — le jeu enchaîne les commandes séparées par « ; ». Pas de
