@@ -297,7 +297,7 @@ private struct PreviewPanelView: View {
                     .font(.system(size: 11, weight: .medium))
                     .lineLimit(1)
                 Spacer(minLength: 0)
-                if let position = lecteur.releves[client.name]?.position {
+                if let position = lecteur.positions[client.name] {
                     Text(position.coordonnees)
                         .font(.system(size: 10, design: .monospaced))
                         .foregroundStyle(.secondary)
@@ -311,7 +311,7 @@ private struct PreviewPanelView: View {
     /// Le nom, la position et la zone — ou ce qui manque pour les dire. La
     /// lecture part au survol ; le libellé suit dès qu'elle revient.
     private func etiquette(for client: DofusClient) -> some View {
-        let position = lecteur.releves[client.name]?.position
+        let position = lecteur.positions[client.name]
         return VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 6) {
                 Text(client.name)

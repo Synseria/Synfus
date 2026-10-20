@@ -377,7 +377,7 @@ struct BarView: View {
                 // Le trajet vers ce perso, zaap compris s'il fait gagner assez
                 // de cartes ; rejoindre celui de devant n'a pas de sens.
                 if client.name != lecteur.persoDevant,
-                   let cible = ItineraireZaap.rejoindre(lecteur.releves[client.name]?.position) {
+                   let cible = ItineraireZaap.rejoindre(lecteur.positions[client.name]) {
                     Button(L("barre.rejoindre", client.name, Coordonnees.texte(cible.x, cible.y))) {
                         ZaapClipboard.shared.copierTrajet(vers: cible, dansLesDouze: true)
                     }
