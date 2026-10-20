@@ -1,7 +1,7 @@
 import Foundation
 
-/// Les quêtes en vigueur : lues sur le disque à la première ouverture de la
-/// palette, téléchargées si elles manquent ou ont plus de 30 jours ; un échec
+/// Les quêtes en vigueur : lues sur le disque au lancement (`preparer`),
+/// téléchargées si elles manquent ou ont plus de 30 jours ; un échec
 /// garde ce qui est là. Six mégaoctets à lire ou écrire, deux mille quêtes à
 /// trier : tout se fait hors du fil principal, qui ne reçoit que le jeu prêt.
 @MainActor

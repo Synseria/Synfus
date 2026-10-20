@@ -42,11 +42,11 @@ SYNFUS_CAPTURE=~/Library/Logs/Synfus/captures/x.png sh test.sh RealCapture   # O
 ## Contraintes dures
 
 - **Toujours le Xcode et le Swift les plus récents** (Xcode 27, Swift 6.4) : `swift-tools-version`
-  et runner de CI (`xcode-27`) suivent la dernière version. `BarView` appelle `glassEffect`
+  et runner de CI (`xcode-27`) suivent la dernière version. `BarControls` appelle `glassEffect`
   (SDK ≥ 26) ; deployment target 14.0, repli `.ultraThinMaterial` par `if #available(macOS 26.0, *)`.
 - **Swift 6, concurrence stricte, sans dérogation.** L'état vit sur main : toute classe à état est
-  `@MainActor` (`Preferences` comprise) ; callbacks Timer et notification repassent par
-  `MainActor.assumeIsolated` ; le callback C de `HotKeyManager` par `DispatchQueue.main.async`.
+  `@MainActor` (`Preferences` comprise) ; tout rappel livré sur main (Timer, notification, sink
+  Combine, moniteur `NSEvent`) repasse par `MainActor.assumeIsolated` ; le callback C de `HotKeyManager` par `DispatchQueue.main.async`.
   Seules exceptions, des **acteurs sans état partagé** pour le travail bloquant, où n'entrent et
   ne sortent que des valeurs `Sendable` : `ClientInventoryEngine` (inventaire AX),
   `DockGeometryReader` (relevé AX du Dock), `PreviewCaptureEngine` (captures), `MoteurOCR` (Vision).
@@ -86,7 +86,7 @@ Point d'entrée `SynfusMain` (`App/App.swift`). Composants : singletons `@MainAc
 la plupart `ObservableObject`. `applicationDidFinishLaunching` démarre, dans l'ordre :
 `WindowManager` → `FreezeWatcher` → `HotKeyManager.rebind()` → `MenuBarController` →
 `AttentionWatcher` → `ClickAdvanceWatcher` → `FloatingBarController` → `LecteurEcran` →
-`CarteStore` → `ClassesStore` → `ZaapClipboard`.
+`CarteStore` → `ClassesStore` → `QuetesStore.preparer()` → `PaletteModele` → `ZaapClipboard`.
 
 `Sources/Synfus/` est rangé par domaine (SwiftPM compile les sous-dossiers sans déclaration). Un
 nouveau fichier va dans le dossier de son domaine ; un fichier sans domaine en annonce un nouveau.
@@ -100,7 +100,7 @@ nouveau fichier va dans le dossier de son domaine ; un fichier sans domaine en a
 | `Carte/` | Tous les repères du jeu (zaaps, banques, ateliers, donjons…) et les sous-zones du Monde des Douze : `Lieu`, `Carte`, `ReseauSousZones`, `ReperesCarte` (purs), `CarteDofusDB` (téléchargement, cache disque, `--exporter-carte` → `Resources/Carte.json`), `CarteStore` (lue et indexée hors main) |
 | `Zaaps/` | `/zaap x,y ; /travel a,b` : `Zaap` (tiré de la carte), `CatalogueZaaps`, `ItineraireZaap` (purs : le zaap de la sous-zone visée, sauf si celui des voisines épargne `ecartZaapDuJeu` cartes), `ZaapsSitues` (pur : zaaps actifs indexés par sous-zone et par carte), `Tournee` (pur : ordre le plus court de plusieurs cases), `ZaapClipboard` (raccourci, bouton, veille du presse-papiers) |
 | `Palette/` | La palette (⌘:) : `RecherchePalette`, `CommandesJeu` (purs) — zaaps, lieux, `/` commandes, `%` variables, quêtes, PNJ, gestes, dernières copies ; `PaletteModele`, `PalettePanel` (panneau key sans activer Synfus), `PaletteVue` |
-| `Quetes/` | Quêtes et PNJ situés : `Quete` (pur : renvois, ressources, récompenses, suivantes), `QuetesDofusDB` (téléchargement à la première palette, cache disque versionné, 30 jours), `QuetesStore` (lu et indexé hors main), `QuetesEnVigueur` (pur : index et fiches gardées du jeu publié), `QuetePanel`/`QueteVue` (panneau transparent, jamais key, montré devant Dofus seulement), `SuiviQuetes`, `SuiviObjectifs` (purs : suivi du jeu lu par OCR, objectifs à faire et faits), `HistoriqueSuivi` (pur : lectures par perso, quêtes sorties du suivi), `QuetesIci` (pur : quêtes qui commencent et PNJ sur la case du perso — menu de l'en-tête, filtre « Ici » de la palette), `LectureSuivi`, `DofusPourLesNoobs` (adresses candidates du guide) |
+| `Quetes/` | Quêtes et PNJ situés : `Quete` (pur : renvois, ressources, récompenses, suivantes), `QuetesDofusDB` (cache disque versionné relu au lancement, téléchargé s'il manque ou a 30 jours), `QuetesStore` (lu et indexé hors main), `QuetesEnVigueur` (pur : index et fiches gardées du jeu publié), `QuetePanel`/`QueteVue` (panneau transparent, jamais key, montré devant Dofus seulement), `SuiviQuetes`, `SuiviObjectifs` (purs : suivi du jeu lu par OCR, objectifs à faire et faits), `HistoriqueSuivi` (pur : lectures par perso, quêtes sorties du suivi), `QuetesIci` (pur : quêtes qui commencent et PNJ sur la case du perso — menu de l'en-tête, filtre « Ici » de la palette), `LectureSuivi`, `DofusPourLesNoobs` (adresses candidates du guide) |
 | `OuTrouver/` | Où trouver un monstre ou un objet : `OuTrouver` (pur : la case de chaque repaire — sous-zone par l'index inverse de la carte, donjon par son repère —, l'ordre des repaires et des lâcheurs), `OuTrouverDofusDB` (monstre, butins et recette à la demande, cache disque versionné, 30 jours), `OuTrouverStore`, `OuTrouverVue` (dépliée sous une ressource ou un objectif) |
 | `Almanax/` | L'almanax du jour en tête de la palette : `Almanax` (pur : jour de Paris, réponse de DofusDB, cache disque du jour), `AlmanaxStore`, `AlmanaxVue` |
 | `Boss/` | Aide aux boss : `Harebourg`, `SuiviConfusion` (purs : confusion du Comte, vie et canal combat lus, suivi d'un combat), `AideBoss`, `BossPanel` (panneau jamais key, montré devant Dofus), `BossVue` |
