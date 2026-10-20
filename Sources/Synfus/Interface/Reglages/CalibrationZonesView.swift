@@ -303,7 +303,7 @@ struct CalibrationZonesView: View {
         case .tchat:
             let noms = WindowManager.shared.clients.map(\.name)
             guard let lu = Harebourg.dernierConstat(lignes, persos: noms) else { return L("calibration.essai.tchat.rien") }
-            let confusion = BossVue.libelle(lu.constat.confusion)
+            let confusion = HarebourgVue.libelle(lu.constat.confusion)
             return lu.constat.perso.map { L("calibration.essai.tchat", $0, confusion) } ?? confusion
         }
     }

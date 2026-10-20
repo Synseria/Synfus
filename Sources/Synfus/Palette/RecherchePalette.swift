@@ -1,8 +1,14 @@
 import Foundation
 
 /// Les gestes de Synfus que la palette sait faire, tapés en toutes lettres.
-enum ActionPalette: CaseIterable, Sendable {
-    case rangerFenetres, lancerSession, equipeSuivante, inviterEquipe, chasse, boss, reglages
+enum ActionPalette: Equatable, Sendable {
+    case rangerFenetres, lancerSession, equipeSuivante, inviterEquipe, chasse, reglages
+    /// L'aide au combat contre ce boss : le nom du boss se tape aussi.
+    case boss(Boss)
+
+    static var toutes: [ActionPalette] {
+        [.rangerFenetres, .lancerSession, .equipeSuivante, .inviterEquipe, .chasse] + Boss.allCases.map(boss) + [.reglages]
+    }
 
     var titre: String {
         switch self {
@@ -11,7 +17,7 @@ enum ActionPalette: CaseIterable, Sendable {
         case .equipeSuivante: return L("palette.action.equipe")
         case .inviterEquipe: return L("palette.action.inviter")
         case .chasse: return L("palette.action.chasse")
-        case .boss: return L("palette.action.boss")
+        case .boss(let boss): return L("palette.action.boss", BossVue.nom(boss))
         case .reglages: return L("palette.action.reglages")
         }
     }
@@ -309,7 +315,7 @@ enum RecherchePalette {
     /// Les gestes et les dernières copies : ce que `tout` ajoute aux zaaps,
     /// lieux, quêtes et PNJ.
     static func divers(_ contexte: ContextePalette) -> [EntreePalette] {
-        let actions = ActionPalette.allCases.map {
+        let actions = ActionPalette.toutes.map {
             EntreePalette(id: "action:\($0)", genre: .action, titre: $0.titre, effet: .action($0))
         }
         return actions + recents(contexte)

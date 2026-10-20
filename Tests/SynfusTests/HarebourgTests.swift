@@ -141,7 +141,7 @@ struct HarebourgTests {
         // Hors de son tour : une prévision.
         #expect(suivi.estimation("A")?.enTour == false)
         #expect(suivi.estimation("A")?.confusion == .demiTour)
-        suivi.combat("A", etat: .monTour(fin: nil), le: t0.addingTimeInterval(5))
+        suivi.combat("A", avant: nil, apres: .monTour(fin: nil), le: t0.addingTimeInterval(5))
         // La vie lue juste après le bouton est encore celle du début du tour ;
         // plus tard, elle ne la change plus.
         suivi.vie(.pourcentage(95), perso: "A", le: t0.addingTimeInterval(6))
@@ -155,7 +155,7 @@ struct HarebourgTests {
         #expect(estimation.coups == 2)
         #expect(estimation.compteLesCoups)
         // Le tour fini, coups et vie du début oubliés : prévision sur la vie actuelle.
-        suivi.combat("A", etat: .pasMonTour, le: t0.addingTimeInterval(20))
+        suivi.combat("A", avant: .monTour(fin: nil), apres: .pasMonTour, le: t0.addingTimeInterval(20))
         estimation = try #require(suivi.estimation("A"))
         #expect(estimation == .init(confusion: .contreHoraire, source: .vie(pourcentage: 40), voisine: nil, coups: 0, enTour: false))
     }
@@ -176,7 +176,7 @@ struct HarebourgTests {
         var suivi = SuiviConfusion()
         let noms = ["A", "B"]
         suivi.vie(.pourcentage(60), perso: "A", le: t0)
-        suivi.combat("A", etat: .monTour(fin: nil), le: t0)
+        suivi.combat("A", avant: nil, apres: .monTour(fin: nil), le: t0)
         suivi.tchat(["[10:00] A : Confusion 90° horaire"], fenetre: "A", persos: noms, le: t0.addingTimeInterval(1))
         #expect(suivi.estimation("A")?.source == .tchat)
         #expect(suivi.estimation("A")?.confusion == .horaire)
@@ -188,8 +188,8 @@ struct HarebourgTests {
                     fenetre: "A", persos: noms, le: t0.addingTimeInterval(30))
         #expect(suivi.estimation("A")?.confusion == .horaire)
         // Au tour suivant de A, l'ancienne annonce ne vaut plus : la vie reprend.
-        suivi.combat("A", etat: .pasMonTour, le: t0.addingTimeInterval(20))
-        suivi.combat("A", etat: .monTour(fin: nil), le: t0.addingTimeInterval(40))
+        suivi.combat("A", avant: .monTour(fin: nil), apres: .pasMonTour, le: t0.addingTimeInterval(20))
+        suivi.combat("A", avant: .pasMonTour, apres: .monTour(fin: nil), le: t0.addingTimeInterval(40))
         #expect(suivi.estimation("A")?.source == .vie(pourcentage: 60))
     }
 
@@ -197,29 +197,64 @@ struct HarebourgTests {
     func annonceRepetee() {
         var suivi = SuiviConfusion()
         let ligne = "[10:00] Confusion 90° horaire"
-        suivi.combat("A", etat: .monTour(fin: nil), le: t0)
+        suivi.combat("A", avant: nil, apres: .monTour(fin: nil), le: t0)
         suivi.tchat([ligne], fenetre: "A", persos: [], le: t0)
-        suivi.combat("A", etat: .pasMonTour, le: t0.addingTimeInterval(10))
+        suivi.combat("A", avant: .monTour(fin: nil), apres: .pasMonTour, le: t0.addingTimeInterval(10))
         // La même ligne, poussée vers le haut : rien de nouveau.
         suivi.tchat([ligne, "[10:00] B lance un sort"], fenetre: "A", persos: [], le: t0.addingTimeInterval(15))
         suivi.vie(.pourcentage(60), perso: "A", le: t0.addingTimeInterval(15))
-        suivi.combat("A", etat: .monTour(fin: nil), le: t0.addingTimeInterval(30))
+        suivi.combat("A", avant: .pasMonTour, apres: .monTour(fin: nil), le: t0.addingTimeInterval(30))
         #expect(suivi.estimation("A")?.source == .vie(pourcentage: 60))
         // Une ligne pareille revient en bas : c'est l'annonce de ce tour.
         suivi.tchat([ligne, "[10:00] B lance un sort", ligne], fenetre: "A", persos: [], le: t0.addingTimeInterval(31))
         #expect(suivi.estimation("A")?.source == .tchat)
     }
 
+    @Test("Un nouveau décompte est un nouveau tour, même sans bouton gris vu entre les deux")
+    func nouveauTourSansGris() {
+        var suivi = SuiviConfusion()
+        let fin1 = t0.addingTimeInterval(30), fin2 = t0.addingTimeInterval(120)
+        suivi.vie(.pourcentage(60), perso: "A", le: t0)
+        suivi.combat("A", avant: nil, apres: .monTour(fin: fin1), le: t0)
+        suivi.coup(2, perso: "A")
+        #expect(suivi.estimation("A")?.coups == 2)
+        // Relu au même décompte : le même tour.
+        suivi.combat("A", avant: .monTour(fin: fin1), apres: .monTour(fin: fin1.addingTimeInterval(1)), le: t0.addingTimeInterval(5))
+        #expect(suivi.estimation("A")?.coups == 2)
+        suivi.combat("A", avant: .monTour(fin: fin1), apres: .monTour(fin: fin2), le: t0.addingTimeInterval(90))
+        #expect(suivi.estimation("A")?.coups == 0)
+        #expect(EtatCombat.nouveauTour(avant: .monTour(fin: nil), apres: .monTour(fin: fin1)) == false)
+        #expect(EtatCombat.nouveauTour(avant: .pasMonTour, apres: .monTour(fin: nil)))
+    }
+
+    @Test("Les tours se comptent aux débuts de tour, le placement remet à zéro")
+    func tours() {
+        var tours = ToursCombat()
+        let fin = { (s: Double) in EtatCombat.monTour(fin: Date(timeIntervalSince1970: s)) }
+        tours.combat("A", avant: .horsCombat, apres: .placement)
+        #expect(tours.tour("A") == nil)
+        tours.combat("A", avant: .placement, apres: fin(30))
+        tours.combat("A", avant: fin(30), apres: .pasMonTour)
+        tours.combat("A", avant: .pasMonTour, apres: fin(100))
+        // Le bouton gris manqué : le décompte relu dit le troisième tour.
+        tours.combat("A", avant: fin(100), apres: fin(200))
+        #expect(tours.tour("A") == 3)
+        tours.corriger(-5, perso: "A")
+        #expect(tours.tour("A") == 1)
+        tours.combat("A", avant: fin(200), apres: .horsCombat)
+        #expect(tours.tour("A") == nil)
+    }
+
     @Test("Une confusion choisie à la main vaut jusqu'à la fin du tour, coups comptés")
     func manuelle() {
         var suivi = SuiviConfusion()
-        suivi.combat("A", etat: .monTour(fin: nil), le: t0)
+        suivi.combat("A", avant: nil, apres: .monTour(fin: nil), le: t0)
         suivi.coup(3, perso: "A")
         suivi.choisir(.demiTour, perso: "A")
         #expect(suivi.estimation("A") == .init(confusion: .demiTour, source: .manuelle, voisine: nil, coups: 0, enTour: true))
         suivi.coup(1, perso: "A")
         #expect(suivi.estimation("A")?.confusion == .horaire)
-        suivi.combat("A", etat: .horsCombat, le: t0.addingTimeInterval(60))
+        suivi.combat("A", avant: .monTour(fin: nil), apres: .horsCombat, le: t0.addingTimeInterval(60))
         #expect(suivi.estimation("A") == nil)
     }
 }

@@ -1,6 +1,6 @@
 ---
 name: aide-boss
-description: Aide aux boss dont la mécanique complique la visée — le Comte Harebourg (confusion des sorts), lue au cœur de vie et au canal combat, panneau posé sur le jeu. Charger avant de toucher Boss/ (Harebourg, SuiviConfusion, AideBoss, BossPanel, BossVue), les genres de lecture vie et tchat, ou d'ajouter un boss.
+description: Aide aux boss dont la mécanique demande de réfléchir — Comte Harebourg (confusion des sorts, lue au cœur de vie et au canal combat), Kimbo, Toxoliath, Ilyzaelle, Tal Kasha —, tour du combat compté, panneau posé sur le jeu. Charger avant de toucher Boss/ (Boss, Harebourg, SuiviConfusion, ToursCombat, AideBoss, BossPanel, BossVue, VuesBoss), les genres de lecture vie et tchat, `EtatCombat.nouveauTour`, ou d'ajouter un boss.
 user-invocable: false
 ---
 
@@ -23,6 +23,28 @@ Synfus lit l'écran et affiche ; viser et lancer restent au joueur (CGU : aucun 
   un sens (`horaire`, `contre horaire`, en/es aussi) — sans sens, rien (le jeu l'écrit toujours,
   demi-tour compris). Une ligne repliée se recolle à celle du dessus (sans heure). Le nom avant
   les deux-points, à une faute près, parmi les persos connus.
+
+## Tours — `ToursCombat` (pur), `EtatCombat.nouveauTour`
+
+Le tour du combat = le nombre de débuts de tour du perso devant (chaque perso joue une fois par
+tour) ; le placement remet à zéro, la sortie efface, ±1 à la main. Un début de tour : entrer
+dans `monTour`, **ou** un `monTour` dont l'échéance change — le bouton gris entre deux tours du
+même perso est souvent manqué (passage automatique ailleurs). Pour que le décompte soit relu,
+`LecteurEcran.tour` jette la signature du combat d'un perso dont l'échéance est passée.
+
+## Autres boss — `Boss.swift` (pur), `VuesBoss`
+
+- **Kimbo** : Terre/Eau → « Glyphe impaire » (glyphes du Disciple à distance impaire) ; Air/Feu →
+  paire. Se tenir à l'autre parité, y amener Kimbo, le frapper dans les éléments de l'état
+  (+800 % dans les autres). Lu au canal combat (`Kimbo.etat`, mots entiers), ou choisi d'un clic.
+- **Toxoliath** : vagues aux tours 1/6/11/16/21, Poison Volatile au 6 puis tous les 4 ;
+  Toxmose deux tours après un coup (bouton « Je l'ai touché »).
+- **Ilyzaelle** : seuils 75 % et 50 % notés d'un clic (vie du boss non lue), deux tours alliée
+  après chacun ; Vers les ténèbres aux tours multiples de 3.
+- **Tal Kasha** : compteur I–III des glyphes où elle a commencé son tour.
+- `SessionBoss` : ce qui est noté pendant un combat, remis à zéro au **placement** seulement
+  (chaque perso est lu quand il passe devant : une première lecture en combat n'est pas un
+  nouveau combat). `Boss.lectures` : ce qui se lit en plus du combat.
 
 ## Suivi — `SuiviConfusion` (pur)
 
@@ -48,5 +70,7 @@ que monter).
 
 ## Ajouter un boss
 
-Un fichier pur de règles et son suivi, testés sur des lignes réelles du tchat ; le panneau
-choisit sa vue par boss. Un nouveau genre de lecture passe par la table `GenreLecture`.
+Un cas de `Boss` (nom, `lectures`, rappels dans `BossVue`), ses règles pures dans `Boss.swift`
+testées (`BossTests`), sa vue dans `VuesBoss`, ce qu'il retient dans `SessionBoss`. La palette
+en tire une entrée (`ActionPalette.toutes`), l'onglet Boss une ligne. Un nouveau genre de lecture
+passe par la table `GenreLecture`.
