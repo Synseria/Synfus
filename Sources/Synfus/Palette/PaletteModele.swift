@@ -110,6 +110,13 @@ final class PaletteModele: ObservableObject {
     /// Sans elle, le filtre « Ici » n'a rien à montrer.
     var positionConnue: Bool { contexte.position != nil }
 
+    /// D'où partent distances et trajets : le dernier perso lu devant, à
+    /// l'ouverture de la palette.
+    var origine: String {
+        guard let perso = contexte.perso, let position = contexte.position else { return L("palette.depuis.inconnue") }
+        return L("palette.depuis", perso, Coordonnees.texte(position.x, position.y))
+    }
+
     /// Les dernières copies, montrées au-dessus des cartes.
     var recents: [EntreePalette] { RecherchePalette.recents(contexte) }
 
@@ -151,7 +158,12 @@ final class PaletteModele: ObservableObject {
             requete = texte
             return
         }
-        filtre = filtre.suivant(arriere ? -1 : 1)
+        choisir(filtre.suivant(arriere ? -1 : 1))
+    }
+
+    /// Un filtre : Tab, ou un clic sur sa capsule.
+    func choisir(_ filtre: FiltrePalette) {
+        self.filtre = filtre
         selection = 0
         deplie = nil
         recalculer()
@@ -177,9 +189,16 @@ final class PaletteModele: ObservableObject {
         basculerFavori(entrees[selection])
     }
 
-    /// Échap : quitte l'étiquette, sinon ferme.
+    /// Échap : quitte l'étiquette ; efface la recherche et le filtre — une
+    /// faute de frappe ne fait pas tout reprendre ; sinon ferme.
     func echap() {
-        if edition != nil { edition = nil } else { PalettePanel.shared.fermer() }
+        if edition != nil { edition = nil; return }
+        guard requete.isEmpty, filtre == .tout else {
+            requete = ""
+            choisir(.tout)
+            return
+        }
+        PalettePanel.shared.fermer()
     }
 
     // MARK: - Effets
@@ -221,10 +240,9 @@ final class PaletteModele: ObservableObject {
         case .rangerFenetres: Task { await WindowArranger.shared.appliquerDerniere() }
         case .lancerSession: WindowManager.shared.lancerSession()
         case .equipeSuivante: WindowManager.shared.equipeSuivante()
-        case .inviterEquipe:
-            guard let texte = contexte.invitationEquipe else { return NSSound.beep() }
-            PressePapiers.copier(texte)
+        case .inviterEquipe: InvitationClipboard.shared.copierEquipe()
         case .chasse: ChassePanel.shared.ouvrir()
+        case .quetes: QuetePanel.shared.ouvrir()
         case .boss(let boss): BossPanel.shared.ouvrir(boss)
         case .reglages: SettingsWindowController.shared.show()
         }
@@ -273,6 +291,7 @@ final class PaletteModele: ObservableObject {
         let candidats = InvitationComposer.candidats(manager.effectif, chefPID: manager.frontmostPID)
         var contexte = ContextePalette()
         contexte.langue = L10n.courante.langue
+        contexte.perso = LecteurEcran.shared.persoDevant
         contexte.position = LecteurEcran.shared.positionDuPersoDevant
         contexte.zaaps = ZaapClipboard.shared.zaapsSitues
         contexte.lieux = CarteStore.shared.carte.lieux

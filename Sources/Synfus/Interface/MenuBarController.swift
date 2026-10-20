@@ -96,6 +96,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
                                                      shortcut: hotKey.displayString)
             }
         }
+        let quetes = add(to: menu, title: L("menu.quetes"), action: #selector(openQuests))
+        if let hotKey = Preferences.shared.quetesHotKey {
+            quetes.attributedTitle = attributed(name: L("menu.quetes"), shortcut: hotKey.displayString)
+        }
         let chasse = add(to: menu, title: L("menu.chasse"), action: #selector(openHunt))
         if let hotKey = Preferences.shared.chasseHotKey {
             chasse.attributedTitle = attributed(name: L("menu.chasse"), shortcut: hotKey.displayString)
@@ -235,6 +239,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
     @objc private func recenterBar() {
         FloatingBarController.shared.recenter()
+    }
+
+    @objc private func openQuests() {
+        QuetePanel.shared.ouvrir()
     }
 
     @objc private func openHunt() {
