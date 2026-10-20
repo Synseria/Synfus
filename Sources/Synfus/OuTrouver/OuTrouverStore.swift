@@ -3,7 +3,9 @@ import Foundation
 /// Où trouver ce que demandent les quêtes : relu du disque à la première
 /// demande, demandé à DofusDB pour un monstre ou un objet encore inconnu, ou
 /// vu il y a plus de trente jours — qu'on montre en attendant. Un échec
-/// garde ce qui est là. Et le trajet vers le repaire le plus proche.
+/// garde ce qui est là. Et le trajet vers le repaire le plus proche. Le
+/// disque se lit et s'écrit hors du fil principal : le cache grossit avec
+/// les fiches vues.
 @MainActor
 final class OuTrouverStore: ObservableObject {
     static let shared = OuTrouverStore()
@@ -11,7 +13,11 @@ final class OuTrouverStore: ObservableObject {
     @Published private(set) var cache = CacheOuTrouver()
     @Published private(set) var enCours: Set<OuTrouver.Sujet> = []
     @Published private(set) var echecs: Set<OuTrouver.Sujet> = []
-    private var lu = false
+    /// La lecture du disque, faite une fois ; chaque demande l'attend.
+    private var lecture: Task<Void, Never>?
+    /// L'écriture en cours : la suivante l'attend, le fichier garde la
+    /// dernière version.
+    private var ecriture: Task<Void, Never>?
     /// La demande en cours de chaque sujet, qu'attend `charge`.
     private var demandes: [OuTrouver.Sujet: Task<Void, Never>] = [:]
     /// Par monstre (`repaires`).
@@ -29,24 +35,32 @@ final class OuTrouverStore: ObservableObject {
         cache.objets[String(id)]?.valeur
     }
 
-    /// Demande le sujet à DofusDB s'il manque ou a vieilli.
+    /// Demande le sujet à DofusDB s'il manque ou a vieilli, une fois le
+    /// disque relu.
     func demander(_ sujet: OuTrouver.Sujet) {
-        relire()
-        guard demandes[sujet] == nil, DofusDB.perimee(depuis: date(sujet), maintenant: Date()) else { return }
-        enCours.insert(sujet)
-        echecs.remove(sujet)
+        guard demandes[sujet] == nil else { return }
         demandes[sujet] = Task {
+            defer { demandes[sujet] = nil }
+            await relu()
+            guard DofusDB.perimee(depuis: date(sujet), maintenant: Date()) else { return }
+            enCours.insert(sujet)
+            echecs.remove(sujet)
             do {
+                let maintenant = Date()
+                var nouveau = cache
                 switch sujet {
-                case .monstre(let id): ranger(monstre: try await OuTrouverDofusDB.monstre(id))
-                case .objet(let id): ranger(objet: id, try await OuTrouverDofusDB.objet(id))
+                case .monstre(let id): nouveau.ranger(monstre: try await OuTrouverDofusDB.monstre(id), le: maintenant)
+                case .objet(let id): nouveau.ranger(objet: id, try await OuTrouverDofusDB.objet(id), le: maintenant)
                 }
-                try? cache.garder()
+                // Ce qui est arrivé pendant la demande reste ; une seule publication.
+                var fusion = cache.sous(nouveau)
+                fusion.oublier(vuesAvant: maintenant.addingTimeInterval(-CacheOuTrouver.oubli))
+                cache = fusion
+                garder()
             } catch {
                 echecs.insert(sujet)
             }
             enCours.remove(sujet)
-            demandes[sujet] = nil
         }
     }
 
@@ -54,7 +68,7 @@ final class OuTrouverStore: ObservableObject {
     /// le trajet d'un objectif.
     func monstreCharge(_ id: Int) async -> FicheMonstre? {
         demander(.monstre(id))
-        if monstre(id) == nil { await demandes[.monstre(id)]?.value }
+        await demandes[.monstre(id)]?.value
         return monstre(id)
     }
 
@@ -103,10 +117,22 @@ final class OuTrouverStore: ObservableObject {
 
     // MARK: - Cache
 
-    private func relire() {
-        guard !lu else { return }
-        lu = true
-        cache = CacheOuTrouver.gardee()
+    private func relu() async {
+        if lecture == nil {
+            lecture = Task {
+                let gardee = await Task.detached(priority: .userInitiated) { CacheOuTrouver.gardee() }.value
+                cache = gardee.sous(cache)
+            }
+        }
+        await lecture?.value
+    }
+
+    private func garder() {
+        let aGarder = cache, precedente = ecriture
+        ecriture = Task.detached(priority: .utility) {
+            await precedente?.value
+            try? aGarder.garder()
+        }
     }
 
     private func date(_ sujet: OuTrouver.Sujet) -> Date? {
@@ -116,16 +142,18 @@ final class OuTrouverStore: ObservableObject {
         }
     }
 
-    private func ranger(monstre: FicheMonstre) {
-        cache.monstres[String(monstre.id)] = .init(date: Date(), valeur: monstre)
+}
+
+private extension CacheOuTrouver {
+    mutating func ranger(monstre: FicheMonstre, le date: Date) {
+        monstres[String(monstre.id)] = .init(date: date, valeur: monstre)
     }
 
     /// Les lâcheurs viennent avec leurs repaires : autant de monstres connus.
-    private func ranger(objet id: Int, _ sources: SourcesObjet) {
-        let maintenant = Date()
-        cache.objets[String(id)] = .init(date: maintenant, valeur: sources)
+    mutating func ranger(objet id: Int, _ sources: SourcesObjet, le date: Date) {
+        objets[String(id)] = .init(date: date, valeur: sources)
         for lacheur in sources.lacheurs {
-            cache.monstres[String(lacheur.monstre.id)] = .init(date: maintenant, valeur: lacheur.monstre)
+            monstres[String(lacheur.monstre.id)] = .init(date: date, valeur: lacheur.monstre)
         }
     }
 }
