@@ -90,6 +90,7 @@ final class FreezeWatcher: ObservableObject {
     /// sont blanchis. La garde après un changement d'espace n'est qu'une
     /// économie de sondes.
     func start() {
+        // swiftlint:disable:next discarded_notification_center_observer - singleton, observé toute la vie de l'app
         NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main
         ) { _ in

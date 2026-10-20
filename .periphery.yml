@@ -1,0 +1,4 @@
+# SynfusMark est aussi compilé seul par Tools/AppIconExport.swift
+# (generate-app-icons.sh) : ce que l'app n'appelle pas sert à l'icône du bundle.
+retain_files:
+  - Sources/Synfus/Marque/SynfusMark.swift

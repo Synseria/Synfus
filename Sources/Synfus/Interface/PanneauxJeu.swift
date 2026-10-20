@@ -14,6 +14,26 @@ enum PanneauxJeu {
         BossPanel.shared.revoirVisibilite(force: force)
     }
 
+    /// Montre ou cache un panneau voulu `ouvert` : devant Dofus (`visible`),
+    /// ou `impose` — ouvert depuis une autre app (menu, bouton de la barre),
+    /// il reste là jusqu'au prochain changement d'app plutôt que de ne pas
+    /// paraître. Construit à sa première apparition ; `cache` suit le
+    /// masquage d'un panneau qui était à l'écran. Rend s'il est montré.
+    @discardableResult
+    static func appliquer(_ panel: inout NSPanel?, ouvert: Bool, impose: Bool, force: Bool,
+                          construire: () -> NSPanel, cache: () -> Void = {}) -> Bool {
+        let montre = visible(ouvert: ouvert) || (ouvert && impose)
+        if montre {
+            let affiche = panel ?? construire()
+            panel = affiche
+            if force || !affiche.isVisible { affiche.orderFrontRegardless() }
+        } else if let panel, panel.isVisible {
+            panel.orderOut(nil)
+            cache()
+        }
+        return montre
+    }
+
     /// Un panneau ouvert se montre-t-il ? Avec `panneauxSeulementDofus`,
     /// seulement devant Dofus (ou Synfus) : la règle de la barre réservée au
     /// jeu, sur `frontmostPID` — `NSWorkspace` a un tour de retard.
