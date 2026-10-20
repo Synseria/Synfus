@@ -11,11 +11,6 @@ import Carbon.HIToolbox
 final class HotKeyManager: ObservableObject {
     static let shared = HotKeyManager()
 
-    private struct Entry {
-        let ref: EventHotKeyRef
-        let id: UInt32
-    }
-
     /// Ce qu'un raccourci déclenche. `release` n'est renseigné que pour les
     /// raccourcis « à maintenir » — l'aperçu d'ensemble, aujourd'hui.
     private struct Action {
@@ -23,7 +18,7 @@ final class HotKeyManager: ObservableObject {
         let release: (() -> Void)?
     }
 
-    private var entries: [Entry] = []
+    private var refs: [EventHotKeyRef] = []
     private var actions: [UInt32: Action] = [:]
     private var handler: EventHandlerRef?
     private var nextID: UInt32 = 1
@@ -129,14 +124,14 @@ final class HotKeyManager: ObservableObject {
             return false
         }
 
-        entries.append(Entry(ref: ref, id: id))
+        refs.append(ref)
         actions[id] = Action(press: action, release: onRelease)
         return true
     }
 
     func unregisterAll() {
-        for entry in entries { UnregisterEventHotKey(entry.ref) }
-        entries.removeAll()
+        for ref in refs { UnregisterEventHotKey(ref) }
+        refs.removeAll()
         actions.removeAll()
         rejected.removeAll()
     }
@@ -167,9 +162,9 @@ private let synfusSignature: OSType = 0x53_59_4E_46  // 'SYNF'
 
 /// Callback C : il ne peut rien capturer, d'où le passage par le singleton.
 private func hotKeyEventCallback(
-    _ callRef: EventHandlerCallRef?,
+    _: EventHandlerCallRef?,
     _ event: EventRef?,
-    _ userData: UnsafeMutableRawPointer?
+    _: UnsafeMutableRawPointer?
 ) -> OSStatus {
     var eventID = EventHotKeyID()
     let status = GetEventParameter(
