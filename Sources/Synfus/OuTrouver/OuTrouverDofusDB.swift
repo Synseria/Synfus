@@ -167,6 +167,25 @@ struct CacheOuTrouver: Codable, Sendable {
 
     static func gardee() -> CacheOuTrouver { relire(try? Data(contentsOf: fichier)) }
 
+    /// Une fiche périmée se redemande dès qu'on la regarde : plus vieille
+    /// que deux péremptions, personne ne l'a regardée depuis. Le fichier ne
+    /// grossit plus sans fin.
+    static let oubli = 2 * DofusDB.peremption
+
+    mutating func oublier(vuesAvant limite: Date) {
+        monstres = monstres.filter { $0.value.date >= limite }
+        objets = objets.filter { $0.value.date >= limite }
+    }
+
+    /// Le cache relu du disque, sous ce qui est arrivé de DofusDB pendant la
+    /// lecture : la plus récente de deux entrées l'emporte.
+    func sous(_ recent: CacheOuTrouver) -> CacheOuTrouver {
+        var fusion = self
+        fusion.monstres.merge(recent.monstres) { $1.date >= $0.date ? $1 : $0 }
+        fusion.objets.merge(recent.objets) { $1.date >= $0.date ? $1 : $0 }
+        return fusion
+    }
+
     func garder() throws {
         try FileManager.default.createDirectory(at: Self.fichier.deletingLastPathComponent(), withIntermediateDirectories: true)
         try JSONEncoder().encode(self).write(to: Self.fichier, options: .atomic)

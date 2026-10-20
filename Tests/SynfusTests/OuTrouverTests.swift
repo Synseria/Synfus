@@ -168,6 +168,23 @@ struct OuTrouverTests {
         #expect(CacheOuTrouver.relire(nil).objets.isEmpty)
     }
 
+    @Test("Le cache oublie ce que personne n'a regardé depuis deux péremptions ; le plus récent l'emporte à la fusion")
+    func cacheBorne() {
+        let maintenant = Date(timeIntervalSince1970: 100_000_000)
+        let vieux = maintenant.addingTimeInterval(-CacheOuTrouver.oubli - 1)
+        let fiche = { (nom: String) in FicheMonstre(id: 1, noms: ["fr": nom], repaires: []) }
+        var disque = CacheOuTrouver()
+        disque.monstres["1"] = .init(date: vieux, valeur: fiche("ancien"))
+        disque.monstres["2"] = .init(date: vieux, valeur: fiche("oublié"))
+        var recent = CacheOuTrouver()
+        recent.monstres["1"] = .init(date: maintenant, valeur: fiche("neuf"))
+        var fusion = disque.sous(recent)
+        #expect(fusion.monstres["1"]?.valeur.noms == ["fr": "neuf"])
+        #expect(recent.sous(disque).monstres["1"]?.valeur.noms == ["fr": "neuf"])
+        fusion.oublier(vuesAvant: maintenant.addingTimeInterval(-CacheOuTrouver.oubli))
+        #expect(fusion.monstres.keys.sorted() == ["1"])
+    }
+
     // MARK: - Ce que cite un objectif
 
     private func objectif(_ texte: String, objet: Int? = nil) -> ObjectifQuete {
