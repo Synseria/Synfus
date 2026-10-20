@@ -103,6 +103,7 @@ nouveau fichier va dans le dossier de son domaine ; un fichier sans domaine en a
 | `Quetes/` | Quêtes et PNJ situés : `Quete` (pur : renvois, ressources, récompenses, suivantes), `QuetesDofusDB` (téléchargement à la première palette, cache disque versionné, 30 jours), `QuetesStore` (lu et indexé hors main), `QuetesEnVigueur` (pur : index et fiches gardées du jeu publié), `QuetePanel`/`QueteVue` (panneau transparent, jamais key, montré devant Dofus seulement), `SuiviQuetes`, `SuiviObjectifs` (purs : suivi du jeu lu par OCR, objectifs à faire et faits), `HistoriqueSuivi` (pur : lectures par perso, quêtes sorties du suivi), `QuetesIci` (pur : quêtes qui commencent et PNJ sur la case du perso — menu de l'en-tête, filtre « Ici » de la palette), `LectureSuivi`, `DofusPourLesNoobs` (adresses candidates du guide) |
 | `OuTrouver/` | Où trouver un monstre ou un objet : `OuTrouver` (pur : la case de chaque repaire — sous-zone par l'index inverse de la carte, donjon par son repère —, l'ordre des repaires et des lâcheurs), `OuTrouverDofusDB` (monstre, butins et recette à la demande, cache disque versionné, 30 jours), `OuTrouverStore`, `OuTrouverVue` (dépliée sous une ressource ou un objectif) |
 | `Almanax/` | L'almanax du jour en tête de la palette : `Almanax` (pur : jour de Paris, réponse de DofusDB, cache disque du jour), `AlmanaxStore`, `AlmanaxVue` |
+| `Boss/` | Aide aux boss : `Harebourg`, `SuiviConfusion` (purs : confusion du Comte, vie et canal combat lus, suivi d'un combat), `AideBoss`, `BossPanel` (panneau jamais key, montré devant Dofus), `BossVue` |
 | `Chasse/` | Chasse au trésor : `IndicesChasse`, `EtapeChasse` (purs), `ChasseDofusDB` (indices en cache disque, étape à la demande), `ChasseModele`, `ChassePanel` (panneau key sans activer Synfus), `ChasseVue` |
 | `Attention/` | Rebond du Dock : `BounceDetector`, `DockPairing` (purs), `DockInspector`, `DockGeometryReader`, `AttentionWatcher`, `AttentionProbe` |
 | `Raccourcis/` | Raccourcis Carbon, enregistreur, conflits, enchaînement au clic |
@@ -123,6 +124,7 @@ nouveau fichier va dans le dossier de son domaine ; un fichier sans domaine en a
 | `attention-dock` | détection du rebond, appariement Dock ↔ persos |
 | `raccourcis` | raccourcis globaux, défauts, enregistreur, fn-clic, signal de bascule, rotation |
 | `lecture-ocr` | lecture de la position et du combat |
+| `aide-boss` | aide aux boss (Comte Harebourg), lecture de la vie et du canal combat |
 | `fermeture-gel` | fermeture des clients, abattage des gelés |
 | `interface-barre` | barre flottante, réglages, menu, aperçus, rangement des fenêtres |
 | `localisation` | tout libellé visible, tables JSON |

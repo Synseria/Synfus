@@ -86,6 +86,8 @@ final class Preferences: ObservableObject {
     @Published var zoneCombat: ZoneEcran? { didSet { save() } }
     @Published var zoneChasse: ZoneEcran? { didSet { save() } }
     @Published var zoneQuetes: ZoneEcran? { didSet { save() } }
+    @Published var zoneVie: ZoneEcran? { didSet { save() } }
+    @Published var zoneTchat: ZoneEcran? { didSet { save() } }
 
     /// Icône du `NSStatusItem`. Le rafraîchissement est à la charge de l'appelant
     /// (`MenuBarController.refreshIcon()`) : les préférences ne pilotent pas l'UI.
@@ -232,6 +234,9 @@ final class Preferences: ObservableObject {
 
     /// Le bouton de chasse dans la barre.
     @Published var chasseBouton: Bool = true { didSet { save() } }
+
+    /// Raccourci du panneau d'aide aux boss. Sans défaut.
+    @Published var bossHotKey: HotKey? { didSet { save() } }
 
     private var loading = false
     /// Dans `enUneEcriture` : les `save()` attendent sa fin, et n'en font qu'un.
@@ -410,7 +415,7 @@ final class Preferences: ObservableObject {
     var raccourcisGlobaux: [HotKey?] {
         hotKeys + [
             cycleNext, cyclePrevious, toggleBar, previewHotKey, arrangeHotKey, sessionHotKey,
-            equipeSuivanteHotKey, inviteHotKey, zaapHotKey, chasseHotKey, paletteHotKey, toggleAutoFocus,
+            equipeSuivanteHotKey, inviteHotKey, zaapHotKey, chasseHotKey, bossHotKey, paletteHotKey, toggleAutoFocus,
         ]
     }
 
@@ -430,6 +435,7 @@ final class Preferences: ObservableObject {
         equipeSuivanteHotKey = nil
         zaapHotKey = nil
         chasseHotKey = nil
+        bossHotKey = nil
     }
 
     /// Reporte sur la touche sous Échap les raccourcis restés sur le keycode 50.
@@ -484,6 +490,8 @@ final class Preferences: ObservableObject {
         .optionnel("zoneCombat", \.zoneCombat),
         .optionnel("zoneChasse", \.zoneChasse),
         .optionnel("zoneQuetes", \.zoneQuetes),
+        .optionnel("zoneVie", \.zoneVie),
+        .optionnel("zoneTchat", \.zoneTchat),
         .facultatif("killFrozenClients", \.killFrozenClients),
         .optionnel("lastArrangement", \.lastArrangement),
         .optionnel("arrangeHotKey", \.arrangeHotKey),
@@ -502,6 +510,7 @@ final class Preferences: ObservableObject {
         .facultatif("zaapsChoix", \.zaapsChoix),
         .facultatif("zaapsFavoris", \.zaapsFavoris),
         .optionnel("chasseHotKey", \.chasseHotKey),
+        .optionnel("bossHotKey", \.bossHotKey),
         .facultatif("lieuxFavoris", \.lieuxFavoris),
         .facultatif("pnjsFavoris", \.pnjsFavoris),
         .facultatif("etiquettes", \.etiquettes),
