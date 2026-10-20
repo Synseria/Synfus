@@ -160,8 +160,9 @@ final class LecteurEcran: ObservableObject {
     /// Le panneau des quêtes est à l'écran : son suivi est lu au tour.
     private var suiviMontre = false
     /// Le panneau d'aide aux boss est à l'écran : le combat est lu au tour,
-    /// la vie et le tchat aussi pendant un combat.
+    /// et pendant un combat ce que le boss choisi demande (vie, tchat).
     private var bossMontre = false
+    private var genresBoss: [GenreLecture] = []
     private var prechauffe = false
     private var prechauffage: Task<Void, Never>?
     /// Lectures demandées, dans l'ordre — le tour, un survol, le bouton du
@@ -231,12 +232,14 @@ final class LecteurEcran: ObservableObject {
         revoirArmement()
     }
 
-    /// Le panneau d'aide aux boss paraît ou disparaît (`BossPanel`) : combat,
-    /// vie et tchat entrent au tour ou en sortent. Jamais l'enregistrement de
+    /// Le panneau d'aide aux boss paraît ou disparaît (`BossPanel`), ou change
+    /// de boss : le combat entre au tour ou en sort, avec en combat les
+    /// `genres` du boss (`nil` : panneau caché). Jamais l'enregistrement de
     /// l'écran demandé.
-    func suivreBoss(_ montre: Bool) {
-        guard montre != bossMontre else { return }
-        bossMontre = montre
+    func suivreBoss(_ genres: [GenreLecture]?) {
+        genresBoss = genres ?? []
+        guard (genres != nil) != bossMontre else { return }
+        bossMontre = genres != nil
         revoirArmement()
     }
 
@@ -289,10 +292,17 @@ final class LecteurEcran: ObservableObject {
             return
         }
         if persoDevant != client.name { persoDevant = client.name }
+        // Son échéance passée, le tour est fini sans que la lecture ait vu le
+        // bouton gris (le perso était passé derrière) : le suivant a le même
+        // bouton coloré, la signature le dirait inchangé — le décompte relu
+        // dit le nouveau tour (`EtatCombat.nouveauTour`).
+        if case .monTour(let fin?) = combats[client.name], Date() > fin {
+            signatures[cle(.combat, client.name)] = nil
+        }
         for genre in genresActifs where perime(genre, client.name) { demander(client, genre) }
         if suiviMontre, QuetesStore.shared.quetes != nil, perime(.quetes, client.name) { demander(client, .quetes) }
         if bossMontre, combats[client.name]?.enCombat == true {
-            for genre in [GenreLecture.vie, .tchat] where perime(genre, client.name) { demander(client, genre) }
+            for genre in genresBoss where perime(genre, client.name) { demander(client, genre) }
         }
         pomper()
     }

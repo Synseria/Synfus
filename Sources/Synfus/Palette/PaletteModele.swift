@@ -225,7 +225,7 @@ final class PaletteModele: ObservableObject {
             guard let texte = contexte.invitationEquipe else { return NSSound.beep() }
             PressePapiers.copier(texte)
         case .chasse: ChassePanel.shared.ouvrir()
-        case .boss: BossPanel.shared.ouvrir()
+        case .boss(let boss): BossPanel.shared.ouvrir(boss)
         case .reglages: SettingsWindowController.shared.show()
         }
     }

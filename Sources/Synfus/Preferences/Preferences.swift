@@ -238,6 +238,9 @@ final class Preferences: ObservableObject {
     /// Raccourci du panneau d'aide aux boss. Sans défaut.
     @Published var bossHotKey: HotKey? { didSet { save() } }
 
+    /// Le boss que montre le panneau d'aide.
+    @Published var bossChoisi: Boss = .harebourg { didSet { save() } }
+
     private var loading = false
     /// Dans `enUneEcriture` : les `save()` attendent sa fin, et n'en font qu'un.
     private var ecritureDifferee = false
@@ -511,6 +514,7 @@ final class Preferences: ObservableObject {
         .facultatif("zaapsFavoris", \.zaapsFavoris),
         .optionnel("chasseHotKey", \.chasseHotKey),
         .optionnel("bossHotKey", \.bossHotKey),
+        .facultatif("bossChoisi", \.bossChoisi),
         .facultatif("lieuxFavoris", \.lieuxFavoris),
         .facultatif("pnjsFavoris", \.pnjsFavoris),
         .facultatif("etiquettes", \.etiquettes),

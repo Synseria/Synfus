@@ -9,10 +9,11 @@ private final class PanneauBoss: NSPanel {
     override var canBecomeMain: Bool { false }
 }
 
-/// Le panneau d'aide aux boss, posé sur le jeu : où viser contre le Comte
-/// Harebourg. Montré, il fait lire au tour le combat, et en combat la vie et
-/// le tchat du perso devant — si l'enregistrement de l'écran est déjà permis,
-/// jamais il ne le demande de lui-même. Comme les quêtes, il ne se montre que
+/// Le panneau d'aide aux boss, posé sur le jeu : la mécanique du boss choisi
+/// et le tour du combat. Montré, il fait lire au tour le combat, et en combat
+/// ce que le boss demande (`Boss.lectures`) chez le perso devant — si
+/// l'enregistrement de l'écran est déjà permis, jamais il ne le demande de
+/// lui-même. Comme les quêtes, il ne se montre que
 /// devant Dofus (`PanneauxJeu`) ; AppKit garde sa position.
 @MainActor
 final class BossPanel: NSObject, ObservableObject {
@@ -31,9 +32,11 @@ final class BossPanel: NSObject, ObservableObject {
         ouvert ? fermer() : ouvrir()
     }
 
-    func ouvrir() {
+    /// Sur ce boss, s'il est donné ; sur le dernier choisi sinon.
+    func ouvrir(_ boss: Boss? = nil) {
         // Abonné aux combats dès maintenant : le tour en cours compte.
-        _ = AideBoss.shared
+        let aide = AideBoss.shared
+        if let boss, boss != aide.boss { aide.choisir(boss) }
         ouvert = true
         impose = true
         appliquer(force: true)
@@ -49,9 +52,12 @@ final class BossPanel: NSObject, ObservableObject {
         appliquer(force: force)
     }
 
+    /// Le boss a changé : ce qui se lit aussi.
+    func revoirLectures() { appliquer(force: false) }
+
     private func appliquer(force: Bool) {
         let montre = PanneauxJeu.appliquer(&panel, ouvert: ouvert, impose: impose, force: force, construire: construire)
-        LecteurEcran.shared.suivreBoss(montre && WindowPreviewService.shared.authorized)
+        LecteurEcran.shared.suivreBoss(montre && WindowPreviewService.shared.authorized ? AideBoss.shared.boss.lectures : nil)
     }
 
     private func construire() -> NSPanel {
