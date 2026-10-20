@@ -61,8 +61,16 @@ struct PaletteVue: View {
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
                     .background(Capsule().fill(choisi ? Couleurs.accent : Color.primary.opacity(0.06)))
+                    .contentShape(Capsule())
+                    .onTapGesture { modele.choisir(filtre) }
             }
             Spacer()
+            // D'où partent distances et trajets : le dernier perso lu devant,
+            // pas forcément celui qu'on croit quand on joue plusieurs comptes.
+            Text(modele.origine)
+                .font(.system(size: 11))
+                .foregroundStyle(.tertiary)
+                .lineLimit(1)
             Text(L("palette.tri", modele.tri.titre))
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
@@ -91,7 +99,9 @@ struct PaletteVue: View {
     private var resultats: some View {
         if modele.entrees.isEmpty {
             Text(quetes.chargement && quetes.quetes == nil ? L("palette.quetes.chargement")
-                 : modele.filtre == .ici && !modele.positionConnue ? L("palette.ici.sansPosition") : L("palette.aucun"))
+                 : modele.filtre == .ici && !modele.positionConnue
+                    ? (Preferences.shared.lirePosition ? L("palette.ici.pasEncore") : L("palette.ici.sansPosition"))
+                    : L("palette.aucun"))
                 .font(.system(size: 13))
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity)

@@ -92,6 +92,9 @@ final class HotKeyManager: ObservableObject {
         if let chasse = prefs.chasseHotKey {
             register(chasse) { ChassePanel.shared.basculer() }
         }
+        if let quetes = prefs.quetesHotKey {
+            register(quetes) { QuetePanel.shared.basculer() }
+        }
         if let boss = prefs.bossHotKey {
             register(boss) { BossPanel.shared.basculer() }
         }

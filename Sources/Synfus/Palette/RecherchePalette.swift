@@ -2,12 +2,13 @@ import Foundation
 
 /// Les gestes de Synfus que la palette sait faire, tapés en toutes lettres.
 enum ActionPalette: Equatable, Sendable {
-    case rangerFenetres, lancerSession, equipeSuivante, inviterEquipe, chasse, reglages
+    case rangerFenetres, lancerSession, equipeSuivante, inviterEquipe, quetes, chasse, reglages
     /// L'aide au combat contre ce boss : le nom du boss se tape aussi.
     case boss(Boss)
 
     static var toutes: [ActionPalette] {
-        [.rangerFenetres, .lancerSession, .equipeSuivante, .inviterEquipe, .chasse] + Boss.allCases.map(boss) + [.reglages]
+        [.rangerFenetres, .lancerSession, .equipeSuivante, .inviterEquipe, .quetes, .chasse] + Boss.allCases.map(boss)
+            + [.reglages]
     }
 
     var titre: String {
@@ -16,6 +17,7 @@ enum ActionPalette: Equatable, Sendable {
         case .lancerSession: return L("palette.action.session")
         case .equipeSuivante: return L("palette.action.equipe")
         case .inviterEquipe: return L("palette.action.inviter")
+        case .quetes: return L("palette.action.quetes")
         case .chasse: return L("palette.action.chasse")
         case .boss(let boss): return L("palette.action.boss", BossVue.nom(boss))
         case .reglages: return L("palette.action.reglages")
@@ -138,6 +140,8 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
 /// Ce que la recherche doit savoir du monde, figé à l'ouverture.
 struct ContextePalette: Sendable {
     var langue: Langue = .fr
+    /// Le perso dont la position est celle-ci : d'où partent les trajets.
+    var perso: String?
     var position: PositionCarte?
     /// Les zaaps actifs, et d'où partir vers une case (`ItineraireZaap.zaap(vers:)`).
     var zaaps = ZaapsSitues.vide

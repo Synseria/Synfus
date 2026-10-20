@@ -232,6 +232,9 @@ final class Preferences: ObservableObject {
     /// Raccourci du panneau de chasse au trésor. Sans défaut.
     @Published var chasseHotKey: HotKey? { didSet { save() } }
 
+    /// Raccourci du panneau des quêtes. Sans défaut.
+    @Published var quetesHotKey: HotKey? { didSet { save() } }
+
     /// Le bouton de chasse dans la barre.
     @Published var chasseBouton: Bool = true { didSet { save() } }
 
@@ -418,7 +421,8 @@ final class Preferences: ObservableObject {
     var raccourcisGlobaux: [HotKey?] {
         hotKeys + [
             cycleNext, cyclePrevious, toggleBar, previewHotKey, arrangeHotKey, sessionHotKey,
-            equipeSuivanteHotKey, inviteHotKey, zaapHotKey, chasseHotKey, bossHotKey, paletteHotKey, toggleAutoFocus,
+            equipeSuivanteHotKey, inviteHotKey, zaapHotKey, chasseHotKey, quetesHotKey, bossHotKey, paletteHotKey,
+            toggleAutoFocus,
         ]
     }
 
@@ -438,6 +442,7 @@ final class Preferences: ObservableObject {
         equipeSuivanteHotKey = nil
         zaapHotKey = nil
         chasseHotKey = nil
+        quetesHotKey = nil
         bossHotKey = nil
     }
 
@@ -514,6 +519,7 @@ final class Preferences: ObservableObject {
         .facultatif("zaapsFavoris", \.zaapsFavoris),
         .optionnel("chasseHotKey", \.chasseHotKey),
         .optionnel("bossHotKey", \.bossHotKey),
+        .optionnel("quetesHotKey", \.quetesHotKey),
         .facultatif("bossChoisi", \.bossChoisi),
         .facultatif("lieuxFavoris", \.lieuxFavoris),
         .facultatif("pnjsFavoris", \.pnjsFavoris),
