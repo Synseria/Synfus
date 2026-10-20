@@ -57,7 +57,8 @@ extensions `+PremierPlan`, `+Effectif`, `+Focus`, `+Fermeture`.
   `rememberedClients` (par pid) le garde affiché, atténué, cliquable : `activate()` sur le
   processus suffit, son élément AX est périmé.
 - `ClientMemory.withRemembered` (pur) ne ressuscite que les pids **silencieux** : un client
-  revenu au login rend une fenêtre, le ressusciter montrerait un perso sorti du jeu.
+  revenu au login rend une fenêtre, le ressusciter montrerait un perso sorti du jeu ; et
+  `consolidate` oublie sa mémoire (qui répond sans perso) — sinon il reviendrait dès qu'il se tait.
 - Client déjà sur un espace inactif au lancement : `CrossSpaceTitles` (CGWindowList, exige
   l'enregistrement de l'écran, **jamais demandé** par ce chemin) ; `discoveredAcrossSpaces`
   (pur) fabrique le dormant. Seulement pour les pids sans mémoire, au plus une fois par 10 s
