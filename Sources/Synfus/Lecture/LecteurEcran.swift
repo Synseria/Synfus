@@ -16,6 +16,12 @@ enum GenreLecture: String, CaseIterable, Sendable {
     /// — un objectif qui se termine le change, mais sa zone est grande. La
     /// chasse n'est lue qu'à la demande (`lireUneFois`).
     case quetes
+    /// Le cœur de vie, au centre de la barre du bas : en combat, tant que le
+    /// panneau d'aide aux boss est montré (`suivreBoss`).
+    case vie
+    /// Le tchat, en bas à gauche, où le canal combat annonce les effets : comme
+    /// la vie, en combat et panneau d'aide montré.
+    case tchat
 
     var parDefaut: ZoneEcran {
         switch self {
@@ -23,6 +29,8 @@ enum GenreLecture: String, CaseIterable, Sendable {
         case .combat: return .combatParDefaut
         case .chasse: return .chasseParDefaut
         case .quetes: return .quetesParDefaut
+        case .vie: return .vieParDefaut
+        case .tchat: return .tchatParDefaut
         }
     }
 
@@ -33,6 +41,8 @@ enum GenreLecture: String, CaseIterable, Sendable {
         case .combat: return \.zoneCombat
         case .chasse: return \.zoneChasse
         case .quetes: return \.zoneQuetes
+        case .vie: return \.zoneVie
+        case .tchat: return \.zoneTchat
         }
     }
 
@@ -44,7 +54,7 @@ enum GenreLecture: String, CaseIterable, Sendable {
     /// seconde jusqu'à ce que la lecture le dise fini — son tour en dépend.
     func intervalle(combat: EtatCombat?) -> TimeInterval {
         switch self {
-        case .position, .chasse: return 1
+        case .position, .chasse, .vie, .tchat: return 1
         case .quetes: return 3
         case .combat: return combat?.enCombat == true ? 1 : 3
         }
@@ -53,9 +63,9 @@ enum GenreLecture: String, CaseIterable, Sendable {
     /// Ce que la signature regarde pour relancer l'OCR.
     var mesure: MesureSignature {
         switch self {
-        case .position: return .zone
+        case .position, .vie: return .zone
         case .combat: return .bouton
-        case .chasse, .quetes: return .lignes
+        case .chasse, .quetes, .tchat: return .lignes
         }
     }
 }
@@ -154,6 +164,9 @@ final class LecteurEcran: ObservableObject {
     private var lectureReglee = false
     /// Le panneau des quêtes est à l'écran : son suivi est lu au tour.
     private var suiviMontre = false
+    /// Le panneau d'aide aux boss est à l'écran : le combat est lu au tour,
+    /// la vie et le tchat aussi pendant un combat.
+    private var bossMontre = false
     private var prechauffe = false
     /// Lectures demandées, dans l'ordre — le tour, un survol, le bouton du
     /// Diagnostic. Une à la fois : l'OCR est séquentiel.
@@ -172,8 +185,8 @@ final class LecteurEcran: ObservableObject {
         return GenreLecture.allCases.filter {
             switch $0 {
             case .position: return prefs.lirePosition
-            case .combat: return prefs.lireCombat
-            case .chasse, .quetes: return false
+            case .combat: return prefs.lireCombat || bossMontre
+            case .chasse, .quetes, .vie, .tchat: return false
             }
         }
     }
@@ -194,8 +207,9 @@ final class LecteurEcran: ObservableObject {
             .store(in: &subscriptions)
         // Une zone recalibrée : l'ancienne signature ne dit plus rien.
         let prefs = Preferences.shared
-        Publishers.Merge3(prefs.$zonePosition, prefs.$zoneCombat, prefs.$zoneQuetes)
-            .dropFirst(3)
+        let zones = [prefs.$zonePosition, prefs.$zoneCombat, prefs.$zoneQuetes, prefs.$zoneVie, prefs.$zoneTchat]
+        Publishers.MergeMany(zones)
+            .dropFirst(zones.count)
             .sink { [weak self] _ in MainActor.assumeIsolated { self?.signatures = [:] } }
             .store(in: &subscriptions)
         // Une bascule : on lit le nouveau perso sans attendre le tour suivant,
@@ -221,8 +235,17 @@ final class LecteurEcran: ObservableObject {
         revoirArmement()
     }
 
+    /// Le panneau d'aide aux boss paraît ou disparaît (`BossPanel`) : combat,
+    /// vie et tchat entrent au tour ou en sortent. Jamais l'enregistrement de
+    /// l'écran demandé.
+    func suivreBoss(_ montre: Bool) {
+        guard montre != bossMontre else { return }
+        bossMontre = montre
+        revoirArmement()
+    }
+
     private func revoirArmement() {
-        lectureReglee || suiviMontre ? armer() : desarmer()
+        lectureReglee || suiviMontre || bossMontre ? armer() : desarmer()
     }
 
     private func armer() {
@@ -267,6 +290,9 @@ final class LecteurEcran: ObservableObject {
         if persoDevant != client.name { persoDevant = client.name }
         for genre in genresActifs where perime(genre, client.name) { demander(client, genre) }
         if suiviMontre, QuetesStore.shared.quetes != nil, perime(.quetes, client.name) { demander(client, .quetes) }
+        if bossMontre, combats[client.name]?.enCombat == true {
+            for genre in [GenreLecture.vie, .tchat] where perime(genre, client.name) { demander(client, genre) }
+        }
         pomper()
     }
 
@@ -367,6 +393,8 @@ final class LecteurEcran: ObservableObject {
             case .position: appliquerPosition(lignes, nom: nom)
             case .combat: appliquerCombat(lignes, couleur: couleurBouton ?? signature.couleur ?? 0, nom: nom)
             case .quetes: LectureSuivi.shared.recevoir(lignes, coupe: signature.auBord, perso: nom)
+            case .vie: AideBoss.shared.recevoirVie(lignes, perso: nom)
+            case .tchat: AideBoss.shared.recevoirTchat(lignes, perso: nom)
             case .chasse: break
             }
         }

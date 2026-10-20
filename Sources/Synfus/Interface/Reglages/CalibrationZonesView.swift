@@ -9,6 +9,8 @@ extension GenreLecture: Identifiable {
         case .combat: return L("diagnostic.lecture.combat")
         case .chasse: return L("diagnostic.lecture.chasse")
         case .quetes: return L("diagnostic.lecture.quetes")
+        case .vie: return L("diagnostic.lecture.vie")
+        case .tchat: return L("diagnostic.lecture.tchat")
         }
     }
 
@@ -19,6 +21,8 @@ extension GenreLecture: Identifiable {
         case .combat: return L("calibration.consigne.combat")
         case .chasse: return L("calibration.consigne.chasse")
         case .quetes: return L("calibration.consigne.quetes")
+        case .vie: return L("calibration.consigne.vie")
+        case .tchat: return L("calibration.consigne.tchat")
         }
     }
 
@@ -30,6 +34,8 @@ extension GenreLecture: Identifiable {
         case .combat: return Color(red: 0.76, green: 0.44, blue: 0.73)
         case .chasse: return Color(red: 0.85, green: 0.65, blue: 0.13)
         case .quetes: return Color(red: 0.30, green: 0.68, blue: 0.45)
+        case .vie: return .red
+        case .tchat: return Color(red: 0.55, green: 0.55, blue: 0.85)
         }
     }
 }
@@ -287,6 +293,18 @@ struct CalibrationZonesView: View {
                 let nom = QuetesStore.shared.nom(reconnue.id) ?? "#\(reconnue.id)"
                 return reconnue.etape.map { L("calibration.essai.quete", nom, $0 + 1) } ?? nom
             }.joined(separator: ", ")
+        case .vie:
+            switch Harebourg.vie(lignes) {
+            case .pourcentage(let valeur)?: return L("calibration.essai.vie.pourcentage", Int(valeur))
+            case .points(let actuels, let max?)?: return L("calibration.essai.vie.points", actuels, max)
+            case .points(let actuels, nil)?: return L("boss.vie.sansMax", actuels)
+            case nil: return L("boss.rienLu")
+            }
+        case .tchat:
+            let noms = WindowManager.shared.clients.map(\.name)
+            guard let lu = Harebourg.dernierConstat(lignes, persos: noms) else { return L("calibration.essai.tchat.rien") }
+            let confusion = BossVue.libelle(lu.constat.confusion)
+            return lu.constat.perso.map { L("calibration.essai.tchat", $0, confusion) } ?? confusion
         }
     }
 

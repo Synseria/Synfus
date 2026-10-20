@@ -13,8 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // réévaluer ; il ne les connaît pas.
         WindowManager.shared.visibiliteARevoir = {
             FloatingBarController.shared.updateVisibility(force: $0)
-            QuetePanel.shared.revoirVisibilite(force: $0)
-            ChassePanel.shared.revoirVisibilite(force: $0)
+            PanneauxJeu.revoir(force: $0)
         }
         WindowManager.shared.start()
         FreezeWatcher.shared.start()

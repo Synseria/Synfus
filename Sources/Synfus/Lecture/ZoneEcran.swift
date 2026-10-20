@@ -47,6 +47,13 @@ struct ZoneEcran: Codable, Equatable, Sendable {
     /// range dans la même colonne), un peu plus large pour ses titres en
     /// gras et plus haut pour cinq quêtes et leurs objectifs. Estimé.
     static let quetesParDefaut = ZoneEcran(x: 0, y: 0.10, largeur: 0.28, hauteur: 0.62)
+    /// Le cœur de vie, au centre de la barre du bas, sans les PA et PM
+    /// dessous : mesuré sur une fenêtre de 1728 × 1084 points.
+    static let vieParDefaut = ZoneEcran(x: 0.40, y: 0.872, largeur: 0.064, hauteur: 0.072)
+    /// Le tchat à sa taille par défaut, en bas à gauche, sans la colonne
+    /// d'icônes ni la ligne de saisie : mesuré sur la même fenêtre. Le joueur
+    /// l'agrandit souvent : le tracé du Diagnostic suit.
+    static let tchatParDefaut = ZoneEcran(x: 0.013, y: 0.845, largeur: 0.375, hauteur: 0.13)
 
     /// Le contenu entier : la capture du calibrage, et celle qu'on découpe
     /// quand plusieurs zones sont dues au même tour (`PlanCapture.entiere`).
