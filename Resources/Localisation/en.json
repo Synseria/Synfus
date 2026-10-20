@@ -719,6 +719,7 @@
   "touche.espace": "space",
   "touche.majuscule": "shift",
   "touche.option": "option",
+  "trajet.copier.horsDesDouze": "Copy the /travel: outside the World of Twelve, no Amakna zaap",
   "trajets.sousTitre": "A copied /travel goes through the nearest zaap when it saves the trip.",
   "vuesCartes": "Map views",
   "vuesCartes.sousTexte": "As thumbnails in the palette, the lists and the quest panel, enlarged on hover; behind each zaap. Downloaded from DofusDB on first display and kept in the caches.",

@@ -719,6 +719,7 @@
   "touche.espace": "espace",
   "touche.majuscule": "majuscule",
   "touche.option": "option",
+  "trajet.copier.horsDesDouze": "Copier le /travel : hors du Monde des Douze, pas de zaap d'Amakna",
   "trajets.sousTitre": "Un /travel copié passe par le zaap le plus proche s'il fait gagner du chemin.",
   "vuesCartes": "Vues des cartes",
   "vuesCartes.sousTexte": "En vignette dans la palette, les listes et le panneau des quêtes, en grand au survol ; en fond des zaaps. Téléchargées de DofusDB à la première ouverture et gardées dans les caches.",
