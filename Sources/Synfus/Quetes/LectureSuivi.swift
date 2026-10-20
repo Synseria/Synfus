@@ -98,15 +98,23 @@ final class LectureSuivi: ObservableObject {
     /// langues, comparés à chaque ligne —, sur l'index du jeu de quêtes, bâti
     /// une fois par jeu. Aussi l'essai du calibrage.
     func reconnaitre(_ lignes: [String], coupe: Bool, dans quetes: Quetes) async -> SuiviQuetes.Lu {
-        let tache: Task<SuiviQuetes.Index, Never>
-        if let index, index.date == quetes.date {
-            tache = index.tache
-        } else {
-            tache = Task.detached { SuiviQuetes.Index(quetes) }
-            index = (quetes.date, tache)
-        }
-        let pret = await tache.value
+        let pret = await index(quetes)
         return await Task.detached { SuiviQuetes.reconnaitre(lignes, coupe: coupe, dans: pret) }.value
+    }
+
+    /// Les rangs des lignes qui portent un nom de quête, sur les quêtes déjà
+    /// là — la détection des zones (`AutoCalibrage`) ; aucune sans quêtes.
+    func rangsDeTitres(_ lignes: [String]) async -> Set<Int> {
+        guard let quetes = QuetesStore.shared.quetes else { return [] }
+        let pret = await index(quetes)
+        return await Task.detached { SuiviQuetes.rangsDeTitres(lignes, dans: pret) }.value
+    }
+
+    private func index(_ quetes: Quetes) async -> SuiviQuetes.Index {
+        if let index, index.date == quetes.date { return await index.tache.value }
+        let tache = Task.detached { SuiviQuetes.Index(quetes) }
+        index = (quetes.date, tache)
+        return await tache.value
     }
 
     /// Le seul chemin d'une lecture, demandée ou du tour.

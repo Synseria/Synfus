@@ -196,9 +196,10 @@ enum Harebourg {
     }
 
     /// L'heure qui ouvre chaque ligne du tchat, « [14:04] » ; l'OCR mange
-    /// parfois les crochets.
+    /// parfois les crochets, ou les lit « ( » et « 1 » — mesuré : « [18:341 »,
+    /// « (14:04] ».
     static func heure(_ ligne: String) -> Substring? {
-        ligne.firstMatch(of: /^\s*\[?\s*\d{1,2}\s*[:h.]\s*\d{2}\s*\]?/).map { ligne[$0.range] }
+        ligne.firstMatch(of: /^\s*[\[(]?\s*\d{1,2}\s*[:h.]\s*\d{2}\s*(?:[\])]|[1lI|](?=\s))?/).map { ligne[$0.range] }
     }
 
     /// Le perso qu'une ligne nomme avant ses deux-points (« [14:04] Syn-App :
