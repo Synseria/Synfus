@@ -3,11 +3,11 @@
 enum QuetesIci {
     /// Sur la case lue, et dans le même monde : depuis Incarnam, la case
     /// homonyme d'Amakna n'est pas ici. La sous-zone le dit (`ReseauSousZones`) ;
-    /// sans elle, les coordonnées seules.
+    /// sans elle, ou la carte pas encore lue, les coordonnées seules.
     static func ici(_ position: PNJ.Position, sousZone: Int?, perso: PositionCarte, reseau: ReseauSousZones) -> Bool {
         guard position.x == perso.x, position.y == perso.y else { return false }
-        guard let sousZone else { return true }
-        return reseau.estDuMondeDesDouze(sousZone) != perso.horsDuMondeDesDouze
+        guard sousZone != nil, reseau.estLu else { return true }
+        return reseau.horsDesDouze(sousZone) == perso.horsDuMondeDesDouze
     }
 
     /// Une quête commence ici si l'un de ses départs y est.

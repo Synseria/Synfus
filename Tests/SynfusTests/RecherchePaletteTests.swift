@@ -92,6 +92,30 @@ struct RecherchePaletteTests {
         #expect(CartesInterieures.relire(donnees) == avecQuetes.interieurs && CartesInterieures.relire(Data("{}".utf8)) == nil)
     }
 
+    @Test("Un PNJ hors du Monde des Douze : le /travel seul, sans zaap ni distance d'Amakna")
+    func pnjHorsDesDouze() throws {
+        var avecQuetes = contexte()
+        let douze = try #require(Carte.integree.sousZones.first { avecQuetes.reseau.estDuMondeDesDouze($0.id) }?.id)
+        let ailleurs = 999_999
+        #expect(avecQuetes.reseau.horsDesDouze(ailleurs))
+        // La carte pas encore lue ne dit rien du monde : la case est supposée des Douze.
+        #expect(!ReseauSousZones.vide.horsDesDouze(ailleurs))
+        let passage = { (sousZone: Int) in PNJ.Passage(position: .init(x: 4, y: -3), carte: nil, sousZone: sousZone, quetes: 1) }
+        avecQuetes.quetes = Quetes(
+            format: Quetes.formatActuel, date: .now, quetes: [],
+            pnjs: [PNJ(id: 1, noms: ["fr": "Incarnam"], passages: [passage(ailleurs)]),
+                   PNJ(id: 2, noms: ["fr": "Amakna"], passages: [passage(douze)])],
+            objets: [:], monstres: [:], nomsPNJ: [:], sousZones: [:], famillesObjets: [:], familles: [:], emotes: [:],
+            titres: [:], metiers: [:], camps: [:])
+        let pnjs = RecherchePalette.pnjs(avecQuetes)
+        let incarnam = try #require(pnjs.first { $0.titre == "Incarnam" })
+        let amakna = try #require(pnjs.first { $0.titre == "Amakna" })
+        #expect(incarnam.effet == .copier("/travel 4,-3"))
+        #expect(incarnam.distance == nil && incarnam.itineraire == nil)
+        #expect(amakna.effet == .trajet(x: 4, y: -3))
+        #expect(amakna.distance != nil)
+    }
+
     @Test("Un lieu porte sa carte et son pictogramme, un zaap sa carte : la liste en montre la vue")
     func vuesDesCartes() throws {
         let banque = try #require(Carte.integree.lieux.first { $0.nom(en: .fr) == "Banque" && $0.zone(en: .fr) == "Bonta" })

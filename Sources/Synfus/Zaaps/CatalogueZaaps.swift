@@ -35,8 +35,7 @@ enum CatalogueZaaps {
     /// rien dire : position inconnue ou hors du Monde des Douze, zaap sur une
     /// autre carte du monde.
     static func distance(de zaap: Zaap, depuis position: PositionCarte?) -> Int? {
-        guard let depart = ItineraireZaap.rejoindre(position), zaap.monde == Zaap.mondeDesDouze else { return nil }
-        return ItineraireZaap.distance(depart, (zaap.x, zaap.y))
+        ItineraireZaap.aPied(depuis: position, vers: (zaap.x, zaap.y), dansLesDouze: zaap.monde == Zaap.mondeDesDouze)
     }
 
     /// Du plus proche au plus loin ; ceux sans distance ferment la marche dans
