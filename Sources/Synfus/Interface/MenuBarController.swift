@@ -100,6 +100,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         if let hotKey = Preferences.shared.chasseHotKey {
             chasse.attributedTitle = attributed(name: L("menu.chasse"), shortcut: hotKey.displayString)
         }
+        let boss = add(to: menu, title: L("menu.boss"), action: #selector(openBoss))
+        if let hotKey = Preferences.shared.bossHotKey {
+            boss.attributedTitle = attributed(name: L("menu.boss"), shortcut: hotKey.displayString)
+        }
         add(to: menu, title: L("menu.reglages"), action: #selector(openSettings))
         menu.addItem(.separator())
         // Reconstruit à chaque ouverture : l'item n'apparaît que s'il y a
@@ -235,6 +239,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
     @objc private func openHunt() {
         ChassePanel.shared.ouvrir()
+    }
+
+    @objc private func openBoss() {
+        BossPanel.shared.ouvrir()
     }
 
     @objc private func openSettings() {

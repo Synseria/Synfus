@@ -1,10 +1,19 @@
 import AppKit
 import SwiftUI
 
-/// Ce que partagent les panneaux posés sur le jeu — quêtes et chasse : quand
-/// ils se montrent, et les boutons de leur en-tête.
+/// Ce que partagent les panneaux posés sur le jeu — quêtes, chasse, aide aux
+/// boss : quand ils se montrent, et les boutons de leur en-tête.
 @MainActor
 enum PanneauxJeu {
+    /// Chaque panneau revoit s'il se montre — au changement d'app (`force`),
+    /// par le filet de `WindowManager`, quand le réglage change. Le seul
+    /// endroit qui les énumère : un panneau de plus ne s'oublie nulle part.
+    static func revoir(force: Bool) {
+        QuetePanel.shared.revoirVisibilite(force: force)
+        ChassePanel.shared.revoirVisibilite(force: force)
+        BossPanel.shared.revoirVisibilite(force: force)
+    }
+
     /// Un panneau ouvert se montre-t-il ? Avec `panneauxSeulementDofus`,
     /// seulement devant Dofus (ou Synfus) : la règle de la barre réservée au
     /// jeu, sur `frontmostPID` — `NSWorkspace` a un tour de retard.

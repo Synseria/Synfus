@@ -2,7 +2,7 @@ import Foundation
 
 /// Les gestes de Synfus que la palette sait faire, tapés en toutes lettres.
 enum ActionPalette: CaseIterable, Sendable {
-    case rangerFenetres, lancerSession, equipeSuivante, inviterEquipe, chasse, reglages
+    case rangerFenetres, lancerSession, equipeSuivante, inviterEquipe, chasse, boss, reglages
 
     var titre: String {
         switch self {
@@ -11,6 +11,7 @@ enum ActionPalette: CaseIterable, Sendable {
         case .equipeSuivante: return L("palette.action.equipe")
         case .inviterEquipe: return L("palette.action.inviter")
         case .chasse: return L("palette.action.chasse")
+        case .boss: return L("palette.action.boss")
         case .reglages: return L("palette.action.reglages")
         }
     }
