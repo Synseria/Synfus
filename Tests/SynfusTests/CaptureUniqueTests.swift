@@ -209,6 +209,36 @@ struct CaptureUniqueTests {
         Sortie.dire("\(zones) zones lues : \(pareilles) au caractère près, \(fautes) faute(s) sur \(caracteres) caractères")
     }
 
+    /// Les zones retrouvées sur chaque fenêtre Dofus entière du dossier, et
+    /// chacune relue comme le tour la lirait :
+    ///
+    ///     SYNFUS_CAPTURES_DOSSIER=~/Library/Logs/Synfus/captures sh test.sh detectionSurCaptures
+    @Test("Les zones se retrouvent sur de vraies captures, et s'y lisent", .enabled(if: dossierCaptures != nil))
+    func detectionSurCaptures() async throws {
+        let dossier = (try #require(Self.dossierCaptures) as NSString).expandingTildeInPath
+        let pleinEcran = ProcessInfo.processInfo.environment["SYNFUS_PLEIN_ECRAN"] == "1"
+        let fichiers = try FileManager.default.contentsOfDirectory(atPath: dossier).filter { $0.hasSuffix(".png") }.sorted()
+        let moteur = MoteurOCR()
+        await moteur.prechauffer()
+        for fichier in fichiers {
+            guard let pleine = SimulationCapture.charger(dossier + "/" + fichier), pleine.width > 2000,
+                  let entiere = SimulationCapture.zone(.entiere, dans: pleine, pleinEcran: pleinEcran)
+            else { continue }
+            let debut = Date()
+            let textes = await moteur.textes(image: entiere)
+            let zones = DetectionZones.detecter(textes)
+            Sortie.dire("\(fichier) : \(zones.keys.map(\.rawValue).sorted()) en \(Int(Date().timeIntervalSince(debut) * 1000)) ms")
+            let position = try #require(zones[.position], "\(fichier)")
+            let coupe = try #require(CapturesCalibrage.decouper(position, dans: entiere))
+            #expect(PositionCarte.lire(await lignes(moteur, coupe, .position)) != nil, "\(fichier)")
+            let vie = try #require(zones[.vie], "\(fichier)")
+            #expect(Harebourg.vie(await lignes(moteur, try #require(CapturesCalibrage.decouper(vie, dans: entiere)), .vie)) != nil)
+            let tchat = try #require(zones[.tchat], "\(fichier)")
+            let lues = await lignes(moteur, try #require(CapturesCalibrage.decouper(tchat, dans: entiere)), .tchat)
+            #expect(lues.filter { Harebourg.heure($0) != nil }.count >= 2, "\(fichier)")
+        }
+    }
+
     private func lignes(_ moteur: MoteurOCR, _ image: CGImage, _ genre: GenreLecture) async -> [String] {
         guard case .lue(_, let lignes, _, _) = await moteur.lire(image: image, precedente: nil, mesure: genre.mesure)
         else { return [] }

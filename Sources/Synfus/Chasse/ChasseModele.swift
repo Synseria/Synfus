@@ -83,6 +83,16 @@ final class ChasseModele: ObservableObject {
 
     // MARK: - Lecture de l'écran
 
+    /// Les rangs des lignes qui portent un indice de chasse — la détection des
+    /// zones (`AutoCalibrage`) ; la liste des indices se charge s'il le faut.
+    func rangsDIndices(_ lignes: [String]) async -> Set<Int> {
+        if indices.isEmpty { await chargerIndices() }
+        let indices = indices
+        return await Task.detached(priority: .userInitiated) {
+            Set(lignes.indices.filter { !EtapeChasse.ciblesLues(dans: [lignes[$0]], parmi: indices).isEmpty })
+        }.value
+    }
+
     /// La reconnaissance cherche chaque nom d'indice, à quelques fautes près,
     /// dans chaque ligne lue : un dixième de seconde, hors du fil principal.
     func lire() {
