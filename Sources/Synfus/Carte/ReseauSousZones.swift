@@ -50,4 +50,14 @@ struct ReseauSousZones: Sendable {
     /// La sous-zone est-elle du Monde des Douze ? Ses coordonnées, sinon,
     /// recoupent celles d'Amakna sans en être (Incarnam, les dimensions divines…).
     func estDuMondeDesDouze(_ sousZone: Int) -> Bool { voisinesDe[sousZone] != nil }
+
+    /// La carte est lue : avant, aucune sous-zone ne dit son monde.
+    var estLu: Bool { !voisinesDe.isEmpty }
+
+    /// Une case est-elle hors du Monde des Douze, d'après sa sous-zone ? Sans
+    /// sous-zone, ou la carte pas encore lue, rien ne le dit : non.
+    func horsDesDouze(_ sousZone: Int?) -> Bool {
+        guard let sousZone, estLu else { return false }
+        return !estDuMondeDesDouze(sousZone)
+    }
 }

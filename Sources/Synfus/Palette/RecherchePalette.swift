@@ -229,14 +229,13 @@ enum RecherchePalette {
     /// Un zaap cherché par `/travel` : le trajet vers lui, comme vers un lieu.
     static func zaapsCommeLieux(_ contexte: ContextePalette) -> [EntreePalette] {
         zaapsTries(contexte).map { zaap in
-            let trajet = trajetVers((zaap.x, zaap.y), contexte)
+            let vers = versCase((zaap.x, zaap.y), dansLesDouze: zaap.monde == Zaap.mondeDesDouze, contexte)
             return EntreePalette(
                 id: "travel:" + zaap.cle, genre: .lieu, titre: L("palette.zaap", zaap.nom(en: contexte.langue)),
                 sousTitre: zaap.zone(en: contexte.langue), etiquette: contexte.etiquettes[zaap.cle],
                 detail: Coordonnees.texte(zaap.x, zaap.y), favori: contexte.favoris.contains(zaap.cle),
-                distance: CatalogueZaaps.distance(de: zaap, depuis: contexte.position),
-                itineraire: itineraire(trajet, contexte.langue), cle: zaap.cle,
-                carte: zaap.idCarte, effet: .trajet(x: zaap.x, y: zaap.y))
+                distance: vers.distance, itineraire: itineraire(vers.trajet, contexte.langue), cle: zaap.cle,
+                carte: zaap.idCarte, effet: vers.effet)
         }
     }
 
@@ -258,20 +257,18 @@ enum RecherchePalette {
 
     static func lieux(_ contexte: ContextePalette) -> [EntreePalette] {
         contexte.lieux.filter { !$0.estZaap }.map { lieu in
-            let trajet = lieu.monde == Zaap.mondeDesDouze ? trajetVers((lieu.x, lieu.y), contexte) : nil
+            let vers = versCase((lieu.x, lieu.y), dansLesDouze: lieu.monde == Zaap.mondeDesDouze, contexte)
             let lieuDit = [lieu.sousZone(en: contexte.langue), lieu.zone(en: contexte.langue)]
                 .compactMap { $0 }.joined(separator: " · ")
             return EntreePalette(
                 id: lieu.cle, genre: .lieu, titre: lieu.nom(en: contexte.langue), sousTitre: lieuDit,
                 etiquette: contexte.etiquettes[lieu.cle], detail: Coordonnees.texte(lieu.x, lieu.y),
-                favori: contexte.favoris.contains(lieu.cle), distance: aPied(vers: (lieu.x, lieu.y), contexte, lieu.monde),
-                itineraire: itineraire(trajet, contexte.langue), categorie: lieu.categorie, cle: lieu.cle,
+                favori: contexte.favoris.contains(lieu.cle), distance: vers.distance,
+                itineraire: itineraire(vers.trajet, contexte.langue), categorie: lieu.categorie, cle: lieu.cle,
                 carte: lieu.idCarte, pictogramme: lieu.gfx,
                 ici: contexte.position.map { QuetesIci.ici(PNJ.Position(x: lieu.x, y: lieu.y), sousZone: lieu.idSousZone,
                                                           perso: $0, reseau: contexte.reseau) } ?? false,
-                interieur: contexte.interieurs.contient(lieu.idCarte),
-                effet: lieu.monde == Zaap.mondeDesDouze ? .trajet(x: lieu.x, y: lieu.y)
-                                                        : .copier(ItineraireZaap.travel(vers: (lieu.x, lieu.y))))
+                interieur: contexte.interieurs.contient(lieu.idCarte), effet: vers.effet)
         }
     }
 
@@ -370,19 +367,19 @@ enum RecherchePalette {
                 let sousTitre = rang == 0 && pnj.passages.count > 1
                     ? L("palette.pnj.habituel", nombre: nombre, lieu, nombre)
                     : rang == 0 ? L("palette.pnj.cite", nombre: nombre, lieu, nombre) : L("palette.pnj.aussi", nombre: nombre, lieu, nombre)
-                let trajet = trajetVers((position.x, position.y), contexte)
+                let vers = versCase((position.x, position.y), dansLesDouze: passage.dansLesDouze(contexte.reseau), contexte)
                 return EntreePalette(id: "pnj:\(pnj.id):\(position.x),\(position.y)", genre: .pnj,
                                      titre: Lieu.traduit(pnj.noms, contexte.langue) ?? "?", sousTitre: sousTitre,
                                      etiquette: contexte.etiquettes[pnj.cle],
                                      detail: Coordonnees.texte(position.x, position.y),
                                      favori: contexte.favoris.contains(pnj.cle),
-                                     distance: aPied(vers: (position.x, position.y), contexte),
-                                     itineraire: itineraire(trajet, contexte.langue), cle: pnj.cle, carte: passage.carte,
+                                     distance: vers.distance,
+                                     itineraire: itineraire(vers.trajet, contexte.langue), cle: pnj.cle, carte: passage.carte,
                                      ici: contexte.position.map {
                                          QuetesIci.ici(position, sousZone: passage.sousZone, perso: $0, reseau: contexte.reseau)
                                      } ?? false,
                                      interieur: contexte.interieurs.contient(passage.carte),
-                                     effet: .trajet(x: position.x, y: position.y))
+                                     effet: vers.effet)
             }
         }
     }
@@ -417,10 +414,16 @@ enum RecherchePalette {
                               zaaps: contexte.zaaps, zaapDuJeu: contexte.zaapDuJeu)
     }
 
-    private static func aPied(vers cible: (x: Int, y: Int), _ contexte: ContextePalette,
-                              _ monde: Int = Zaap.mondeDesDouze) -> Int? {
-        guard let depuis = ItineraireZaap.rejoindre(contexte.position), monde == Zaap.mondeDesDouze else { return nil }
-        return ItineraireZaap.distance(depuis, cible)
+    /// Ce qu'une entrée qui mène à une case montre et fait — un seul chemin
+    /// pour les zaaps cherchés par `/travel`, les lieux et les PNJ. Hors du
+    /// Monde des Douze, le `/travel` seul, sans distance ni zaap : ses
+    /// coordonnées recoupent celles d'Amakna, un zaap d'Amakna y mènerait à tort.
+    private static func versCase(_ cible: (x: Int, y: Int), dansLesDouze: Bool, _ contexte: ContextePalette)
+        -> (trajet: ItineraireZaap.Trajet?, distance: Int?, effet: EntreePalette.Effet) {
+        guard dansLesDouze else { return (nil, nil, .copier(ItineraireZaap.travel(vers: cible))) }
+        return (trajetVers(cible, contexte),
+                ItineraireZaap.aPied(depuis: contexte.position, vers: cible, dansLesDouze: true),
+                .trajet(x: cible.x, y: cible.y))
     }
 
     static func itineraire(_ trajet: ItineraireZaap.Trajet?, _ langue: Langue) -> String? {

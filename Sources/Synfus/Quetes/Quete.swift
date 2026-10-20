@@ -226,6 +226,10 @@ struct PNJ: Codable, Equatable, Sendable {
         let sousZone: Int?
         /// Combien de quêtes le placent ici.
         let quetes: Int
+
+        /// Dans le Monde des Douze, sauf si sa sous-zone dit le contraire.
+        /// Ailleurs (Incarnam…), ni zaap ni distance d'Amakna.
+        func dansLesDouze(_ reseau: ReseauSousZones) -> Bool { !reseau.horsDesDouze(sousZone) }
     }
 
     let id: Int

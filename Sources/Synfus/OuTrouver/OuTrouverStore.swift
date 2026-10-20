@@ -88,7 +88,7 @@ final class OuTrouverStore: ObservableObject {
     /// Copie le trajet vers le repaire, zaap compris dans le Monde des Douze.
     func copierTrajet(_ repaire: RepaireSitue) {
         ZaapClipboard.shared.copierTrajet(vers: (repaire.situation.x, repaire.situation.y),
-                                          monde: repaire.situation.monde)
+                                          dansLesDouze: repaire.situation.monde == Zaap.mondeDesDouze)
     }
 
     /// Le trajet vers le repaire le plus proche du monstre ; `false` si rien
