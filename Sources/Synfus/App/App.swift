@@ -3,7 +3,7 @@ import ApplicationServices
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    func applicationDidFinishLaunching(_ notification: Notification) {
+    func applicationDidFinishLaunching(_: Notification) {
         // Accessory : pas d'icône dans le Dock, Synfus vit dans la barre de menus.
         NSApp.setActivationPolicy(.accessory)
 
@@ -37,7 +37,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    func applicationWillTerminate(_ notification: Notification) {
+    func applicationWillTerminate(_: Notification) {
         // La position de la barre s'écrit avec un temps de retard sur le
         // déplacement : quitter dans cet intervalle ne doit pas la perdre.
         FloatingBarController.shared.flushPendingOrigin()

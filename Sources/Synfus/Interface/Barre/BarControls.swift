@@ -48,7 +48,7 @@ struct WindowDragArea: NSViewRepresentable {
         @available(*, unavailable)
         required init?(coder _: NSCoder) { nil }
 
-        override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+        override func acceptsFirstMouse(for _: NSEvent?) -> Bool { true }
         override var mouseDownCanMoveWindow: Bool { false }
 
         /// Le curseur dit ce que la zone fait : main ouverte au survol, fermée
@@ -71,9 +71,9 @@ struct WindowDragArea: NSViewRepresentable {
         // on pose le curseur nous-mêmes à l'entrée, et on le rend à la sortie.
         // Et on le repose à chaque mouvement : le jeu, au premier plan,
         // réimpose le sien en continu.
-        override func mouseEntered(with event: NSEvent) { NSCursor.openHand.set() }
-        override func mouseMoved(with event: NSEvent) { NSCursor.openHand.set() }
-        override func mouseExited(with event: NSEvent) { NSCursor.arrow.set() }
+        override func mouseEntered(with _: NSEvent) { NSCursor.openHand.set() }
+        override func mouseMoved(with _: NSEvent) { NSCursor.openHand.set() }
+        override func mouseExited(with _: NSEvent) { NSCursor.arrow.set() }
 
         override func mouseDown(with event: NSEvent) {
             guard let window else { return }
