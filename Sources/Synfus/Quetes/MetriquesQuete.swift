@@ -29,12 +29,12 @@ struct MetriquesQuete: Equatable {
     let vignette: CGSize
 
     static let confort = MetriquesQuete(
-        texte: 12, titre: 14, consigne: 11, detail: 10, coche: 11, icone: 10,
+        texte: 13, titre: 15, consigne: 12, detail: 11, coche: 12, icone: 11,
         marge: 12, ecartSections: 12, ecartLignes: 4, ligneHorizontale: 6, ligneVerticale: 4,
         vignette: CGSize(width: 52, height: 36))
 
     static let compact = MetriquesQuete(
-        texte: 11, titre: 13, consigne: 10, detail: 9, coche: 10, icone: 9,
+        texte: 12, titre: 13, consigne: 11, detail: 11, coche: 11, icone: 11,
         marge: 8, ecartSections: 8, ecartLignes: 1, ligneHorizontale: 4, ligneVerticale: 2,
         vignette: CGSize(width: 44, height: 30))
 

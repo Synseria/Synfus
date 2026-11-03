@@ -32,7 +32,7 @@ struct HarebourgVue: View {
                 .frame(width: 96, height: 48)
             VStack(alignment: .leading, spacing: 2) {
                 Text(Self.titre(estimation.confusion.visee))
-                    .font(.system(size: 15, weight: .bold))
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(estimation.enTour ? Couleurs.accent : Color.secondary)
                 Text(Self.libelle(estimation.confusion))
                     .font(.system(size: 11))
@@ -125,7 +125,7 @@ struct HarebourgVue: View {
                         .frame(width: 26, height: 22)
                         .foregroundStyle(active ? Color.white : Color.primary)
                         .background(RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .fill(active ? Couleurs.accent : Color.primary.opacity(0.08)))
+                            .fill(active ? Couleurs.accentPlein : Color.primary.opacity(0.08)))
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)

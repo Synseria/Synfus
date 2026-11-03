@@ -13,7 +13,10 @@ La grille est le skill global `grille-ui`. Ici, seulement ce qui lui manque ou l
 
 ## Jetons
 
-- Couleurs : `Couleurs` (accent, ambre, suggestion) ; une couleur de classe vient de `DofusClass`.
+- Couleurs : `Couleurs` (accent, `accentPlein` en aplat sous du texte blanc, ambre, suggestion,
+  alerte, succes) ; une couleur de classe vient de `DofusClass`. Tailles : 11, 12, 13, 15, 20, et
+  9 pour les marques (initiales, numéros, chevrons), jamais pour un texte ; graisses : normale et
+  semibold. `JetonsTests` les tient.
 - Lignes de réglage : `Ligne`, `Interrupteur`, `RaccourciReglable`. Sous un libellé, `etat:` ne prend
   qu'une valeur, un état, le résultat d'une action ou une mention légale ; une explication va dans
   `aide:` (ⓘ). `Interrupteur` n'a pas d'`etat:`. Un titre de page n'a pas de phrase : `EnTetePage`
@@ -27,9 +30,6 @@ La grille est le skill global `grille-ui`. Ici, seulement ce qui lui manque ou l
 Un résultat se regarde, il ne vaut pas défaut à lui seul (une icône de 8 pt n'est pas un texte).
 
 ```sh
-rg -t swift '\.bold\(\)|weight: \.(bold|heavy)' Sources          # gras
-rg -t swift -o '\.system\(size: [0-9.]+' Sources                 # tailles employées
-rg -t swift 'accentColor|\.orange' Sources                       # hors `Couleurs`
 rg -t swift 'lineLimit\(1\)' Sources                             # troncatures à justifier
 rg -t swift 'textCase' Sources                                   # capitales
 rg -t swift 'etat:' Sources/Synfus/Interface/Reglages            # une valeur, pas une phrase

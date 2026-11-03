@@ -40,7 +40,7 @@ struct ClassesSettings: View {
                 } else {
                     Circle().fill(breed.color)
                     Text(icons.catalogue.abbreviation(for: breed.label))
-                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
                         .foregroundStyle(.white)
                 }
             }

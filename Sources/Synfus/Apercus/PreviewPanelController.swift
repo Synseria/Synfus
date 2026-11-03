@@ -299,7 +299,7 @@ private struct PreviewPanelView: View {
                 Spacer(minLength: 0)
                 if let position = lecteur.positions[client.name] {
                     Text(position.coordonnees)
-                        .font(.system(size: 10, design: .monospaced))
+                        .font(.system(size: 11, design: .monospaced))
                         .foregroundStyle(.secondary)
                         .help(position.zone ?? "")
                 }
@@ -323,12 +323,12 @@ private struct PreviewPanelView: View {
             }
             if let zone = position?.zone {
                 Text(zone)
-                    .font(.system(size: 10))
+                    .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             } else if !service.authorized {
                 Text(L("apercu.autorisationRequise"))
-                    .font(.system(size: 10))
+                    .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }
         }
@@ -341,7 +341,7 @@ private struct PreviewPanelView: View {
         Text(service.authorized
              ? L("apercu.captureEnCours")
              : L("apercu.autorisationRequise"))
-            .font(.system(size: 10))
+            .font(.system(size: 11))
             .foregroundStyle(.secondary)
             .multilineTextAlignment(.center)
             .padding(8)

@@ -82,7 +82,7 @@ struct GeneralSettings: View {
     private var quarantineWarning: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
-                Image(systemName: "exclamationmark.triangle").foregroundStyle(.orange)
+                Image(systemName: "exclamationmark.triangle").foregroundStyle(Couleurs.alerte)
                 Text(L("general.quarantaine"))
                     .font(.system(size: 11, weight: .semibold))
                 HelpTip(L("general.quarantaine.aide"))

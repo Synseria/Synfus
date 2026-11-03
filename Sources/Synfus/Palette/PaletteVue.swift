@@ -33,18 +33,18 @@ struct PaletteVue: View {
     private var recherche: some View {
         HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 16))
+                .font(.system(size: 15))
                 .foregroundStyle(.secondary)
             TextField(L("palette.invite"), text: $modele.requete)
                 .textFieldStyle(.plain)
-                .font(.system(size: 17))
+                .font(.system(size: 20))
                 .focused($champ, equals: .recherche)
             Text(mode)
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(.white)
                 .padding(.horizontal, 7)
                 .padding(.vertical, 2)
-                .background(Capsule().fill(Couleurs.accent))
+                .background(Capsule().fill(Couleurs.accentPlein))
         }
         .padding(.horizontal, 16)
         .frame(height: 52)
@@ -60,7 +60,7 @@ struct PaletteVue: View {
                     .foregroundStyle(choisi ? Color.white : Color.secondary)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
-                    .background(Capsule().fill(choisi ? Couleurs.accent : Color.primary.opacity(0.06)))
+                    .background(Capsule().fill(choisi ? Couleurs.accentPlein : Color.primary.opacity(0.06)))
                     .contentShape(Capsule())
                     .onTapGesture { modele.choisir(filtre) }
             }
@@ -264,7 +264,7 @@ private struct Touche: View {
 
     var body: some View {
         Text(texte)
-            .font(.system(size: 10, design: .monospaced))
+            .font(.system(size: 11, design: .monospaced))
             .padding(.horizontal, 5)
             .padding(.vertical, 1)
             .background(RoundedRectangle(cornerRadius: 4).fill(Color.primary.opacity(0.08)))
@@ -334,7 +334,7 @@ private struct LigneResultat: View {
                     if entree.favori {
                         Image(systemName: "star.fill").font(.system(size: 9)).foregroundStyle(Couleurs.ambre)
                     }
-                    if entree.interieur { EtiquetteInterieur(taille: 10) }
+                    if entree.interieur { EtiquetteInterieur(taille: 11) }
                 }
                 if entree.sousTitre != nil || entree.itineraire != nil {
                     HStack(spacing: 6) {
@@ -411,7 +411,7 @@ struct PastilleEtiquette: View {
 
     var body: some View {
         Text(texte)
-            .font(.system(size: 10, weight: .semibold))
+            .font(.system(size: 11, weight: .semibold))
             .foregroundStyle(.black.opacity(0.85))
             .padding(.horizontal, 5)
             .padding(.vertical, 1)

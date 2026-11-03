@@ -76,7 +76,7 @@ struct CalibrationZonesView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(L("calibration.titre", genre.libelle)).font(.system(size: 14, weight: .semibold))
+            Text(L("calibration.titre", genre.libelle)).font(.system(size: 15, weight: .semibold))
             Text(genre.consigne)
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
@@ -87,7 +87,7 @@ struct CalibrationZonesView: View {
                 .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.05)))
             if let capture {
                 Text(L("calibration.capturee", capture.date.formatted(date: .abbreviated, time: .shortened)))
-                    .font(.system(size: 10))
+                    .font(.system(size: 11))
                     .foregroundStyle(.tertiary)
             }
 
@@ -193,7 +193,7 @@ struct CalibrationZonesView: View {
                             .fixedSize(horizontal: false, vertical: true)
                         Text(L("diagnostic.position.brut",
                                essai.lignes.isEmpty ? "—" : essai.lignes.joined(separator: " ⏎ ")))
-                            .font(.system(size: 10, design: .monospaced))
+                            .font(.system(size: 11, design: .monospaced))
                             .foregroundStyle(.tertiary)
                             .lineLimit(6)
                             .textSelection(.enabled)

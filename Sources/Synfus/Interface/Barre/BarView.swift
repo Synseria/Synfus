@@ -188,7 +188,7 @@ struct BarView: View {
     private var zaapButton: some View {
         ModeButton(
             icone: "point.3.connected.trianglepath.dotted",
-            teinte: .green,
+            teinte: Couleurs.accent,
             actif: zaaps.reecritRecemment || palette.ouvert,
             aide: L("barre.paletteAide", prefs.paletteHotKey?.displayString ?? L("barre.aucunRaccourci"))
         ) {
@@ -202,7 +202,7 @@ struct BarView: View {
     private var chasseButton: some View {
         ModeButton(
             icone: "map",
-            teinte: .yellow,
+            teinte: Couleurs.ambre,
             actif: chasse.ouvert,
             aide: L("barre.chasseAide", prefs.chasseHotKey?.displayString ?? L("barre.aucunRaccourci"))
         ) {
@@ -254,7 +254,7 @@ struct BarView: View {
         let on = prefs.attentionAction == .focus
         return ModeButton(
             icone: on ? "bolt.fill" : "bolt.slash",
-            teinte: .orange,
+            teinte: Couleurs.alerte,
             actif: on,
             aide: on
                 ? L("barre.passageAuto.actif", toggleShortcut)
@@ -284,7 +284,7 @@ struct BarView: View {
             } else {
                 Circle().fill(icons.catalogue.color(for: className))
                 Text(icons.catalogue.abbreviation(for: className))
-                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .font(.system(size: 9, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white)
             }
         }
@@ -322,7 +322,7 @@ struct BarView: View {
                         .fixedSize()
                     if prefs.showClasses, let className = client.characterClass {
                         Text(className)
-                            .font(.system(size: 9))
+                            .font(.system(size: 11))
                             .foregroundStyle(active ? Color.white.opacity(0.75) : Color.secondary)
                             .lineLimit(1)
                     }
@@ -343,7 +343,7 @@ struct BarView: View {
             .fixedSize(horizontal: true, vertical: false)
             .background(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(active ? Color.accentColor : Color.clear)
+                    .fill(active ? Couleurs.accentPlein : Color.clear)
             )
             .overlay { if alerting { AlertPulse() } }
             .overlay { if manager.basculeSignalee == client.slotKey { SwitchBlink() } }

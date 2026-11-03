@@ -31,8 +31,8 @@ struct DiagnosticSettings: View {
                 // si elle monte à ~1 s alors que la barre reste fluide, c'est
                 // que le déport fait son travail.
                 Text(L("diagnostic.dernierInventaire", Int(managerDiagnostics.lastInventoryDuration * 1000)))
-                    .font(.system(size: 10, design: .monospaced))
-                    .foregroundStyle(managerDiagnostics.lastInventoryDuration > 0.5 ? .orange : .secondary)
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(managerDiagnostics.lastInventoryDuration > 0.5 ? Couleurs.alerte : Color.secondary)
                 Spacer()
             }
             .padding(.horizontal, 28)
@@ -54,7 +54,7 @@ struct DiagnosticSettings: View {
                        ? L("diagnostic.accessibiliteManquanteQuarantaine")
                        : L("diagnostic.accessibiliteManquante"))
                     .font(.system(size: 11))
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(Couleurs.alerte)
                     .padding(.top, 6)
             } else {
                     VStack(alignment: .leading, spacing: 8) {
@@ -63,18 +63,18 @@ struct DiagnosticSettings: View {
                                 Text(client.name)
                                     .font(.system(size: 12, weight: .medium))
                                 Text(L("diagnostic.titre", client.rawTitle))
-                                    .font(.system(size: 10, design: .monospaced))
+                                    .font(.system(size: 11, design: .monospaced))
                                     .foregroundStyle(.secondary)
                                     .textSelection(.enabled)
                                 Text("pid \(client.pid)")
-                                    .font(.system(size: 10, design: .monospaced))
+                                    .font(.system(size: 11, design: .monospaced))
                                     .foregroundStyle(.tertiary)
                                 if prefs.lirePosition {
                                     positionLine(for: client)
                                 }
                                 if prefs.lireCombat {
                                     Text(L("diagnostic.combat.ligne", EtatCombat.libelle(lecteur.combats[client.name])))
-                                        .font(.system(size: 10, design: .monospaced))
+                                        .font(.system(size: 11, design: .monospaced))
                                         .foregroundStyle(.secondary)
                                 }
                                 if previews.authorized {
@@ -83,7 +83,7 @@ struct DiagnosticSettings: View {
                                          : previews.previews[client.slotKey] != nil
                                            ? L("diagnostic.apercu.capture")
                                            : L("diagnostic.apercu.pasDemande"))
-                                        .font(.system(size: 10, design: .monospaced))
+                                        .font(.system(size: 11, design: .monospaced))
                                         .foregroundStyle(.tertiary)
                                 }
                             }
@@ -105,7 +105,7 @@ struct DiagnosticSettings: View {
                     ForEach(freezes.journal.suffix(5)) { abattu in
                         Text(abattu.date.formatted(date: .omitted, time: .standard) + "  "
                              + L("diagnostic.gelesAcheves.ligne", abattu.nom, Int(abattu.pid)))
-                            .font(.system(size: 10, design: .monospaced))
+                            .font(.system(size: 11, design: .monospaced))
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -122,16 +122,16 @@ struct DiagnosticSettings: View {
         if let lignes = lecture.lignesPosition[client.name] {
             let position = lecteur.positions[client.name]
             Text(L("diagnostic.position.ligne", PositionCarte.libelle(position)))
-                .font(.system(size: 10, design: .monospaced))
-                .foregroundStyle(position == nil ? Color.orange : Color.secondary)
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundStyle(position == nil ? Couleurs.alerte : Color.secondary)
                 .textSelection(.enabled)
             Text(L("diagnostic.position.brut", lignes.joined(separator: " ⏎ ")))
-                .font(.system(size: 10, design: .monospaced))
+                .font(.system(size: 11, design: .monospaced))
                 .foregroundStyle(.tertiary)
                 .textSelection(.enabled)
         } else {
             Text(L("diagnostic.position.pasEncore"))
-                .font(.system(size: 10, design: .monospaced))
+                .font(.system(size: 11, design: .monospaced))
                 .foregroundStyle(.tertiary)
         }
     }
@@ -149,17 +149,17 @@ struct DiagnosticSettings: View {
             if let rapport = arranger.dernierRapport {
                 Text(L("diagnostic.rangement.entete", rapport.titre, rapport.ecran)
                      + " — " + rapport.date.formatted(date: .omitted, time: .standard))
-                    .font(.system(size: 10, design: .monospaced))
+                    .font(.system(size: 11, design: .monospaced))
                     .foregroundStyle(.secondary)
                 if !rapport.rangees.isEmpty {
                     Text(L("diagnostic.rangement.ranges", rapport.rangees.joined(separator: ", ")))
-                        .font(.system(size: 10, design: .monospaced))
+                        .font(.system(size: 11, design: .monospaced))
                         .foregroundStyle(.secondary)
                 }
                 ForEach(rapport.ecartees) { ecartee in
                     Text(L("diagnostic.rangement.ecarte", ecartee.nom, ecartee.raison))
-                        .font(.system(size: 10, design: .monospaced))
-                        .foregroundStyle(.orange)
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundStyle(Couleurs.alerte)
                 }
             } else {
                 Text(L("diagnostic.rangement.aucun"))
@@ -186,7 +186,7 @@ struct DiagnosticSettings: View {
                         .font(.system(size: 11, weight: .medium))
                     ForEach(Array(attention.pairing.enumerated()), id: \.offset) { _, pair in
                         Text("\(pair.dock)  →  \(pair.character)")
-                            .font(.system(size: 10, design: .monospaced))
+                            .font(.system(size: 11, design: .monospaced))
                             .foregroundStyle(.secondary)
                     }
                     // Une icône de plus (ou de moins) que de processus Dofus, et
@@ -195,8 +195,8 @@ struct DiagnosticSettings: View {
                     if !attention.pairingReliable {
                         Label(L("diagnostic.attention.appariementDouteux"),
                               systemImage: "exclamationmark.triangle")
-                            .font(.system(size: 10))
-                            .foregroundStyle(.orange)
+                            .font(.system(size: 11))
+                            .foregroundStyle(Couleurs.alerte)
                     }
                 }
                 .padding(.bottom, 4)
@@ -207,7 +207,7 @@ struct DiagnosticSettings: View {
                     Text(L("diagnostic.attention.releve"))
                         .font(.system(size: 11, weight: .medium))
                     Text(lecture)
-                        .font(.system(size: 10, design: .monospaced))
+                        .font(.system(size: 11, design: .monospaced))
                         .foregroundStyle(.secondary)
                 }
                 .padding(.bottom, 4)
@@ -215,7 +215,7 @@ struct DiagnosticSettings: View {
 
             if !probe.watchedItems.isEmpty {
                 Text(L("diagnostic.attention.iconesSurveillees", probe.watchedItems.joined(separator: ", ")))
-                    .font(.system(size: 10, design: .monospaced))
+                    .font(.system(size: 11, design: .monospaced))
                     .foregroundStyle(.secondary)
             }
 
@@ -223,7 +223,7 @@ struct DiagnosticSettings: View {
                 Button(L("diagnostic.attention.journal")) { probe.revealLog() }
                     .font(.system(size: 11))
                 Text(AttentionProbe.logURL.path)
-                    .font(.system(size: 9, design: .monospaced))
+                    .font(.system(size: 11, design: .monospaced))
                     .foregroundStyle(.tertiary)
                     .lineLimit(1)
                     .truncationMode(.head)
@@ -242,9 +242,9 @@ struct DiagnosticSettings: View {
                         ForEach(probe.events) { event in
                             VStack(alignment: .leading, spacing: 1) {
                                 Text("\(event.time.formatted(date: .omitted, time: .standard))  \(event.label)")
-                                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                                    .font(.system(size: 11, weight: .medium, design: .monospaced))
                                 Text(event.detail)
-                                    .font(.system(size: 10, design: .monospaced))
+                                    .font(.system(size: 11, design: .monospaced))
                                     .foregroundStyle(.secondary)
                                     .textSelection(.enabled)
                             }

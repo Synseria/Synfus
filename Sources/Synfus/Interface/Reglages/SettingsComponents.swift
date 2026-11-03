@@ -31,7 +31,7 @@ struct EnTetePage: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Text(titre).font(.system(size: 20, weight: .bold))
+            Text(titre).font(.system(size: 20, weight: .semibold))
             if let aide { HelpTip(aide) }
             Spacer(minLength: 12)
             if let valeur { Text(valeur).font(.system(size: 12)).foregroundStyle(.secondary) }
@@ -117,7 +117,7 @@ struct Avertissement: View {
         Ligne(titre: texte) {
             if let bouton { Button(bouton, action: action) }
         }
-        .foregroundStyle(.orange)
+        .foregroundStyle(Couleurs.alerte)
     }
 }
 
@@ -183,7 +183,7 @@ struct ShortcutRow: View {
                 if conflit || refuse {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.system(size: 11))
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(Couleurs.alerte)
                         .help(conflit ? L("raccourcis.conflit") : L("raccourcis.refuse"))
                 }
                 ShortcutRecorder(hotKey: hotKey, allowsBareKeys: allowsBareKeys)
@@ -240,9 +240,9 @@ struct PermissionRow: View {
     var body: some View {
         Ligne(titre: name, aide: help) {
             HStack(spacing: 8) {
-                Circle().fill(granted ? Color.green : Color.orange).frame(width: 8, height: 8)
+                Circle().fill(granted ? Couleurs.succes : Couleurs.alerte).frame(width: 8, height: 8)
                 Text(granted ? L("commun.accordee") : L("commun.manquante"))
-                    .foregroundStyle(granted ? Color.secondary : Color.orange)
+                    .foregroundStyle(granted ? Color.secondary : Couleurs.alerte)
                 if !granted { Button(L("commun.ouvrirReglagesSysteme"), action: open) }
             }
         }
@@ -257,7 +257,7 @@ struct CopiableCommand: View {
     var body: some View {
         HStack(spacing: 6) {
             Text(command)
-                .font(.system(size: 10, design: .monospaced))
+                .font(.system(size: 11, design: .monospaced))
                 .textSelection(.enabled)
                 .lineLimit(2)
                 .truncationMode(.middle)

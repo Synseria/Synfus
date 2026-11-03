@@ -64,18 +64,18 @@ struct CharactersSettings: View {
                 .font(.system(size: 9))
                 .foregroundStyle(.tertiary)
             Circle()
-                .fill(isOnline(name) ? Color.green : Color.secondary.opacity(0.3))
+                .fill(isOnline(name) ? Couleurs.succes : Color.secondary.opacity(0.3))
                 .frame(width: 7, height: 7)
             Text(name)
             Spacer()
             teamPicker(for: name)
             if let slot = slotOf(name) {
                 Text("\(slot + 1)")
-                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
                     .foregroundStyle(.secondary)
             }
             Text(isOnline(name) ? L("persos.connecte") : L("persos.horsLigne"))
-                .font(.system(size: 10))
+                .font(.system(size: 11))
                 .foregroundStyle(.tertiary)
 
             HStack(spacing: 2) {
@@ -92,7 +92,7 @@ struct CharactersSettings: View {
                 .help(L("persos.descendre"))
             }
             .buttonStyle(.borderless)
-            .font(.system(size: 10, weight: .semibold))
+            .font(.system(size: 11, weight: .semibold))
         }
         .padding(.vertical, 4)
         .contentShape(Rectangle())
@@ -115,7 +115,7 @@ struct CharactersSettings: View {
         }
         .labelsHidden()
         .fixedSize()
-        .font(.system(size: 10))
+        .font(.system(size: 11))
         .help(L("persos.equipeDuPerso"))
     }
 

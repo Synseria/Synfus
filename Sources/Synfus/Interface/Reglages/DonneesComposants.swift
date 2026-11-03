@@ -90,7 +90,7 @@ struct BoutonEtiquette: View {
                 PastilleEtiquette(texte: etiquette)
             } else {
                 Text(L("palette.reglages.etiquette"))
-                    .font(.system(size: 10))
+                    .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 5)
                     .padding(.vertical, 1)

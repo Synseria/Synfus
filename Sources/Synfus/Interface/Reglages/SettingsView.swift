@@ -129,7 +129,7 @@ struct SettingsView: View {
                 ForEach(GroupeReglages.allCases, id: \.self) { groupe in
                     if let titre = groupe.titre {
                         Text(titre)
-                            .font(.system(size: 10, weight: .semibold))
+                            .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, 8)
                             .padding(.top, 10)
@@ -160,7 +160,7 @@ struct SettingsView: View {
                 .padding(.vertical, 5)
                 .background(
                     RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(section == item ? Couleurs.accent : Color.clear)
+                        .fill(section == item ? Couleurs.accentPlein : Color.clear)
                 )
                 .foregroundStyle(section == item ? Color.white : Color.primary)
                 .contentShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
