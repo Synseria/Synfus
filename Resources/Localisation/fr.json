@@ -181,7 +181,7 @@
   "chasse.echec": "DofusDB injoignable : %@",
   "chasse.indice": "Indice",
   "chasse.indices": "Indices de chasse",
-  "chasse.indices.aucune": "Indices chargés à la première ouverture du panneau",
+  "chasse.indices.aucune": "Pas encore chargés",
   "chasse.indices.chargement": "Chargement des indices…",
   "chasse.indices.date": "%lld indices DofusDB du %@",
   "chasse.indices.echec": "Indices indisponibles : %@",
