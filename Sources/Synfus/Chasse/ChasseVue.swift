@@ -86,11 +86,11 @@ struct ChasseVue: View {
         let choisie = modele.direction == direction
         return Button { modele.choisir(direction) } label: {
             Image(systemName: direction.symbole)
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(size: 15, weight: .semibold))
                 .frame(width: 36, height: 36)
                 .foregroundStyle(choisie ? Color.white : Color.primary)
                 .background(RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(choisie ? Couleurs.accent : Color.primary.opacity(0.08)))
+                    .fill(choisie ? Couleurs.accentPlein : Color.primary.opacity(0.08)))
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -102,7 +102,7 @@ struct ChasseVue: View {
         if previews.authorized {
             Button { modele.lire() } label: {
                 Image(systemName: "text.viewfinder")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 15, weight: .semibold))
                     .frame(width: 36, height: 36)
                     .foregroundStyle(Couleurs.ambre)
                     .background(Circle().fill(Couleurs.ambre.opacity(0.18)))
@@ -144,13 +144,13 @@ struct ChasseVue: View {
                 if let echec = modele.echecIndices, !modele.chargementIndices {
                     HStack(spacing: 6) {
                         Text(L("chasse.indices.echec", echec))
-                            .font(.system(size: 10))
-                            .foregroundStyle(.orange)
+                            .font(.system(size: 11))
+                            .foregroundStyle(Couleurs.alerte)
                         Button(L("quete.reessayer")) { Task { await modele.chargerIndices(forcer: true) } }
                             .controlSize(.mini)
                     }
                 } else {
-                    Text(L("chasse.indices.chargement")).font(.system(size: 10)).foregroundStyle(.secondary)
+                    Text(L("chasse.indices.chargement")).font(.system(size: 11)).foregroundStyle(.secondary)
                 }
             }
         }
@@ -163,7 +163,7 @@ struct ChasseVue: View {
         VStack(alignment: .leading, spacing: 3) {
             if modele.rienLu {
                 HStack(spacing: 6) {
-                    Text(L("chasse.rienLu")).font(.system(size: 10)).foregroundStyle(.secondary)
+                    Text(L("chasse.rienLu")).font(.system(size: 11)).foregroundStyle(.secondary)
                     Button(L("lecture.ouvrir")) { SettingsWindowController.shared.show(section: .lecture) }
                         .controlSize(.mini)
                         .help(L("chasse.lire.aide"))
@@ -190,20 +190,20 @@ struct ChasseVue: View {
     @ViewBuilder
     private var resultat: some View {
         if let echec = modele.echec {
-            Text(L("chasse.echec", echec)).font(.system(size: 11)).foregroundStyle(.orange)
+            Text(L("chasse.echec", echec)).font(.system(size: 11)).foregroundStyle(Couleurs.alerte)
         } else if let constat = modele.constat {
             HStack(spacing: 6) {
                 Image(systemName: constat.direction.symbole).foregroundStyle(.secondary)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(constat.cible.nom(en: modele.langue))
-                        .font(.system(size: 10))
+                        .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                     Group {
                         switch constat.resultat {
                         case .trouve(let x, let y, let distance):
                             Text(L("chasse.trouve", nombre: distance, Coordonnees.texte(x, y), distance)).font(.system(size: 13, weight: .semibold))
                         case .introuvable:
-                            Text(L("chasse.introuvable", EtapeChasse.portee)).foregroundStyle(.orange)
+                            Text(L("chasse.introuvable", EtapeChasse.portee)).foregroundStyle(Couleurs.alerte)
                         case .phorreur:
                             Text(L("chasse.phorreur.suivre", constat.direction.libelle))
                         }

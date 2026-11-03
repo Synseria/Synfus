@@ -47,7 +47,7 @@ struct BossVue: View {
         EnTetePanneau(icone: "scope", teinte: Couleurs.ambre, menu: Self.menu) {
             Text(Self.nom(prefs.bossChoisi)).font(.system(size: 12, weight: .semibold))
                 .padding(.leading, 6)
-            Image(systemName: "chevron.down").font(.system(size: 8, weight: .bold)).foregroundStyle(.secondary)
+            Image(systemName: "chevron.down").font(.system(size: 9, weight: .semibold)).foregroundStyle(.secondary)
                 .padding(.leading, 3)
             if let perso = lecteur.persoDevant {
                 Text(perso).font(.system(size: 11)).foregroundStyle(.secondary)
@@ -111,7 +111,7 @@ struct BossVue: View {
             if rappels {
                 ForEach(Self.rappels(prefs.bossChoisi), id: \.self) {
                     Text("• " + $0)
-                        .font(.system(size: 10))
+                        .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -154,7 +154,7 @@ struct PetitBouton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: icone)
-                .font(.system(size: 10, weight: .bold))
+                .font(.system(size: 11, weight: .semibold))
                 .frame(width: 22, height: 20)
                 .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Color.primary.opacity(0.08)))
                 .contentShape(Rectangle())
@@ -181,7 +181,7 @@ struct ChoixBoss<Valeur: Hashable>: View {
                         .frame(maxWidth: .infinity, minHeight: 24)
                         .foregroundStyle(actif ? Color.white : Color.primary)
                         .background(RoundedRectangle(cornerRadius: 7, style: .continuous)
-                            .fill(actif ? Couleurs.accent : Color.primary.opacity(0.08)))
+                            .fill(actif ? Couleurs.accentPlein : Color.primary.opacity(0.08)))
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)

@@ -27,7 +27,7 @@ struct CarteZaapReglages: View {
                 Text(zaap.zone(en: langue) ?? (prefs.zaapsAjoutes.contains(zaap) ? L("zaap.ajoute") : ""))
                     .lineLimit(1)
                 if zaap.monde != Zaap.mondeDesDouze {
-                    Text(L("zaap.autreCarte")).foregroundStyle(.orange)
+                    Text(L("zaap.autreCarte")).foregroundStyle(Couleurs.alerte)
                 }
                 Spacer(minLength: 0)
                 Text(Coordonnees.texte(zaap.x, zaap.y)).font(.system(size: 11, design: .monospaced))

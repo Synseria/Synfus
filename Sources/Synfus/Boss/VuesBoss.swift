@@ -149,11 +149,11 @@ struct TalKashaVue: View {
             Spacer()
             ForEach(1...TalKasha.glyphesRequis, id: \.self) { rang in
                 Text(String(repeating: "I", count: rang))
-                    .font(.system(size: 12, weight: .bold, design: .serif))
+                    .font(.system(size: 12, weight: .semibold, design: .serif))
                     .frame(width: 30, height: 22)
                     .foregroundStyle(rang <= glyphes ? Color.white : Color.secondary)
                     .background(RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(rang <= glyphes ? Couleurs.accent : Color.primary.opacity(0.08)))
+                        .fill(rang <= glyphes ? Couleurs.accentPlein : Color.primary.opacity(0.08)))
             }
             PetitBouton(icone: "minus", aide: L("boss.talKasha.moins")) {
                 aide.noter { session, _ in session.glyphesTalKasha = max(session.glyphesTalKasha - 1, 0) }

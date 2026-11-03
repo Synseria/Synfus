@@ -282,7 +282,7 @@ struct AlertPulse: View {
 
     var body: some View {
         RoundedRectangle(cornerRadius: 8, style: .continuous)
-            .strokeBorder(Color.orange, lineWidth: 1.5)
+            .strokeBorder(Couleurs.alerte, lineWidth: 1.5)
             .opacity(pulse ? 1 : 0.2)
             .onAppear {
                 withAnimation(.easeInOut(duration: 0.55).repeatForever(autoreverses: true)) {
@@ -299,13 +299,13 @@ struct AlertPulse: View {
 struct CopiedBadge: View {
     var body: some View {
         RoundedRectangle(cornerRadius: 8, style: .continuous)
-            .strokeBorder(Color.accentColor, lineWidth: 1.5)
+            .strokeBorder(Couleurs.accent, lineWidth: 1.5)
             .overlay(alignment: .topTrailing) {
                 Image(systemName: "doc.on.clipboard.fill")
-                    .font(.system(size: 8, weight: .bold))
+                    .font(.system(size: 9, weight: .semibold))
                     .foregroundStyle(.white)
                     .padding(2)
-                    .background(Circle().fill(Color.accentColor))
+                    .background(Circle().fill(Couleurs.accentPlein))
                     .offset(x: 4, y: -4)
             }
             .transition(.opacity)
@@ -327,7 +327,7 @@ struct SwitchBlink: View {
     var body: some View {
         RoundedRectangle(cornerRadius: 8, style: .continuous)
             .strokeBorder(Color.white, lineWidth: 2)
-            .shadow(color: .accentColor, radius: 4)
+            .shadow(color: Couleurs.accent, radius: 4)
             .opacity(allume ? 1 : 0.1)
             .allowsHitTesting(false)
             .onAppear {
@@ -379,12 +379,12 @@ struct CombatBadge: View {
         Group {
             if let texte {
                 Text(texte)
-                    .font(.system(size: 8, weight: .bold, design: .rounded))
+                    .font(.system(size: 9, weight: .semibold, design: .rounded))
                     .monospacedDigit()
                     .padding(.horizontal, 3)
             } else {
                 Image(systemName: "figure.fencing")
-                    .font(.system(size: 7, weight: .bold))
+                    .font(.system(size: 9, weight: .semibold))
                     .padding(2)
             }
         }

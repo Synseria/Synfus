@@ -85,7 +85,7 @@ struct QueteVue: View {
             if store.quetes == nil, !store.chargement, let echec = store.echec {
                 Text(L("quete.indisponible", echec))
                     .font(.system(size: 12))
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(Couleurs.alerte)
                     .multilineTextAlignment(.center)
                 Button(L("quete.reessayer")) { Task { try? await store.mettreAJour() } }
             } else {
@@ -114,7 +114,7 @@ struct QueteVue: View {
     /// Le coin bas droit, à saisir pour agrandir le panneau.
     private var poignee: some View {
         Image(systemName: "arrow.down.right")
-            .font(.system(size: 8, weight: .bold))
+            .font(.system(size: 9, weight: .semibold))
             .foregroundStyle(.tertiary)
             .frame(width: 18, height: 18)
             .padding(2)
@@ -146,13 +146,13 @@ struct QueteVue: View {
         let nouvelles = MenuQuetes.nouvelles(lecture.reconnues, epinglees: prefs.quetesEpinglees)
         return HStack(spacing: 4) {
             Text(titre).font(.system(size: metriques.texte, weight: .semibold)).lineLimit(1).truncationMode(.tail)
-            Image(systemName: "chevron.down").font(.system(size: 8, weight: .bold)).foregroundStyle(.secondary)
+            Image(systemName: "chevron.down").font(.system(size: 9, weight: .semibold)).foregroundStyle(.secondary)
             if nouvelles > 0, ficheImposee == nil {
                 Text("\(nouvelles)")
-                    .font(.system(size: 9, weight: .bold))
+                    .font(.system(size: 9, weight: .semibold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 4)
-                    .background(Capsule().fill(Couleurs.accent))
+                    .background(Capsule().fill(Couleurs.accentPlein))
                     .help(L("quete.menu.nouvelles"))
             }
         }
@@ -581,7 +581,7 @@ struct QueteVue: View {
                             HStack(spacing: 6) {
                                 if let numero = etat.numero, !valide {
                                     Text(L("quete.ordre", numero))
-                                        .font(.system(size: metriques.detail, weight: .bold))
+                                        .font(.system(size: metriques.detail, weight: .semibold))
                                         .foregroundStyle(Couleurs.ambre)
                                 }
                                 if let position = objectif.position {
