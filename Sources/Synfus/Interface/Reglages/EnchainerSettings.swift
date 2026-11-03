@@ -6,7 +6,7 @@ struct EnchainerSettings: View {
     @ObservedObject private var clicks = ClickAdvanceWatcher.shared
 
     var body: some View {
-        PageReglages(titre: L("reglages.enchainer"), sousTitre: L("enchainer.sousTitre"),
+        PageReglages(titre: L("reglages.enchainer"),
                      aide: L("raccourcis.enchainer.aide")) {
             Section {
                 Interrupteur(titre: L("raccourcis.enchainer.bascule"), isOn: Binding(
@@ -22,7 +22,7 @@ struct EnchainerSettings: View {
                         .fixedSize()
                     }
                     Ligne(titre: L("raccourcis.enchainer.clicsCaptes"),
-                          sousTexte: clicks.lastModifiers.map { L("raccourcis.enchainer.dernierClic", $0) },
+                          etat: clicks.lastModifiers.map { L("raccourcis.enchainer.dernierClic", $0) },
                           aide: clicks.seenClicks == 0 ? L("raccourcis.enchainer.clicsCaptes.aide") : nil) {
                         Text("\(clicks.seenClicks)")
                             .monospacedDigit()

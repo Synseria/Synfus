@@ -16,7 +16,7 @@ struct LieuxSettings: View {
         let langue = L10n.courante.langue
         let lieux = montres(langue)
         let affiches = Array(lieux.prefix(Self.limite).enumerated())
-        PageListe(titre: L("reglages.lieux"), sousTitre: L("lieux.sousTitre")) {
+        PageListe(titre: L("reglages.lieux"), aide: L("lieux.aide")) {
             SourceCarte().cadreDeListe(premiere: true, derniere: false)
             InterrupteurVuesCartes().cadreDeListe(premiere: false, derniere: true)
             EnTeteListe(titre: L("lieux.compte", lieux.count), aide: L("palette.reglages.lieux.aide"))
@@ -33,7 +33,7 @@ struct LieuxSettings: View {
             }
             .cadreDeListe(premiere: true, derniere: affiches.isEmpty)
             ForEach(affiches, id: \.element.cle) { rang, lieu in
-                Ligne(titre: lieu.nom(en: langue), sousTexte: Self.lieuDit(lieu, langue)) {
+                Ligne(titre: lieu.nom(en: langue), etat: Self.lieuDit(lieu, langue)) {
                     PictogrammeLieu(gfx: lieu.gfx) {
                         Image(systemName: "mappin.and.ellipse").foregroundStyle(.secondary)
                     }

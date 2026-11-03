@@ -10,6 +10,7 @@ user-invocable: false
 | --- | --- |
 | Aperçus des fenêtres (ScreenCaptureKit, appariement, préchauffe) | `reference/apercus.md` |
 | Rangement des fenêtres, plein écran, « Lancer la session » | `reference/rangement.md` |
+| Revoir ou refaire un écran (avec le skill global `grille-ui`) | `reference/grille-ui.md` |
 
 **Un réglage n'apparaît que s'il sert** : les options d'une fonction coupée sont masquées, pas
 grisées (options de la barre sous « Afficher la barre », touche de l'enchaînement au clic sous
@@ -87,12 +88,12 @@ sa bascule). Toute nouvelle option suit la règle.
 
 - `Reglages/SettingsView.swift` : barre latérale en groupes (`GroupeReglages`), un
   onglet par sujet et peu de réglages par onglet — mieux vaut un onglet de plus qu'un onglet
-  chargé —, une vue par onglet, chacune une `PageReglages` (titre, une
-  phrase, `Form` groupé). Les onglets de longue liste (Zaaps, Lieux, Quêtes, PNJ) sont des `PageListe` : un `Form`
+  chargé —, une vue par onglet, chacune une `PageReglages` (titre, ⓘ,
+  `Form` groupé) : aucune phrase à l'écran, une explication va dans `aide:`. Les onglets de longue liste (Zaaps, Lieux, Quêtes, PNJ) sont des `PageListe` : un `Form`
   construit toutes ses lignes à l'ouverture (600 ms pour 300 lieux), la `LazyVStack` de `PageListe`
   ne construit que ce qui paraît — chaque ligne y est un enfant direct, cadrée par `cadreDeListe` ;
   tri et textes cherchés gardés par `ListeCherchable` (règle de la palette, `RecherchePalette.Champs`). Toute ligne passe par `Ligne` (libellé à gauche, contrôle à droite,
-  précision grise, ⓘ), `Interrupteur` ou `RaccourciReglable` (doublons et réenregistrement) : c'est ce qui tient l'alignement — jamais un `HStack`
+  valeur ou état en gris par `etat:`, ⓘ), `Interrupteur` ou `RaccourciReglable` (doublons et réenregistrement) : c'est ce qui tient l'alignement — jamais un `HStack`
   maison. Libellés sans deux-points ni « / ». Couleurs : `Couleurs` (accent vert d'eau, ambre). `SettingsWindowController` doit appeler
   `NSApp.activate(ignoringOtherApps:)` (app accessory) ; la fenêtre s'ouvre sous la barre
   (`visibleBarFrame`), au centre sinon.

@@ -6,7 +6,7 @@ struct BarreSettings: View {
     @ObservedObject private var previews = WindowPreviewService.shared
 
     var body: some View {
-        PageReglages(titre: L("reglages.barre"), sousTitre: L("barre.sousTitre"),
+        PageReglages(titre: L("reglages.barre"),
                      aide: L("general.barre.aide")) {
             Section {
                 Interrupteur(titre: L("general.barre.afficher"), isOn: Binding(
@@ -24,7 +24,7 @@ struct BarreSettings: View {
                         Button(L("general.barre.recentrer")) { FloatingBarController.shared.recenter() }
                     }
                 }
-                Interrupteur(titre: L("barre.panneauxSeulementDofus"), sousTexte: L("barre.panneauxSeulementDofus.sousTexte"),
+                Interrupteur(titre: L("barre.panneauxSeulementDofus"), aide: L("barre.panneauxSeulementDofus.aide"),
                              isOn: Binding(get: { prefs.panneauxSeulementDofus }, set: { valeur in
                                  prefs.panneauxSeulementDofus = valeur
                                  PanneauxJeu.revoir(force: true)
