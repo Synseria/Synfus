@@ -1,22 +1,21 @@
 import SwiftUI
 
 /// Les briques communes des réglages. La règle d'interface : **un réglage
-/// par ligne, le libellé à gauche, le contrôle à droite** (`Ligne`), une
-/// précision d'une ligne en gris sous le libellé, l'explication longue
-/// derrière un ⓘ — jamais entre deux boutons. Libellés : sans deux-points ni
-/// « / », un nom (« Gain minimal ») ou un infinitif (« Afficher la barre »).
+/// par ligne, le libellé à gauche, le contrôle à droite** (`Ligne`), sous le
+/// libellé une valeur ou un état en gris (`etat`), toute explication derrière
+/// un ⓘ — jamais une phrase à l'écran. Libellés : sans deux-points ni « / »,
+/// un nom (« Gain minimal ») ou un infinitif (« Afficher la barre »).
 
-/// Une page de réglages : son titre, une phrase, puis ses groupes.
+/// Une page de réglages : son titre, puis ses groupes.
 struct PageReglages<Contenu: View>: View {
     let titre: String
-    let sousTitre: String
-    /// L'explication longue, derrière le ⓘ du titre.
+    /// L'explication, derrière le ⓘ du titre.
     var aide: String?
     @ViewBuilder let contenu: Contenu
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            EnTetePage(titre: titre, sousTitre: sousTitre, aide: aide)
+            EnTetePage(titre: titre, aide: aide)
             Form { contenu }
                 .formStyle(.grouped)
         }
@@ -26,16 +25,16 @@ struct PageReglages<Contenu: View>: View {
 /// Le titre d'une page, pour celles qui ne sont pas un formulaire.
 struct EnTetePage: View {
     let titre: String
-    let sousTitre: String
+    /// Un compte ou un état de la page, jamais une phrase.
+    var valeur: String?
     var aide: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            HStack(spacing: 8) {
-                Text(titre).font(.system(size: 20, weight: .bold))
-                if let aide { HelpTip(aide) }
-            }
-            Text(sousTitre).font(.system(size: 12)).foregroundStyle(.secondary)
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(titre).font(.system(size: 20, weight: .bold))
+            if let aide { HelpTip(aide) }
+            Spacer(minLength: 12)
+            if let valeur { Text(valeur).font(.system(size: 12)).foregroundStyle(.secondary) }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 28)
@@ -44,21 +43,21 @@ struct EnTetePage: View {
     }
 }
 
-/// Une ligne : libellé (ⓘ, précision) à gauche, précédé d'une icône s'il y
-/// en a une, contrôle à droite.
+/// Une ligne : libellé (ⓘ, état) à gauche, précédé d'une icône s'il y en a
+/// une, contrôle à droite.
 struct Ligne<Controle: View, Icone: View>: View {
     let titre: String
     var detail: String?
-    var sousTexte: String?
+    var etat: String?
     var aide: String?
     let icone: Icone
     let controle: Controle
 
-    init(titre: String, detail: String? = nil, sousTexte: String? = nil, aide: String? = nil,
+    init(titre: String, detail: String? = nil, etat: String? = nil, aide: String? = nil,
          @ViewBuilder icone: () -> Icone, @ViewBuilder controle: () -> Controle) {
         self.titre = titre
         self.detail = detail
-        self.sousTexte = sousTexte
+        self.etat = etat
         self.aide = aide
         self.icone = icone()
         self.controle = controle()
@@ -76,8 +75,8 @@ struct Ligne<Controle: View, Icone: View>: View {
                         if let detail { Text(detail).foregroundStyle(.secondary).lineLimit(1) }
                         if let aide { HelpTip(aide) }
                     }
-                    if let sousTexte {
-                        Text(sousTexte).font(.system(size: 11)).foregroundStyle(.secondary)
+                    if let etat {
+                        Text(etat).font(.system(size: 11)).foregroundStyle(.secondary)
                     }
                 }
             }
@@ -86,21 +85,21 @@ struct Ligne<Controle: View, Icone: View>: View {
 }
 
 extension Ligne where Icone == EmptyView {
-    init(titre: String, detail: String? = nil, sousTexte: String? = nil, aide: String? = nil,
+    init(titre: String, detail: String? = nil, etat: String? = nil, aide: String? = nil,
          @ViewBuilder controle: () -> Controle) {
-        self.init(titre: titre, detail: detail, sousTexte: sousTexte, aide: aide, icone: { EmptyView() }, controle: controle)
+        self.init(titre: titre, detail: detail, etat: etat, aide: aide, icone: { EmptyView() }, controle: controle)
     }
 }
 
 /// Un interrupteur sur la grille des lignes.
 struct Interrupteur: View {
     let titre: String
-    var sousTexte: String?
+    var etat: String?
     var aide: String?
     let isOn: Binding<Bool>
 
     var body: some View {
-        Ligne(titre: titre, sousTexte: sousTexte, aide: aide) {
+        Ligne(titre: titre, etat: etat, aide: aide) {
             Toggle(titre, isOn: isOn)
                 .labelsHidden()
                 .toggleStyle(.switch)

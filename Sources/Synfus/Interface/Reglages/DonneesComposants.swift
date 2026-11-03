@@ -12,7 +12,7 @@ struct SourceCarte: View {
     var body: some View {
         Ligne(titre: echec.map { L("zaap.maj.echec", $0) }
                 ?? L("zaap.maj.date", carte.carte.date.formatted(date: .abbreviated, time: .shortened)),
-              sousTexte: L("palette.reglages.carte.contenu", carte.carte.lieux.count, carte.carte.zaaps.count),
+              etat: L("palette.reglages.carte.contenu", carte.carte.lieux.count, carte.carte.zaaps.count),
               aide: L("zaap.maj.aide")) {
             HStack(spacing: 8) {
                 if miseAJour { ProgressView().controlSize(.small) }
@@ -36,7 +36,7 @@ struct SourceQuetes: View {
 
     var body: some View {
         Ligne(titre: titre,
-              sousTexte: quetes.quetes.map { L("palette.reglages.quetes.contenu", $0.quetes.count, $0.pnjs.count) },
+              etat: quetes.quetes.map { L("palette.reglages.quetes.contenu", $0.quetes.count, $0.pnjs.count) },
               aide: L("palette.reglages.quetes.aide")) {
             HStack(spacing: 8) {
                 if quetes.chargement { ProgressView().controlSize(.small) }
@@ -59,7 +59,7 @@ struct SourceClasses: View {
     @ObservedObject private var classes = ClassesStore.shared
 
     var body: some View {
-        Ligne(titre: titre, sousTexte: L("classes.maj.contenu", classes.catalogue.breeds.count),
+        Ligne(titre: titre, etat: L("classes.maj.contenu", classes.catalogue.breeds.count),
               aide: L("classes.maj.aide")) {
             HStack(spacing: 8) {
                 if classes.chargement { ProgressView().controlSize(.small) }
@@ -169,6 +169,6 @@ struct InterrupteurVuesCartes: View {
     @ObservedObject private var prefs = Preferences.shared
 
     var body: some View {
-        Interrupteur(titre: L("vuesCartes"), sousTexte: L("vuesCartes.sousTexte"), isOn: $prefs.vuesCartes)
+        Interrupteur(titre: L("vuesCartes"), aide: L("vuesCartes.aide"), isOn: $prefs.vuesCartes)
     }
 }

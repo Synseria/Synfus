@@ -7,12 +7,12 @@ struct ChasseSettings: View {
     @ObservedObject private var modele = ChasseModele.shared
 
     var body: some View {
-        PageReglages(titre: L("chasse.titre"), sousTitre: L("chasse.sousTitre"),
+        PageReglages(titre: L("chasse.titre"),
                      aide: L("chasse.aide")) {
             Section {
                 RaccourciReglable(label: L("chasse.raccourci"), chemin: \.chasseHotKey)
                 Interrupteur(titre: L("chasse.bouton"), isOn: $prefs.chasseBouton)
-                Ligne(titre: L("chasse.indices"), sousTexte: source) {
+                Ligne(titre: L("chasse.indices"), etat: source) {
                     HStack(spacing: 8) {
                         if modele.chargementIndices { ProgressView().controlSize(.small) }
                         Button(L("chasse.indices.maj")) { Task { await modele.chargerIndices(forcer: true) } }

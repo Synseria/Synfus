@@ -12,7 +12,7 @@ struct CharactersSettings: View {
     }
 
     var body: some View {
-        PageReglages(titre: L("reglages.persos"), sousTitre: L("persos.sousTitre")) {
+        PageReglages(titre: L("reglages.persos")) {
             Section {
                 ForEach(Array(prefs.characterOrder.enumerated()), id: \.element) { index, name in
                     characterRow(index: index, name: name)

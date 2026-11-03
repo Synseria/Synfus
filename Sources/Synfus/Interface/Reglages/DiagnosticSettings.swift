@@ -15,7 +15,7 @@ struct DiagnosticSettings: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            EnTetePage(titre: L("reglages.diagnostic"), sousTitre: L("diagnostic.sousTitre"))
+            EnTetePage(titre: L("reglages.diagnostic"))
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
                     content
