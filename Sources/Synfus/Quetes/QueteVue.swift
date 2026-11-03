@@ -122,7 +122,7 @@ struct QueteVue: View {
 
     // MARK: - En-tête du panneau
 
-    /// Une seule ligne : le menu des quêtes au nom de la montrée, puis de quoi
+    /// Le menu des quêtes au nom de la montrée, seul endroit où il paraît, puis de quoi
     /// la désépingler et cacher le panneau. Tout l'en-tête déplace le panneau,
     /// sauf les boutons ; un clic sur le titre ouvre le menu (`EnTetePanneau`).
     private var enTete: some View {
@@ -145,7 +145,8 @@ struct QueteVue: View {
     private func menuQuetes(titre: String) -> some View {
         let nouvelles = MenuQuetes.nouvelles(lecture.reconnues, epinglees: prefs.quetesEpinglees)
         return HStack(spacing: 4) {
-            Text(titre).font(.synfus(metriques.titre, gras: true)).lineLimit(2).fixedSize(horizontal: false, vertical: true)
+            Text(titre).font(.synfus(metriques.titre, gras: true)).lineLimit(3).fixedSize(horizontal: false, vertical: true)
+                .help(titre)
             Image(systemName: "chevron.down").font(.synfus(.marque, gras: true)).foregroundStyle(.secondary)
             if nouvelles > 0, ficheImposee == nil {
                 Text("\(nouvelles)")

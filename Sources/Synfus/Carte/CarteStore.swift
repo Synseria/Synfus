@@ -37,6 +37,9 @@ final class CarteStore: ObservableObject {
         }
     }
 
+    /// La carte des captures de la documentation, sans disque ni réseau.
+    func poserPourCaptures(_ carte: Carte) { publier(CarteIndexee(carte)) }
+
     func mettreAJour() async throws {
         let nouvelle = try await CarteDofusDB.telecharger()
         publier(await Task.detached(priority: .utility) {

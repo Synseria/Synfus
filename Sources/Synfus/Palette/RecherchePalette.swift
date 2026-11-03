@@ -110,8 +110,8 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
     let genre: Genre
     let titre: String
     var sousTitre: String?
-    /// Tout ce que l'entrée affiche, pour l'infobulle d'une entrée coupée.
-    var complet: String { [titre, itineraire, sousTitre].compactMap(\.self).joined(separator: " · ") }
+    /// Nom, lieu et trajet en entier : l'infobulle d'une entrée coupée.
+    var complet: String { [titre, sousTitre, itineraire].compactMap(\.self).joined(separator: " · ") }
     var etiquette: String?
     /// À droite : coordonnées, commande copiée.
     var detail: String?
