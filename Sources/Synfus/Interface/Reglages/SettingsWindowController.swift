@@ -20,7 +20,7 @@ final class SettingsWindowController: NSObject {
     func show(section: SettingsSection? = nil) {
         if let section { OngletReglages.shared.section = section }
         if window == nil {
-            let hosting = NSHostingController(rootView: SettingsView())
+            let hosting = NSHostingController(rootView: SettingsView().racineSynfus())
             let window = NSWindow(contentViewController: hosting)
             window.title = L("reglages.titre")
             window.styleMask = [.titled, .closable, .miniaturizable]

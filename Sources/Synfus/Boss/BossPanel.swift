@@ -61,7 +61,7 @@ final class BossPanel: NSObject, ObservableObject {
     }
 
     private func construire() -> NSPanel {
-        let hosting = NSHostingController(rootView: BossVue())
+        let hosting = NSHostingController(rootView: BossVue().racineSynfus())
         hosting.sizingOptions = [.preferredContentSize]
         let panel = PanneauBoss(
             contentRect: NSRect(x: 0, y: 0, width: BossVue.largeur, height: 300),

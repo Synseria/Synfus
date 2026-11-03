@@ -33,14 +33,14 @@ struct PaletteVue: View {
     private var recherche: some View {
         HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 15))
+                .font(.synfus(.titre))
                 .foregroundStyle(.secondary)
             TextField(L("palette.invite"), text: $modele.requete)
                 .textFieldStyle(.plain)
-                .font(.system(size: 20))
+                .font(.synfus(.grand))
                 .focused($champ, equals: .recherche)
             Text(mode)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.synfus(.petit, gras: true))
                 .foregroundStyle(.white)
                 .padding(.horizontal, 7)
                 .padding(.vertical, 2)
@@ -56,7 +56,7 @@ struct PaletteVue: View {
             ForEach(FiltrePalette.allCases, id: \.self) { filtre in
                 let choisi = modele.filtre == filtre
                 Text(filtre.titre)
-                    .font(.system(size: 11, weight: choisi ? .semibold : .regular))
+                    .font(.synfus(.petit, gras: choisi))
                     .foregroundStyle(choisi ? Color.white : Color.secondary)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
@@ -68,11 +68,11 @@ struct PaletteVue: View {
             // D'où partent distances et trajets : le dernier perso lu devant,
             // pas forcément celui qu'on croit quand on joue plusieurs comptes.
             Text(modele.origine)
-                .font(.system(size: 11))
+                .font(.synfus(.petit))
                 .foregroundStyle(.tertiary)
                 .lineLimit(1)
             Text(L("palette.tri", modele.tri.titre))
-                .font(.system(size: 11))
+                .font(.synfus(.petit))
                 .foregroundStyle(.secondary)
                 .onTapGesture { modele.triSuivant() }
         }
@@ -104,7 +104,7 @@ struct PaletteVue: View {
                      : modele.filtre == .ici && !modele.positionConnue
                         ? (sansLecture ? L("palette.ici.sansPosition") : L("palette.ici.pasEncore"))
                         : L("palette.aucun"))
-                    .font(.system(size: 13))
+                    .font(.synfus(.corps))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                 if sansLecture {
@@ -142,7 +142,7 @@ struct PaletteVue: View {
                 Image(systemName: "clock.arrow.circlepath").foregroundStyle(.secondary)
                 ForEach(modele.recents) { entree in
                     Text(entree.titre)
-                        .font(.system(size: 11, design: .monospaced))
+                        .font(.synfus(.petit, design: .monospaced))
                         .lineLimit(1)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
@@ -152,7 +152,7 @@ struct PaletteVue: View {
                 }
             }
         }
-        .font(.system(size: 11))
+        .font(.synfus(.petit))
     }
 
     private var grille: some View {
@@ -205,12 +205,12 @@ struct PaletteVue: View {
         if let edition = modele.edition {
             HStack(spacing: 8) {
                 Text(L("palette.etiquette.pour", edition.titre))
-                    .font(.system(size: 12))
+                    .font(.synfus(.note))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                 TextField(L("palette.etiquette.exemple"), text: $modele.texteEtiquette)
                     .textFieldStyle(.roundedBorder)
-                    .font(.system(size: 12))
+                    .font(.synfus(.note))
                     .focused($champ, equals: .etiquette)
                 Touche("↵")
                 Touche("esc")
@@ -229,7 +229,7 @@ struct PaletteVue: View {
                 Spacer()
                 aide("esc", L("palette.touche.fermer"))
             }
-            .font(.system(size: 11))
+            .font(.synfus(.petit))
             .foregroundStyle(.secondary)
             .padding(.horizontal, 16)
             .frame(height: 36)
@@ -264,7 +264,7 @@ private struct Touche: View {
 
     var body: some View {
         Text(texte)
-            .font(.system(size: 11, design: .monospaced))
+            .font(.synfus(.petit, design: .monospaced))
             .padding(.horizontal, 5)
             .padding(.vertical, 1)
             .background(RoundedRectangle(cornerRadius: 4).fill(Color.primary.opacity(0.08)))
@@ -283,12 +283,12 @@ private struct CarteZaap: View {
                 if let etiquette = entree.etiquette { PastilleEtiquette(texte: etiquette) }
                 Spacer(minLength: 0)
                 if entree.favori {
-                    Image(systemName: "star.fill").font(.system(size: 9)).foregroundStyle(Couleurs.ambre)
+                    Image(systemName: "star.fill").font(.synfus(.marque)).foregroundStyle(Couleurs.ambre)
                 }
             }
             .frame(height: 16)
             Text(entree.titre)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.synfus(.note, gras: true))
                 .lineLimit(1)
             HStack(spacing: 4) {
                 Text(entree.itineraire ?? entree.sousTitre ?? "")
@@ -296,10 +296,10 @@ private struct CarteZaap: View {
                     .foregroundStyle(.secondary)
                 Spacer(minLength: 0)
                 Text(entree.detail ?? "")
-                    .font(.system(size: 11, design: .monospaced))
+                    .font(.synfus(.petit, design: .monospaced))
                     .foregroundStyle(.secondary)
             }
-            .font(.system(size: 11))
+            .font(.synfus(.petit))
         }
         .padding(9)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -321,44 +321,44 @@ private struct LigneResultat: View {
         HStack(spacing: 12) {
             PictogrammeLieu(gfx: entree.pictogramme) {
                 Image(systemName: icone)
-                    .font(.system(size: 13))
-                    .foregroundStyle(choisie ? Couleurs.accent : Color.secondary)
+                    .font(.synfus(.corps))
+                    .foregroundStyle(choisie ? Couleurs.accentTexte : Color.secondary)
             }
             .frame(width: 22, height: 22)
             .frame(width: 26, height: 26)
             .background(RoundedRectangle(cornerRadius: 7).fill(Color.primary.opacity(0.06)))
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
-                    Text(entree.titre).font(.system(size: 13)).lineLimit(1)
+                    Text(entree.titre).font(.synfus(.corps)).lineLimit(1)
                     if let etiquette = entree.etiquette { PastilleEtiquette(texte: etiquette) }
                     if entree.favori {
-                        Image(systemName: "star.fill").font(.system(size: 9)).foregroundStyle(Couleurs.ambre)
+                        Image(systemName: "star.fill").font(.synfus(.marque)).foregroundStyle(Couleurs.ambre)
                     }
-                    if entree.interieur { EtiquetteInterieur(taille: 11) }
+                    if entree.interieur { EtiquetteInterieur(taille: .petit) }
                 }
                 if entree.sousTitre != nil || entree.itineraire != nil {
                     HStack(spacing: 6) {
                         if let sousTitre = entree.sousTitre { Text(sousTitre).foregroundStyle(.secondary) }
                         // Le zaap retenu, à lire avant d'Entrée : le trajet copié y passe.
                         if let itineraire = entree.itineraire {
-                            Text(itineraire).foregroundStyle(Couleurs.accent).layoutPriority(1)
+                            Text(itineraire).foregroundStyle(Couleurs.accentTexte).layoutPriority(1)
                         }
                     }
-                    .font(.system(size: 11))
+                    .font(.synfus(.petit))
                     .lineLimit(1)
                 }
             }
             Spacer(minLength: 8)
             if let detail = entree.detail {
                 Text(detail)
-                    .font(.system(size: 12, design: .monospaced))
+                    .font(.synfus(.note, design: .monospaced))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
             if let carte = entree.carte { MiniatureCarte(carte: carte, taille: Self.vignette) }
             if case .ouTrouver = entree.effet {
                 Image(systemName: deplie ? "chevron.down" : "chevron.right")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.synfus(.petit, gras: true))
                     .foregroundStyle(.secondary)
                     .frame(width: 14)
             }
@@ -393,11 +393,11 @@ private struct LigneResultat: View {
 /// Une carte qui n'est pas en extérieur : `/travel` mène devant, il reste
 /// à entrer. La palette et le panneau des quêtes la disent pareil.
 struct EtiquetteInterieur: View {
-    let taille: CGFloat
+    let taille: TailleTexte
 
     var body: some View {
         Text(L("carte.interieur"))
-            .font(.system(size: taille, weight: .medium))
+            .font(.synfus(taille))
             .foregroundStyle(.secondary)
             .padding(.horizontal, 4)
             .overlay(Capsule().strokeBorder(Color.secondary.opacity(0.5)))
@@ -411,7 +411,7 @@ struct PastilleEtiquette: View {
 
     var body: some View {
         Text(texte)
-            .font(.system(size: 11, weight: .semibold))
+            .font(.synfus(.petit, gras: true))
             .foregroundStyle(.black.opacity(0.85))
             .padding(.horizontal, 5)
             .padding(.vertical, 1)

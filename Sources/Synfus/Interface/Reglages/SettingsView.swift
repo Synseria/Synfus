@@ -120,7 +120,6 @@ struct SettingsView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(width: 920, height: 680)
-        .tint(Couleurs.accent)
     }
 
     private var sidebar: some View {
@@ -129,7 +128,7 @@ struct SettingsView: View {
                 ForEach(GroupeReglages.allCases, id: \.self) { groupe in
                     if let titre = groupe.titre {
                         Text(titre)
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.synfus(.petit, gras: true))
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, 8)
                             .padding(.top, 10)
@@ -154,7 +153,7 @@ struct SettingsView: View {
                 Image(systemName: item.icon).frame(width: 18)
                 Text(item.label)
             }
-                .font(.system(size: 12, weight: section == item ? .semibold : .regular))
+                .font(.synfus(.note, gras: section == item))
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 5)

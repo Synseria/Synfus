@@ -76,9 +76,9 @@ struct CalibrationZonesView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(L("calibration.titre", genre.libelle)).font(.system(size: 15, weight: .semibold))
+            Text(L("calibration.titre", genre.libelle)).font(.synfus(.titre, gras: true))
             Text(genre.consigne)
-                .font(.system(size: 11))
+                .font(.synfus(.petit))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -87,7 +87,7 @@ struct CalibrationZonesView: View {
                 .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.05)))
             if let capture {
                 Text(L("calibration.capturee", capture.date.formatted(date: .abbreviated, time: .shortened)))
-                    .font(.system(size: 11))
+                    .font(.synfus(.petit))
                     .foregroundStyle(.tertiary)
             }
 
@@ -161,7 +161,7 @@ struct CalibrationZonesView: View {
         } else {
             Text(decompte != nil ? L("calibration.enCours")
                  : echec ?? (manager.clients.isEmpty ? L("calibration.aucunPerso") : L("calibration.aucuneCapture")))
-                .font(.system(size: 11))
+                .font(.synfus(.petit))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(24)
@@ -184,16 +184,16 @@ struct CalibrationZonesView: View {
                     .overlay(Rectangle().strokeBorder(genre.teinte.opacity(0.6), lineWidth: 1))
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
-                        Text(L("calibration.essai")).font(.system(size: 11, weight: .semibold))
+                        Text(L("calibration.essai")).font(.synfus(.petit, gras: true))
                         if essaiEnCours != nil { ProgressView().controlSize(.mini) }
                     }
                     if let essai {
                         Text(L("calibration.essai.compris", essai.compris))
-                            .font(.system(size: 11))
+                            .font(.synfus(.petit))
                             .fixedSize(horizontal: false, vertical: true)
                         Text(L("diagnostic.position.brut",
                                essai.lignes.isEmpty ? "—" : essai.lignes.joined(separator: " ⏎ ")))
-                            .font(.system(size: 11, design: .monospaced))
+                            .font(.synfus(.petit, design: .monospaced))
                             .foregroundStyle(.tertiary)
                             .lineLimit(6)
                             .textSelection(.enabled)

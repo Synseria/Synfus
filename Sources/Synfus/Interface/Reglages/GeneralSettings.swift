@@ -84,7 +84,7 @@ struct GeneralSettings: View {
             HStack(spacing: 6) {
                 Image(systemName: "exclamationmark.triangle").foregroundStyle(Couleurs.alerte)
                 Text(L("general.quarantaine"))
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.synfus(.petit, gras: true))
                 HelpTip(L("general.quarantaine.aide"))
             }
             CopiableCommand(command: AppIntegrity.quarantineFix)

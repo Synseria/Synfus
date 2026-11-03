@@ -41,17 +41,17 @@ struct TeamSectorView: View {
                 switch secteur {
                 case .tous:
                     Image(systemName: "person.3")
-                        .font(.system(size: 11, weight: .medium))
+                        .font(.synfus(.petit))
                 case .equipe(let index):
                     Text("\(index + 1)")
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .font(.synfus(.petit, gras: true, design: .rounded))
                         .padding(.trailing, 1)
                     ForEach(membres, id: \.self) { membre in
                         point(for: membre)
                     }
                 case .nouvelle:
                     Image(systemName: "plus")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.synfus(.petit, gras: true))
                 }
             }
             .padding(.horizontal, agrandi ? 12 : 7)

@@ -61,7 +61,7 @@ struct CharactersSettings: View {
     private func characterRow(index: Int, name: String) -> some View {
         HStack(spacing: 8) {
             Image(systemName: "line.3.horizontal")
-                .font(.system(size: 9))
+                .font(.synfus(.marque))
                 .foregroundStyle(.tertiary)
             Circle()
                 .fill(isOnline(name) ? Couleurs.succes : Color.secondary.opacity(0.3))
@@ -71,11 +71,11 @@ struct CharactersSettings: View {
             teamPicker(for: name)
             if let slot = slotOf(name) {
                 Text("\(slot + 1)")
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .font(.synfus(.petit, gras: true, design: .rounded))
                     .foregroundStyle(.secondary)
             }
             Text(isOnline(name) ? L("persos.connecte") : L("persos.horsLigne"))
-                .font(.system(size: 11))
+                .font(.synfus(.petit))
                 .foregroundStyle(.tertiary)
 
             HStack(spacing: 2) {
@@ -92,7 +92,7 @@ struct CharactersSettings: View {
                 .help(L("persos.descendre"))
             }
             .buttonStyle(.borderless)
-            .font(.system(size: 11, weight: .semibold))
+            .font(.synfus(.petit, gras: true))
         }
         .padding(.vertical, 4)
         .contentShape(Rectangle())
@@ -115,7 +115,7 @@ struct CharactersSettings: View {
         }
         .labelsHidden()
         .fixedSize()
-        .font(.system(size: 11))
+        .font(.synfus(.petit))
         .help(L("persos.equipeDuPerso"))
     }
 

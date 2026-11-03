@@ -67,8 +67,8 @@ struct ShortcutRecorder: View {
         HStack(spacing: 6) {
             Button(action: toggle) {
                 Text(label)
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
-                    .foregroundStyle(recording ? Couleurs.accent : .primary)
+                    .font(.synfus(.note, gras: true, design: .rounded))
+                    .foregroundStyle(recording ? Couleurs.accentTexte : .primary)
                     .frame(minWidth: 92)
                     .padding(.vertical, 4)
                     .padding(.horizontal, 8)

@@ -31,10 +31,10 @@ struct EnTetePage: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Text(titre).font(.system(size: 20, weight: .semibold))
+            Text(titre).font(.synfus(.grand, gras: true))
             if let aide { HelpTip(aide) }
             Spacer(minLength: 12)
-            if let valeur { Text(valeur).font(.system(size: 12)).foregroundStyle(.secondary) }
+            if let valeur { Text(valeur).font(.synfus(.note)).foregroundStyle(.secondary) }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 28)
@@ -76,7 +76,7 @@ struct Ligne<Controle: View, Icone: View>: View {
                         if let aide { HelpTip(aide) }
                     }
                     if let etat {
-                        Text(etat).font(.system(size: 11)).foregroundStyle(.secondary)
+                        Text(etat).font(.synfus(.petit)).foregroundStyle(.secondary)
                     }
                 }
             }
@@ -131,7 +131,7 @@ struct HelpTip: View {
     var body: some View {
         Button { showing.toggle() } label: {
             Image(systemName: "info.circle")
-                .font(.system(size: 12))
+                .font(.synfus(.note))
                 .foregroundStyle(.secondary)
         }
         .buttonStyle(.plain)
@@ -139,7 +139,7 @@ struct HelpTip: View {
         .accessibilityLabel(text)
         .popover(isPresented: $showing, arrowEdge: .bottom) {
             Text(text)
-                .font(.system(size: 12))
+                .font(.synfus(.note))
                 .padding(12)
                 .frame(width: 300, alignment: .leading)
         }
@@ -182,7 +182,7 @@ struct ShortcutRow: View {
             HStack(spacing: 6) {
                 if conflit || refuse {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 11))
+                        .font(.synfus(.petit))
                         .foregroundStyle(Couleurs.alerte)
                         .help(conflit ? L("raccourcis.conflit") : L("raccourcis.refuse"))
                 }
@@ -257,7 +257,7 @@ struct CopiableCommand: View {
     var body: some View {
         HStack(spacing: 6) {
             Text(command)
-                .font(.system(size: 11, design: .monospaced))
+                .font(.synfus(.petit, design: .monospaced))
                 .textSelection(.enabled)
                 .lineLimit(2)
                 .truncationMode(.middle)

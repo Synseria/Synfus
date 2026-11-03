@@ -13,10 +13,11 @@ La grille est le skill global `grille-ui`. Ici, seulement ce qui lui manque ou l
 
 ## Jetons
 
-- Couleurs : `Couleurs` (accent, `accentPlein` en aplat sous du texte blanc, ambre, suggestion,
-  alerte, succes) ; une couleur de classe vient de `DofusClass`. Tailles : 11, 12, 13, 15, 20, et
-  9 pour les marques (initiales, numéros, chevrons), jamais pour un texte ; graisses : normale et
-  semibold. `JetonsTests` les tient.
+- Couleurs : `Couleurs` — `accent` (trait, voile), `accentPlein` (aplat sous du blanc), `accentTexte`
+  (texte), ambre, suggestion, alerte, succes ; une couleur de classe vient de `DofusClass`.
+- Polices : `.font(.synfus(taille, gras:, design:))`, `TailleTexte` pour seule échelle ; `marque`
+  pour les initiales, numéros et petits symboles, jamais pour un texte. Racine de fenêtre :
+  `.racineSynfus()`. `JetonsTests` tient le tout.
 - Lignes de réglage : `Ligne`, `Interrupteur`, `RaccourciReglable`. Sous un libellé, `etat:` ne prend
   qu'une valeur, un état, le résultat d'une action ou une mention légale ; une explication va dans
   `aide:` (ⓘ). `Interrupteur` n'a pas d'`etat:`. Un titre de page n'a pas de phrase : `EnTetePage`
@@ -27,7 +28,7 @@ La grille est le skill global `grille-ui`. Ici, seulement ce qui lui manque ou l
 
 ## Relevés dans le code
 
-Un résultat se regarde, il ne vaut pas défaut à lui seul (une icône de 8 pt n'est pas un texte).
+Un résultat se regarde, il ne vaut pas défaut à lui seul.
 
 ```sh
 rg -t swift 'lineLimit\(1\)' Sources                             # troncatures à justifier
