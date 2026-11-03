@@ -12,9 +12,7 @@ enum Couleurs {
     static let accentPlein = Color(red: 0.12, green: 0.50, blue: 0.41)
     /// L'accent d'un texte : `accent` ne tient pas 4,5:1 sur un fond clair.
     static let accentTexte = Color(nsColor: NSColor(name: nil) { apparence in
-        let sombre = apparence.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
-        return sombre ? NSColor(srgbRed: 0.19, green: 0.65, blue: 0.53, alpha: 1)
-                      : NSColor(srgbRed: 0.12, green: 0.50, blue: 0.41, alpha: 1)
+        NSColor(apparence.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? accent : accentPlein)
     })
     static let ambre = Color(red: 0.89, green: 0.71, blue: 0.35)
     static let suggestion = Color(red: 0.62, green: 0.45, blue: 0.95)

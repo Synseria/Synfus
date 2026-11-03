@@ -20,7 +20,7 @@ struct DiagnosticSettings: View {
                 VStack(alignment: .leading, spacing: 10) {
                     content
                 }
-                .padding(.horizontal, 32)
+                .padding(.horizontal, MargeReglages.texte)
                 .padding(.vertical, 14)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -35,7 +35,7 @@ struct DiagnosticSettings: View {
                     .foregroundStyle(managerDiagnostics.lastInventoryDuration > 0.5 ? Couleurs.alerte : Color.secondary)
                 Spacer()
             }
-            .padding(.horizontal, 32)
+            .padding(.horizontal, MargeReglages.texte)
             .padding(.vertical, 10)
         }
     }

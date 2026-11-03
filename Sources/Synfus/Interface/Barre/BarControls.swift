@@ -286,7 +286,8 @@ struct AlertPulse: View {
         RoundedRectangle(cornerRadius: 8, style: .continuous)
             .strokeBorder(Couleurs.alerte, lineWidth: 1.5)
             .opacity(pulse || sansMouvement ? 1 : 0.2)
-            .onAppear {
+            .task(id: sansMouvement) {
+                pulse = false
                 guard !sansMouvement else { return }
                 withAnimation(.easeInOut(duration: 0.55).repeatForever(autoreverses: true)) {
                     pulse = true
@@ -334,7 +335,8 @@ struct SwitchBlink: View {
             .shadow(color: Couleurs.accent, radius: 4)
             .opacity(allume || sansMouvement ? 1 : 0.1)
             .allowsHitTesting(false)
-            .onAppear {
+            .task(id: sansMouvement) {
+                allume = true
                 guard !sansMouvement else { return }
                 withAnimation(.easeInOut(duration: 0.2).repeatForever(autoreverses: true)) {
                     allume = false

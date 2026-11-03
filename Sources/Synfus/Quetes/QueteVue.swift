@@ -145,7 +145,7 @@ struct QueteVue: View {
     private func menuQuetes(titre: String) -> some View {
         let nouvelles = MenuQuetes.nouvelles(lecture.reconnues, epinglees: prefs.quetesEpinglees)
         return HStack(spacing: 4) {
-            Text(titre).font(.synfus(metriques.titre, gras: true)).lineLimit(1).truncationMode(.tail).help(titre)
+            Text(titre).font(.synfus(metriques.titre, gras: true)).lineLimit(2).fixedSize(horizontal: false, vertical: true)
             Image(systemName: "chevron.down").font(.synfus(.marque, gras: true)).foregroundStyle(.secondary)
             if nouvelles > 0, ficheImposee == nil {
                 Text("\(nouvelles)")
@@ -306,7 +306,7 @@ struct QueteVue: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help(sujet.estUnMonstre ? L("ouTrouver.aide.monstre") : L("ouTrouver.aide.objet"))
+        .aide(sujet.estUnMonstre ? L("ouTrouver.aide.monstre") : L("ouTrouver.aide.objet"))
     }
 
     /// `retrait` : sous le texte de la ligne, pas sous son icône.

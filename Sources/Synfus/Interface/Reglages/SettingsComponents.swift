@@ -6,6 +6,11 @@ import SwiftUI
 /// un ⓘ — jamais une phrase à l'écran. Libellés : sans deux-points ni « / »,
 /// un nom (« Gain minimal ») ou un infinitif (« Afficher la barre »).
 
+/// Le bord gauche du texte d'une page, celui des lignes d'un `Form` groupé.
+enum MargeReglages {
+    static let texte: CGFloat = 32
+}
+
 /// Une page de réglages : son titre, puis ses groupes.
 struct PageReglages<Contenu: View>: View {
     let titre: String
@@ -37,7 +42,7 @@ struct EnTetePage: View {
             if let valeur { Text(valeur).font(.synfus(.note)).foregroundStyle(.secondary) }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 32)
+        .padding(.horizontal, MargeReglages.texte)
         .padding(.top, 22)
         .padding(.bottom, 4)
     }
