@@ -16,9 +16,9 @@ struct BossSettings: View {
                     }
                 }
             }
-            Section {
-                Ligne(titre: L("boss.lecture"), aide: L("boss.lecture.aide")) {
-                    if !previews.authorized {
+            if !previews.authorized {
+                Section {
+                    Ligne(titre: L("boss.lecture"), aide: L("boss.lecture.aide")) {
                         Button(L("boss.autoriser")) { previews.requestAuthorization() }
                     }
                 }

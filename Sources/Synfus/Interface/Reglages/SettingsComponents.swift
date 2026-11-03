@@ -30,7 +30,7 @@ struct EnTetePage: View {
     var aide: String?
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
+        HStack(spacing: 8) {
             Text(titre).font(.system(size: 20, weight: .bold))
             if let aide { HelpTip(aide) }
             Spacer(minLength: 12)
@@ -94,12 +94,11 @@ extension Ligne where Icone == EmptyView {
 /// Un interrupteur sur la grille des lignes.
 struct Interrupteur: View {
     let titre: String
-    var etat: String?
     var aide: String?
     let isOn: Binding<Bool>
 
     var body: some View {
-        Ligne(titre: titre, etat: etat, aide: aide) {
+        Ligne(titre: titre, aide: aide) {
             Toggle(titre, isOn: isOn)
                 .labelsHidden()
                 .toggleStyle(.switch)
@@ -136,6 +135,8 @@ struct HelpTip: View {
                 .foregroundStyle(.secondary)
         }
         .buttonStyle(.plain)
+        .help(text)
+        .accessibilityLabel(text)
         .popover(isPresented: $showing, arrowEdge: .bottom) {
             Text(text)
                 .font(.system(size: 12))

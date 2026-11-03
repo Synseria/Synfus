@@ -5,7 +5,7 @@ struct PaletteSettings: View {
     @ObservedObject private var prefs = Preferences.shared
 
     var body: some View {
-        PageReglages(titre: L("reglages.palette"), aide: L("raccourcis.palette.aide")) {
+        PageReglages(titre: L("reglages.palette")) {
             Section {
                 RaccourciReglable(label: L("raccourcis.palette"), help: L("raccourcis.palette.aide"),
                                   chemin: \.paletteHotKey)

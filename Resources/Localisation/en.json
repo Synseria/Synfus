@@ -626,7 +626,6 @@
   "raccourcis.aide": "Global shortcuts: they work even when Dofus is in front.",
   "raccourcis.allerAUnPerso": "Go to a character",
   "raccourcis.allerAUnPerso.aide": "One shortcut per connected character, in the order of the Characters tab; characters not connected are skipped.",
-  "raccourcis.attention": "When a character calls for attention",
   "raccourcis.attention.aide": "Detected from the icon bouncing in the Dock, the only signal an app can send outward; Synfus reads nothing from the game itself.",
   "raccourcis.attention.bascule": "Turn automatic switching on or off",
   "raccourcis.attention.reaction": "Reaction",
@@ -740,5 +739,6 @@
   "zaap.sansPosition": "Position reading is required.",
   "zaap.supprimer": "Delete this zaap",
   "zaaps.compte": "%lld active out of %lld",
+  "zaaps.compte.un": "%lld active out of %lld",
   "zaaps.grille": "Enable, label, favorite"
 }

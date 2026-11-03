@@ -626,7 +626,6 @@
   "raccourcis.aide": "Des raccourcis globaux : ils marchent même quand Dofus est devant.",
   "raccourcis.allerAUnPerso": "Aller à un perso",
   "raccourcis.allerAUnPerso.aide": "Un raccourci par perso connecté, dans l'ordre de l'onglet Persos ; les persos non connectés sont sautés.",
-  "raccourcis.attention": "Quand un perso réclame l'attention",
   "raccourcis.attention.aide": "Détecté au rebond de l'icône dans le Dock, le seul signal qu'une app peut émettre vers l'extérieur ; Synfus ne lit rien du jeu lui-même.",
   "raccourcis.attention.bascule": "Activer ou couper le passage automatique",
   "raccourcis.attention.reaction": "Réaction",
@@ -740,5 +739,6 @@
   "zaap.sansPosition": "Il faut la lecture de la position.",
   "zaap.supprimer": "Supprimer ce zaap",
   "zaaps.compte": "%lld actifs sur %lld",
+  "zaaps.compte.un": "%lld actif sur %lld",
   "zaaps.grille": "Activer, étiqueter, mettre en favori"
 }
