@@ -119,6 +119,7 @@ struct CapturesTests {
         let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
         try FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)
         equipe()
+        CarteStore.shared.poserPourCaptures(Carte.integree)
         let toutes = ProcessInfo.processInfo.environment["SYNFUS_CAPTURES_TOUT"] != nil
         let sections: [SettingsSection] = toutes ? SettingsSection.allCases : [.zaaps, .raccourcis, .lecture]
         for (nom, section) in sections.map({ ("reglages-" + $0.rawValue, $0) }) {

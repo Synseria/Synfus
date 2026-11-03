@@ -279,18 +279,31 @@ struct GearButton: View {
 /// et l'appliquait, invisible, à toutes les pastilles — la barre se redessinait
 /// deux fois par seconde en permanence, alerte ou pas.
 struct AlertPulse: View {
-    @Environment(\.accessibilityReduceMotion) private var sansMouvement
-    @State private var pulse = false
-
     var body: some View {
         RoundedRectangle(cornerRadius: 8, style: .continuous)
             .strokeBorder(Couleurs.alerte, lineWidth: 1.5)
-            .opacity(pulse || sansMouvement ? 1 : 0.2)
-            .task(id: sansMouvement) {
-                pulse = false
-                guard !sansMouvement else { return }
-                withAnimation(.easeInOut(duration: 0.55).repeatForever(autoreverses: true)) {
-                    pulse = true
+            .modifier(Battement(bas: 0.2, demiPeriode: 0.55))
+    }
+}
+
+/// L'opacité d'un signal qui bat, pleine sous « Réduire les animations ». Remettre
+/// `haut` à vrai sans animation est ce qui arrête un `repeatForever` en cours.
+private struct Battement: ViewModifier {
+    let bas: Double
+    let demiPeriode: TimeInterval
+    @Environment(\.accessibilityReduceMotion) private var sansMouvement
+    @State private var haut = true
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(haut ? 1 : bas)
+            .onChange(of: sansMouvement, initial: true) {
+                if sansMouvement {
+                    haut = true
+                } else {
+                    withAnimation(.easeInOut(duration: demiPeriode).repeatForever(autoreverses: true)) {
+                        haut = false
+                    }
                 }
             }
     }
@@ -326,22 +339,12 @@ struct CopiedBadge: View {
 /// de la pastille active ne se remarquait pas, et l'on perdait le fil. Un
 /// contour qui clignote se voit du coin de l'œil, sans rien poser sur le jeu.
 struct SwitchBlink: View {
-    @Environment(\.accessibilityReduceMotion) private var sansMouvement
-    @State private var allume = true
-
     var body: some View {
         RoundedRectangle(cornerRadius: 8, style: .continuous)
             .strokeBorder(Color.white, lineWidth: 2)
             .shadow(color: Couleurs.accent, radius: 4)
-            .opacity(allume || sansMouvement ? 1 : 0.1)
+            .modifier(Battement(bas: 0.1, demiPeriode: 0.2))
             .allowsHitTesting(false)
-            .task(id: sansMouvement) {
-                allume = true
-                guard !sansMouvement else { return }
-                withAnimation(.easeInOut(duration: 0.2).repeatForever(autoreverses: true)) {
-                    allume = false
-                }
-            }
     }
 }
 
