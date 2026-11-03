@@ -107,6 +107,7 @@ struct CalibrationZonesView: View {
                 Spacer()
                 Button(L("calibration.terminer")) { dismiss() }
                     .keyboardShortcut(.defaultAction)
+                    .tint(Couleurs.accentPlein)
             }
         }
         .padding(16)

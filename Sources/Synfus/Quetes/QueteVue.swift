@@ -145,7 +145,7 @@ struct QueteVue: View {
     private func menuQuetes(titre: String) -> some View {
         let nouvelles = MenuQuetes.nouvelles(lecture.reconnues, epinglees: prefs.quetesEpinglees)
         return HStack(spacing: 4) {
-            Text(titre).font(.synfus(metriques.texte, gras: true)).lineLimit(1).truncationMode(.tail)
+            Text(titre).font(.synfus(metriques.titre, gras: true)).lineLimit(1).truncationMode(.tail).help(titre)
             Image(systemName: "chevron.down").font(.synfus(.marque, gras: true)).foregroundStyle(.secondary)
             if nouvelles > 0, ficheImposee == nil {
                 Text("\(nouvelles)")
@@ -163,28 +163,13 @@ struct QueteVue: View {
 
     // MARK: - En-tête
 
-    /// Le nom et ses étiquettes, puis le niveau et le guide : chaque paire
-    /// passe sur deux lignes quand le panneau est trop étroit pour une.
+    /// Le niveau et le guide, sur deux lignes quand le panneau est trop étroit
+    /// pour une, sous les étiquettes. Le nom est au titre du panneau.
     private func entete(_ fiche: FicheQuete) -> some View {
-        let nom = Text(fiche.nom)
-            .font(.synfus(metriques.titre, gras: true))
-            .fixedSize(horizontal: false, vertical: true)
         let niveau = Text(L("quete.niveau", nombre: fiche.etapes.count, fiche.niveau, fiche.etapes.count))
         return VStack(alignment: .leading, spacing: metriques.ecartLignes) {
             if fiche.groupe || fiche.donjon {
-                ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        nom
-                        Spacer(minLength: 4)
-                        badges(fiche)
-                    }
-                    VStack(alignment: .leading, spacing: 2) {
-                        nom
-                        HStack(spacing: 4) { badges(fiche) }
-                    }
-                }
-            } else {
-                nom
+                HStack(spacing: 4) { badges(fiche) }
             }
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 6) {
@@ -365,16 +350,19 @@ struct QueteVue: View {
                 HStack(spacing: 6) {
                     Button { changerEtape(fiche, rang - 1) } label: { Image(systemName: "chevron.left") }
                         .disabled(rang == 0)
-                        .help(L("quete.etapePrecedente"))
-                    titreSection(L("quete.etapeSur", rang + 1, fiche.etapes.count, etape.nom))
+                        .aide(L("quete.etapePrecedente"))
+                    titreSection(etape.nom == fiche.nom ? L("quete.etape", rang + 1, fiche.etapes.count)
+                                                        : L("quete.etapeSur", rang + 1, fiche.etapes.count, etape.nom))
                         .lineLimit(1)
+                        .help(etape.nom)
                     persosLus(lus)
                     Spacer(minLength: 0)
                     Button { changerEtape(fiche, rang + 1) } label: { Image(systemName: "chevron.right") }
                         .disabled(rang >= fiche.etapes.count - 1)
-                        .help(L("quete.etapeSuivante"))
+                        .aide(L("quete.etapeSuivante"))
                 }
                 .buttonStyle(.borderless)
+                .tint(Color.secondary)
             } else {
                 HStack(spacing: 6) {
                     titreSection(L("quete.objectifs"))
@@ -428,7 +416,7 @@ struct QueteVue: View {
         .controlSize(.small)
         HStack {
             Spacer()
-            if achevee { bouton.buttonStyle(.borderedProminent) } else { bouton }
+            if achevee { bouton.buttonStyle(.borderedProminent).tint(Couleurs.accentPlein) } else { bouton }
         }
         .padding(.top, metriques.ecartLignes)
     }
@@ -558,6 +546,8 @@ struct QueteVue: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(objectif.texte)
+                .accessibilityAddTraits(valide ? .isSelected : [])
                 .help(suggere ? (objectif.combat ? L("quete.suggestion.combat.aide") : L("quete.suggestion.aide"))
                     : etat.aFaire && !valide ? L("quete.aFaire.aide")
                     : etat.nonOuvert && !valide ? L("quete.nonOuvert.aide") : "")
@@ -670,7 +660,6 @@ struct QueteVue: View {
     private func titreSection(_ texte: String) -> some View {
         Text(texte)
             .font(.synfus(metriques.detail, gras: true))
-            .textCase(.uppercase)
             .foregroundStyle(.secondary)
     }
 

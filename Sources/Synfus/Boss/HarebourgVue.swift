@@ -129,7 +129,7 @@ struct HarebourgVue: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .help(Self.libelle(confusion))
+                .aide(Self.libelle(confusion))
             }
         }
         .disabled(lecteur.persoDevant == nil)

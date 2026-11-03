@@ -52,10 +52,11 @@ struct ChasseVue: View {
             Button { modele.reprendrePosition() } label: { Image(systemName: "location") }
                 .buttonStyle(.borderless)
                 .disabled(LecteurEcran.shared.positionDuPersoDevant == nil)
-                .help(L("chasse.depart.reprendre"))
+                .aide(L("chasse.depart.reprendre"))
             Spacer()
         }
         .textFieldStyle(.roundedBorder)
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     // MARK: - Boussole
@@ -94,7 +95,7 @@ struct ChasseVue: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help(direction.libelle)
+        .aide(direction.libelle)
     }
 
     @ViewBuilder
@@ -110,7 +111,7 @@ struct ChasseVue: View {
             }
             .buttonStyle(.plain)
             .disabled(modele.lectureEnCours || modele.indices.isEmpty)
-            .help(L("chasse.lire.aide"))
+            .aide(L("chasse.lire.aide"))
         } else {
             Button { previews.requestAuthorization() } label: {
                 Image(systemName: "lock")
@@ -119,7 +120,7 @@ struct ChasseVue: View {
                     .contentShape(Circle())
             }
             .buttonStyle(.plain)
-            .help(L("chasse.autoriser.aide"))
+            .aide(L("chasse.autoriser.aide"))
         }
     }
 
@@ -217,7 +218,7 @@ struct ChasseVue: View {
                             .foregroundStyle(modele.copieRecente ? Couleurs.accentTexte : Color.secondary)
                     }
                     .buttonStyle(.borderless)
-                    .help(L("chasse.copier"))
+                    .aide(L("chasse.copier"))
                 }
             }
             .padding(10)

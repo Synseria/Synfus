@@ -18,7 +18,7 @@ struct PageListe<Contenu: View>: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) { contenu }
                     .labeledContentStyle(StyleLigneListe())
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, 23)
                     .padding(.top, 10)
                     .padding(.bottom, 20)
             }

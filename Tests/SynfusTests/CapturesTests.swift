@@ -119,8 +119,9 @@ struct CapturesTests {
         let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
         try FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)
         equipe()
-        for (nom, section) in [("reglages-zaaps", SettingsSection.zaaps),
-                               ("reglages-raccourcis", .raccourcis), ("reglages-lecture", .lecture)] {
+        let toutes = ProcessInfo.processInfo.environment["SYNFUS_CAPTURES_TOUT"] != nil
+        let sections: [SettingsSection] = toutes ? SettingsSection.allCases : [.zaaps, .raccourcis, .lecture]
+        for (nom, section) in sections.map({ ("reglages-" + $0.rawValue, $0) }) {
             let vue = SettingsView(onglet: OngletReglages(section))
                 .background(Color(nsColor: .windowBackgroundColor))
                 .environment(\.colorScheme, .dark)
@@ -132,7 +133,7 @@ struct CapturesTests {
     /// texte ni défilement, qui sont des vues AppKit.
     private func ecrire(_ vue: some View, vers url: URL) throws {
         NSApplication.shared.appearance = NSAppearance(named: .darkAqua)
-        let hote = NSHostingView(rootView: vue)
+        let hote = NSHostingView(rootView: vue.racineSynfus())
         hote.frame = NSRect(origin: .zero, size: hote.fittingSize)
         let fenetre = NSWindow(contentRect: hote.frame, styleMask: .borderless, backing: .buffered, defer: false)
         fenetre.contentView = hote

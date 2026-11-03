@@ -95,7 +95,7 @@ struct BossVue: View {
             Spacer(minLength: 0)
             Button { previews.requestAuthorization() } label: { Image(systemName: "lock") }
                 .buttonStyle(.borderless)
-                .help(L("boss.autoriser"))
+                .aide(L("boss.autoriser"))
         }
     }
 
@@ -160,7 +160,7 @@ struct PetitBouton: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help(aide)
+        .aide(aide)
     }
 }
 

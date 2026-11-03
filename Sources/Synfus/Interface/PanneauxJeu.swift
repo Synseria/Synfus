@@ -58,11 +58,11 @@ struct BoutonEnTete: View {
             Image(systemName: icone)
                 .font(.synfus(.petit, gras: true))
                 .foregroundStyle(.secondary)
-                .frame(width: 22, height: 22)
+                .frame(width: 24, height: 24)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help(aide)
+        .aide(aide)
     }
 }
 

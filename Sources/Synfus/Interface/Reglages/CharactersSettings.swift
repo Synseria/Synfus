@@ -83,13 +83,13 @@ struct CharactersSettings: View {
                     Image(systemName: "chevron.up")
                 }
                 .disabled(index == 0)
-                .help(L("persos.monter"))
+                .aide(L("persos.monter"))
 
                 Button { moveCharacter(at: index, by: 1) } label: {
                     Image(systemName: "chevron.down")
                 }
                 .disabled(index == prefs.characterOrder.count - 1)
-                .help(L("persos.descendre"))
+                .aide(L("persos.descendre"))
             }
             .buttonStyle(.borderless)
             .font(.synfus(.petit, gras: true))

@@ -41,7 +41,7 @@ rg -t swift 'accessibilityLabel|onTapGesture' Sources
 ## Captures
 
 `SYNFUS_CAPTURES=$PWD/docs/screenshots sh test.sh CapturesTests` : à part, écran allumé, Dofus
-fermé, aucun autre build en cours. Rendu par `cacheDisplay` : le verre, le survol et l'accent des
+fermé, aucun autre build en cours. Avec `SYNFUS_CAPTURES_TOUT=1`, tous les onglets des réglages. Rendu par `cacheDisplay` : le verre, le survol et l'accent des
 interrupteurs ne s'y jugent pas, ils se voient en vrai (`sh run.sh --install --start`).
 
 ## Ce qui ne vaut pas ici
