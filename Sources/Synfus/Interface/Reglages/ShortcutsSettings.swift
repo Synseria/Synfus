@@ -17,7 +17,7 @@ struct ShortcutsSettings: View {
     }
 
     var body: some View {
-        PageReglages(titre: L("reglages.raccourcis"), sousTitre: L("raccourcis.sousTitre")) {
+        PageReglages(titre: L("reglages.raccourcis"), aide: L("raccourcis.aide")) {
             Section {
                 // Une ligne par perso connecté : les emplacements suivent l'effectif.
                 ForEach(0..<min(manager.effectif.count, prefs.hotKeys.count), id: \.self) { slot in

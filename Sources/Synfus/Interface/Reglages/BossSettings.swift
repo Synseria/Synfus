@@ -7,18 +7,18 @@ struct BossSettings: View {
     @ObservedObject private var previews = WindowPreviewService.shared
 
     var body: some View {
-        PageReglages(titre: L("boss.titre"), sousTitre: L("boss.sousTitre"), aide: L("boss.aide")) {
+        PageReglages(titre: L("boss.titre"), aide: L("boss.aide")) {
             Section {
                 RaccourciReglable(label: L("boss.raccourci"), chemin: \.bossHotKey)
                 ForEach(Boss.allCases, id: \.self) { boss in
-                    Ligne(titre: BossVue.nom(boss), sousTexte: Self.resume(boss)) {
+                    Ligne(titre: BossVue.nom(boss), aide: Self.resume(boss)) {
                         Button(L("boss.ouvrir")) { BossPanel.shared.ouvrir(boss) }
                     }
                 }
             }
-            Section {
-                Ligne(titre: L("boss.lecture"), sousTexte: L("boss.lecture.sousTexte")) {
-                    if !previews.authorized {
+            if !previews.authorized {
+                Section {
+                    Ligne(titre: L("boss.lecture"), aide: L("boss.lecture.aide")) {
                         Button(L("boss.autoriser")) { previews.requestAuthorization() }
                     }
                 }
@@ -28,11 +28,11 @@ struct BossSettings: View {
 
     private static func resume(_ boss: Boss) -> String {
         switch boss {
-        case .harebourg: return L("boss.harebourg.sousTexte")
-        case .kimbo: return L("boss.kimbo.sousTexte")
-        case .toxoliath: return L("boss.toxoliath.sousTexte")
-        case .ilyzaelle: return L("boss.ilyzaelle.sousTexte")
-        case .talKasha: return L("boss.talKasha.sousTexte")
+        case .harebourg: return L("boss.harebourg.aide")
+        case .kimbo: return L("boss.kimbo.aide")
+        case .toxoliath: return L("boss.toxoliath.aide")
+        case .ilyzaelle: return L("boss.ilyzaelle.aide")
+        case .talKasha: return L("boss.talKasha.aide")
         }
     }
 }

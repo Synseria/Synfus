@@ -12,25 +12,25 @@ struct QuetesSettings: View {
         let langue = L10n.courante.langue
         let quetes = montrees(langue)
         let affichees = Array(quetes.prefix(Self.limite).enumerated())
-        PageListe(titre: L("reglages.quetes"), sousTitre: L("quetes.sousTitre")) {
+        PageListe(titre: L("reglages.quetes"), aide: L("quetes.aide")) {
             SourceQuetes().cadreDeListe(premiere: true, derniere: false)
             Interrupteur(titre: L("quetes.bouton"), isOn: $prefs.quetesBouton).cadreDeListe(premiere: false, derniere: false)
             RaccourciReglable(label: L("quetes.raccourci"), chemin: \.quetesHotKey).cadreDeListe(premiere: false, derniere: true)
             EnTeteListe(titre: L("quetes.panneau"))
-            Interrupteur(titre: L("quetes.compact"), sousTexte: L("quetes.compact.sousTexte"), isOn: $prefs.quetesCompact)
+            Interrupteur(titre: L("quetes.compact"), aide: L("quetes.compact.aide"), isOn: $prefs.quetesCompact)
                 .cadreDeListe(premiere: true, derniere: false)
-            Interrupteur(titre: L("quetes.consigne"), sousTexte: L("quetes.consigne.sousTexte"), isOn: $prefs.quetesConsigne)
+            Interrupteur(titre: L("quetes.consigne"), aide: L("quetes.consigne.aide"), isOn: $prefs.quetesConsigne)
                 .cadreDeListe(premiere: false, derniere: false)
-            Interrupteur(titre: L("quetes.masquerObjets"), sousTexte: L("quetes.masquerObjets.sousTexte"),
+            Interrupteur(titre: L("quetes.masquerObjets"), aide: L("quetes.masquerObjets.aide"),
                          isOn: $prefs.quetesMasquerObjets)
                 .cadreDeListe(premiere: false, derniere: false)
-            Interrupteur(titre: L("quetes.cocherSuivi"), sousTexte: L("quetes.cocherSuivi.sousTexte"),
+            Interrupteur(titre: L("quetes.cocherSuivi"), aide: L("quetes.cocherSuivi.aide"),
                          isOn: $prefs.quetesCocherSuivi)
                 .cadreDeListe(premiere: false, derniere: false)
             // Les vignettes ne servent que si les vues des cartes sont là.
             InterrupteurVuesCartes().cadreDeListe(premiere: false, derniere: !prefs.vuesCartes)
             if prefs.vuesCartes {
-                Interrupteur(titre: L("quetes.vignettes"), sousTexte: L("quetes.vignettes.sousTexte"),
+                Interrupteur(titre: L("quetes.vignettes"), aide: L("quetes.vignettes.aide"),
                              isOn: $prefs.quetesVignettes)
                     .cadreDeListe(premiere: false, derniere: true)
             }
@@ -39,7 +39,7 @@ struct QuetesSettings: View {
                 .cadreDeListe(premiere: true, derniere: affichees.isEmpty)
             ForEach(affichees, id: \.element.id) { rang, quete in
                 Ligne(titre: Lieu.traduit(quete.noms, langue) ?? "?",
-                      sousTexte: L("quete.niveau", nombre: quete.etapes.count, quete.niveau, quete.etapes.count)) {
+                      etat: L("quete.niveau", nombre: quete.etapes.count, quete.niveau, quete.etapes.count)) {
                     Button(L("quetes.ouvrir")) { QuetePanel.shared.ouvrir(quete.id) }
                 }
                 .cadreDeListe(premiere: false, derniere: rang == affichees.count - 1 && quetes.count <= Self.limite)

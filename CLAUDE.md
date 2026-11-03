@@ -126,7 +126,7 @@ nouveau fichier va dans le dossier de son domaine ; un fichier sans domaine en a
 | `lecture-ocr` | lecture de la position et du combat |
 | `aide-boss` | aide aux boss (Comte Harebourg), lecture de la vie et du canal combat |
 | `fermeture-gel` | fermeture des clients, abattage des gelés |
-| `interface-barre` | barre flottante, réglages, menu, aperçus, rangement des fenêtres |
+| `interface-barre` | barre flottante, réglages, menu, aperçus, rangement des fenêtres ; ses exceptions à la grille UI (skill global `grille-ui`) |
 | `localisation` | tout libellé visible, tables JSON |
 | `preferences` | ajouter ou changer un réglage, un défaut |
 | `marque-assets` | classes et leurs emblèmes, visuels du jeu, marque et icône de l'app |

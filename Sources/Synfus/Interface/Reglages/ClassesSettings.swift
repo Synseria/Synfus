@@ -7,10 +7,10 @@ struct ClassesSettings: View {
     @ObservedObject private var icons = ClassesStore.shared
 
     var body: some View {
-        PageReglages(titre: L("reglages.classes"), sousTitre: L("classes.sousTitre")) {
+        PageReglages(titre: L("reglages.classes")) {
             Section {
                 SourceClasses()
-                Ligne(titre: L("classes.dossier"), sousTexte: L("classes.mentionAnkama")) {
+                Ligne(titre: L("classes.dossier"), etat: L("classes.mentionAnkama")) {
                     HStack(spacing: 8) {
                         Button(L("classes.recharger")) { icons.reloadAll() }
                         Button(L("classes.ouvrirDossier")) { NSWorkspace.shared.open(icons.directory) }

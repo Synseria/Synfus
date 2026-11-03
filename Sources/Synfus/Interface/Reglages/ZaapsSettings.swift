@@ -22,7 +22,7 @@ struct ZaapsSettings: View {
     var body: some View {
         let langue = L10n.courante.langue
         let connus = prefs.zaapsConnus
-        PageListe(titre: L("reglages.zaaps"), sousTitre: L("zaaps.sousTitre", prefs.zaapsActifs.count, connus.count)) {
+        PageListe(titre: L("reglages.zaaps"), valeur: L("zaaps.compte", nombre: prefs.zaapsActifs.count, prefs.zaapsActifs.count, connus.count)) {
             SourceCarte().cadreDeListe(premiere: true, derniere: false)
             InterrupteurVuesCartes()
                 .cadreDeListe(premiere: false, derniere: true)
