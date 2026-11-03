@@ -8,16 +8,31 @@ import Testing
 /// bien : seul ce relevé des sources l'arrête.
 struct JetonsTests {
 
-    private func lignes(sauf exclus: Set<String>) throws -> [(fichier: String, ligne: Substring)] {
-        let fichiers = SourcesDuDepot.fichiers()
-        try #require(!fichiers.isEmpty)
-        return try fichiers.filter { !exclus.contains($0.lastPathComponent) }.flatMap { url in
-            try String(contentsOf: url, encoding: .utf8).split(separator: "\n").compactMap { ligne in
-                // Un commentaire ne compte pas, le code qui le précède si.
-                let code = ligne.split(separator: "//", maxSplits: 1, omittingEmptySubsequences: false)[0]
-                return code.isEmpty ? nil : (url.lastPathComponent, code)
+    /// Une ligne sans son commentaire (`//` précédé de `:` est une URL).
+    private func sansCommentaire(_ ligne: Substring) -> Substring {
+        var reste = ligne
+        while let debut = reste.range(of: "//") {
+            if debut.lowerBound == ligne.startIndex || ligne[ligne.index(before: debut.lowerBound)] != ":" {
+                return ligne[..<debut.lowerBound]
             }
+            reste = ligne[debut.upperBound...]
         }
+        return ligne
+    }
+
+    private func code(_ url: URL) throws -> [Substring] {
+        try String(contentsOf: url, encoding: .utf8).split(separator: "\n")
+            .map(sansCommentaire).filter { !$0.allSatisfy(\.isWhitespace) }
+    }
+
+    private func fichiers(sauf exclus: Set<String>) throws -> [URL] {
+        let tous = SourcesDuDepot.fichiers()
+        try #require(!tous.isEmpty)
+        return tous.filter { !exclus.contains($0.lastPathComponent) }
+    }
+
+    private func lignes(sauf exclus: Set<String>) throws -> [(fichier: String, ligne: Substring)] {
+        try fichiers(sauf: exclus).flatMap { url in try code(url).map { (url.lastPathComponent, $0) } }
     }
 
     /// Luminance relative WCAG de la couleur, rendue sous une apparence.
@@ -65,11 +80,12 @@ struct JetonsTests {
 
     @Test("Chaque fenêtre porte le jeton de racine")
     func racines() throws {
-        let motif = /rootView:\s*[^\n]+/
+        // Un appel, sur une ou plusieurs lignes : jusqu'à la fin de ses modificateurs.
+        let motif = /rootView:\s*[^\n]*(\n\s*\.[^\n]*)*/
         // `ImagesCarte` n'héberge qu'une image, sans contrôle.
-        for url in SourcesDuDepot.fichiers() where url.lastPathComponent != "ImagesCarte.swift" {
-            for racine in try String(contentsOf: url, encoding: .utf8).matches(of: motif) {
-                #expect(racine.output.contains(".racineSynfus()"), "\(url.lastPathComponent) : \(racine.output)")
+        for url in try fichiers(sauf: ["ImagesCarte.swift"]) {
+            for racine in try code(url).joined(separator: "\n").matches(of: motif) {
+                #expect(racine.output.0.contains(".racineSynfus()"), "\(url.lastPathComponent) : \(racine.output.0)")
             }
         }
     }

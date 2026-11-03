@@ -232,10 +232,15 @@ struct PaletteVue: View {
                 aide("↵", entree)
                     .lineLimit(1)
                     .truncationMode(.middle)
+                // Sans saisie, ↵ a un texte court : la place d'annoncer `/` et `%`.
+                if modele.requete.isEmpty {
+                    aide("/", L("palette.touche.commandes"))
+                    aide("%", L("palette.touche.variables"))
+                } else {
+                    aide("⇥", L("palette.touche.filtre"))
+                }
                 aide("⌘E", L("palette.touche.etiquette"))
                 aide("⌘D", L("palette.touche.favori"))
-                aide("/", L("palette.touche.commandes"))
-                aide("%", L("palette.touche.variables"))
                 Spacer()
                 aide("esc", L("palette.touche.fermer"))
             }
