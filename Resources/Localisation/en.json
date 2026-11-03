@@ -181,7 +181,7 @@
   "chasse.echec": "DofusDB unreachable: %@",
   "chasse.indice": "Clue",
   "chasse.indices": "Hunt clues",
-  "chasse.indices.aucune": "Clues are loaded when the panel first opens",
+  "chasse.indices.aucune": "Not loaded yet",
   "chasse.indices.chargement": "Loading clues…",
   "chasse.indices.date": "%lld DofusDB clues from %@",
   "chasse.indices.echec": "Clues unavailable: %@",
