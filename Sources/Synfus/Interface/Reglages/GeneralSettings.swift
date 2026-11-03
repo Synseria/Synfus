@@ -11,7 +11,7 @@ struct GeneralSettings: View {
     @State private var langue = LangueReglage.choisie?.rawValue ?? ""
 
     var body: some View {
-        PageReglages(titre: L("reglages.general"), sousTitre: L("general.sousTitre")) {
+        PageReglages(titre: L("reglages.general")) {
             Section {
                 PermissionRow(
                     name: L("general.accessibilite"),

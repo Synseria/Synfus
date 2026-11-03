@@ -5,7 +5,7 @@ struct InvitationsSettings: View {
     @ObservedObject private var prefs = Preferences.shared
 
     var body: some View {
-        PageReglages(titre: L("reglages.invitations"), sousTitre: L("invitations.sousTitre"),
+        PageReglages(titre: L("reglages.invitations"),
                      aide: L("raccourcis.inviter.aide")) {
             Section {
                 RaccourciReglable(

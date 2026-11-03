@@ -14,14 +14,14 @@ struct LectureSettings: View {
     @State private var resultat: String?
 
     var body: some View {
-        PageReglages(titre: L("reglages.lecture"), sousTitre: L("lecture.sousTitre"),
+        PageReglages(titre: L("reglages.lecture"),
                      aide: L("diagnostic.lecture.aide")) {
             Section {
                 Interrupteur(titre: L("diagnostic.lecture.position"), isOn: activation(\.lirePosition))
                 Interrupteur(titre: L("diagnostic.lecture.combat"), isOn: activation(\.lireCombat))
                 if prefs.lirePosition || prefs.lireCombat {
                     Ligne(titre: etatLecture,
-                          sousTexte: L("diagnostic.position.stats", lecture.lectures,
+                          etat: L("diagnostic.position.stats", lecture.lectures,
                                        Int(lecture.derniereDuree * 1000), lecture.sautes)) {
                         Button(L("diagnostic.position.toutLire")) { LecteurEcran.shared.toutLire() }
                             .help(L("diagnostic.position.toutLire.aide"))
@@ -33,7 +33,7 @@ struct LectureSettings: View {
             // Chasse et suivi de quêtes se lisent à la demande, depuis leur
             // panneau : leurs zones se calibrent même lecture éteinte.
             Section {
-                Ligne(titre: L("lecture.detecter"), sousTexte: resultat ?? L("lecture.detecter.sousTexte")) {
+                Ligne(titre: L("lecture.detecter"), etat: resultat, aide: L("lecture.detecter.aide")) {
                     HStack(spacing: 8) {
                         if detection != nil, decompte == nil { ProgressView().controlSize(.small) }
                         Button(decompte.map { L("calibration.decompte", $0) } ?? L("lecture.detecter.bouton")) {
@@ -44,7 +44,7 @@ struct LectureSettings: View {
                 }
                 ForEach(GenreLecture.allCases) { genre in
                     Ligne(titre: genre.libelle,
-                          sousTexte: prefs[keyPath: genre.reglage] == nil
+                          etat: prefs[keyPath: genre.reglage] == nil
                               ? L("lecture.zone.defaut") : L("lecture.zone.calibree")) {
                         Button(L("lecture.calibrer")) { calibrage = genre }
                     }

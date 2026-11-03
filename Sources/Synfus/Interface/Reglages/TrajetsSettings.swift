@@ -5,15 +5,15 @@ struct TrajetsSettings: View {
     @ObservedObject private var prefs = Preferences.shared
 
     var body: some View {
-        PageReglages(titre: L("reglages.trajets"), sousTitre: L("trajets.sousTitre"),
+        PageReglages(titre: L("reglages.trajets"),
                      aide: L("zaap.reecriture.aide", ItineraireZaap.ecartZaapDuJeu)) {
             Section {
                 RaccourciReglable(label: L("zaap.raccourci"), help: L("zaap.raccourci.aide"), chemin: \.zaapHotKey)
-                Ligne(titre: L("zaap.gain"), sousTexte: L("zaap.gain.sousTexte")) {
+                Ligne(titre: L("zaap.gain"), aide: L("zaap.gain.aide")) {
                     Stepper(L("zaap.gain.valeur", nombre: prefs.zaapGainMinimal, prefs.zaapGainMinimal),
                             value: $prefs.zaapGainMinimal, in: ItineraireZaap.gainsPossibles)
                 }
-                Interrupteur(titre: L("zaap.duJeu"), sousTexte: L("zaap.duJeu.sousTexte", ItineraireZaap.ecartZaapDuJeu), isOn: $prefs.zaapDuJeu)
+                Interrupteur(titre: L("zaap.duJeu"), aide: L("zaap.duJeu.aide", ItineraireZaap.ecartZaapDuJeu), isOn: $prefs.zaapDuJeu)
                 if prefs.lirePosition {
                     Interrupteur(titre: L("zaap.auto"), aide: L("zaap.auto.aide"), isOn: $prefs.zaapAuto)
                 } else {
