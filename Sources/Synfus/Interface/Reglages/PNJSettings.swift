@@ -22,7 +22,7 @@ struct PNJSettings: View {
             ForEach(affiches, id: \.element.id) { rang, pnj in
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
-                        Text(Lieu.traduit(pnj.noms, langue) ?? "?").font(.system(size: 13, weight: .medium))
+                        Text(Lieu.traduit(pnj.noms, langue) ?? "?").font(.synfus(.corps, gras: true))
                         Spacer()
                         BoutonEtiquette(cle: pnj.cle)
                         BoutonFavori(cle: pnj.cle)
@@ -30,13 +30,13 @@ struct PNJSettings: View {
                     ForEach(Array(pnj.passages.enumerated()), id: \.offset) { rang, passage in
                         HStack(spacing: 8) {
                             Text(lieu(passage, langue)).foregroundStyle(rang == 0 ? Color.primary : Color.secondary)
-                            Text(L("pnj.quetes", nombre: passage.quetes, passage.quetes)).font(.system(size: 11)).foregroundStyle(.secondary)
+                            Text(L("pnj.quetes", nombre: passage.quetes, passage.quetes)).font(.synfus(.petit)).foregroundStyle(.secondary)
                             Spacer()
                             BoutonTrajet(x: passage.position.x, y: passage.position.y,
                                          dansLesDouze: passage.dansLesDouze(CarteStore.shared.reseau))
                             if let carte = passage.carte { MiniatureCarte(carte: carte) }
                         }
-                        .font(.system(size: 12))
+                        .font(.synfus(.note))
                     }
                 }
                 .padding(.vertical, 2)

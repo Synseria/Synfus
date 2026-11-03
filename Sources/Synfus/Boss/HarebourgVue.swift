@@ -18,7 +18,7 @@ struct HarebourgVue: View {
         if let tour = aide.tour {
             Label(tour % 2 == 1 ? L("boss.harebourg.impair") : L("boss.harebourg.pair"),
                   systemImage: tour % 2 == 1 ? "shield" : "arrow.left.arrow.right")
-                .font(.system(size: 11))
+                .font(.synfus(.petit))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -32,10 +32,10 @@ struct HarebourgVue: View {
                 .frame(width: 96, height: 48)
             VStack(alignment: .leading, spacing: 2) {
                 Text(Self.titre(estimation.confusion.visee))
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(estimation.enTour ? Couleurs.accent : Color.secondary)
+                    .font(.synfus(.titre, gras: true))
+                    .foregroundStyle(estimation.enTour ? Couleurs.accentTexte : Color.secondary)
                 Text(Self.libelle(estimation.confusion))
-                    .font(.system(size: 11))
+                    .font(.synfus(.petit))
                     .foregroundStyle(.secondary)
             }
             .fixedSize(horizontal: false, vertical: true)
@@ -45,19 +45,19 @@ struct HarebourgVue: View {
     @ViewBuilder
     private func details(_ estimation: SuiviConfusion.Estimation) -> some View {
         Label(source(estimation), systemImage: icone(estimation.source))
-            .font(.system(size: 11))
+            .font(.synfus(.petit))
             .foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
         if let voisine = estimation.voisine {
             Label(L("boss.frontiere", Self.titre(voisine.visee)), systemImage: "exclamationmark.triangle")
-                .font(.system(size: 11))
+                .font(.synfus(.petit))
                 .foregroundStyle(Couleurs.ambre)
                 .fixedSize(horizontal: false, vertical: true)
         }
         if estimation.enTour, estimation.compteLesCoups {
             HStack(spacing: 6) {
                 Text(L("boss.coups", nombre: estimation.coups, estimation.coups))
-                    .font(.system(size: 11))
+                    .font(.synfus(.petit))
                     .help(L("boss.coups.aide"))
                 Spacer()
                 PetitBouton(icone: "minus", aide: L("boss.coups.moins")) { aide.coup(-1) }
@@ -99,7 +99,7 @@ struct HarebourgVue: View {
                 Text(L("boss.rienLu"))
             }
         }
-        .font(.system(size: 11))
+        .font(.synfus(.petit))
         .foregroundStyle(.secondary)
         .fixedSize(horizontal: false, vertical: true)
         if enCombat, aide.vieLue == nil {
@@ -115,13 +115,13 @@ struct HarebourgVue: View {
     private var aLaMain: some View {
         let choisie = aide.estimation.flatMap { $0.source == .manuelle && $0.coups == 0 ? $0.confusion : nil }
         return HStack(spacing: 4) {
-            Text(L("boss.aLaMain")).font(.system(size: 11)).foregroundStyle(.secondary)
+            Text(L("boss.aLaMain")).font(.synfus(.petit)).foregroundStyle(.secondary)
             Spacer()
             ForEach([Harebourg.Confusion.aucune, .horaire, .demiTour, .contreHoraire], id: \.self) { confusion in
                 let active = choisie == confusion
                 Button { aide.choisir(active ? nil : confusion) } label: {
                     Image(systemName: Self.symbole(confusion))
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.synfus(.petit, gras: true))
                         .frame(width: 26, height: 22)
                         .foregroundStyle(active ? Color.white : Color.primary)
                         .background(RoundedRectangle(cornerRadius: 6, style: .continuous)

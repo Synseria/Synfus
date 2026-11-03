@@ -117,7 +117,7 @@ final class FloatingBarController: NSObject {
     }
 
     private func build() {
-        let hosting = NSHostingController(rootView: BarView())
+        let hosting = NSHostingController(rootView: BarView().racineSynfus())
         hosting.sizingOptions = [.preferredContentSize]
 
         let panel = BarPanel(

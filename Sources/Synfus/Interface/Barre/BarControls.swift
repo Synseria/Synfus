@@ -169,7 +169,6 @@ struct BarBackground: ViewModifier {
 /// carrés gris en permanence.
 struct ModeButton: View {
     let icone: String
-    let teinte: Color
     let actif: Bool
     let aide: String
     let action: () -> Void
@@ -178,8 +177,8 @@ struct ModeButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: icone)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(actif ? teinte : Color.secondary)
+                .font(.synfus(.note))
+                .foregroundStyle(actif ? Couleurs.accentTexte : Color.secondary)
                 .contentTransition(.symbolEffect(.replace))
                 .frame(width: 22, height: 22)
                 .background(
@@ -196,7 +195,7 @@ struct ModeButton: View {
     }
 
     private var fond: Color {
-        if actif { return teinte.opacity(survole ? 0.22 : 0.18) }
+        if actif { return Couleurs.accent.opacity(survole ? 0.22 : 0.18) }
         return survole ? Color.primary.opacity(0.08) : .clear
     }
 }
@@ -230,7 +229,7 @@ struct ArrangeMenuButton: View {
             Button(L("menu.lancerSession")) { WindowManager.shared.lancerSession() }
         } label: {
             Image(systemName: "rectangle.3.group")
-                .font(.system(size: 12, weight: .medium))
+                .font(.synfus(.note))
                 .foregroundStyle(Color.secondary)
                 .frame(width: 22, height: 22)
                 .background(
@@ -258,7 +257,7 @@ struct GearButton: View {
             SettingsWindowController.shared.show()
         } label: {
             Image(systemName: "gearshape")
-                .font(.system(size: 11, weight: .medium))
+                .font(.synfus(.petit))
                 .foregroundStyle(survole ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tertiary))
                 .frame(width: 22, height: 22)
                 .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
@@ -302,7 +301,7 @@ struct CopiedBadge: View {
             .strokeBorder(Couleurs.accent, lineWidth: 1.5)
             .overlay(alignment: .topTrailing) {
                 Image(systemName: "doc.on.clipboard.fill")
-                    .font(.system(size: 9, weight: .semibold))
+                    .font(.synfus(.marque, gras: true))
                     .foregroundStyle(.white)
                     .padding(2)
                     .background(Circle().fill(Couleurs.accentPlein))
@@ -379,17 +378,17 @@ struct CombatBadge: View {
         Group {
             if let texte {
                 Text(texte)
-                    .font(.system(size: 9, weight: .semibold, design: .rounded))
+                    .font(.synfus(.marque, gras: true, design: .rounded))
                     .monospacedDigit()
                     .padding(.horizontal, 3)
             } else {
                 Image(systemName: "figure.fencing")
-                    .font(.system(size: 9, weight: .semibold))
+                    .font(.synfus(.marque, gras: true))
                     .padding(2)
             }
         }
         .foregroundStyle(.white)
         .background(Capsule().fill(etat.enCombat && etat != .pasMonTour && etat != .placement ? Self.rose : Color.gray))
-        .offset(x: 4, y: -4)
+        .offset(x: 5, y: -5)
     }
 }

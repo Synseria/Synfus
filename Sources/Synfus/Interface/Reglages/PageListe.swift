@@ -45,7 +45,7 @@ struct EnTeteListe: View {
 
     var body: some View {
         SectionTitle(titre, help: aide)
-            .font(.system(size: 13, weight: .semibold))
+            .font(.synfus(.corps, gras: true))
             .padding(.horizontal, 10)
             .padding(.top, 18)
             .padding(.bottom, 6)
