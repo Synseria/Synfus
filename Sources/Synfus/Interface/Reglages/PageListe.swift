@@ -12,16 +12,13 @@ struct PageListe<Contenu: View>: View {
     var aide: String?
     @ViewBuilder let contenu: Contenu
 
-    /// Le retrait d'une ligne dans son cadre (`cadreDeListe`).
-    private static var margeLigne: CGFloat { 10 }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             EnTetePage(titre: titre, valeur: valeur, aide: aide)
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) { contenu }
                     .labeledContentStyle(StyleLigneListe())
-                    .padding(.horizontal, MargeReglages.texte - Self.margeLigne)
+                    .padding(.horizontal, MargeReglages.texte - MargeReglages.ligne)
                     .padding(.top, 10)
                     .padding(.bottom, 20)
             }
@@ -49,7 +46,7 @@ struct EnTeteListe: View {
     var body: some View {
         SectionTitle(titre, help: aide)
             .font(.synfus(.corps, gras: true))
-            .padding(.horizontal, 10)
+            .padding(.horizontal, MargeReglages.ligne)
             .padding(.top, 18)
             .padding(.bottom, 6)
     }
@@ -60,7 +57,7 @@ extension View {
     /// la première, en bas de la dernière ; un filet sépare les autres.
     func cadreDeListe(premiere: Bool, derniere: Bool) -> some View {
         let rayon: CGFloat = 8
-        return padding(.horizontal, 10)
+        return padding(.horizontal, MargeReglages.ligne)
             .padding(.vertical, 8)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(UnevenRoundedRectangle(
@@ -69,7 +66,7 @@ extension View {
                 style: .continuous)
                 .fill(Color.primary.opacity(0.045)))
             .overlay(alignment: .top) {
-                if !premiere { Divider().padding(.horizontal, 10) }
+                if !premiere { Divider().padding(.horizontal, MargeReglages.ligne) }
             }
     }
 }

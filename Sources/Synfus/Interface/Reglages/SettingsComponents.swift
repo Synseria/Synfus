@@ -9,6 +9,8 @@ import SwiftUI
 /// Le bord gauche du texte d'une page, celui des lignes d'un `Form` groupé.
 enum MargeReglages {
     static let texte: CGFloat = 32
+    /// Le retrait d'une ligne dans le cadre d'une `PageListe`.
+    static let ligne: CGFloat = 10
 }
 
 /// Une page de réglages : son titre, puis ses groupes.
