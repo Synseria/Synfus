@@ -15,8 +15,9 @@ La grille est le skill global `grille-ui`. Ici, seulement ce qui lui manque ou l
 
 - Couleurs : `Couleurs` (accent, ambre, suggestion) ; une couleur de classe vient de `DofusClass`.
 - Lignes de réglage : `Ligne`, `Interrupteur`, `RaccourciReglable`. Sous un libellé, `etat:` ne prend
-  qu'une valeur ou un état ; une explication va dans `aide:` (ⓘ). Un titre de page n'a pas de phrase :
-  `EnTetePage` prend un compte (`valeur:`) et une `aide:`.
+  qu'une valeur, un état, le résultat d'une action ou une mention légale ; une explication va dans
+  `aide:` (ⓘ). `Interrupteur` n'a pas d'`etat:`. Un titre de page n'a pas de phrase : `EnTetePage`
+  prend un compte (`valeur:`) et une `aide:`.
 - En-têtes de panneau : `EnTetePanneau` ; tailles de la fiche : `MetriquesQuete`.
 - Un libellé passe par `L()` et se vérifie dans les trois langues : l'espagnol et le français sont
   les plus longs, un nom du jeu peut l'être davantage.

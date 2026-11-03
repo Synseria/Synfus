@@ -626,7 +626,6 @@
   "raccourcis.aide": "Atajos globales: funcionan incluso con Dofus delante.",
   "raccourcis.allerAUnPerso": "Ir a un personaje",
   "raccourcis.allerAUnPerso.aide": "Un atajo por personaje conectado, en el orden de la pestaña Personajes; los personajes no conectados se saltan.",
-  "raccourcis.attention": "Cuando un personaje reclama atención",
   "raccourcis.attention.aide": "Detectado por el rebote del icono en el Dock, la única señal que una app puede emitir hacia fuera; Synfus no lee nada del juego en sí.",
   "raccourcis.attention.bascule": "Activar o desactivar el paso automático",
   "raccourcis.attention.reaction": "Reacción",
@@ -740,5 +739,6 @@
   "zaap.sansPosition": "Hace falta la lectura de la posición.",
   "zaap.supprimer": "Eliminar este zaap",
   "zaaps.compte": "%lld activos de %lld",
+  "zaaps.compte.un": "%lld activo de %lld",
   "zaaps.grille": "Activar, etiquetar, marcar como favorito"
 }
