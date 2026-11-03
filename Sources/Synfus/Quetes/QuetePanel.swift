@@ -121,7 +121,7 @@ final class QuetePanel: NSObject, ObservableObject {
             backing: .buffered,
             defer: false
         )
-        panel.contentView = NSHostingView(rootView: QueteVue())
+        panel.contentView = NSHostingView(rootView: QueteVue().racineSynfus())
         panel.minSize = Self.tailleMinimale
         panel.isFloatingPanel = true
         panel.level = .statusBar

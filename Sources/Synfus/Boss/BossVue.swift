@@ -35,7 +35,7 @@ struct BossVue: View {
             .padding(12)
         }
         .frame(width: Self.largeur, alignment: .leading)
-        .font(.system(size: 12))
+        .font(.synfus(.note))
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Color.primary.opacity(0.12)))
         // L'autorisation donnée, la lecture démarre sans attendre un
@@ -45,12 +45,12 @@ struct BossVue: View {
 
     private var entete: some View {
         EnTetePanneau(icone: "scope", teinte: Couleurs.ambre, menu: Self.menu) {
-            Text(Self.nom(prefs.bossChoisi)).font(.system(size: 12, weight: .semibold))
+            Text(Self.nom(prefs.bossChoisi)).font(.synfus(.note, gras: true))
                 .padding(.leading, 6)
-            Image(systemName: "chevron.down").font(.system(size: 8, weight: .bold)).foregroundStyle(.secondary)
+            Image(systemName: "chevron.down").font(.synfus(.marque, gras: true)).foregroundStyle(.secondary)
                 .padding(.leading, 3)
             if let perso = lecteur.persoDevant {
-                Text(perso).font(.system(size: 11)).foregroundStyle(.secondary)
+                Text(perso).font(.synfus(.petit)).foregroundStyle(.secondary)
                     .lineLimit(1)
                     .padding(.horizontal, 6)
             }
@@ -75,7 +75,7 @@ struct BossVue: View {
         HStack(spacing: 6) {
             Image(systemName: "clock").foregroundStyle(.secondary)
             Text(aide.tour.map { L("boss.tour", $0) } ?? L("boss.tour.attente"))
-                .font(.system(size: 11, weight: aide.tour == nil ? .regular : .semibold))
+                .font(.synfus(.petit, gras: aide.tour != nil))
                 .foregroundStyle(aide.tour == nil ? Color.secondary : Color.primary)
                 .help(L("boss.tour.aide"))
             Spacer()
@@ -89,13 +89,13 @@ struct BossVue: View {
     private var autorisation: some View {
         HStack(spacing: 8) {
             Text(L("boss.autoriser.aide"))
-                .font(.system(size: 11))
+                .font(.synfus(.petit))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
             Button { previews.requestAuthorization() } label: { Image(systemName: "lock") }
                 .buttonStyle(.borderless)
-                .help(L("boss.autoriser"))
+                .aide(L("boss.autoriser"))
         }
     }
 
@@ -103,7 +103,7 @@ struct BossVue: View {
         VStack(alignment: .leading, spacing: 4) {
             Button { rappels.toggle() } label: {
                 Label(L("boss.rappels"), systemImage: rappels ? "chevron.down" : "chevron.right")
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.synfus(.petit, gras: true))
                     .foregroundStyle(.secondary)
                     .contentShape(Rectangle())
             }
@@ -111,7 +111,7 @@ struct BossVue: View {
             if rappels {
                 ForEach(Self.rappels(prefs.bossChoisi), id: \.self) {
                     Text("• " + $0)
-                        .font(.system(size: 10))
+                        .font(.synfus(.petit))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -154,13 +154,13 @@ struct PetitBouton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: icone)
-                .font(.system(size: 10, weight: .bold))
+                .font(.synfus(.petit, gras: true))
                 .frame(width: 22, height: 20)
                 .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Color.primary.opacity(0.08)))
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help(aide)
+        .aide(aide)
     }
 }
 
@@ -177,11 +177,11 @@ struct ChoixBoss<Valeur: Hashable>: View {
                 let actif = option.valeur == actuel
                 Button { choisir(actif ? nil : option.valeur) } label: {
                     Text(option.titre)
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.synfus(.petit, gras: true))
                         .frame(maxWidth: .infinity, minHeight: 24)
                         .foregroundStyle(actif ? Color.white : Color.primary)
                         .background(RoundedRectangle(cornerRadius: 7, style: .continuous)
-                            .fill(actif ? Couleurs.accent : Color.primary.opacity(0.08)))
+                            .fill(actif ? Couleurs.accentPlein : Color.primary.opacity(0.08)))
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)

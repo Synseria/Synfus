@@ -90,7 +90,7 @@ struct BoutonEtiquette: View {
                 PastilleEtiquette(texte: etiquette)
             } else {
                 Text(L("palette.reglages.etiquette"))
-                    .font(.system(size: 10))
+                    .font(.synfus(.petit))
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 5)
                     .padding(.vertical, 1)
@@ -130,7 +130,7 @@ struct BoutonFavori: View {
                 .foregroundStyle(favori ? Couleurs.ambre : Color.secondary)
         }
         .buttonStyle(.borderless)
-        .help(favori ? L("zaap.favori.retirer") : L("zaap.favori.ajouter"))
+        .aide(favori ? L("zaap.favori.retirer") : L("zaap.favori.ajouter"))
     }
 }
 
@@ -152,10 +152,10 @@ struct BoutonTrajet: View {
             }
         } label: {
             HStack(spacing: 4) {
-                Text(Coordonnees.texte(x, y)).font(.system(size: 11, design: .monospaced))
+                Text(Coordonnees.texte(x, y)).font(.synfus(.petit, design: .monospaced))
                 Image(systemName: copie ? "checkmark" : "doc.on.clipboard")
             }
-            .foregroundStyle(copie ? Couleurs.accent : Color.secondary)
+            .foregroundStyle(copie ? Couleurs.accentTexte : Color.secondary)
         }
         .buttonStyle(.borderless)
         .help(dansLesDouze ? L("ouTrouver.copierTrajet") : L("trajet.copier.horsDesDouze"))

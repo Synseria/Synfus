@@ -41,17 +41,17 @@ struct TeamSectorView: View {
                 switch secteur {
                 case .tous:
                     Image(systemName: "person.3")
-                        .font(.system(size: 10, weight: .medium))
+                        .font(.synfus(.petit))
                 case .equipe(let index):
                     Text("\(index + 1)")
-                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .font(.synfus(.petit, gras: true, design: .rounded))
                         .padding(.trailing, 1)
                     ForEach(membres, id: \.self) { membre in
                         point(for: membre)
                     }
                 case .nouvelle:
                     Image(systemName: "plus")
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(.synfus(.petit, gras: true))
                 }
             }
             .padding(.horizontal, agrandi ? 12 : 7)
@@ -65,7 +65,7 @@ struct TeamSectorView: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .strokeBorder(cible ? Color.accentColor : Color.clear, lineWidth: 1.5)
+                    .strokeBorder(cible ? Couleurs.accent : Color.clear, lineWidth: 1.5)
             )
             .contentShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
         }
@@ -78,8 +78,8 @@ struct TeamSectorView: View {
     }
 
     private var fond: Color {
-        if actif { return .accentColor }
-        if cible { return Color.accentColor.opacity(0.18) }
+        if actif { return Couleurs.accentPlein }
+        if cible { return Couleurs.accent.opacity(0.18) }
         return survole ? Color.primary.opacity(0.08) : .clear
     }
 

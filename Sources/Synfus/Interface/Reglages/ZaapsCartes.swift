@@ -21,18 +21,18 @@ struct CarteZaapReglages: View {
                     .controlSize(.mini)
             }
             Text(zaap.nom(en: langue))
-                .font(.system(size: 12, weight: .semibold))
+                .font(.synfus(.note, gras: true))
                 .lineLimit(1)
             HStack(spacing: 4) {
                 Text(zaap.zone(en: langue) ?? (prefs.zaapsAjoutes.contains(zaap) ? L("zaap.ajoute") : ""))
                     .lineLimit(1)
                 if zaap.monde != Zaap.mondeDesDouze {
-                    Text(L("zaap.autreCarte")).foregroundStyle(.orange)
+                    Text(L("zaap.autreCarte")).foregroundStyle(Couleurs.alerte)
                 }
                 Spacer(minLength: 0)
-                Text(Coordonnees.texte(zaap.x, zaap.y)).font(.system(size: 11, design: .monospaced))
+                Text(Coordonnees.texte(zaap.x, zaap.y)).font(.synfus(.petit, design: .monospaced))
             }
-            .font(.system(size: 11))
+            .font(.synfus(.petit))
             .foregroundStyle(.secondary)
         }
         .padding(9)
@@ -63,7 +63,7 @@ struct AjoutZaap: View {
         Button { ouvert = true } label: {
             VStack(spacing: 4) {
                 Image(systemName: "plus")
-                Text(L("zaap.ajout")).font(.system(size: 11))
+                Text(L("zaap.ajout")).font(.synfus(.petit))
             }
             .foregroundStyle(.secondary)
             .frame(maxWidth: .infinity, minHeight: 62)
@@ -74,7 +74,7 @@ struct AjoutZaap: View {
         .buttonStyle(.plain)
         .popover(isPresented: $ouvert, arrowEdge: .bottom) {
             VStack(alignment: .leading, spacing: 8) {
-                Text(L("zaap.ajout.aide")).font(.system(size: 11)).foregroundStyle(.secondary)
+                Text(L("zaap.ajout.aide")).font(.synfus(.petit)).foregroundStyle(.secondary)
                     .frame(width: 260, alignment: .leading)
                 HStack(spacing: 6) {
                     TextField(L("zaap.ajout.nom"), text: $nom)

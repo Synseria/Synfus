@@ -9,7 +9,7 @@ final class PaletteModele: ObservableObject {
     static let shared = PaletteModele()
 
     /// Les cartes de zaaps, quand rien n'est tapé.
-    static let colonnes = 4
+    static let colonnes = 3
 
     @Published var requete = "" {
         didSet {

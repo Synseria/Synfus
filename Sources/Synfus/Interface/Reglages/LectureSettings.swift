@@ -27,7 +27,7 @@ struct LectureSettings: View {
                             .help(L("diagnostic.position.toutLire.aide"))
                             .disabled(!previews.authorized || manager.clients.isEmpty)
                     }
-                    .foregroundStyle(etatEnDefaut ? Color.orange : Color.primary)
+                    .foregroundStyle(etatEnDefaut ? Couleurs.alerte : Color.primary)
                 }
             }
             // Chasse et suivi de quêtes se lisent à la demande, depuis leur
@@ -116,7 +116,7 @@ struct LectureSettings: View {
     private func zoneLue(_ genre: GenreLecture, _ image: NSImage) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(L("diagnostic.lecture.zoneVue", genre.libelle, lecture.dernierPerso ?? "?"))
-                .font(.system(size: 10))
+                .font(.synfus(.petit))
                 .foregroundStyle(.tertiary)
             Image(nsImage: image)
                 .resizable()
@@ -126,13 +126,13 @@ struct LectureSettings: View {
                 .clipShape(RoundedRectangle(cornerRadius: 4))
             if let lignes = lecture.lignes[genre] {
                 Text(L("diagnostic.position.brut", lignes.joined(separator: " ⏎ ")))
-                    .font(.system(size: 10, design: .monospaced))
+                    .font(.synfus(.petit, design: .monospaced))
                     .foregroundStyle(.tertiary)
                     .textSelection(.enabled)
             }
             if genre == .combat, let couleur = lecture.couleur {
                 Text(L("diagnostic.lecture.couleur", Int(couleur * 100)))
-                    .font(.system(size: 10, design: .monospaced))
+                    .font(.synfus(.petit, design: .monospaced))
                     .foregroundStyle(.tertiary)
             }
         }

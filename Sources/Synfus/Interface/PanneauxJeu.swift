@@ -56,13 +56,13 @@ struct BoutonEnTete: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: icone)
-                .font(.system(size: 10, weight: .bold))
+                .font(.synfus(.petit, gras: true))
                 .foregroundStyle(.secondary)
-                .frame(width: 22, height: 22)
+                .frame(width: 24, height: 24)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help(aide)
+        .aide(aide)
     }
 }
 
@@ -101,7 +101,7 @@ struct EnTetePanneau<Titre: View, Boutons: View>: View {
                 .padding(.vertical, 3)
         }
         .padding(.trailing, 4)
-        .font(.system(size: 12))
+        .font(.synfus(.note))
         // Les zones de glisser prennent la hauteur des boutons, sans tirer
         // l'en-tête vers le bas.
         .fixedSize(horizontal: false, vertical: true)

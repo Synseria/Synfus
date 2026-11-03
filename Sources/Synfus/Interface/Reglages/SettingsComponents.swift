@@ -6,6 +6,11 @@ import SwiftUI
 /// un ⓘ — jamais une phrase à l'écran. Libellés : sans deux-points ni « / »,
 /// un nom (« Gain minimal ») ou un infinitif (« Afficher la barre »).
 
+/// Le bord gauche du texte d'une page, celui des lignes d'un `Form` groupé.
+enum MargeReglages {
+    static let texte: CGFloat = 32
+}
+
 /// Une page de réglages : son titre, puis ses groupes.
 struct PageReglages<Contenu: View>: View {
     let titre: String
@@ -31,13 +36,13 @@ struct EnTetePage: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Text(titre).font(.system(size: 20, weight: .bold))
+            Text(titre).font(.synfus(.grand, gras: true))
             if let aide { HelpTip(aide) }
             Spacer(minLength: 12)
-            if let valeur { Text(valeur).font(.system(size: 12)).foregroundStyle(.secondary) }
+            if let valeur { Text(valeur).font(.synfus(.note)).foregroundStyle(.secondary) }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 28)
+        .padding(.horizontal, MargeReglages.texte)
         .padding(.top, 22)
         .padding(.bottom, 4)
     }
@@ -76,7 +81,7 @@ struct Ligne<Controle: View, Icone: View>: View {
                         if let aide { HelpTip(aide) }
                     }
                     if let etat {
-                        Text(etat).font(.system(size: 11)).foregroundStyle(.secondary)
+                        Text(etat).font(.synfus(.petit)).foregroundStyle(.secondary)
                     }
                 }
             }
@@ -117,7 +122,7 @@ struct Avertissement: View {
         Ligne(titre: texte) {
             if let bouton { Button(bouton, action: action) }
         }
-        .foregroundStyle(.orange)
+        .foregroundStyle(Couleurs.alerte)
     }
 }
 
@@ -131,7 +136,7 @@ struct HelpTip: View {
     var body: some View {
         Button { showing.toggle() } label: {
             Image(systemName: "info.circle")
-                .font(.system(size: 12))
+                .font(.synfus(.note))
                 .foregroundStyle(.secondary)
         }
         .buttonStyle(.plain)
@@ -139,7 +144,7 @@ struct HelpTip: View {
         .accessibilityLabel(text)
         .popover(isPresented: $showing, arrowEdge: .bottom) {
             Text(text)
-                .font(.system(size: 12))
+                .font(.synfus(.note))
                 .padding(12)
                 .frame(width: 300, alignment: .leading)
         }
@@ -182,8 +187,8 @@ struct ShortcutRow: View {
             HStack(spacing: 6) {
                 if conflit || refuse {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.orange)
+                        .font(.synfus(.petit))
+                        .foregroundStyle(Couleurs.alerte)
                         .help(conflit ? L("raccourcis.conflit") : L("raccourcis.refuse"))
                 }
                 ShortcutRecorder(hotKey: hotKey, allowsBareKeys: allowsBareKeys)
@@ -240,9 +245,9 @@ struct PermissionRow: View {
     var body: some View {
         Ligne(titre: name, aide: help) {
             HStack(spacing: 8) {
-                Circle().fill(granted ? Color.green : Color.orange).frame(width: 8, height: 8)
+                Circle().fill(granted ? Couleurs.succes : Couleurs.alerte).frame(width: 8, height: 8)
                 Text(granted ? L("commun.accordee") : L("commun.manquante"))
-                    .foregroundStyle(granted ? Color.secondary : Color.orange)
+                    .foregroundStyle(granted ? Color.secondary : Couleurs.alerte)
                 if !granted { Button(L("commun.ouvrirReglagesSysteme"), action: open) }
             }
         }
@@ -257,7 +262,7 @@ struct CopiableCommand: View {
     var body: some View {
         HStack(spacing: 6) {
             Text(command)
-                .font(.system(size: 10, design: .monospaced))
+                .font(.synfus(.petit, design: .monospaced))
                 .textSelection(.enabled)
                 .lineLimit(2)
                 .truncationMode(.middle)
@@ -267,7 +272,7 @@ struct CopiableCommand: View {
                 Image(systemName: "doc.on.doc")
             }
             .buttonStyle(.borderless)
-            .help(L("commun.copierCommande"))
+            .aide(L("commun.copierCommande"))
         }
         .padding(6)
         .background(RoundedRectangle(cornerRadius: 5).fill(Color.primary.opacity(0.06)))

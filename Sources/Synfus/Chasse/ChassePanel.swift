@@ -68,7 +68,7 @@ final class ChassePanel: NSObject, ObservableObject, NSWindowDelegate {
     }
 
     private func construire() -> NSPanel {
-        let hosting = NSHostingController(rootView: ChasseVue())
+        let hosting = NSHostingController(rootView: ChasseVue().racineSynfus())
         hosting.sizingOptions = [.preferredContentSize]
         let panel = PanneauChasse(
             contentRect: NSRect(x: 0, y: 0, width: 216, height: 360),

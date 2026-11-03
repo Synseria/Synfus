@@ -116,6 +116,7 @@ struct PanneauQuetesTests {
         for (grand, petit) in zip(confort, compact) {
             switch (grand, petit) {
             case let (grand as CGFloat, petit as CGFloat): #expect(petit <= grand)
+            case let (grand as TailleTexte, petit as TailleTexte): #expect(petit <= grand)
             case let (grand as CGSize, petit as CGSize): #expect(petit.width <= grand.width && petit.height <= grand.height)
             default: Issue.record("mesure d'un type inattendu : \(grand)")
             }

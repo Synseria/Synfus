@@ -12,13 +12,16 @@ struct PageListe<Contenu: View>: View {
     var aide: String?
     @ViewBuilder let contenu: Contenu
 
+    /// Le retrait d'une ligne dans son cadre (`cadreDeListe`).
+    private static var margeLigne: CGFloat { 10 }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             EnTetePage(titre: titre, valeur: valeur, aide: aide)
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) { contenu }
                     .labeledContentStyle(StyleLigneListe())
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, MargeReglages.texte - Self.margeLigne)
                     .padding(.top, 10)
                     .padding(.bottom, 20)
             }
@@ -45,7 +48,7 @@ struct EnTeteListe: View {
 
     var body: some View {
         SectionTitle(titre, help: aide)
-            .font(.system(size: 13, weight: .semibold))
+            .font(.synfus(.corps, gras: true))
             .padding(.horizontal, 10)
             .padding(.top, 18)
             .padding(.bottom, 6)

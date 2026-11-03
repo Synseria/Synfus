@@ -151,7 +151,7 @@ final class PreviewPanelController: NSObject, ObservableObject {
     }
 
     private func build() {
-        let hosting = NSHostingController(rootView: PreviewPanelView())
+        let hosting = NSHostingController(rootView: PreviewPanelView().racineSynfus())
         hosting.sizingOptions = [.preferredContentSize]
 
         let panel = PreviewPanel(
@@ -290,16 +290,16 @@ private struct PreviewPanelView: View {
             HStack(spacing: 5) {
                 if let number {
                     Text("\(number)")
-                        .font(.system(size: 9, weight: .semibold, design: .rounded))
+                        .font(.synfus(.marque, gras: true, design: .rounded))
                         .foregroundStyle(.secondary)
                 }
                 Text(client.name)
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.synfus(.petit, gras: true))
                     .lineLimit(1)
                 Spacer(minLength: 0)
                 if let position = lecteur.positions[client.name] {
                     Text(position.coordonnees)
-                        .font(.system(size: 10, design: .monospaced))
+                        .font(.synfus(.petit, design: .monospaced))
                         .foregroundStyle(.secondary)
                         .help(position.zone ?? "")
                 }
@@ -315,20 +315,20 @@ private struct PreviewPanelView: View {
         return VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 6) {
                 Text(client.name)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.synfus(.petit, gras: true))
                     .lineLimit(1)
                 Text(position?.coordonnees ?? (service.authorized ? "…" : "—"))
-                    .font(.system(size: 11, design: .monospaced))
+                    .font(.synfus(.petit, design: .monospaced))
                     .foregroundStyle(.secondary)
             }
             if let zone = position?.zone {
                 Text(zone)
-                    .font(.system(size: 10))
+                    .font(.synfus(.petit))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             } else if !service.authorized {
                 Text(L("apercu.autorisationRequise"))
-                    .font(.system(size: 10))
+                    .font(.synfus(.petit))
                     .foregroundStyle(.secondary)
             }
         }
@@ -341,7 +341,7 @@ private struct PreviewPanelView: View {
         Text(service.authorized
              ? L("apercu.captureEnCours")
              : L("apercu.autorisationRequise"))
-            .font(.system(size: 10))
+            .font(.synfus(.petit))
             .foregroundStyle(.secondary)
             .multilineTextAlignment(.center)
             .padding(8)
