@@ -130,7 +130,7 @@ struct BoutonFavori: View {
                 .foregroundStyle(favori ? Couleurs.ambre : Color.secondary)
         }
         .buttonStyle(.borderless)
-        .help(favori ? L("zaap.favori.retirer") : L("zaap.favori.ajouter"))
+        .aide(favori ? L("zaap.favori.retirer") : L("zaap.favori.ajouter"))
     }
 }
 
@@ -158,7 +158,7 @@ struct BoutonTrajet: View {
             .foregroundStyle(copie ? Couleurs.accentTexte : Color.secondary)
         }
         .buttonStyle(.borderless)
-        .help(dansLesDouze ? L("ouTrouver.copierTrajet") : L("trajet.copier.horsDesDouze"))
+        .aide(dansLesDouze ? L("ouTrouver.copierTrajet") : L("trajet.copier.horsDesDouze"))
     }
 }
 

@@ -37,7 +37,7 @@ struct EnTetePage: View {
             if let valeur { Text(valeur).font(.synfus(.note)).foregroundStyle(.secondary) }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 28)
+        .padding(.horizontal, 32)
         .padding(.top, 22)
         .padding(.bottom, 4)
     }
@@ -267,7 +267,7 @@ struct CopiableCommand: View {
                 Image(systemName: "doc.on.doc")
             }
             .buttonStyle(.borderless)
-            .help(L("commun.copierCommande"))
+            .aide(L("commun.copierCommande"))
         }
         .padding(6)
         .background(RoundedRectangle(cornerRadius: 5).fill(Color.primary.opacity(0.06)))

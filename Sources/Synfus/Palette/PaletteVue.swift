@@ -39,6 +39,7 @@ struct PaletteVue: View {
                 .textFieldStyle(.plain)
                 .font(.synfus(.grand))
                 .focused($champ, equals: .recherche)
+                .help(L("raccourcis.palette.aide"))
             Text(mode)
                 .font(.synfus(.petit, gras: true))
                 .foregroundStyle(.white)
@@ -63,6 +64,7 @@ struct PaletteVue: View {
                     .background(Capsule().fill(choisi ? Couleurs.accentPlein : Color.primary.opacity(0.06)))
                     .contentShape(Capsule())
                     .onTapGesture { modele.choisir(filtre) }
+                    .accessibilityAddTraits(choisi ? [.isButton, .isSelected] : .isButton)
             }
             Spacer()
             // D'où partent distances et trajets : le dernier perso lu devant,
@@ -75,6 +77,7 @@ struct PaletteVue: View {
                 .font(.synfus(.petit))
                 .foregroundStyle(.secondary)
                 .onTapGesture { modele.triSuivant() }
+                .accessibilityAddTraits(.isButton)
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 10)
@@ -149,6 +152,7 @@ struct PaletteVue: View {
                         .background(Capsule().fill(Color.primary.opacity(0.07)))
                         .onTapGesture { modele.executer(entree) }
                         .help(entree.titre)
+                        .accessibilityAddTraits(.isButton)
                 }
             }
         }
@@ -162,6 +166,9 @@ struct PaletteVue: View {
                 CarteZaap(entree: entree, choisie: index == modele.selection)
                     .id(entree.id)
                     .onTapGesture { modele.executer(entree) }
+                    .help(entree.complet)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityAddTraits(.isButton)
                     .contextMenu { menu(entree) }
             }
         }
@@ -174,6 +181,9 @@ struct PaletteVue: View {
                 LigneResultat(entree: entree, choisie: index == modele.selection, deplie: deplie)
                     .id(entree.id)
                     .onTapGesture { modele.executer(entree) }
+                    .help(entree.complet)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityAddTraits(.isButton)
                     .contextMenu { menu(entree) }
                 if deplie, case .ouTrouver(let sujet) = entree.effet {
                     OuTrouverVue(sujet: sujet, metriques: .confort)

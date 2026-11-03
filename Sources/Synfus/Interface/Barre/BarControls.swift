@@ -180,7 +180,7 @@ struct ModeButton: View {
                 .font(.synfus(.note))
                 .foregroundStyle(actif ? Couleurs.accentTexte : Color.secondary)
                 .contentTransition(.symbolEffect(.replace))
-                .frame(width: 22, height: 22)
+                .frame(width: 24, height: 24)
                 .background(
                     RoundedRectangle(cornerRadius: 7, style: .continuous)
                         .fill(fond)
@@ -191,7 +191,8 @@ struct ModeButton: View {
         .onHover { survole = $0 }
         .animation(.easeOut(duration: 0.15), value: survole)
         .animation(.easeOut(duration: 0.15), value: actif)
-        .help(aide)
+        .aide(aide)
+        .accessibilityAddTraits(actif ? .isSelected : [])
     }
 
     private var fond: Color {
@@ -231,7 +232,7 @@ struct ArrangeMenuButton: View {
             Image(systemName: "rectangle.3.group")
                 .font(.synfus(.note))
                 .foregroundStyle(Color.secondary)
-                .frame(width: 22, height: 22)
+                .frame(width: 24, height: 24)
                 .background(
                     RoundedRectangle(cornerRadius: 7, style: .continuous)
                         .fill(survole ? Color.primary.opacity(0.08) : Color.clear)
@@ -239,11 +240,12 @@ struct ArrangeMenuButton: View {
                 .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
         }
         .menuStyle(.borderlessButton)
+        .tint(Color.secondary)
         .menuIndicator(.hidden)
         .fixedSize()
         .onHover { survole = $0 }
         .animation(.easeOut(duration: 0.15), value: survole)
-        .help(L("barre.rangerAide"))
+        .aide(L("barre.rangerAide"))
     }
 }
 
@@ -259,12 +261,12 @@ struct GearButton: View {
             Image(systemName: "gearshape")
                 .font(.synfus(.petit))
                 .foregroundStyle(survole ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tertiary))
-                .frame(width: 22, height: 22)
+                .frame(width: 24, height: 24)
                 .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
         }
         .buttonStyle(.plain)
         .onHover { survole = $0 }
-        .help(L("barre.reglagesAide"))
+        .aide(L("barre.reglagesAide"))
     }
 }
 
@@ -277,13 +279,15 @@ struct GearButton: View {
 /// et l'appliquait, invisible, à toutes les pastilles — la barre se redessinait
 /// deux fois par seconde en permanence, alerte ou pas.
 struct AlertPulse: View {
+    @Environment(\.accessibilityReduceMotion) private var sansMouvement
     @State private var pulse = false
 
     var body: some View {
         RoundedRectangle(cornerRadius: 8, style: .continuous)
             .strokeBorder(Couleurs.alerte, lineWidth: 1.5)
-            .opacity(pulse ? 1 : 0.2)
+            .opacity(pulse || sansMouvement ? 1 : 0.2)
             .onAppear {
+                guard !sansMouvement else { return }
                 withAnimation(.easeInOut(duration: 0.55).repeatForever(autoreverses: true)) {
                     pulse = true
                 }
@@ -321,15 +325,17 @@ struct CopiedBadge: View {
 /// de la pastille active ne se remarquait pas, et l'on perdait le fil. Un
 /// contour qui clignote se voit du coin de l'œil, sans rien poser sur le jeu.
 struct SwitchBlink: View {
+    @Environment(\.accessibilityReduceMotion) private var sansMouvement
     @State private var allume = true
 
     var body: some View {
         RoundedRectangle(cornerRadius: 8, style: .continuous)
             .strokeBorder(Color.white, lineWidth: 2)
             .shadow(color: Couleurs.accent, radius: 4)
-            .opacity(allume ? 1 : 0.1)
+            .opacity(allume || sansMouvement ? 1 : 0.1)
             .allowsHitTesting(false)
             .onAppear {
+                guard !sansMouvement else { return }
                 withAnimation(.easeInOut(duration: 0.2).repeatForever(autoreverses: true)) {
                     allume = false
                 }

@@ -11,6 +11,7 @@ struct BarView: View {
     @ObservedObject private var chasse = ChassePanel.shared
     @ObservedObject private var quetes = QuetePanel.shared
     @ObservedObject private var palette = PalettePanel.shared
+    @Environment(\.accessibilityReduceMotion) private var sansMouvement
     @State private var dragging: String?
     @State private var chipFrames: [String: CGRect] = [:]
     /// Cadres des secteurs de la rangée des équipes, dans le même repère que
@@ -49,7 +50,7 @@ struct BarView: View {
         .background(WindowDragArea())   // tout le fond libre déplace la barre
         .modifier(BarBackground())
         .fixedSize()
-        .animation(.easeOut(duration: 0.15), value: dragging != nil)
+        .animation(sansMouvement ? nil : .easeOut(duration: 0.15), value: dragging != nil)
         .contextMenu { contextMenu }
         .onChange(of: manager.effectif) { _, effectif in pruneChipFrames(effectif) }
         .onChange(of: prefs.equipes.count) { _, _ in pruneSectorFrames() }
@@ -526,7 +527,7 @@ struct BarView: View {
                 guard let target = chipFrames.first(where: { entry in
                     entry.key != client.name && entry.value.contains(value.location)
                 })?.key else { return }
-                withAnimation(.easeInOut(duration: 0.15)) {
+                withAnimation(sansMouvement ? nil : .easeInOut(duration: 0.15)) {
                     Preferences.shared.swapOrder(client.name, target)
                     // Un tri, pas un inventaire : rien n'a changé côté clients.
                     WindowManager.shared.resort()

@@ -97,7 +97,7 @@ struct ShortcutRecorder: View {
             .buttonStyle(.plain)
             .opacity(hotKey == nil ? 0 : 1)
             .disabled(hotKey == nil)
-            .help(L("raccourci.supprimer"))
+            .aide(L("raccourci.supprimer"))
         }
         .onDisappear { session.stop(id) }
     }

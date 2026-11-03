@@ -24,5 +24,9 @@ extension Font {
 extension View {
     /// À poser sur la racine de chaque fenêtre : sans elle, un contrôle du
     /// système y prend l'accent de l'utilisateur.
-    func racineSynfus() -> some View { tint(Couleurs.accentPlein) }
+    func racineSynfus() -> some View { tint(Couleurs.accentTexte) }
+
+    /// Le texte d'un bouton sans texte : l'infobulle, et son nom pour VoiceOver,
+    /// que `.help` ne donne pas.
+    func aide(_ texte: String) -> some View { help(texte).accessibilityLabel(texte) }
 }
