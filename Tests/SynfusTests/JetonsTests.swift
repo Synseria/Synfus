@@ -9,10 +9,14 @@ import Testing
 struct JetonsTests {
 
     private func lignes(sauf exclus: Set<String>) throws -> [(fichier: String, ligne: Substring)] {
-        try SourcesDuDepot.fichiers().filter { !exclus.contains($0.lastPathComponent) }.flatMap { url in
-            try String(contentsOf: url, encoding: .utf8).split(separator: "\n")
-                .filter { !$0.contains("///") && !$0.contains("// ") }
-                .map { (url.lastPathComponent, $0) }
+        let fichiers = SourcesDuDepot.fichiers()
+        try #require(!fichiers.isEmpty)
+        return try fichiers.filter { !exclus.contains($0.lastPathComponent) }.flatMap { url in
+            try String(contentsOf: url, encoding: .utf8).split(separator: "\n").compactMap { ligne in
+                // Un commentaire ne compte pas, le code qui le précède si.
+                let code = ligne.split(separator: "//", maxSplits: 1, omittingEmptySubsequences: false)[0]
+                return code.isEmpty ? nil : (url.lastPathComponent, code)
+            }
         }
     }
 
@@ -61,9 +65,12 @@ struct JetonsTests {
 
     @Test("Chaque fenêtre porte le jeton de racine")
     func racines() throws {
+        let motif = /rootView:\s*[^\n]+/
         // `ImagesCarte` n'héberge qu'une image, sans contrôle.
-        for (fichier, ligne) in try lignes(sauf: ["ImagesCarte.swift"]) where ligne.contains("rootView:") {
-            #expect(ligne.contains(".racineSynfus()"), "\(fichier) : \(ligne)")
+        for url in SourcesDuDepot.fichiers() where url.lastPathComponent != "ImagesCarte.swift" {
+            for racine in try String(contentsOf: url, encoding: .utf8).matches(of: motif) {
+                #expect(racine.output.contains(".racineSynfus()"), "\(url.lastPathComponent) : \(racine.output)")
+            }
         }
     }
 }

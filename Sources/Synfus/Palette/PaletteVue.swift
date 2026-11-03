@@ -232,10 +232,10 @@ struct PaletteVue: View {
                 aide("↵", entree)
                     .lineLimit(1)
                     .truncationMode(.middle)
-                aide("⇥", L("palette.touche.filtre"))
                 aide("⌘E", L("palette.touche.etiquette"))
                 aide("⌘D", L("palette.touche.favori"))
-                aide("⌘T", L("palette.touche.tri"))
+                aide("/", L("palette.touche.commandes"))
+                aide("%", L("palette.touche.variables"))
                 Spacer()
                 aide("esc", L("palette.touche.fermer"))
             }

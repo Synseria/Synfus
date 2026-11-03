@@ -66,7 +66,7 @@ struct AlmanaxVue: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(.secondary)
-            .help(L("palette.touche.ouTrouver"))
+            .aide(L("palette.touche.ouTrouver"))
         }
     }
 }
