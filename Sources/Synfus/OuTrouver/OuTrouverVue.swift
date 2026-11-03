@@ -31,7 +31,7 @@ struct OuTrouverVue: View {
                 if let sources = store.objet(id) { objet(sources) } else { attente }
             }
         }
-        .font(.system(size: metriques.detail))
+        .font(.synfus(metriques.detail))
         .foregroundStyle(.secondary)
         .onAppear { store.demander(sujet) }
     }
@@ -121,11 +121,11 @@ struct OuTrouverVue: View {
                 Text(Lieu.traduit(repaire.repaire.noms, langue) ?? "?").lineLimit(1).layoutPriority(1)
                 Spacer(minLength: 4)
                 if copie == id {
-                    Text(L("quete.copie")).fontWeight(.semibold).foregroundStyle(Couleurs.accent)
+                    Text(L("quete.copie")).fontWeight(.semibold).foregroundStyle(Couleurs.accentTexte)
                 } else {
                     if let cartes = repaire.cartes { Text(L("ouTrouver.cartes", nombre: cartes, cartes)).lineLimit(1) }
                     Text(Coordonnees.texte(repaire.situation.x, repaire.situation.y))
-                        .font(.system(size: metriques.detail, design: .monospaced))
+                        .font(.synfus(metriques.detail, design: .monospaced))
                         .lineLimit(1)
                 }
             }
@@ -142,7 +142,7 @@ struct OuTrouverVue: View {
             let reste = nombre - Self.premiers
             Button(L("ouTrouver.plus", nombre: reste, reste)) { tout = true }
                 .buttonStyle(.borderless)
-                .font(.system(size: metriques.detail))
+                .font(.synfus(metriques.detail))
         }
     }
 

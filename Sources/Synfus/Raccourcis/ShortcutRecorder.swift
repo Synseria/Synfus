@@ -67,8 +67,8 @@ struct ShortcutRecorder: View {
         HStack(spacing: 6) {
             Button(action: toggle) {
                 Text(label)
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
-                    .foregroundStyle(recording ? Color.accentColor : .primary)
+                    .font(.synfus(.note, gras: true, design: .rounded))
+                    .foregroundStyle(recording ? Couleurs.accentTexte : .primary)
                     .frame(minWidth: 92)
                     .padding(.vertical, 4)
                     .padding(.horizontal, 8)
@@ -78,7 +78,7 @@ struct ShortcutRecorder: View {
                             .overlay(
                                 RoundedRectangle(cornerRadius: 6)
                                     .strokeBorder(
-                                        recording ? Color.accentColor : Color.primary.opacity(0.15),
+                                        recording ? Couleurs.accent : Color.primary.opacity(0.15),
                                         lineWidth: recording ? 1.5 : 0.5
                                     )
                             )
@@ -97,7 +97,7 @@ struct ShortcutRecorder: View {
             .buttonStyle(.plain)
             .opacity(hotKey == nil ? 0 : 1)
             .disabled(hotKey == nil)
-            .help(L("raccourci.supprimer"))
+            .aide(L("raccourci.supprimer"))
         }
         .onDisappear { session.stop(id) }
     }

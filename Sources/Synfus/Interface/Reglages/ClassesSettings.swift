@@ -40,7 +40,7 @@ struct ClassesSettings: View {
                 } else {
                     Circle().fill(breed.color)
                     Text(icons.catalogue.abbreviation(for: breed.label))
-                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .font(.synfus(.petit, gras: true, design: .rounded))
                         .foregroundStyle(.white)
                 }
             }
@@ -52,7 +52,7 @@ struct ClassesSettings: View {
 
             if custom != nil, let provenance {
                 Text(provenance == .tienne ? L("classes.provenance.tienne") : L("classes.provenance.dofusdb"))
-                    .font(.system(size: 11))
+                    .font(.synfus(.petit))
                     .foregroundStyle(.secondary)
             }
             if provenance == .tienne {

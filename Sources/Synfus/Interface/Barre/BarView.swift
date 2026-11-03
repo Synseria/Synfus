@@ -11,6 +11,7 @@ struct BarView: View {
     @ObservedObject private var chasse = ChassePanel.shared
     @ObservedObject private var quetes = QuetePanel.shared
     @ObservedObject private var palette = PalettePanel.shared
+    @Environment(\.accessibilityReduceMotion) private var sansMouvement
     @State private var dragging: String?
     @State private var chipFrames: [String: CGRect] = [:]
     /// Cadres des secteurs de la rangée des équipes, dans le même repère que
@@ -49,7 +50,7 @@ struct BarView: View {
         .background(WindowDragArea())   // tout le fond libre déplace la barre
         .modifier(BarBackground())
         .fixedSize()
-        .animation(.easeOut(duration: 0.15), value: dragging != nil)
+        .animation(sansMouvement ? nil : .easeOut(duration: 0.15), value: dragging != nil)
         .contextMenu { contextMenu }
         .onChange(of: manager.effectif) { _, effectif in pruneChipFrames(effectif) }
         .onChange(of: prefs.equipes.count) { _, _ in pruneSectorFrames() }
@@ -143,7 +144,7 @@ struct BarView: View {
                 manager.requestAccessibility()
             } label: {
                 Label(L("barre.autoriser"), systemImage: "lock.shield")
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.synfus(.petit, gras: true))
                     .padding(.horizontal, 8)
                     .padding(.vertical, 5)
             }
@@ -151,7 +152,7 @@ struct BarView: View {
             .help(L("barre.accessibiliteRequise"))
         } else if manager.clients.isEmpty {
             Text(L("barre.aucunPerso"))
-                .font(.system(size: 11))
+                .font(.synfus(.petit))
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 5)
@@ -160,7 +161,7 @@ struct BarView: View {
             // de connecté le dit, et la rangée reste là pour revenir à « Tous ».
             if manager.effectif.isEmpty {
                 Text(L("barre.aucunPersoEquipe"))
-                    .font(.system(size: 11))
+                    .font(.synfus(.petit))
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 5)
@@ -188,7 +189,6 @@ struct BarView: View {
     private var zaapButton: some View {
         ModeButton(
             icone: "point.3.connected.trianglepath.dotted",
-            teinte: .green,
             actif: zaaps.reecritRecemment || palette.ouvert,
             aide: L("barre.paletteAide", prefs.paletteHotKey?.displayString ?? L("barre.aucunRaccourci"))
         ) {
@@ -202,7 +202,6 @@ struct BarView: View {
     private var chasseButton: some View {
         ModeButton(
             icone: "map",
-            teinte: .yellow,
             actif: chasse.ouvert,
             aide: L("barre.chasseAide", prefs.chasseHotKey?.displayString ?? L("barre.aucunRaccourci"))
         ) {
@@ -213,7 +212,7 @@ struct BarView: View {
     /// Le panneau des quêtes épinglées ; vide, il invite à en chercher une
     /// dans la palette.
     private var quetesButton: some View {
-        ModeButton(icone: "scroll", teinte: .mint, actif: quetes.ouvert, aide: L("barre.quetesAide")) {
+        ModeButton(icone: "scroll", actif: quetes.ouvert, aide: L("barre.quetesAide")) {
             QuetePanel.shared.basculer()
         }
     }
@@ -254,7 +253,6 @@ struct BarView: View {
         let on = prefs.attentionAction == .focus
         return ModeButton(
             icone: on ? "bolt.fill" : "bolt.slash",
-            teinte: .orange,
             actif: on,
             aide: on
                 ? L("barre.passageAuto.actif", toggleShortcut)
@@ -284,7 +282,7 @@ struct BarView: View {
             } else {
                 Circle().fill(icons.catalogue.color(for: className))
                 Text(icons.catalogue.abbreviation(for: className))
-                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .font(.synfus(.marque, gras: true, design: .rounded))
                     .foregroundStyle(.white)
             }
         }
@@ -317,21 +315,21 @@ struct BarView: View {
 
                 VStack(alignment: .leading, spacing: 0) {
                     Text(client.name)
-                        .font(.system(size: 12, weight: active ? .semibold : .regular))
+                        .font(.synfus(.note, gras: active))
                         .lineLimit(1)
                         .fixedSize()
                     if prefs.showClasses, let className = client.characterClass {
                         Text(className)
-                            .font(.system(size: 9))
-                            .foregroundStyle(active ? Color.white.opacity(0.75) : Color.secondary)
+                            .font(.synfus(.petit))
+                            .foregroundStyle(active ? Color.white : Color.secondary)
                             .lineLimit(1)
                     }
                 }
 
                 if prefs.showNumbers {
                     Text("\(index + 1)")
-                        .font(.system(size: 9, weight: .semibold, design: .rounded))
-                        .foregroundStyle(active ? Color.white.opacity(0.7) : Color.secondary.opacity(0.8))
+                        .font(.synfus(.marque, gras: true, design: .rounded))
+                        .foregroundStyle(active ? Color.white : Color.secondary)
                 }
 
                 // Rien de plus : l'enchaînement au clic suit l'ordre de la barre,
@@ -343,7 +341,7 @@ struct BarView: View {
             .fixedSize(horizontal: true, vertical: false)
             .background(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(active ? Color.accentColor : Color.clear)
+                    .fill(active ? Couleurs.accentPlein : Color.clear)
             )
             .overlay { if alerting { AlertPulse() } }
             .overlay { if manager.basculeSignalee == client.slotKey { SwitchBlink() } }
@@ -529,7 +527,7 @@ struct BarView: View {
                 guard let target = chipFrames.first(where: { entry in
                     entry.key != client.name && entry.value.contains(value.location)
                 })?.key else { return }
-                withAnimation(.easeInOut(duration: 0.15)) {
+                withAnimation(sansMouvement ? nil : .easeInOut(duration: 0.15)) {
                     Preferences.shared.swapOrder(client.name, target)
                     // Un tri, pas un inventaire : rien n'a changé côté clients.
                     WindowManager.shared.resort()

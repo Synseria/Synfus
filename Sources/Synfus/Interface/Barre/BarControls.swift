@@ -169,7 +169,6 @@ struct BarBackground: ViewModifier {
 /// carrés gris en permanence.
 struct ModeButton: View {
     let icone: String
-    let teinte: Color
     let actif: Bool
     let aide: String
     let action: () -> Void
@@ -178,10 +177,10 @@ struct ModeButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: icone)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(actif ? teinte : Color.secondary)
+                .font(.synfus(.note))
+                .foregroundStyle(actif ? Couleurs.accentTexte : Color.secondary)
                 .contentTransition(.symbolEffect(.replace))
-                .frame(width: 22, height: 22)
+                .frame(width: 24, height: 24)
                 .background(
                     RoundedRectangle(cornerRadius: 7, style: .continuous)
                         .fill(fond)
@@ -192,11 +191,12 @@ struct ModeButton: View {
         .onHover { survole = $0 }
         .animation(.easeOut(duration: 0.15), value: survole)
         .animation(.easeOut(duration: 0.15), value: actif)
-        .help(aide)
+        .aide(aide)
+        .accessibilityAddTraits(actif ? .isSelected : [])
     }
 
     private var fond: Color {
-        if actif { return teinte.opacity(survole ? 0.22 : 0.18) }
+        if actif { return Couleurs.accent.opacity(survole ? 0.22 : 0.18) }
         return survole ? Color.primary.opacity(0.08) : .clear
     }
 }
@@ -230,9 +230,9 @@ struct ArrangeMenuButton: View {
             Button(L("menu.lancerSession")) { WindowManager.shared.lancerSession() }
         } label: {
             Image(systemName: "rectangle.3.group")
-                .font(.system(size: 12, weight: .medium))
+                .font(.synfus(.note))
                 .foregroundStyle(Color.secondary)
-                .frame(width: 22, height: 22)
+                .frame(width: 24, height: 24)
                 .background(
                     RoundedRectangle(cornerRadius: 7, style: .continuous)
                         .fill(survole ? Color.primary.opacity(0.08) : Color.clear)
@@ -240,11 +240,12 @@ struct ArrangeMenuButton: View {
                 .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
         }
         .menuStyle(.borderlessButton)
+        .tint(Color.secondary)
         .menuIndicator(.hidden)
         .fixedSize()
         .onHover { survole = $0 }
         .animation(.easeOut(duration: 0.15), value: survole)
-        .help(L("barre.rangerAide"))
+        .aide(L("barre.rangerAide"))
     }
 }
 
@@ -258,14 +259,14 @@ struct GearButton: View {
             SettingsWindowController.shared.show()
         } label: {
             Image(systemName: "gearshape")
-                .font(.system(size: 11, weight: .medium))
+                .font(.synfus(.petit))
                 .foregroundStyle(survole ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tertiary))
-                .frame(width: 22, height: 22)
+                .frame(width: 24, height: 24)
                 .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
         }
         .buttonStyle(.plain)
         .onHover { survole = $0 }
-        .help(L("barre.reglagesAide"))
+        .aide(L("barre.reglagesAide"))
     }
 }
 
@@ -278,13 +279,16 @@ struct GearButton: View {
 /// et l'appliquait, invisible, à toutes les pastilles — la barre se redessinait
 /// deux fois par seconde en permanence, alerte ou pas.
 struct AlertPulse: View {
+    @Environment(\.accessibilityReduceMotion) private var sansMouvement
     @State private var pulse = false
 
     var body: some View {
         RoundedRectangle(cornerRadius: 8, style: .continuous)
-            .strokeBorder(Color.orange, lineWidth: 1.5)
-            .opacity(pulse ? 1 : 0.2)
-            .onAppear {
+            .strokeBorder(Couleurs.alerte, lineWidth: 1.5)
+            .opacity(pulse || sansMouvement ? 1 : 0.2)
+            .task(id: sansMouvement) {
+                pulse = false
+                guard !sansMouvement else { return }
                 withAnimation(.easeInOut(duration: 0.55).repeatForever(autoreverses: true)) {
                     pulse = true
                 }
@@ -299,13 +303,13 @@ struct AlertPulse: View {
 struct CopiedBadge: View {
     var body: some View {
         RoundedRectangle(cornerRadius: 8, style: .continuous)
-            .strokeBorder(Color.accentColor, lineWidth: 1.5)
+            .strokeBorder(Couleurs.accent, lineWidth: 1.5)
             .overlay(alignment: .topTrailing) {
                 Image(systemName: "doc.on.clipboard.fill")
-                    .font(.system(size: 8, weight: .bold))
+                    .font(.synfus(.marque, gras: true))
                     .foregroundStyle(.white)
                     .padding(2)
-                    .background(Circle().fill(Color.accentColor))
+                    .background(Circle().fill(Couleurs.accentPlein))
                     .offset(x: 4, y: -4)
             }
             .transition(.opacity)
@@ -322,15 +326,18 @@ struct CopiedBadge: View {
 /// de la pastille active ne se remarquait pas, et l'on perdait le fil. Un
 /// contour qui clignote se voit du coin de l'œil, sans rien poser sur le jeu.
 struct SwitchBlink: View {
+    @Environment(\.accessibilityReduceMotion) private var sansMouvement
     @State private var allume = true
 
     var body: some View {
         RoundedRectangle(cornerRadius: 8, style: .continuous)
             .strokeBorder(Color.white, lineWidth: 2)
-            .shadow(color: .accentColor, radius: 4)
-            .opacity(allume ? 1 : 0.1)
+            .shadow(color: Couleurs.accent, radius: 4)
+            .opacity(allume || sansMouvement ? 1 : 0.1)
             .allowsHitTesting(false)
-            .onAppear {
+            .task(id: sansMouvement) {
+                allume = true
+                guard !sansMouvement else { return }
                 withAnimation(.easeInOut(duration: 0.2).repeatForever(autoreverses: true)) {
                     allume = false
                 }
@@ -379,17 +386,17 @@ struct CombatBadge: View {
         Group {
             if let texte {
                 Text(texte)
-                    .font(.system(size: 8, weight: .bold, design: .rounded))
+                    .font(.synfus(.marque, gras: true, design: .rounded))
                     .monospacedDigit()
                     .padding(.horizontal, 3)
             } else {
                 Image(systemName: "figure.fencing")
-                    .font(.system(size: 7, weight: .bold))
+                    .font(.synfus(.marque, gras: true))
                     .padding(2)
             }
         }
         .foregroundStyle(.white)
         .background(Capsule().fill(etat.enCombat && etat != .pasMonTour && etat != .placement ? Self.rose : Color.gray))
-        .offset(x: 4, y: -4)
+        .offset(x: 5, y: -5)
     }
 }

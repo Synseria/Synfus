@@ -23,14 +23,14 @@ struct ChasseVue: View {
             .padding(12)
         }
         .frame(width: 216, alignment: .leading)
-        .font(.system(size: 12))
+        .font(.synfus(.note))
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Color.primary.opacity(0.12)))
     }
 
     private var entete: some View {
         EnTetePanneau(icone: "map", teinte: Couleurs.ambre) {
-            Text(L("chasse.titre")).font(.system(size: 12, weight: .semibold))
+            Text(L("chasse.titre")).font(.synfus(.note, gras: true))
                 .padding(.horizontal, 6)
                 .padding(.vertical, 3)
             if modele.rechercheEnCours || modele.lectureEnCours { ProgressView().controlSize(.mini) }
@@ -52,10 +52,11 @@ struct ChasseVue: View {
             Button { modele.reprendrePosition() } label: { Image(systemName: "location") }
                 .buttonStyle(.borderless)
                 .disabled(LecteurEcran.shared.positionDuPersoDevant == nil)
-                .help(L("chasse.depart.reprendre"))
+                .aide(L("chasse.depart.reprendre"))
             Spacer()
         }
         .textFieldStyle(.roundedBorder)
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     // MARK: - Boussole
@@ -86,15 +87,15 @@ struct ChasseVue: View {
         let choisie = modele.direction == direction
         return Button { modele.choisir(direction) } label: {
             Image(systemName: direction.symbole)
-                .font(.system(size: 14, weight: .semibold))
+                .font(.synfus(.titre, gras: true))
                 .frame(width: 36, height: 36)
                 .foregroundStyle(choisie ? Color.white : Color.primary)
                 .background(RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(choisie ? Couleurs.accent : Color.primary.opacity(0.08)))
+                    .fill(choisie ? Couleurs.accentPlein : Color.primary.opacity(0.08)))
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help(direction.libelle)
+        .aide(direction.libelle)
     }
 
     @ViewBuilder
@@ -102,7 +103,7 @@ struct ChasseVue: View {
         if previews.authorized {
             Button { modele.lire() } label: {
                 Image(systemName: "text.viewfinder")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.synfus(.titre, gras: true))
                     .frame(width: 36, height: 36)
                     .foregroundStyle(Couleurs.ambre)
                     .background(Circle().fill(Couleurs.ambre.opacity(0.18)))
@@ -110,7 +111,7 @@ struct ChasseVue: View {
             }
             .buttonStyle(.plain)
             .disabled(modele.lectureEnCours || modele.indices.isEmpty)
-            .help(L("chasse.lire.aide"))
+            .aide(L("chasse.lire.aide"))
         } else {
             Button { previews.requestAuthorization() } label: {
                 Image(systemName: "lock")
@@ -119,7 +120,7 @@ struct ChasseVue: View {
                     .contentShape(Circle())
             }
             .buttonStyle(.plain)
-            .help(L("chasse.autoriser.aide"))
+            .aide(L("chasse.autoriser.aide"))
         }
     }
 
@@ -144,13 +145,13 @@ struct ChasseVue: View {
                 if let echec = modele.echecIndices, !modele.chargementIndices {
                     HStack(spacing: 6) {
                         Text(L("chasse.indices.echec", echec))
-                            .font(.system(size: 10))
-                            .foregroundStyle(.orange)
+                            .font(.synfus(.petit))
+                            .foregroundStyle(Couleurs.alerte)
                         Button(L("quete.reessayer")) { Task { await modele.chargerIndices(forcer: true) } }
                             .controlSize(.mini)
                     }
                 } else {
-                    Text(L("chasse.indices.chargement")).font(.system(size: 10)).foregroundStyle(.secondary)
+                    Text(L("chasse.indices.chargement")).font(.synfus(.petit)).foregroundStyle(.secondary)
                 }
             }
         }
@@ -163,7 +164,7 @@ struct ChasseVue: View {
         VStack(alignment: .leading, spacing: 3) {
             if modele.rienLu {
                 HStack(spacing: 6) {
-                    Text(L("chasse.rienLu")).font(.system(size: 10)).foregroundStyle(.secondary)
+                    Text(L("chasse.rienLu")).font(.synfus(.petit)).foregroundStyle(.secondary)
                     Button(L("lecture.ouvrir")) { SettingsWindowController.shared.show(section: .lecture) }
                         .controlSize(.mini)
                         .help(L("chasse.lire.aide"))
@@ -172,7 +173,7 @@ struct ChasseVue: View {
             ForEach(modele.lues, id: \.self) { cible in
                 Button { modele.choisir(cible) } label: {
                     Text(cible.nom(en: modele.langue))
-                        .font(.system(size: 11))
+                        .font(.synfus(.petit))
                         .lineLimit(1)
                         .padding(.horizontal, 7)
                         .padding(.vertical, 2)
@@ -190,20 +191,20 @@ struct ChasseVue: View {
     @ViewBuilder
     private var resultat: some View {
         if let echec = modele.echec {
-            Text(L("chasse.echec", echec)).font(.system(size: 11)).foregroundStyle(.orange)
+            Text(L("chasse.echec", echec)).font(.synfus(.petit)).foregroundStyle(Couleurs.alerte)
         } else if let constat = modele.constat {
             HStack(spacing: 6) {
                 Image(systemName: constat.direction.symbole).foregroundStyle(.secondary)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(constat.cible.nom(en: modele.langue))
-                        .font(.system(size: 10))
+                        .font(.synfus(.petit))
                         .foregroundStyle(.secondary)
                     Group {
                         switch constat.resultat {
                         case .trouve(let x, let y, let distance):
-                            Text(L("chasse.trouve", nombre: distance, Coordonnees.texte(x, y), distance)).font(.system(size: 13, weight: .semibold))
+                            Text(L("chasse.trouve", nombre: distance, Coordonnees.texte(x, y), distance)).font(.synfus(.corps, gras: true))
                         case .introuvable:
-                            Text(L("chasse.introuvable", EtapeChasse.portee)).foregroundStyle(.orange)
+                            Text(L("chasse.introuvable", EtapeChasse.portee)).foregroundStyle(Couleurs.alerte)
                         case .phorreur:
                             Text(L("chasse.phorreur.suivre", constat.direction.libelle))
                         }
@@ -214,10 +215,10 @@ struct ChasseVue: View {
                 if case .trouve = constat.resultat {
                     Button { modele.copier() } label: {
                         Image(systemName: modele.copieRecente ? "checkmark" : "doc.on.doc")
-                            .foregroundStyle(modele.copieRecente ? Couleurs.accent : Color.secondary)
+                            .foregroundStyle(modele.copieRecente ? Couleurs.accentTexte : Color.secondary)
                     }
                     .buttonStyle(.borderless)
-                    .help(L("chasse.copier"))
+                    .aide(L("chasse.copier"))
                 }
             }
             .padding(10)

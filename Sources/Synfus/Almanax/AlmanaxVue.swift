@@ -23,7 +23,7 @@ struct AlmanaxVue: View {
             if let bonus = Lieu.traduit(almanax.bonus, langue) {
                 let description = Lieu.traduit(almanax.description, langue)
                 Text(description.map { L("palette.almanax.bonus", bonus, $0) } ?? bonus)
-                    .font(.system(size: 11))
+                    .font(.synfus(.petit))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.leading, 38)
@@ -50,8 +50,8 @@ struct AlmanaxVue: View {
             icone(offrande).frame(width: 28, height: 28)
             Button { copier(nom) } label: {
                 HStack(spacing: 6) {
-                    Text(L("palette.almanax")).font(.system(size: 11, weight: .semibold)).foregroundStyle(Couleurs.ambre)
-                    Text(L("palette.almanax.offrande", offrande.quantite, nom)).font(.system(size: 13, weight: .medium))
+                    Text(L("palette.almanax")).font(.synfus(.petit, gras: true)).foregroundStyle(Couleurs.ambre)
+                    Text(L("palette.almanax.offrande", offrande.quantite, nom)).font(.synfus(.corps, gras: true))
                 }
                 .contentShape(Rectangle())
             }
@@ -60,13 +60,13 @@ struct AlmanaxVue: View {
             Spacer(minLength: 4)
             Button { deplie = deplie == offrande.objet ? nil : offrande.objet } label: {
                 Image(systemName: deplie == offrande.objet ? "chevron.down" : "chevron.right")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.synfus(.petit, gras: true))
                     .frame(width: 20, height: 20)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .foregroundStyle(.secondary)
-            .help(L("palette.touche.ouTrouver"))
+            .aide(L("palette.touche.ouTrouver"))
         }
     }
 }

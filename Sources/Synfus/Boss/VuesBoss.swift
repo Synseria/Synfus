@@ -14,7 +14,7 @@ private struct Consigne: View {
         } icon: {
             Image(systemName: icone)
         }
-        .font(.system(size: forte ? 13 : 11, weight: forte ? .semibold : .regular))
+        .font(.synfus(forte ? .corps : .petit, gras: forte))
         .foregroundStyle(urgente ? Couleurs.ambre : forte ? Color.primary : Color.secondary)
     }
 }
@@ -28,7 +28,7 @@ struct KimboVue: View {
     @ObservedObject private var aide = AideBoss.shared
 
     var body: some View {
-        Text(L("boss.kimbo.question")).font(.system(size: 11)).foregroundStyle(.secondary)
+        Text(L("boss.kimbo.question")).font(.synfus(.petit)).foregroundStyle(.secondary)
         ChoixBoss(choix: [(Kimbo.Etat.impair, L("boss.kimbo.terreEau")), (.pair, L("boss.kimbo.airFeu"))],
                   actuel: aide.session.kimbo) { etat in aide.noter { session, _ in session.kimbo = etat } }
         if let etat = aide.session.kimbo {
@@ -145,15 +145,15 @@ struct TalKashaVue: View {
     var body: some View {
         let glyphes = aide.session.glyphesTalKasha
         HStack(spacing: 6) {
-            Text(L("boss.talKasha.glyphes")).font(.system(size: 11)).foregroundStyle(.secondary)
+            Text(L("boss.talKasha.glyphes")).font(.synfus(.petit)).foregroundStyle(.secondary)
             Spacer()
             ForEach(1...TalKasha.glyphesRequis, id: \.self) { rang in
                 Text(String(repeating: "I", count: rang))
-                    .font(.system(size: 12, weight: .bold, design: .serif))
+                    .font(.synfus(.note, gras: true, design: .serif))
                     .frame(width: 30, height: 22)
                     .foregroundStyle(rang <= glyphes ? Color.white : Color.secondary)
                     .background(RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(rang <= glyphes ? Couleurs.accent : Color.primary.opacity(0.08)))
+                        .fill(rang <= glyphes ? Couleurs.accentPlein : Color.primary.opacity(0.08)))
             }
             PetitBouton(icone: "minus", aide: L("boss.talKasha.moins")) {
                 aide.noter { session, _ in session.glyphesTalKasha = max(session.glyphesTalKasha - 1, 0) }

@@ -61,21 +61,21 @@ struct CharactersSettings: View {
     private func characterRow(index: Int, name: String) -> some View {
         HStack(spacing: 8) {
             Image(systemName: "line.3.horizontal")
-                .font(.system(size: 9))
+                .font(.synfus(.marque))
                 .foregroundStyle(.tertiary)
             Circle()
-                .fill(isOnline(name) ? Color.green : Color.secondary.opacity(0.3))
+                .fill(isOnline(name) ? Couleurs.succes : Color.secondary.opacity(0.3))
                 .frame(width: 7, height: 7)
             Text(name)
             Spacer()
             teamPicker(for: name)
             if let slot = slotOf(name) {
                 Text("\(slot + 1)")
-                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .font(.synfus(.petit, gras: true, design: .rounded))
                     .foregroundStyle(.secondary)
             }
             Text(isOnline(name) ? L("persos.connecte") : L("persos.horsLigne"))
-                .font(.system(size: 10))
+                .font(.synfus(.petit))
                 .foregroundStyle(.tertiary)
 
             HStack(spacing: 2) {
@@ -83,16 +83,16 @@ struct CharactersSettings: View {
                     Image(systemName: "chevron.up")
                 }
                 .disabled(index == 0)
-                .help(L("persos.monter"))
+                .aide(L("persos.monter"))
 
                 Button { moveCharacter(at: index, by: 1) } label: {
                     Image(systemName: "chevron.down")
                 }
                 .disabled(index == prefs.characterOrder.count - 1)
-                .help(L("persos.descendre"))
+                .aide(L("persos.descendre"))
             }
             .buttonStyle(.borderless)
-            .font(.system(size: 10, weight: .semibold))
+            .font(.synfus(.petit, gras: true))
         }
         .padding(.vertical, 4)
         .contentShape(Rectangle())
@@ -115,7 +115,7 @@ struct CharactersSettings: View {
         }
         .labelsHidden()
         .fixedSize()
-        .font(.system(size: 10))
+        .font(.synfus(.petit))
         .help(L("persos.equipeDuPerso"))
     }
 

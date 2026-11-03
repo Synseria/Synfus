@@ -50,15 +50,10 @@ struct LocalisationTests {
     /// cet usage fait vivre.
     @Test("Les clés du code et celles de fr.json se correspondent")
     func clesDuCode() throws {
-        let sources = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-            .appendingPathComponent("Sources/Synfus")
         var utilisees = Set<String>()
         let regex = try NSRegularExpression(pattern: #"\bL\("([^"]+)"(, nombre:)?"#)
-        let fichiers = try #require(FileManager.default.enumerator(at: sources, includingPropertiesForKeys: nil))
-        for cas in fichiers {
-            guard let url = cas as? URL, url.pathExtension == "swift",
-                  let contenu = try? String(contentsOf: url, encoding: .utf8) else { continue }
+        for url in SourcesDuDepot.fichiers() {
+            guard let contenu = try? String(contentsOf: url, encoding: .utf8) else { continue }
             for match in regex.matches(in: contenu, range: NSRange(contenu.startIndex..., in: contenu)) {
                 guard let plage = Range(match.range(at: 1), in: contenu) else { continue }
                 utilisees.insert(String(contenu[plage]))

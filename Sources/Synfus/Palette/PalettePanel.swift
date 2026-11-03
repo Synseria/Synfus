@@ -85,7 +85,7 @@ final class PalettePanel: NSObject, ObservableObject, NSWindowDelegate {
     }
 
     private func construire() -> NSPanel {
-        let hosting = NSHostingController(rootView: PaletteVue())
+        let hosting = NSHostingController(rootView: PaletteVue().racineSynfus())
         hosting.sizingOptions = [.preferredContentSize]
         let panel = PanneauPalette(
             contentRect: NSRect(x: 0, y: 0, width: Self.largeur, height: 420),
