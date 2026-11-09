@@ -3,6 +3,53 @@
 Une section par version, `## X.Y.Z — AAAA-MM-JJ` : la release GitHub de `vX.Y.Z` en reprend le
 contenu (`Tools/notes-de-version.sh`), et `sh build.sh --publish` refuse une version absente d'ici.
 
+## 0.12.0 — 2026-11-09
+
+![La fiche de quête](https://raw.githubusercontent.com/Synseria/Synfus/v0.12.0/docs/screenshots/quete.png)
+
+### Nouveautés
+
+- **Mise à jour depuis Synfus** : chaque jour, Synfus regarde s'il existe une nouvelle version sur
+  GitHub et la propose dans son menu et dans Réglages → Général. Un clic : téléchargement, contrôle,
+  remplacement et relance, sans commande `xattr` à taper. Les autorisations Accessibilité et
+  Enregistrement de l'écran sont à redonner à chaque version (l'app n'est pas signée par un
+  certificat Apple payant) : Synfus le dit, et dit pourquoi. Désactivable (Réglages → Général).
+  Cette version-ci s'installe encore à la main ; les suivantes, d'elles-mêmes.
+- **Commandes entre `/zaap` et `/travel`** (Réglages → Trajets, `/a` par défaut) : le jeu ignorait
+  parfois le `/travel` lancé avant que la carte du zaap ait chargé. `/zaap -1,24 ; /a ; /travel -4,29`
+  lui laisse le temps.
+- **Aide aux boss** : un panneau posé sur le jeu pour le Comte Harebourg (confusion des sorts lue
+  à la vie et au canal combat), Kimbo, Toxoliath, Ilyzaelle et Tal Kasha, avec le tour du combat
+  compté.
+- **Quêtes** :
+  - le suivi du jeu relu tant que le panneau est montré, **perso par perso** : objectifs faits
+    cochés, objectif en cours surligné, « Tu y es — fait ? » sur la carte de l'objectif ;
+  - **où trouver** le monstre ou l'objet d'un objectif ;
+  - **quêtes d'ici** : celles qui commencent et les PNJ sur la case du perso ;
+  - les objectifs ouverts ensemble numérotés dans l'ordre le plus court ;
+  - un panneau compact.
+- **Palette** : l'almanax du jour en tête, sections Monstres et Objets (Entrée déplie où les
+  trouver), PNJ en favori, une ligne de trajet dit le zaap retenu (« via Coin des Bouftous · 6
+  cartes »).
+- **Zones de lecture retrouvées seules** sur une capture du jeu.
+
+### Améliorations
+
+- Données du jeu (carte, quêtes, classes) revues chaque jour, plus seulement au lancement.
+- Réglages sans phrase à l'écran : le détail passe au ⓘ, un clic mène à l'onglet cité, un
+  raccourci refusé par macOS se signale.
+- Palette à trois colonnes, Échap efface avant de fermer, filtres au clic.
+- VoiceOver et « Réduire les animations » respectés.
+- Le zaap désigné par le jeu cède quand celui des zones voisines est bien plus près.
+- Lecture de l'écran plus légère : une capture entière découpée dès deux zones, combat lu toutes
+  les 3 s hors combat.
+
+### Corrections
+
+- ⌘C, ⌘V, ⌘A, ⌘Z marchent dans tous les champs ; « Fermer tous » ne se valide plus avec Entrée.
+- Un PNJ ou un objectif hors du Monde des Douze se rejoint par son `/travel` seul.
+- Un client revenu à l'écran de connexion oublie son perso.
+
 ## 0.11.0 — 2026-10-08
 
 ![La barre](https://raw.githubusercontent.com/Synseria/Synfus/v0.11.0/docs/screenshots/barre.png)
