@@ -49,7 +49,8 @@ SYNFUS_CAPTURE=~/Library/Logs/Synfus/captures/x.png sh test.sh RealCapture   # O
   Combine, moniteur `NSEvent`) repasse par `MainActor.assumeIsolated` ; le callback C de `HotKeyManager` par `DispatchQueue.main.async`.
   Seules exceptions, des **acteurs sans état partagé** pour le travail bloquant, où n'entrent et
   ne sortent que des valeurs `Sendable` : `ClientInventoryEngine` (inventaire AX),
-  `DockGeometryReader` (relevé AX du Dock), `PreviewCaptureEngine` (captures), `MoteurOCR` (Vision).
+  `DockGeometryReader` (relevé AX du Dock), `PreviewCaptureEngine` (captures), `MoteurOCR` (Vision),
+  `InstallateurMiseAJour` (téléchargement et contrôle d'une release).
 - **Un seul foyer par logique.** Avant d'écrire une fonction, chercher celle qui existe ; quand une
   correction touche un chemin, vérifier que son jumeau en bénéficie. Foyers : lecture AX
   `AccessibilityReader` ; processus Dofus `DofusProcesses` ; titres `WindowTitle` ; fermeture
@@ -86,7 +87,7 @@ Point d'entrée `SynfusMain` (`App/App.swift`). Composants : singletons `@MainAc
 la plupart `ObservableObject`. `applicationDidFinishLaunching` démarre, dans l'ordre :
 `WindowManager` → `FreezeWatcher` → `HotKeyManager.rebind()` → `MenuBarController` →
 `AttentionWatcher` → `ClickAdvanceWatcher` → `FloatingBarController` → `LecteurEcran` →
-`CarteStore` → `ClassesStore` → `QuetesStore.preparer()` → `PaletteModele` → `ZaapClipboard`.
+`CarteStore` → `ClassesStore` → `QuetesStore.preparer()` → `PaletteModele` → `ZaapClipboard` → `MiseAJour`.
 
 `Sources/Synfus/` est rangé par domaine (SwiftPM compile les sous-dossiers sans déclaration). Un
 nouveau fichier va dans le dossier de son domaine ; un fichier sans domaine en annonce un nouveau.
@@ -102,6 +103,7 @@ nouveau fichier va dans le dossier de son domaine ; un fichier sans domaine en a
 | `Palette/` | La palette (⌘:) : `RecherchePalette`, `CommandesJeu` (purs) — zaaps, lieux, `/` commandes, `%` variables, quêtes, PNJ, gestes, dernières copies ; `PaletteModele`, `PalettePanel` (panneau key sans activer Synfus), `PaletteVue` |
 | `Quetes/` | Quêtes et PNJ situés : `Quete` (pur : renvois, ressources, récompenses, suivantes), `QuetesDofusDB` (cache disque versionné relu au lancement, téléchargé s'il manque ou a 30 jours), `QuetesStore` (lu et indexé hors main), `QuetesEnVigueur` (pur : index et fiches gardées du jeu publié), `QuetePanel`/`QueteVue` (panneau transparent, jamais key, montré devant Dofus seulement), `SuiviQuetes`, `SuiviObjectifs` (purs : suivi du jeu lu par OCR, objectifs à faire et faits), `HistoriqueSuivi` (pur : lectures par perso, quêtes sorties du suivi), `QuetesIci` (pur : quêtes qui commencent et PNJ sur la case du perso — menu de l'en-tête, filtre « Ici » de la palette), `LectureSuivi`, `DofusPourLesNoobs` (adresses candidates du guide) |
 | `OuTrouver/` | Où trouver un monstre ou un objet : `OuTrouver` (pur : la case de chaque repaire — sous-zone par l'index inverse de la carte, donjon par son repère —, l'ordre des repaires et des lâcheurs), `OuTrouverDofusDB` (monstre, butins et recette à la demande, cache disque versionné, 30 jours), `OuTrouverStore`, `OuTrouverVue` (dépliée sous une ressource ou un objectif) |
+| `MiseAJour/` | Mises à jour depuis les releases GitHub : `VersionPubliee` (pur : réponse de l'API, comparaison de versions, `SHA256SUMS.txt`), `InstallateurMiseAJour` (DMG téléchargé, empreinte, app extraite et contrôlée), `MiseAJour` (vérification quotidienne, proposition, remplacement par un script détaché, autorisations TCC effacées : les releases sont ad hoc) |
 | `Almanax/` | L'almanax du jour en tête de la palette : `Almanax` (pur : jour de Paris, réponse de DofusDB, cache disque du jour), `AlmanaxStore`, `AlmanaxVue` |
 | `Boss/` | Aide aux boss : `Boss` (pur : Kimbo, Toxoliath, Ilyzaelle, Tal Kasha, `SessionBoss`), `Harebourg`, `SuiviConfusion` (purs : confusion du Comte, vie et canal combat lus), `ToursCombat` (pur : tour du combat), `AideBoss`, `BossPanel` (panneau jamais key, montré devant Dofus), `BossVue` (+ `HarebourgVue`, `VuesBoss`) |
 | `Chasse/` | Chasse au trésor : `IndicesChasse`, `EtapeChasse` (purs), `ChasseDofusDB` (indices en cache disque, étape à la demande), `ChasseModele`, `ChassePanel` (panneau key sans activer Synfus), `ChasseVue` |

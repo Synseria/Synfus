@@ -30,6 +30,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // normalisera les textes dès leur arrivée.
         _ = PaletteModele.shared
         ZaapClipboard.shared.start()
+        MiseAJour.shared.start()
 
         if !AXIsProcessTrusted() {
             WindowManager.shared.requestAccessibility()
