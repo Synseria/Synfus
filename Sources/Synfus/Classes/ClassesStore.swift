@@ -3,8 +3,8 @@ import SwiftUI
 
 /// Les classes en vigueur et leurs emblèmes, pour tout Synfus.
 ///
-/// La liste : la table intégrée, rafraîchie depuis DofusDB au démarrage quand
-/// elle a plus de `DofusDB.peremption` et au clic « Mettre à jour »
+/// La liste : la table intégrée, rafraîchie depuis DofusDB au lancement puis chaque jour
+/// (`DonneesDuJeu`) quand elle a plus de `DofusDB.peremption` et au clic « Mettre à jour »
 /// (`ClassesDofusDB`) ; un échec garde ce qui est là. L'emblème : celui que
 /// l'utilisateur a posé dans le dossier, sinon celui de DofusDB, gardé dans
 /// les caches (`ImagesDofusDB`) — rien du jeu dans le bundle ni le dépôt
@@ -43,7 +43,8 @@ final class ClassesStore: ObservableObject {
         date = gardees?.date
     }
 
-    func start() {
+    /// Au lancement puis chaque jour (`DonneesDuJeu`).
+    func rafraichir() {
         guard DofusDB.perimee(depuis: date, maintenant: Date()) else { return }
         Task { try? await mettreAJour() }
     }

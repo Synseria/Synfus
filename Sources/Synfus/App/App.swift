@@ -24,8 +24,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         FloatingBarController.shared.apply()
         LecteurEcran.shared.start()
         CarteStore.shared.start()
-        ClassesStore.shared.start()
+        ClassesStore.shared.rafraichir()
         QuetesStore.shared.preparer()
+        DonneesDuJeu.start()
         // Abonnée à la carte et aux quêtes, lues en tâche de fond : elle en
         // normalisera les textes dès leur arrivée.
         _ = PaletteModele.shared
