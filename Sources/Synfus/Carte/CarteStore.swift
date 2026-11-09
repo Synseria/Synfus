@@ -25,16 +25,30 @@ final class CarteStore: ObservableObject {
     func start() {
         Task {
             publier(await Task.detached(priority: .userInitiated) { CarteIndexee(CarteDofusDB.locale()) }.value)
-            guard DofusDB.perimee(depuis: carte.date, maintenant: Date()) else { return }
-            try? await mettreAJour()
+            await rafraichirCarte()
         }
         Task {
             if let gardee = await Task.detached(priority: .utility, operation: { CartesInterieures.gardee() }).value {
                 interieurs = gardee
             }
-            guard DofusDB.perimee(depuis: interieurs.date, maintenant: Date()) else { return }
-            await mettreAJourInterieurs()
+            await rafraichirInterieurs()
         }
+    }
+
+    /// Chaque jour (`DonneesDuJeu`) : ce qui a passé `DofusDB.peremption` se redemande.
+    func rafraichir() {
+        Task { await rafraichirCarte() }
+        Task { await rafraichirInterieurs() }
+    }
+
+    private func rafraichirCarte() async {
+        guard DofusDB.perimee(depuis: carte.date, maintenant: Date()) else { return }
+        try? await mettreAJour()
+    }
+
+    private func rafraichirInterieurs() async {
+        guard DofusDB.perimee(depuis: interieurs.date, maintenant: Date()) else { return }
+        await mettreAJourInterieurs()
     }
 
     /// La carte des captures de la documentation, sans disque ni réseau.
@@ -48,7 +62,7 @@ final class CarteStore: ObservableObject {
         }.value)
     }
 
-    /// Un échec garde la liste en place ; elle se redemande au lancement suivant.
+    /// Un échec garde la liste en place ; elle se redemande au prochain rafraîchissement.
     private func mettreAJourInterieurs() async {
         guard let nouveaux = try? await CartesInterieures.telecharger() else { return }
         interieurs = nouveaux
