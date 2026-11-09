@@ -16,6 +16,9 @@ final class MiseAJour: ObservableObject {
     }
 
     @Published private(set) var etat = Etat.inconnu
+    /// Lancé dans une autre version que la fois d'avant — par ce mécanisme ou
+    /// à la main : les autorisations de l'ancienne ne valent plus.
+    private(set) var apresMiseAJour = false
 
     /// La version proposée, quel que soit l'état où elle en est.
     var proposee: VersionPubliee? {
@@ -33,7 +36,12 @@ final class MiseAJour: ObservableObject {
     private init() {}
 
     func start() {
-        Preferences.shared.$verifierMisesAJour
+        let prefs = Preferences.shared
+        apresMiseAJour = Self.apresMiseAJour(derniere: prefs.derniereVersionLancee, courante: AppIntegrity.version,
+                                             premierLancement: prefs.premierLancement)
+        if let courante = AppIntegrity.version { prefs.derniereVersionLancee = courante }
+        if Self.versionSimulee(CommandLine.arguments) != nil { verifier() }
+        prefs.$verifierMisesAJour
             .removeDuplicates()
             .sink { [weak self] actif in MainActor.assumeIsolated { actif ? self?.armer() : self?.desarmer() } }
             .store(in: &subscriptions)
@@ -61,7 +69,7 @@ final class MiseAJour: ObservableObject {
         case .verification, .installation: return
         default: break
         }
-        guard let installee = AppIntegrity.version else { return }
+        guard let installee = Self.versionSimulee(CommandLine.arguments) ?? AppIntegrity.version else { return }
         etat = .verification
         Task {
             let derniere = await installateur.derniere()
@@ -73,6 +81,22 @@ final class MiseAJour: ObservableObject {
                 etat = derniere == nil ? .inconnu : .aJour
             }
         }
+    }
+
+    /// Vrai si la version qui tourne n'est pas celle du lancement précédent.
+    /// Une sauvegarde d'avant ce réglage (`derniere` absente) vient forcément
+    /// d'une version plus ancienne ; au premier lancement, rien n'a changé.
+    nonisolated static func apresMiseAJour(derniere: String?, courante: String?, premierLancement: Bool) -> Bool {
+        guard let courante, !premierLancement else { return false }
+        return derniere != courante
+    }
+
+    /// `--simuler-version X.Y.Z` : la version comparée aux releases à la place
+    /// de celle du bundle, pour essayer une mise à jour sur un build à jour.
+    /// Vérifie même si la recherche est éteinte.
+    nonisolated static func versionSimulee(_ arguments: [String]) -> String? {
+        guard let index = arguments.firstIndex(of: "--simuler-version"), index + 1 < arguments.count else { return nil }
+        return arguments[index + 1]
     }
 
     /// Le menu et l'onglet Général : confirmer, puis installer.
