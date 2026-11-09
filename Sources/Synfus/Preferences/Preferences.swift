@@ -75,6 +75,10 @@ final class Preferences: ObservableObject {
     /// « Enregistrement de l'écran », jamais demandée d'office.
     /// Chercher chaque jour une version plus récente sur GitHub (`MiseAJour`).
     @Published var verifierMisesAJour: Bool = true { didSet { save() } }
+    /// La version du lancement précédent (`MiseAJour.apresMiseAJour`).
+    @Published var derniereVersionLancee: String? { didSet { save() } }
+    /// Aucune sauvegarde à la lecture : rien n'a encore été réglé.
+    private(set) var premierLancement = false
     @Published var lirePosition: Bool = false { didSet { save() } }
 
     /// Détecter le combat — bouton « Fin de tour » rose, gris ou absent — par
@@ -521,6 +525,7 @@ final class Preferences: ObservableObject {
         .facultatif("zaapDuJeu", \.zaapDuJeu),
         .facultatif("zaapIntercalees", \.zaapIntercalees),
         .facultatif("verifierMisesAJour", \.verifierMisesAJour),
+        .optionnel("derniereVersionLancee", \.derniereVersionLancee),
         .facultatif("zaapsAjoutes", \.zaapsAjoutes),
         .facultatif("zaapsChoix", \.zaapsChoix),
         .facultatif("zaapsFavoris", \.zaapsFavoris),
@@ -586,6 +591,7 @@ final class Preferences: ObservableObject {
         else {
             // Premier lancement : ⌘1 à ⌘0 pour l'accès direct, et toute la
             // navigation sur la touche sous Échap.
+            premierLancement = true
             hotKeys = HotKey.digitRow.indices.map { HotKey.defaultHotKey(slot: $0) }
             cycleNext = .defaultCycleNext
             cyclePrevious = .defaultCyclePrevious

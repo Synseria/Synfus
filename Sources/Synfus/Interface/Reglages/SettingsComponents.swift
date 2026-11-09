@@ -117,11 +117,12 @@ struct Interrupteur: View {
 /// Un avertissement d'une ligne, et le geste qui le lève.
 struct Avertissement: View {
     let texte: String
+    var aide: String?
     var bouton: String?
     var action: () -> Void = {}
 
     var body: some View {
-        Ligne(titre: texte) {
+        Ligne(titre: texte, aide: aide) {
             if let bouton { Button(bouton, action: action) }
         }
         .foregroundStyle(Couleurs.alerte)

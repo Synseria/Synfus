@@ -87,14 +87,14 @@ Point d'entrée `SynfusMain` (`App/App.swift`). Composants : singletons `@MainAc
 la plupart `ObservableObject`. `applicationDidFinishLaunching` démarre, dans l'ordre :
 `WindowManager` → `FreezeWatcher` → `HotKeyManager.rebind()` → `MenuBarController` →
 `AttentionWatcher` → `ClickAdvanceWatcher` → `FloatingBarController` → `LecteurEcran` →
-`CarteStore` → `ClassesStore` → `QuetesStore.preparer()` → `PaletteModele` → `ZaapClipboard` → `MiseAJour`.
+`CarteStore` → `ClassesStore` → `QuetesStore.preparer()` → `DonneesDuJeu` → `PaletteModele` → `ZaapClipboard` → `MiseAJour`.
 
 `Sources/Synfus/` est rangé par domaine (SwiftPM compile les sous-dossiers sans déclaration). Un
 nouveau fichier va dans le dossier de son domaine ; un fichier sans domaine en annonce un nouveau.
 
 | Dossier | Contenu |
 | --- | --- |
-| `App/` | Point d'entrée et `--dump-*`, intégrité du bundle, démarrage automatique, `PressePapiers`, `DofusDB` (client de l'API), `ImagesDofusDB`, `Ressources` (bundle, dossier de l'utilisateur), `DernierCalcul` (pur) |
+| `App/` | Point d'entrée et `--dump-*`, intégrité du bundle, démarrage automatique, `PressePapiers`, `DofusDB` (client de l'API), `ImagesDofusDB`, `Ressources` (bundle, dossier de l'utilisateur), `DernierCalcul` (pur), `DonneesDuJeu` (données DofusDB revues chaque jour) |
 | `Accessibilite/` | `AccessibilityReader` (lecture AX, `DofusProcesses`), `--dump-windows`, `CrossSpaceTitles` |
 | `Clients/` | `DofusClient`, `WindowTitle`, `ClientMemory`, `Equipes`, `Rotation` (purs) ; `WindowManager` (+`PremierPlan`, `+Effectif`, `+Focus`, `+Fermeture`), `ClientInventoryEngine`, `ClientTerminator`, `FreezeWatcher` |
 | `Invitations/` | `/invite Nom` : `InvitationComposer` (pur), `InvitationClipboard` |
@@ -131,4 +131,5 @@ nouveau fichier va dans le dossier de son domaine ; un fichier sans domaine en a
 | `interface-barre` | barre flottante, réglages, menu, aperçus, rangement des fenêtres ; ses exceptions à la grille UI (skill global `grille-ui`) |
 | `localisation` | tout libellé visible, tables JSON |
 | `preferences` | ajouter ou changer un réglage, un défaut |
+| `mise-a-jour` | mise à jour depuis GitHub, assets d'une release, rafraîchissement des données DofusDB |
 | `marque-assets` | classes et leurs emblèmes, visuels du jeu, marque et icône de l'app |
