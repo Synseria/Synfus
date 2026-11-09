@@ -31,7 +31,8 @@ actor InstallateurMiseAJour {
               Self.reussie(sommes.1)
         else { throw .reseau }
 
-        guard let attendue = VersionPubliee.empreinte(de: version.nomImage, dans: String(decoding: sommes.0, as: UTF8.self)),
+        guard let texte = String(bytes: sommes.0, encoding: .utf8),
+              let attendue = VersionPubliee.empreinte(de: version.nomImage, dans: texte),
               let contenu = try? Data(contentsOf: image, options: .mappedIfSafe),
               SHA256.hash(data: contenu).map({ String(format: "%02x", $0) }).joined() == attendue
         else { throw .empreinte }
