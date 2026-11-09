@@ -73,6 +73,8 @@ final class Preferences: ObservableObject {
     /// Lire la position du perso (coordonnées de la carte, en haut à gauche
     /// de la fenêtre) par OCR. Désactivé par défaut : il faut l'autorisation
     /// « Enregistrement de l'écran », jamais demandée d'office.
+    /// Chercher chaque jour une version plus récente sur GitHub (`MiseAJour`).
+    @Published var verifierMisesAJour: Bool = true { didSet { save() } }
     @Published var lirePosition: Bool = false { didSet { save() } }
 
     /// Détecter le combat — bouton « Fin de tour » rose, gris ou absent — par
@@ -148,6 +150,9 @@ final class Preferences: ObservableObject {
     /// Passer par le zaap que le jeu rattache à la sous-zone visée, même plus
     /// loin qu'un autre, jusqu'à `ItineraireZaap.ecartZaapDuJeu` (`ItineraireZaap.zaap(vers:)`).
     @Published var zaapDuJeu: Bool = true { didSet { save() } }
+    /// Les commandes glissées entre `/zaap` et `/travel`, telles que saisies
+    /// (`ItineraireZaap.intercalees`).
+    @Published var zaapIntercalees: String = "/a" { didSet { save() } }
 
     /// Les zaaps ajoutés à la main.
     @Published var zaapsAjoutes: [Zaap] = [] { didSet { save() } }
@@ -514,6 +519,8 @@ final class Preferences: ObservableObject {
         .facultatif("zaapAuto", \.zaapAuto),
         .facultatif("zaapGainMinimal", \.zaapGainMinimal),
         .facultatif("zaapDuJeu", \.zaapDuJeu),
+        .facultatif("zaapIntercalees", \.zaapIntercalees),
+        .facultatif("verifierMisesAJour", \.verifierMisesAJour),
         .facultatif("zaapsAjoutes", \.zaapsAjoutes),
         .facultatif("zaapsChoix", \.zaapsChoix),
         .facultatif("zaapsFavoris", \.zaapsFavoris),

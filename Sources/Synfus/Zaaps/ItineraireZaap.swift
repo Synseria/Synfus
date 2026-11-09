@@ -137,10 +137,25 @@ enum ItineraireZaap {
         trajet(depuis: depart, vers: cible, zaap: zaap, gainMinimal: gainMinimal).cartes
     }
 
+    /// Les commandes saisies pour s'intercaler entre `/zaap` et `/travel`,
+    /// séparées par « ; ». Enchaîné juste après le zaap, le `/travel` part
+    /// parfois avant que la carte d'arrivée ait chargé, et le jeu l'ignore :
+    /// une commande sans effet de plus lui laisse ce temps. Un « / » manquant
+    /// est ajouté — un texte nu partirait dans le canal de discussion.
+    static func intercalees(_ saisie: String) -> [String] {
+        saisie.split(separator: ";").compactMap {
+            let commande = $0.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !commande.isEmpty, !commande.contains(where: \.isNewline) else { return nil }
+            return commande.hasPrefix("/") ? commande : "/" + commande
+        }
+    }
+
     /// `/zaap x,y ; /travel a,b` si le zaap retenu pour la cible (`zaap(vers:)`)
     /// épargne au moins `gainMinimal` cartes depuis `position` ; `nil` sinon.
+    /// Les `intercalees` (`intercalees(_:)`) se glissent entre les deux.
     static func reecrire(
-        _ texte: String, depuis position: PositionCarte?, gainMinimal: Int, zaaps: ZaapsSitues, zaapDuJeu: Bool
+        _ texte: String, depuis position: PositionCarte?, gainMinimal: Int, zaaps: ZaapsSitues, zaapDuJeu: Bool,
+        intercalees: [String]
     ) -> String? {
         guard let cible = cible(dans: texte),
               let zaap = trajet(vers: cible, depuis: position, gainMinimal: gainMinimal, zaaps: zaaps,
@@ -148,7 +163,7 @@ enum ItineraireZaap {
         else { return nil }
         let travel = texte.trimmingCharacters(in: .whitespacesAndNewlines)
         // L'espace avant le « ; » : sans elle, le jeu lit mal l'enchaînement.
-        return "\(Self.zaap(zaap)) ; \(travel)"
+        return ([Self.zaap(zaap)] + intercalees + [travel]).joined(separator: " ; ")
     }
 
     /// Les régions dont les coordonnées ne sont pas celles du Monde des Douze

@@ -165,7 +165,7 @@ final class ZaapClipboard: ObservableObject {
         let prefs = Preferences.shared
         return ItineraireZaap.reecrire(texte, depuis: LecteurEcran.shared.positionDuPersoDevant,
                                        gainMinimal: prefs.zaapGainMinimal, zaaps: zaapsSitues,
-                                       zaapDuJeu: prefs.zaapDuJeu)
+                                       zaapDuJeu: prefs.zaapDuJeu, intercalees: prefs.commandesIntercalees)
     }
 
     /// Notre propre copie n'est pas une nouvelle copie à examiner.

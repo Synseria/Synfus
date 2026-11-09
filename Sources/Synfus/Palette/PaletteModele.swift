@@ -302,6 +302,7 @@ final class PaletteModele: ObservableObject {
         contexte.quetes = QuetesStore.shared.quetes
         contexte.gainMinimal = prefs.zaapGainMinimal
         contexte.zaapDuJeu = prefs.zaapDuJeu
+        contexte.intercalees = prefs.commandesIntercalees
         contexte.invitationEquipe = InvitationComposer.groupee(format: prefs.inviteFormat, noms: candidats)
         contexte.invitations = candidats.map { ($0, InvitationComposer.commande(format: prefs.inviteFormat, nom: $0)) }
         return contexte

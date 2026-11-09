@@ -14,6 +14,12 @@ struct TrajetsSettings: View {
                             value: $prefs.zaapGainMinimal, in: ItineraireZaap.gainsPossibles)
                 }
                 Interrupteur(titre: L("zaap.duJeu"), aide: L("zaap.duJeu.aide", ItineraireZaap.ecartZaapDuJeu), isOn: $prefs.zaapDuJeu)
+                Ligne(titre: L("zaap.intercalees"), aide: L("zaap.intercalees.aide")) {
+                    TextField(L("zaap.intercalees"), text: $prefs.zaapIntercalees, prompt: Text(verbatim: "/a"))
+                        .labelsHidden()
+                        .font(.synfus(.note, design: .monospaced))
+                        .frame(width: 180)
+                }
                 if prefs.lirePosition {
                     Interrupteur(titre: L("zaap.auto"), aide: L("zaap.auto.aide"), isOn: $prefs.zaapAuto)
                 } else {
