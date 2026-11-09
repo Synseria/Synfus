@@ -148,6 +148,9 @@ final class Preferences: ObservableObject {
     /// Passer par le zaap que le jeu rattache à la sous-zone visée, même plus
     /// loin qu'un autre, jusqu'à `ItineraireZaap.ecartZaapDuJeu` (`ItineraireZaap.zaap(vers:)`).
     @Published var zaapDuJeu: Bool = true { didSet { save() } }
+    /// Les commandes glissées entre `/zaap` et `/travel`, telles que saisies
+    /// (`ItineraireZaap.intercalees`).
+    @Published var zaapIntercalees: String = "/a" { didSet { save() } }
 
     /// Les zaaps ajoutés à la main.
     @Published var zaapsAjoutes: [Zaap] = [] { didSet { save() } }
@@ -514,6 +517,7 @@ final class Preferences: ObservableObject {
         .facultatif("zaapAuto", \.zaapAuto),
         .facultatif("zaapGainMinimal", \.zaapGainMinimal),
         .facultatif("zaapDuJeu", \.zaapDuJeu),
+        .facultatif("zaapIntercalees", \.zaapIntercalees),
         .facultatif("zaapsAjoutes", \.zaapsAjoutes),
         .facultatif("zaapsChoix", \.zaapsChoix),
         .facultatif("zaapsFavoris", \.zaapsFavoris),

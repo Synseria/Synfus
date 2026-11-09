@@ -9,6 +9,9 @@ extension Preferences {
         CatalogueZaaps.actifs(base: zaapsDeBase, ajoutes: zaapsAjoutes, choix: zaapsChoix)
     }
 
+    /// Ce qui se glisse entre `/zaap` et `/travel`, lu de la saisie.
+    var commandesIntercalees: [String] { ItineraireZaap.intercalees(zaapIntercalees) }
+
     var zaapsFavorisConnus: [Zaap] { CatalogueZaaps.favoris(zaapsFavoris, parmi: zaapsConnus) }
 
     /// Un favori, zaap (`Zaap.cle`), lieu (`Lieu.cle`) ou PNJ (`PNJ.cle`) :
