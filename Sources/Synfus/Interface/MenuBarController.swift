@@ -50,6 +50,17 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         // de 200 ms, c'est-à-dire presque toujours.
         manager.refreshSoon(after: 0.05)
 
+        if let version = MiseAJour.shared.proposee {
+            if case .installation = MiseAJour.shared.etat {
+                let item = NSMenuItem(title: L("maj.menu.installation", version.numero), action: nil, keyEquivalent: "")
+                item.isEnabled = false
+                menu.addItem(item)
+            } else {
+                add(to: menu, title: L("maj.menu.installer", version.numero), action: #selector(installUpdate))
+            }
+            menu.addItem(.separator())
+        }
+
         if !manager.accessibilityGranted {
             add(to: menu, title: L("menu.autoriser"), action: #selector(requestAccess))
             menu.addItem(.separator())
@@ -251,6 +262,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
     @objc private func openBoss() {
         BossPanel.shared.ouvrir()
+    }
+
+    @objc private func installUpdate() {
+        MiseAJour.shared.proposer()
     }
 
     @objc private func openSettings() {

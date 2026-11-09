@@ -157,6 +157,7 @@ struct ContextePalette: Sendable {
     var recents: [String] = []
     var gainMinimal = ItineraireZaap.gainParDefaut
     var zaapDuJeu = true
+    var intercalees: [String] = []
     /// `/invite A; /invite B` pour l'équipe active, déjà composé.
     var invitationEquipe: String?
     var invitations: [(nom: String, commande: String)] = []
@@ -417,7 +418,8 @@ enum RecherchePalette {
     private static func trajet(vers cible: (x: Int, y: Int), _ contexte: ContextePalette) -> String {
         let travel = ItineraireZaap.travel(vers: cible)
         return ItineraireZaap.reecrire(travel, depuis: contexte.position, gainMinimal: contexte.gainMinimal,
-                                       zaaps: contexte.zaaps, zaapDuJeu: contexte.zaapDuJeu) ?? travel
+                                       zaaps: contexte.zaaps, zaapDuJeu: contexte.zaapDuJeu,
+                                       intercalees: contexte.intercalees) ?? travel
     }
 
     /// Le trajet que `trajet(vers:)` copiera — la même décision (`ItineraireZaap.trajet`).
