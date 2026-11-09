@@ -73,6 +73,8 @@ final class Preferences: ObservableObject {
     /// Lire la position du perso (coordonnées de la carte, en haut à gauche
     /// de la fenêtre) par OCR. Désactivé par défaut : il faut l'autorisation
     /// « Enregistrement de l'écran », jamais demandée d'office.
+    /// Chercher chaque jour une version plus récente sur GitHub (`MiseAJour`).
+    @Published var verifierMisesAJour: Bool = true { didSet { save() } }
     @Published var lirePosition: Bool = false { didSet { save() } }
 
     /// Détecter le combat — bouton « Fin de tour » rose, gris ou absent — par
@@ -518,6 +520,7 @@ final class Preferences: ObservableObject {
         .facultatif("zaapGainMinimal", \.zaapGainMinimal),
         .facultatif("zaapDuJeu", \.zaapDuJeu),
         .facultatif("zaapIntercalees", \.zaapIntercalees),
+        .facultatif("verifierMisesAJour", \.verifierMisesAJour),
         .facultatif("zaapsAjoutes", \.zaapsAjoutes),
         .facultatif("zaapsChoix", \.zaapsChoix),
         .facultatif("zaapsFavoris", \.zaapsFavoris),

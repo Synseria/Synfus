@@ -489,7 +489,7 @@ struct PreferencesTests {
      "sessionHotKey":{"keyCode":1,"modifiers":256},"showClasses":false,
      "showNumbers":false,"showPreviewOnHover":true,"signalerBascule":false,
      "toggleAutoFocus":{"keyCode":99,"modifiers":0},
-     "zaapAuto":true,"zaapBouton":false,"zaapGainMinimal":8,"zaapDuJeu":false,"zaapIntercalees":"/a ; /b",
+     "zaapAuto":true,"zaapBouton":false,"zaapGainMinimal":8,"zaapDuJeu":false,"zaapIntercalees":"/a ; /b","verifierMisesAJour":false,
      "zaapHotKey":{"keyCode":17,"modifiers":2048},
      "zaapsAjoutes":[{"monde":1,"noms":{"fr":"Mon zaap"},"x":50,"y":-50,"zone":{}}],
      "zaapsChoix":{"1:-2,0":false},
@@ -550,6 +550,7 @@ struct PreferencesTests {
         #expect(prefs.zaapGainMinimal == 8)
         #expect(prefs.zaapDuJeu == false)
         #expect(prefs.zaapIntercalees == "/a ; /b")
+        #expect(prefs.verifierMisesAJour == false)
         #expect(prefs.zaapsAjoutes == [Zaap(50, -50, noms: ["fr": "Mon zaap"])])
         #expect(prefs.zaapsChoix == ["1:-2,0": false])
         #expect(prefs.zaapsFavoris == ["1:5,-18", "1:-2,0"])
@@ -621,6 +622,7 @@ struct PreferencesTests {
         prefs.zaapGainMinimal = 8
         prefs.zaapDuJeu = false
         prefs.zaapIntercalees = "/a ; /b"
+        prefs.verifierMisesAJour = false
         prefs.zaapsAjoutes = [Zaap(50, -50, noms: ["fr": "Mon zaap"])]
         prefs.zaapsChoix = ["1:-2,0": false]
         prefs.zaapsFavoris = ["1:5,-18", "1:-2,0"]
@@ -674,7 +676,7 @@ struct PreferencesTests {
          "killFrozenClients":true,"lireCombat":false,"lirePosition":false,"menuBarIcon":"logo",
          "showClasses":true,"showNumbers":true,"showPreviewOnHover":false,
          "signalerBascule":true,"zaapAuto":false,"zaapBouton":true,
-         "zaapGainMinimal":5,"zaapDuJeu":true,"zaapIntercalees":"/a","zaapsAjoutes":[],"zaapsChoix":{},"zaapsFavoris":[],"zaapsVueCarte":true,
+         "zaapGainMinimal":5,"zaapDuJeu":true,"zaapIntercalees":"/a","verifierMisesAJour":true,"zaapsAjoutes":[],"zaapsChoix":{},"zaapsFavoris":[],"zaapsVueCarte":true,
          "lieuxFavoris":[],"pnjsFavoris":[],"paletteRecents":[],"paletteTri":"proximite","quetesEpinglees":[],"quetesEtape":{},
          "quetesValides":{},"quetesBouton":true,"quetesMasquerObjets":false,
          "quetesCompact":true,"quetesConsigne":true,"quetesVignettes":false,

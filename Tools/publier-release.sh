@@ -68,6 +68,11 @@ version doit être réautorisée** — retirer l'ancienne entrée dans la
 liste Accessibilité, puis rajouter la nouvelle.
 
 Compiler depuis les sources (`sh run.sh --install --start`) évite tout cela.
+
+Une fois Synfus installé, les versions suivantes se proposent d'elles-mêmes
+(menu de Synfus → « Installer Synfus X.Y.Z… ») : téléchargement, contrôle,
+remplacement et relance, sans quarantaine ; seules les autorisations sont à
+redonner.
 EOF
 sed -i '' "s/VERSION/$VERSION/g" "$NOTES"
 
