@@ -57,3 +57,22 @@ struct MiseAJourTests {
         #expect(VersionPubliee.empreinte(de: "x.dmg", dans: "123  x.dmg") == nil)
     }
 }
+
+@Suite("Mise à jour : après une mise à jour, version simulée")
+struct ApresMiseAJourTests {
+    @Test("Une autre version que la fois d'avant, ou une sauvegarde qui ne la connaît pas : mise à jour")
+    func apresMiseAJour() {
+        #expect(MiseAJour.apresMiseAJour(derniere: "0.11.0", courante: "0.12.0", premierLancement: false))
+        #expect(MiseAJour.apresMiseAJour(derniere: nil, courante: "0.12.0", premierLancement: false))
+        #expect(!MiseAJour.apresMiseAJour(derniere: "0.12.0", courante: "0.12.0", premierLancement: false))
+        #expect(!MiseAJour.apresMiseAJour(derniere: nil, courante: "0.12.0", premierLancement: true))
+        #expect(!MiseAJour.apresMiseAJour(derniere: "0.11.0", courante: nil, premierLancement: false))
+    }
+
+    @Test("--simuler-version remplace la version comparée")
+    func simulation() {
+        #expect(MiseAJour.versionSimulee(["Synfus", "--simuler-version", "0.0.1"]) == "0.0.1")
+        #expect(MiseAJour.versionSimulee(["Synfus", "--simuler-version"]) == nil)
+        #expect(MiseAJour.versionSimulee(["Synfus"]) == nil)
+    }
+}
