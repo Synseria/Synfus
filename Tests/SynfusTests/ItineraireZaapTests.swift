@@ -186,7 +186,7 @@ struct ItineraireZaapTests {
                 == "/zaap 5,7 ; /travel 4,12")
         // [-20,9] : Koalak [-16,1] à douze cartes, la Route des Roulottes
         // [-25,12] à huit par les sous-zones — trop peu pour céder.
-        #expect(ItineraireZaap.zaap(vers: (-20, 9), parmi: situes, zaapDuJeu: true, intercalees: []).map { [$0.x, $0.y] } == [-16, 1])
+        #expect(ItineraireZaap.zaap(vers: (-20, 9), parmi: situes, zaapDuJeu: true).map { [$0.x, $0.y] } == [-16, 1])
         #expect(ItineraireZaap.zaap(vers: (-20, 9), parmi: situes, zaapDuJeu: false).map { [$0.x, $0.y] } == [-25, 12])
     }
 
