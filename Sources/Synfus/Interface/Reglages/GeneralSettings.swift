@@ -26,6 +26,11 @@ struct GeneralSettings: View {
                     help: L("general.enregistrementEcran.aide")
                 ) { previews.requestAuthorization() }
 
+                if miseAJour.apresMiseAJour, !manager.accessibilityGranted || !previews.authorized {
+                    Avertissement(texte: L("maj.autorisations", AppIntegrity.version ?? ""),
+                                  aide: L("maj.autorisations.aide"))
+                }
+
                 if AppIntegrity.isQuarantined {
                     quarantineWarning
                 }
