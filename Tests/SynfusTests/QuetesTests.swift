@@ -110,7 +110,7 @@ struct QuetesTests {
     private func contexte() throws -> ContextePalette {
         var contexte = ContextePalette()
         contexte.position = PositionCarte(x: -2, y: 0, zone: "Amakna")
-        contexte.zaaps = ZaapsSitues(CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [], choix: [:]), reseau: .vide)
+        contexte.zaaps = ZaapsSitues(CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [], choix: [:], reseau: .vide), reseau: .vide)
         contexte.quetes = try Self.quetes()
         return contexte
     }
@@ -124,7 +124,7 @@ struct QuetesTests {
     @Test("/pnj trouve le PNJ là où il se tient, avec la carte dont la liste montre la vue")
     func palettePNJ() throws {
         let otomai = try #require(RecherchePalette.entrees("/pnj otomai", try contexte()).first)
-        #expect(otomai.effet == .trajet(x: -2, y: -4))
+        #expect(otomai.effet == .trajet(x: -2, y: -4, sousZone: 10))
         #expect(otomai.carte == 185862149)
     }
 
@@ -252,8 +252,8 @@ struct QuetesTests {
 
     /// Les sous-zones des départs et des PNJ du jeu d'essai, dans le Monde des Douze.
     private let reseau = ReseauSousZones(Carte(
-        date: .now, lieux: [], sousZones: [SousZoneCarte(id: 56, zaap: nil, voisines: []),
-                                           SousZoneCarte(id: 10, zaap: nil, voisines: [])], cases: [:]))
+        date: .now, lieux: [], sousZones: [SousZoneCarte(id: 56, zaap: nil, zone: nil, voisines: []),
+                                           SousZoneCarte(id: 10, zaap: nil, zone: nil, voisines: [])], cases: [:]))
 
     @Test("Le départ d'une quête : son PNJ, sa case et sa sous-zone")
     func departs() throws {

@@ -68,18 +68,27 @@ enum ItineraireZaap {
     /// être derrière une montagne : le plus proche en sous-zones traversées (à
     /// égalité, en cartes). Avec `zaapDuJeu`, plutôt celui que le jeu associe
     /// à la sous-zone de la cible, s'il est actif — l'autopilote connaît des
-    /// raccourcis que la carte ne dit pas —, sauf si celui des sous-zones
-    /// épargne au moins `ecartZaapDuJeu` cartes : une grande sous-zone peut se
-    /// voir rattacher un zaap lointain. Sans sous-zone joignable — cible hors
-    /// du Monde des Douze relevé, sous-zone isolée —, le plus proche à vol d'oiseau.
-    static func zaap(vers cible: (x: Int, y: Int), parmi zaaps: ZaapsSitues, zaapDuJeu: Bool) -> Zaap? {
-        guard let depart = zaaps.reseau.sousZone(cible.x, cible.y) else {
-            return zaapLePlusProche(de: cible, parmi: zaaps.liste)
-        }
+    /// raccourcis que la carte ne dit pas, et les falaises que les sous-zones
+    /// voisines ignorent. Il ne cède que s'il est hors de la zone de la cible
+    /// (Forêt d'Amakna rattachée au Rivage sufokien) quand celui des
+    /// sous-zones y est et épargne au moins `ecartZaapDuJeu` cartes : deux
+    /// sous-zones d'une même zone se rejoignent à pied, deux zones voisines
+    /// pas toujours (Marécages nauséabonds et Montagne des Craqueleurs).
+    ///
+    /// `sousZone`, quand on la connaît (PNJ, lieu, objectif), prime sur celle
+    /// de la case : une couche à part partage ses coordonnées avec la carte du
+    /// monde (la Canopée au-dessus de la jungle d'Otomaï). Sans sous-zone
+    /// joignable — cible hors du Monde des Douze relevé, sous-zone isolée —,
+    /// le plus proche à vol d'oiseau.
+    static func zaap(vers cible: (x: Int, y: Int), sousZone connue: Int?, parmi zaaps: ZaapsSitues,
+                     zaapDuJeu: Bool) -> Zaap? {
+        let reseau = zaaps.reseau
+        guard let depart = connue.flatMap({ reseau.estDuMondeDesDouze($0) ? $0 : nil }) ?? reseau.sousZone(cible.x, cible.y)
+        else { return zaapLePlusProche(de: cible, parmi: zaaps.liste) }
         let voisin = parLesSousZones(depuis: depart, vers: cible, parmi: zaaps)
-        if zaapDuJeu, let associe = zaaps.reseau.zaapAssocie(depart).flatMap(zaaps.zaap(carte:)) {
-            // Le vol d'oiseau ne détrône pas le jeu : il ignore les montagnes.
-            guard let voisin,
+        if zaapDuJeu, let associe = reseau.zaapAssocie(depart).flatMap(zaaps.zaap(carte:)) {
+            guard let voisin, let zone = reseau.zone(depart),
+                  zaaps.zone(de: voisin) == zone, zaaps.zone(de: associe) != zone,
                   distance((associe.x, associe.y), cible) - distance((voisin.x, voisin.y), cible) >= ecartZaapDuJeu
             else { return associe }
             return voisin
@@ -124,10 +133,11 @@ enum ItineraireZaap {
 
     /// Le trajet qu'un `/travel` vers `cible` copié depuis `position` suivrait
     /// (`reecrire`) ; `nil` hors du Monde des Douze ou sans position.
-    static func trajet(vers cible: (x: Int, y: Int), depuis position: PositionCarte?, gainMinimal: Int,
+    static func trajet(vers cible: (x: Int, y: Int), sousZone: Int?, depuis position: PositionCarte?, gainMinimal: Int,
                        zaaps: ZaapsSitues, zaapDuJeu: Bool) -> Trajet? {
         guard let depart = rejoindre(position) else { return nil }
-        return trajet(depuis: depart, vers: cible, zaap: zaap(vers: cible, parmi: zaaps, zaapDuJeu: zaapDuJeu),
+        return trajet(depuis: depart, vers: cible,
+                      zaap: zaap(vers: cible, sousZone: sousZone, parmi: zaaps, zaapDuJeu: zaapDuJeu),
                       gainMinimal: gainMinimal)
     }
 
@@ -153,13 +163,15 @@ enum ItineraireZaap {
     /// `/zaap x,y ; /travel a,b` si le zaap retenu pour la cible (`zaap(vers:)`)
     /// épargne au moins `gainMinimal` cartes depuis `position` ; `nil` sinon.
     /// Les `intercalees` (`intercalees(_:)`) se glissent entre les deux.
+    /// `sousZone` : celle de la cible quand on la connaît, `nil` pour un
+    /// `/travel` venu d'ailleurs.
     static func reecrire(
-        _ texte: String, depuis position: PositionCarte?, gainMinimal: Int, zaaps: ZaapsSitues, zaapDuJeu: Bool,
-        intercalees: [String]
+        _ texte: String, sousZone: Int?, depuis position: PositionCarte?, gainMinimal: Int, zaaps: ZaapsSitues,
+        zaapDuJeu: Bool, intercalees: [String]
     ) -> String? {
         guard let cible = cible(dans: texte),
-              let zaap = trajet(vers: cible, depuis: position, gainMinimal: gainMinimal, zaaps: zaaps,
-                                zaapDuJeu: zaapDuJeu)?.zaap
+              let zaap = trajet(vers: cible, sousZone: sousZone, depuis: position, gainMinimal: gainMinimal,
+                                zaaps: zaaps, zaapDuJeu: zaapDuJeu)?.zaap
         else { return nil }
         let travel = texte.trimmingCharacters(in: .whitespacesAndNewlines)
         // L'espace avant le « ; » : sans elle, le jeu lit mal l'enchaînement.

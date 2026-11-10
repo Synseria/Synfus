@@ -135,16 +135,18 @@ struct BoutonFavori: View {
 }
 
 /// Copier le trajet vers une case, zaap compris dans le Monde des Douze — le
-/// geste des listes.
+/// geste des listes. La sous-zone dit si la case en est (`ReseauSousZones.horsDesDouze`).
 struct BoutonTrajet: View {
     let x: Int
     let y: Int
-    let dansLesDouze: Bool
+    let sousZone: Int?
     @State private var copie = false
+
+    private var dansLesDouze: Bool { !CarteStore.shared.reseau.horsDesDouze(sousZone) }
 
     var body: some View {
         Button {
-            ZaapClipboard.shared.copierTrajet(vers: (x, y), dansLesDouze: dansLesDouze)
+            ZaapClipboard.shared.copierTrajet(vers: (x, y), sousZone: sousZone, dansLesDouze: dansLesDouze)
             copie = true
             Task {
                 try? await Task.sleep(for: .seconds(1.2))

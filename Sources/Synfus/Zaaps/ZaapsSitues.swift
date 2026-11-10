@@ -15,13 +15,15 @@ struct ZaapsSitues: Sendable {
         parCarte = Dictionary(zaaps.compactMap { zaap in zaap.idCarte.map { ($0, zaap) } },
                               uniquingKeysWith: { premier, _ in premier })
         var parSousZone: [Int: [Zaap]] = [:]
-        for zaap in zaaps where zaap.monde == Zaap.mondeDesDouze {
-            // Un ajout à la main n'a que ses coordonnées pour dire sa sous-zone.
-            guard let sousZone = zaap.idSousZone ?? reseau.sousZone(zaap.x, zaap.y) else { continue }
+        for zaap in zaaps {
+            guard let sousZone = reseau.sousZone(du: zaap) else { continue }
             parSousZone[sousZone, default: []].append(zaap)
         }
         self.parSousZone = parSousZone
     }
+
+    /// La zone du zaap (`ReseauSousZones.zone`).
+    func zone(de zaap: Zaap) -> Int? { reseau.sousZone(du: zaap).flatMap(reseau.zone) }
 
     /// Le zaap actif posé sur cette carte du jeu (`Zaap.idCarte`).
     func zaap(carte: Int) -> Zaap? { parCarte[carte] }

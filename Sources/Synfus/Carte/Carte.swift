@@ -8,7 +8,7 @@ struct Carte: Codable, Equatable, Sendable {
     /// La forme du fichier : une carte gardée d'une autre (ancienne) ne se
     /// relit pas, l'intégrée la remplace — sans quoi un cache d'avant un
     /// nouveau champ le laisserait vide jusqu'au prochain téléchargement.
-    static let formatActuel = 2
+    static let formatActuel = 3
     var format = Carte.formatActuel
     let date: Date
     let lieux: [Lieu]
