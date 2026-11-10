@@ -1,11 +1,13 @@
 import SwiftUI
 
-/// L'almanax du jour en tête de la palette : l'offrande — un clic copie le
-/// nom de l'objet, pour l'hôtel de vente ; le chevron déplie où le trouver —
-/// et le bonus du jour.
+/// L'almanax du jour en tête de la palette : l'offrande et ses deux temps —
+/// le nom copié pour l'hôtel de vente, puis le trajet jusqu'au Sanctuaire pour
+/// la rendre ; le chevron déplie où la trouver — et le bonus du jour.
 struct AlmanaxVue: View {
     let almanax: Almanax
     let copier: (String) -> Void
+    /// Copie le trajet jusqu'au Sanctuaire ; `nil` si la carte ne le situe pas.
+    let allerAuSanctuaire: (() -> Void)?
     @State private var deplie: Int?
 
     private var langue: Langue { L10n.courante.langue }
@@ -48,16 +50,24 @@ struct AlmanaxVue: View {
         let nom = Lieu.traduit(offrande.noms, langue) ?? "?"
         return HStack(spacing: 10) {
             icone(offrande).frame(width: 28, height: 28)
-            Button { copier(nom) } label: {
-                HStack(spacing: 6) {
-                    Text(L("palette.almanax")).font(.synfus(.petit, gras: true)).foregroundStyle(Couleurs.ambre)
-                    Text(L("palette.almanax.offrande", offrande.quantite, nom)).font(.synfus(.corps, gras: true))
-                }
-                .contentShape(Rectangle())
+            HStack(spacing: 6) {
+                Text(L("palette.almanax")).font(.synfus(.petit, gras: true)).foregroundStyle(Couleurs.ambre)
+                Text(L("palette.almanax.offrande", offrande.quantite, nom)).font(.synfus(.corps, gras: true))
+                    .lineLimit(1)
             }
-            .buttonStyle(.plain)
-            .help(L("quete.copierNom"))
             Spacer(minLength: 4)
+            Button { copier(nom) } label: {
+                Label(L("palette.almanax.nom"), systemImage: "doc.on.clipboard")
+            }
+            .controlSize(.small)
+            .aide(L("palette.almanax.nom.aide"))
+            if let allerAuSanctuaire {
+                Button(action: allerAuSanctuaire) {
+                    Label(L("palette.almanax.sanctuaire"), systemImage: "arrow.triangle.turn.up.right.diamond")
+                }
+                .controlSize(.small)
+                .aide(L("palette.almanax.sanctuaire.aide"))
+            }
             Button { deplie = deplie == offrande.objet ? nil : offrande.objet } label: {
                 Image(systemName: deplie == offrande.objet ? "chevron.down" : "chevron.right")
                     .font(.synfus(.petit, gras: true))
