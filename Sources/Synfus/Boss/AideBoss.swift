@@ -12,16 +12,52 @@ final class AideBoss: ObservableObject {
     @Published private(set) var suivi = SuiviConfusion()
     @Published private(set) var tours = ToursCombat()
     @Published private(set) var session = SessionBoss()
+    /// La fiche DofusDB de chaque boss déjà demandée (`chargerFiche`).
+    @Published private(set) var fiches: [Boss: FicheBoss] = [:]
 
     /// Le dernier état de combat vu de chaque perso.
     private var combatsVus: [String: EtatCombat] = [:]
     private var abonnement: AnyCancellable?
+    private var abonnementSalle: AnyCancellable?
+    /// La salle de boss où la dernière position lue a mis le perso devant :
+    /// le boss n'est choisi qu'en y entrant, un choix à la main dans la salle
+    /// tient.
+    private var salle: Boss?
+    private var ficheDemandee: Set<Boss> = []
 
     private init() {
         // Les valeurs émises, pas la propriété : `@Published` publie avant
         // d'affecter.
         abonnement = LecteurEcran.shared.$combats.sink { [weak self] combats in
             MainActor.assumeIsolated { self?.combats(combats) }
+        }
+        abonnementSalle = LecteurEcran.shared.$positions.sink { [weak self] positions in
+            MainActor.assumeIsolated {
+                let perso = LecteurEcran.shared.persoDevant
+                self?.lire(zone: perso.flatMap { positions[$0] }?.zone)
+            }
+        }
+    }
+
+    /// Entrer dans la salle d'un boss le choisit : le panneau, ouvert ou
+    /// rouvert, montre le bon. Jamais d'ouverture d'office.
+    private func lire(zone: String?) {
+        let ici = Boss.dans(zone: zone)
+        guard ici != salle else { return }
+        salle = ici
+        if let ici, ici != boss { choisir(ici) }
+    }
+
+    /// Demande une fois par lancement la fiche DofusDB du boss ; muette en
+    /// cas d'échec (la mécanique se passe d'elle).
+    func chargerFiche(_ boss: Boss) {
+        guard ficheDemandee.insert(boss).inserted else { return }
+        Task {
+            guard let fiche = try? await FicheBoss.telecharger(boss) else {
+                ficheDemandee.remove(boss)
+                return
+            }
+            fiches[boss] = fiche
         }
     }
 
