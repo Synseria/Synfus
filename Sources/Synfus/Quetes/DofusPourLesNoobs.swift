@@ -78,6 +78,15 @@ enum DofusPourLesNoobs {
         NSWorkspace.shared.open(url)
     }
 
+    /// Le HTML de la première page qui existe ; `nil` sans page ni réseau.
+    nonisolated static func html(_ nom: String) async -> String? {
+        guard let url = await premiereExistante(candidats(nom).map(page)),
+              let (donnees, reponse) = try? await URLSession.shared.data(for: URLRequest(url: url, timeoutInterval: 10)),
+              (reponse as? HTTPURLResponse)?.statusCode == 200
+        else { return nil }
+        return String(bytes: donnees, encoding: .utf8)
+    }
+
     /// Toutes à la fois (une requête `HEAD` chacune), la première de la liste
     /// qui répond 200.
     private nonisolated static func premiereExistante(_ urls: [URL]) async -> URL? {

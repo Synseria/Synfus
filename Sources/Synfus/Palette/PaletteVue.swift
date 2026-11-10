@@ -193,7 +193,8 @@ struct PaletteVue: View {
         LazyVStack(spacing: 2) {
             ForEach(Array(modele.entrees.enumerated()), id: \.element.id) { index, entree in
                 let deplie = modele.deplie == entree.id
-                LigneResultat(entree: entree, choisie: index == modele.selection, deplie: deplie)
+                // Le clavier dans la fiche : la ligne ne se dit plus choisie, la carte l'est.
+                LigneResultat(entree: entree, choisie: index == modele.selection && modele.carte == nil, deplie: deplie)
                     .id(entree.id)
                     .onTapGesture { modele.executer(entree) }
                     .help(entree.complet)
@@ -257,8 +258,6 @@ struct PaletteVue: View {
                 if modele.requete.isEmpty {
                     aide("/", L("palette.touche.commandes"))
                     aide("%", L("palette.touche.variables"))
-                } else if surLigneDepliee {
-                    aide("←", L("palette.touche.replier"))
                 } else {
                     aide("⇥", L("palette.touche.filtre"))
                 }
@@ -274,18 +273,12 @@ struct PaletteVue: View {
         }
     }
 
-    private var surLigneDepliee: Bool {
-        modele.carte == nil && modele.entrees.indices.contains(modele.selection)
-            && modele.entrees[modele.selection].id == modele.deplie
-    }
-
     /// Ce qu'Entrée fera de la sélection — le texte même qui sera copié.
     private var entree: String {
         guard modele.entrees.indices.contains(modele.selection) else { return L("palette.touche.valider") }
         let entree = modele.entrees[modele.selection]
         if entree.id == modele.deplie {
-            if let action = modele.cartes.action(modele.carte) ?? modele.cartes.parDefaut { return aide(action) }
-            if case .ouTrouver(.monstre) = entree.effet { return L("palette.touche.plusProche") }
+            return modele.cartes.valide(modele.carte).map(aide) ?? L("palette.touche.replier")
         }
         switch entree.effet {
         case .copier, .trajet: return L("palette.touche.copier", modele.texteACopier(entree) ?? "")
@@ -301,7 +294,7 @@ struct PaletteVue: View {
         switch action {
         case .entree(let lieu): return L("palette.touche.copier", modele.versLieu(lieu).texte ?? "")
         case .guide: return L("palette.touche.guide")
-        case .clef, .monstres, .succes:
+        case .clef, .conseils, .monstres, .succes:
             return modele.ouvertes.contains(action) ? L("palette.touche.replier") : L("palette.touche.deplier")
         }
     }
