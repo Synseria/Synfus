@@ -18,6 +18,7 @@ struct BossVue: View {
             entete
             Divider()
             VStack(alignment: .leading, spacing: 10) {
+                if let fiche = aide.fiches[prefs.bossChoisi] { Self.ficheVue(fiche) }
                 if previews.authorized {
                     ligneTour
                     switch prefs.bossChoisi {
@@ -41,6 +42,22 @@ struct BossVue: View {
         // L'autorisation donnée, la lecture démarre sans attendre un
         // changement d'app.
         .onChange(of: previews.authorized) { BossPanel.shared.revoirVisibilite(force: false) }
+        .task(id: prefs.bossChoisi) { aide.chargerFiche(prefs.bossChoisi) }
+    }
+
+    /// Niveau, vie, PA et PM du plus haut grade, puis les résistances.
+    private static func ficheVue(_ fiche: FicheBoss) -> some View {
+        let res = fiche.resistances
+        return VStack(alignment: .leading, spacing: 2) {
+            Text(L("boss.fiche", fiche.niveau, fiche.vie.formatted(), fiche.pa, fiche.pm))
+                .font(.synfus(.petit, gras: true))
+            Text(L("boss.fiche.resistances", res[.neutre] ?? 0, res[.terre] ?? 0, res[.feu] ?? 0,
+                   res[.eau] ?? 0, res[.air] ?? 0))
+                .font(.synfus(.petit))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .help(L("boss.fiche.aide"))
     }
 
     private var entete: some View {
@@ -55,6 +72,10 @@ struct BossVue: View {
                     .padding(.horizontal, 6)
             }
         } boutons: {
+            BoutonEnTete(icone: "book", aide: L("boss.guide")) {
+                let donjon = Preferences.shared.bossChoisi.donjon
+                Task { await DofusPourLesNoobs.ouvrir(donjon) }
+            }
             BoutonEnTete(icone: "minus", aide: L("quete.fermer.simple")) { BossPanel.shared.fermer() }
         }
     }
