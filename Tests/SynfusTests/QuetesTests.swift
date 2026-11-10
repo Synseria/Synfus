@@ -110,7 +110,7 @@ struct QuetesTests {
     private func contexte() throws -> ContextePalette {
         var contexte = ContextePalette()
         contexte.position = PositionCarte(x: -2, y: 0, zone: "Amakna")
-        contexte.zaaps = ZaapsSitues(CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [], choix: [:], reseau: .vide), reseau: .vide)
+        contexte.zaaps = ZaapsSitues(CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [], choix: [:]), reseau: .vide)
         contexte.quetes = try Self.quetes()
         return contexte
     }

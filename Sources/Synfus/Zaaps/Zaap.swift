@@ -2,10 +2,9 @@
 /// du jeu.
 ///
 /// `monde` est la carte du monde de DofusDB (`worldMapId`) : 1, le Monde des
-/// Douze ; Incarnam, la Canopée, Harebourg ou Crocuzko ont la leur. Celle
-/// d'Incarnam recoupe les coordonnées d'Amakna sans en être : exclue par
-/// défaut ; la Canopée et les autres sont des couches du Monde des Douze, que
-/// leur sous-zone situe (`CatalogueZaaps.actifParDefaut`).
+/// Douze ; Incarnam, la Canopée, Harebourg ou Crocuzko ont la leur, que
+/// `/zaap x,y` n'atteint pas (`CatalogueZaaps.actifParDefaut`). La Canopée et
+/// les autres couches du Monde des Douze, cochées, sont situées par leur sous-zone.
 struct Zaap: Codable, Hashable, Sendable {
     static let mondeDesDouze = 1
 

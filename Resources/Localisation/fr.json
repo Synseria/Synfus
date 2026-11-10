@@ -778,7 +778,7 @@
   "zaap.intercalees": "Commandes entre zaap et trajet",
   "zaap.intercalees.aide": "Glissées entre /zaap et /travel, séparées par « ; ». Juste après le zaap, le jeu ignore parfois le /travel tant que la carte charge ; une commande sans effet comme /a lui laisse le temps. Vide : rien n'est ajouté.",
   "zaap.lirePosition": "Lire la position",
-  "zaap.liste.aide": "Décoche un zaap pour qu'il ne soit jamais proposé. Ceux marqués « autre carte » (Incarnam, Canopée, Harebourg, Crocuzko) ont des coordonnées qui recoupent celles du Monde des Douze : décochés par défaut, sinon un /travel vers Amakna pourrait passer par Incarnam.",
+  "zaap.liste.aide": "Décoche un zaap pour qu'il ne soit jamais proposé. Ceux marqués « autre carte » (Incarnam, Canopée, Harebourg, Crocuzko) ont des coordonnées qui recoupent celles du Monde des Douze, où le jeu cherche leur /zaap et le refuse : décochés par défaut.",
   "zaap.maj": "Mettre à jour depuis DofusDB",
   "zaap.maj.aide": "Télécharge la liste des zaaps depuis api.dofusdb.fr — Synfus le fait aussi de lui-même au démarrage quand la liste a plus de 30 jours. Tes activations, tes ajouts et tes favoris sont conservés.",
   "zaap.maj.date": "Liste DofusDB du %@",
