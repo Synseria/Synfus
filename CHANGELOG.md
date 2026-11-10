@@ -19,6 +19,17 @@ contenu (`Tools/notes-de-version.sh`), et `sh build.sh --publish` refuse une ver
 ### Améliorations
 
 - Une pastille en combat, sans que ce soit son tour, prend un cadre rose discret.
+- **Palette** : rouverte, elle reprend où on l'a laissée — recherche toute sélectionnée (une
+  lettre la remplace), filtre, ligne et fiche dépliée. La fiche d'un donjon se parcourt au
+  clavier : ↓ entre dans ses cartes (entrée, guide, clef, monstres, succès), ←/→ passe de l'une à
+  l'autre, ↵ la fait ; un second ↵ sur le donjon copie le trajet jusqu'à l'entrée, ← replie. Sur
+  un monstre déplié, un second ↵ copie le trajet du repaire le plus proche. Le perso d'où partent
+  les trajets passe à côté du champ, lisible en entier.
+
+### Corrections
+
+- Les zaaps d'une autre carte du monde (Incarnam, la Canopée, Harebourg, Crocuzko) reviennent
+  décochés par défaut : le jeu refuse leur `/zaap` (la Canopée du Kimbo copiait un trajet mort).
 
 ## 0.12.0 — 2026-11-10
 
