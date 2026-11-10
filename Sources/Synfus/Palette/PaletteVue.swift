@@ -7,6 +7,8 @@ struct PaletteVue: View {
     @ObservedObject var modele = PaletteModele.shared
     @ObservedObject private var quetes = QuetesStore.shared
     @ObservedObject private var almanax = AlmanaxStore.shared
+    /// Le détail d'un donjon arrive après l'ouverture : ↵ et les cartes de sa fiche changent.
+    @ObservedObject private var donjons = DonjonsStore.shared
     @FocusState private var champ: Champ?
 
     private enum Champ { case recherche, etiquette }
@@ -40,12 +42,22 @@ struct PaletteVue: View {
                 .font(.synfus(.grand))
                 .focused($champ, equals: .recherche)
                 .help(L("raccourcis.palette.aide"))
-            Text(mode)
-                .font(.synfus(.petit, gras: true))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 7)
-                .padding(.vertical, 2)
-                .background(Capsule().fill(Couleurs.accentPlein))
+            // D'où partent distances et trajets : le dernier perso lu devant,
+            // pas forcément celui qu'on croit quand on joue plusieurs comptes.
+            Label(modele.origine, systemImage: "location")
+                .font(.synfus(.petit))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .fixedSize()
+                .help(L("palette.depuis.aide"))
+            if let mode {
+                Text(mode)
+                    .font(.synfus(.petit, gras: true))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 2)
+                    .background(Capsule().fill(Couleurs.accentPlein))
+            }
         }
         .padding(.horizontal, 16)
         .frame(height: 52)
@@ -66,34 +78,32 @@ struct PaletteVue: View {
                     .onTapGesture { modele.choisir(filtre) }
                     .accessibilityAddTraits(choisi ? [.isButton, .isSelected] : .isButton)
             }
-            Spacer()
-            // D'où partent distances et trajets : le dernier perso lu devant,
-            // pas forcément celui qu'on croit quand on joue plusieurs comptes.
-            Text(modele.origine)
-                .font(.synfus(.petit))
-                .foregroundStyle(.tertiary)
-                .lineLimit(1)
-            Text(L("palette.tri", modele.tri.titre))
+            Spacer(minLength: 8)
+            Label(modele.tri.titre, systemImage: "arrow.up.arrow.down")
                 .font(.synfus(.petit))
                 .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .fixedSize()
+                .contentShape(Rectangle())
                 .onTapGesture { modele.triSuivant() }
+                .help(L("palette.tri.aide"))
                 .accessibilityAddTraits(.isButton)
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 10)
     }
 
-    private var mode: String {
+    /// Le mode d'une commande tapée ; rien quand on cherche partout, que les filtres disent déjà.
+    private var mode: String? {
         let texte = modele.requete.trimmingCharacters(in: .whitespaces)
-        if texte.isEmpty { return L("palette.mode.zaaps") }
+        if !texte.hasPrefix("/"), !texte.hasPrefix("%") { return nil }
         if texte.hasPrefix("%") { return L("palette.mode.variables") }
         if texte.hasPrefix("/zaap") { return "/zaap" }
         if texte.hasPrefix("/travel") { return "/travel" }
         if texte.hasPrefix("/invite") { return "/invite" }
         if texte.hasPrefix("/quete") || texte.hasPrefix("/quête") { return "/quete" }
         if texte.hasPrefix("/pnj") { return "/pnj" }
-        if texte.hasPrefix("/") { return L("palette.mode.commandes") }
-        return L("palette.mode.tout")
+        return L("palette.mode.commandes")
     }
 
     // MARK: - Résultats
@@ -134,6 +144,10 @@ struct PaletteVue: View {
                 .onChange(of: modele.selection) { _, index in
                     guard modele.entrees.indices.contains(index) else { return }
                     defilement.scrollTo(modele.entrees[index].id)
+                }
+                .onChange(of: modele.carte) { _, carte in
+                    guard let carte else { return }
+                    defilement.scrollTo(FicheDonjonVue.ancre(carte))
                 }
             }
         }
@@ -190,7 +204,7 @@ struct PaletteVue: View {
                     Group {
                         switch entree.effet {
                         case .ouTrouver(let sujet): OuTrouverVue(sujet: sujet, metriques: .confort)
-                        case .donjon(let id): FicheDonjonVue(id: id, copierTrajet: { modele.copierTrajet(vers: $0) })
+                        case .donjon(let id): FicheDonjonVue(id: id, modele: modele)
                         default: EmptyView()
                         }
                     }
@@ -243,6 +257,8 @@ struct PaletteVue: View {
                 if modele.requete.isEmpty {
                     aide("/", L("palette.touche.commandes"))
                     aide("%", L("palette.touche.variables"))
+                } else if surLigneDepliee {
+                    aide("←", L("palette.touche.replier"))
                 } else {
                     aide("⇥", L("palette.touche.filtre"))
                 }
@@ -258,10 +274,19 @@ struct PaletteVue: View {
         }
     }
 
+    private var surLigneDepliee: Bool {
+        modele.carte == nil && modele.entrees.indices.contains(modele.selection)
+            && modele.entrees[modele.selection].id == modele.deplie
+    }
+
     /// Ce qu'Entrée fera de la sélection — le texte même qui sera copié.
     private var entree: String {
         guard modele.entrees.indices.contains(modele.selection) else { return L("palette.touche.valider") }
         let entree = modele.entrees[modele.selection]
+        if entree.id == modele.deplie {
+            if let action = modele.cartes.action(modele.carte) ?? modele.cartes.parDefaut { return aide(action) }
+            if case .ouTrouver(.monstre) = entree.effet { return L("palette.touche.plusProche") }
+        }
         switch entree.effet {
         case .copier, .trajet: return L("palette.touche.copier", modele.texteACopier(entree) ?? "")
         case .completer: return L("palette.touche.completer")
@@ -269,6 +294,15 @@ struct PaletteVue: View {
         case .ouvrirQuete: return L("palette.touche.ouvrir")
         case .ouTrouver: return L("palette.touche.ouTrouver")
         case .donjon: return L("palette.touche.fiche")
+        }
+    }
+
+    private func aide(_ action: ActionFiche) -> String {
+        switch action {
+        case .entree(let lieu): return L("palette.touche.copier", modele.versLieu(lieu).texte ?? "")
+        case .guide: return L("palette.touche.guide")
+        case .clef, .monstres, .succes:
+            return modele.ouvertes.contains(action) ? L("palette.touche.replier") : L("palette.touche.deplier")
         }
     }
 

@@ -29,7 +29,7 @@ struct BancDonneesTests {
 
     private static let position = PositionCarte(x: 2, y: -3, zone: "Amakna (Village d'Amakna)")
     private static let reseau = ReseauSousZones(Carte.integree)
-    private static let zaaps = ZaapsSitues(CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [], choix: [:], reseau: reseau),
+    private static let zaaps = ZaapsSitues(CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [], choix: [:]),
                                            reseau: reseau)
 
     @Test("Lancement : ce qui se lit et s'indexe hors du fil principal", .enabled(if: chemin != nil))

@@ -8,7 +8,7 @@ struct ItineraireZaapTests {
 
     /// Les zaaps actifs d'une installation neuve, et les sous-zones de la carte intégrée.
     private let reseau = ReseauSousZones(Carte.integree)
-    private var zaaps: [Zaap] { CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [], choix: [:], reseau: reseau) }
+    private var zaaps: [Zaap] { CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [], choix: [:]) }
     private var situes: ZaapsSitues { ZaapsSitues(zaaps, reseau: reseau) }
 
     private func position(_ x: Int, _ y: Int, zone: String? = nil) -> PositionCarte {
@@ -73,16 +73,19 @@ struct ItineraireZaapTests {
                                         gainMinimal: 1, zaaps: situes, zaapDuJeu: true, intercalees: []) != nil)
     }
 
-    @Test("La liste intégrée : aucun zaap en double, ceux d'Incarnam inactifs, ceux d'une couche du Monde des Douze actifs")
+    @Test("La liste intégrée : aucun zaap en double, ceux d'une autre carte du monde inactifs (Incarnam, la Canopée)")
     func table() {
         let cles = Carte.integree.zaaps.map(\.cle)
         #expect(Set(cles).count == cles.count)
         #expect(Carte.integree.zaaps.count == 45)
         let incarnam = try? #require(Carte.integree.zaaps.first { $0.monde == 2 && $0.x == 3 && $0.y == 0 })
-        #expect(incarnam.map { CatalogueZaaps.estActif($0, choix: [:], reseau: reseau) } == false)
+        #expect(incarnam.map { CatalogueZaaps.estActif($0, choix: [:]) } == false)
         #expect(!zaaps.contains { $0.monde == 2 })
-        // La Canopée, couche au-dessus de la jungle d'Otomaï.
-        #expect(zaaps.contains { $0.x == -54 && $0.y == 16 && $0.monde != Zaap.mondeDesDouze })
+        // La Canopée, couche au-dessus de la jungle d'Otomaï : le jeu refuse son `/zaap -54,16`.
+        #expect(!zaaps.contains { $0.monde != Zaap.mondeDesDouze })
+        // La Canopée du Kimbo, dans le Feuillage de l'arbre Hakam [-54,16].
+        #expect(ItineraireZaap.zaap(vers: (-54, 16), sousZone: 472, parmi: situes, zaapDuJeu: true)?.monde
+                == Zaap.mondeDesDouze)
         // Sans cela, un /travel 3,-1 d'Amakna passerait par le cimetière
         // d'Incarnam (3,0) à vol d'oiseau ; par les sous-zones, c'est le
         // zaap du Village d'Amakna.
@@ -97,7 +100,7 @@ struct ItineraireZaapTests {
         let chateau = Carte.integree.zaaps.first { $0.x == 3 && $0.y == -5 }!
         let cimetiere = Carte.integree.zaaps.first { $0.monde == 2 && $0.x == 3 && $0.y == 0 }!
         let actifs = CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [],
-                                           choix: [chateau.cle: false, cimetiere.cle: true], reseau: reseau)
+                                           choix: [chateau.cle: false, cimetiere.cle: true])
         #expect(!actifs.contains(chateau))
         #expect(actifs.contains(cimetiere))
     }
@@ -109,7 +112,7 @@ struct ItineraireZaapTests {
         let tous = CatalogueZaaps.tous(base: Carte.integree.zaaps, ajoutes: [nouveau, doublon])
         #expect(tous.count == Carte.integree.zaaps.count + 1)
         #expect(tous.first { $0.cle == doublon.cle }?.nom(en: .fr) == "Village d'Amakna")
-        let actifs = CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [nouveau], choix: [:], reseau: reseau)
+        let actifs = CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [nouveau], choix: [:])
         #expect(ItineraireZaap.reecrire("/travel 51,50", sousZone: nil, depuis: position(0, 0), gainMinimal: 5, zaaps: ZaapsSitues(actifs, reseau: reseau), zaapDuJeu: true, intercalees: [])
                 == "/zaap 50,50 ; /travel 51,50")
     }
@@ -205,7 +208,10 @@ struct ItineraireZaapTests {
 
     @Test("Une cible dont on sait la sous-zone prend le zaap de sa couche, pas celui de la case d'en dessous")
     func couche() {
-        // L'Assistante d'Otomaï [-55,15], Village de la Canopée : la case
+        let canopee = Carte.integree.zaaps.first { $0.monde != Zaap.mondeDesDouze && $0.x == -54 && $0.y == 16 }!
+        let situes = ZaapsSitues(CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [], choix: [canopee.cle: true]),
+                                 reseau: reseau)
+        // Cochée à la main. L'Assistante d'Otomaï [-55,15], Village de la Canopée : la case
         // est celle de la Jungle obscure, rattachée au Village côtier [-46,18].
         #expect(ItineraireZaap.zaap(vers: (-55, 15), sousZone: 469, parmi: situes, zaapDuJeu: true).map { [$0.x, $0.y] }
                 == [-54, 16])
