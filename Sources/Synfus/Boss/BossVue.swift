@@ -12,6 +12,8 @@ struct BossVue: View {
     @ObservedObject private var previews = WindowPreviewService.shared
     @ObservedObject private var prefs = Preferences.shared
     @State private var rappels = false
+    /// Le rappel tout juste copié (ou tous : `""`), coché le temps du signal.
+    @State private var copie: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -106,23 +108,56 @@ struct BossVue: View {
         }
     }
 
+    /// Chaque rappel se copie d'un clic, pour le coller dans le tchat du
+    /// groupe ; l'icône du titre les copie tous, à la suite.
     private var rappelsVue: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Button { rappels.toggle() } label: {
-                Label(L("boss.rappels"), systemImage: rappels ? "chevron.down" : "chevron.right")
-                    .font(.synfus(.petit, gras: true))
-                    .foregroundStyle(.secondary)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            if rappels {
-                ForEach(Self.rappels(prefs.bossChoisi), id: \.self) {
-                    Text("• " + $0)
-                        .font(.synfus(.petit))
+        let liste = Self.rappels(prefs.bossChoisi)
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Button { rappels.toggle() } label: {
+                    Label(L("boss.rappels"), systemImage: rappels ? "chevron.down" : "chevron.right")
+                        .font(.synfus(.petit, gras: true))
                         .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                Spacer(minLength: 0)
+                if rappels {
+                    Button { copier(liste.joined(separator: " "), signal: "") } label: {
+                        Image(systemName: copie == "" ? "checkmark" : "doc.on.doc")
+                            .font(.synfus(.petit))
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.borderless)
+                    .aide(L("boss.rappels.copier"))
                 }
             }
+            if rappels {
+                ForEach(liste, id: \.self) { rappel in
+                    Button { copier(rappel, signal: rappel) } label: {
+                        HStack(alignment: .firstTextBaseline, spacing: 4) {
+                            Text("• " + rappel)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Spacer(minLength: 0)
+                            if copie == rappel { Image(systemName: "checkmark") }
+                        }
+                        .font(.synfus(.petit))
+                        .foregroundStyle(.secondary)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .aide(L("boss.rappel.copier"))
+                }
+            }
+        }
+    }
+
+    private func copier(_ texte: String, signal: String) {
+        PressePapiers.copier(texte)
+        copie = signal
+        Task {
+            try? await Task.sleep(for: .seconds(1.5))
+            if copie == signal { copie = nil }
         }
     }
 
