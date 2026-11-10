@@ -329,6 +329,8 @@
   "general.systeme": "System",
   "general.version": "Version",
   "lecture.calibrer": "Calibrate…",
+  "lecture.combatDerriere": "Characters behind too",
+  "lecture.combatDerriere.aide": "The fight of the characters you aren't looking at, even with Dofus in the background: their chip shows whether they are fighting and their turn countdown. Windowed only — macOS doesn't redraw a hidden full screen — and one capture per character every two seconds in a fight.",
   "lecture.detecter": "Detect zones on screen",
   "lecture.detecter.aide": "One game capture: each visible element (position, chat, health heart, trackers, fight button) finds its zone. Open what you want calibrated first.",
   "lecture.detecter.bouton": "Detect",

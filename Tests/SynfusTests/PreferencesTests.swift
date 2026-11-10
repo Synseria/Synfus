@@ -483,7 +483,7 @@ struct PreferencesTests {
      "hotKeys":[{"keyCode":18,"modifiers":256},null,{"keyCode":20,"modifiers":2048},null,null,null,null,null,null,null],
      "inviteFormat":"/w %nom go","inviteGroupee":true,
      "inviteHotKey":{"keyCode":34,"modifiers":256},
-     "killFrozenClients":false,"lastArrangement":"principale","lireCombat":true,
+     "killFrozenClients":false,"lastArrangement":"principale","lireCombat":true,"lireCombatDerriere":true,
      "lirePosition":true,"menuBarIcon":"symbole",
      "previewHotKey":{"keyCode":49,"modifiers":2048},
      "sessionHotKey":{"keyCode":1,"modifiers":256},"showClasses":false,
@@ -577,6 +577,7 @@ struct PreferencesTests {
         #expect(prefs.chasseBouton == false)
         #expect(prefs.bossChoisi == .kimbo)
         #expect(prefs.bossBouton == false)
+        #expect(prefs.lireCombatDerriere == true)
         #expect(prefs.vuesCartes == false)
     }
 
@@ -651,6 +652,7 @@ struct PreferencesTests {
         prefs.chasseBouton = false
         prefs.bossChoisi = .kimbo
         prefs.bossBouton = false
+        prefs.lireCombatDerriere = true
         prefs.vuesCartes = false
 
         #expect(canonique(store.donnees(pour: Preferences.key))
@@ -677,7 +679,7 @@ struct PreferencesTests {
          "autoCenterBar":true,"barOnlyWithDofus":false,"panneauxSeulementDofus":true,"barVisible":true,"bossBouton":true,"bossChoisi":"harebourg",
          "chasseBouton":true,"characterOrder":[],
          "defaultsVersion":7,"equipes":[],"etiquettes":{},"hotKeys":[null],"inviteFormat":"/invite %nom","inviteGroupee":false,
-         "killFrozenClients":true,"lireCombat":false,"lirePosition":false,"menuBarIcon":"logo",
+         "killFrozenClients":true,"lireCombat":false,"lireCombatDerriere":false,"lirePosition":false,"menuBarIcon":"logo",
          "showClasses":true,"showNumbers":true,"showPreviewOnHover":false,
          "signalerBascule":true,"zaapAuto":false,"zaapBouton":true,
          "zaapGainMinimal":5,"zaapDuJeu":true,"zaapIntercalees":"/a","verifierMisesAJour":true,"zaapsAjoutes":[],"zaapsChoix":{},"zaapsFavoris":[],"zaapsVueCarte":true,
