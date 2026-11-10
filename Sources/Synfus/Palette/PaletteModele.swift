@@ -226,6 +226,16 @@ final class PaletteModele: ObservableObject {
         }
     }
 
+    /// Le Sanctuaire de l'Almanax, s'il est sur la carte.
+    var sanctuaire: Lieu? { CarteStore.shared.reperes.lieu(id: Almanax.sanctuaire) }
+
+    /// Le trajet jusqu'à un lieu, zaap compris — la décision des entrées de lieux.
+    func copierTrajet(vers lieu: Lieu) {
+        guard let texte = RecherchePalette.texte(de: .trajet(x: lieu.x, y: lieu.y, sousZone: lieu.idSousZone), contexte)
+        else { return }
+        copier(texte)
+    }
+
     /// Copie, retient parmi les dernières copies et ferme.
     func copier(_ texte: String) {
         PressePapiers.copier(texte)
