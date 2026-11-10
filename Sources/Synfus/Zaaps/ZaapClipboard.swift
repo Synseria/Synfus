@@ -67,6 +67,7 @@ final class ZaapClipboard: ObservableObject {
     /// dit où est la case, et sa sous-zone quand il la connaît : un oubli
     /// copierait ce zaap-là, ou celui de la couche d'en dessous (la Canopée).
     func copierTrajet(vers cible: (x: Int, y: Int), sousZone: Int?, dansLesDouze: Bool) {
+        UsageStore.shared.compter(.trajetCopie)
         let travel = ItineraireZaap.travel(vers: cible)
         guard dansLesDouze, let nouveau = itineraire(travel, sousZone: sousZone) else { return poser(travel) }
         poser(nouveau)
@@ -158,6 +159,7 @@ final class ZaapClipboard: ObservableObject {
     @discardableResult
     private func reecrire() -> Bool {
         guard let texte = PressePapiers.lire(), let nouveau = itineraire(texte, sousZone: nil) else { return false }
+        UsageStore.shared.compter(.trajetReecrit)
         poser(nouveau)
         signaler()
         return true

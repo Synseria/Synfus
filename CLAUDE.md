@@ -57,7 +57,7 @@ SYNFUS_CAPTURE=~/Library/Logs/Synfus/captures/x.png sh test.sh RealCapture   # O
   `ClientTerminator` ; presse-papiers `PressePapiers` ; API DofusDB `DofusDB` (lots d'identifiants : `parIdentifiants`) ; images du jeu `ImagesDofusDB` (vues de carte : `VueCarte`, toujours réduites) ; effectif `republierEffectif` ; coût d'un trajet depuis le perso `ZaapClipboard` (`cout(depuis:)`, `tournee`) ; zaaps actifs indexés `ZaapClipboard.zaapsSitues` ; classes
   `ClassesStore.catalogue` ; marque `SynfusMark` ; libellés `L()` ; texte lu comparé à des noms `Ressemblance` ;
   zones de lecture `GenreLecture` ; coches, décoches, objectif en cours et étape des quêtes `Preferences.cocher` / `appliquer` (`CochesQuete`) ; coût d'un trajet `ItineraireZaap.cartes` ; distance à pied `ItineraireZaap.aPied` ; case hors du Monde des Douze `ReseauSousZones.horsDesDouze` (une entrée de palette vers une case : `versCase`) ;
-  plusieurs réglages d'un geste, une écriture `Preferences.enUneEcriture` ; résultat redemandé à chaque rendu
+  geste compté pour les statistiques `UsageStore.compter` ; plusieurs réglages d'un geste, une écriture `Preferences.enUneEcriture` ; résultat redemandé à chaque rendu
   `DernierCalcul` (sous la clé de ses entrées ; réglages des trajets et carte : `ZaapClipboard.revisionTrajets`).
 - Les constantes `extern CFStringRef` de l'Accessibilité (`kAXTrustedCheckOptionPrompt`,
   `"AXFullScreen"`…) sont refusées par la concurrence stricte : citer leur valeur littérale.
@@ -87,7 +87,7 @@ Point d'entrée `SynfusMain` (`App/App.swift`). Composants : singletons `@MainAc
 la plupart `ObservableObject`. `applicationDidFinishLaunching` démarre, dans l'ordre :
 `WindowManager` → `FreezeWatcher` → `HotKeyManager.rebind()` → `MenuBarController` →
 `AttentionWatcher` → `ClickAdvanceWatcher` → `FloatingBarController` → `LecteurEcran` →
-`CarteStore` → `ClassesStore` → `QuetesStore.preparer()` → `DonneesDuJeu` → `PaletteModele` → `ZaapClipboard` → `MiseAJour`.
+`CarteStore` → `ClassesStore` → `QuetesStore.preparer()` → `DonneesDuJeu` → `PaletteModele` → `ZaapClipboard` → `MiseAJour` → `UsageStore`.
 
 `Sources/Synfus/` est rangé par domaine (SwiftPM compile les sous-dossiers sans déclaration). Un
 nouveau fichier va dans le dossier de son domaine ; un fichier sans domaine en annonce un nouveau.
@@ -105,6 +105,7 @@ nouveau fichier va dans le dossier de son domaine ; un fichier sans domaine en a
 | `OuTrouver/` | Où trouver un monstre ou un objet : `OuTrouver` (pur : la case de chaque repaire — sous-zone par l'index inverse de la carte, donjon par son repère —, l'ordre des repaires et des lâcheurs), `OuTrouverDofusDB` (monstre, butins et recette à la demande, cache disque versionné, 30 jours), `OuTrouverStore`, `OuTrouverVue` (dépliée sous une ressource ou un objectif) |
 | `Donjons/` | Fiche d'un donjon, la même cherchée par lui ou par un boss : `Donjon`, `Donjons`, `DetailDonjon`, `FicheCombat` (purs : niveau, PV, PA, PM, résistances au plus haut grade, aussi pour le panneau des boss), `DonjonsStore` (liste à la première palette, détail à l'ouverture), `FicheDonjonVue`, `FicheCombatVue` |
 | `MiseAJour/` | Mises à jour depuis les releases GitHub : `VersionPubliee` (pur : réponse de l'API, comparaison de versions, `SHA256SUMS.txt`), `InstallateurMiseAJour` (DMG téléchargé, empreinte, app extraite et contrôlée), `MiseAJour` (vérification quotidienne, proposition, remplacement par un script détaché, autorisations TCC effacées : les releases sont ad hoc) |
+| `Usage/` | Statistiques d'utilisation : `EvenementUsage`, `HistoriqueUsage` (purs : liste fermée des compteurs, jours gardés sur le Mac), `RapportUsage` (pur : OTLP JSON, identifiant d'installation haché), `DiagnosticsUsage` (plantages et blocages remis par MetricKit), `UsageStore` (compte, `usage.json`, envoi quotidien au collecteur de Flux-Domus si `partagerStatistiques` et si la publication a inscrit adresse et jeton) |
 | `Almanax/` | L'almanax du jour en tête de la palette : `Almanax` (pur : jour de Paris, réponse de DofusDB, cache disque du jour), `AlmanaxStore`, `AlmanaxVue` |
 | `Boss/` | Aide aux boss : `Boss` (pur : Kimbo, Toxoliath, Ilyzaelle, Tal Kasha, `SessionBoss`), `Harebourg`, `SuiviConfusion` (purs : confusion du Comte, vie et canal combat lus), `ToursCombat` (pur : tour du combat), `AideBoss`, `BossPanel` (panneau jamais key, montré devant Dofus), `BossVue` (+ `HarebourgVue`, `VuesBoss`) |
 | `Chasse/` | Chasse au trésor : `IndicesChasse`, `EtapeChasse` (purs), `ChasseDofusDB` (indices en cache disque, étape à la demande), `ChasseModele`, `ChassePanel` (panneau key sans activer Synfus), `ChasseVue` |

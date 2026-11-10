@@ -58,6 +58,20 @@ assets `Synfus-X.Y.Z-arm64.dmg`, `Synfus-X.Y.Z-x86_64.dmg`, `SHA256SUMS.txt` (fo
 l'app à la racine du DMG sous le nom `Synfus.app`. Changer un nom ou le format casse la mise à
 jour de **toutes** les versions déjà installées : jamais sans garder l'ancien en parallèle.
 
+## Statistiques d'utilisation
+
+Une release envoie les statistiques (`Usage/UsageStore`) : `publier-release.sh` lit l'adresse du
+collecteur et le jeton de Synfus dans le coffre (`secret run`, `domus:telemetrie/prod/URL` et
+`…/SYNFUS`, Touch ID) ou dans l'environnement (`TELEMETRIE_URL`, `TELEMETRIE_JETON` : secrets de la
+CI), et refuse de construire sans eux ; `build.sh` les inscrit dans l'Info.plist. Un build local
+n'en a pas : il compte sans envoyer. Pour l'essayer de bout en bout :
+`secret run TELEMETRIE_URL=domus:telemetrie/prod/URL TELEMETRIE_JETON=domus:telemetrie/prod/SYNFUS -- sh run.sh --install --start`.
+Les plantages et blocages (MetricKit, `Usage/DiagnosticsUsage`) partent un par envoi ; chaque
+release publie aussi `Synfus-X.Y.Z-dSYM.zip` (asset ignoré par la mise à jour), dont
+`Tools/symboliser.sh <diagnostic.json>` tire les noms de fonctions. Contrat d'envoi et
+collecteur : `docs/` de Flux-Domus. Un compteur ajouté à `EvenementUsage` est
+gardé par le collecteur tant qu'il suit `usage.[a-z0-9_]+` (de même `reglage.*`).
+
 ## Données du jeu — `App/DonneesDuJeu.swift`
 
 Carte, cartes intérieures, quêtes et classes : lues au lancement par leurs stores, puis

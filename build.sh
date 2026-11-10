@@ -7,10 +7,11 @@
 #   sh build.sh --help
 # Installer et lancer, c'est `sh run.sh --install [--start]`.
 #
-# Trois variables d'environnement, pour la publication :
+# Variables d'environnement, pour la publication :
 #   VERSION=0.0.1   numéro inscrit dans l'Info.plist (défaut : dernier tag git)
 #   ARCH=x86_64     architecture cible (défaut : celle de la machine)
 #   DISTRIBUTION=1  build à publier : signé ad hoc
+#   TELEMETRIE_URL, TELEMETRIE_JETON  envoi des statistiques d'utilisation
 [ -n "${BASH_VERSION:-}" ] || exec /bin/bash "$0" "$@"
 case ":${SHELLOPTS:-}:" in *:posix:*) exec /bin/bash "$0" "$@" ;; esac
 set -euo pipefail
@@ -97,6 +98,16 @@ BINARY="$BIN_PATH/$NAME"
 # Accessibilité) : signature.sh la choisit, la même pour tous les builds.
 source ./signature.sh
 
+# Statistiques d'utilisation : l'adresse du collecteur et le jeton de Synfus,
+# fournis à la publication par le coffre (Tools/publier-release.sh). Sans eux,
+# l'app compte mais n'envoie rien : un build local ne pollue pas les chiffres.
+# Écrits par le heredoc, jamais en argument d'une commande (visible par ps).
+TELEMETRIE_PLIST=""
+if [ -n "${TELEMETRIE_URL:-}" ] && [ -n "${TELEMETRIE_JETON:-}" ]; then
+    TELEMETRIE_PLIST="<key>SynfusTelemetrieURL</key><string>$TELEMETRIE_URL</string>
+    <key>SynfusTelemetrieJeton</key><string>$TELEMETRIE_JETON</string>"
+fi
+
 echo "==> Assemblage du bundle"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
@@ -128,6 +139,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>NSScreenCaptureUsageDescription</key>
     <string>Synfus capture les fenêtres de Dofus pour en afficher un aperçu dans la barre.</string>
     <key>NSHumanReadableCopyright</key>  <string>Synfus</string>
+    $TELEMETRIE_PLIST
 </dict>
 </plist>
 PLIST
@@ -149,4 +161,8 @@ echo "==> $APP prêt"
 if [ "$MODE" = "release" ]; then
     DMG="$DIST/$NAME-$VERSION-${ARCH:-$(uname -m)}.dmg"
     ./Tools/make-dmg.sh "$APP" "$DMG"
+    # Les symboles du binaire livré : un rapport de plantage (MetricKit) ne
+    # porte que des adresses, Tools/symboliser.sh les traduit avec eux.
+    rm -rf "$DIST/$NAME-$VERSION-${ARCH:-$(uname -m)}.dSYM"
+    cp -R "$BIN_PATH/$NAME.dSYM" "$DIST/$NAME-$VERSION-${ARCH:-$(uname -m)}.dSYM"
 fi

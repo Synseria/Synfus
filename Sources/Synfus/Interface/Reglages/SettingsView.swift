@@ -19,7 +19,7 @@ enum GroupeReglages: CaseIterable {
 
 /// Sections des réglages, listées dans la barre latérale.
 enum SettingsSection: String, CaseIterable, Identifiable {
-    case general, barre
+    case general, barre, statistiques
     case raccourcis, attention, enchainer, invitations
     case palette, trajets, chasse, boss
     case zaaps, lieux, quetes, pnj
@@ -30,7 +30,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
 
     var groupe: GroupeReglages {
         switch self {
-        case .general, .barre: return .synfus
+        case .general, .barre, .statistiques: return .synfus
         case .raccourcis, .attention, .enchainer, .invitations: return .clavier
         case .palette, .trajets, .chasse, .boss: return .jeu
         case .zaaps, .lieux, .quetes, .pnj: return .donnees
@@ -43,6 +43,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         switch self {
         case .general: return L("reglages.general")
         case .barre: return L("reglages.barre")
+        case .statistiques: return L("reglages.statistiques")
         case .raccourcis: return L("reglages.raccourcis")
         case .attention: return L("reglages.attention")
         case .enchainer: return L("reglages.enchainer")
@@ -66,6 +67,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         switch self {
         case .general: return "gearshape"
         case .barre: return "rectangle.topthird.inset.filled"
+        case .statistiques: return "chart.bar"
         case .raccourcis: return "keyboard"
         case .attention: return "bolt"
         case .enchainer: return "cursorarrow.click"
@@ -172,6 +174,7 @@ struct SettingsView: View {
         switch section {
         case .general: GeneralSettings()
         case .barre: BarreSettings()
+        case .statistiques: StatistiquesSettings()
         case .raccourcis: ShortcutsSettings()
         case .attention: AttentionSettings()
         case .enchainer: EnchainerSettings()

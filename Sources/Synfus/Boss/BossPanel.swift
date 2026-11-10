@@ -37,6 +37,7 @@ final class BossPanel: NSObject, ObservableObject {
         // Abonné aux combats dès maintenant : le tour en cours compte.
         let aide = AideBoss.shared
         if let boss, boss != aide.boss { aide.choisir(boss) }
+        if !ouvert { UsageStore.shared.compter(.boss(aide.boss)) }
         ouvert = true
         impose = true
         appliquer(force: true)

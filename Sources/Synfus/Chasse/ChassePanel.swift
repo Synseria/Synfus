@@ -43,6 +43,7 @@ final class ChassePanel: NSObject, ObservableObject, NSWindowDelegate {
     func ouvrir() {
         let panel = panel ?? construire()
         panel.makeKeyAndOrderFront(nil)
+        if !ouvert { UsageStore.shared.compter(.chasse) }
         ouvert = true
         ChasseModele.shared.ouvrir()
     }
