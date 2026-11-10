@@ -69,7 +69,7 @@ struct ZaapsSettings: View {
             .filter { zaap in
                 switch vue {
                 case .tous: return true
-                case .actifs: return CatalogueZaaps.estActif(zaap, choix: prefs.zaapsChoix)
+                case .actifs: return CatalogueZaaps.estActif(zaap, choix: prefs.zaapsChoix, reseau: CarteStore.shared.reseau)
                 case .etiquetes: return etiquettes[zaap.cle] != nil
                 }
             }

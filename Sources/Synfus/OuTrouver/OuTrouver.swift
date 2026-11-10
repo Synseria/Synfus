@@ -18,6 +18,8 @@ enum OuTrouver {
         let x: Int
         let y: Int
         let monde: Int
+        /// Ce qui choisit le zaap d'une couche à part (`ItineraireZaap.zaap(vers:)`).
+        let sousZone: Int
     }
 
     /// Une sous-zone : sa case relevée la plus proche du perso, sinon un repère
@@ -31,14 +33,14 @@ enum OuTrouver {
         switch repaire.genre {
         case .sousZone:
             if let proche = laPlusProche(reseau.cases(repaire.id), de: depart) {
-                return Situation(x: proche.x, y: proche.y, monde: Zaap.mondeDesDouze)
+                return Situation(x: proche.x, y: proche.y, monde: Zaap.mondeDesDouze, sousZone: repaire.id)
             }
             lieu = reperes.lieu(sousZone: repaire.id)
         case .donjon:
             lieu = repaire.entree.flatMap(reperes.donjon(carte:))
                 ?? repaire.noms[Langue.fr.rawValue].flatMap(reperes.donjon(nom:))
         }
-        return lieu.map { Situation(x: $0.x, y: $0.y, monde: $0.monde) }
+        return lieu.map { Situation(x: $0.x, y: $0.y, monde: $0.monde, sousZone: $0.idSousZone) }
     }
 
     /// La case la plus proche du départ ; sans départ, celle du milieu de la

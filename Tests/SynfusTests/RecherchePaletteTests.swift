@@ -9,7 +9,8 @@ struct RecherchePaletteTests {
                           etiquettes: [String: String] = [:], favoris: Set<String> = []) -> ContextePalette {
         var contexte = ContextePalette()
         contexte.position = position
-        contexte.zaaps = ZaapsSitues(CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [], choix: [:]),
+        contexte.zaaps = ZaapsSitues(CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [], choix: [:],
+                                                           reseau: ReseauSousZones(Carte.integree)),
                                      reseau: ReseauSousZones(Carte.integree))
         contexte.lieux = Carte.integree.lieux
         contexte.etiquettes = etiquettes
@@ -112,7 +113,7 @@ struct RecherchePaletteTests {
         let amakna = try #require(pnjs.first { $0.titre == "Amakna" })
         #expect(incarnam.effet == .copier("/travel 4,-3"))
         #expect(incarnam.distance == nil && incarnam.itineraire == nil)
-        #expect(amakna.effet == .trajet(x: 4, y: -3))
+        #expect(amakna.effet == .trajet(x: 4, y: -3, sousZone: douze))
         #expect(amakna.distance != nil)
     }
 

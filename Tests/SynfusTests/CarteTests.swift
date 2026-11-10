@@ -14,10 +14,14 @@ struct CarteTests {
           {"id":3,"x":9,"y":9,"mapId":13,"worldMapId":1,"categoryId":4,"subareaId":999,"name":{"fr":"Milice"}}]}
         """
         let sousZones = """
-        {"total":1,"data":[{"id":10,"areaId":0,"name":{"id":"1","fr":"Village d'Amakna","en":"Amakna Village"}}]}
+        {"total":3,"data":[{"id":10,"areaId":0,"name":{"id":"1","fr":"Village d'Amakna","en":"Amakna Village"}},
+          {"id":469,"areaId":46,"name":{"fr":"Village de la Canopée"}},
+          {"id":445,"areaId":45,"name":{"fr":"Pâturages"}}]}
         """
         let zones = """
-        {"total":1,"data":[{"id":0,"name":{"fr":"Amakna","en":"Amakna"}}]}
+        {"total":3,"data":[{"id":0,"name":{"fr":"Amakna","en":"Amakna"},"superAreaId":0},
+          {"id":46,"name":{"fr":"Île d'Otomaï"},"superAreaId":0},
+          {"id":45,"name":{"fr":"Incarnam"},"superAreaId":3}]}
         """
         let decodeur = JSONDecoder()
         let carte = CarteDofusDB.assembler(
@@ -36,8 +40,10 @@ struct CarteTests {
 
         #expect(carte.zaaps == [Zaap(-2, 0, noms: ["fr": "Village d'Amakna", "en": "Amakna Village"],
                                      zone: ["fr": "Amakna", "en": "Amakna"], idCarte: 11, idSousZone: 10)])
-        // Les sous-zones des repères du Monde des Douze, même sans case.
-        #expect(carte.sousZones.map(\.id) == [10, 999])
+        // Les sous-zones des repères du Monde des Douze, même sans case, et
+        // toutes celles de ses zones (la Canopée) ; pas celles d'Incarnam.
+        #expect(carte.sousZones.map(\.id) == [10, 469, 999])
+        #expect(carte.sousZones.map(\.zone) == [0, 46, nil])
     }
 
     private func case_(_ id: Int, _ x: Int, _ y: Int, _ sousZone: Int, prioritaire: Bool? = nil) -> CarteDofusDB.Case {
@@ -66,9 +72,9 @@ struct CarteTests {
         """
         let sousZones = try JSONDecoder().decode([CarteDofusDB.SousZone].self, from: Data(json.utf8))
         #expect(CarteDofusDB.graphe([1, 2, 3], sousZones) == [
-            SousZoneCarte(id: 1, zaap: nil, voisines: [2]),
-            SousZoneCarte(id: 2, zaap: 42, voisines: [1]),
-            SousZoneCarte(id: 3, zaap: nil, voisines: []),
+            SousZoneCarte(id: 1, zaap: nil, zone: 0, voisines: [2]),
+            SousZoneCarte(id: 2, zaap: 42, zone: 0, voisines: [1]),
+            SousZoneCarte(id: 3, zaap: nil, zone: 0, voisines: []),
         ])
     }
 

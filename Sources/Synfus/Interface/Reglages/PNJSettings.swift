@@ -32,8 +32,7 @@ struct PNJSettings: View {
                             Text(lieu(passage, langue)).foregroundStyle(rang == 0 ? Color.primary : Color.secondary)
                             Text(L("pnj.quetes", nombre: passage.quetes, passage.quetes)).font(.synfus(.petit)).foregroundStyle(.secondary)
                             Spacer()
-                            BoutonTrajet(x: passage.position.x, y: passage.position.y,
-                                         dansLesDouze: passage.dansLesDouze(CarteStore.shared.reseau))
+                            BoutonTrajet(x: passage.position.x, y: passage.position.y, sousZone: passage.sousZone)
                             if let carte = passage.carte { MiniatureCarte(carte: carte) }
                         }
                         .font(.synfus(.note))

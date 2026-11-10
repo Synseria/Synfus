@@ -1,8 +1,9 @@
 import Foundation
 
 /// La carte depuis l'API de DofusDB : les repères (`hints`), nommés par leur
-/// sous-zone (`subareas`) et leur zone (`areas`), et les cases du Monde des
-/// Douze (`map-positions`) qui situent chaque sous-zone. Gardée sur le disque ;
+/// sous-zone (`subareas`) et leur zone (`areas`), les cases du Monde des
+/// Douze (`map-positions`) qui situent chaque sous-zone, et toutes les
+/// sous-zones du Monde des Douze, couches à part comprises (la Canopée). Gardée sur le disque ;
 /// l'assemblage est pur, le réseau n'est qu'autour.
 enum CarteDofusDB {
     struct Repere: Decodable {
@@ -31,6 +32,10 @@ enum CarteDofusDB {
     struct Zone: Decodable {
         let id: Int
         let name: DofusDB.Noms
+        /// 0 : le Monde des Douze ; Incarnam, les dimensions divines… ont le leur.
+        let superAreaId: Int?
+
+        static let champs = ["id", "name", "superAreaId"]
     }
 
     /// Une carte du jeu et sa case ; plusieurs cartes partagent une case
@@ -89,9 +94,8 @@ enum CarteDofusDB {
         let reperes: [Repere] = try await DofusDB.toutes("hints", [])
         let cases: [Case] = try await DofusDB.toutesEnParallele(
             "map-positions", [URLQueryItem(name: "worldMap", value: "\(Zaap.mondeDesDouze)")] + DofusDB.selection(Case.champs))
-        let sousZones: [SousZone] = try await DofusDB.parIdentifiants(
-            "subareas", reperes.map(\.subareaId) + cases.map(\.subAreaId), DofusDB.selection(SousZone.champs))
-        let zones: [Zone] = try await DofusDB.parIdentifiants("areas", sousZones.map(\.areaId))
+        let sousZones: [SousZone] = try await DofusDB.toutes("subareas", DofusDB.selection(SousZone.champs))
+        let zones: [Zone] = try await DofusDB.toutes("areas", DofusDB.selection(Zone.champs))
         let carte = assembler(date: maintenant, reperes: reperes, sousZones: sousZones, zones: zones, cases: cases)
         guard carte.lieux.count >= Carte.minimumPlausible else { throw Echec.listeSuspecte(carte.lieux.count) }
         guard carte.cases.count >= Carte.minimumCasesPlausible else { throw Echec.casesSuspectes(carte.cases.count) }
@@ -100,8 +104,9 @@ enum CarteDofusDB {
 
     /// Les lieux dans l'ordre de DofusDB, un repère sans sous-zone connue
     /// gardant des noms de zone vides ; les sous-zones, toutes celles du Monde
-    /// des Douze — même celles qu'aucune case ne montre (intérieurs) ou qui
-    /// manquent aux cases (l'Arche de Vili) : un zaap peut s'y trouver.
+    /// des Douze — même celles qu'aucune case ne montre (intérieurs, la
+    /// Canopée au-dessus de la jungle d'Otomaï) ou qui manquent aux cases
+    /// (l'Arche de Vili) : un zaap ou un PNJ peut s'y trouver.
     static func assembler(date: Date, reperes: [Repere], sousZones: [SousZone], zones: [Zone], cases: [Case]) -> Carte {
         let sousZone = Dictionary(sousZones.map { ($0.id, $0) }, uniquingKeysWith: { premier, _ in premier })
         let zone = Dictionary(zones.map { ($0.id, $0.name.parLangue) }, uniquingKeysWith: { premier, _ in premier })
@@ -113,8 +118,10 @@ enum CarteDofusDB {
                         zone: sz.flatMap { zone[$0.areaId] } ?? [:], sousZone: sz?.name.parLangue ?? [:])
         }
         let parCase = sousZoneParCase(cases)
+        let douze = Set(zones.filter { $0.superAreaId == 0 }.map(\.id))
         let retenues = Set(cases.map(\.subAreaId))
             .union(reperes.filter { $0.worldMapId == Zaap.mondeDesDouze }.map(\.subareaId))
+            .union(sousZones.filter { douze.contains($0.areaId) }.map(\.id))
         return Carte(date: date, lieux: lieux, sousZones: graphe(retenues, sousZones), cases: parCase)
     }
 
@@ -146,7 +153,8 @@ enum CarteDofusDB {
         let parId = Dictionary(sousZones.map { ($0.id, $0) }, uniquingKeysWith: { premier, _ in premier })
         return retenues.sorted().map { id in
             let zaap = parId[id]?.associatedZaapMapId
-            return SousZoneCarte(id: id, zaap: zaap == 0 ? nil : zaap, voisines: (voisines[id] ?? []).sorted())
+            return SousZoneCarte(id: id, zaap: zaap == 0 ? nil : zaap, zone: parId[id]?.areaId,
+                                 voisines: (voisines[id] ?? []).sorted())
         }
     }
 

@@ -42,7 +42,7 @@ struct LieuxSettings: View {
                     HStack(spacing: 10) {
                         BoutonEtiquette(cle: lieu.cle)
                         BoutonFavori(cle: lieu.cle)
-                        BoutonTrajet(x: lieu.x, y: lieu.y, dansLesDouze: lieu.monde == Zaap.mondeDesDouze)
+                        BoutonTrajet(x: lieu.x, y: lieu.y, sousZone: lieu.idSousZone)
                         MiniatureCarte(carte: lieu.idCarte)
                     }
                 }
