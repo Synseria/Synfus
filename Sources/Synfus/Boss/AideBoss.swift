@@ -13,7 +13,7 @@ final class AideBoss: ObservableObject {
     @Published private(set) var tours = ToursCombat()
     @Published private(set) var session = SessionBoss()
     /// La fiche DofusDB de chaque boss déjà demandée (`chargerFiche`).
-    @Published private(set) var fiches: [Boss: FicheBoss] = [:]
+    @Published private(set) var fiches: [Boss: FicheCombat] = [:]
 
     /// Le dernier état de combat vu de chaque perso.
     private var combatsVus: [String: EtatCombat] = [:]
@@ -53,7 +53,7 @@ final class AideBoss: ObservableObject {
     func chargerFiche(_ boss: Boss) {
         guard ficheDemandee.insert(boss).inserted else { return }
         Task {
-            guard let fiche = try? await FicheBoss.telecharger(boss) else {
+            guard let fiche = try? await FicheCombat.telecharger(monstre: boss.monstre) else {
                 ficheDemandee.remove(boss)
                 return
             }

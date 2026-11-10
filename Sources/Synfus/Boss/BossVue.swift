@@ -18,7 +18,7 @@ struct BossVue: View {
             entete
             Divider()
             VStack(alignment: .leading, spacing: 10) {
-                if let fiche = aide.fiches[prefs.bossChoisi] { Self.ficheVue(fiche) }
+                if let fiche = aide.fiches[prefs.bossChoisi] { FicheCombatVue(fiche: fiche) }
                 if previews.authorized {
                     ligneTour
                     switch prefs.bossChoisi {
@@ -45,20 +45,6 @@ struct BossVue: View {
         .task(id: prefs.bossChoisi) { aide.chargerFiche(prefs.bossChoisi) }
     }
 
-    /// Niveau, vie, PA et PM du plus haut grade, puis les résistances.
-    private static func ficheVue(_ fiche: FicheBoss) -> some View {
-        let res = fiche.resistances
-        return VStack(alignment: .leading, spacing: 2) {
-            Text(L("boss.fiche", fiche.niveau, fiche.vie.formatted(), fiche.pa, fiche.pm))
-                .font(.synfus(.petit, gras: true))
-            Text(L("boss.fiche.resistances", res[.neutre] ?? 0, res[.terre] ?? 0, res[.feu] ?? 0,
-                   res[.eau] ?? 0, res[.air] ?? 0))
-                .font(.synfus(.petit))
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .help(L("boss.fiche.aide"))
-    }
 
     private var entete: some View {
         EnTetePanneau(icone: "scope", teinte: Couleurs.ambre, menu: Self.menu) {
