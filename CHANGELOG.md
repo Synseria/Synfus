@@ -7,6 +7,9 @@ contenu (`Tools/notes-de-version.sh`), et `sh build.sh --publish` refuse une ver
 
 ### Nouveautés
 
+- **Nouvelle icône** : l'Œuf ajouré, un Dofus en treillis blanc bleuté posé sur un feuillage,
+  fond transparent comme les icônes du jeu ; la barre de menus en reprend la silhouette.
+
 - **Fiche d'un donjon** dans la palette, la même qu'on cherche le donjon ou l'un de ses boss :
   niveau conseillé, trajet jusqu'à l'entrée, guide Dofus pour les noobs, clef (et où la trouver),
   boss et monstres avec niveau, PV, PA, PM et résistances, succès.

@@ -8,24 +8,23 @@ import UniformTypeIdentifiers
 // et l'app dessinent donc rigoureusement la même marque, il n'y a pas de second
 // dessin à maintenir.
 
-/// Une définition de l'`iconset` : nom de fichier, côté en pixels, cadrage.
+/// Une définition de l'`iconset` : nom de fichier, côté en pixels.
 private struct Slot {
     let filename: String
     let pixels: Int
-    let shape: SynfusMark.Shape
 }
 
 private let slots: [Slot] = [
-    .init(filename: "icon_16x16.png", pixels: 16, shape: .rounded),
-    .init(filename: "icon_16x16@2x.png", pixels: 32, shape: .rounded),
-    .init(filename: "icon_32x32.png", pixels: 32, shape: .rounded),
-    .init(filename: "icon_32x32@2x.png", pixels: 64, shape: .rounded),
-    .init(filename: "icon_128x128.png", pixels: 128, shape: .rounded),
-    .init(filename: "icon_128x128@2x.png", pixels: 256, shape: .rounded),
-    .init(filename: "icon_256x256.png", pixels: 256, shape: .rounded),
-    .init(filename: "icon_256x256@2x.png", pixels: 512, shape: .rounded),
-    .init(filename: "icon_512x512.png", pixels: 512, shape: .rounded),
-    .init(filename: "icon_512x512@2x.png", pixels: 1024, shape: .rounded),
+    .init(filename: "icon_16x16.png", pixels: 16),
+    .init(filename: "icon_16x16@2x.png", pixels: 32),
+    .init(filename: "icon_32x32.png", pixels: 32),
+    .init(filename: "icon_32x32@2x.png", pixels: 64),
+    .init(filename: "icon_128x128.png", pixels: 128),
+    .init(filename: "icon_128x128@2x.png", pixels: 256),
+    .init(filename: "icon_256x256.png", pixels: 256),
+    .init(filename: "icon_256x256@2x.png", pixels: 512),
+    .init(filename: "icon_512x512.png", pixels: 512),
+    .init(filename: "icon_512x512@2x.png", pixels: 1024),
 ]
 
 private func write(_ image: CGImage, to url: URL) throws {
@@ -58,7 +57,7 @@ enum AppIconExport {
         do {
             try FileManager.default.createDirectory(at: iconset, withIntermediateDirectories: true)
             for slot in slots {
-                guard let image = SynfusMark.image(pixelSize: slot.pixels, shape: slot.shape) else {
+                guard let image = SynfusMark.image(pixelSize: slot.pixels) else {
                     throw NSError(domain: "AppIconExport", code: 3, userInfo: [
                         NSLocalizedDescriptionKey: "Rendu impossible à \(slot.pixels) px",
                     ])
@@ -67,7 +66,7 @@ enum AppIconExport {
             }
             // PNG de référence, hors iconset : ce que l'on regarde pour juger le
             // dessin, et ce que le README peut montrer.
-            guard let grand = SynfusMark.image(pixelSize: 1024, shape: .rounded) else {
+            guard let grand = SynfusMark.image(pixelSize: 1024) else {
                 throw NSError(domain: "AppIconExport", code: 3, userInfo: [
                     NSLocalizedDescriptionKey: "Rendu 1024 px impossible",
                 ])
