@@ -70,4 +70,8 @@ jobs:
       - name: Construire et publier
         env:
           GH_TOKEN: ${{ github.token }}
+          # Statistiques d'utilisation (cf. build.sh) : sans ces deux secrets
+          # du dépôt, publier-release.sh refuse de construire.
+          TELEMETRIE_URL: ${{ secrets.TELEMETRIE_URL }}
+          TELEMETRIE_JETON: ${{ secrets.TELEMETRIE_JETON }}
         run: bash Tools/publier-release.sh "${{ steps.version.outputs.version }}"

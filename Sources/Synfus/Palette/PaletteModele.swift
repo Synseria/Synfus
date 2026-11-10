@@ -263,6 +263,7 @@ final class PaletteModele: ObservableObject {
 
     /// Un clic : la ligne choisie, puis son effet.
     func executer(_ entree: EntreePalette) {
+        UsageStore.shared.compter(.palette(entree.genre))
         if let index = entrees.firstIndex(where: { $0.id == entree.id }) {
             selection = index
             carte = nil

@@ -31,6 +31,7 @@ extension WindowManager {
 
     /// Tous → 1 → … → Tous, le geste du raccourci.
     func equipeSuivante() {
+        UsageStore.shared.compter(.equipeSuivante)
         activerEquipe(Equipes.suivante(apres: equipeActive, nombre: prefs.equipes.count))
     }
 }

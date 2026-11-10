@@ -18,6 +18,7 @@ final class SettingsWindowController: NSObject {
 
     /// Sur cet onglet, s'il est donné.
     func show(section: SettingsSection? = nil) {
+        UsageStore.shared.compter(.reglages)
         if let section { OngletReglages.shared.section = section }
         if window == nil {
             let hosting = NSHostingController(rootView: SettingsView().racineSynfus())

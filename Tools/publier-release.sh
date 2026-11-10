@@ -10,11 +10,29 @@ VERSION="${1:?usage : publier-release.sh X.Y.Z}"
 TAG="v$VERSION"
 
 # Les deux tranches avec le même SDK ; x86_64 par cross-compilation.
-for arch in arm64 x86_64; do
-    DISTRIBUTION=1 ARCH="$arch" bash build.sh --release "$VERSION"
-    rm -rf dist/Synfus.app
-done
+construire() {
+    for arch in arm64 x86_64; do
+        DISTRIBUTION=1 ARCH="$arch" bash build.sh --release "$VERSION"
+        rm -rf dist/Synfus.app
+    done
+}
+# Une release envoie ses statistiques d'utilisation : adresse du collecteur et
+# jeton de Synfus viennent de l'environnement (secrets de la CI), sinon du
+# coffre (`secret run`, Touch ID). Jamais une release qui compterait pour rien.
+if [ -n "${TELEMETRIE_URL:-}" ] && [ -n "${TELEMETRIE_JETON:-}" ]; then
+    construire
+elif command -v secret >/dev/null; then
+    export VERSION
+    export -f construire
+    secret run TELEMETRIE_URL=domus:telemetrie/prod/URL TELEMETRIE_JETON=domus:telemetrie/prod/SYNFUS \
+        -- bash -euo pipefail -c construire
+else
+    echo "publier-release.sh : ni TELEMETRIE_URL et TELEMETRIE_JETON, ni la commande secret" >&2
+    exit 1
+fi
 ( cd dist && shasum -a 256 "Synfus-$VERSION-arm64.dmg" "Synfus-$VERSION-x86_64.dmg" ) | tee dist/SHA256SUMS.txt
+( cd dist && rm -f "Synfus-$VERSION-dSYM.zip" \
+    && zip -qry "Synfus-$VERSION-dSYM.zip" "Synfus-$VERSION-arm64.dSYM" "Synfus-$VERSION-x86_64.dSYM" )
 
 # Ce qui change vient de CHANGELOG.md, seule source ; le mode d'emploi qui
 # suit est le même à chaque version.
@@ -76,7 +94,8 @@ redonner.
 EOF
 sed -i '' "s/VERSION/$VERSION/g" "$NOTES"
 
-FICHIERS=(dist/Synfus-"$VERSION"-arm64.dmg dist/Synfus-"$VERSION"-x86_64.dmg dist/SHA256SUMS.txt)
+FICHIERS=(dist/Synfus-"$VERSION"-arm64.dmg dist/Synfus-"$VERSION"-x86_64.dmg dist/SHA256SUMS.txt
+          dist/Synfus-"$VERSION"-dSYM.zip)
 # La release peut déjà exister (ouverte depuis GitHub, publication rejouée) :
 # on la met alors à jour, fichiers homonymes écrasés.
 if gh release view "$TAG" >/dev/null 2>&1; then
