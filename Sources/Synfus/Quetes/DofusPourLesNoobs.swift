@@ -18,8 +18,18 @@ enum DofusPourLesNoobs {
     ]
 
     /// Les adresses possibles, la plus probable d'abord : lettres nues, puis
-    /// de plus en plus d'entités.
+    /// de plus en plus d'entités. Une apostrophe colle les mots
+    /// (« naissance-dune-vocation ») ou les sépare (« belvedere-d-ilyzaelle ») :
+    /// le site fait les deux, collée d'abord.
     static func candidats(_ nom: String) -> [String] {
+        let apostrophes: Set<Character> = ["'", "’", "ʼ"]
+        let separes = nom.contains(where: apostrophes.contains)
+            ? variantes(String(nom.map { apostrophes.contains($0) ? " " : $0 })) : []
+        var vus: Set<String> = []
+        return (variantes(nom) + separes).filter { vus.insert($0).inserted }
+    }
+
+    private static func variantes(_ nom: String) -> [String] {
         // Le titre en morceaux : du texte fixe, ou une lettre accentuée à deux
         // écritures. Une apostrophe colle les mots, le reste les sépare.
         var morceaux: [(nue: String, entite: String?)] = []

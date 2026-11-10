@@ -49,4 +49,31 @@ struct BossTests {
         #expect(Boss.toxoliath.lectures.isEmpty)
         #expect(ActionPalette.toutes.filter { if case .boss = $0 { true } else { false } }.count == Boss.allCases.count)
     }
+
+    @Test("La salle lue au-dessus de la position désigne son boss, malgré une écorchure ; ailleurs, aucun")
+    func salle() throws {
+        #expect(Boss.dans(zone: "Frigost (Donjon du Comte Harebourg)") == .harebourg)
+        #expect(Boss.dans(zone: "Expédition de l'Audace - Donjon du Comte Harebourg") == .harebourg)
+        #expect(Boss.dans(zone: "Île d'Otomaï (Canopee du Kimbo)") == .kimbo)
+        #expect(Boss.dans(zone: "Kimbo's Canopy") == .kimbo)
+        #expect(Boss.dans(zone: "Cave du Toxo1iath") == .toxoliath)
+        #expect(Boss.dans(zone: "Mirador de Ilyzaelle") == .ilyzaelle)
+        #expect(Boss.dans(zone: "Chambre de Tal Kasha") == .talKasha)
+        #expect(Boss.dans(zone: "Île d'Otomaï (Village de la Canopée)") == nil)
+        #expect(Boss.dans(zone: "Amakna (Village d'Amakna)") == nil)
+        #expect(Boss.dans(zone: nil) == nil)
+    }
+
+    @Test("La fiche DofusDB : le plus haut grade, résistances absentes à zéro")
+    func fiche() throws {
+        let json = """
+        {"grades":[{"grade":1,"level":150,"lifePoints":8000,"actionPoints":10,"movementPoints":5},
+                   {"grade":5,"level":160,"lifePoints":10000,"actionPoints":12,"movementPoints":7,
+                    "reductionEarth":400,"reductionFire":-20}]}
+        """
+        let fiche = try #require(FicheBoss(try JSONDecoder().decode(FicheBoss.MonstreAPI.self, from: Data(json.utf8))))
+        #expect([fiche.niveau, fiche.vie, fiche.pa, fiche.pm] as [Int] == [160, 10000, 12, 7])
+        #expect(fiche.resistances[.terre] == 400 && fiche.resistances[.feu] == -20 && fiche.resistances[.air] == 0)
+        #expect(FicheBoss(FicheBoss.MonstreAPI(grades: [])) == nil)
+    }
 }
