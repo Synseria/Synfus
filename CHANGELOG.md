@@ -3,7 +3,7 @@
 Une section par version, `## X.Y.Z — AAAA-MM-JJ` : la release GitHub de `vX.Y.Z` en reprend le
 contenu (`Tools/notes-de-version.sh`), et `sh build.sh --publish` refuse une version absente d'ici.
 
-## 0.12.0 — 2026-11-09
+## 0.12.0 — 2026-11-10
 
 ![La fiche de quête](https://raw.githubusercontent.com/Synseria/Synfus/v0.12.0/docs/screenshots/quete.png)
 
@@ -20,7 +20,9 @@ contenu (`Tools/notes-de-version.sh`), et `sh build.sh --publish` refuse une ver
   lui laisse le temps.
 - **Aide aux boss** : un panneau posé sur le jeu pour le Comte Harebourg (confusion des sorts lue
   à la vie et au canal combat), Kimbo, Toxoliath, Ilyzaelle et Tal Kasha, avec le tour du combat
-  compté.
+  compté. Entrer dans la salle d'un boss le choisit ; sa fiche DofusDB (niveau, PV, PA, PM,
+  résistances) et un lien vers le guide du donjon sur Dofus pour les noobs. Un bouton dans la
+  barre.
 - **Quêtes** :
   - le suivi du jeu relu tant que le panneau est montré, **perso par perso** : objectifs faits
     cochés, objectif en cours surligné, « Tu y es — fait ? » sur la carte de l'objectif ;
@@ -40,7 +42,8 @@ contenu (`Tools/notes-de-version.sh`), et `sh build.sh --publish` refuse une ver
   raccourci refusé par macOS se signale.
 - Palette à trois colonnes, Échap efface avant de fermer, filtres au clic.
 - VoiceOver et « Réduire les animations » respectés.
-- Le zaap désigné par le jeu cède quand celui des zones voisines est bien plus près.
+- Barre et menu rangés dans le même ordre : quêtes, boss, chasse, puis rangement des fenêtres ; la
+  palette au menu.
 - Lecture de l'écran plus légère : une capture entière découpée dès deux zones, combat lu toutes
   les 3 s hors combat.
 
@@ -48,6 +51,11 @@ contenu (`Tools/notes-de-version.sh`), et `sh build.sh --publish` refuse une ver
 
 - ⌘C, ⌘V, ⌘A, ⌘Z marchent dans tous les champs ; « Fermer tous » ne se valide plus avec Entrée.
 - Un PNJ ou un objectif hors du Monde des Douze se rejoint par son `/travel` seul.
+- **Zaaps** : le zaap que le jeu rattache à la zone visée n'est plus remplacé par un zaap plus
+  proche derrière des falaises (Mériana : Koalak, plus la Montagne des Craqueleurs) ; un PNJ, un
+  lieu ou un objectif est situé par sa sous-zone, pas seulement sa case (l'Assistante d'Otomaï :
+  le zaap de la Canopée, plus celui de la plage). Les zaaps de la Canopée, de Harebourg et de
+  Crocuzko sont actifs par défaut.
 - Un client revenu à l'écran de connexion oublie son perso.
 
 ## 0.11.0 — 2026-10-08
