@@ -121,7 +121,8 @@ struct PaletteVue: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 10) {
                         if modele.enGrille, let jour = almanax.almanax {
-                            AlmanaxVue(almanax: jour) { modele.copier($0) }
+                            AlmanaxVue(almanax: jour, copier: { modele.copier($0) },
+                                       allerAuSanctuaire: modele.sanctuaire.map { lieu in { modele.copierTrajet(vers: lieu) } })
                         }
                         if modele.enGrille, !modele.recents.isEmpty { recents }
                         if modele.enGrille { grille } else { liste }

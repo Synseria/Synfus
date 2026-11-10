@@ -4,6 +4,10 @@ import Foundation
 /// tels que DofusDB les donne (`almanax?date=AAAA-MM-JJ`). Pur : le jour du
 /// jeu, la réponse lue, le texte nettoyé.
 struct Almanax: Codable, Equatable, Sendable {
+    /// Le Sanctuaire de l'Almanax, où rendre l'offrande : son repère DofusDB
+    /// (`Lieu.id`), en Plaine des Porkass.
+    static let sanctuaire = 3218
+
     struct Offrande: Codable, Equatable, Sendable {
         let objet: Int
         let noms: [String: String]
