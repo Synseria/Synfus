@@ -6,8 +6,7 @@ extension Preferences {
     var zaapsConnus: [Zaap] { CatalogueZaaps.tous(base: zaapsDeBase, ajoutes: zaapsAjoutes) }
 
     var zaapsActifs: [Zaap] {
-        CatalogueZaaps.actifs(base: zaapsDeBase, ajoutes: zaapsAjoutes, choix: zaapsChoix,
-                              reseau: CarteStore.shared.reseau)
+        CatalogueZaaps.actifs(base: zaapsDeBase, ajoutes: zaapsAjoutes, choix: zaapsChoix)
     }
 
     /// Ce qui se glisse entre `/zaap` et `/travel`, lu de la saisie.
