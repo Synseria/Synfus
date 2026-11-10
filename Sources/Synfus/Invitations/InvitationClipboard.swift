@@ -65,6 +65,7 @@ final class InvitationClipboard: ObservableObject {
             return
         }
         PressePapiers.copier(texte)
+        UsageStore.shared.compter(.invitation)
         signaler(manager.effectif.filter {
             candidats.contains(WindowTitle.characterName(fromTitle: $0.rawTitle))
         })
@@ -77,6 +78,7 @@ final class InvitationClipboard: ObservableObject {
     }
 
     private func poser(nom: String) {
+        UsageStore.shared.compter(.invitation)
         PressePapiers.copier(InvitationComposer.commande(format: Preferences.shared.inviteFormat, nom: nom))
     }
 

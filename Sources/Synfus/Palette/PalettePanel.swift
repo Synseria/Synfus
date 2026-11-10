@@ -58,6 +58,7 @@ final class PalettePanel: NSObject, ObservableObject, NSWindowDelegate {
     func ouvrir() {
         let panel = panel ?? construire()
         PaletteModele.shared.ouvrir()
+        UsageStore.shared.compter(.palette)
         placer(panel)
         panel.makeKeyAndOrderFront(nil)
         ouvert = true

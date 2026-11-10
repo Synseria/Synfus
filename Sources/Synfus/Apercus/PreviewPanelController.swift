@@ -52,6 +52,7 @@ final class PreviewPanelController: NSObject, ObservableObject {
     /// coordonnées écran.
     func show(_ client: DofusClient, below rect: CGRect, apercu: Bool = true) {
         anchor = rect
+        if apercu { UsageStore.shared.compter(.apercu) }
         present(apercu ? .single(client) : .etiquette(client))
     }
 
@@ -59,6 +60,7 @@ final class PreviewPanelController: NSObject, ObservableObject {
     func showGrid(_ clients: [DofusClient]) {
         guard !clients.isEmpty else { return }
         anchor = nil
+        UsageStore.shared.compter(.apercuGrille)
         present(.grid(clients))
     }
 

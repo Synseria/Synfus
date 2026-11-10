@@ -52,7 +52,10 @@ final class QuetePanel: NSObject, ObservableObject {
     /// jeu si l'enregistrement de l'écran est déjà permis — jamais il ne le
     /// demande de lui-même.
     func ouvrir() {
-        if !ouvert, WindowPreviewService.shared.authorized { LectureSuivi.shared.lire() }
+        if !ouvert {
+            UsageStore.shared.compter(.quetes)
+            if WindowPreviewService.shared.authorized { LectureSuivi.shared.lire() }
+        }
         ouvert = true
         impose = true
         appliquer(force: true)

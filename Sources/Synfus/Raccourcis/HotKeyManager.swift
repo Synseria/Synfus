@@ -45,14 +45,21 @@ final class HotKeyManager: ObservableObject {
         for (slot, hotKey) in prefs.hotKeys.prefix(WindowManager.shared.effectif.count).enumerated() {
             guard let hotKey else { continue }
             register(hotKey) {
+                UsageStore.shared.compter(.basculeRaccourci)
                 WindowManager.shared.focus(slot: slot)
             }
         }
         // Un geste par raccourci, une ligne chacun : celui qu'on ajoute ne
         // s'oublie pas ici.
         let gestes: [(HotKey?, () -> Void)] = [
-            (prefs.cycleNext, { WindowManager.shared.cycle(by: 1) }),
-            (prefs.cyclePrevious, { WindowManager.shared.cycle(by: -1) }),
+            (prefs.cycleNext, {
+                UsageStore.shared.compter(.rotationRaccourci)
+                WindowManager.shared.cycle(by: 1)
+            }),
+            (prefs.cyclePrevious, {
+                UsageStore.shared.compter(.rotationRaccourci)
+                WindowManager.shared.cycle(by: -1)
+            }),
             (prefs.toggleAutoFocus, {
                 let prefs = Preferences.shared
                 prefs.attentionAction = prefs.attentionAction == .focus ? .highlight : .focus

@@ -44,6 +44,7 @@ final class WindowArranger: ObservableObject {
     /// en ressort muet, donc dormant, donc écarté avant tout IPC. Les écritures
     /// AX, elles, restent sur main : ce sont des gestes.
     func appliquer(_ disposition: Disposition) async {
+        UsageStore.shared.compter(.rangement)
         let manager = WindowManager.shared
         await manager.refreshed()
 
