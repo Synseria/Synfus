@@ -265,19 +265,21 @@ struct LectureCombatTests {
 
     @Test("Le combat se lit toutes les 3 s hors combat, chaque seconde dès qu'il est vu et jusqu'à sa fin")
     func rythmeDuCombat() {
-        #expect(GenreLecture.combat.intervalle(combat: nil) == 3)
-        #expect(GenreLecture.combat.intervalle(combat: .horsCombat) == 3)
-        #expect(GenreLecture.combat.intervalle(combat: .placement) == 1)
-        #expect(GenreLecture.combat.intervalle(combat: .monTour(fin: nil)) == 1)
-        #expect(GenreLecture.combat.intervalle(combat: .pasMonTour) == 1)
-        #expect(GenreLecture.position.intervalle(combat: .placement) == 1)
-        #expect(GenreLecture.quetes.intervalle(combat: .pasMonTour) == 3)
+        #expect(GenreLecture.combat.intervalle(combat: .pasMonTour, devant: false) == 2)
+        #expect(GenreLecture.combat.intervalle(combat: .horsCombat, devant: false) == 3)
+        #expect(GenreLecture.combat.intervalle(combat: nil, devant: true) == 3)
+        #expect(GenreLecture.combat.intervalle(combat: .horsCombat, devant: true) == 3)
+        #expect(GenreLecture.combat.intervalle(combat: .placement, devant: true) == 1)
+        #expect(GenreLecture.combat.intervalle(combat: .monTour(fin: nil), devant: true) == 1)
+        #expect(GenreLecture.combat.intervalle(combat: .pasMonTour, devant: true) == 1)
+        #expect(GenreLecture.position.intervalle(combat: .placement, devant: true) == 1)
+        #expect(GenreLecture.quetes.intervalle(combat: .pasMonTour, devant: true) == 3)
     }
 
     @Test("La vie et le tchat de l'aide aux boss se lisent chaque seconde, dans le contenu")
     func vieEtTchat() {
         for genre in [GenreLecture.vie, .tchat] {
-            #expect(genre.intervalle(combat: .monTour(fin: nil)) == 1)
+            #expect(genre.intervalle(combat: .monTour(fin: nil), devant: true) == 1)
             #expect(genre.parDefaut.bornee() == genre.parDefaut)
         }
         #expect(GenreLecture.vie.mesure == .zone)
@@ -350,5 +352,20 @@ struct LectureCombatTests {
         #expect(!colore.semblable(a: gris))
         #expect(colore.semblable(a: coloreAussi))
         #expect(SignatureZone(empreinte: empreinte, couleur: nil).semblable(a: SignatureZone(empreinte: empreinte, couleur: nil)))
+    }
+
+    @Test("Derrière : ni le perso devant, ni un dormant, ni un plein écran")
+    func combatsDerriere() {
+        func client(_ nom: String, pid: Int32, dormant: Bool = false, pleinEcran: Bool = false) -> DofusClient {
+            var client = DofusClient(pid: pid, slotKey: "\(pid)#0", axWindow: .application(pid), rawTitle: nom,
+                                     name: nom, characterClass: nil, dormant: dormant)
+            client.pleinEcran = pleinEcran
+            return client
+        }
+        let devant = client("Aeryn", pid: 1)
+        let clients = [devant, client("Brok", pid: 2), client("Cid", pid: 3, dormant: true),
+                       client("Dax", pid: 4, pleinEcran: true)]
+        #expect(GenreLecture.combatsDerriere(clients, devant: devant).map(\.name) == ["Brok"])
+        #expect(GenreLecture.combatsDerriere(clients, devant: nil).map(\.name) == ["Aeryn", "Brok"])
     }
 }

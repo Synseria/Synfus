@@ -84,6 +84,8 @@ final class Preferences: ObservableObject {
     /// Détecter le combat — bouton « Fin de tour » rose, gris ou absent — par
     /// la même lecture de l'écran. Désactivé par défaut, pour la même raison.
     @Published var lireCombat: Bool = false { didSet { save() } }
+    /// Lire aussi le combat des persos qui ne sont pas devant (fenêtrés).
+    @Published var lireCombatDerriere: Bool = false { didSet { save() } }
 
     /// Zones de lecture calibrées (onglet Lecture de l'écran), une par
     /// `GenreLecture` ; `nil` : son défaut (`GenreLecture.parDefaut`), qui
@@ -506,6 +508,7 @@ final class Preferences: ObservableObject {
         .facultatif("signalerBascule", \.signalerBascule),
         .facultatif("lirePosition", \.lirePosition),
         .facultatif("lireCombat", \.lireCombat),
+        .facultatif("lireCombatDerriere", \.lireCombatDerriere),
         .optionnel("zonePosition", \.zonePosition),
         .optionnel("zoneCombat", \.zoneCombat),
         .optionnel("zoneChasse", \.zoneChasse),

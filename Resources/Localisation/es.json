@@ -329,6 +329,8 @@
   "general.systeme": "Sistema",
   "general.version": "Versión",
   "lecture.calibrer": "Calibrar…",
+  "lecture.combatDerriere": "También los personajes detrás",
+  "lecture.combatDerriere.aide": "El combate de los personajes que no miras, incluso con Dofus en segundo plano: su pastilla dice si están en combate y la cuenta atrás de su turno. Solo en ventana — macOS no redibuja una pantalla completa oculta — y una captura por personaje cada dos segundos en combate.",
   "lecture.detecter": "Detectar las zonas en pantalla",
   "lecture.detecter.aide": "Una captura del juego: cada elemento visible (posición, chat, corazón de vida, seguimientos, botón de combate) encuentra su zona. Abre antes lo que quieras calibrar.",
   "lecture.detecter.bouton": "Detectar",
