@@ -142,7 +142,7 @@ struct BossVue: View {
 
     // MARK: - Libellés
 
-    static func nom(_ boss: Boss) -> String {
+    nonisolated static func nom(_ boss: Boss) -> String {
         switch boss {
         case .harebourg: return L("boss.harebourg")
         case .kimbo: return L("boss.kimbo")
