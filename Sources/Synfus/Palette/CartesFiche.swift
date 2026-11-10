@@ -22,22 +22,22 @@ enum ActionFiche: Hashable, Sendable {
     }
 }
 
-/// Une seule rangée, que la vue replie sur plusieurs lignes au besoin : ←/→
-/// la parcourent d'un bout à l'autre, ↑/↓ y entrent et en sortent.
+/// Une seule rangée : ←/→ la parcourent d'un bout à l'autre, ↑/↓ y entrent
+/// et en sortent.
 struct CartesFiche: Equatable, Sendable {
     let actions: [ActionFiche]
 
     static let vide = CartesFiche(actions: [])
 
-    /// La fiche d'un donjon : y aller d'abord (entrée, guide, clefs) — l'entrée
-    /// en tête, où arrive le clavier —, puis ce qui se déplie une fois là.
+    /// La fiche d'un donjon : l'entrée en tête, où arrive le clavier, le
+    /// guide et ses conseils, ce qu'on croise dedans, la clef pour finir.
     static func donjon(entree: Lieu?, guide: String?, detail: DetailDonjon?, conseils: Bool) -> CartesFiche {
         var actions = [entree.map(ActionFiche.entree), guide.map(ActionFiche.guide)].compactMap(\.self)
-        actions += detail?.clefs.map { .clef(objet: $0.objet) } ?? []
         if conseils { actions.append(.conseils) }
         if let detail {
             if detail.monstres.contains(where: { !$0.boss }) { actions.append(.monstres) }
             if !detail.succes.isEmpty { actions.append(.succes) }
+            actions += detail.clefs.map { .clef(objet: $0.objet) }
         }
         return CartesFiche(actions: actions)
     }

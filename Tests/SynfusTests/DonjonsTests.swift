@@ -65,7 +65,7 @@ struct DonjonsTests {
         #expect(RecherchePalette.lieux(contexte).first?.effet == .trajet(x: -67, y: -75, sousZone: 794))
     }
 
-    @Test("Fiche au clavier : entrée en tête, puis guide ; clef, conseils et dépliables avec ce qui arrive")
+    @Test("Fiche au clavier : position en tête, guide, conseils, dépliables, la clef pour finir")
     func cartes() throws {
         let donjon = try #require(try Self.donjons().donjon(id: 71))
         let entree = Self.lieu("Donjon du Comte Harebourg", carte: 112460048)
@@ -78,7 +78,7 @@ struct DonjonsTests {
         let detail = DetailDonjon(monstres: [boss, mansot], clefs: [.init(objet: 14047, noms: [:], quantite: 1)],
                                   succes: [.init(noms: [:], description: [:])])
         let cartes = CartesFiche.donjon(entree: entree, guide: "Guide", detail: detail, conseils: true)
-        #expect(cartes.actions == [.entree(entree), .guide("Guide"), .clef(objet: 14047), .conseils, .monstres, .succes])
+        #expect(cartes.actions == [.entree(entree), .guide("Guide"), .conseils, .monstres, .succes, .clef(objet: 14047)])
         // Seuls des boss : rien à déplier pour les monstres.
         #expect(CartesFiche.donjon(entree: nil, guide: nil, detail: DetailDonjon(monstres: [boss], clefs: [], succes: []),
                                    conseils: false) == .vide)
