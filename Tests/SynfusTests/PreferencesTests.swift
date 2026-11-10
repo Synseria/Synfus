@@ -470,7 +470,7 @@ struct PreferencesTests {
     {"advanceModifier":"option","advanceOnClick":true,
      "arrangeHotKey":{"keyCode":40,"modifiers":256},"attentionAction":"focus",
      "autoCenterBar":false,"barOnlyWithDofus":true,"panneauxSeulementDofus":false,"barOriginX":120.5,"barOriginY":640,
-     "barVisible":false,"bossChoisi":"kimbo","characterOrder":["Aeryn","Nova"],
+     "barVisible":false,"bossBouton":false,"bossChoisi":"kimbo","characterOrder":["Aeryn","Nova"],
      "chasseBouton":false,"chasseHotKey":{"keyCode":5,"modifiers":2048},
      "cycleNext":{"keyCode":122,"modifiers":0},"cyclePrevious":{"keyCode":120,"modifiers":0},
      "defaultsVersion":7,"equipeSuivanteHotKey":{"keyCode":17,"modifiers":256},
@@ -576,6 +576,7 @@ struct PreferencesTests {
         #expect(prefs.chasseHotKey == HotKey(keyCode: 5, modifiers: 2048))
         #expect(prefs.chasseBouton == false)
         #expect(prefs.bossChoisi == .kimbo)
+        #expect(prefs.bossBouton == false)
         #expect(prefs.vuesCartes == false)
     }
 
@@ -649,6 +650,7 @@ struct PreferencesTests {
         prefs.chasseHotKey = HotKey(keyCode: 5, modifiers: 2048)
         prefs.chasseBouton = false
         prefs.bossChoisi = .kimbo
+        prefs.bossBouton = false
         prefs.vuesCartes = false
 
         #expect(canonique(store.donnees(pour: Preferences.key))
@@ -672,7 +674,7 @@ struct PreferencesTests {
 
         let attendu = """
         {"advanceModifier":"fn","advanceOnClick":false,"attentionAction":"highlight",
-         "autoCenterBar":true,"barOnlyWithDofus":false,"panneauxSeulementDofus":true,"barVisible":true,"bossChoisi":"harebourg",
+         "autoCenterBar":true,"barOnlyWithDofus":false,"panneauxSeulementDofus":true,"barVisible":true,"bossBouton":true,"bossChoisi":"harebourg",
          "chasseBouton":true,"characterOrder":[],
          "defaultsVersion":7,"equipes":[],"etiquettes":{},"hotKeys":[null],"inviteFormat":"/invite %nom","inviteGroupee":false,
          "killFrozenClients":true,"lireCombat":false,"lirePosition":false,"menuBarIcon":"logo",

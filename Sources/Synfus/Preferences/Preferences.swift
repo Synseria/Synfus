@@ -250,6 +250,9 @@ final class Preferences: ObservableObject {
     /// Raccourci du panneau d'aide aux boss. Sans défaut.
     @Published var bossHotKey: HotKey? { didSet { save() } }
 
+    /// Le bouton d'aide aux boss dans la barre.
+    @Published var bossBouton: Bool = true { didSet { save() } }
+
     /// Le boss que montre le panneau d'aide.
     @Published var bossChoisi: Boss = .harebourg { didSet { save() } }
 
@@ -542,6 +545,7 @@ final class Preferences: ObservableObject {
         .facultatif("quetesEpinglees", \.quetesEpinglees),
         .facultatif("quetesEtape", \.quetesEtape),
         .facultatif("chasseBouton", \.chasseBouton),
+        .facultatif("bossBouton", \.bossBouton),
         .facultatif("quetesValides", \.quetesValides),
         .facultatif("quetesBouton", \.quetesBouton),
         .facultatif("quetesMasquerObjets", \.quetesMasquerObjets),
