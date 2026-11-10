@@ -2,8 +2,9 @@ import Foundation
 
 /// Les donjons de DofusDB : la liste et le nom des boss une fois par lancement,
 /// à la première ouverture de la palette (quelques pages) ; le détail d'un
-/// donjon à l'ouverture de sa fiche. Rien sur le disque : quelques requêtes,
-/// et la fiche se passe de réseau pour copier le trajet.
+/// donjon et ses conseils (Dofus pour les noobs) à l'ouverture de sa fiche.
+/// Rien sur le disque : quelques requêtes, et la fiche se passe de réseau
+/// pour copier le trajet.
 @MainActor
 final class DonjonsStore: ObservableObject {
     static let shared = DonjonsStore()
@@ -11,8 +12,11 @@ final class DonjonsStore: ObservableObject {
     @Published private(set) var donjons: Donjons?
     @Published private(set) var details: [Int: DetailDonjon] = [:]
     @Published private(set) var echecs: Set<Int> = []
+    /// Par donjon ; vide quand sa page n'a pas de conseils tactiques.
+    @Published private(set) var conseils: [Int: [ConseilCombat]] = [:]
     private var chargement: Task<Void, Never>?
     private var demandes: Set<Int> = []
+    private var conseilsDemandes: Set<Int> = []
 
     private init() {}
 
@@ -27,6 +31,7 @@ final class DonjonsStore: ObservableObject {
     }
 
     func demander(_ donjon: Donjon) {
+        demanderConseils(donjon)
         guard details[donjon.id] == nil, demandes.insert(donjon.id).inserted else { return }
         echecs.remove(donjon.id)
         Task {
@@ -36,6 +41,18 @@ final class DonjonsStore: ObservableObject {
             } catch {
                 echecs.insert(donjon.id)
             }
+        }
+    }
+
+    /// Une page d'environ 200 Ko, lue hors du fil principal ; sans réseau,
+    /// redemandée à la prochaine ouverture.
+    private func demanderConseils(_ donjon: Donjon) {
+        guard let nom = donjon.nomFrancais, conseils[donjon.id] == nil, conseilsDemandes.insert(donjon.id).inserted
+        else { return }
+        Task {
+            defer { conseilsDemandes.remove(donjon.id) }
+            guard let html = await DofusPourLesNoobs.html(nom) else { return }
+            conseils[donjon.id] = await Task.detached(priority: .utility) { ConseilCombat.extraire(html) }.value
         }
     }
 
