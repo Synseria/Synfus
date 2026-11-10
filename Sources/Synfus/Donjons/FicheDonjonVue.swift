@@ -1,10 +1,10 @@
 import SwiftUI
 
 /// La fiche d'un donjon, dépliée sous lui ou sous l'un de ses boss dans la
-/// palette : niveau, puis deux rangées de cartes que le clavier parcourt
-/// (`CartesFiche`) — entrée, guide, clefs ; monstres, succès — et entre elles
-/// les boss à leur plus haut grade. Le détail se télécharge à l'ouverture ;
-/// entrée et guide n'attendent pas.
+/// palette : niveau, une rangée de cartes que le clavier parcourt
+/// (`CartesFiche`) — entrée, guide, clefs, conseils, monstres, succès —, ce
+/// qu'elles déplient, puis les boss à leur plus haut grade. Le détail et les
+/// conseils se téléchargent à l'ouverture ; entrée et guide n'attendent pas.
 struct FicheDonjonVue: View {
     let id: Int
     @ObservedObject var modele: PaletteModele
@@ -13,25 +13,31 @@ struct FicheDonjonVue: View {
     private var langue: Langue { L10n.courante.langue }
 
     /// L'identifiant d'une carte dans la liste : la palette y fait défiler.
-    static func ancre(_ position: CartesFiche.Position) -> String {
-        "fiche:\(position.rangee):\(position.colonne)"
-    }
+    static func ancre(_ action: ActionFiche) -> String { "fiche:\(action)" }
 
     var body: some View {
         if let donjon = store.donjons?.donjon(id: id) {
-            let cartes = modele.cartes
             let detail = store.details[id]
+            let actions = modele.cartes.actions
             VStack(alignment: .leading, spacing: 8) {
                 if let niveau = donjon.niveau {
                     Text(L("donjon.niveau", niveau)).font(.synfus(.petit, gras: true))
                 }
-                rangee(0, cartes, detail)
+                RangeeSouple(espacement: 6) {
+                    ForEach(actions, id: \.self) { action in
+                        carte(action, detail)
+                            .id(Self.ancre(action))
+                            .onTapGesture { modele.cliquer(action) }
+                    }
+                }
+                ForEach(actions.filter { modele.ouvertes.contains($0) }, id: \.self) { action in
+                    ouverte(action, detail).padding(.leading, 12)
+                }
                 if let detail {
                     ForEach(detail.monstres.filter(\.boss), id: \.id) { monstre in ligne(monstre) }
                 } else {
                     attente(donjon)
                 }
-                rangee(1, cartes, detail)
             }
             .onAppear { store.demander(donjon) }
         }
@@ -56,28 +62,9 @@ struct FicheDonjonVue: View {
         .foregroundStyle(.secondary)
     }
 
-    /// Une rangée de cartes, puis ce que ses cartes ouvertes déplient.
-    @ViewBuilder
-    private func rangee(_ index: Int, _ cartes: CartesFiche, _ detail: DetailDonjon?) -> some View {
-        if cartes.rangees.indices.contains(index), !cartes.rangees[index].isEmpty {
-            let actions = cartes.rangees[index]
-            HStack(spacing: 6) {
-                ForEach(Array(actions.enumerated()), id: \.element) { colonne, action in
-                    let position = CartesFiche.Position(rangee: index, colonne: colonne)
-                    carte(action, detail, choisie: modele.carte == position)
-                        .id(Self.ancre(position))
-                        .onTapGesture { modele.cliquer(position) }
-                }
-            }
-            ForEach(actions.filter { modele.ouvertes.contains($0) }, id: \.self) { action in
-                ouverte(action, detail).padding(.leading, 12)
-            }
-        }
-    }
-
-    private func carte(_ action: ActionFiche, _ detail: DetailDonjon?, choisie: Bool) -> some View {
+    private func carte(_ action: ActionFiche, _ detail: DetailDonjon?) -> some View {
         CarteAction(icone: icone(action), titre: titre(action, detail), sousTitre: sousTitre(action),
-                    ouverte: action.sePlie ? modele.ouvertes.contains(action) : nil, choisie: choisie)
+                    ouverte: action.sePlie ? modele.ouvertes.contains(action) : nil, choisie: modele.carte == action)
             .help(aide(action) ?? "")
     }
 
@@ -86,6 +73,7 @@ struct FicheDonjonVue: View {
         case .entree: return "arrow.triangle.turn.up.right.diamond"
         case .guide: return "book"
         case .clef: return "key"
+        case .conseils: return "lightbulb"
         case .monstres: return "pawprint"
         case .succes: return "trophy"
         }
@@ -98,6 +86,9 @@ struct FicheDonjonVue: View {
         case .clef(let objet):
             let clef = detail?.clefs.first { $0.objet == objet }
             return L("donjon.clef", clef?.quantite ?? 1, clef.flatMap { Lieu.traduit($0.noms, langue) } ?? "?")
+        case .conseils:
+            let nombre = store.conseils[id]?.count ?? 0
+            return L("donjon.conseils", nombre: nombre, nombre)
         case .monstres:
             let nombre = detail?.monstres.filter { !$0.boss }.count ?? 0
             return L("donjon.monstres", nombre: nombre, nombre)
@@ -118,6 +109,7 @@ struct FicheDonjonVue: View {
         case .entree(let lieu): return L("donjon.entree.aide", Coordonnees.texte(lieu.x, lieu.y))
         case .guide: return L("boss.guide")
         case .clef: return L("donjon.clef.aide")
+        case .conseils: return L("donjon.conseils.aide")
         case .monstres, .succes: return nil
         }
     }
@@ -126,6 +118,7 @@ struct FicheDonjonVue: View {
     private func ouverte(_ action: ActionFiche, _ detail: DetailDonjon?) -> some View {
         switch action {
         case .clef(let objet): OuTrouverVue(sujet: .objet(objet), metriques: .compact)
+        case .conseils: conseils
         case .monstres:
             ForEach(detail?.monstres.filter { !$0.boss } ?? [], id: \.id) { monstre in ligne(monstre) }
         case .succes:
@@ -135,6 +128,21 @@ struct FicheDonjonVue: View {
                     .help(Lieu.traduit(succes.description, langue) ?? "")
             }
         case .entree, .guide: EmptyView()
+        }
+    }
+
+    /// Une phrase par conseil ; l'explication du site en infobulle.
+    private var conseils: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            ForEach(Array((store.conseils[id] ?? []).enumerated()), id: \.offset) { _, conseil in
+                Text("• " + conseil.titre)
+                    .font(.synfus(.petit))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .help(conseil.detail)
+            }
+            Text(L("donjon.conseils.source"))
+                .font(.synfus(.petit))
+                .foregroundStyle(.tertiary)
         }
     }
 
@@ -150,8 +158,8 @@ struct FicheDonjonVue: View {
 }
 
 /// Une carte d'action de fiche : symbole, titre, une ligne de plus au besoin,
-/// chevron quand elle déplie. Choisie au clavier, elle prend la teinte de la
-/// ligne choisie.
+/// chevron quand elle déplie. Choisie au clavier, elle prend la teinte pleine
+/// de la ligne choisie ; ouverte, seulement un lisere et un titre teintés.
 private struct CarteAction: View {
     let icone: String
     let titre: String
@@ -163,9 +171,11 @@ private struct CarteAction: View {
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: icone)
-                .foregroundStyle(choisie ? Couleurs.accentTexte : Color.secondary)
+                .foregroundStyle(choisie || ouverte == true ? Couleurs.accentTexte : Color.secondary)
             VStack(alignment: .leading, spacing: 0) {
-                Text(titre).lineLimit(1)
+                Text(titre)
+                    .foregroundStyle(ouverte == true && !choisie ? Couleurs.accentTexte : Color.primary)
+                    .lineLimit(1)
                 if let sousTitre {
                     Text(sousTitre).foregroundStyle(Couleurs.accentTexte).lineLimit(1)
                 }
@@ -179,12 +189,56 @@ private struct CarteAction: View {
         .font(.synfus(.petit))
         .padding(.horizontal, 9)
         .padding(.vertical, 5)
-        .background(RoundedRectangle(cornerRadius: 8, style: .continuous)
-            .fill(choisie ? Couleurs.accent.opacity(0.22) : Color.primary.opacity(0.06)))
-        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous)
-            .strokeBorder(choisie ? Couleurs.accent : Color.primary.opacity(0.08)))
+        .frame(maxHeight: .infinity)
+        .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(fond))
+        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(lisere, lineWidth: choisie ? 1.5 : 1))
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(choisie ? [.isButton, .isSelected] : .isButton)
+    }
+
+    private var fond: Color {
+        if choisie { return Couleurs.accent.opacity(0.22) }
+        return ouverte == true ? .clear : Color.primary.opacity(0.06)
+    }
+
+    private var lisere: Color {
+        if choisie { return Couleurs.accent }
+        return ouverte == true ? Couleurs.accent.opacity(0.45) : Color.primary.opacity(0.08)
+    }
+}
+
+/// Des cartes à la suite, renvoyées à la ligne quand la place manque, toutes
+/// à la hauteur de la plus haute.
+private struct RangeeSouple: Layout {
+    let espacement: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache _: inout ()) -> CGSize {
+        let positions = disposer(largeur: proposal.width ?? .infinity, subviews)
+        let largeur = positions.map { $0.origine.x + $0.taille.width }.max() ?? 0
+        let hauteur = positions.map { $0.origine.y + $0.taille.height }.max() ?? 0
+        return CGSize(width: proposal.width ?? largeur, height: hauteur)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal _: ProposedViewSize, subviews: Subviews, cache _: inout ()) {
+        for (sousVue, position) in zip(subviews, disposer(largeur: bounds.width, subviews)) {
+            sousVue.place(at: CGPoint(x: bounds.minX + position.origine.x, y: bounds.minY + position.origine.y),
+                          proposal: ProposedViewSize(position.taille))
+        }
+    }
+
+    private func disposer(largeur: CGFloat, _ subviews: Subviews) -> [(origine: CGPoint, taille: CGSize)] {
+        let tailles = subviews.map { $0.sizeThatFits(.unspecified) }
+        let hauteur = tailles.map(\.height).max() ?? 0
+        var x: CGFloat = 0
+        var y: CGFloat = 0
+        return tailles.map { taille in
+            if x > 0, x + taille.width > largeur {
+                x = 0
+                y += hauteur + espacement
+            }
+            defer { x += min(taille.width, largeur) + espacement }
+            return (CGPoint(x: x, y: y), CGSize(width: min(taille.width, largeur), height: hauteur))
+        }
     }
 }

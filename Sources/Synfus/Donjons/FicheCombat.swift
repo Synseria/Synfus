@@ -48,6 +48,19 @@ struct FicheCombat: Equatable, Sendable {
                        .feu: grade.reductionFire ?? 0, .eau: grade.reductionWater ?? 0, .air: grade.reductionAir ?? 0]
     }
 
+    /// Les éléments où il résiste le moins (à frapper) et le plus (à
+    /// éviter), à `marge` points près ; rien quand l'écart entre extrêmes est
+    /// sous `ecartUtile` : tout se vaut.
+    var elements: (frapper: [Element], eviter: [Element]) {
+        let valeurs = Element.allCases.map { ($0, resistances[$0] ?? 0) }
+        guard let bas = valeurs.map(\.1).min(), let haut = valeurs.map(\.1).max(), haut - bas >= Self.ecartUtile
+        else { return ([], []) }
+        return (valeurs.filter { $0.1 <= bas + Self.marge }.map(\.0), valeurs.filter { $0.1 >= haut - Self.marge && $0.1 > bas + Self.marge }.map(\.0))
+    }
+
+    static let ecartUtile = 10
+    static let marge = 5
+
     static func telecharger(monstre: Int) async throws -> FicheCombat? {
         let monstres: [MonstreAPI] = try await DofusDB.toutes(
             "monsters", [URLQueryItem(name: "id", value: "\(monstre)")] + DofusDB.selection(["grades"]))

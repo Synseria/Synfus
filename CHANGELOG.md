@@ -26,11 +26,12 @@ contenu (`Tools/notes-de-version.sh`), et `sh build.sh --publish` refuse une ver
 - Les **rappels du combat d'un boss** se copient d'un clic pour le tchat ; l'icône de leur titre
   les copie tous à la suite.
 - **Palette** : rouverte, elle reprend où on l'a laissée — recherche toute sélectionnée (une
-  lettre la remplace), filtre, ligne et fiche dépliée. La fiche d'un donjon se parcourt au
-  clavier : ↓ entre dans ses cartes (entrée, guide, clef, monstres, succès), ←/→ passe de l'une à
-  l'autre, ↵ la fait ; un second ↵ sur le donjon copie le trajet jusqu'à l'entrée, ← replie. Sur
-  un monstre déplié, un second ↵ copie le trajet du repaire le plus proche. Le perso d'où partent
-  les trajets passe à côté du champ, lisible en entier.
+  lettre la remplace), filtre, ligne et fiche dépliée. Le perso d'où partent les trajets passe à
+  côté du champ, lisible en entier.
+- **Fiche d'un donjon au clavier** : ↵ la déplie, le clavier sur « Entrée » (↵ encore : trajet
+  copié) ; ←/→ passe d'une carte à l'autre (guide, clef, conseils, monstres, succès), ↑ revient à
+  la ligne, ↵ y replie. Les **conseils tactiques** de Dofus pour les noobs se déplient dans la
+  fiche, et chaque boss ou monstre dit les éléments à frapper et à éviter d'après ses résistances.
 
 ### Corrections
 
