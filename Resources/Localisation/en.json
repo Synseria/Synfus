@@ -778,7 +778,7 @@
   "zaap.intercalees": "Commands between zaap and travel",
   "zaap.intercalees.aide": "Inserted between /zaap and /travel, separated by “;”. Right after the zaap, the game sometimes ignores /travel while the map loads; a harmless command such as /a gives it time. Empty: nothing is added.",
   "zaap.lirePosition": "Read position",
-  "zaap.liste.aide": "Uncheck a zaap so it is never suggested. Those marked \"other map\" (Incarnam, Canopy, Harebourg, Crocuzko) have coordinates that overlap the World of Twelve: unchecked by default, otherwise a /travel to Amakna could go through Incarnam.",
+  "zaap.liste.aide": "Uncheck a zaap so it is never suggested. Those marked \"other map\" (Incarnam, Canopy, Harebourg, Crocuzko) have coordinates that overlap the World of Twelve, where the game looks up their /zaap and rejects it: unchecked by default.",
   "zaap.maj": "Update from DofusDB",
   "zaap.maj.aide": "Downloads the zaap list from api.dofusdb.fr — Synfus also does it by itself at launch when the list is more than 30 days old. Your choices, additions and favourites are kept.",
   "zaap.maj.date": "DofusDB list from %@",
