@@ -329,6 +329,8 @@
   "general.systeme": "Système",
   "general.version": "Version",
   "lecture.calibrer": "Calibrer…",
+  "lecture.combatDerriere": "Aussi les persos derrière",
+  "lecture.combatDerriere.aide": "Le combat des persos que tu ne regardes pas, même Dofus en arrière-plan : leur pastille dit s'ils sont en combat et le décompte de leur tour. Seulement en fenêtré — macOS ne redessine pas un plein écran caché — et une capture par perso toutes les deux secondes en combat.",
   "lecture.detecter": "Détecter les zones à l'écran",
   "lecture.detecter.aide": "Une capture du jeu : chaque élément visible (position, tchat, cœur de vie, suivis, bouton de combat) trouve sa zone. Ouvre d'abord ce que tu veux calibrer.",
   "lecture.detecter.bouton": "Détecter",
