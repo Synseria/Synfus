@@ -186,11 +186,17 @@ struct PaletteVue: View {
                     .accessibilityElement(children: .combine)
                     .accessibilityAddTraits(.isButton)
                     .contextMenu { menu(entree) }
-                if deplie, case .ouTrouver(let sujet) = entree.effet {
-                    OuTrouverVue(sujet: sujet, metriques: .confort)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.leading, 48)
-                        .padding(.bottom, 6)
+                if deplie {
+                    Group {
+                        switch entree.effet {
+                        case .ouTrouver(let sujet): OuTrouverVue(sujet: sujet, metriques: .confort)
+                        case .donjon(let id): FicheDonjonVue(id: id, copierTrajet: { modele.copierTrajet(vers: $0) })
+                        default: EmptyView()
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.leading, 48)
+                    .padding(.bottom, 6)
                 }
             }
         }
@@ -262,6 +268,7 @@ struct PaletteVue: View {
         case .action: return L("palette.touche.faire")
         case .ouvrirQuete: return L("palette.touche.ouvrir")
         case .ouTrouver: return L("palette.touche.ouTrouver")
+        case .donjon: return L("palette.touche.fiche")
         }
     }
 
@@ -372,7 +379,7 @@ private struct LigneResultat: View {
                     .lineLimit(1)
             }
             if let carte = entree.carte { MiniatureCarte(carte: carte, taille: Self.vignette) }
-            if case .ouTrouver = entree.effet {
+            if entree.effet.sePlie {
                 Image(systemName: deplie ? "chevron.down" : "chevron.right")
                     .font(.synfus(.petit, gras: true))
                     .foregroundStyle(.secondary)
