@@ -1,62 +1,23 @@
 import AppKit
 
-/// La marque réduite à sa silhouette : la couvée en aplat, l'œuf de tête
-/// détouré de ses deux acolytes par un mince jour.
+/// La marque réduite à sa silhouette pour la barre de menus : l'œuf ajouré
+/// et ses deux feuilles (`SynfusMark.dessinerGlyphe`), recadrés au plus juste.
 ///
-/// La géométrie vient de [SynfusMark](Sources/Synfus/Marque/SynfusMark.swift) — un seul
-/// dessin sert l'icône du bundle et la barre de menus. Ce qui change ici tient à
-/// la taille de lecture :
-///
-/// - **Monochrome.** Dans la barre de menus, macOS attend une image *template*
-///   qu'il teint selon le thème et inverse quand le menu est ouvert. Seule
-///   l'opacité compte : le jour entre les œufs doit être **transparent**, pas
-///   peint — d'où le détourage par effacement plutôt qu'un trait de couleur.
-/// - **Aucune peau.** Écailles, mouchetures et ondes ne survivraient pas à
-///   18 px ; la matière reste sur l'icône, la barre de menus n'a que la forme.
+/// Monochrome : macOS attend une image *template* qu'il teint selon le thème
+/// et inverse quand le menu est ouvert. Seule l'opacité compte — les jours
+/// du treillis et le détourage de l'œuf sont effacés dans l'alpha.
 enum SynfusGlyph {
 
-    /// Cotes de la maquette du glyphe : les trois œufs serrés, cadrés au plus
-    /// juste. Tout est exprimé pour une hauteur de référence de 164.
-    private static let hauteurReference: CGFloat = 164.16
-    private static let largeurReference: CGFloat = 175.52
-    private static let cadreAvant = CGRect(x: 24.4, y: 0, width: 126.72, height: 164.16)
-    private static let cadreGauche = CGRect(x: 0, y: 0.8, width: 91.52, height: 118.56)
-    private static let cadreDroit = CGRect(x: 84.0, y: 0.8, width: 91.52, height: 118.56)
-    /// Le jour qui détoure l'œuf de tête, en épaisseur de trait.
-    private static let jour: CGFloat = 18.72
-
-    private static func scaled(_ rect: CGRect, _ k: CGFloat) -> CGRect {
-        CGRect(x: rect.minX * k, y: rect.minY * k,
-               width: rect.width * k, height: rect.height * k)
-    }
-
-    // MARK: - Barre de menus
-
-    /// Image *template* pour le `NSStatusItem`. `isTemplate` laisse macOS la
-    /// teindre : seule l'opacité compte, la couleur qu'on y met est ignorée.
+    /// Image *template* pour le `NSStatusItem`.
     static func menuBarImage(hauteur: CGFloat = 18) -> NSImage {
-        let k = hauteur / hauteurReference
-        let taille = NSSize(width: (largeurReference * k).rounded(), height: hauteur)
-
+        let cadre = SynfusMark.cadreGlyphe
+        let echelle = hauteur / cadre.height
+        let taille = NSSize(width: (cadre.width * echelle).rounded(), height: hauteur)
         let image = NSImage(size: taille, flipped: true) { _ in
             guard let ctx = NSGraphicsContext.current?.cgContext else { return false }
-            ctx.setFillColor(NSColor.black.cgColor)
-
-            // Les deux du fond…
-            ctx.addPath(SynfusMark.dragonEgg(in: scaled(cadreGauche, k)))
-            ctx.addPath(SynfusMark.dragonEgg(in: scaled(cadreDroit, k)))
-            ctx.fillPath()
-
-            // …le jour, effacé dans l'alpha…
-            ctx.setBlendMode(.clear)
-            ctx.addPath(SynfusMark.dragonEgg(in: scaled(cadreAvant, k)))
-            ctx.setLineWidth(jour * k)
-            ctx.strokePath()
-            ctx.setBlendMode(.normal)
-
-            // …puis l'œuf de tête.
-            ctx.addPath(SynfusMark.dragonEgg(in: scaled(cadreAvant, k)))
-            ctx.fillPath()
+            ctx.scaleBy(x: echelle, y: echelle)
+            ctx.translateBy(x: -cadre.minX, y: -cadre.minY)
+            SynfusMark.dessinerGlyphe(in: ctx)
             return true
         }
         image.isTemplate = true
