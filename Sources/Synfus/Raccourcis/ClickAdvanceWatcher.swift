@@ -93,7 +93,10 @@ final class ClickAdvanceWatcher: ObservableObject {
         // Une pause fixe, le temps que le client traite le clic avant de perdre
         // le focus. Elle n'a pas d'autre rôle : ni cadence, ni variation.
         DispatchQueue.main.asyncAfter(deadline: .now() + Self.settleDelay) {
-            MainActor.assumeIsolated { WindowManager.shared.cycle(by: 1) }
+            MainActor.assumeIsolated {
+                UsageStore.shared.compter(.rotationClic)
+                WindowManager.shared.cycle(by: 1)
+            }
         }
     }
 

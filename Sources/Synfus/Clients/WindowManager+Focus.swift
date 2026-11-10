@@ -56,6 +56,7 @@ extension WindowManager {
         selfActivatedPID = frontmostPID == client.pid ? nil : client.pid
         setFrontmost(pid: client.pid, isDofus: true)
         AttentionWatcher.shared.clear(client)
+        UsageStore.shared.noterPersoJoue(client.name)
     }
 
     /// Désigne la pastille à faire clignoter, le temps de `dureeSignal`. Une
@@ -75,6 +76,7 @@ extension WindowManager {
     /// disposition, puis basculer sur le premier perso. Rien que des gestes
     /// existants, enchaînés — et toujours aucun évènement émis.
     func lancerSession() {
+        UsageStore.shared.compter(.session)
         Task {
             await WindowArranger.shared.appliquerDerniere()
             if !effectif.isEmpty { focus(slot: 0) }

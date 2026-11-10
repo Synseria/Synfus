@@ -315,6 +315,7 @@ struct BarView: View {
         return Button {
             // La pastille vient d'être cliquée : la faire clignoter ne dirait
             // rien de plus.
+            UsageStore.shared.compter(.basculeBarre)
             manager.focus(client, signaler: false)
         } label: {
             HStack(spacing: 5) {

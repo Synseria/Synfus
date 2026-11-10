@@ -221,6 +221,7 @@ final class PaletteModele: ObservableObject {
     }
 
     func executer(_ entree: EntreePalette) {
+        UsageStore.shared.compter(.palette(entree.genre))
         switch entree.effet {
         case .copier, .trajet:
             guard let texte = texteACopier(entree) else { return }

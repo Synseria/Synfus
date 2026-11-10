@@ -206,6 +206,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     // MARK: - Actions
 
     @objc private func focusClient(_ sender: NSMenuItem) {
+        UsageStore.shared.compter(.basculeMenu)
         WindowManager.shared.focus(slot: sender.tag)
     }
 

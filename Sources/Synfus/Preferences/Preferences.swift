@@ -70,15 +70,20 @@ final class Preferences: ObservableObject {
     /// perdre en enchaînant au clic.
     @Published var signalerBascule: Bool = true { didSet { save() } }
 
-    /// Lire la position du perso (coordonnées de la carte, en haut à gauche
-    /// de la fenêtre) par OCR. Désactivé par défaut : il faut l'autorisation
-    /// « Enregistrement de l'écran », jamais demandée d'office.
     /// Chercher chaque jour une version plus récente sur GitHub (`MiseAJour`).
     @Published var verifierMisesAJour: Bool = true { didSet { save() } }
     /// La version du lancement précédent (`MiseAJour.apresMiseAJour`).
     @Published var derniereVersionLancee: String? { didSet { save() } }
     /// Aucune sauvegarde à la lecture : rien n'a encore été réglé.
     private(set) var premierLancement = false
+    /// Envoyer chaque jour les statistiques d'utilisation (`UsageStore`).
+    /// Activé par défaut : anonymes, montrées telles quelles dans l'onglet
+    /// Statistiques, coupées d'un geste.
+    @Published var partagerStatistiques: Bool = true { didSet { save() } }
+
+    /// Lire la position du perso (coordonnées de la carte, en haut à gauche
+    /// de la fenêtre) par OCR. Désactivé par défaut : il faut l'autorisation
+    /// « Enregistrement de l'écran », jamais demandée d'office.
     @Published var lirePosition: Bool = false { didSet { save() } }
 
     /// Détecter le combat — bouton « Fin de tour » rose, gris ou absent — par
@@ -532,6 +537,7 @@ final class Preferences: ObservableObject {
         .facultatif("zaapIntercalees", \.zaapIntercalees),
         .facultatif("verifierMisesAJour", \.verifierMisesAJour),
         .optionnel("derniereVersionLancee", \.derniereVersionLancee),
+        .facultatif("partagerStatistiques", \.partagerStatistiques),
         .facultatif("zaapsAjoutes", \.zaapsAjoutes),
         .facultatif("zaapsChoix", \.zaapsChoix),
         .facultatif("zaapsFavoris", \.zaapsFavoris),

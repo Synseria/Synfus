@@ -130,6 +130,7 @@ final class MiseAJour: ObservableObject {
         else { return etat = .echec(.ecriture, version) }
 
         etat = .installation(version)
+        UsageStore.shared.compter(.miseAJour)
         Task {
             do throws(InstallateurMiseAJour.Echec) {
                 let neuve = try await installateur.preparer(version, identifiant: identifiant, dans: dossier)

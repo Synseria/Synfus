@@ -248,6 +248,7 @@ final class AttentionWatcher: ObservableObject {
             alerting.insert(client.slotKey)
         case .focus:
             alerting.insert(client.slotKey)
+            UsageStore.shared.compter(.basculeAttention)
             WindowManager.shared.focus(client)
         }
     }

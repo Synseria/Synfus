@@ -32,6 +32,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         _ = PaletteModele.shared
         ZaapClipboard.shared.start()
         MiseAJour.shared.start()
+        UsageStore.shared.start()
 
         if !AXIsProcessTrusted() {
             WindowManager.shared.requestAccessibility()
@@ -43,6 +44,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // La position de la barre s'écrit avec un temps de retard sur le
         // déplacement : quitter dans cet intervalle ne doit pas la perdre.
         FloatingBarController.shared.flushPendingOrigin()
+        UsageStore.shared.releve(envoi: false)
         HotKeyManager.shared.unregisterAll()
     }
 
