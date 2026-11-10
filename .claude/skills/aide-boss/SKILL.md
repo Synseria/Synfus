@@ -46,6 +46,17 @@ même perso est souvent manqué (passage automatique ailleurs). Pour que le déc
   (chaque perso est lu quand il passe devant : une première lecture en combat n'est pas un
   nouveau combat). `Boss.lectures` : ce qui se lit en plus du combat.
 
+## Salle, fiche, guide — `Boss` (pur), `FicheBoss`
+
+- **Salle** : `Boss.salle` (noms fr/en/es de la sous-zone, relevés de DofusDB) ; `Boss.dans(zone:)`
+  la retrouve dans la zone lue au-dessus de la position, à `fautesTolerees` près. `AideBoss` choisit
+  le boss **en entrant** dans sa salle (un choix à la main dans la salle tient) ; jamais d'ouverture
+  du panneau d'office. Il faut la lecture de la position.
+- **Fiche** : `Boss.monstre` (id DofusDB) → `FicheBoss` du plus haut grade (niveau, PV, PA, PM,
+  résistances `reductionX` en %), demandée une fois par lancement, muette en cas d'échec.
+- **Guide** : `Boss.donjon`, titre de la page Dofus pour les noobs (`DofusPourLesNoobs.ouvrir`).
+- Ajouter un boss : ses règles pures, `monstre`, `donjon`, `salle`, sa vue, ses libellés.
+
 ## Suivi — `SuiviConfusion` (pur)
 
 Par perso : début et fin de tour (bouton de combat), vie au début du tour (la première lecture
