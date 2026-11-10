@@ -320,10 +320,9 @@ final class PaletteModele: ObservableObject {
         }
     }
 
-    /// Le trajet jusqu'à un lieu et ce qu'en dit sa ligne (« via … · 6 cartes »).
-    func versLieu(_ lieu: Lieu) -> (texte: String?, itineraire: String?) {
-        let vers = RecherchePalette.versLieu(lieu, contexte)
-        return (RecherchePalette.texte(de: vers.effet, contexte), RecherchePalette.itineraire(vers.trajet, contexte.langue))
+    /// Le texte du trajet jusqu'à un lieu, la décision de sa ligne.
+    func trajet(vers lieu: Lieu) -> String? {
+        RecherchePalette.texte(de: RecherchePalette.versLieu(lieu, contexte).effet, contexte)
     }
 
     /// Le Sanctuaire de l'Almanax, s'il est sur la carte.
@@ -331,7 +330,7 @@ final class PaletteModele: ObservableObject {
 
     /// Le trajet jusqu'à un lieu, zaap compris — la décision des entrées de lieux.
     func copierTrajet(vers lieu: Lieu) {
-        guard let texte = versLieu(lieu).texte else { return }
+        guard let texte = trajet(vers: lieu) else { return }
         copier(texte)
     }
 
