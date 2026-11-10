@@ -374,10 +374,14 @@ struct CombatBadge: View {
             }
             .allowsHitTesting(false)
         case .placement, .pasMonTour:
-            pastille(nil)
-                .opacity(0.8)
-                .help(L("barre.combat.enCombat"))
-                .allowsHitTesting(false)
+            // En combat, pas son tour : le cadre en retrait, l'épée grise.
+            ZStack(alignment: .topTrailing) {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .strokeBorder(Self.rose.opacity(0.4), lineWidth: 1.5)
+                pastille(nil).opacity(0.8)
+            }
+            .help(L("barre.combat.enCombat"))
+            .allowsHitTesting(false)
         case .horsCombat:
             EmptyView()
         }

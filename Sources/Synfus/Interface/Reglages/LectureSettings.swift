@@ -19,6 +19,10 @@ struct LectureSettings: View {
             Section {
                 Interrupteur(titre: L("diagnostic.lecture.position"), isOn: activation(\.lirePosition))
                 Interrupteur(titre: L("diagnostic.lecture.combat"), isOn: activation(\.lireCombat))
+                if prefs.lireCombat {
+                    Interrupteur(titre: L("lecture.combatDerriere"), aide: L("lecture.combatDerriere.aide"),
+                                 isOn: $prefs.lireCombatDerriere)
+                }
                 if prefs.lirePosition || prefs.lireCombat {
                     Ligne(titre: etatLecture,
                           etat: L("diagnostic.position.stats", lecture.lectures,

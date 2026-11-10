@@ -52,12 +52,22 @@ enum GenreLecture: String, CaseIterable, Sendable {
     /// Le combat, hors combat, toutes les trois : on n'y entre que par un
     /// placement, qui dure bien plus ; vu en cours (`enCombat`), chaque
     /// seconde jusqu'à ce que la lecture le dise fini — son tour en dépend.
-    func intervalle(combat: EtatCombat?) -> TimeInterval {
+    /// Derrière (`lireCombatDerriere`), toutes les deux en combat : chaque
+    /// perso coûte une capture, et le décompte se tient sans relecture
+    /// (`EtatCombat.monTour(fin:)`).
+    func intervalle(combat: EtatCombat?, devant: Bool) -> TimeInterval {
         switch self {
         case .position, .chasse, .vie, .tchat: return 1
         case .quetes: return 3
-        case .combat: return combat?.enCombat == true ? 1 : 3
+        case .combat: return combat?.enCombat == true ? (devant ? 1 : 2) : 3
         }
+    }
+
+    /// Les persos dont le combat se lit derrière : ni celui au premier plan,
+    /// ni un dormant, ni un plein écran — macOS n'en redessine pas l'espace,
+    /// la capture serait figée.
+    static func combatsDerriere(_ clients: [DofusClient], devant: DofusClient?) -> [DofusClient] {
+        clients.filter { !$0.dormant && !$0.pleinEcran && $0.slotKey != devant?.slotKey }
     }
 
     /// Ce que la signature regarde pour relancer l'OCR.
@@ -280,37 +290,50 @@ final class LecteurEcran: ObservableObject {
         diagnostic.etat = .eteint
     }
 
-    /// Le tour régulier : le perso au premier plan, s'il y en a un.
+    /// Le tour régulier : le perso au premier plan, s'il y en a un, et le
+    /// combat des autres si `lireCombatDerriere` — même quand Dofus n'est pas
+    /// devant.
     private func tour() {
         guard timer != nil else { return }
         let manager = WindowManager.shared
         guard WindowPreviewService.shared.authorized else { diagnostic.etat = .nonAutorise; return }
-        guard manager.frontmostIsDofus,
-              let client = manager.clients.first(where: { manager.isFrontmost($0) })
-        else {
+        let devant = manager.frontmostIsDofus ? manager.clients.first(where: { manager.isFrontmost($0) }) : nil
+        let prefs = Preferences.shared
+        if prefs.lireCombat, prefs.lireCombatDerriere {
+            for autre in GenreLecture.combatsDerriere(manager.clients, devant: devant)
+            where perime(.combat, autre.name, devant: false) {
+                oublierTourEchu(autre.name)
+                demander(autre, .combat)
+            }
+        }
+        guard let client = devant else {
             if !busy, file.isEmpty { diagnostic.etat = .attente }
-            return
+            return pomper()
         }
         if persoDevant != client.name { persoDevant = client.name }
-        // Son échéance passée, le tour est fini sans que la lecture ait vu le
-        // bouton gris (le perso était passé derrière) : le suivant a le même
-        // bouton coloré, la signature le dirait inchangé — le décompte relu
-        // dit le nouveau tour (`EtatCombat.nouveauTour`).
-        if case .monTour(let fin?) = combats[client.name], Date() > fin {
-            signatures[cle(.combat, client.name)] = nil
+        oublierTourEchu(client.name)
+        for genre in genresActifs where perime(genre, client.name, devant: true) { demander(client, genre) }
+        if suiviMontre, QuetesStore.shared.quetes != nil, perime(.quetes, client.name, devant: true) {
+            demander(client, .quetes)
         }
-        for genre in genresActifs where perime(genre, client.name) { demander(client, genre) }
-        if suiviMontre, QuetesStore.shared.quetes != nil, perime(.quetes, client.name) { demander(client, .quetes) }
         if bossMontre, combats[client.name]?.enCombat == true {
-            for genre in genresBoss where perime(genre, client.name) { demander(client, genre) }
+            for genre in genresBoss where perime(genre, client.name, devant: true) { demander(client, genre) }
         }
         pomper()
     }
 
+    /// Son échéance passée, le tour est fini sans que la lecture ait vu le
+    /// bouton gris (le perso était passé derrière, ou lu trop rarement) : le
+    /// suivant a le même bouton coloré, la signature le dirait inchangé — le
+    /// décompte relu dit le nouveau tour (`EtatCombat.nouveauTour`).
+    private func oublierTourEchu(_ nom: String) {
+        if case .monTour(let fin?) = combats[nom], Date() > fin { signatures[cle(.combat, nom)] = nil }
+    }
+
     /// La dernière capture de ce genre chez ce perso a son intervalle, à la
     /// tolérance du minuteur près.
-    private func perime(_ genre: GenreLecture, _ nom: String) -> Bool {
-        let intervalle = genre.intervalle(combat: combats[nom])
+    private func perime(_ genre: GenreLecture, _ nom: String, devant: Bool) -> Bool {
+        let intervalle = genre.intervalle(combat: combats[nom], devant: devant)
         return vuLe[cle(genre, nom)].map { Date().timeIntervalSince($0) >= intervalle - Self.intervalle / 2 } ?? true
     }
 
