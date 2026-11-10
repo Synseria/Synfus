@@ -470,11 +470,11 @@ struct QueteVue: View {
     /// Douze, aucun coût ne se compte : ceux-là restent hors de l'ordre.
     private static func tournee(_ etape: FicheQuete.Etape, aFaire: Set<Int>, valides: Set<Int>,
                                 reseau: ReseauSousZones) -> [Int] {
-        let ouverts = etape.objectifs.compactMap { objectif -> (id: Int, x: Int, y: Int)? in
+        let ouverts = etape.objectifs.compactMap { objectif -> (id: Int, x: Int, y: Int, sousZone: Int?)? in
             guard aFaire.contains(objectif.id), !valides.contains(objectif.id), let position = objectif.position,
                   !reseau.horsDesDouze(objectif.sousZone)
             else { return nil }
-            return (objectif.id, position.x, position.y)
+            return (objectif.id, position.x, position.y, objectif.sousZone)
         }
         guard ouverts.count > 1 else { return [] }
         return ZaapClipboard.shared.tournee(ouverts) ?? []
@@ -485,7 +485,7 @@ struct QueteVue: View {
     private func copierTrajet(_ objectif: FicheQuete.Objectif, quete: Int) {
         let id = Self.idLigne(objectif)
         if let position = objectif.position {
-            ZaapClipboard.shared.copierTrajet(vers: (position.x, position.y),
+            ZaapClipboard.shared.copierTrajet(vers: (position.x, position.y), sousZone: objectif.sousZone,
                                               dansLesDouze: !CarteStore.shared.reseau.horsDesDouze(objectif.sousZone))
             signaler(id)
         } else if case .monstre(let monstre)? = objectif.sujet {

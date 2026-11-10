@@ -175,7 +175,7 @@ final class ChasseModele: ObservableObject {
     func copier() {
         guard case .trouve(let x, let y, _) = constat?.resultat else { return }
         // Une chasse se joue dans le Monde des Douze.
-        ZaapClipboard.shared.copierTrajet(vers: (x, y), dansLesDouze: true)
+        ZaapClipboard.shared.copierTrajet(vers: (x, y), sousZone: nil, dansLesDouze: true)
         effacementCopie?.cancel()
         copieRecente = true
         effacementCopie = Task {

@@ -4,13 +4,15 @@ import Foundation
 /// sinon), les ajouts à la main, et les choix d'activation. Pur.
 enum CatalogueZaaps {
     /// Hors du Monde des Douze, un zaap partage ses coordonnées avec un coin
-    /// d'Amakna : le proposer pour un `/travel` y enverrait à tort.
-    static func actifParDefaut(_ zaap: Zaap) -> Bool {
-        zaap.monde == Zaap.mondeDesDouze
+    /// d'Amakna : le proposer pour un `/travel` y enverrait à tort. Celui
+    /// d'une couche à part du Monde des Douze (la Canopée) ne sert qu'aux
+    /// cibles de sa sous-zone ou de ses voisines (`ItineraireZaap.zaap(vers:)`).
+    static func actifParDefaut(_ zaap: Zaap, reseau: ReseauSousZones) -> Bool {
+        zaap.monde == Zaap.mondeDesDouze || reseau.sousZone(du: zaap) != nil
     }
 
-    static func estActif(_ zaap: Zaap, choix: [String: Bool]) -> Bool {
-        choix[zaap.cle] ?? actifParDefaut(zaap)
+    static func estActif(_ zaap: Zaap, choix: [String: Bool], reseau: ReseauSousZones) -> Bool {
+        choix[zaap.cle] ?? actifParDefaut(zaap, reseau: reseau)
     }
 
     /// La base puis les ajouts ; un ajout qui reprend un zaap de la base ne
@@ -20,8 +22,8 @@ enum CatalogueZaaps {
         return base + ajoutes.filter { !connus.contains($0.cle) }
     }
 
-    static func actifs(base: [Zaap], ajoutes: [Zaap], choix: [String: Bool]) -> [Zaap] {
-        tous(base: base, ajoutes: ajoutes).filter { estActif($0, choix: choix) }
+    static func actifs(base: [Zaap], ajoutes: [Zaap], choix: [String: Bool], reseau: ReseauSousZones) -> [Zaap] {
+        tous(base: base, ajoutes: ajoutes).filter { estActif($0, choix: choix, reseau: reseau) }
     }
 
     /// Les favoris dans l'ordre choisi ; une clé qui ne désigne plus aucun zaap

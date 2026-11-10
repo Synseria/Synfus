@@ -102,7 +102,7 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
         case ouTrouver(OuTrouver.Sujet)
         /// Copie le trajet vers la case, zaap compris s'il vaut le coup —
         /// calculé seulement pour l'entrée choisie (`texte(de:)`).
-        case trajet(x: Int, y: Int)
+        case trajet(x: Int, y: Int, sousZone: Int?)
         case action(ActionPalette)
     }
 
@@ -200,7 +200,7 @@ enum RecherchePalette {
         case "/zaap": return classer(index.zaaps, mots(reste))
         case "/travel":
             if let cible = ItineraireZaap.cible(dans: "/travel " + reste) {
-                let copie = trajet(vers: cible, index.contexte)
+                let copie = trajet(vers: cible, sousZone: nil, index.contexte)
                 return [EntreePalette(id: "travel", genre: .lieu, titre: copie, detail: Coordonnees.texte(cible.x, cible.y),
                                       effet: .copier(copie))]
             }
@@ -216,7 +216,7 @@ enum RecherchePalette {
     static func texte(de effet: EntreePalette.Effet, _ contexte: ContextePalette) -> String? {
         switch effet {
         case .copier(let texte): return texte
-        case .trajet(let x, let y): return trajet(vers: (x, y), contexte)
+        case .trajet(let x, let y, let sousZone): return trajet(vers: (x, y), sousZone: sousZone, contexte)
         case .completer, .action, .ouvrirQuete, .ouTrouver: return nil
         }
     }
@@ -242,7 +242,9 @@ enum RecherchePalette {
     /// Un zaap cherché par `/travel` : le trajet vers lui, comme vers un lieu.
     static func zaapsCommeLieux(_ contexte: ContextePalette) -> [EntreePalette] {
         zaapsTries(contexte).map { zaap in
-            let vers = versCase((zaap.x, zaap.y), dansLesDouze: zaap.monde == Zaap.mondeDesDouze, contexte)
+            let sousZone = contexte.reseau.sousZone(du: zaap)
+            let vers = versCase((zaap.x, zaap.y), sousZone: sousZone,
+                                dansLesDouze: zaap.monde == Zaap.mondeDesDouze || sousZone != nil, contexte)
             return EntreePalette(
                 id: "travel:" + zaap.cle, genre: .lieu, titre: L("palette.zaap", zaap.nom(en: contexte.langue)),
                 sousTitre: zaap.zone(en: contexte.langue), etiquette: contexte.etiquettes[zaap.cle],
@@ -270,7 +272,8 @@ enum RecherchePalette {
 
     static func lieux(_ contexte: ContextePalette) -> [EntreePalette] {
         contexte.lieux.filter { !$0.estZaap }.map { lieu in
-            let vers = versCase((lieu.x, lieu.y), dansLesDouze: lieu.monde == Zaap.mondeDesDouze, contexte)
+            let vers = versCase((lieu.x, lieu.y), sousZone: lieu.idSousZone,
+                                dansLesDouze: !contexte.reseau.horsDesDouze(lieu.idSousZone), contexte)
             let lieuDit = [lieu.sousZone(en: contexte.langue), lieu.zone(en: contexte.langue)]
                 .compactMap { $0 }.joined(separator: " · ")
             return EntreePalette(
@@ -380,7 +383,8 @@ enum RecherchePalette {
                 let sousTitre = rang == 0 && pnj.passages.count > 1
                     ? L("palette.pnj.habituel", nombre: nombre, lieu, nombre)
                     : rang == 0 ? L("palette.pnj.cite", nombre: nombre, lieu, nombre) : L("palette.pnj.aussi", nombre: nombre, lieu, nombre)
-                let vers = versCase((position.x, position.y), dansLesDouze: passage.dansLesDouze(contexte.reseau), contexte)
+                let vers = versCase((position.x, position.y), sousZone: passage.sousZone,
+                                    dansLesDouze: passage.dansLesDouze(contexte.reseau), contexte)
                 return EntreePalette(id: "pnj:\(pnj.id):\(position.x),\(position.y)", genre: .pnj,
                                      titre: Lieu.traduit(pnj.noms, contexte.langue) ?? "?", sousTitre: sousTitre,
                                      etiquette: contexte.etiquettes[pnj.cle],
@@ -415,29 +419,30 @@ enum RecherchePalette {
 
     // MARK: - Trajets
 
-    private static func trajet(vers cible: (x: Int, y: Int), _ contexte: ContextePalette) -> String {
+    private static func trajet(vers cible: (x: Int, y: Int), sousZone: Int?, _ contexte: ContextePalette) -> String {
         let travel = ItineraireZaap.travel(vers: cible)
-        return ItineraireZaap.reecrire(travel, depuis: contexte.position, gainMinimal: contexte.gainMinimal,
-                                       zaaps: contexte.zaaps, zaapDuJeu: contexte.zaapDuJeu,
-                                       intercalees: contexte.intercalees) ?? travel
+        return ItineraireZaap.reecrire(travel, sousZone: sousZone, depuis: contexte.position,
+                                       gainMinimal: contexte.gainMinimal, zaaps: contexte.zaaps,
+                                       zaapDuJeu: contexte.zaapDuJeu, intercalees: contexte.intercalees) ?? travel
     }
 
     /// Le trajet que `trajet(vers:)` copiera — la même décision (`ItineraireZaap.trajet`).
-    static func trajetVers(_ cible: (x: Int, y: Int), _ contexte: ContextePalette) -> ItineraireZaap.Trajet? {
-        ItineraireZaap.trajet(vers: cible, depuis: contexte.position, gainMinimal: contexte.gainMinimal,
-                              zaaps: contexte.zaaps, zaapDuJeu: contexte.zaapDuJeu)
+    static func trajetVers(_ cible: (x: Int, y: Int), sousZone: Int?, _ contexte: ContextePalette) -> ItineraireZaap.Trajet? {
+        ItineraireZaap.trajet(vers: cible, sousZone: sousZone, depuis: contexte.position,
+                              gainMinimal: contexte.gainMinimal, zaaps: contexte.zaaps, zaapDuJeu: contexte.zaapDuJeu)
     }
 
     /// Ce qu'une entrée qui mène à une case montre et fait — un seul chemin
     /// pour les zaaps cherchés par `/travel`, les lieux et les PNJ. Hors du
     /// Monde des Douze, le `/travel` seul, sans distance ni zaap : ses
     /// coordonnées recoupent celles d'Amakna, un zaap d'Amakna y mènerait à tort.
-    private static func versCase(_ cible: (x: Int, y: Int), dansLesDouze: Bool, _ contexte: ContextePalette)
+    private static func versCase(_ cible: (x: Int, y: Int), sousZone: Int?, dansLesDouze: Bool,
+                                 _ contexte: ContextePalette)
         -> (trajet: ItineraireZaap.Trajet?, distance: Int?, effet: EntreePalette.Effet) {
         guard dansLesDouze else { return (nil, nil, .copier(ItineraireZaap.travel(vers: cible))) }
-        return (trajetVers(cible, contexte),
+        return (trajetVers(cible, sousZone: sousZone, contexte),
                 ItineraireZaap.aPied(depuis: contexte.position, vers: cible, dansLesDouze: true),
-                .trajet(x: cible.x, y: cible.y))
+                .trajet(x: cible.x, y: cible.y, sousZone: sousZone))
     }
 
     static func itineraire(_ trajet: ItineraireZaap.Trajet?, _ langue: Langue) -> String? {

@@ -22,8 +22,8 @@ struct OuTrouverTests {
         lieux: [lieu(1, 30, 30, sousZone: 7, nom: "Atelier"),
                 lieu(2, 20, 20, carte: 900, sousZone: 6, categorie: CategorieLieu.donjon.rawValue, nom: "Antre du Dragon Cochon"),
                 lieu(3, -1, -1, monde: 2, sousZone: 8, nom: "Pâturages")],
-        sousZones: [SousZoneCarte(id: 5, zaap: nil, voisines: [6]), SousZoneCarte(id: 6, zaap: nil, voisines: [5]),
-                    SousZoneCarte(id: 7, zaap: nil, voisines: [])],
+        sousZones: [SousZoneCarte(id: 5, zaap: nil, zone: nil, voisines: [6]), SousZoneCarte(id: 6, zaap: nil, zone: nil, voisines: [5]),
+                    SousZoneCarte(id: 7, zaap: nil, zone: nil, voisines: [])],
         cases: ["0,0": 5, "1,0": 5, "2,0": 5, "3,0": 5, "4,0": 5, "10,10": 6])
     private let reseau = ReseauSousZones(Self.carte)
 
@@ -47,19 +47,19 @@ struct OuTrouverTests {
 
     @Test("Une sous-zone : sa case la plus proche du perso, son milieu sans position, sinon un repère")
     func sousZone() {
-        #expect(situer(repaire(.sousZone, 5), depuis: (10, 1)) == .init(x: 4, y: 0, monde: 1))
-        #expect(situer(repaire(.sousZone, 5), depuis: nil) == .init(x: 2, y: 0, monde: 1))
-        #expect(situer(repaire(.sousZone, 7), depuis: (0, 0)) == .init(x: 30, y: 30, monde: 1))
+        #expect(situer(repaire(.sousZone, 5), depuis: (10, 1)) == .init(x: 4, y: 0, monde: 1, sousZone: 5))
+        #expect(situer(repaire(.sousZone, 5), depuis: nil) == .init(x: 2, y: 0, monde: 1, sousZone: 5))
+        #expect(situer(repaire(.sousZone, 7), depuis: (0, 0)) == .init(x: 30, y: 30, monde: 1, sousZone: 7))
         // Un autre monde : le repère garde le sien, qui dira « pas de zaap ».
-        #expect(situer(repaire(.sousZone, 8), depuis: (0, 0)) == .init(x: -1, y: -1, monde: 2))
+        #expect(situer(repaire(.sousZone, 8), depuis: (0, 0)) == .init(x: -1, y: -1, monde: 2, sousZone: 8))
         #expect(situer(repaire(.sousZone, 99), depuis: (0, 0)) == nil)
     }
 
     @Test("Un donjon : son repère, par sa carte d'entrée, sinon par son nom ; une expédition n'est nulle part")
     func donjon() {
-        #expect(situer(repaire(.donjon, 1, entree: 900), depuis: nil) == .init(x: 20, y: 20, monde: 1))
+        #expect(situer(repaire(.donjon, 1, entree: 900), depuis: nil) == .init(x: 20, y: 20, monde: 1, sousZone: 6))
         #expect(situer(repaire(.donjon, 1, nom: "Antre du dragon cochon", entree: 4), depuis: nil)
-                == .init(x: 20, y: 20, monde: 1))
+                == .init(x: 20, y: 20, monde: 1, sousZone: 6))
         #expect(situer(repaire(.donjon, 2, nom: "Expédition - Antre du Dragon Cochon", entree: 5), depuis: nil) == nil)
     }
 
@@ -150,7 +150,7 @@ struct OuTrouverTests {
         let sources = SourcesObjet(lacheurs: [.init(monstre: fiche(1), taux: 50), .init(monstre: fiche(2), taux: 10),
                                               .init(monstre: fiche(3), taux: 30)], recette: nil)
         func situe(_ cartes: Int?) -> [RepaireSitue] {
-            [RepaireSitue(repaire: repaire(.sousZone, 5), situation: .init(x: 0, y: 0, monde: 1), cartes: cartes)]
+            [RepaireSitue(repaire: repaire(.sousZone, 5), situation: .init(x: 0, y: 0, monde: 1, sousZone: 5), cartes: cartes)]
         }
         let proches = OuTrouver.lacheurs(sources) { $0.id == 2 ? situe(3) : $0.id == 3 ? situe(9) : [] }
         #expect(proches.map(\.lacheur.monstre.id) == [2, 3, 1])

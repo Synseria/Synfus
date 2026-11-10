@@ -16,7 +16,7 @@ struct OuTrouverReseauTests {
         #expect(fiche.repaires.contains { $0.genre == .donjon && $0.noms["fr"] == "Salle du Minotot" })
         let situes = OuTrouver.situes(fiche.repaires, depuis: (0, 0), reseau: ReseauSousZones(Carte.integree),
                                       reperes: ReperesCarte(Carte.integree.lieux)) { ItineraireZaap.distance((0, 0), $0) }
-        #expect(situes.contains { $0.situation == .init(x: -42, y: -17, monde: Zaap.mondeDesDouze) })
+        #expect(situes.contains { [$0.situation.x, $0.situation.y, $0.situation.monde] == [-42, -17, Zaap.mondeDesDouze] })
     }
 
     @Test("La laine de Bouftou : lâchée par le Bouftou, situé à Astrub et dans sa cour ; une coiffe se fabrique",

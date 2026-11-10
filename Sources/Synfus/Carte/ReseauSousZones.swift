@@ -1,9 +1,11 @@
 /// Une sous-zone du Monde des Douze telle que DofusDB la décrit : le zaap que
-/// le jeu lui associe et celles qu'elle touche.
+/// le jeu lui associe, sa zone et celles qu'elle touche.
 struct SousZoneCarte: Codable, Equatable, Sendable {
     let id: Int
     /// La carte du zaap associé (`associatedZaapMapId`, cf. `Lieu.idCarte`).
     let zaap: Int?
+    /// Sa zone (`areaId`) : « Montagne des Koalaks », « Amakna »…
+    let zone: Int?
     /// Triées ; symétriques, quoi qu'en dise DofusDB.
     let voisines: [Int]
 }
@@ -14,6 +16,7 @@ struct ReseauSousZones: Sendable {
     private let parCase: [String: Int]
     private let zaapDe: [Int: Int]
     private let voisinesDe: [Int: [Int]]
+    private let zoneDe: [Int: Int]
     /// L'index inverse : où chercher un monstre, c'est la case de sa sous-zone
     /// la plus proche du perso (`OuTrouver`).
     private let casesDe: [Int: [(x: Int, y: Int)]]
@@ -34,6 +37,8 @@ struct ReseauSousZones: Sendable {
         zaapDe = Dictionary(carte.sousZones.compactMap { sz in sz.zaap.map { (sz.id, $0) } },
                             uniquingKeysWith: { premier, _ in premier })
         voisinesDe = Dictionary(carte.sousZones.map { ($0.id, $0.voisines) }, uniquingKeysWith: { premier, _ in premier })
+        zoneDe = Dictionary(carte.sousZones.compactMap { sz in sz.zone.map { (sz.id, $0) } },
+                            uniquingKeysWith: { premier, _ in premier })
     }
 
     /// `nil` hors du Monde des Douze relevé.
@@ -42,6 +47,18 @@ struct ReseauSousZones: Sendable {
     func zaapAssocie(_ sousZone: Int) -> Int? { zaapDe[sousZone] }
 
     func voisines(_ sousZone: Int) -> [Int] { voisinesDe[sousZone] ?? [] }
+
+    func zone(_ sousZone: Int) -> Int? { zoneDe[sousZone] }
+
+    /// La sous-zone du Monde des Douze d'un zaap, couches à part comprises (la
+    /// Canopée, le château de Harebourg) ; `nil` ailleurs (Incarnam). Un ajout
+    /// à la main n'a que ses coordonnées pour la dire.
+    func sousZone(du zaap: Zaap) -> Int? {
+        if let sousZone = zaap.idSousZone {
+            return zaap.monde == Zaap.mondeDesDouze || estDuMondeDesDouze(sousZone) ? sousZone : nil
+        }
+        return zaap.monde == Zaap.mondeDesDouze ? self.sousZone(zaap.x, zaap.y) : nil
+    }
 
     /// Les cases relevées de la sous-zone ; aucune hors du Monde des Douze
     /// ou pour une sous-zone que la carte du monde ne montre pas (intérieurs).

@@ -8,7 +8,7 @@ struct CarteZaapReglages: View {
     @ObservedObject private var prefs = Preferences.shared
 
     var body: some View {
-        let actif = CatalogueZaaps.estActif(zaap, choix: prefs.zaapsChoix)
+        let actif = CatalogueZaaps.estActif(zaap, choix: prefs.zaapsChoix, reseau: CarteStore.shared.reseau)
         VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 6) {
                 BoutonEtiquette(cle: zaap.cle)
