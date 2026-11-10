@@ -1,6 +1,6 @@
 ---
 name: marque-assets
-description: Classes du jeu (table intégrée rafraîchie par DofusDB) et leurs emblèmes (DofusDB, gardés dans les caches de l'utilisateur, ou l'icône qu'il pose — jamais embarqués, CGU Dofus 13.2), et la marque « la Couvée » dessinée par le code (SynfusMark, SynfusGlyph, icône du bundle). Charger avant de toucher Classes/ (DofusClass, ClassesDofusDB, ClassesStore), Marque/, Tools/ (AppIconExport, generate-app-icons.sh) ou Resources/.
+description: Classes du jeu (table intégrée rafraîchie par DofusDB) et leurs emblèmes (DofusDB, gardés dans les caches de l'utilisateur, ou l'icône qu'il pose — jamais embarqués, CGU Dofus 13.2), et la marque « l'Œuf ajouré » dessinée par le code (SynfusMark, SynfusGlyph, icône du bundle). Charger avant de toucher Classes/ (DofusClass, ClassesDofusDB, ClassesStore), Marque/, Tools/ (AppIconExport, generate-app-icons.sh) ou Resources/.
 user-invocable: false
 ---
 
@@ -37,17 +37,22 @@ user-invocable: false
 
 ## La marque — `Sources/Synfus/Marque/`
 
-- La Couvée (trois œufs de dragon, un par compte, le perso actif devant) est décrite **une
-  seule fois** dans `SynfusMark.swift` : CoreGraphics pur, n'importe que CoreGraphics et
-  Foundation (`Tools/AppIconExport.swift` le compile tel quel ; un `import AppKit` le casse).
-  Tracés originaux, aucun asset du jeu.
-- Periphery signale `SynfusMark` comme du code mort : hors `dragonEgg` (repris par
-  `SynfusGlyph`), il ne sert qu'à `Tools/AppIconExport.swift`, compilé hors du paquet. Faux
-  positif attendu — ne pas supprimer.
+- L'Œuf ajouré (un Dofus en treillis de rubans ondés, blanc bleuté, éclairé du dedans, posé sur
+  un feuillage à l'accent de l'app, fond transparent) est décrit **une seule fois** dans
+  `SynfusMark.swift` : CoreGraphics pur, n'importe que CoreGraphics et Foundation
+  (`Tools/AppIconExport.swift` le compile tel quel ; un `import AppKit` le casse). Tracés
+  originaux, aucun asset du jeu.
+- Periphery peut signaler `SynfusMark.image` comme du code mort : il ne sert qu'à
+  `Tools/AppIconExport.swift`, compilé hors du paquet. Faux positif attendu — ne pas supprimer.
 - Usages : icône du bundle (`./Tools/generate-app-icons.sh` → `Resources/Synfus.{icns,png}`) et
-  symbole de la barre de menus (`SynfusGlyph.menuBarImage()`). Ne jamais retoucher les PNG :
-  modifier `SynfusMark`, relancer le script.
-- Repère de description 256 × 256, y vers le bas ; `roundedInsetRatio`, `eggAspect`,
-  `texturesBelow` (sous ce seuil, les textures sont abandonnées).
-- `SynfusGlyph` est une image *template* : seule l'opacité compte, le détourage de l'œuf de tête
-  passe par un effacement de l'alpha (`.clear` / `.destinationOut`), jamais par un trait.
+  symbole de la barre de menus (`SynfusGlyph.menuBarImage()` → `SynfusMark.dessinerGlyphe`).
+  Ne jamais retoucher les PNG : modifier `SynfusMark`, relancer le script.
+- Repère 1024 × 1024, y vers le bas. `treillis(pixels:)` allège le treillis en petit (moins de
+  rubans, plus larges) ; le trait ne descend pas sous `traitMinimalPixels`.
+- Le treillis de devant est **une pièce** : contours de tout puis plein de tout, coupés par la
+  silhouette, avec un rebord. Un effet sur la pièce (biseau) efface dans un calque en
+  remplissage plein, jamais en pair-impair : les croisements compteraient deux fois.
+- Le glyphe est une image *template* : seule l'opacité compte ; jours du treillis et détourage
+  de l'œuf passent par un effacement de l'alpha (`.clear` / `.destinationOut`), jamais par un
+  trait. Il a son propre dessin à plat (rubans vus de face, feuilles trapues) : le volume ne
+  se lit plus à 18 pt.

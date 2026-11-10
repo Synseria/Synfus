@@ -116,7 +116,7 @@ nouveau fichier va dans le dossier de son domaine ; un fichier sans domaine en a
 | `Lecture/` | OCR position, combat, suivis de chasse et de quêtes, vie et tchat : `ZoneEcran`, `PositionCarte`, `LectureCombat`, `LumaBitmap`, `Ressemblance`, `DetectionZones` (purs), `LecteurEcran` (+ `GenreLecture`, `DiagnosticLecture`, `MoteurOCR`), `CapturesCalibrage`, `AutoCalibrage` (zones retrouvées sur une capture) |
 | `Preferences/` | `Preferences`, protocole `PreferencesStore` |
 | `Classes/` | `DofusClass` (table intégrée, `Catalogue`, purs), `ClassesDofusDB` (liste `breeds`, cache disque, fusion), `ClassesStore` (emblèmes DofusDB ou icône de l'utilisateur) |
-| `Marque/` | La Couvée : `SynfusMark` (CoreGraphics pur), `SynfusGlyph` |
+| `Marque/` | L'Œuf ajouré : `SynfusMark` (CoreGraphics pur, icône et glyphe), `SynfusGlyph` (barre de menus) |
 | `Localisation/` | `L()`, choix de langue ; tables dans `Resources/Localisation/` |
 | `Interface/` | `MenuBarController`, `ConfirmationFermeture`, `ImagesCarte` (vignette de carte, vue agrandie au survol, pictogramme d'un lieu) ; `Barre/` (barre flottante) ; `Reglages/` (une vue par onglet) |
 
