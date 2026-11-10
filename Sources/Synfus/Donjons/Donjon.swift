@@ -57,7 +57,6 @@ struct Donjon: Equatable, Sendable {
 /// Tous les donjons, et le nom de leurs boss : de quoi retrouver la fiche
 /// d'un donjon par son repère sur la carte ou par le nom d'un boss. Pur.
 struct Donjons: Sendable {
-    let liste: [Donjon]
     /// Le nom de chaque boss de donjon, par identifiant DofusDB.
     let nomsBoss: [Int: [String: String]]
     private let parId: [Int: Donjon]
@@ -69,7 +68,6 @@ struct Donjons: Sendable {
         func premiers<Cle: Hashable>(_ paires: [(Cle, Donjon)]) -> [Cle: Donjon] {
             Dictionary(paires, uniquingKeysWith: { premier, _ in premier })
         }
-        self.liste = liste
         self.nomsBoss = nomsBoss
         parId = premiers(liste.map { ($0.id, $0) })
         parEntree = premiers(liste.compactMap { donjon in donjon.entree.map { ($0, donjon) } })
