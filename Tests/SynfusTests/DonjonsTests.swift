@@ -64,4 +64,48 @@ struct DonjonsTests {
         contexte.donjons = nil
         #expect(RecherchePalette.lieux(contexte).first?.effet == .trajet(x: -67, y: -75, sousZone: 794))
     }
+
+    @Test("Fiche au clavier : entrée et guide d'emblée, clef et dépliables avec le détail ; ↵ par défaut va à l'entrée")
+    func cartes() throws {
+        let donjon = try #require(try Self.donjons().donjon(id: 71))
+        let entree = Self.lieu("Donjon du Comte Harebourg", carte: 112460048)
+        let attente = CartesFiche.donjon(entree: entree, guide: donjon.nomFrancais, detail: nil)
+        #expect(attente.rangees == [[.entree(entree), .guide("Donjon du Comte Harebourg")], []])
+        #expect(attente.parDefaut == .entree(entree))
+        #expect(CartesFiche.donjon(entree: nil, guide: nil, detail: nil).parDefaut == nil)
+
+        let boss = DetailDonjon.Monstre(id: 3416, noms: [:], boss: true, fiche: Self.fiche)
+        let mansot = DetailDonjon.Monstre(id: 3384, noms: [:], boss: false, fiche: Self.fiche)
+        let detail = DetailDonjon(monstres: [boss, mansot], clefs: [.init(objet: 14047, noms: [:], quantite: 1)],
+                                  succes: [.init(noms: [:], description: [:])])
+        let cartes = CartesFiche.donjon(entree: entree, guide: "Guide", detail: detail)
+        #expect(cartes.rangees == [[.entree(entree), .guide("Guide"), .clef(objet: 14047)], [.monstres, .succes]])
+        // Seuls des boss : rien à déplier pour les monstres.
+        #expect(CartesFiche.donjon(entree: entree, guide: nil, detail: DetailDonjon(monstres: [boss], clefs: [], succes: []))
+            .rangees == [[.entree(entree)], []])
+    }
+
+    @Test("Fiche au clavier : ↓ entre et descend de rangée, ↑ remonte jusqu'à la ligne, ←/→ restent dans la rangée")
+    func navigation() {
+        typealias P = CartesFiche.Position
+        let cartes = CartesFiche(rangees: [[.guide("a"), .guide("b"), .guide("c")], [], [.monstres, .succes]])
+        #expect(cartes.dessous(nil) == P(rangee: 0, colonne: 0))
+        // La rangée vide est sautée, la colonne gardée au plus près.
+        #expect(cartes.dessous(P(rangee: 0, colonne: 2)) == P(rangee: 2, colonne: 1))
+        #expect(cartes.dessous(P(rangee: 2, colonne: 0)) == nil)
+        #expect(cartes.dessus(P(rangee: 2, colonne: 1)) == P(rangee: 0, colonne: 1))
+        #expect(cartes.dessus(P(rangee: 0, colonne: 1)) == nil)
+        #expect(cartes.derniere == P(rangee: 2, colonne: 0))
+        #expect(cartes.laterale(P(rangee: 0, colonne: 2), 1) == P(rangee: 0, colonne: 2))
+        #expect(cartes.laterale(P(rangee: 0, colonne: 2), -1) == P(rangee: 0, colonne: 1))
+        #expect(cartes.action(P(rangee: 2, colonne: 1)) == .succes)
+        #expect(cartes.valide(P(rangee: 1, colonne: 0)) == nil)
+        #expect(cartes.valide(P(rangee: 0, colonne: 5)) == P(rangee: 0, colonne: 2))
+        #expect(CartesFiche.vide.dessous(nil) == nil && CartesFiche.vide.derniere == nil)
+    }
+
+    private static let fiche = FicheCombat(FicheCombat.MonstreAPI(
+        id: 1, name: nil, grades: [.init(grade: 1, level: 1, lifePoints: 1, actionPoints: 1, movementPoints: 1,
+                                         reductionNeutral: nil, reductionEarth: nil, reductionFire: nil,
+                                         reductionWater: nil, reductionAir: nil)]))!
 }
