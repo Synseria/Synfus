@@ -285,8 +285,7 @@ enum RecherchePalette {
 
     static func lieux(_ contexte: ContextePalette) -> [EntreePalette] {
         contexte.lieux.filter { !$0.estZaap }.map { lieu in
-            let vers = versCase((lieu.x, lieu.y), sousZone: lieu.idSousZone,
-                                dansLesDouze: !contexte.reseau.horsDesDouze(lieu.idSousZone), contexte)
+            let vers = versLieu(lieu, contexte)
             // Un donjon déplie sa fiche, qui copie aussi son trajet.
             let donjon = lieu.categorie == CategorieLieu.donjon.rawValue ? contexte.donjons?.donjon(de: lieu) : nil
             let lieuDit = [lieu.sousZone(en: contexte.langue), lieu.zone(en: contexte.langue)]
@@ -460,6 +459,14 @@ enum RecherchePalette {
     static func trajetVers(_ cible: (x: Int, y: Int), sousZone: Int?, _ contexte: ContextePalette) -> ItineraireZaap.Trajet? {
         ItineraireZaap.trajet(vers: cible, sousZone: sousZone, depuis: contexte.position,
                               gainMinimal: contexte.gainMinimal, zaaps: contexte.zaaps, zaapDuJeu: contexte.zaapDuJeu)
+    }
+
+    /// Ce qu'une entrée vers ce lieu montre et fait : sa ligne, et l'entrée
+    /// d'un donjon dans sa fiche.
+    static func versLieu(_ lieu: Lieu, _ contexte: ContextePalette)
+        -> (trajet: ItineraireZaap.Trajet?, distance: Int?, effet: EntreePalette.Effet) {
+        versCase((lieu.x, lieu.y), sousZone: lieu.idSousZone, dansLesDouze: !contexte.reseau.horsDesDouze(lieu.idSousZone),
+                 contexte)
     }
 
     /// Ce qu'une entrée qui mène à une case montre et fait — un seul chemin

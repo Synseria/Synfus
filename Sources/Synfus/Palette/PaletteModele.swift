@@ -19,11 +19,21 @@ final class PaletteModele: ObservableObject {
             recalculer()
         }
     }
-    /// L'entrée dont « Où trouver » est déplié sous la ligne (monstre, objet).
-    @Published private(set) var deplie: String?
+    /// L'entrée dont la fiche est dépliée sous la ligne : où trouver un
+    /// monstre ou un objet, un donjon.
+    @Published private(set) var deplie: String? {
+        didSet {
+            guard deplie != oldValue else { return }
+            carte = nil
+            ouvertes = []
+        }
+    }
+    /// La carte de la fiche dépliée où est le clavier ; `nil` : sur la ligne.
+    @Published private(set) var carte: CartesFiche.Position?
+    /// Les cartes de la fiche dépliée ouvertes (clef, monstres, succès).
+    @Published private(set) var ouvertes: Set<ActionFiche> = []
     @Published private(set) var entrees: [EntreePalette] = []
-    /// La famille montrée, que Tab fait défiler ; revient à « Tout » à
-    /// chaque ouverture.
+    /// La famille montrée, que Tab fait défiler.
     @Published private(set) var filtre: FiltrePalette = .tout
     @Published private(set) var tri: TriPalette = .proximite
     @Published var selection = 0
@@ -131,36 +141,67 @@ final class PaletteModele: ObservableObject {
     /// Les dernières copies, montrées au-dessus des cartes.
     var recents: [EntreePalette] { RecherchePalette.recents(contexte) }
 
+    /// La palette reprend où on l'a laissée : recherche (que le panneau
+    /// sélectionne, une lettre la remplace), filtre, ligne et fiche dépliée,
+    /// distances refaites depuis la position du moment. Échap vide avant de
+    /// fermer : rouvrir est alors vierge.
     func ouvrir() {
         if contexteImpose == nil {
             QuetesStore.shared.preparer()
             AlmanaxStore.shared.preparer()
             DonjonsStore.shared.charger()
         }
-        contexte = contexteImpose ?? Self.contexteCourant()
-        filtre = .tout
         tri = contexteImpose == nil ? Preferences.shared.paletteTri : tri
         edition = nil
-        requete = ""
-        selection = 0
-        deplie = nil
-        recalculer()
+        rafraichir()
+        if let deplie, !entrees.contains(where: { $0.id == deplie }) { self.deplie = nil }
+        carte = cartes.valide(carte)
         ouverture += 1
     }
 
     // MARK: - Clavier
 
-    /// Flèches : de carte en carte dans la grille, de ligne en ligne sinon.
+    /// Flèches : de carte en carte dans la grille, de ligne en ligne sinon —
+    /// en passant par les rangées de la fiche dépliée.
     func deplacer(colonne: Int = 0, ligne: Int = 0) {
         guard !entrees.isEmpty else { return }
+        if !enGrille, ligne != 0, surLaFiche {
+            if ligne > 0, let dessous = cartes.dessous(carte) { carte = dessous; return }
+            if ligne < 0, let position = carte { carte = cartes.dessus(position); return }
+        }
         let pas = colonne + ligne * (enGrille ? Self.colonnes : 1)
+        let avant = selection
+        carte = nil
         selection = min(max(selection + pas, 0), entrees.count - 1)
+        // En remontant sur une fiche dépliée, on arrive par sa dernière rangée.
+        if ligne < 0, selection != avant, surLaFiche { carte = cartes.derniere }
     }
 
+    /// ← et → hors de la grille : de carte en carte dans une rangée ; ← sur
+    /// une ligne dépliée la replie. `false` : la flèche reste au champ.
+    func lateral(_ pas: Int) -> Bool {
+        guard !enGrille, edition == nil, surLaFiche else { return false }
+        if let position = carte {
+            carte = cartes.laterale(position, pas)
+            return true
+        }
+        guard pas < 0 else { return false }
+        deplie = nil
+        return true
+    }
+
+    /// ↵ : la carte choisie de la fiche ; sur une ligne déjà dépliée, son
+    /// geste par défaut (aller à l'entrée du donjon, au repaire le plus proche) ;
+    /// sinon l'entrée elle-même.
     func valider() {
         if edition != nil { return validerEtiquette() }
         guard entrees.indices.contains(selection) else { return NSSound.beep() }
-        executer(entrees[selection])
+        let entree = entrees[selection]
+        if surLaFiche {
+            if let action = cartes.action(carte) ?? cartes.parDefaut { return agir(action) }
+            if case .ouTrouver(.monstre(let id)) = entree.effet { return copierLePlusProche(monstre: id) }
+        }
+        executer(entree)
     }
 
     /// Tab : compléter une commande, sinon passer au filtre suivant (⇧Tab :
@@ -220,8 +261,13 @@ final class PaletteModele: ObservableObject {
         RecherchePalette.texte(de: entree.effet, contexte)
     }
 
+    /// Un clic : la ligne choisie, puis son effet.
     func executer(_ entree: EntreePalette) {
         UsageStore.shared.compter(.palette(entree.genre))
+        if let index = entrees.firstIndex(where: { $0.id == entree.id }) {
+            selection = index
+            carte = nil
+        }
         switch entree.effet {
         case .copier, .trajet:
             guard let texte = texteACopier(entree) else { return }
@@ -239,13 +285,65 @@ final class PaletteModele: ObservableObject {
         }
     }
 
+    // MARK: - Fiche dépliée
+
+    /// La sélection est sur la ligne dépliée ou dans sa fiche.
+    private var surLaFiche: Bool {
+        entrees.indices.contains(selection) && entrees[selection].id == deplie
+    }
+
+    /// Les cartes de la fiche dépliée, refaites à chaque lecture : le détail
+    /// du donjon arrive après l'ouverture.
+    var cartes: CartesFiche {
+        guard let deplie, let entree = entrees.first(where: { $0.id == deplie }),
+              case .donjon(let id) = entree.effet, let donjon = DonjonsStore.shared.donjons?.donjon(id: id)
+        else { return .vide }
+        return .donjon(entree: Self.entree(de: donjon), guide: donjon.nomFrancais,
+                       detail: DonjonsStore.shared.details[id])
+    }
+
+    /// Le repère de l'entrée d'un donjon sur la carte : par sa carte, sinon par son nom.
+    private static func entree(de donjon: Donjon) -> Lieu? {
+        let reperes = CarteStore.shared.reperes
+        return donjon.entree.flatMap(reperes.donjon(carte:)) ?? donjon.nomFrancais.flatMap(reperes.donjon(nom:))
+    }
+
+    /// La carte de la fiche dépliée, à la souris : choisie, puis faite.
+    func cliquer(_ position: CartesFiche.Position) {
+        guard let action = cartes.action(position) else { return }
+        if let index = entrees.firstIndex(where: { $0.id == deplie }) { selection = index }
+        carte = position
+        agir(action)
+    }
+
+    func agir(_ action: ActionFiche) {
+        switch action {
+        case .entree(let lieu): copierTrajet(vers: lieu)
+        case .guide(let nom): Task { await DofusPourLesNoobs.ouvrir(nom) }
+        case .clef, .monstres, .succes:
+            if ouvertes.remove(action) == nil { ouvertes.insert(action) }
+        }
+    }
+
+    /// Le trajet jusqu'à un lieu et ce qu'en dit sa ligne (« via … · 6 cartes »).
+    func versLieu(_ lieu: Lieu) -> (texte: String?, itineraire: String?) {
+        let vers = RecherchePalette.versLieu(lieu, contexte)
+        return (RecherchePalette.texte(de: vers.effet, contexte), RecherchePalette.itineraire(vers.trajet, contexte.langue))
+    }
+
+    private func copierLePlusProche(monstre id: Int) {
+        Task {
+            guard await OuTrouverStore.shared.copierLePlusProche(monstre: id) else { return NSSound.beep() }
+            PalettePanel.shared.fermer()
+        }
+    }
+
     /// Le Sanctuaire de l'Almanax, s'il est sur la carte.
     var sanctuaire: Lieu? { CarteStore.shared.reperes.lieu(id: Almanax.sanctuaire) }
 
     /// Le trajet jusqu'à un lieu, zaap compris — la décision des entrées de lieux.
     func copierTrajet(vers lieu: Lieu) {
-        guard let texte = RecherchePalette.texte(de: .trajet(x: lieu.x, y: lieu.y, sousZone: lieu.idSousZone), contexte)
-        else { return }
+        guard let texte = versLieu(lieu).texte else { return }
         copier(texte)
     }
 
@@ -293,12 +391,13 @@ final class PaletteModele: ObservableObject {
         rafraichir()
     }
 
-    /// Après un favori ou une étiquette : même recherche, même sélection.
+    /// Après un favori, une étiquette, à la réouverture : même recherche,
+    /// même sélection, contexte relu.
     private func rafraichir() {
         let gardee = entrees.indices.contains(selection) ? entrees[selection].id : nil
         contexte = contexteImpose ?? Self.contexteCourant()
         recalculer()
-        if let gardee, let index = entrees.firstIndex(where: { $0.id == gardee }) { selection = index }
+        selection = gardee.flatMap { id in entrees.firstIndex { $0.id == id } } ?? 0
     }
 
     private func recalculer() {
