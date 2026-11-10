@@ -100,10 +100,21 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
         case ouvrirQuete(Int)
         /// Déplie sous la ligne où trouver le monstre ou l'objet (`OuTrouverVue`).
         case ouTrouver(OuTrouver.Sujet)
+        /// Déplie sous la ligne la fiche du donjon (`FicheDonjonVue`) : un
+        /// donjon de la carte ou l'un de ses boss.
+        case donjon(Int)
         /// Copie le trajet vers la case, zaap compris s'il vaut le coup —
         /// calculé seulement pour l'entrée choisie (`texte(de:)`).
         case trajet(x: Int, y: Int, sousZone: Int?)
         case action(ActionPalette)
+
+        /// Entrée déplie quelque chose sous la ligne plutôt que de copier.
+        var sePlie: Bool {
+            switch self {
+            case .ouTrouver, .donjon: return true
+            case .copier, .completer, .ouvrirQuete, .trajet, .action: return false
+            }
+        }
     }
 
     let id: String
@@ -163,6 +174,8 @@ struct ContextePalette: Sendable {
     var invitations: [(nom: String, commande: String)] = []
     /// `nil` tant qu'elles ne sont pas téléchargées.
     var quetes: Quetes?
+    /// `nil` tant qu'ils ne sont pas téléchargés.
+    var donjons: Donjons?
 }
 
 /// La recherche de la palette. Pure : un texte et un contexte, des entrées
@@ -217,7 +230,7 @@ enum RecherchePalette {
         switch effet {
         case .copier(let texte): return texte
         case .trajet(let x, let y, let sousZone): return trajet(vers: (x, y), sousZone: sousZone, contexte)
-        case .completer, .action, .ouvrirQuete, .ouTrouver: return nil
+        case .completer, .action, .ouvrirQuete, .ouTrouver, .donjon: return nil
         }
     }
 
@@ -274,6 +287,8 @@ enum RecherchePalette {
         contexte.lieux.filter { !$0.estZaap }.map { lieu in
             let vers = versCase((lieu.x, lieu.y), sousZone: lieu.idSousZone,
                                 dansLesDouze: !contexte.reseau.horsDesDouze(lieu.idSousZone), contexte)
+            // Un donjon déplie sa fiche, qui copie aussi son trajet.
+            let donjon = lieu.categorie == CategorieLieu.donjon.rawValue ? contexte.donjons?.donjon(de: lieu) : nil
             let lieuDit = [lieu.sousZone(en: contexte.langue), lieu.zone(en: contexte.langue)]
                 .compactMap { $0 }.joined(separator: " · ")
             return EntreePalette(
@@ -284,8 +299,21 @@ enum RecherchePalette {
                 carte: lieu.idCarte, pictogramme: lieu.gfx,
                 ici: contexte.position.map { QuetesIci.ici(PNJ.Position(x: lieu.x, y: lieu.y), sousZone: lieu.idSousZone,
                                                           perso: $0, reseau: contexte.reseau) } ?? false,
-                interieur: contexte.interieurs.contient(lieu.idCarte), effet: vers.effet)
+                interieur: contexte.interieurs.contient(lieu.idCarte), effet: donjon.map { .donjon($0.id) } ?? vers.effet)
         }
+    }
+
+    /// Les boss de donjon : leur nom déplie la fiche de leur donjon, la même
+    /// que le donjon cherché par son nom.
+    static func boss(_ contexte: ContextePalette) -> [EntreePalette] {
+        guard let donjons = contexte.donjons else { return [] }
+        return donjons.nomsBoss.compactMap { id, noms in
+            guard let nom = Lieu.traduit(noms, contexte.langue), let donjon = donjons.donjon(boss: id) else { return nil }
+            let lieu = Lieu.traduit(donjon.noms, contexte.langue) ?? "?"
+            return EntreePalette(id: "boss:\(id)", genre: .monstre, titre: nom, sousTitre: L("palette.boss", lieu),
+                                 effet: .donjon(donjon.id))
+        }
+        .alphabetiques()
     }
 
     private static func invitations(_ contexte: ContextePalette) -> [EntreePalette] {
@@ -346,7 +374,9 @@ enum RecherchePalette {
     /// téléchargé ; Entrée déplie où les trouver.
     static func monstres(_ contexte: ContextePalette) -> [EntreePalette] {
         (contexte.quetes?.monstres ?? [:]).compactMap { id, noms in
-            guard let numero = Int(id), let nom = Lieu.traduit(noms, contexte.langue) else { return nil }
+            // Un boss de donjon a sa fiche (`boss`), où trouver compris : le donjon.
+            guard let numero = Int(id), contexte.donjons?.donjon(boss: numero) == nil,
+                  let nom = Lieu.traduit(noms, contexte.langue) else { return nil }
             return EntreePalette(id: "monstre:\(id)", genre: .monstre, titre: nom, sousTitre: L("palette.monstre"),
                                  effet: .ouTrouver(.monstre(numero)))
         }
@@ -712,7 +742,7 @@ final class IndexPalette {
     /// La grille, quand rien n'est tapé.
     private(set) lazy var accueil = RecherchePalette.accueil(contexte, zaaps: zaaps.map(\.entree),
                                                             lieux: lieux.map(\.entree))
-    private(set) lazy var monstres = fiches(RecherchePalette.monstres(contexte))
+    private(set) lazy var monstres = fiches(RecherchePalette.boss(contexte) + RecherchePalette.monstres(contexte))
     private(set) lazy var objets = fiches(RecherchePalette.objets(contexte))
     /// Sans préfixe : zaaps, lieux, quêtes, PNJ, gestes, dernières copies,
     /// monstres et objets.

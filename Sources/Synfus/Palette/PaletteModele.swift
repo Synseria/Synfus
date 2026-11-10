@@ -63,6 +63,17 @@ final class PaletteModele: ObservableObject {
                 }
             }
             .store(in: &abonnements)
+        DonjonsStore.shared.$donjons
+            .dropFirst()
+            .sink { donjons in
+                MainActor.assumeIsolated {
+                    let modele = PaletteModele.shared
+                    modele.contexte.donjons = donjons
+                    modele.recalculer()
+                    modele.prechauffer()
+                }
+            }
+            .store(in: &abonnements)
         // Publiée avant d'être affectée, la carte se relit au tour suivant,
         // avec les zaaps qu'on en tire.
         CarteStore.shared.$carte
@@ -124,6 +135,7 @@ final class PaletteModele: ObservableObject {
         if contexteImpose == nil {
             QuetesStore.shared.preparer()
             AlmanaxStore.shared.preparer()
+            DonjonsStore.shared.charger()
         }
         contexte = contexteImpose ?? Self.contexteCourant()
         filtre = .tout
@@ -213,7 +225,7 @@ final class PaletteModele: ObservableObject {
         case .copier, .trajet:
             guard let texte = texteACopier(entree) else { return }
             copier(texte)
-        case .ouTrouver:
+        case .ouTrouver, .donjon:
             deplie = deplie == entree.id ? nil : entree.id
         case .completer(let texte):
             requete = texte
@@ -310,6 +322,7 @@ final class PaletteModele: ObservableObject {
         contexte.favoris = prefs.favoris
         contexte.recents = prefs.paletteRecents
         contexte.quetes = QuetesStore.shared.quetes
+        contexte.donjons = DonjonsStore.shared.donjons
         contexte.gainMinimal = prefs.zaapGainMinimal
         contexte.zaapDuJeu = prefs.zaapDuJeu
         contexte.intercalees = prefs.commandesIntercalees

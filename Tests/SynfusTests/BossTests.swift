@@ -71,9 +71,9 @@ struct BossTests {
                    {"grade":5,"level":160,"lifePoints":10000,"actionPoints":12,"movementPoints":7,
                     "reductionEarth":400,"reductionFire":-20}]}
         """
-        let fiche = try #require(FicheBoss(try JSONDecoder().decode(FicheBoss.MonstreAPI.self, from: Data(json.utf8))))
+        let fiche = try #require(FicheCombat(try JSONDecoder().decode(FicheCombat.MonstreAPI.self, from: Data(json.utf8))))
         #expect([fiche.niveau, fiche.vie, fiche.pa, fiche.pm] as [Int] == [160, 10000, 12, 7])
         #expect(fiche.resistances[.terre] == 400 && fiche.resistances[.feu] == -20 && fiche.resistances[.air] == 0)
-        #expect(FicheBoss(FicheBoss.MonstreAPI(grades: [])) == nil)
+        #expect(FicheCombat(FicheCombat.MonstreAPI(id: nil, name: nil, grades: [])) == nil)
     }
 }
