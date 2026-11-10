@@ -3,6 +3,23 @@
 Une section par version, `## X.Y.Z — AAAA-MM-JJ` : la release GitHub de `vX.Y.Z` en reprend le
 contenu (`Tools/notes-de-version.sh`), et `sh build.sh --publish` refuse une version absente d'ici.
 
+## 0.13.0 — 2026-11-10
+
+### Nouveautés
+
+- **Fiche d'un donjon** dans la palette, la même qu'on cherche le donjon ou l'un de ses boss :
+  niveau conseillé, trajet jusqu'à l'entrée, guide Dofus pour les noobs, clef (et où la trouver),
+  boss et monstres avec niveau, PV, PA, PM et résistances, succès.
+- **Combat des persos derrière** (Réglages → Lecture de l'écran, sous « Lire le combat ») : leur
+  pastille montre le décompte de leur tour même quand tu ne les regardes pas, Dofus en
+  arrière-plan compris. En fenêtré seulement.
+- **Almanax en deux temps** : « Nom » copie l'offrande pour l'hôtel de vente, « Sanctuaire » le
+  trajet pour la rendre.
+
+### Améliorations
+
+- Une pastille en combat, sans que ce soit son tour, prend un cadre rose discret.
+
 ## 0.12.0 — 2026-11-10
 
 ![La fiche de quête](https://raw.githubusercontent.com/Synseria/Synfus/v0.12.0/docs/screenshots/quete.png)
