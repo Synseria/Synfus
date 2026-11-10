@@ -28,8 +28,8 @@ contenu (`Tools/notes-de-version.sh`), et `sh build.sh --publish` refuse une ver
 - **Palette** : rouverte, elle reprend où on l'a laissée — recherche toute sélectionnée (une
   lettre la remplace), filtre, ligne et fiche dépliée. Le perso d'où partent les trajets passe à
   côté du champ, lisible en entier.
-- **Fiche d'un donjon au clavier** : ↵ la déplie, le clavier sur « Entrée » (↵ encore : trajet
-  copié) ; ←/→ passe d'une carte à l'autre (guide, clef, conseils, monstres, succès), ↑ revient à
+- **Fiche d'un donjon au clavier** : ↵ la déplie, le clavier sur « Position » (↵ encore : trajet
+  copié) ; ←/→ passe d'une carte à l'autre, sur une ligne (guide, conseils, monstres, succès, clef), ↑ revient à
   la ligne, ↵ y replie. Les **conseils tactiques** de Dofus pour les noobs se déplient dans la
   fiche, et chaque boss ou monstre dit les éléments à frapper et à éviter d'après ses résistances.
 
