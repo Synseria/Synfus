@@ -64,10 +64,11 @@ final class ZaapClipboard: ObservableObject {
     /// depuis le perso devant — le même calcul que pour un `/travel` copié.
     /// Hors du Monde des Douze, le `/travel` seul : ses coordonnées recoupent
     /// celles d'Amakna, un zaap d'Amakna y mènerait à tort. Chaque appelant
-    /// dit où est la case : un oubli copierait ce zaap-là.
-    func copierTrajet(vers cible: (x: Int, y: Int), dansLesDouze: Bool) {
+    /// dit où est la case, et sa sous-zone quand il la connaît : un oubli
+    /// copierait ce zaap-là, ou celui de la couche d'en dessous (la Canopée).
+    func copierTrajet(vers cible: (x: Int, y: Int), sousZone: Int?, dansLesDouze: Bool) {
         let travel = ItineraireZaap.travel(vers: cible)
-        guard dansLesDouze, let nouveau = itineraire(travel) else { return poser(travel) }
+        guard dansLesDouze, let nouveau = itineraire(travel, sousZone: sousZone) else { return poser(travel) }
         poser(nouveau)
         signaler()
     }
@@ -85,13 +86,14 @@ final class ZaapClipboard: ObservableObject {
     /// L'ordre le plus court pour passer par toutes ces cases depuis le perso
     /// devant, zaaps compris — le calcul même de `copierTrajet`, trajet par
     /// trajet (`Tournee`). `nil` : position inconnue, ou hors du Monde des Douze.
-    func tournee(_ cases: [(id: Int, x: Int, y: Int)]) -> [Int]? {
+    func tournee(_ cases: [(id: Int, x: Int, y: Int, sousZone: Int?)]) -> [Int]? {
         guard let depart = ItineraireZaap.rejoindre(LecteurEcran.shared.positionDuPersoDevant) else { return nil }
-        let cle = [revisionTrajets, depart.x, depart.y] + cases.flatMap { [$0.id, $0.x, $0.y] }
+        let cle = [revisionTrajets, depart.x, depart.y] + cases.flatMap { [$0.id, $0.x, $0.y, $0.sousZone ?? -1] }
         return tourneeGardee.valeur(pour: cle) {
             let couts = Couts()
             let parId = Dictionary(cases.map { ($0.id, (x: $0.x, y: $0.y)) }, uniquingKeysWith: { a, _ in a })
-            let zaapDe = parId.mapValues(couts.zaap)
+            let zaapDe = Dictionary(cases.map { ($0.id, couts.zaap(($0.x, $0.y), sousZone: $0.sousZone)) },
+                                    uniquingKeysWith: { a, _ in a })
             func cout(_ depuis: (x: Int, y: Int), _ vers: Int) -> Int {
                 couts.depuis(depuis, vers: parId[vers]!, zaap: zaapDe[vers] ?? nil)
             }
@@ -107,12 +109,12 @@ final class ZaapClipboard: ObservableObject {
         let zaapDuJeu = Preferences.shared.zaapDuJeu
         let gainMinimal = Preferences.shared.zaapGainMinimal
 
-        nonisolated func zaap(_ cible: (x: Int, y: Int)) -> Zaap? {
-            ItineraireZaap.zaap(vers: cible, parmi: zaaps, zaapDuJeu: zaapDuJeu)
+        nonisolated func zaap(_ cible: (x: Int, y: Int), sousZone: Int?) -> Zaap? {
+            ItineraireZaap.zaap(vers: cible, sousZone: sousZone, parmi: zaaps, zaapDuJeu: zaapDuJeu)
         }
 
         nonisolated func depuis(_ depart: (x: Int, y: Int), vers cible: (x: Int, y: Int)) -> Int {
-            depuis(depart, vers: cible, zaap: zaap(cible))
+            depuis(depart, vers: cible, zaap: zaap(cible, sousZone: nil))
         }
 
         nonisolated func depuis(_ depart: (x: Int, y: Int), vers cible: (x: Int, y: Int), zaap: Zaap?) -> Int {
@@ -155,15 +157,15 @@ final class ZaapClipboard: ObservableObject {
 
     @discardableResult
     private func reecrire() -> Bool {
-        guard let texte = PressePapiers.lire(), let nouveau = itineraire(texte) else { return false }
+        guard let texte = PressePapiers.lire(), let nouveau = itineraire(texte, sousZone: nil) else { return false }
         poser(nouveau)
         signaler()
         return true
     }
 
-    private func itineraire(_ texte: String) -> String? {
+    private func itineraire(_ texte: String, sousZone: Int?) -> String? {
         let prefs = Preferences.shared
-        return ItineraireZaap.reecrire(texte, depuis: LecteurEcran.shared.positionDuPersoDevant,
+        return ItineraireZaap.reecrire(texte, sousZone: sousZone, depuis: LecteurEcran.shared.positionDuPersoDevant,
                                        gainMinimal: prefs.zaapGainMinimal, zaaps: zaapsSitues,
                                        zaapDuJeu: prefs.zaapDuJeu, intercalees: prefs.commandesIntercalees)
     }

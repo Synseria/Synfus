@@ -377,7 +377,7 @@ struct BarView: View {
                 if client.name != lecteur.persoDevant,
                    let cible = ItineraireZaap.rejoindre(lecteur.positions[client.name]) {
                     Button(L("barre.rejoindre", client.name, Coordonnees.texte(cible.x, cible.y))) {
-                        ZaapClipboard.shared.copierTrajet(vers: cible, dansLesDouze: true)
+                        ZaapClipboard.shared.copierTrajet(vers: cible, sousZone: nil, dansLesDouze: true)
                     }
                 }
                 Button(L("barre.fermer", client.name)) { manager.close(client) }

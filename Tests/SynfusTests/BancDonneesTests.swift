@@ -29,7 +29,7 @@ struct BancDonneesTests {
 
     private static let position = PositionCarte(x: 2, y: -3, zone: "Amakna (Village d'Amakna)")
     private static let reseau = ReseauSousZones(Carte.integree)
-    private static let zaaps = ZaapsSitues(CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [], choix: [:]),
+    private static let zaaps = ZaapsSitues(CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [], choix: [:], reseau: reseau),
                                            reseau: reseau)
 
     @Test("Lancement : ce qui se lit et s'indexe hors du fil principal", .enabled(if: chemin != nil))
@@ -166,14 +166,14 @@ struct BancDonneesTests {
     /// Ce que coûte un trajet copié, zaap compris (`ZaapClipboard.Couts`).
     private static func cout(_ depart: (x: Int, y: Int), _ cible: (x: Int, y: Int)) -> Int {
         ItineraireZaap.cartes(depuis: depart, vers: cible,
-                              zaap: ItineraireZaap.zaap(vers: cible, parmi: zaaps, zaapDuJeu: true), gainMinimal: 5)
+                              zaap: ItineraireZaap.zaap(vers: cible, sousZone: nil, parmi: zaaps, zaapDuJeu: true), gainMinimal: 5)
     }
 
     /// Ce que calcule `ZaapClipboard.tournee`, sans le perso devant ni la garde.
     private static func tournee(_ cases: [(id: Int, x: Int, y: Int)]) -> [Int] {
         let depart = (x: position.x, y: position.y)
         let parId = Dictionary(uniqueKeysWithValues: cases.map { ($0.id, (x: $0.x, y: $0.y)) })
-        let zaapDe = parId.mapValues { ItineraireZaap.zaap(vers: $0, parmi: zaaps, zaapDuJeu: true) }
+        let zaapDe = parId.mapValues { ItineraireZaap.zaap(vers: $0, sousZone: nil, parmi: zaaps, zaapDuJeu: true) }
         func cout(_ depuis: (x: Int, y: Int), _ vers: Int) -> Int {
             ItineraireZaap.cartes(depuis: depuis, vers: parId[vers]!, zaap: zaapDe[vers] ?? nil, gainMinimal: 5)
         }
