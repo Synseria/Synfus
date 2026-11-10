@@ -65,43 +65,79 @@ struct DonjonsTests {
         #expect(RecherchePalette.lieux(contexte).first?.effet == .trajet(x: -67, y: -75, sousZone: 794))
     }
 
-    @Test("Fiche au clavier : entrée et guide d'emblée, clef et dépliables avec le détail ; ↵ par défaut va à l'entrée")
+    @Test("Fiche au clavier : entrée en tête, puis guide ; clef, conseils et dépliables avec ce qui arrive")
     func cartes() throws {
         let donjon = try #require(try Self.donjons().donjon(id: 71))
         let entree = Self.lieu("Donjon du Comte Harebourg", carte: 112460048)
-        let attente = CartesFiche.donjon(entree: entree, guide: donjon.nomFrancais, detail: nil)
-        #expect(attente.rangees == [[.entree(entree), .guide("Donjon du Comte Harebourg")], []])
-        #expect(attente.parDefaut == .entree(entree))
-        #expect(CartesFiche.donjon(entree: nil, guide: nil, detail: nil).parDefaut == nil)
+        let attente = CartesFiche.donjon(entree: entree, guide: donjon.nomFrancais, detail: nil, conseils: false)
+        #expect(attente.actions == [.entree(entree), .guide("Donjon du Comte Harebourg")])
+        #expect(attente.premiere == .entree(entree))
 
         let boss = DetailDonjon.Monstre(id: 3416, noms: [:], boss: true, fiche: Self.fiche)
         let mansot = DetailDonjon.Monstre(id: 3384, noms: [:], boss: false, fiche: Self.fiche)
         let detail = DetailDonjon(monstres: [boss, mansot], clefs: [.init(objet: 14047, noms: [:], quantite: 1)],
                                   succes: [.init(noms: [:], description: [:])])
-        let cartes = CartesFiche.donjon(entree: entree, guide: "Guide", detail: detail)
-        #expect(cartes.rangees == [[.entree(entree), .guide("Guide"), .clef(objet: 14047)], [.monstres, .succes]])
+        let cartes = CartesFiche.donjon(entree: entree, guide: "Guide", detail: detail, conseils: true)
+        #expect(cartes.actions == [.entree(entree), .guide("Guide"), .clef(objet: 14047), .conseils, .monstres, .succes])
         // Seuls des boss : rien à déplier pour les monstres.
-        #expect(CartesFiche.donjon(entree: entree, guide: nil, detail: DetailDonjon(monstres: [boss], clefs: [], succes: []))
-            .rangees == [[.entree(entree)], []])
+        #expect(CartesFiche.donjon(entree: nil, guide: nil, detail: DetailDonjon(monstres: [boss], clefs: [], succes: []),
+                                   conseils: false) == .vide)
     }
 
-    @Test("Fiche au clavier : ↓ entre et descend de rangée, ↑ remonte jusqu'à la ligne, ←/→ restent dans la rangée")
+    @Test("Fiche au clavier : ←/→ restent dans la rangée ; le clavier tient une carte, pas un rang")
     func navigation() {
-        typealias P = CartesFiche.Position
-        let cartes = CartesFiche(rangees: [[.guide("a"), .guide("b"), .guide("c")], [], [.monstres, .succes]])
-        #expect(cartes.dessous(nil) == P(rangee: 0, colonne: 0))
-        // La rangée vide est sautée, la colonne gardée au plus près.
-        #expect(cartes.dessous(P(rangee: 0, colonne: 2)) == P(rangee: 2, colonne: 1))
-        #expect(cartes.dessous(P(rangee: 2, colonne: 0)) == nil)
-        #expect(cartes.dessus(P(rangee: 2, colonne: 1)) == P(rangee: 0, colonne: 1))
-        #expect(cartes.dessus(P(rangee: 0, colonne: 1)) == nil)
-        #expect(cartes.derniere == P(rangee: 2, colonne: 0))
-        #expect(cartes.laterale(P(rangee: 0, colonne: 2), 1) == P(rangee: 0, colonne: 2))
-        #expect(cartes.laterale(P(rangee: 0, colonne: 2), -1) == P(rangee: 0, colonne: 1))
-        #expect(cartes.action(P(rangee: 2, colonne: 1)) == .succes)
-        #expect(cartes.valide(P(rangee: 1, colonne: 0)) == nil)
-        #expect(cartes.valide(P(rangee: 0, colonne: 5)) == P(rangee: 0, colonne: 2))
-        #expect(CartesFiche.vide.dessous(nil) == nil && CartesFiche.vide.derniere == nil)
+        let avant = CartesFiche(actions: [.guide("a"), .monstres, .succes])
+        #expect(avant.laterale(.succes, 1) == .succes)
+        #expect(avant.laterale(.succes, -1) == .monstres)
+        #expect(avant.laterale(.guide("a"), -1) == .guide("a"))
+        // Les conseils arrivent : le clavier reste sur les monstres.
+        let apres = CartesFiche(actions: [.guide("a"), .conseils, .monstres, .succes])
+        #expect(apres.valide(.monstres) == .monstres)
+        #expect(apres.valide(.clef(objet: 1)) == nil)
+        #expect(CartesFiche.vide.premiere == nil)
+    }
+
+    @Test("Conseils de Dofus pour les noobs : une phrase par puce de la section, son paragraphe, entités décodées")
+    func conseils() {
+        let html = """
+        <span class="ancres-dpln" id="principe-combat"></span><ul><li>Pas un conseil</li></ul>Non.</div>
+        <span class="ancres-dpln" id="conseils-tactiques"></span>
+        <h4>Conseils tactiques pour ce combat</h4></div>
+        <div class="paragraph">Les conseils list&eacute;s ci-dessous sont ind&eacute;pendants.<br></div>
+        <div class="paragraph"><ul><li><strong><font color="#3f3f3f">Essayez d&rsquo;&ecirc;tre &agrave; plus de 8PO.</font></strong><br></li></ul>Les Coquilles infligent&#8203; des d&eacute;g&acirc;ts&nbsp;!</div>
+        <div class="paragraph"><ul><li><strong>Occupez-vous de la Crocabulia en dernier.</strong></li></ul></div>
+        <span class="ancres-dpln" id="strategie-globale"></span><ul><li>Hors section</li></ul>Non.</div>
+        """
+        #expect(ConseilCombat.extraire(html) == [
+            ConseilCombat(titre: "Essayez d’être à plus de 8PO.", detail: "Les Coquilles infligent des dégâts !"),
+            ConseilCombat(titre: "Occupez-vous de la Crocabulia en dernier.", detail: ""),
+        ])
+        #expect(ConseilCombat.extraire("<html>sans section</html>").isEmpty)
+        // Une page ancienne : la stratégie, faute de conseils.
+        let ancienne = """
+        <span class="ancres-dpln" id="strategie-globale"></span>
+        <div class="paragraph">Intro.<ul><li> Bouger le Disciple : </ul>Il gagne 1PM.<ul><li>Ne pas le bouger :</ul>Plus simple.</div>
+        """
+        #expect(ConseilCombat.extraire(ancienne) == [ConseilCombat(titre: "Bouger le Disciple", detail: "Il gagne 1PM."),
+                                                      ConseilCombat(titre: "Ne pas le bouger", detail: "Plus simple.")])
+        #expect(ConseilCombat.texte("&Eacute;t&eacute; &oelig;uf &#233;&#xE9; &inconnu;") == "Été œuf éé &inconnu;")
+    }
+
+    @Test("Éléments : frapper où il résiste le moins, éviter où il résiste le plus ; rien quand tout se vaut")
+    func elements() throws {
+        func fiche(_ neutre: Int, _ terre: Int, _ feu: Int, _ eau: Int, _ air: Int) throws -> FicheCombat {
+            try #require(FicheCombat(FicheCombat.MonstreAPI(id: 1, name: nil, grades: [.init(
+                grade: 1, level: 1, lifePoints: 1, actionPoints: 1, movementPoints: 1, reductionNeutral: neutre,
+                reductionEarth: terre, reductionFire: feu, reductionWater: eau, reductionAir: air)])))
+        }
+        // Crocabulia.
+        let croca = try fiche(13, 15, 21, 18, 9).elements
+        #expect(croca.frapper == [.neutre, .air] && croca.eviter == [.feu, .eau])
+        // Kimbo : 400 % partout.
+        #expect(try fiche(400, 400, 400, 400, 400).elements.frapper.isEmpty)
+        // Écart tout juste utile : un élément au milieu ne compte que pour frapper.
+        let juste = try fiche(0, 5, 10, 10, 10).elements
+        #expect(juste.frapper == [.neutre, .terre] && juste.eviter == [.feu, .eau, .air])
     }
 
     private static let fiche = FicheCombat(FicheCombat.MonstreAPI(

@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// Niveau, vie, PA et PM d'un monstre à son plus haut grade, puis ses
-/// résistances : le panneau d'aide aux boss et la fiche d'un donjon.
+/// Niveau, vie, PA et PM d'un monstre à son plus haut grade, ses
+/// résistances, et les éléments à frapper ou à éviter qu'elles disent : le
+/// panneau d'aide aux boss et la fiche d'un donjon.
 struct FicheCombatVue: View {
     let fiche: FicheCombat
 
@@ -15,7 +16,27 @@ struct FicheCombatVue: View {
                 .font(.synfus(.petit))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+            let elements = fiche.elements
+            if !elements.frapper.isEmpty {
+                Text(L("combat.fiche.elements", Self.noms(elements.frapper), Self.noms(elements.eviter)))
+                    .font(.synfus(.petit))
+                    .foregroundStyle(Couleurs.accentTexte)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .help(L("combat.fiche.aide"))
+    }
+
+    private static func noms(_ elements: [FicheCombat.Element]) -> String {
+        elements.map { element in
+            switch element {
+            case .neutre: return L("element.neutre")
+            case .terre: return L("element.terre")
+            case .feu: return L("element.feu")
+            case .eau: return L("element.eau")
+            case .air: return L("element.air")
+            }
+        }
+        .joined(separator: ", ")
     }
 }
