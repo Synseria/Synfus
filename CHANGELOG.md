@@ -19,6 +19,8 @@ contenu (`Tools/notes-de-version.sh`), et `sh build.sh --publish` refuse une ver
 ### Améliorations
 
 - Une pastille en combat, sans que ce soit son tour, prend un cadre rose discret.
+- Les **rappels du combat d'un boss** se copient d'un clic pour le tchat ; l'icône de leur titre
+  les copie tous à la suite.
 
 ## 0.12.0 — 2026-11-10
 
