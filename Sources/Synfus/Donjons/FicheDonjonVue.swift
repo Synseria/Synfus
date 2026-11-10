@@ -2,7 +2,7 @@ import SwiftUI
 
 /// La fiche d'un donjon, dépliée sous lui ou sous l'un de ses boss dans la
 /// palette : niveau, une rangée de cartes que le clavier parcourt
-/// (`CartesFiche`) — entrée, guide, clefs, conseils, monstres, succès —, ce
+/// (`CartesFiche`) — position, guide, conseils, monstres, succès, clef —, ce
 /// qu'elles déplient, puis les boss à leur plus haut grade. Le détail et les
 /// conseils se téléchargent à l'ouverture ; entrée et guide n'attendent pas.
 struct FicheDonjonVue: View {
@@ -23,12 +23,10 @@ struct FicheDonjonVue: View {
                 if let niveau = donjon.niveau {
                     Text(L("donjon.niveau", niveau)).font(.synfus(.petit, gras: true))
                 }
-                RangeeSouple(espacement: 6) {
-                    ForEach(actions, id: \.self) { action in
-                        carte(action, detail)
-                            .id(Self.ancre(action))
-                            .onTapGesture { modele.cliquer(action) }
-                    }
+                // Sur une ligne : faute de place (beaucoup de clefs), elle défile.
+                ViewThatFits(in: .horizontal) {
+                    rangee(actions, detail)
+                    ScrollView(.horizontal, showsIndicators: false) { rangee(actions, detail) }
                 }
                 ForEach(actions.filter { modele.ouvertes.contains($0) }, id: \.self) { action in
                     ouverte(action, detail).padding(.leading, 12)
@@ -40,6 +38,17 @@ struct FicheDonjonVue: View {
                 }
             }
             .onAppear { store.demander(donjon) }
+        }
+    }
+
+    private func rangee(_ actions: [ActionFiche], _ detail: DetailDonjon?) -> some View {
+        HStack(spacing: 6) {
+            ForEach(actions, id: \.self) { action in
+                carte(action, detail)
+                    .fixedSize()
+                    .id(Self.ancre(action))
+                    .onTapGesture { modele.cliquer(action) }
+            }
         }
     }
 
@@ -63,9 +72,9 @@ struct FicheDonjonVue: View {
     }
 
     private func carte(_ action: ActionFiche, _ detail: DetailDonjon?) -> some View {
-        CarteAction(icone: icone(action), titre: titre(action, detail), sousTitre: sousTitre(action),
+        CarteAction(icone: icone(action), titre: titre(action, detail),
                     ouverte: action.sePlie ? modele.ouvertes.contains(action) : nil, choisie: modele.carte == action)
-            .help(aide(action) ?? "")
+            .help(aide(action, detail) ?? "")
     }
 
     private func icone(_ action: ActionFiche) -> String {
@@ -83,9 +92,7 @@ struct FicheDonjonVue: View {
         switch action {
         case .entree: return L("donjon.entree")
         case .guide: return L("donjon.guide")
-        case .clef(let objet):
-            let clef = detail?.clefs.first { $0.objet == objet }
-            return L("donjon.clef", clef?.quantite ?? 1, clef.flatMap { Lieu.traduit($0.noms, langue) } ?? "?")
+        case .clef: return L("donjon.clef")
         case .conseils:
             let nombre = store.conseils[id]?.count ?? 0
             return L("donjon.conseils", nombre: nombre, nombre)
@@ -98,17 +105,15 @@ struct FicheDonjonVue: View {
         }
     }
 
-    /// Sous l'entrée, le trajet copié dit en clair : on sait avant ↵ par quel zaap on passe.
-    private func sousTitre(_ action: ActionFiche) -> String? {
-        guard case .entree(let lieu) = action else { return nil }
-        return modele.versLieu(lieu).itineraire ?? Coordonnees.texte(lieu.x, lieu.y)
-    }
-
-    private func aide(_ action: ActionFiche) -> String? {
+    /// Le détail qui allongerait la carte : le zaap retenu est déjà sur la
+    /// ligne et dans le pied, le nom de la clef dans son « où trouver ».
+    private func aide(_ action: ActionFiche, _ detail: DetailDonjon?) -> String? {
         switch action {
         case .entree(let lieu): return L("donjon.entree.aide", Coordonnees.texte(lieu.x, lieu.y))
         case .guide: return L("boss.guide")
-        case .clef: return L("donjon.clef.aide")
+        case .clef(let objet):
+            let clef = detail?.clefs.first { $0.objet == objet }
+            return L("donjon.clef.aide", clef?.quantite ?? 1, clef.flatMap { Lieu.traduit($0.noms, langue) } ?? "?")
         case .conseils: return L("donjon.conseils.aide")
         case .monstres, .succes: return nil
         }
@@ -157,13 +162,11 @@ struct FicheDonjonVue: View {
     }
 }
 
-/// Une carte d'action de fiche : symbole, titre, une ligne de plus au besoin,
-/// chevron quand elle déplie. Choisie au clavier, elle prend la teinte pleine
+/// Une carte d'action de fiche : symbole, titre, chevron quand elle déplie. Choisie au clavier, elle prend la teinte pleine
 /// de la ligne choisie ; ouverte, seulement un lisere et un titre teintés.
 private struct CarteAction: View {
     let icone: String
     let titre: String
-    let sousTitre: String?
     /// `nil` : elle agit plutôt que de déplier.
     let ouverte: Bool?
     let choisie: Bool
@@ -172,14 +175,9 @@ private struct CarteAction: View {
         HStack(spacing: 6) {
             Image(systemName: icone)
                 .foregroundStyle(choisie || ouverte == true ? Couleurs.accentTexte : Color.secondary)
-            VStack(alignment: .leading, spacing: 0) {
-                Text(titre)
-                    .foregroundStyle(ouverte == true && !choisie ? Couleurs.accentTexte : Color.primary)
-                    .lineLimit(1)
-                if let sousTitre {
-                    Text(sousTitre).foregroundStyle(Couleurs.accentTexte).lineLimit(1)
-                }
-            }
+            Text(titre)
+                .foregroundStyle(ouverte == true && !choisie ? Couleurs.accentTexte : Color.primary)
+                .lineLimit(1)
             if let ouverte {
                 Image(systemName: ouverte ? "chevron.down" : "chevron.right")
                     .font(.synfus(.marque, gras: true))
@@ -189,7 +187,6 @@ private struct CarteAction: View {
         .font(.synfus(.petit))
         .padding(.horizontal, 9)
         .padding(.vertical, 5)
-        .frame(maxHeight: .infinity)
         .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(fond))
         .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(lisere, lineWidth: choisie ? 1.5 : 1))
         .contentShape(Rectangle())
@@ -205,40 +202,5 @@ private struct CarteAction: View {
     private var lisere: Color {
         if choisie { return Couleurs.accent }
         return ouverte == true ? Couleurs.accent.opacity(0.45) : Color.primary.opacity(0.08)
-    }
-}
-
-/// Des cartes à la suite, renvoyées à la ligne quand la place manque, toutes
-/// à la hauteur de la plus haute.
-private struct RangeeSouple: Layout {
-    let espacement: CGFloat
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache _: inout ()) -> CGSize {
-        let positions = disposer(largeur: proposal.width ?? .infinity, subviews)
-        let largeur = positions.map { $0.origine.x + $0.taille.width }.max() ?? 0
-        let hauteur = positions.map { $0.origine.y + $0.taille.height }.max() ?? 0
-        return CGSize(width: proposal.width ?? largeur, height: hauteur)
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal _: ProposedViewSize, subviews: Subviews, cache _: inout ()) {
-        for (sousVue, position) in zip(subviews, disposer(largeur: bounds.width, subviews)) {
-            sousVue.place(at: CGPoint(x: bounds.minX + position.origine.x, y: bounds.minY + position.origine.y),
-                          proposal: ProposedViewSize(position.taille))
-        }
-    }
-
-    private func disposer(largeur: CGFloat, _ subviews: Subviews) -> [(origine: CGPoint, taille: CGSize)] {
-        let tailles = subviews.map { $0.sizeThatFits(.unspecified) }
-        let hauteur = tailles.map(\.height).max() ?? 0
-        var x: CGFloat = 0
-        var y: CGFloat = 0
-        return tailles.map { taille in
-            if x > 0, x + taille.width > largeur {
-                x = 0
-                y += hauteur + espacement
-            }
-            defer { x += min(taille.width, largeur) + espacement }
-            return (CGPoint(x: x, y: y), CGSize(width: min(taille.width, largeur), height: hauteur))
-        }
     }
 }
