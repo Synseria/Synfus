@@ -4,7 +4,8 @@ import SwiftUI
 /// Un panneau sans cadre qui prend le clavier sans activer Synfus : Dofus
 /// reste l'app active, et le texte copié se colle dès la palette fermée.
 /// Flèches, Entrée, Tab (filtre), Échap, ⌘E (étiquette), ⌘D (favori) et ⌘T
-/// (tri) vont au modèle, le reste au champ.
+/// (tri) vont au modèle, le reste au champ — ← et → aussi, hors de la grille
+/// et d'une fiche dépliée.
 private final class PanneauPalette: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
@@ -25,8 +26,10 @@ private final class PanneauPalette: NSPanel {
             switch event.keyCode {
             case 125 where !enEdition: return modele.deplacer(ligne: 1)
             case 126 where !enEdition: return modele.deplacer(ligne: -1)
-            case 123 where modele.enGrille && !enEdition: return modele.deplacer(colonne: -1)
-            case 124 where modele.enGrille && !enEdition: return modele.deplacer(colonne: 1)
+            case 123 where !enEdition, 124 where !enEdition:
+                let pas = event.keyCode == 123 ? -1 : 1
+                if modele.enGrille { return modele.deplacer(colonne: pas) }
+                if modele.lateral(pas) { return }
             case 36, 76: return modele.valider()
             case 48 where !enEdition: return modele.tabulation(arriere: event.modifierFlags.contains(.shift))
             case 53: return modele.echap()
@@ -61,6 +64,9 @@ final class PalettePanel: NSObject, ObservableObject, NSWindowDelegate {
         placer(panel)
         panel.makeKeyAndOrderFront(nil)
         ouvert = true
+        // La recherche d'avant revient toute sélectionnée : une lettre ou ⌫ la
+        // remplace. Le champ a gardé le clavier depuis la fermeture.
+        (panel.firstResponder as? NSText)?.selectAll(nil)
     }
 
     func fermer() {
