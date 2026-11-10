@@ -49,6 +49,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         // `refreshSoon` l'exécute sur-le-champ dès que le dernier date de plus
         // de 200 ms, c'est-à-dire presque toujours.
         manager.refreshSoon(after: 0.05)
+        let prefs = Preferences.shared
 
         if let version = MiseAJour.shared.proposee {
             if case .installation = MiseAJour.shared.etat {
@@ -70,21 +71,14 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             menu.addItem(empty)
             menu.addItem(.separator())
         } else {
-            let prefs = Preferences.shared
             // L'effectif : les numéros sont ceux de la barre, et `focus(slot:)`
             // compte de la même façon.
             for (index, client) in manager.effectif.enumerated() {
-                let item = add(to: menu, title: client.name, action: #selector(focusClient(_:)))
+                let item = add(to: menu, title: client.name, action: #selector(focusClient(_:)),
+                               raccourci: index < prefs.hotKeys.count ? prefs.hotKeys[index] : nil)
                 item.tag = index
                 item.image = ClassesStore.shared.menuIcon(for: client.characterClass)
                 if manager.isFrontmost(client) { item.state = .on }
-
-                // Le raccourci est affiché à titre indicatif seulement : le vrai
-                // enregistrement est global (Carbon), pas un key equivalent de menu
-                // qui ne fonctionnerait que lorsque Synfus est au premier plan.
-                if index < prefs.hotKeys.count, let hotKey = prefs.hotKeys[index] {
-                    item.attributedTitle = attributed(name: client.name, shortcut: hotKey.displayString)
-                }
             }
             if manager.effectif.isEmpty {
                 let empty = NSMenuItem(title: L("menu.aucunPersoEquipe"), action: nil, keyEquivalent: "")
@@ -95,32 +89,24 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             menu.addItem(.separator())
         }
 
-        let barTitle = Preferences.shared.barVisible ? L("menu.masquerBarre") : L("menu.afficherBarre")
-        add(to: menu, title: barTitle, action: #selector(toggleBar))
-        add(to: menu, title: L("menu.recentrerBarre"), action: #selector(recenterBar))
+        // Les panneaux de jeu dans l'ordre de la barre, puis les fenêtres et
+        // la barre, puis Synfus lui-même.
+        add(to: menu, title: L("menu.quetes"), action: #selector(openQuests), raccourci: prefs.quetesHotKey)
+        add(to: menu, title: L("menu.boss"), action: #selector(openBoss), raccourci: prefs.bossHotKey)
+        add(to: menu, title: L("menu.chasse"), action: #selector(openHunt), raccourci: prefs.chasseHotKey)
+        add(to: menu, title: L("menu.palette"), action: #selector(openPalette), raccourci: prefs.paletteHotKey)
+        menu.addItem(.separator())
+
         menu.addItem(arrangeSubmenu(enabled: manager.accessibilityGranted
                                              && !manager.clients.isEmpty))
         if !manager.clients.isEmpty {
-            let session = add(to: menu, title: L("menu.lancerSession"), action: #selector(launchSession))
-            if let hotKey = Preferences.shared.sessionHotKey {
-                session.attributedTitle = attributed(name: L("menu.lancerSession"),
-                                                     shortcut: hotKey.displayString)
-            }
+            add(to: menu, title: L("menu.lancerSession"), action: #selector(launchSession), raccourci: prefs.sessionHotKey)
         }
-        let quetes = add(to: menu, title: L("menu.quetes"), action: #selector(openQuests))
-        if let hotKey = Preferences.shared.quetesHotKey {
-            quetes.attributedTitle = attributed(name: L("menu.quetes"), shortcut: hotKey.displayString)
-        }
-        let chasse = add(to: menu, title: L("menu.chasse"), action: #selector(openHunt))
-        if let hotKey = Preferences.shared.chasseHotKey {
-            chasse.attributedTitle = attributed(name: L("menu.chasse"), shortcut: hotKey.displayString)
-        }
-        let boss = add(to: menu, title: L("menu.boss"), action: #selector(openBoss))
-        if let hotKey = Preferences.shared.bossHotKey {
-            boss.attributedTitle = attributed(name: L("menu.boss"), shortcut: hotKey.displayString)
-        }
-        add(to: menu, title: L("menu.reglages"), action: #selector(openSettings))
+        add(to: menu, title: prefs.barVisible ? L("menu.masquerBarre") : L("menu.afficherBarre"), action: #selector(toggleBar))
+        add(to: menu, title: L("menu.recentrerBarre"), action: #selector(recenterBar))
         menu.addItem(.separator())
+
+        add(to: menu, title: L("menu.reglages"), action: #selector(openSettings))
         // Reconstruit à chaque ouverture : l'item n'apparaît que s'il y a
         // quelqu'un à fermer, inutile de jouer avec `isEnabled`.
         if !manager.clients.isEmpty {
@@ -191,10 +177,13 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         return parent
     }
 
+    /// Le raccourci, global (Carbon), est montré à titre indicatif : un key
+    /// equivalent de menu ne marcherait que Synfus au premier plan.
     @discardableResult
-    private func add(to menu: NSMenu, title: String, action: Selector) -> NSMenuItem {
+    private func add(to menu: NSMenu, title: String, action: Selector, raccourci: HotKey? = nil) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
         item.target = self
+        if let raccourci { item.attributedTitle = attributed(name: title, shortcut: raccourci.displayString) }
         menu.addItem(item)
         return item
     }
@@ -262,6 +251,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
     @objc private func openBoss() {
         BossPanel.shared.ouvrir()
+    }
+
+    @objc private func openPalette() {
+        PalettePanel.shared.ouvrir()
     }
 
     @objc private func installUpdate() {

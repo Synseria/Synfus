@@ -10,6 +10,7 @@ struct BarView: View {
     @ObservedObject private var zaaps = ZaapClipboard.shared
     @ObservedObject private var chasse = ChassePanel.shared
     @ObservedObject private var quetes = QuetePanel.shared
+    @ObservedObject private var boss = BossPanel.shared
     @ObservedObject private var palette = PalettePanel.shared
     @Environment(\.accessibilityReduceMotion) private var sansMouvement
     @State private var dragging: String?
@@ -170,10 +171,13 @@ struct BarView: View {
                 chip(index: index, client: client)
             }
             separator
+            // Les panneaux de jeu d'abord, du plus servi au plus rare, puis
+            // les fenêtres ; le même ordre que le menu de la barre de menus.
+            if prefs.quetesBouton { quetesButton }
+            if prefs.bossBouton { bossButton }
+            if prefs.chasseBouton { chasseButton }
             arrangeMenu
             if prefs.zaapBouton { zaapButton }
-            if prefs.chasseBouton { chasseButton }
-            if prefs.quetesBouton { quetesButton }
             autoFocusToggle
         }
     }
@@ -214,6 +218,17 @@ struct BarView: View {
     private var quetesButton: some View {
         ModeButton(icone: "scroll", actif: quetes.ouvert, aide: L("barre.quetesAide")) {
             QuetePanel.shared.basculer()
+        }
+    }
+
+    /// Le panneau d'aide aux boss, posé sur le jeu.
+    private var bossButton: some View {
+        ModeButton(
+            icone: "scope",
+            actif: boss.ouvert,
+            aide: L("barre.bossAide", prefs.bossHotKey?.displayString ?? L("barre.aucunRaccourci"))
+        ) {
+            BossPanel.shared.basculer()
         }
     }
 
