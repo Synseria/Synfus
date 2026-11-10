@@ -1,10 +1,10 @@
 import Foundation
 
-/// La fiche d'un boss à son plus haut grade, tirée de DofusDB : niveau, vie,
-/// PA, PM et résistances en pourcentage. De quoi choisir ses éléments avant
-/// d'entrer ; la mécanique, elle, reste dans les vues de chaque boss. Pur
+/// Un monstre à son plus haut grade, tiré de DofusDB : niveau, vie, PA, PM et
+/// résistances en pourcentage. De quoi choisir ses éléments avant d'entrer —
+/// la même fiche pour le panneau d'aide aux boss et la fiche d'un donjon. Pur
 /// (décodage) ; le réseau passe par `DofusDB`.
-struct FicheBoss: Equatable, Sendable {
+struct FicheCombat: Equatable, Sendable {
     enum Element: CaseIterable, Sendable {
         case neutre, terre, feu, eau, air
     }
@@ -30,7 +30,11 @@ struct FicheBoss: Equatable, Sendable {
     }
 
     struct MonstreAPI: Decodable, Sendable {
+        let id: Int?
+        let name: DofusDB.Noms?
         let grades: [GradeAPI]
+
+        static let champs = ["id", "name", "grades"]
     }
 
     /// Le plus haut grade ; `nil` sans grade.
@@ -44,9 +48,9 @@ struct FicheBoss: Equatable, Sendable {
                        .feu: grade.reductionFire ?? 0, .eau: grade.reductionWater ?? 0, .air: grade.reductionAir ?? 0]
     }
 
-    static func telecharger(_ boss: Boss) async throws -> FicheBoss? {
+    static func telecharger(monstre: Int) async throws -> FicheCombat? {
         let monstres: [MonstreAPI] = try await DofusDB.toutes(
-            "monsters", [URLQueryItem(name: "id", value: "\(boss.monstre)")] + DofusDB.selection(["grades"]))
-        return monstres.first.flatMap(FicheBoss.init)
+            "monsters", [URLQueryItem(name: "id", value: "\(monstre)")] + DofusDB.selection(["grades"]))
+        return monstres.first.flatMap(FicheCombat.init)
     }
 }
