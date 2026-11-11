@@ -22,6 +22,9 @@ sa bascule). Toute nouvelle option suit la règle.
   ne capte jamais le clavier. Seules exceptions, la palette (`Palette/PalettePanel`) et le
   panneau de chasse (`Chasse/ChassePanel`) : `.nonactivatingPanel` qui **peuvent** devenir key,
   pour taper sans activer Synfus.
+- Boutons après les persos : `BoutonBarre` (pur) est le seul endroit qui les liste, dans
+  l'ordre de la barre ; masqués par `Preferences.boutonsMasques` (Réglages → Barre, ou clic droit
+  « Masquer ce bouton »). L'engrenage n'est jamais masquable.
 - Panneaux du jeu (quêtes, chasse, boss) : leur visibilité passe par `PanneauxJeu.revoir`, le
   seul endroit qui les énumère. Panneau d'aide aux boss (`Boss/BossPanel`) : jamais clé, taille
   de son contenu (skill `aide-boss`).
