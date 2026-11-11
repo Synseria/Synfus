@@ -44,10 +44,20 @@ final class UsageStore: ObservableObject {
     private static let attenteApresEchec: TimeInterval = 3600
     private static let session = URLSession(configuration: .ephemeral)
 
+    /// Fixé à la création du store, jamais pendant un rendu : le tirer peut
+    /// écrire `historique` (identifiant de secours).
+    private let installation: String
+
     init(fichier: URL?) {
         self.fichier = fichier
-        historique = fichier.flatMap { try? Data(contentsOf: $0) }
+        var historique = fichier.flatMap { try? Data(contentsOf: $0) }
             .flatMap { try? Self.decodeur.decode(HistoriqueUsage.self, from: $0) } ?? HistoriqueUsage()
+        let secours = historique.identifiantDeSecours
+        installation = IdentifiantInstallation.fixer(materiel: IdentifiantInstallation.materiel(),
+                                                     app: Bundle.main.bundleIdentifier ?? "fr.synseria.Synfus",
+                                                     secours: &historique.identifiantDeSecours)
+        modifie = historique.identifiantDeSecours != secours
+        self.historique = historique
     }
 
     func start() {
@@ -123,63 +133,58 @@ final class UsageStore: ObservableObject {
                              architecture: ContexteUsage.architectureCourante)
     }
 
-    private lazy var installation: String = {
-        let app = Bundle.main.bundleIdentifier ?? "fr.synseria.Synfus"
-        if let materiel = IdentifiantInstallation.materiel() {
-            return IdentifiantInstallation.calculer(materiel: materiel, app: app)
-        }
-        let secours = historique.identifiantDeSecours ?? UUID().uuidString
-        historique.identifiantDeSecours = secours
-        modifie = true
-        return IdentifiantInstallation.calculer(materiel: secours, app: app)
-    }()
-
     private func envoyer(maintenant: Date) {
         guard Preferences.shared.partagerStatistiques, let configuration = Self.configuration,
               !envoiEnCours, let contexte else { return }
         if let tentative = derniereTentative, maintenant.timeIntervalSince(tentative) < Self.attenteApresEchec { return }
-        let jours = historique.aEnvoyer(aujourdhui: Self.aujourdhui(maintenant))
-        let diagnostics = historique.diagnosticAEnvoyer.map { [$0] } ?? []
-        guard !jours.isEmpty || !diagnostics.isEmpty else { return }
+        guard let envoi = historique.prochainEnvoi(aujourdhui: Self.aujourdhui(maintenant)) else { return }
 
         var requete = URLRequest(url: configuration.url, timeoutInterval: 30)
         requete.httpMethod = "POST"
         requete.setValue("application/json", forHTTPHeaderField: "Content-Type")
         requete.setValue("Bearer \(configuration.jeton)", forHTTPHeaderField: "Authorization")
-        requete.httpBody = RapportUsage.corps(jours, diagnostics: diagnostics, contexte: contexte, envoi: maintenant)
+        requete.httpBody = RapportUsage.corps(envoi.jours, diagnostics: envoi.diagnostics, contexte: contexte, envoi: maintenant)
         derniereTentative = maintenant
         envoiEnCours = true
         Task {
-            let accepte = await Self.poster(requete)
+            let reponse = await Self.poster(requete)
             envoiEnCours = false
-            guard accepte else { return }
-            historique.marquerEnvoyes(jours.map(\.jour))
-            diagnostics.forEach { historique.retirerDiagnostic($0) }
-            historique.dernierEnvoi = maintenant
-            historique.dernierRapport = RapportUsage.texte(jours, diagnostics: diagnostics, contexte: contexte, envoi: maintenant)
+            switch reponse {
+            case .echec:
+                return
+            case .refusee:
+                // Des jours refusés restent : ils sortent seuls de l'attente
+                // passé `retardMaximal`. Un diagnostic le serait à chaque essai.
+                guard case .diagnostic = envoi else { return }
+                historique.acquitter(envoi)
+            case .acceptee:
+                historique.acquitter(envoi)
+                historique.dernierEnvoi = maintenant
+                historique.dernierRapport = RapportUsage.texte(envoi.jours, diagnostics: envoi.diagnostics,
+                                                               contexte: contexte, envoi: maintenant)
+            }
             derniereTentative = nil
             modifie = true
             enregistrer()
+            // La suite de l'attente, une requête après l'autre.
+            envoyer(maintenant: Date())
         }
     }
 
-    nonisolated private static func poster(_ requete: URLRequest) async -> Bool {
-        guard let (_, reponse) = try? await session.data(for: requete),
-              let http = reponse as? HTTPURLResponse
-        else { return false }
-        return (200..<300).contains(http.statusCode)
+    nonisolated private static func poster(_ requete: URLRequest) async -> ReponseCollecteur {
+        let reponse = try? await session.data(for: requete).1
+        return ReponseCollecteur(statut: (reponse as? HTTPURLResponse)?.statusCode)
     }
 
-    /// Le JSON du prochain envoi : les jours en attente, à défaut la journée
-    /// en cours telle qu'elle partira demain.
+    /// Le JSON du prochain envoi : les jours en attente, puis un diagnostic,
+    /// à défaut la journée en cours telle qu'elle partira demain.
     func apercuProchainEnvoi(maintenant: Date = Date()) -> String? {
         guard let contexte else { return nil }
         let aujourdhui = Self.aujourdhui(maintenant)
-        var jours = historique.aEnvoyer(aujourdhui: aujourdhui)
-        if jours.isEmpty, let jour = historique.jour(aujourdhui) { jours = [jour] }
-        let diagnostics = historique.diagnosticAEnvoyer.map { [$0] } ?? []
-        guard !jours.isEmpty || !diagnostics.isEmpty else { return nil }
-        return RapportUsage.texte(jours, diagnostics: diagnostics, contexte: contexte, envoi: maintenant)
+        guard let envoi = historique.prochainEnvoi(aujourdhui: aujourdhui)
+                ?? historique.jour(aujourdhui).map({ EnvoiUsage.jours([$0]) })
+        else { return nil }
+        return RapportUsage.texte(envoi.jours, diagnostics: envoi.diagnostics, contexte: contexte, envoi: maintenant)
     }
 
     // MARK: - Règles

@@ -76,9 +76,8 @@ extension WindowManager {
     /// disposition, puis basculer sur le premier perso. Rien que des gestes
     /// existants, enchaînés — et toujours aucun évènement émis.
     func lancerSession() {
-        UsageStore.shared.compter(.session)
         Task {
-            await WindowArranger.shared.appliquerDerniere()
+            await WindowArranger.shared.appliquerDerniere(geste: .session)
             if !effectif.isEmpty { focus(slot: 0) }
         }
     }
