@@ -12,7 +12,7 @@ struct BossSettings: View {
                 RaccourciReglable(label: L("boss.raccourci"), chemin: \.bossHotKey)
                 ForEach(Boss.allCases, id: \.self) { boss in
                     Ligne(titre: BossVue.nom(boss), aide: Self.resume(boss)) {
-                        Button(L("boss.ouvrir")) { BossPanel.shared.ouvrir(boss) }
+                        Button(L("boss.ouvrir")) { BossPanel.shared.ouvrir(.special(boss)) }
                     }
                 }
             }
