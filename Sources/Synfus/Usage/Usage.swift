@@ -45,7 +45,7 @@ enum EvenementUsage: String, CaseIterable, Codable, Sendable {
     case reglages
     case miseAJour = "mise_a_jour"
 
-    /// Les rubriques de l'onglet Statistiques.
+    /// Les rubriques de l'onglet Usage.
     enum Famille: CaseIterable, Sendable { case bascules, palette, outils }
 
     var famille: Famille {
@@ -129,7 +129,7 @@ struct JourUsage: Codable, Equatable, Sendable {
 }
 
 /// L'historique gardé sur le Mac : le détail des derniers jours, le cumul des
-/// plus anciens. Les rapports partent d'ici ; l'onglet Statistiques s'y lit.
+/// plus anciens. Les rapports partent d'ici ; l'onglet Usage s'y lit.
 struct HistoriqueUsage: Codable, Equatable, Sendable {
     /// Du plus ancien au plus récent, sans trou de clé ni doublon.
     private(set) var jours: [JourUsage] = []

@@ -18,7 +18,7 @@ contenu (`Tools/notes-de-version.sh`), et `sh build.sh --publish` refuse une ver
   arrière-plan compris. En fenêtré seulement.
 - **Almanax en deux temps** : « Nom » copie l'offrande pour l'hôtel de vente, « Sanctuaire » le
   trajet pour la rendre.
-- **Statistiques** (Réglages → Statistiques) : ce que tu utilises dans Synfus, sur 7 jours,
+- **Statistiques** (Réglages → Usage) : ce que tu utilises dans Synfus, sur 7 jours,
   30 jours ou depuis le début. Elles sont partagées une fois par jour, anonymes, pour savoir ce qui
   sert et ce qui peut partir : « Voir les données » montre le JSON exact envoyé, un interrupteur
   coupe l'envoi. Rien du jeu n'en fait partie, ni le nom de tes persos.
