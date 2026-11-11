@@ -33,6 +33,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ZaapClipboard.shared.start()
         MiseAJour.shared.start()
         UsageStore.shared.start()
+        IconeAppliquee.auLancement()
 
         if !AXIsProcessTrusted() {
             WindowManager.shared.requestAccessibility()

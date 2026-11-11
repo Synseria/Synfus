@@ -109,6 +109,10 @@ final class Preferences: ObservableObject {
     /// (`MenuBarController.refreshIcon()`) : les préférences ne pilotent pas l'UI.
     @Published var menuBarIcon: MenuBarIcon = .logo { didSet { save() } }
 
+    /// Icône de l'app (Finder, Launchpad, alertes). Posée par `IconeAppliquee`,
+    /// à la charge de l'appelant comme `menuBarIcon`.
+    @Published var iconeApp: IconeApp = .parDefaut { didSet { save() } }
+
     /// Achever les clients gelés à la fermeture (voir `FreezeWatcher`). Activé
     /// par défaut : la règle d'abattage est assez stricte pour ne viser que des
     /// processus déjà morts en pratique, et c'est tout l'intérêt de la fonction
@@ -502,6 +506,7 @@ final class Preferences: ObservableObject {
         .facultatif("panneauxSeulementDofus", \.panneauxSeulementDofus),
         .facultatif("autoCenterBar", \.autoCenterBar),
         .facultatif("menuBarIcon", \.menuBarIcon),
+        .facultatif("iconeApp", \.iconeApp),
         .facultatif("showPreviewOnHover", \.showPreviewOnHover),
         .optionnel("previewHotKey", \.previewHotKey),
         .facultatif("advanceOnClick", \.advanceOnClick),

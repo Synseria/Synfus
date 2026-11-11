@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Onglet Général : ce qui conditionne tout le reste — les deux autorisations
-/// système —, puis le système (icône, démarrage, langue, version).
+/// système —, puis le système (icônes, démarrage, langue, version).
 struct GeneralSettings: View {
     @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var manager = WindowManager.shared
@@ -39,6 +39,12 @@ struct GeneralSettings: View {
             }
 
             Section {
+                Ligne(titre: L("general.iconeApp"), aide: L("general.iconeApp.aide")) {
+                    ChoixIconeApp(choix: Binding(
+                        get: { prefs.iconeApp },
+                        set: { prefs.iconeApp = $0; IconeAppliquee.appliquer($0) }
+                    ))
+                }
                 Ligne(titre: L("general.icone")) {
                     Picker(L("general.icone"), selection: Binding(
                         get: { prefs.menuBarIcon },
@@ -128,6 +134,60 @@ struct GeneralSettings: View {
             }
             CopiableCommand(command: AppIntegrity.quarantineFix)
             CopiableCommand(command: AppIntegrity.resetCommand)
+        }
+    }
+}
+
+/// Les huit icônes de l'app, un motif par ligne, un fond par colonne : chacune
+/// est son propre aperçu, la choisie cerclée de l'accent.
+private struct ChoixIconeApp: View {
+    @Binding var choix: IconeApp
+    private let cote: CGFloat = 40
+
+    var body: some View {
+        Grid(horizontalSpacing: 4, verticalSpacing: 4) {
+            ForEach(IconeApp.Motif.allCases, id: \.self) { motif in
+                GridRow {
+                    ForEach(IconeApp.Fond.allCases, id: \.self) { fond in
+                        vignette(IconeApp(motif: motif, fond: fond))
+                    }
+                }
+            }
+        }
+    }
+
+    private func vignette(_ icone: IconeApp) -> some View {
+        Button { choix = icone } label: {
+            Image(nsImage: IconeAppliquee.vignette(icone, cote: cote))
+                .padding(4)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 11)
+                        .strokeBorder(icone == choix ? Couleurs.accent : .clear, lineWidth: 2)
+                }
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .aide(L("general.iconeApp.vignette", icone.motif.nom, icone.fond.nom))
+        .accessibilityAddTraits(icone == choix ? .isSelected : [])
+    }
+}
+
+private extension IconeApp.Motif {
+    var nom: String {
+        switch self {
+        case .oeuf: L("general.iconeApp.oeuf")
+        case .couvee: L("general.iconeApp.couvee")
+        }
+    }
+}
+
+private extension IconeApp.Fond {
+    var nom: String {
+        switch self {
+        case .nuit: L("general.iconeApp.nuit")
+        case .foret: L("general.iconeApp.foret")
+        case .aube: L("general.iconeApp.aube")
+        case .transparent: L("general.iconeApp.transparent")
         }
     }
 }
