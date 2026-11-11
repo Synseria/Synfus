@@ -681,7 +681,7 @@ struct PreferencesTests {
          "autoCenterBar":true,"barOnlyWithDofus":false,"panneauxSeulementDofus":true,"barVisible":true,"bossChoisi":"harebourg",
          "boutonsMasques":[],"characterOrder":[],
          "defaultsVersion":7,"equipes":[],"etiquettes":{},"hotKeys":[null],"inviteFormat":"/invite %nom","inviteGroupee":false,
-         "killFrozenClients":true,"lireCombat":false,"lireCombatDerriere":false,"lirePosition":false,"menuBarIcon":"logo","iconeApp":{"motif":"oeuf","fond":"nuit"},
+         "killFrozenClients":true,"lireCombat":false,"lireCombatDerriere":false,"lirePosition":false,"menuBarIcon":"logo","iconeApp":{"motif":"oeuf","fond":"transparent"},
          "showClasses":true,"showNumbers":true,"showPreviewOnHover":false,
          "signalerBascule":true,"zaapAuto":false,
          "zaapGainMinimal":5,"zaapDuJeu":true,"zaapIntercalees":"/a","verifierMisesAJour":true,"partagerStatistiques":true,"zaapsAjoutes":[],"zaapsChoix":{},"zaapsFavoris":[],"zaapsVueCarte":true,
