@@ -3,7 +3,7 @@
 Une section par version, `## X.Y.Z — AAAA-MM-JJ` : la release GitHub de `vX.Y.Z` en reprend le
 contenu (`Tools/notes-de-version.sh`), et `sh build.sh --publish` refuse une version absente d'ici.
 
-## 0.13.0 — 2026-11-10
+## 0.13.0 — 2026-11-11
 
 ### Nouveautés
 
