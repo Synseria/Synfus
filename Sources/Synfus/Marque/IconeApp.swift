@@ -19,8 +19,14 @@ struct IconeApp: Codable, Hashable, Sendable {
     var motif: Motif
     var fond: Fond
 
-    /// Celle du bundle (`Resources/Synfus.icns`).
-    static let parDefaut = IconeApp(motif: .oeuf, fond: .nuit)
+    /// Celle du bundle (`Resources/Synfus.icns`) : une tuile. macOS 26 enferme
+    /// dans un carré gris l'icône d'un bundle qui n'en est pas une.
+    static let duBundle = IconeApp(motif: .oeuf, fond: .nuit)
+
+    /// Posée dès le premier lancement (`IconeAppliquee`) : une icône posée
+    /// sur le bundle, elle, n'est pas enfermée — la transparente s'y voit
+    /// telle quelle.
+    static let parDefaut = IconeApp(motif: .oeuf, fond: .transparent)
 
     /// Les huit, motif par motif.
     static let toutes: [IconeApp] = Motif.allCases.flatMap { motif in Fond.allCases.map { IconeApp(motif: motif, fond: $0) } }

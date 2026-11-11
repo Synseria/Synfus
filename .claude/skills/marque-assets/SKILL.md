@@ -49,8 +49,11 @@ user-invocable: false
   prend tout le carré, l'ombre portée d'un calque sous lui). `SynfusMark.image(pixelSize:icone:)`
   centre chaque motif par son `cadre`, à 92 % de la tuile. Un nouveau motif : son `cadre`, son
   `dessiner(pixels:)`, une ligne dans `poser`, et son fichier dans `generate-app-icons.sh`.
-- Le **défaut** `IconeApp.parDefaut` (oeuf + nuit) est celui du bundle : ne régénérer les icônes
-  (`./Tools/generate-app-icons.sh` → `Resources/Synfus.{icns,png}`) que s'il change. Ne jamais
+- Deux défauts : `IconeApp.duBundle` (oeuf + nuit, une tuile : macOS 26 enferme dans un carré
+  gris l'icône d'un bundle qui n'en est pas une) et `IconeApp.parDefaut` (oeuf + transparent),
+  posé par `IconeAppliquee` dès le lancement — une icône posée sur le bundle n'est pas enfermée.
+  Ne régénérer les icônes (`./Tools/generate-app-icons.sh` → `Resources/Synfus.{icns,png}`) que
+  si `duBundle` change. Ne jamais
   retoucher les PNG : modifier le dessin, relancer le script. Tué (`Killed: 9`) en écrivant dans
   `Resources/` : lancer le générateur vers `$TMPDIR`, copier, puis `iconutil`.
 - `setShadow` prend décalage et flou en **pixels**, hors de la transformation : les multiplier
