@@ -137,6 +137,22 @@ struct JourUsage: Codable, Equatable, Sendable {
     }
 }
 
+/// Ce que porte une requête au collecteur.
+enum EnvoiUsage: Equatable, Sendable {
+    case jours([JourUsage])
+    case diagnostic(DiagnosticUsage)
+
+    var jours: [JourUsage] {
+        if case .jours(let jours) = self { return jours }
+        return []
+    }
+
+    var diagnostics: [DiagnosticUsage] {
+        if case .diagnostic(let diagnostic) = self { return [diagnostic] }
+        return []
+    }
+}
+
 /// L'historique gardé sur le Mac : le détail des derniers jours, le cumul des
 /// plus anciens. Les rapports partent d'ici ; l'onglet Usage s'y lit.
 struct HistoriqueUsage: Codable, Equatable, Sendable {
@@ -160,9 +176,25 @@ struct HistoriqueUsage: Codable, Equatable, Sendable {
         diagnostics = Array((diagnostics + nouveaux).suffix(Self.diagnosticsMaximum))
     }
 
-    /// Le plus ancien en attente part avec le prochain envoi : un à la fois,
-    /// le corps reste sous la limite du collecteur.
+    /// Le plus ancien en attente part le premier : un par envoi, le corps
+    /// reste sous la limite du collecteur.
     var diagnosticAEnvoyer: DiagnosticUsage? { diagnostics.first }
+
+    /// Les jours en attente d'abord, puis les diagnostics : chacun dans sa
+    /// requête, pour qu'un diagnostic refusé ne retienne jamais les jours.
+    func prochainEnvoi(aujourdhui: String) -> EnvoiUsage? {
+        let jours = aEnvoyer(aujourdhui: aujourdhui)
+        if !jours.isEmpty { return .jours(jours) }
+        return diagnosticAEnvoyer.map(EnvoiUsage.diagnostic)
+    }
+
+    /// L'envoi sort de l'attente : accepté, ou refusé pour de bon.
+    mutating func acquitter(_ envoi: EnvoiUsage) {
+        switch envoi {
+        case .jours(let jours): marquerEnvoyes(jours.map(\.jour))
+        case .diagnostic(let diagnostic): retirerDiagnostic(diagnostic)
+        }
+    }
 
     mutating func retirerDiagnostic(_ diagnostic: DiagnosticUsage) {
         if let index = diagnostics.firstIndex(of: diagnostic) { diagnostics.remove(at: index) }

@@ -217,6 +217,29 @@ struct UsageTests {
         #expect(historique.diagnosticAEnvoyer?.version == "0.13.3")
     }
 
+    @Test("Jours et diagnostics partent chacun dans sa requête, les jours d'abord")
+    func prochainEnvoi() throws {
+        var historique = HistoriqueUsage()
+        historique.compter(.palette, le: "2026-11-09")
+        let diagnostic = DiagnosticUsage(genre: .blocage, version: "0.13.0", json: try rapportMetricKit(enFaute: 10, autre: 10))
+        historique.ajouter([diagnostic])
+        let jours = try #require(historique.prochainEnvoi(aujourdhui: "2026-11-10"))
+        #expect(jours.jours.map(\.jour) == ["2026-11-09"] && jours.diagnostics.isEmpty)
+        historique.acquitter(jours)
+        #expect(historique.prochainEnvoi(aujourdhui: "2026-11-10") == .diagnostic(diagnostic))
+        historique.acquitter(.diagnostic(diagnostic))
+        #expect(historique.prochainEnvoi(aujourdhui: "2026-11-10") == nil)
+    }
+
+    @Test("Réponse du collecteur : un contenu refusé l'est pour de bon, le reste se retente")
+    func reponseCollecteur() {
+        #expect(ReponseCollecteur(statut: 204) == .acceptee)
+        #expect(ReponseCollecteur(statut: 400) == .refusee)
+        #expect(ReponseCollecteur(statut: 413) == .refusee)
+        for statut in [401, 403, 408, 429, 500, 503] { #expect(ReponseCollecteur(statut: statut) == .echec, "\(statut)") }
+        #expect(ReponseCollecteur(statut: nil) == .echec)
+    }
+
     @Test("Tout compteur et tout réglage a une clé que le collecteur garde")
     func clesDuCollecteur() {
         for evenement in EvenementUsage.allCases {

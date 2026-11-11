@@ -113,6 +113,25 @@ enum RapportUsage {
     }
 }
 
+/// Ce que le collecteur répond d'un envoi.
+enum ReponseCollecteur: Equatable, Sendable {
+    case acceptee
+    /// Le contenu est en cause (trop gros, mal formé) : renvoyé tel quel, il
+    /// serait refusé de même.
+    case refusee
+    /// Réseau, serveur, jeton ou débit : un autre essai, plus tard, peut passer.
+    case echec
+
+    init(statut: Int?) {
+        switch statut {
+        case .some(200..<300): self = .acceptee
+        case .some(401), .some(403), .some(408), .some(429): self = .echec
+        case .some(400..<500): self = .refusee
+        default: self = .echec
+        }
+    }
+}
+
 /// L'identifiant de l'installation : l'UUID matériel du Mac haché avec
 /// l'identifiant de l'app — stable d'une réinstallation à l'autre, propre à
 /// Synfus (une autre app en tire un autre), sans rien dire du Mac.
