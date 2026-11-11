@@ -805,7 +805,7 @@
   "stats.palette_variable": "Variables",
   "stats.palette_zaap": "Zaaps",
   "stats.partager": "Partager des statistiques anonymes",
-  "stats.partager.aide": "Une fois par jour : les compteurs de cette page, le nombre de persos (jamais leurs noms), les réglages en service, la langue, les versions de Synfus et de macOS, et un identifiant tiré de ce Mac par hachage, qui ne dit rien de lui. Rien du jeu : ni nom, ni serveur, ni position, ni texte lu. Couper le partage garde le compte sur ce Mac.",
+  "stats.partager.aide": "Une fois par jour : les compteurs de cette page, le nombre de persos (jamais leurs noms), les réglages en service, la langue, les versions de Synfus et de macOS, et un identifiant tiré de ce Mac par hachage, qui ne dit rien de lui. Rien du jeu : ni nom, ni serveur, ni position, ni texte lu. S'y ajoutent les rapports de plantage, de blocage et d'excès de processeur ou d'écriture disque que macOS remet à Synfus : des piles d'appels de Synfus. Couper le partage garde le compte sur ce Mac.",
   "stats.periode": "Période",
   "stats.periode.mois": "30 jours",
   "stats.periode.semaine": "7 jours",
