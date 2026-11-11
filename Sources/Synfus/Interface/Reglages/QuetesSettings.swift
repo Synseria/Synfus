@@ -14,7 +14,6 @@ struct QuetesSettings: View {
         let affichees = Array(quetes.prefix(Self.limite).enumerated())
         PageListe(titre: L("reglages.quetes"), aide: L("quetes.aide")) {
             SourceQuetes().cadreDeListe(premiere: true, derniere: false)
-            Interrupteur(titre: L("quetes.bouton"), isOn: $prefs.quetesBouton).cadreDeListe(premiere: false, derniere: false)
             RaccourciReglable(label: L("quetes.raccourci"), chemin: \.quetesHotKey).cadreDeListe(premiere: false, derniere: true)
             EnTeteListe(titre: L("quetes.panneau"))
             Interrupteur(titre: L("quetes.compact"), aide: L("quetes.compact.aide"), isOn: $prefs.quetesCompact)

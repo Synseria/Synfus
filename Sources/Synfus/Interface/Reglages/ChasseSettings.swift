@@ -1,9 +1,8 @@
 import SwiftUI
 
-/// Onglet Chasse : ouvrir le panneau, son raccourci, son bouton dans la
-/// barre, et la liste des indices de DofusDB.
+/// Onglet Chasse : ouvrir le panneau, son raccourci, et la liste des indices
+/// de DofusDB.
 struct ChasseSettings: View {
-    @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var modele = ChasseModele.shared
 
     var body: some View {
@@ -11,7 +10,6 @@ struct ChasseSettings: View {
                      aide: L("chasse.aide")) {
             Section {
                 RaccourciReglable(label: L("chasse.raccourci"), chemin: \.chasseHotKey)
-                Interrupteur(titre: L("chasse.bouton"), isOn: $prefs.chasseBouton)
                 Ligne(titre: L("chasse.indices"), etat: source) {
                     HStack(spacing: 8) {
                         if modele.chargementIndices { ProgressView().controlSize(.small) }
