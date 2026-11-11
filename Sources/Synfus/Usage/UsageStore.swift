@@ -5,7 +5,7 @@ import Combine
 import Foundation
 
 /// Le seul foyer des statistiques : chaque geste compté passe par `compter`,
-/// l'onglet Statistiques lit `historique`, et les jours terminés partent au
+/// l'onglet Usage lit `historique`, et les jours terminés partent au
 /// collecteur une fois par jour (`Preferences.partagerStatistiques`). Couper
 /// le partage n'arrête pas le compte, qui ne quitte pas le Mac.
 @MainActor

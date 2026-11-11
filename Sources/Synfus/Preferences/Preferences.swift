@@ -81,7 +81,7 @@ final class Preferences: ObservableObject {
     private(set) var premierLancement = false
     /// Envoyer chaque jour les statistiques d'utilisation (`UsageStore`).
     /// Activé par défaut : anonymes, montrées telles quelles dans l'onglet
-    /// Statistiques, coupées d'un geste.
+    /// Usage, coupées d'un geste.
     @Published var partagerStatistiques: Bool = true { didSet { save() } }
 
     /// Lire la position du perso (coordonnées de la carte, en haut à gauche
