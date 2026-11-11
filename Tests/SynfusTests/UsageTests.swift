@@ -104,6 +104,21 @@ struct UsageTests {
         #expect(relu.totaux(sur: nil, aujourdhui: "2026-11-10", calendrier: calendrier).isEmpty)
     }
 
+    @Test("Un historique amputé ou d'une autre version se relit, champs absents à leur défaut")
+    func relectureTolerante() throws {
+        let json = """
+        {"identifiantDeSecours": "ABC", "champFutur": 3,
+         "jours": [{"jour": "2026-11-10", "compteurs": {"palette": 2}}, {"jour": "2026-11-11", "envoye": "oui"}]}
+        """
+        let relu = try JSONDecoder().decode(HistoriqueUsage.self, from: Data(json.utf8))
+        #expect(relu.identifiantDeSecours == "ABC")
+        #expect(relu.jour("2026-11-10")?.nombre(.palette) == 2)
+        #expect(relu.jour("2026-11-10")?.envoye == false)
+        #expect(relu.jour("2026-11-11")?.envoye == false)
+        #expect(relu.diagnostics.isEmpty && relu.cumul.isEmpty && relu.depuis == nil)
+        #expect(try JSONDecoder().decode(HistoriqueUsage.self, from: Data("{}".utf8)) == HistoriqueUsage())
+    }
+
     @Test("Le rapport : OTLP JSON, seulement des clés que le collecteur garde, aucun nom de perso")
     func rapport() throws {
         var historique = HistoriqueUsage()
@@ -138,15 +153,58 @@ struct UsageTests {
         #expect(valeurs["jour"]?["stringValue"] as? String == "2026-11-09")
     }
 
-    @Test("Diagnostics : dix gardés au plus, un par envoi, coupés sous la limite du collecteur")
+    /// Un rapport au format de MetricKit : une pile par fil, `remplissage`
+    /// octets de cadres dans chacune.
+    private func rapportMetricKit(enFaute: Int, autre: Int, guillemets: Bool = false) throws -> Data {
+        func pile(_ attribuee: Bool, _ remplissage: Int) -> [String: Any] {
+            let symbole = guillemets ? String(repeating: "\"\\", count: remplissage / 2) : String(repeating: "a", count: remplissage)
+            return ["threadAttributed": attribuee,
+                    "callStackRootFrames": [["binaryName": "Synfus", "address": 4_300_000_000, "symbole": symbole]]]
+        }
+        let racine: [String: Any] = [
+            "version": "1.0.0",
+            "diagnosticMetaData": ["appVersion": "0.13.0", "platformArchitecture": "arm64"],
+            "callStackTree": ["callStackPerThread": true, "callStacks": [pile(false, autre), pile(true, enFaute)]],
+        ]
+        return try JSONSerialization.data(withJSONObject: racine)
+    }
+
+    private func objet(_ contenu: String) throws -> [String: Any] {
+        try #require(try JSONSerialization.jsonObject(with: Data(contenu.utf8)) as? [String: Any])
+    }
+
+    @Test("Diagnostic trop long : réduit au fil en faute, puis aux métadonnées, toujours du JSON")
+    func reductionDiagnostic() throws {
+        let court = try rapportMetricKit(enFaute: 100, autre: 100)
+        #expect(DiagnosticUsage.reduire(court) == String(bytes: court, encoding: .utf8))
+
+        let autreLong = try objet(DiagnosticUsage.reduire(try rapportMetricKit(enFaute: 1_000, autre: 80_000)))
+        let piles = try #require((autreLong["callStackTree"] as? [String: Any])?["callStacks"] as? [[String: Any]])
+        #expect(piles.count == 1 && piles.first?["threadAttributed"] as? Bool == true)
+        #expect((autreLong["diagnosticMetaData"] as? [String: Any])?["appVersion"] as? String == "0.13.0")
+
+        let enFauteLong = try objet(DiagnosticUsage.reduire(try rapportMetricKit(enFaute: 80_000, autre: 100)))
+        #expect(Set(enFauteLong.keys) == ["version", "diagnosticMetaData"])
+
+        // Sous la limite en octets bruts, au-dessus une fois échappé.
+        let echappe = try rapportMetricKit(enFaute: 20_000, autre: 100, guillemets: true)
+        #expect(echappe.count < DiagnosticUsage.tailleMaximale)
+        let reduit = DiagnosticUsage.reduire(echappe)
+        #expect(DiagnosticUsage.tailleEchappee(reduit) <= DiagnosticUsage.tailleMaximale)
+        #expect(try objet(reduit)["callStackTree"] == nil)
+
+        #expect(DiagnosticUsage.reduire(Data(String(repeating: "x", count: 70_000).utf8)) == "{}")
+    }
+
+    @Test("Diagnostics : dix gardés au plus, le plus ancien d'abord, un corps sous la limite du collecteur")
     func diagnostics() throws {
         var historique = HistoriqueUsage()
-        let long = Data(("{\"x\":\"" + String(repeating: "a", count: 60_000) + "\"}").utf8)
+        let long = try rapportMetricKit(enFaute: 30_000, autre: 30_000, guillemets: true)
         historique.ajouter((0..<12).map { DiagnosticUsage(genre: .plantage, version: "0.13.\($0)", json: long) })
         #expect(historique.diagnostics.count == HistoriqueUsage.diagnosticsMaximum)
         let premier = try #require(historique.diagnosticAEnvoyer)
         #expect(premier.version == "0.13.2")
-        #expect(premier.contenu.count == DiagnosticUsage.tailleMaximale)
+        #expect(DiagnosticUsage.tailleEchappee(premier.contenu) <= DiagnosticUsage.tailleMaximale)
 
         let data = RapportUsage.corps([], diagnostics: [premier], contexte: contexte, envoi: Date())
         #expect(data.count < 65_536)
@@ -157,6 +215,29 @@ struct UsageTests {
         }
         historique.retirerDiagnostic(premier)
         #expect(historique.diagnosticAEnvoyer?.version == "0.13.3")
+    }
+
+    @Test("Jours et diagnostics partent chacun dans sa requête, les jours d'abord")
+    func prochainEnvoi() throws {
+        var historique = HistoriqueUsage()
+        historique.compter(.palette, le: "2026-11-09")
+        let diagnostic = DiagnosticUsage(genre: .blocage, version: "0.13.0", json: try rapportMetricKit(enFaute: 10, autre: 10))
+        historique.ajouter([diagnostic])
+        let jours = try #require(historique.prochainEnvoi(aujourdhui: "2026-11-10"))
+        #expect(jours.jours.map(\.jour) == ["2026-11-09"] && jours.diagnostics.isEmpty)
+        historique.acquitter(jours)
+        #expect(historique.prochainEnvoi(aujourdhui: "2026-11-10") == .diagnostic(diagnostic))
+        historique.acquitter(.diagnostic(diagnostic))
+        #expect(historique.prochainEnvoi(aujourdhui: "2026-11-10") == nil)
+    }
+
+    @Test("Réponse du collecteur : un contenu refusé l'est pour de bon, le reste se retente")
+    func reponseCollecteur() {
+        #expect(ReponseCollecteur(statut: 204) == .acceptee)
+        #expect(ReponseCollecteur(statut: 400) == .refusee)
+        #expect(ReponseCollecteur(statut: 413) == .refusee)
+        for statut in [401, 403, 408, 429, 500, 503] { #expect(ReponseCollecteur(statut: statut) == .echec, "\(statut)") }
+        #expect(ReponseCollecteur(statut: nil) == .echec)
     }
 
     @Test("Tout compteur et tout réglage a une clé que le collecteur garde")
@@ -176,12 +257,30 @@ struct UsageTests {
         #expect(a == IdentifiantInstallation.calculer(materiel: "UUID-1", app: "fr.synseria.Synfus"))
         #expect(a != IdentifiantInstallation.calculer(materiel: "UUID-1", app: "fr.synseria.Autre"))
         #expect(a.wholeMatch(of: #/[0-9a-f]{64}/#) != nil)
+
+        var secours: String?
+        #expect(IdentifiantInstallation.fixer(materiel: "UUID-1", app: "fr.synseria.Synfus", secours: &secours) == a)
+        #expect(secours == nil)
+        let tire = IdentifiantInstallation.fixer(materiel: nil, app: "fr.synseria.Synfus", secours: &secours)
+        #expect(secours != nil)
+        #expect(IdentifiantInstallation.fixer(materiel: nil, app: "fr.synseria.Synfus", secours: &secours) == tire)
     }
 
-    @Test("Le jour : calendrier de l'utilisateur, et décalage d'une clé")
+    @Test("Le jour : fuseau de l'utilisateur, et décalage d'une clé")
     func jours() {
         let date = calendrier.date(from: DateComponents(year: 2026, month: 3, day: 1, hour: 0, minute: 30))!
         #expect(JourUsage.cle(date, calendrier: calendrier) == "2026-03-01")
         #expect(HistoriqueUsage.decaler("2026-03-01", de: -1, calendrier: calendrier) == "2026-02-28")
+    }
+
+    @Test("La clé d'un jour est grégorienne, même sur un Mac en calendrier bouddhiste")
+    func calendrierGregorien() {
+        #expect(JourUsage.gregorien.identifier == .gregorian)
+        #expect(JourUsage.gregorien.timeZone == .current)
+        var bouddhiste = Calendar(identifier: .buddhist)
+        bouddhiste.timeZone = .current
+        let date = JourUsage.date("2026-11-10")!
+        #expect(JourUsage.cle(date) == "2026-11-10")
+        #expect(JourUsage.cle(date, calendrier: bouddhiste) != "2026-11-10")
     }
 }

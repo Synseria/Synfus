@@ -89,7 +89,7 @@ enum EvenementUsage: String, CaseIterable, Codable, Sendable {
     }
 }
 
-/// Une journée d'utilisation, sur le calendrier de l'utilisateur.
+/// Une journée d'utilisation, dans le fuseau de l'utilisateur.
 struct JourUsage: Codable, Equatable, Sendable {
     /// `2026-11-09` (`JourUsage.cle`).
     let jour: String
@@ -116,15 +116,40 @@ struct JourUsage: Codable, Equatable, Sendable {
         secondesAvecPersos > 0 ? persosSecondes / secondesAvecPersos : nil
     }
 
-    static func date(_ cle: String, calendrier: Calendar = .current) -> Date? {
+    /// Grégorien quel que soit le calendrier du Mac (bouddhiste, japonais…) :
+    /// les clés se comparent en texte et partent telles quelles au collecteur.
+    /// Le fuseau, lui, est celui de l'utilisateur : sa journée.
+    static var gregorien: Calendar {
+        var calendrier = Calendar(identifier: .gregorian)
+        calendrier.timeZone = .current
+        return calendrier
+    }
+
+    static func date(_ cle: String, calendrier: Calendar = JourUsage.gregorien) -> Date? {
         let parties = cle.split(separator: "-").compactMap { Int($0) }
         guard parties.count == 3 else { return nil }
         return calendrier.date(from: DateComponents(year: parties[0], month: parties[1], day: parties[2]))
     }
 
-    static func cle(_ date: Date, calendrier: Calendar = .current) -> String {
+    static func cle(_ date: Date, calendrier: Calendar = JourUsage.gregorien) -> String {
         let c = calendrier.dateComponents([.year, .month, .day], from: date)
         return String(format: "%04d-%02d-%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0)
+    }
+}
+
+/// Ce que porte une requête au collecteur.
+enum EnvoiUsage: Equatable, Sendable {
+    case jours([JourUsage])
+    case diagnostic(DiagnosticUsage)
+
+    var jours: [JourUsage] {
+        if case .jours(let jours) = self { return jours }
+        return []
+    }
+
+    var diagnostics: [DiagnosticUsage] {
+        if case .diagnostic(let diagnostic) = self { return [diagnostic] }
+        return []
     }
 }
 
@@ -151,9 +176,25 @@ struct HistoriqueUsage: Codable, Equatable, Sendable {
         diagnostics = Array((diagnostics + nouveaux).suffix(Self.diagnosticsMaximum))
     }
 
-    /// Le plus ancien en attente part avec le prochain envoi : un à la fois,
-    /// le corps reste sous la limite du collecteur.
+    /// Le plus ancien en attente part le premier : un par envoi, le corps
+    /// reste sous la limite du collecteur.
     var diagnosticAEnvoyer: DiagnosticUsage? { diagnostics.first }
+
+    /// Les jours en attente d'abord, puis les diagnostics : chacun dans sa
+    /// requête, pour qu'un diagnostic refusé ne retienne jamais les jours.
+    func prochainEnvoi(aujourdhui: String) -> EnvoiUsage? {
+        let jours = aEnvoyer(aujourdhui: aujourdhui)
+        if !jours.isEmpty { return .jours(jours) }
+        return diagnosticAEnvoyer.map(EnvoiUsage.diagnostic)
+    }
+
+    /// L'envoi sort de l'attente : accepté, ou refusé pour de bon.
+    mutating func acquitter(_ envoi: EnvoiUsage) {
+        switch envoi {
+        case .jours(let jours): marquerEnvoyes(jours.map(\.jour))
+        case .diagnostic(let diagnostic): retirerDiagnostic(diagnostic)
+        }
+    }
 
     mutating func retirerDiagnostic(_ diagnostic: DiagnosticUsage) {
         if let index = diagnostics.firstIndex(of: diagnostic) { diagnostics.remove(at: index) }
@@ -206,7 +247,7 @@ struct HistoriqueUsage: Codable, Equatable, Sendable {
 
     /// Les compteurs des `nombreDeJours` derniers jours jusqu'à `aujourdhui`
     /// compris, ou de tout l'historique (`nil`).
-    func totaux(sur nombreDeJours: Int?, aujourdhui: String, calendrier: Calendar = .current) -> [EvenementUsage: Int] {
+    func totaux(sur nombreDeJours: Int?, aujourdhui: String, calendrier: Calendar = JourUsage.gregorien) -> [EvenementUsage: Int] {
         var bruts: [String: Int] = [:]
         if let nombreDeJours {
             let debut = Self.decaler(aujourdhui, de: -(nombreDeJours - 1), calendrier: calendrier)
@@ -225,7 +266,7 @@ struct HistoriqueUsage: Codable, Equatable, Sendable {
     /// Moyenne, sur les jours de la période où un perso au moins était
     /// connecté, du nombre de persos connectés et du nombre de persos joués.
     func moyennesPersos(sur nombreDeJours: Int?, aujourdhui: String,
-                        calendrier: Calendar = .current) -> (connectes: Double, joues: Double)? {
+                        calendrier: Calendar = JourUsage.gregorien) -> (connectes: Double, joues: Double)? {
         let debut = nombreDeJours.map { Self.decaler(aujourdhui, de: -($0 - 1), calendrier: calendrier) } ?? ""
         let actifs = jours.filter { $0.jour >= debut && $0.jour <= aujourdhui && $0.persosMoyenne != nil }
         guard !actifs.isEmpty else { return nil }
@@ -252,10 +293,51 @@ struct HistoriqueUsage: Codable, Equatable, Sendable {
         }
     }
 
-    static func decaler(_ cle: String, de jours: Int, calendrier: Calendar = .current) -> String {
+    static func decaler(_ cle: String, de jours: Int, calendrier: Calendar = JourUsage.gregorien) -> String {
         guard let date = JourUsage.date(cle, calendrier: calendrier),
               let decalee = calendrier.date(byAdding: .day, value: jours, to: date)
         else { return cle }
         return JourUsage.cle(decalee, calendrier: calendrier)
+    }
+}
+
+// Relecture tolérante d'`usage.json` : un champ ajouté par une version plus
+// récente (ou retiré) prend son défaut au lieu de faire échouer toute la
+// lecture — que `UsageStore` remplacerait alors par un historique vide,
+// identifiant de secours compris.
+
+extension JourUsage {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(jour: try c.decode(String.self, forKey: .jour))
+        compteurs = c.valeur(.compteurs, sinon: compteurs)
+        persosMax = c.valeur(.persosMax, sinon: persosMax)
+        persosSecondes = c.valeur(.persosSecondes, sinon: persosSecondes)
+        secondesAvecPersos = c.valeur(.secondesAvecPersos, sinon: secondesAvecPersos)
+        persosJoues = c.valeur(.persosJoues, sinon: persosJoues)
+        reglages = c.valeur(.reglages, sinon: reglages)
+        langue = c.valeur(.langue, sinon: langue)
+        envoye = c.valeur(.envoye, sinon: envoye)
+    }
+}
+
+extension HistoriqueUsage {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.init()
+        jours = c.valeur(.jours, sinon: jours)
+        cumul = c.valeur(.cumul, sinon: cumul)
+        depuis = c.valeur(.depuis, sinon: depuis)
+        dernierEnvoi = c.valeur(.dernierEnvoi, sinon: dernierEnvoi)
+        dernierRapport = c.valeur(.dernierRapport, sinon: dernierRapport)
+        identifiantDeSecours = c.valeur(.identifiantDeSecours, sinon: identifiantDeSecours)
+        diagnostics = c.valeur(.diagnostics, sinon: diagnostics)
+    }
+}
+
+private extension KeyedDecodingContainer {
+    /// Le champ, ou `defaut` s'il est absent ou illisible.
+    func valeur<T: Decodable>(_ cle: Key, sinon defaut: T) -> T {
+        (try? decodeIfPresent(T.self, forKey: cle)) ?? defaut
     }
 }

@@ -113,6 +113,25 @@ enum RapportUsage {
     }
 }
 
+/// Ce que le collecteur répond d'un envoi.
+enum ReponseCollecteur: Equatable, Sendable {
+    case acceptee
+    /// Le contenu est en cause (trop gros, mal formé) : renvoyé tel quel, il
+    /// serait refusé de même.
+    case refusee
+    /// Réseau, serveur, jeton ou débit : un autre essai, plus tard, peut passer.
+    case echec
+
+    init(statut: Int?) {
+        switch statut {
+        case .some(200..<300): self = .acceptee
+        case .some(401), .some(403), .some(408), .some(429): self = .echec
+        case .some(400..<500): self = .refusee
+        default: self = .echec
+        }
+    }
+}
+
 /// L'identifiant de l'installation : l'UUID matériel du Mac haché avec
 /// l'identifiant de l'app — stable d'une réinstallation à l'autre, propre à
 /// Synfus (une autre app en tire un autre), sans rien dire du Mac.
@@ -121,8 +140,16 @@ enum IdentifiantInstallation {
         SHA256.hash(data: Data("\(app):\(materiel)".utf8)).map { String(format: "%02x", $0) }.joined()
     }
 
-    /// `nil` si le Mac ne donne pas son UUID (jamais vu) : l'appelant tire
-    /// alors un UUID au hasard et le garde.
+    /// L'identifiant tiré de `materiel`, ou, si le Mac ne le donne pas, d'un
+    /// UUID tiré au hasard une fois et gardé dans `secours`.
+    static func fixer(materiel: String?, app: String, secours: inout String?) -> String {
+        if let materiel { return calculer(materiel: materiel, app: app) }
+        let tire = secours ?? UUID().uuidString
+        secours = tire
+        return calculer(materiel: tire, app: app)
+    }
+
+    /// `nil` si le Mac ne donne pas son UUID (jamais vu).
     static func materiel() -> String? {
         let service = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("IOPlatformExpertDevice"))
         guard service != 0 else { return nil }
