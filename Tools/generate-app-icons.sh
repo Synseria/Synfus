@@ -4,7 +4,7 @@
 #
 #   ./Tools/generate-app-icons.sh
 #
-# Le générateur compile la source RÉELLE du dessin (Sources/Synfus/Marque/SynfusMark.swift),
+# Le générateur compile la source RÉELLE du dessin (Sources/Synfus/Marque/ : SynfusMark, Couvee, IconeApp),
 # celle-là même dont l'app tire son symbole de barre de menus : un seul dessin,
 # aucune duplication. À relancer après toute modification de la marque.
 set -euo pipefail
@@ -18,6 +18,8 @@ trap 'rm -rf "$BUILD_DIR"' EXIT
 echo "▸ Compilation du générateur…"
 swiftc -O -swift-version 6 \
     Sources/Synfus/Marque/SynfusMark.swift \
+    Sources/Synfus/Marque/Couvee.swift \
+    Sources/Synfus/Marque/IconeApp.swift \
     Tools/AppIconExport.swift \
     -o "$BUILD_DIR/AppIconExport"
 
