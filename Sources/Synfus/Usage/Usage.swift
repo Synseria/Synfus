@@ -268,3 +268,44 @@ struct HistoriqueUsage: Codable, Equatable, Sendable {
         return JourUsage.cle(decalee, calendrier: calendrier)
     }
 }
+
+// Relecture tolérante d'`usage.json` : un champ ajouté par une version plus
+// récente (ou retiré) prend son défaut au lieu de faire échouer toute la
+// lecture — que `UsageStore` remplacerait alors par un historique vide,
+// identifiant de secours compris.
+
+extension JourUsage {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(jour: try c.decode(String.self, forKey: .jour))
+        compteurs = c.valeur(.compteurs, sinon: compteurs)
+        persosMax = c.valeur(.persosMax, sinon: persosMax)
+        persosSecondes = c.valeur(.persosSecondes, sinon: persosSecondes)
+        secondesAvecPersos = c.valeur(.secondesAvecPersos, sinon: secondesAvecPersos)
+        persosJoues = c.valeur(.persosJoues, sinon: persosJoues)
+        reglages = c.valeur(.reglages, sinon: reglages)
+        langue = c.valeur(.langue, sinon: langue)
+        envoye = c.valeur(.envoye, sinon: envoye)
+    }
+}
+
+extension HistoriqueUsage {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.init()
+        jours = c.valeur(.jours, sinon: jours)
+        cumul = c.valeur(.cumul, sinon: cumul)
+        depuis = c.valeur(.depuis, sinon: depuis)
+        dernierEnvoi = c.valeur(.dernierEnvoi, sinon: dernierEnvoi)
+        dernierRapport = c.valeur(.dernierRapport, sinon: dernierRapport)
+        identifiantDeSecours = c.valeur(.identifiantDeSecours, sinon: identifiantDeSecours)
+        diagnostics = c.valeur(.diagnostics, sinon: diagnostics)
+    }
+}
+
+private extension KeyedDecodingContainer {
+    /// Le champ, ou `defaut` s'il est absent ou illisible.
+    func valeur<T: Decodable>(_ cle: Key, sinon defaut: T) -> T {
+        (try? decodeIfPresent(T.self, forKey: cle)) ?? defaut
+    }
+}
