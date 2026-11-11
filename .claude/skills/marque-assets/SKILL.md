@@ -38,7 +38,7 @@ user-invocable: false
 ## La marque — `Sources/Synfus/Marque/`
 
 - L'Œuf ajouré (un Dofus en treillis de rubans ondés, blanc bleuté, éclairé du dedans, posé sur
-  un feuillage à l'accent de l'app, sur une tuile vert sombre — macOS 26 enferme dans un carré
+  un feuillage à l'accent de l'app, sur une tuile bleu nuit — macOS 26 enferme dans un carré
   gris, réduite, toute icône qui n'est pas une tuile) est décrit **une seule fois** dans
   `SynfusMark.swift` : CoreGraphics pur, n'importe que CoreGraphics et Foundation
   (`Tools/AppIconExport.swift` le compile tel quel ; un `import AppKit` le casse). Tracés
