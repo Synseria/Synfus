@@ -57,7 +57,7 @@ enum AppIconExport {
         do {
             try FileManager.default.createDirectory(at: iconset, withIntermediateDirectories: true)
             for slot in slots {
-                guard let image = SynfusMark.image(pixelSize: slot.pixels, icone: .parDefaut) else {
+                guard let image = SynfusMark.image(pixelSize: slot.pixels, icone: .duBundle) else {
                     throw NSError(domain: "AppIconExport", code: 3, userInfo: [
                         NSLocalizedDescriptionKey: "Rendu impossible à \(slot.pixels) px",
                     ])
@@ -66,7 +66,7 @@ enum AppIconExport {
             }
             // PNG de référence, hors iconset : ce que l'on regarde pour juger le
             // dessin, et ce que le README peut montrer.
-            guard let grand = SynfusMark.image(pixelSize: 1024, icone: .parDefaut) else {
+            guard let grand = SynfusMark.image(pixelSize: 1024, icone: .duBundle) else {
                 throw NSError(domain: "AppIconExport", code: 3, userInfo: [
                     NSLocalizedDescriptionKey: "Rendu 1024 px impossible",
                 ])
