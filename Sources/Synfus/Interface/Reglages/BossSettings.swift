@@ -4,14 +4,12 @@ import SwiftUI
 /// qu'il lit — les zones de la vie et du tchat se calibrent dans l'onglet
 /// Lecture de l'écran.
 struct BossSettings: View {
-    @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var previews = WindowPreviewService.shared
 
     var body: some View {
         PageReglages(titre: L("boss.titre"), aide: L("boss.aide")) {
             Section {
                 RaccourciReglable(label: L("boss.raccourci"), chemin: \.bossHotKey)
-                Interrupteur(titre: L("boss.bouton"), isOn: $prefs.bossBouton)
                 ForEach(Boss.allCases, id: \.self) { boss in
                     Ligne(titre: BossVue.nom(boss), aide: Self.resume(boss)) {
                         Button(L("boss.ouvrir")) { BossPanel.shared.ouvrir(boss) }

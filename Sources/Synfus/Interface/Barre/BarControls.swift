@@ -228,6 +228,9 @@ struct ArrangeMenuButton: View {
             ArrangementMenuItems()
             Divider()
             Button(L("menu.lancerSession")) { WindowManager.shared.lancerSession() }
+            // Un `Menu` n'a pas de clic droit à lui : l'entrée va dans le menu même.
+            Divider()
+            MasquerBouton(bouton: .rangement)
         } label: {
             Image(systemName: "rectangle.3.group")
                 .font(.synfus(.note))
@@ -246,6 +249,16 @@ struct ArrangeMenuButton: View {
         .onHover { survole = $0 }
         .animation(.easeOut(duration: 0.15), value: survole)
         .aide(L("barre.rangerAide"))
+    }
+}
+
+/// L'entrée « Masquer ce bouton » du menu d'un bouton de la barre ; il revient
+/// par Réglages › Barre.
+struct MasquerBouton: View {
+    let bouton: BoutonBarre
+
+    var body: some View {
+        Button(L("barre.masquerBouton")) { Preferences.shared.montrer(bouton, false) }
     }
 }
 

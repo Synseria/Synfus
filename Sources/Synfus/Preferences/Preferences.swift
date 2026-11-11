@@ -25,6 +25,9 @@ final class Preferences: ObservableObject {
     @Published var showNumbers: Bool = true { didSet { save() } }
     @Published var showClasses: Bool = true { didSet { save() } }
 
+    /// Les boutons de la barre masqués, après les persos ; tous montrés par défaut.
+    @Published var boutonsMasques: Set<BoutonBarre> = [] { didSet { save() } }
+
     /// Réaction quand un perso réclame l'attention (rebond de son icône du Dock).
     @Published var attentionAction: AttentionAction = .highlight { didSet { save() } }
 
@@ -148,9 +151,6 @@ final class Preferences: ObservableObject {
     /// Raccourci « zaap le plus proche du /travel copié ». Sans défaut.
     @Published var zaapHotKey: HotKey? { didSet { save() } }
 
-    /// Le bouton zaap dans la barre — montré seulement si la position est lue.
-    @Published var zaapBouton: Bool = true { didSet { save() } }
-
     /// Réécrire de soi-même chaque `/travel` copié. Éteint par défaut : il
     /// regarde chaque copie, de n'importe quelle app.
     @Published var zaapAuto: Bool = false { didSet { save() } }
@@ -224,9 +224,6 @@ final class Preferences: ObservableObject {
     /// Les objectifs que le suivi du jeu montre faits se cochent à sa lecture.
     @Published var quetesCocherSuivi: Bool = true { didSet { save() } }
 
-    /// Le bouton des quêtes dans la barre.
-    @Published var quetesBouton: Bool = true { didSet { save() } }
-
     /// Les objets de quête hors des ressources à réunir : ils ne s'achètent pas.
     @Published var quetesMasquerObjets: Bool = false { didSet { save() } }
 
@@ -251,14 +248,8 @@ final class Preferences: ObservableObject {
     /// Raccourci du panneau des quêtes. Sans défaut.
     @Published var quetesHotKey: HotKey? { didSet { save() } }
 
-    /// Le bouton de chasse dans la barre.
-    @Published var chasseBouton: Bool = true { didSet { save() } }
-
     /// Raccourci du panneau d'aide aux boss. Sans défaut.
     @Published var bossHotKey: HotKey? { didSet { save() } }
-
-    /// Le bouton d'aide aux boss dans la barre.
-    @Published var bossBouton: Bool = true { didSet { save() } }
 
     /// Le boss que montre le panneau d'aide.
     @Published var bossChoisi: Boss = .harebourg { didSet { save() } }
@@ -295,6 +286,11 @@ final class Preferences: ObservableObject {
         } else if hotKeys.count > emplacements {
             hotKeys.removeSubrange(emplacements...)
         }
+    }
+
+    /// Montre ou masque un bouton de la barre.
+    func montrer(_ bouton: BoutonBarre, _ montre: Bool) {
+        if montre { boutonsMasques.remove(bouton) } else { boutonsMasques.insert(bouton) }
     }
 
     /// Permute deux persos dans l'ordre de préférence.
@@ -530,7 +526,6 @@ final class Preferences: ObservableObject {
         .facultatif("inviteFormat", \.inviteFormat),
         .facultatif("inviteGroupee", \.inviteGroupee),
         .optionnel("zaapHotKey", \.zaapHotKey),
-        .facultatif("zaapBouton", \.zaapBouton),
         .facultatif("zaapAuto", \.zaapAuto),
         .facultatif("zaapGainMinimal", \.zaapGainMinimal),
         .facultatif("zaapDuJeu", \.zaapDuJeu),
@@ -553,10 +548,7 @@ final class Preferences: ObservableObject {
         .facultatif("paletteTri", \.paletteTri),
         .facultatif("quetesEpinglees", \.quetesEpinglees),
         .facultatif("quetesEtape", \.quetesEtape),
-        .facultatif("chasseBouton", \.chasseBouton),
-        .facultatif("bossBouton", \.bossBouton),
         .facultatif("quetesValides", \.quetesValides),
-        .facultatif("quetesBouton", \.quetesBouton),
         .facultatif("quetesMasquerObjets", \.quetesMasquerObjets),
         .facultatif("quetesCompact", \.quetesCompact),
         .facultatif("quetesConsigne", \.quetesConsigne),
@@ -566,6 +558,13 @@ final class Preferences: ObservableObject {
         .facultatif("quetesDecoches", \.quetesDecoches),
         .facultatif("quetesCochesLues", \.quetesCochesLues),
         .facultatif("zaapsVueCarte", \.vuesCartes),
+        .boutonsMasques("boutonsMasques"),
+    ]
+
+    /// Les booléens qui portaient chacun un bouton de la barre avant
+    /// `boutonsMasques` : relus tant qu'une sauvegarde n'a pas la nouvelle clé.
+    private static let boutonsHerites: [(BoutonBarre, Cle)] = [
+        (.quetes, "quetesBouton"), (.boss, "bossBouton"), (.chasse, "chasseBouton"), (.palette, "zaapBouton"),
     ]
 
     /// Génération du jeu de raccourcis par défaut appliqué à la sauvegarde.
@@ -678,6 +677,31 @@ final class Preferences: ObservableObject {
                         guard let valeur = try conteneur.decodeIfPresent(V.self, forKey: cle)
                         else { return nil }
                         return { $0[keyPath: chemin] = valeur }
+                    })
+        }
+
+        /// Les boutons masqués, écrits dans l'ordre de la barre pour que la
+        /// sauvegarde ne change pas d'un lancement à l'autre. Relus en texte :
+        /// un bouton inconnu (version plus récente) est ignoré au lieu de rendre
+        /// la sauvegarde illisible. Sans la clé, les anciens booléens à `false`
+        /// donnent les boutons masqués.
+        static func boutonsMasques(_ cle: Cle) -> Reglage {
+            Reglage(ecrire: { prefs, conteneur in
+                        let masques = BoutonBarre.allCases.filter(prefs.boutonsMasques.contains)
+                        try conteneur.encode(masques.map(\.rawValue), forKey: cle)
+                    },
+                    lire: { conteneur in
+                        var masques: Set<BoutonBarre> = []
+                        if let noms = try conteneur.decodeIfPresent([String].self, forKey: cle) {
+                            masques = Set(noms.compactMap(BoutonBarre.init(rawValue:)))
+                        } else {
+                            for (bouton, ancienne) in Preferences.boutonsHerites
+                            where try conteneur.decodeIfPresent(Bool.self, forKey: ancienne) == false {
+                                masques.insert(bouton)
+                            }
+                        }
+                        guard !masques.isEmpty else { return nil }
+                        return { $0.boutonsMasques = masques }
                     })
         }
 

@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// Onglet Barre : la barre flottante, ce qu'elle montre, et l'aperçu au survol.
+/// Onglet Barre : la barre flottante, ce qu'elle montre — ses boutons
+/// compris —, et l'aperçu au survol.
 struct BarreSettings: View {
     @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var previews = WindowPreviewService.shared
@@ -30,8 +31,18 @@ struct BarreSettings: View {
                                  PanneauxJeu.revoir(force: true)
                              }))
             }
-
-
+            if prefs.barVisible {
+                Section {
+                    ForEach(BoutonBarre.allCases, id: \.self) { bouton in
+                        Interrupteur(titre: bouton.libelle, isOn: Binding(
+                            get: { !prefs.boutonsMasques.contains(bouton) },
+                            set: { prefs.montrer(bouton, $0) }
+                        ))
+                    }
+                } header: {
+                    SectionTitle(L("barre.boutons"))
+                }
+            }
             Section {
                 Interrupteur(titre: L("general.apercus.survol"), aide: L("general.apercus.aide"), isOn: Binding(
                     get: { prefs.showPreviewOnHover },
