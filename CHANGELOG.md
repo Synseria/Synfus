@@ -25,6 +25,10 @@ contenu (`Tools/notes-de-version.sh`), et `sh build.sh --publish` refuse une ver
 
 ### Améliorations
 
+- **Aide aux boss pour tous les boss de donjon** : fiche (PV, PA, PM, résistances), éléments à
+  frapper et à éviter, conseils de Dofus pour les noobs, guide et tour du combat. « Aide au
+  combat : X » dans la palette, « Autre boss… » au titre du panneau ; entrer dans un donjon
+  choisit son boss. Les cinq boss à mécanique gardent leur aide propre, conseils en plus.
 - Une pastille en combat, sans que ce soit son tour, prend un cadre rose discret.
 - Les **rappels du combat d'un boss** se copient d'un clic pour le tchat ; l'icône de leur titre
   les copie tous à la suite.

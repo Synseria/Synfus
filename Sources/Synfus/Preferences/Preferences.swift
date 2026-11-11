@@ -261,7 +261,7 @@ final class Preferences: ObservableObject {
     @Published var bossBouton: Bool = true { didSet { save() } }
 
     /// Le boss que montre le panneau d'aide.
-    @Published var bossChoisi: Boss = .harebourg { didSet { save() } }
+    @Published var bossChoisi: CibleBoss = .special(.harebourg) { didSet { save() } }
 
     private var loading = false
     /// Dans `enUneEcriture` : les `save()` attendent sa fin, et n'en font qu'un.

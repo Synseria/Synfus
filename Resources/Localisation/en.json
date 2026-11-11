@@ -45,6 +45,8 @@
   "boss.attente.combat": "Waiting for a fight. On the front character's turn, Synfus reads its health and the fight channel.",
   "boss.autoriser": "Allow screen recording",
   "boss.autoriser.aide": "Reading health and the fight channel needs the “Screen Recording” permission.",
+  "boss.autre": "Other boss…",
+  "boss.autre.recherche": "Fight help ",
   "boss.bouton": "Button in the bar",
   "boss.confusion.aucune": "No confusion",
   "boss.confusion.contreHoraire": "Confusion 90° counterclockwise",

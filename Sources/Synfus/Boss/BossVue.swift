@@ -11,7 +11,10 @@ struct BossVue: View {
     @ObservedObject private var lecteur = LecteurEcran.shared
     @ObservedObject private var previews = WindowPreviewService.shared
     @ObservedObject private var prefs = Preferences.shared
+    /// La liste des donjons (nom d'un boss, guide) et leurs conseils arrivent après.
+    @ObservedObject private var donjons = DonjonsStore.shared
     @State private var rappels = false
+    @State private var conseils = false
     /// Le rappel tout juste copié (ou tous : `""`), coché le temps du signal.
     @State private var copie: String?
 
@@ -20,20 +23,22 @@ struct BossVue: View {
             entete
             Divider()
             VStack(alignment: .leading, spacing: 10) {
-                if let fiche = aide.fiches[prefs.bossChoisi] { FicheCombatVue(fiche: fiche) }
+                if let fiche = aide.fiches[prefs.bossChoisi.monstre] { FicheCombatVue(fiche: fiche) }
                 if previews.authorized {
                     ligneTour
-                    switch prefs.bossChoisi {
+                    switch prefs.bossChoisi.special {
                     case .harebourg: HarebourgVue()
                     case .kimbo: KimboVue()
                     case .toxoliath: ToxoliathVue()
                     case .ilyzaelle: IlyzaelleVue()
                     case .talKasha: TalKashaVue()
+                    case nil: EmptyView()
                     }
                 } else {
                     autorisation
                 }
-                rappelsVue
+                if let special = prefs.bossChoisi.special { rappelsVue(special) }
+                conseilsVue
             }
             .padding(12)
         }
@@ -44,13 +49,17 @@ struct BossVue: View {
         // L'autorisation donnée, la lecture démarre sans attendre un
         // changement d'app.
         .onChange(of: previews.authorized) { BossPanel.shared.revoirVisibilite(force: false) }
-        .task(id: prefs.bossChoisi) { aide.chargerFiche(prefs.bossChoisi) }
+        .task(id: prefs.bossChoisi) {
+            aide.chargerFiche(prefs.bossChoisi)
+            donjons.charger()
+        }
+        .task(id: aide.donjon?.id) { if let donjon = aide.donjon { donjons.demander(donjon) } }
     }
 
 
     private var entete: some View {
         EnTetePanneau(icone: "scope", teinte: Couleurs.ambre, menu: Self.menu) {
-            Text(Self.nom(prefs.bossChoisi)).font(.synfus(.note, gras: true))
+            Text(Self.nom(prefs.bossChoisi, donjons: donjons.donjons)).font(.synfus(.note, gras: true))
                 .padding(.leading, 6)
             Image(systemName: "chevron.down").font(.synfus(.marque, gras: true)).foregroundStyle(.secondary)
                 .padding(.leading, 3)
@@ -60,22 +69,29 @@ struct BossVue: View {
                     .padding(.horizontal, 6)
             }
         } boutons: {
-            BoutonEnTete(icone: "book", aide: L("boss.guide")) {
-                let donjon = Preferences.shared.bossChoisi.donjon
-                Task { await DofusPourLesNoobs.ouvrir(donjon) }
+            if let nom = aide.donjon?.nomFrancais {
+                BoutonEnTete(icone: "book", aide: L("boss.guide")) { Task { await DofusPourLesNoobs.ouvrir(nom) } }
             }
             BoutonEnTete(icone: "minus", aide: L("quete.fermer.simple")) { BossPanel.shared.fermer() }
         }
     }
 
-    /// Le menu du titre : les boss, le choisi coché.
+    /// Le menu du titre : les boss à mécanique, le boss de donjon suivi s'il
+    /// en est un, coché, puis la palette pour en chercher un autre.
     private static func menu() -> NSMenu {
         let menu = NSMenu()
-        for boss in Boss.allCases {
-            let item = CibleMenu.shared.element(nom(boss)) { AideBoss.shared.choisir(boss) }
-            item.state = boss == Preferences.shared.bossChoisi ? .on : .off
+        let choisi = Preferences.shared.bossChoisi
+        var cibles = Boss.allCases.map(CibleBoss.special)
+        if choisi.special == nil { cibles.append(choisi) }
+        for cible in cibles {
+            let item = CibleMenu.shared.element(nom(cible, donjons: DonjonsStore.shared.donjons)) {
+                AideBoss.shared.choisir(cible)
+            }
+            item.state = cible == choisi ? .on : .off
             menu.addItem(item)
         }
+        menu.addItem(.separator())
+        menu.addItem(CibleMenu.shared.element(L("boss.autre")) { PalettePanel.shared.ouvrir(requete: L("boss.autre.recherche")) })
         return menu
     }
 
@@ -110,8 +126,8 @@ struct BossVue: View {
 
     /// Chaque rappel se copie d'un clic, pour le coller dans le tchat du
     /// groupe ; l'icône du titre les copie tous, à la suite.
-    private var rappelsVue: some View {
-        let liste = Self.rappels(prefs.bossChoisi)
+    private func rappelsVue(_ boss: Boss) -> some View {
+        let liste = Self.rappels(boss)
         return VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
                 Button { rappels.toggle() } label: {
@@ -161,7 +177,46 @@ struct BossVue: View {
         }
     }
 
+    /// Les conseils de Dofus pour les noobs pour ce combat, dépliés d'un
+    /// clic ; l'explication de chacun en infobulle.
+    @ViewBuilder
+    private var conseilsVue: some View {
+        if let liste = aide.donjon.flatMap({ donjons.conseils[$0.id] }), !liste.isEmpty {
+            VStack(alignment: .leading, spacing: 4) {
+                Button { conseils.toggle() } label: {
+                    Label(L("donjon.conseils", nombre: liste.count, liste.count),
+                          systemImage: conseils ? "chevron.down" : "chevron.right")
+                        .font(.synfus(.petit, gras: true))
+                        .foregroundStyle(.secondary)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .aide(L("donjon.conseils.aide"))
+                if conseils {
+                    ForEach(Array(liste.enumerated()), id: \.offset) { _, conseil in
+                        Text("• " + conseil.titre)
+                            .font(.synfus(.petit))
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .help(conseil.detail)
+                    }
+                    Text(L("donjon.conseils.source")).font(.synfus(.petit)).foregroundStyle(.tertiary)
+                }
+            }
+        }
+    }
+
     // MARK: - Libellés
+
+    /// Le nom d'un boss de donjon vient de DofusDB ; « ? » tant que la liste
+    /// n'est pas là.
+    static func nom(_ cible: CibleBoss, donjons: Donjons?) -> String {
+        switch cible {
+        case .special(let boss): return nom(boss)
+        case .donjon(let monstre, _):
+            return donjons?.nomsBoss[monstre].flatMap { Lieu.traduit($0, L10n.courante.langue) } ?? "?"
+        }
+    }
 
     nonisolated static func nom(_ boss: Boss) -> String {
         switch boss {

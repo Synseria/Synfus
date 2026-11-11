@@ -145,7 +145,12 @@ final class PaletteModele: ObservableObject {
     /// sélectionne, une lettre la remplace), filtre, ligne et fiche dépliée,
     /// distances refaites depuis la position du moment. Échap vide avant de
     /// fermer : rouvrir est alors vierge.
-    func ouvrir() {
+    /// `requete` : une recherche posée d'office (« Aide au combat »), à compléter.
+    func ouvrir(requete posee: String? = nil) {
+        if let posee {
+            requete = posee
+            filtre = .tout
+        }
         if contexteImpose == nil {
             QuetesStore.shared.preparer()
             AlmanaxStore.shared.preparer()
@@ -351,7 +356,7 @@ final class PaletteModele: ObservableObject {
         case .inviterEquipe: InvitationClipboard.shared.copierEquipe()
         case .chasse: ChassePanel.shared.ouvrir()
         case .quetes: QuetePanel.shared.ouvrir()
-        case .boss(let boss): BossPanel.shared.ouvrir(boss)
+        case .boss(let boss, _): BossPanel.shared.ouvrir(boss)
         case .reglages: SettingsWindowController.shared.show()
         }
     }

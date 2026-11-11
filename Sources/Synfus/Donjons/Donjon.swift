@@ -63,6 +63,13 @@ struct Donjons: Sendable {
     private let parEntree: [Int: Donjon]
     private let parNom: [String: Donjon]
     private let parBoss: [Int: Donjon]
+    /// Les noms de chaque donjon en toutes langues, du plus long au plus
+    /// court : dans « Expédition de l'Audace - Donjon du Comte Harebourg »,
+    /// l'expédition l'emporte sur le donjon qu'elle reprend.
+    private let nomsLus: [(forme: Ressemblance.Forme, donjon: Donjon)]
+
+    /// Les écorchures de l'OCR tolérées dans le nom d'un donjon lu.
+    static let fautesTolerees = 2
 
     init(_ liste: [Donjon], nomsBoss: [Int: [String: String]]) {
         func premiers<Cle: Hashable>(_ paires: [(Cle, Donjon)]) -> [Cle: Donjon] {
@@ -74,6 +81,18 @@ struct Donjons: Sendable {
         parNom = premiers(liste.compactMap { donjon in donjon.nomFrancais.map { (RecherchePalette.normaliser($0), donjon) } })
         // Le premier donjon d'un boss : une expédition reprend le boss du donjon d'origine.
         parBoss = premiers(liste.flatMap { donjon in donjon.boss.map { ($0, donjon) } })
+        nomsLus = liste.flatMap { donjon in Set(donjon.noms.values).map { (Ressemblance.normaliser($0), donjon) } }
+            .sorted { $0.0.count > $1.0.count }
+            .map { (Ressemblance.Forme($0.0), $0.1) }
+    }
+
+    /// Le donjon nommé dans la zone lue au-dessus de la position (« Frigost
+    /// (Donjon du Comte Harebourg) ») : sa sous-zone porte son nom ; `nil`
+    /// ailleurs.
+    func donjon(zone: String?) -> Donjon? {
+        guard let zone else { return nil }
+        let lue = Ressemblance.Forme(Ressemblance.normaliser(zone))
+        return nomsLus.first { Ressemblance.distanceDansTexte($0.forme, lue, auPlus: Self.fautesTolerees) != nil }?.donjon
     }
 
     func donjon(id: Int) -> Donjon? { parId[id] }
