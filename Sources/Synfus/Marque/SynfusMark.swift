@@ -29,7 +29,7 @@ struct SynfusRGB: Equatable, Sendable {
 
 /// La marque Synfus : l'Œuf ajouré — un Dofus en treillis de rubans ondés,
 /// blanc bleuté, éclairé du dedans, posé sur un feuillage à l'accent de
-/// l'app, sur une tuile bleu nuit. Tracés originaux, aucun asset d'Ankama.
+/// l'app, sur une tuile. Tracés originaux, aucun asset d'Ankama.
 ///
 /// Le treillis est un vrai volume : deux familles de rubans enroulés autour
 /// de l'œuf, vus d'un peu au-dessus ; ceux du dos passent par les jours,
@@ -37,8 +37,9 @@ struct SynfusRGB: Equatable, Sendable {
 /// tout) et coupés net par la silhouette.
 ///
 /// Moteur **pur** — entrées → `CGImage`, aucun état. Cette description unique
-/// sert à l'icône du bundle (via `Tools/AppIconExport.swift`) et au symbole de
-/// la barre de menus (via `SynfusGlyph`) : il n'y a pas de second dessin.
+/// sert à l'icône du bundle (via `Tools/AppIconExport.swift`), à l'icône
+/// choisie (`IconeApp`, l'Œuf ou la `Couvee` sur l'un des fonds) et au symbole
+/// de la barre de menus (via `SynfusGlyph`) : il n'y a pas de second dessin.
 ///
 /// Repère : **1024 × 1024, y vers le bas**.
 enum SynfusMark {
@@ -87,9 +88,27 @@ enum SynfusMark {
     private static let feuilleMilieu = SynfusRGB(hex: 0x30A687)
     private static let feuilleSombre = SynfusRGB(hex: 0x1A6E58)
     private static let feuilleContour = SynfusRGB(hex: 0x0E3A30)
-    private static let tuileCentre = SynfusRGB(hex: 0x23365C)
-    private static let tuileBord = SynfusRGB(hex: 0x0A1122)
-    private static let tuileLueur = SynfusRGB(hex: 0x6FA8E8)
+
+    /// Les teintes d'une tuile : le centre, le bord, la lueur derrière le motif.
+    private struct Teintes {
+        let centre: SynfusRGB, bord: SynfusRGB, lueur: SynfusRGB
+
+        init(_ centre: UInt32, _ bord: UInt32, _ lueur: UInt32) {
+            self.centre = SynfusRGB(hex: centre)
+            self.bord = SynfusRGB(hex: bord)
+            self.lueur = SynfusRGB(hex: lueur)
+        }
+    }
+
+    /// `nil` : pas de tuile.
+    private static func teintes(_ fond: IconeApp.Fond) -> Teintes? {
+        switch fond {
+        case .nuit: Teintes(0x23365C, 0x0A1122, 0x6FA8E8)
+        case .foret: Teintes(0x1F6E5C, 0x0A2A24, 0x8FE3C8)
+        case .aube: Teintes(0x3B2C5E, 0x120C22, 0xB8A6F0)
+        case .transparent: nil
+        }
+    }
 
     // MARK: - L'œuf
 
@@ -255,37 +274,66 @@ enum SynfusMark {
 
     private static let sRGB = CGColorSpace(name: CGColorSpace.sRGB)!
 
-    private static func degrade(_ couleurs: [CGColor], _ positions: [CGFloat]) -> CGGradient {
+    static func degrade(_ couleurs: [CGColor], _ positions: [CGFloat]) -> CGGradient {
         CGGradient(colorsSpace: sRGB, colors: couleurs as CFArray, locations: positions)!
     }
 
-    /// L'icône carrée, fond transparent ; `nil` si le contexte est refusé.
-    /// L'icône : la marque sur sa tuile. macOS 26 enferme dans un carré gris,
-    /// réduite, toute icône qui n'est pas une tuile ; posée sur la sienne,
-    /// elle la remplit presque. Le reste du carré est transparent.
-    static func image(pixelSize: Int) -> CGImage? {
+    /// L'icône, le reste du carré transparent ; `nil` si le contexte est
+    /// refusé. macOS 26 enferme dans un carré gris, réduite, toute icône qui
+    /// n'est pas une tuile : sur la sienne, le motif la remplit presque ;
+    /// sans tuile, il prend tout le carré, une ombre portée sous lui.
+    static func image(pixelSize: Int, icone: IconeApp) -> CGImage? {
         guard let ctx = CGContext(data: nil, width: pixelSize, height: pixelSize, bitsPerComponent: 8, bytesPerRow: 0,
                                   space: sRGB, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
         else { return nil }
         let echelle = Double(pixelSize) / cote
         ctx.translateBy(x: 0, y: Double(pixelSize))
         ctx.scaleBy(x: echelle, y: -echelle)
-        tuile(echelle: echelle, in: ctx)
-        ctx.saveGState()
-        ctx.addPath(squircle(tuile))
-        ctx.clip()
-        let k = tuile.height * 0.92 / cadreMarque.height
-        ctx.translateBy(x: tuile.midX, y: tuile.midY)
-        ctx.scaleBy(x: k, y: k)
-        ctx.translateBy(x: -cadreMarque.midX, y: -cadreMarque.midY)
-        dessiner(pixels: Int(Double(pixelSize) * k), in: ctx)
-        ctx.restoreGState()
+        if let teintes = teintes(icone.fond) {
+            tuile(teintes, echelle: echelle, in: ctx)
+            ctx.saveGState()
+            ctx.addPath(squircle(tuile))
+            ctx.clip()
+            poser(icone.motif, dans: tuile, remplissage: 0.92, pixelSize: pixelSize, in: ctx)
+            ctx.restoreGState()
+        } else {
+            // L'ombre d'un calque se pose sous tout le motif d'un coup, pas
+            // sous chacune de ses pièces. Décalage et flou sont en pixels.
+            ctx.saveGState()
+            ctx.setShadow(offset: CGSize(width: 0, height: -14 * echelle), blur: 36 * echelle,
+                          color: SynfusRGB(hex: 0).cg(0.45))
+            ctx.beginTransparencyLayer(auxiliaryInfo: nil)
+            poser(icone.motif, dans: sansTuile, remplissage: 1, pixelSize: pixelSize, in: ctx)
+            ctx.endTransparencyLayer()
+            ctx.restoreGState()
+        }
         return ctx.makeImage()
+    }
+
+    /// Le motif centré dans `cible`, à `remplissage` près de son côté le plus serré.
+    private static func poser(_ motif: IconeApp.Motif, dans cible: CGRect, remplissage: Double, pixelSize: Int,
+                              in ctx: CGContext) {
+        let (cadre, repere): (CGRect, Double) = switch motif {
+        case .oeuf: (cadreMarque, cote)
+        case .couvee: (Couvee.cadre, 256)
+        }
+        let k = min(cible.width * remplissage / cadre.width, cible.height * remplissage / cadre.height)
+        ctx.saveGState()
+        ctx.translateBy(x: cible.midX, y: cible.midY)
+        ctx.scaleBy(x: k, y: k)
+        ctx.translateBy(x: -cadre.midX, y: -cadre.midY)
+        switch motif {
+        case .oeuf: dessiner(pixels: Int(Double(pixelSize) * k), in: ctx)
+        case .couvee: Couvee.dessiner(pixels: repere * k * Double(pixelSize) / cote, in: ctx)
+        }
+        ctx.restoreGState()
     }
 
     /// La tuile macOS : 824/1024 du côté, centrée (la grille d'Apple).
     private static let tuile = CGRect(x: 100, y: 100, width: 824, height: 824)
-    /// Ce que la marque occupe, du fleuron au bas des feuilles.
+    /// Sans tuile : tout le carré, moins la place de l'ombre portée.
+    private static let sansTuile = CGRect(x: 0, y: 0, width: cote, height: cote).insetBy(dx: 44, dy: 44)
+    /// Ce que l'Œuf occupe, du fleuron au bas des feuilles.
     private static let cadreMarque = CGRect(x: 168, y: 64, width: 688, height: 846)
 
     /// Superellipse — la forme des tuiles macOS : un arrondi de rectangle
@@ -305,25 +353,25 @@ enum SynfusMark {
         return chemin
     }
 
-    /// Bleu nuit, une lueur bleutée derrière l'œuf : le blanc et le vert des
-    /// feuilles y ressortent, ce que ne faisait pas un fond vert.
-    private static func tuile(echelle: Double, in ctx: CGContext) {
+    /// Un dégradé sombre, une lueur claire derrière le motif : sur un fond
+    /// vif, le blanc de l'Œuf et le vert de ses feuilles se perdent.
+    private static func tuile(_ teintes: Teintes, echelle: Double, in ctx: CGContext) {
         let forme = squircle(tuile)
         ctx.saveGState()
         // Décalage et flou sont en pixels : sans `echelle`, l'ombre noie le
         // carré entier des petites tailles.
         ctx.setShadow(offset: CGSize(width: 0, height: -10 * echelle), blur: 24 * echelle, color: SynfusRGB(hex: 0).cg(0.35))
         ctx.addPath(forme)
-        ctx.setFillColor(tuileBord.cg())
+        ctx.setFillColor(teintes.bord.cg())
         ctx.fillPath()
         ctx.restoreGState()
         ctx.saveGState()
         ctx.addPath(forme)
         ctx.clip()
         let centre = CGPoint(x: tuile.midX, y: 440)
-        ctx.drawRadialGradient(degrade([tuileCentre.cg(), tuileBord.cg()], [0, 1]), startCenter: centre, startRadius: 0,
+        ctx.drawRadialGradient(degrade([teintes.centre.cg(), teintes.bord.cg()], [0, 1]), startCenter: centre, startRadius: 0,
                                endCenter: centre, endRadius: 560, options: [.drawsAfterEndLocation])
-        ctx.drawRadialGradient(degrade([tuileLueur.cg(0.45), tuileLueur.cg(0)], [0, 1]), startCenter: centre, startRadius: 0,
+        ctx.drawRadialGradient(degrade([teintes.lueur.cg(0.45), teintes.lueur.cg(0)], [0, 1]), startCenter: centre, startRadius: 0,
                                endCenter: centre, endRadius: 330, options: [])
         ctx.restoreGState()
     }
