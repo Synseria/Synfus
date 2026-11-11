@@ -43,25 +43,32 @@ struct BossTests {
     }
 
     @Test("Chaque boss lit au moins le combat ; seuls le Comte et Kimbo lisent le tchat")
-    func lectures() {
+    func lectures() throws {
         #expect(Boss.harebourg.lectures == [.vie, .tchat])
         #expect(Boss.kimbo.lectures == [.tchat])
         #expect(Boss.toxoliath.lectures.isEmpty)
         #expect(ActionPalette.toutes.filter { if case .boss = $0 { true } else { false } }.count == Boss.allCases.count)
+        var contexte = ContextePalette()
+        let api = try JSONDecoder().decode([Donjon.API].self, from: Data("""
+        [{"id":28,"name":{"fr":"Canopée du Kimbo"},"bosses":[1045]},{"id":2,"name":{"fr":"Donjon des Bouftous"},"bosses":[147]}]
+        """.utf8))
+        contexte.donjons = Donjons(api.map(Donjon.init), nomsBoss: [1045: ["fr": "Kimbo"], 147: ["fr": "Bouftou Royal"]])
+        // Kimbo est déjà parmi les boss à mécanique : seul le Bouftou Royal s'ajoute.
+        #expect(RecherchePalette.aideAuxBoss(contexte) == [.boss(.donjon(monstre: 147, donjon: 2), nom: "Bouftou Royal")])
     }
 
-    @Test("La salle lue au-dessus de la position désigne son boss, malgré une écorchure ; ailleurs, aucun")
-    func salle() throws {
-        #expect(Boss.dans(zone: "Frigost (Donjon du Comte Harebourg)") == .harebourg)
-        #expect(Boss.dans(zone: "Expédition de l'Audace - Donjon du Comte Harebourg") == .harebourg)
-        #expect(Boss.dans(zone: "Île d'Otomaï (Canopee du Kimbo)") == .kimbo)
-        #expect(Boss.dans(zone: "Kimbo's Canopy") == .kimbo)
-        #expect(Boss.dans(zone: "Cave du Toxo1iath") == .toxoliath)
-        #expect(Boss.dans(zone: "Mirador de Ilyzaelle") == .ilyzaelle)
-        #expect(Boss.dans(zone: "Chambre de Tal Kasha") == .talKasha)
-        #expect(Boss.dans(zone: "Île d'Otomaï (Village de la Canopée)") == nil)
-        #expect(Boss.dans(zone: "Amakna (Village d'Amakna)") == nil)
-        #expect(Boss.dans(zone: nil) == nil)
+    @Test("Un boss de donjon retrouve sa mécanique quand l'aide la connaît ; la sauvegarde d'avant se relit")
+    func cible() throws {
+        #expect(CibleBoss.boss(1045, donjon: 28) == .special(.kimbo))
+        #expect(CibleBoss.boss(232, donjon: 2) == .donjon(monstre: 232, donjon: 2))
+        #expect(CibleBoss.donjon(monstre: 232, donjon: 2).lectures.isEmpty)
+        #expect(CibleBoss.special(.harebourg).lectures == [.vie, .tchat])
+        func relu(_ json: String) throws -> CibleBoss { try JSONDecoder().decode(CibleBoss.self, from: Data(json.utf8)) }
+        #expect(try relu(#""talKasha""#) == .special(.talKasha))
+        for cible in [CibleBoss.special(.kimbo), .donjon(monstre: 232, donjon: 2)] {
+            #expect(try relu(try #require(String(bytes: JSONEncoder().encode(cible), encoding: .utf8))) == cible)
+        }
+        #expect(throws: DecodingError.self) { try relu(#""donjon:x""#) }
     }
 
     @Test("La fiche DofusDB : le plus haut grade, résistances absentes à zéro")

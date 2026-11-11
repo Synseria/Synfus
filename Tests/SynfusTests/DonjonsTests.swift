@@ -36,6 +36,18 @@ struct DonjonsTests {
         #expect(harebourg.succes == [892, 893])
     }
 
+    @Test("La zone lue au-dessus de la position nomme son donjon, en toutes langues, malgré une écorchure")
+    func zone() throws {
+        let donjons = try Self.donjons()
+        #expect(donjons.donjon(zone: "Frigost (Donjon du Comte Harebourg)")?.id == 71)
+        #expect(donjons.donjon(zone: "Frigost (Count Harebourg's Dungeon)")?.id == 71)
+        // L'expédition, au nom plus long, l'emporte sur le donjon qu'elle reprend.
+        #expect(donjons.donjon(zone: "Expédition de l'Audace - Donjon du Comte Harebourg")?.id == 171)
+        #expect(donjons.donjon(zone: "Île d'Otomaï (Canopee du Kimbo)")?.id == 28)
+        #expect(donjons.donjon(zone: "Île d'Otomaï (Village de la Canopée)") == nil)
+        #expect(donjons.donjon(zone: nil) == nil)
+    }
+
     @Test("Le détail : les boss d'abord, puis du plus fort au plus faible ; la clef nommée")
     func detail() throws {
         let json = """

@@ -46,16 +46,24 @@ même perso est souvent manqué (passage automatique ailleurs). Pour que le déc
   (chaque perso est lu quand il passe devant : une première lecture en combat n'est pas un
   nouveau combat). `Boss.lectures` : ce qui se lit en plus du combat.
 
-## Salle, fiche, guide — `Boss` (pur), `FicheBoss`
+## Boss suivi, salle, fiche, guide — `CibleBoss` (pur), `Donjons.donjon(zone:)`
 
-- **Salle** : `Boss.salle` (noms fr/en/es de la sous-zone, relevés de DofusDB) ; `Boss.dans(zone:)`
-  la retrouve dans la zone lue au-dessus de la position, à `fautesTolerees` près. `AideBoss` choisit
-  le boss **en entrant** dans sa salle (un choix à la main dans la salle tient) ; jamais d'ouverture
-  du panneau d'office. Il faut la lecture de la position.
-- **Fiche** : `Boss.monstre` (id DofusDB) → `FicheBoss` du plus haut grade (niveau, PV, PA, PM,
-  résistances `reductionX` en %), demandée une fois par lancement, muette en cas d'échec.
-- **Guide** : `Boss.donjon`, titre de la page Dofus pour les noobs (`DofusPourLesNoobs.ouvrir`).
-- Ajouter un boss : ses règles pures, `monstre`, `donjon`, `salle`, sa vue, ses libellés.
+- **Tous les boss de donjon** : `CibleBoss` = `.special(Boss)` (mécanique connue) ou
+  `.donjon(monstre:donjon:)` (fiche, éléments, conseils, tour). `CibleBoss.boss(_:donjon:)` rend
+  à sa mécanique un boss qui en a une : un seul chemin, palette ou entrée dans le donjon.
+  Sauvegardé en chaîne (`harebourg`, `donjon:1045:28`) : l'ancienne sauvegarde `Boss` se relit.
+- **Salle** : `Donjons.donjon(zone:)` cherche le nom du donjon (fr/en/es, DofusDB) dans la zone
+  lue au-dessus de la position, à `fautesTolerees` près, le nom le plus long d'abord (une
+  expédition l'emporte sur son donjon). `AideBoss` choisit son premier boss **en entrant** (un
+  choix à la main dedans tient) ; jamais d'ouverture du panneau d'office. Il faut la lecture de
+  la position et la liste des donjons (`DonjonsStore.charger`, demandée à la première zone lue).
+- **Fiche** : `CibleBoss.monstre` → `FicheCombat` du plus haut grade, demandée une fois par
+  lancement, muette en cas d'échec ; éléments à frapper et à éviter (`FicheCombat.elements`).
+- **Guide et conseils** : par le donjon du boss (`AideBoss.donjon`, `Donjon.nomFrancais`,
+  `DonjonsStore.conseils`).
+- **Compteurs d'usage** : seuls les boss à mécanique sont comptés (`EvenementUsage` est une liste
+  fermée partagée avec le collecteur).
+- Ajouter un boss à mécanique : ses règles pures, `monstre`, sa vue, ses rappels, ses libellés.
 
 ## Suivi — `SuiviConfusion` (pur)
 

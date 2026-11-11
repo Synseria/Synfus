@@ -576,7 +576,7 @@ struct PreferencesTests {
         #expect(prefs.quetesCochesLues == ["18": [104]])
         #expect(prefs.chasseHotKey == HotKey(keyCode: 5, modifiers: 2048))
         #expect(prefs.chasseBouton == false)
-        #expect(prefs.bossChoisi == .kimbo)
+        #expect(prefs.bossChoisi == .special(.kimbo))
         #expect(prefs.bossBouton == false)
         #expect(prefs.lireCombatDerriere == true)
         #expect(prefs.vuesCartes == false)
@@ -652,7 +652,7 @@ struct PreferencesTests {
         prefs.quetesCochesLues = ["18": [104]]
         prefs.chasseHotKey = HotKey(keyCode: 5, modifiers: 2048)
         prefs.chasseBouton = false
-        prefs.bossChoisi = .kimbo
+        prefs.bossChoisi = .special(.kimbo)
         prefs.bossBouton = false
         prefs.lireCombatDerriere = true
         prefs.vuesCartes = false

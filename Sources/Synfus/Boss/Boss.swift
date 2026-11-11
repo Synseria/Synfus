@@ -166,45 +166,4 @@ extension Boss {
         case .talKasha: return 4744
         }
     }
-
-    /// Son donjon, tel que Dofus pour les noobs en titre la page.
-    var donjon: String {
-        switch self {
-        case .harebourg: return "Donjon du Comte Harebourg"
-        case .kimbo: return "Canopée du Kimbo"
-        case .toxoliath: return "Cave du Toxoliath"
-        case .ilyzaelle: return "Belvédère d'Ilyzaelle"
-        case .talKasha: return "Chambre de Tal Kasha"
-        }
-    }
-
-    /// Le nom de la sous-zone de sa salle, que le jeu écrit au-dessus de la
-    /// position, en fr, en et es (DofusDB : 794, 459, 831, 893, 882). Une
-    /// expédition reprend le nom de la salle : « Expédition de l'Audace -
-    /// Donjon du Comte Harebourg ».
-    var salle: [String] {
-        switch self {
-        case .harebourg: return ["Donjon du Comte Harebourg", "Count Harebourg's Dungeon", "Mazmorra del Conde Kontatrás"]
-        case .kimbo: return ["Canopée du Kimbo", "Kimbo's Canopy", "Canopea del Kimbo"]
-        case .toxoliath: return ["Cave du Toxoliath", "Toxoliath's Cave", "Cueva de Toxoliat"]
-        case .ilyzaelle: return ["Belvédère d'Ilyzaelle", "Ilyzaelle's Lookout", "Mirador de Ilyzaelle"]
-        case .talKasha: return ["Chambre de Tal Kasha", "Chamber of Tal Kasha", "Cámara de Tal Kasha"]
-        }
-    }
-
-    /// Les écorchures de l'OCR tolérées dans le nom d'une salle.
-    static let fautesTolerees = 2
-
-    /// Le boss dont la salle est nommée dans la zone lue (« Frigost (Donjon
-    /// du Comte Harebourg) ») ; `nil` ailleurs, ou la zone illisible.
-    static func dans(zone: String?) -> Boss? {
-        guard let zone else { return nil }
-        let lue = Ressemblance.Forme(Ressemblance.normaliser(zone))
-        return allCases.first { boss in
-            boss.salle.contains { nom in
-                Ressemblance.distanceDansTexte(Ressemblance.Forme(Ressemblance.normaliser(nom)), lue,
-                                               auPlus: fautesTolerees) != nil
-            }
-        }
-    }
 }

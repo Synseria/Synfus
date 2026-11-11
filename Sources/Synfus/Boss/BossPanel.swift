@@ -11,7 +11,7 @@ private final class PanneauBoss: NSPanel {
 
 /// Le panneau d'aide aux boss, posé sur le jeu : la mécanique du boss choisi
 /// et le tour du combat. Montré, il fait lire au tour le combat, et en combat
-/// ce que le boss demande (`Boss.lectures`) chez le perso devant — si
+/// ce que le boss demande (`CibleBoss.lectures`) chez le perso devant — si
 /// l'enregistrement de l'écran est déjà permis, jamais il ne le demande de
 /// lui-même. Comme les quêtes, il ne se montre que
 /// devant Dofus (`PanneauxJeu`) ; AppKit garde sa position.
@@ -33,11 +33,13 @@ final class BossPanel: NSObject, ObservableObject {
     }
 
     /// Sur ce boss, s'il est donné ; sur le dernier choisi sinon.
-    func ouvrir(_ boss: Boss? = nil) {
+    func ouvrir(_ boss: CibleBoss? = nil) {
         // Abonné aux combats dès maintenant : le tour en cours compte.
         let aide = AideBoss.shared
         if let boss, boss != aide.boss { aide.choisir(boss) }
-        if !ouvert { UsageStore.shared.compter(.boss(aide.boss)) }
+        // Les compteurs sont une liste fermée, partagée avec le collecteur :
+        // les boss de donjon passent par l'action de la palette.
+        if !ouvert, let special = aide.boss.special { UsageStore.shared.compter(.boss(special)) }
         ouvert = true
         impose = true
         appliquer(force: true)

@@ -14,7 +14,7 @@ struct BossSettings: View {
                 Interrupteur(titre: L("boss.bouton"), isOn: $prefs.bossBouton)
                 ForEach(Boss.allCases, id: \.self) { boss in
                     Ligne(titre: BossVue.nom(boss), aide: Self.resume(boss)) {
-                        Button(L("boss.ouvrir")) { BossPanel.shared.ouvrir(boss) }
+                        Button(L("boss.ouvrir")) { BossPanel.shared.ouvrir(.special(boss)) }
                     }
                 }
             }

@@ -45,6 +45,8 @@
   "boss.attente.combat": "En attente d'un combat. Au tour du perso devant, Synfus lit sa vie et le canal combat.",
   "boss.autoriser": "Autoriser l'enregistrement de l'écran",
   "boss.autoriser.aide": "Lire la vie et le canal combat demande l'autorisation « Enregistrement de l'écran ».",
+  "boss.autre": "Autre boss…",
+  "boss.autre.recherche": "Aide au combat ",
   "boss.bouton": "Bouton dans la barre",
   "boss.confusion.aucune": "Aucune confusion",
   "boss.confusion.contreHoraire": "Confusion 90° contre-horaire",
