@@ -34,17 +34,18 @@ final class WindowArranger: ObservableObject {
     private init() {}
 
     /// Rejoue la dernière disposition choisie — c'est l'action du raccourci.
-    func appliquerDerniere() async {
-        await appliquer(Preferences.shared.lastArrangement ?? .mosaique)
+    func appliquerDerniere(geste: EvenementUsage = .rangement) async {
+        await appliquer(Preferences.shared.lastArrangement ?? .mosaique, geste: geste)
     }
 
     /// Asynchrone parce que l'inventaire l'est : on attend un relevé frais —
     /// l'utilisateur vient peut-être de connecter ou fermer un client, et on
     /// range ce qu'il voit, pas ce qu'on croyait. Un client fraîchement gelé
     /// en ressort muet, donc dormant, donc écarté avant tout IPC. Les écritures
-    /// AX, elles, restent sur main : ce sont des gestes.
-    func appliquer(_ disposition: Disposition) async {
-        UsageStore.shared.compter(.rangement)
+    /// AX, elles, restent sur main : ce sont des gestes. `geste` est ce que
+    /// les statistiques comptent : un rangement, ou la session qui l'enchaîne.
+    func appliquer(_ disposition: Disposition, geste: EvenementUsage = .rangement) async {
+        UsageStore.shared.compter(geste)
         let manager = WindowManager.shared
         await manager.refreshed()
 
