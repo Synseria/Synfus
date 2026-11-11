@@ -270,7 +270,7 @@ enum SynfusMark {
         let echelle = Double(pixelSize) / cote
         ctx.translateBy(x: 0, y: Double(pixelSize))
         ctx.scaleBy(x: echelle, y: -echelle)
-        tuile(in: ctx)
+        tuile(echelle: echelle, in: ctx)
         ctx.saveGState()
         ctx.addPath(squircle(tuile))
         ctx.clip()
@@ -307,10 +307,12 @@ enum SynfusMark {
 
     /// Bleu nuit, une lueur bleutée derrière l'œuf : le blanc et le vert des
     /// feuilles y ressortent, ce que ne faisait pas un fond vert.
-    private static func tuile(in ctx: CGContext) {
+    private static func tuile(echelle: Double, in ctx: CGContext) {
         let forme = squircle(tuile)
         ctx.saveGState()
-        ctx.setShadow(offset: CGSize(width: 0, height: -10), blur: 24, color: SynfusRGB(hex: 0).cg(0.35))
+        // Décalage et flou sont en pixels : sans `echelle`, l'ombre noie le
+        // carré entier des petites tailles.
+        ctx.setShadow(offset: CGSize(width: 0, height: -10 * echelle), blur: 24 * echelle, color: SynfusRGB(hex: 0).cg(0.35))
         ctx.addPath(forme)
         ctx.setFillColor(tuileBord.cg())
         ctx.fillPath()
