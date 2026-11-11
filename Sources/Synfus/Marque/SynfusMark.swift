@@ -29,7 +29,7 @@ struct SynfusRGB: Equatable, Sendable {
 
 /// La marque Synfus : l'Œuf ajouré — un Dofus en treillis de rubans ondés,
 /// blanc bleuté, éclairé du dedans, posé sur un feuillage à l'accent de
-/// l'app, sur une tuile vert sombre. Tracés originaux, aucun asset d'Ankama.
+/// l'app, sur une tuile bleu nuit. Tracés originaux, aucun asset d'Ankama.
 ///
 /// Le treillis est un vrai volume : deux familles de rubans enroulés autour
 /// de l'œuf, vus d'un peu au-dessus ; ceux du dos passent par les jours,
@@ -87,9 +87,9 @@ enum SynfusMark {
     private static let feuilleMilieu = SynfusRGB(hex: 0x30A687)
     private static let feuilleSombre = SynfusRGB(hex: 0x1A6E58)
     private static let feuilleContour = SynfusRGB(hex: 0x0E3A30)
-    private static let tuileCentre = SynfusRGB(hex: 0x1F6E5C)
-    private static let tuileBord = SynfusRGB(hex: 0x0A2A24)
-    private static let tuileLueur = SynfusRGB(hex: 0x8FE3C8)
+    private static let tuileCentre = SynfusRGB(hex: 0x23365C)
+    private static let tuileBord = SynfusRGB(hex: 0x0A1122)
+    private static let tuileLueur = SynfusRGB(hex: 0x6FA8E8)
 
     // MARK: - L'œuf
 
@@ -305,7 +305,8 @@ enum SynfusMark {
         return chemin
     }
 
-    /// Vert sombre à l'accent de l'app, une lueur derrière l'œuf.
+    /// Bleu nuit, une lueur bleutée derrière l'œuf : le blanc et le vert des
+    /// feuilles y ressortent, ce que ne faisait pas un fond vert.
     private static func tuile(in ctx: CGContext) {
         let forme = squircle(tuile)
         ctx.saveGState()
