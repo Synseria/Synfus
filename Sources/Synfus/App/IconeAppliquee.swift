@@ -29,17 +29,17 @@ enum IconeAppliquee {
     /// Une mise à jour remplace le bundle, et l'icône qui y était posée.
     static func auLancement() {
         let icone = Preferences.shared.iconeApp
-        if icone != .parDefaut { appliquer(icone) }
+        if icone != .duBundle { appliquer(icone) }
     }
 
-    /// Le défaut retire l'icône posée : le bundle reprend `Synfus.icns`.
+    /// Celle du bundle retire l'icône posée : il reprend `Synfus.icns`.
     /// Hors bundle (`swift run`, tests), rien.
     static func appliquer(_ icone: IconeApp) {
         let bundle = Bundle.main.bundlePath
         guard bundle.hasSuffix(".app") else { return }
         demande += 1
         let numero = demande
-        guard icone != .parDefaut else { return poser(nil, sur: bundle) }
+        guard icone != .duBundle else { return poser(nil, sur: bundle) }
         Task {
             // Sept tailles de l'Œuf : trop long pour main.
             let rendus = await Task.detached(priority: .userInitiated) {

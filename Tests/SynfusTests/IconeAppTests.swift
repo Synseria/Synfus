@@ -27,7 +27,8 @@ struct IconeAppTests {
     @Test("Huit variantes, le défaut parmi elles")
     func toutes() {
         #expect(Set(IconeApp.toutes).count == 8)
-        #expect(IconeApp.toutes.first == .parDefaut)
+        #expect(IconeApp.toutes.first == .duBundle)
+        #expect(IconeApp.toutes.contains(.parDefaut))
     }
 
     /// L'opacité de chaque pixel d'un rendu, relu dans un bitmap connu.
