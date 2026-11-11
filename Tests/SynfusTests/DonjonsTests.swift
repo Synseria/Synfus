@@ -46,6 +46,9 @@ struct DonjonsTests {
         #expect(donjons.donjon(zone: "Île d'Otomaï (Canopee du Kimbo)")?.id == 28)
         #expect(donjons.donjon(zone: "Île d'Otomaï (Village de la Canopée)") == nil)
         #expect(donjons.donjon(zone: nil) == nil)
+        // Un nom vide ou trop court venu de DofusDB ne se lit pas partout.
+        let api = try JSONDecoder().decode([Donjon.API].self, from: Data(#"[{"id":5,"name":{"fr":"Repaire","es":""}}]"#.utf8))
+        #expect(Donjons(api.map(Donjon.init), nomsBoss: [:]).donjon(zone: "Amakna (Village d'Amakna)") == nil)
     }
 
     @Test("Le détail : les boss d'abord, puis du plus fort au plus faible ; la clef nommée")

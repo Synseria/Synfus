@@ -1,7 +1,8 @@
 import Foundation
 
 /// Les donjons de DofusDB : la liste et le nom des boss une fois par lancement,
-/// à la première ouverture de la palette (quelques pages) ; le détail d'un
+/// à la première ouverture de la palette ou à la première zone lue par
+/// l'aide aux boss (quelques pages) ; le détail d'un
 /// donjon et ses conseils (Dofus pour les noobs) à l'ouverture de sa fiche.
 /// Rien sur le disque : quelques requêtes, et la fiche se passe de réseau
 /// pour copier le trajet.
@@ -15,17 +16,25 @@ final class DonjonsStore: ObservableObject {
     /// Par donjon ; vide quand sa page n'a pas de conseils tactiques.
     @Published private(set) var conseils: [Int: [ConseilCombat]] = [:]
     private var chargement: Task<Void, Never>?
+    /// Après un échec, la liste attend avant de se redemander : chaque
+    /// position lue l'appelle, sans réseau on rechargerait à chaque lecture.
+    private var dernierEchec: Date?
+    static let attenteApresEchec: TimeInterval = 5 * 60
     private var demandes: Set<Int> = []
     private var conseilsDemandes: Set<Int> = []
 
     private init() {}
 
-    /// Une fois ; un échec réessaie à l'appel suivant.
-    func charger() {
+    /// Une fois ; un échec réessaie à un appel suivant, `attenteApresEchec` passée.
+    func charger(maintenant: Date = Date()) {
         guard donjons == nil, chargement == nil else { return }
+        if let dernierEchec, maintenant.timeIntervalSince(dernierEchec) < Self.attenteApresEchec { return }
         chargement = Task {
             defer { chargement = nil }
-            guard let liste = try? await Self.telecharger() else { return }
+            guard let liste = try? await Self.telecharger() else {
+                dernierEchec = Date()
+                return
+            }
             donjons = liste
         }
     }

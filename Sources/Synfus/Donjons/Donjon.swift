@@ -70,6 +70,7 @@ struct Donjons: Sendable {
 
     /// Les écorchures de l'OCR tolérées dans le nom d'un donjon lu.
     static let fautesTolerees = 2
+    static let nomMinimal = 2 * fautesTolerees
 
     init(_ liste: [Donjon], nomsBoss: [Int: [String: String]]) {
         func premiers<Cle: Hashable>(_ paires: [(Cle, Donjon)]) -> [Cle: Donjon] {
@@ -82,6 +83,8 @@ struct Donjons: Sendable {
         // Le premier donjon d'un boss : une expédition reprend le boss du donjon d'origine.
         parBoss = premiers(liste.flatMap { donjon in donjon.boss.map { ($0, donjon) } })
         nomsLus = liste.flatMap { donjon in Set(donjon.noms.values).map { (Ressemblance.normaliser($0), donjon) } }
+            // Un nom plus court que les écorchures tolérées se lirait partout.
+            .filter { $0.0.count > Self.nomMinimal }
             .sorted { $0.0.count > $1.0.count }
             .map { (Ressemblance.Forme($0.0), $0.1) }
     }
