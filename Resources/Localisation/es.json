@@ -805,7 +805,7 @@
   "stats.palette_variable": "Variables",
   "stats.palette_zaap": "Zaaps",
   "stats.partager": "Compartir estadísticas anónimas",
-  "stats.partager.aide": "Una vez al día: los contadores de esta página, el número de personajes (nunca sus nombres), los ajustes en uso, el idioma, las versiones de Synfus y de macOS, y un identificador obtenido de este Mac por hash, que no dice nada de él. Nada del juego: ni nombre, ni servidor, ni posición, ni texto leído. Desactivar el envío conserva los contadores en este Mac.",
+  "stats.partager.aide": "Una vez al día: los contadores de esta página, el número de personajes (nunca sus nombres), los ajustes en uso, el idioma, las versiones de Synfus y de macOS, y un identificador obtenido de este Mac por hash, que no dice nada de él. Nada del juego: ni nombre, ni servidor, ni posición, ni texto leído. También se envían los informes de cierre inesperado, bloqueo y exceso de procesador o de escritura en disco que macOS entrega a Synfus: pilas de llamadas de Synfus. Desactivar el envío conserva los contadores en este Mac.",
   "stats.periode": "Periodo",
   "stats.periode.mois": "30 días",
   "stats.periode.semaine": "7 días",

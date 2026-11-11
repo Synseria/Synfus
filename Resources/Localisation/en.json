@@ -805,7 +805,7 @@
   "stats.palette_variable": "Variables",
   "stats.palette_zaap": "Zaaps",
   "stats.partager": "Share anonymous statistics",
-  "stats.partager.aide": "Once a day: the counters on this page, the number of characters (never their names), the settings in use, the language, the Synfus and macOS versions, and an identifier hashed from this Mac that reveals nothing about it. Nothing from the game: no name, server, position or text read. Turning sharing off keeps the counts on this Mac.",
+  "stats.partager.aide": "Once a day: the counters on this page, the number of characters (never their names), the settings in use, the language, the Synfus and macOS versions, and an identifier hashed from this Mac that reveals nothing about it. Nothing from the game: no name, server, position or text read. Also sent: the crash, hang, and excessive CPU or disk-write reports macOS hands to Synfus, which hold Synfus call stacks. Turning sharing off keeps the counts on this Mac.",
   "stats.periode": "Period",
   "stats.periode.mois": "30 days",
   "stats.periode.semaine": "7 days",
