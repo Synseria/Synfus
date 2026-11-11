@@ -227,6 +227,7 @@ struct PreferencesTests {
         prefs.barOrigin = CGPoint(x: 120, y: 640)
         prefs.cyclePrevious = HotKey(keyCode: 48, modifiers: UInt32(shiftKey))
         prefs.menuBarIcon = .symbole
+        prefs.iconeApp = IconeApp(motif: .couvee, fond: .transparent)
 
         // Même stockage, nouvelle instance : c'est ce que fait un relancement.
         let relu = Preferences.forTesting(store: store)
@@ -239,6 +240,7 @@ struct PreferencesTests {
         #expect(relu.barOrigin == CGPoint(x: 120, y: 640))
         #expect(relu.cyclePrevious == HotKey(keyCode: 48, modifiers: UInt32(shiftKey)))
         #expect(relu.menuBarIcon == .symbole)
+        #expect(relu.iconeApp == IconeApp(motif: .couvee, fond: .transparent))
     }
 
     /// Les réglages ajoutés après coup sont facultatifs dans la sauvegarde : une
@@ -260,6 +262,7 @@ struct PreferencesTests {
         #expect(prefs.autoCenterBar == true)
         #expect(prefs.barOnlyWithDofus == false)
         #expect(prefs.menuBarIcon == .logo)
+        #expect(prefs.iconeApp == .parDefaut)
         // Masquer la barre reste sans défaut : on ne confisque aucune
         // combinaison réservée par le système sans qu'elle ait été demandée.
         #expect(prefs.toggleBar == nil)
@@ -485,7 +488,7 @@ struct PreferencesTests {
      "inviteFormat":"/w %nom go","inviteGroupee":true,
      "inviteHotKey":{"keyCode":34,"modifiers":256},
      "killFrozenClients":false,"lastArrangement":"principale","lireCombat":true,"lireCombatDerriere":true,
-     "lirePosition":true,"menuBarIcon":"symbole",
+     "lirePosition":true,"menuBarIcon":"symbole","iconeApp":{"motif":"couvee","fond":"aube"},
      "previewHotKey":{"keyCode":49,"modifiers":2048},
      "sessionHotKey":{"keyCode":1,"modifiers":256},"showClasses":false,
      "showNumbers":false,"showPreviewOnHover":true,"signalerBascule":false,
@@ -525,6 +528,7 @@ struct PreferencesTests {
         #expect(prefs.panneauxSeulementDofus == false)
         #expect(prefs.autoCenterBar == false)
         #expect(prefs.menuBarIcon == .symbole)
+        #expect(prefs.iconeApp == IconeApp(motif: .couvee, fond: .aube))
         #expect(prefs.showPreviewOnHover == true)
         #expect(prefs.previewHotKey == HotKey(keyCode: 49, modifiers: 2048))
         #expect(prefs.advanceOnClick == true)
@@ -598,6 +602,7 @@ struct PreferencesTests {
         prefs.panneauxSeulementDofus = false
         prefs.autoCenterBar = false
         prefs.menuBarIcon = .symbole
+        prefs.iconeApp = IconeApp(motif: .couvee, fond: .aube)
         prefs.showPreviewOnHover = true
         prefs.previewHotKey = HotKey(keyCode: 49, modifiers: 2048)
         prefs.advanceOnClick = true
@@ -676,7 +681,7 @@ struct PreferencesTests {
          "autoCenterBar":true,"barOnlyWithDofus":false,"panneauxSeulementDofus":true,"barVisible":true,"bossChoisi":"harebourg",
          "boutonsMasques":[],"characterOrder":[],
          "defaultsVersion":7,"equipes":[],"etiquettes":{},"hotKeys":[null],"inviteFormat":"/invite %nom","inviteGroupee":false,
-         "killFrozenClients":true,"lireCombat":false,"lireCombatDerriere":false,"lirePosition":false,"menuBarIcon":"logo",
+         "killFrozenClients":true,"lireCombat":false,"lireCombatDerriere":false,"lirePosition":false,"menuBarIcon":"logo","iconeApp":{"motif":"oeuf","fond":"nuit"},
          "showClasses":true,"showNumbers":true,"showPreviewOnHover":false,
          "signalerBascule":true,"zaapAuto":false,
          "zaapGainMinimal":5,"zaapDuJeu":true,"zaapIntercalees":"/a","verifierMisesAJour":true,"partagerStatistiques":true,"zaapsAjoutes":[],"zaapsChoix":{},"zaapsFavoris":[],"zaapsVueCarte":true,
