@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// Onglet Statistiques : ce que Synfus a compté, pour l'utilisateur d'abord,
-/// puis le partage — et le JSON exact de ce qui part.
-struct StatistiquesSettings: View {
+/// Onglet Usage : l'interrupteur du partage, puis le JSON exact de ce qui part
+/// et ce que Synfus a compté. Compteurs montrés au seul partage : c'est ce qui
+/// donne envie de le laisser allumé.
+struct UsageSettings: View {
     @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var usage = UsageStore.shared
     @State private var periode = Periode.semaine
@@ -29,46 +30,51 @@ struct StatistiquesSettings: View {
     }
 
     var body: some View {
-        let aujourdhui = UsageStore.aujourdhui()
-        let totaux = usage.historique.totaux(sur: periode.jours, aujourdhui: aujourdhui)
-        PageReglages(titre: L("reglages.statistiques")) {
-            Section {
-                Ligne(titre: L("stats.periode"), etat: depuis) {
-                    Picker(L("stats.periode"), selection: $periode) {
-                        ForEach(Periode.allCases, id: \.self) { Text($0.libelle).tag($0) }
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.segmented)
-                    .fixedSize()
-                }
-                if let moyennes = usage.historique.moyennesPersos(sur: periode.jours, aujourdhui: aujourdhui) {
-                    valeur(L("stats.persosConnectes"), moyennes.connectes.formatted(.number.precision(.fractionLength(1))))
-                    valeur(L("stats.persosJoues"), moyennes.joues.formatted(.number.precision(.fractionLength(1))))
-                }
-            }
-            ForEach(EvenementUsage.Famille.allCases, id: \.self) { famille in
-                let evenements = EvenementUsage.allCases.filter { $0.famille == famille && totaux[$0, default: 0] > 0 }
-                if !evenements.isEmpty {
-                    Section {
-                        ForEach(evenements, id: \.self) { evenement in
-                            valeur(evenement.libelle, totaux[evenement, default: 0].formatted())
-                        }
-                    } header: {
-                        SectionTitle(titre(famille))
-                    }
-                }
-            }
+        PageReglages(titre: L("reglages.usage")) {
             Section {
                 Interrupteur(titre: L("stats.partager"), aide: L("stats.partager.aide"),
                              isOn: $prefs.partagerStatistiques)
-                Ligne(titre: L("stats.dernierEnvoi"), etat: dernierEnvoi) {
-                    Button(L("stats.voirDonnees")) { donnees = true }
+                if prefs.partagerStatistiques {
+                    Ligne(titre: L("stats.dernierEnvoi"), etat: dernierEnvoi) {
+                        Button(L("stats.voirDonnees")) { donnees = true }
+                    }
                 }
-            } header: {
-                SectionTitle(L("stats.partage"))
             }
+            if prefs.partagerStatistiques { compteurs }
         }
         .sheet(isPresented: $donnees) { DonneesEnvoyeesVue() }
+    }
+
+    @ViewBuilder
+    private var compteurs: some View {
+        let aujourdhui = UsageStore.aujourdhui()
+        let totaux = usage.historique.totaux(sur: periode.jours, aujourdhui: aujourdhui)
+        Section {
+            Ligne(titre: L("stats.periode"), etat: depuis) {
+                Picker(L("stats.periode"), selection: $periode) {
+                    ForEach(Periode.allCases, id: \.self) { Text($0.libelle).tag($0) }
+                }
+                .labelsHidden()
+                .pickerStyle(.segmented)
+                .fixedSize()
+            }
+            if let moyennes = usage.historique.moyennesPersos(sur: periode.jours, aujourdhui: aujourdhui) {
+                valeur(L("stats.persosConnectes"), moyennes.connectes.formatted(.number.precision(.fractionLength(1))))
+                valeur(L("stats.persosJoues"), moyennes.joues.formatted(.number.precision(.fractionLength(1))))
+            }
+        }
+        ForEach(EvenementUsage.Famille.allCases, id: \.self) { famille in
+            let evenements = EvenementUsage.allCases.filter { $0.famille == famille && totaux[$0, default: 0] > 0 }
+            if !evenements.isEmpty {
+                Section {
+                    ForEach(evenements, id: \.self) { evenement in
+                        valeur(evenement.libelle, totaux[evenement, default: 0].formatted())
+                    }
+                } header: {
+                    SectionTitle(titre(famille))
+                }
+            }
+        }
     }
 
     private func valeur(_ titre: String, _ texte: String) -> some View {

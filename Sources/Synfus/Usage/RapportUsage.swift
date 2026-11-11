@@ -102,7 +102,7 @@ enum RapportUsage {
         return (try? JSONSerialization.data(withJSONObject: racine, options: options)) ?? Data()
     }
 
-    /// Le même corps, indenté, tel que l'onglet Statistiques le montre.
+    /// Le même corps, indenté, tel que l'onglet Usage le montre.
     static func texte(_ jours: [JourUsage], diagnostics: [DiagnosticUsage], contexte: ContexteUsage, envoi: Date) -> String {
         String(bytes: corps(jours, diagnostics: diagnostics, contexte: contexte, envoi: envoi, lisible: true),
                encoding: .utf8) ?? ""

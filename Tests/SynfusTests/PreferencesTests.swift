@@ -470,13 +470,14 @@ struct PreferencesTests {
     {"advanceModifier":"option","advanceOnClick":true,
      "arrangeHotKey":{"keyCode":40,"modifiers":256},"attentionAction":"focus",
      "autoCenterBar":false,"barOnlyWithDofus":true,"panneauxSeulementDofus":false,"barOriginX":120.5,"barOriginY":640,
-     "barVisible":false,"bossBouton":false,"bossChoisi":"kimbo","characterOrder":["Aeryn","Nova"],
-     "chasseBouton":false,"chasseHotKey":{"keyCode":5,"modifiers":2048},
+     "barVisible":false,"bossChoisi":"kimbo",
+     "boutonsMasques":["quetes","boss","chasse","palette"],"characterOrder":["Aeryn","Nova"],
+     "chasseHotKey":{"keyCode":5,"modifiers":2048},
      "cycleNext":{"keyCode":122,"modifiers":0},"cyclePrevious":{"keyCode":120,"modifiers":0},
      "defaultsVersion":7,"equipeSuivanteHotKey":{"keyCode":17,"modifiers":256},
      "etiquettes":{"1:-78,-41":"Fri 1"},"lieuxFavoris":["lieu:2738"],"pnjsFavoris":["pnj:6309"],
      "paletteHotKey":{"keyCode":47,"modifiers":256},"paletteRecents":["/zaap 5,7"],"paletteTri":"type","quetesEpinglees":[18,42],"quetesEtape":{"18":2},
-     "quetesValides":{"18":[102,104]},"quetesBouton":false,"quetesMasquerObjets":true,
+     "quetesValides":{"18":[102,104]},"quetesMasquerObjets":true,
      "quetesCompact":false,"quetesConsigne":false,"quetesVignettes":true,
      "quetesEnCours":{"18":104},"quetesCocherSuivi":false,"quetesDecoches":{"18":[103]},"quetesCochesLues":{"18":[104]},
      "equipes":[{"membres":["Aeryn"]},{"membres":["Nova"]}],
@@ -489,7 +490,7 @@ struct PreferencesTests {
      "sessionHotKey":{"keyCode":1,"modifiers":256},"showClasses":false,
      "showNumbers":false,"showPreviewOnHover":true,"signalerBascule":false,
      "toggleAutoFocus":{"keyCode":99,"modifiers":0},
-     "zaapAuto":true,"zaapBouton":false,"zaapGainMinimal":8,"zaapDuJeu":false,"zaapIntercalees":"/a ; /b","verifierMisesAJour":false,"derniereVersionLancee":"0.11.0","partagerStatistiques":false,
+     "zaapAuto":true,"zaapGainMinimal":8,"zaapDuJeu":false,"zaapIntercalees":"/a ; /b","verifierMisesAJour":false,"derniereVersionLancee":"0.11.0","partagerStatistiques":false,
      "zaapHotKey":{"keyCode":17,"modifiers":2048},
      "zaapsAjoutes":[{"monde":1,"noms":{"fr":"Mon zaap"},"x":50,"y":-50,"zone":{}}],
      "zaapsChoix":{"1:-2,0":false},
@@ -545,7 +546,6 @@ struct PreferencesTests {
         #expect(prefs.inviteFormat == "/w %nom go")
         #expect(prefs.inviteGroupee == true)
         #expect(prefs.zaapHotKey == HotKey(keyCode: 17, modifiers: 2048))
-        #expect(prefs.zaapBouton == false)
         #expect(prefs.zaapAuto == true)
         #expect(prefs.zaapGainMinimal == 8)
         #expect(prefs.zaapDuJeu == false)
@@ -565,7 +565,6 @@ struct PreferencesTests {
         #expect(prefs.quetesEpinglees == [18, 42])
         #expect(prefs.quetesEtape == ["18": 2])
         #expect(prefs.quetesValides == ["18": [102, 104]])
-        #expect(prefs.quetesBouton == false)
         #expect(prefs.quetesMasquerObjets == true)
         #expect(prefs.quetesCompact == false)
         #expect(prefs.quetesConsigne == false)
@@ -575,9 +574,8 @@ struct PreferencesTests {
         #expect(prefs.quetesDecoches == ["18": [103]])
         #expect(prefs.quetesCochesLues == ["18": [104]])
         #expect(prefs.chasseHotKey == HotKey(keyCode: 5, modifiers: 2048))
-        #expect(prefs.chasseBouton == false)
         #expect(prefs.bossChoisi == .kimbo)
-        #expect(prefs.bossBouton == false)
+        #expect(prefs.boutonsMasques == [.quetes, .boss, .chasse, .palette])
         #expect(prefs.lireCombatDerriere == true)
         #expect(prefs.vuesCartes == false)
     }
@@ -621,7 +619,6 @@ struct PreferencesTests {
         prefs.inviteFormat = "/w %nom go"
         prefs.inviteGroupee = true
         prefs.zaapHotKey = HotKey(keyCode: 17, modifiers: 2048)
-        prefs.zaapBouton = false
         prefs.zaapAuto = true
         prefs.zaapGainMinimal = 8
         prefs.zaapDuJeu = false
@@ -641,7 +638,6 @@ struct PreferencesTests {
         prefs.quetesEpinglees = [18, 42]
         prefs.quetesEtape = ["18": 2]
         prefs.quetesValides = ["18": [102, 104]]
-        prefs.quetesBouton = false
         prefs.quetesMasquerObjets = true
         prefs.quetesCompact = false
         prefs.quetesConsigne = false
@@ -651,9 +647,8 @@ struct PreferencesTests {
         prefs.quetesDecoches = ["18": [103]]
         prefs.quetesCochesLues = ["18": [104]]
         prefs.chasseHotKey = HotKey(keyCode: 5, modifiers: 2048)
-        prefs.chasseBouton = false
         prefs.bossChoisi = .kimbo
-        prefs.bossBouton = false
+        prefs.boutonsMasques = [.palette, .chasse, .boss, .quetes]
         prefs.lireCombatDerriere = true
         prefs.vuesCartes = false
 
@@ -678,15 +673,15 @@ struct PreferencesTests {
 
         let attendu = """
         {"advanceModifier":"fn","advanceOnClick":false,"attentionAction":"highlight",
-         "autoCenterBar":true,"barOnlyWithDofus":false,"panneauxSeulementDofus":true,"barVisible":true,"bossBouton":true,"bossChoisi":"harebourg",
-         "chasseBouton":true,"characterOrder":[],
+         "autoCenterBar":true,"barOnlyWithDofus":false,"panneauxSeulementDofus":true,"barVisible":true,"bossChoisi":"harebourg",
+         "boutonsMasques":[],"characterOrder":[],
          "defaultsVersion":7,"equipes":[],"etiquettes":{},"hotKeys":[null],"inviteFormat":"/invite %nom","inviteGroupee":false,
          "killFrozenClients":true,"lireCombat":false,"lireCombatDerriere":false,"lirePosition":false,"menuBarIcon":"logo",
          "showClasses":true,"showNumbers":true,"showPreviewOnHover":false,
-         "signalerBascule":true,"zaapAuto":false,"zaapBouton":true,
+         "signalerBascule":true,"zaapAuto":false,
          "zaapGainMinimal":5,"zaapDuJeu":true,"zaapIntercalees":"/a","verifierMisesAJour":true,"partagerStatistiques":true,"zaapsAjoutes":[],"zaapsChoix":{},"zaapsFavoris":[],"zaapsVueCarte":true,
          "lieuxFavoris":[],"pnjsFavoris":[],"paletteRecents":[],"paletteTri":"proximite","quetesEpinglees":[],"quetesEtape":{},
-         "quetesValides":{},"quetesBouton":true,"quetesMasquerObjets":false,
+         "quetesValides":{},"quetesMasquerObjets":false,
          "quetesCompact":true,"quetesConsigne":true,"quetesVignettes":false,
          "quetesEnCours":{},"quetesCocherSuivi":true,"quetesDecoches":{},"quetesCochesLues":{}}
         """
@@ -926,5 +921,59 @@ extension PreferencesTests {
         #expect(prefs.quetesEtape == ["18": 2])
         prefs.appliquer([lue(etape: 0, sure: true)])
         #expect(prefs.quetesEtape == ["18": 2])
+    }
+}
+
+/// Les boutons de la barre : un seul réglage, qui reprend les booléens d'avant.
+extension PreferencesTests {
+    @Test("Les boutons montrés gardent l'ordre de la barre")
+    func boutonsAffiches() {
+        #expect(BoutonBarre.affiches(sauf: []) == BoutonBarre.allCases)
+        #expect(BoutonBarre.affiches(sauf: [.palette, .quetes])
+                == [.boss, .chasse, .rangement, .passageAuto])
+    }
+
+    @Test("Masquer puis remontrer un bouton")
+    func montrerBouton() {
+        let (prefs, _) = neuves()
+        prefs.montrer(.rangement, false)
+        prefs.montrer(.boss, false)
+        prefs.montrer(.boss, false)
+        #expect(prefs.boutonsMasques == [.rangement, .boss])
+        prefs.montrer(.rangement, true)
+        #expect(prefs.boutonsMasques == [.boss])
+    }
+
+    /// Une sauvegarde d'avant `boutonsMasques` porte un booléen par bouton :
+    /// ceux à `false` restent masqués, et la réécriture ne garde que la
+    /// nouvelle clé.
+    @Test("Les anciens booléens des boutons sont repris")
+    func anciensBooleensDesBoutons() throws {
+        let ancien = """
+        {"characterOrder":[],"hotKeys":[],"barVisible":true,"showNumbers":true,"defaultsVersion":7,
+         "quetesBouton":false,"bossBouton":true,"chasseBouton":true,"zaapBouton":false}
+        """
+        let store = StockageMemoire([Preferences.key: Data(ancien.utf8)])
+        let prefs = Preferences.forTesting(store: store)
+        #expect(prefs.boutonsMasques == [.quetes, .palette])
+
+        prefs.montrer(.boss, false)
+        let donnees = try #require(store.donnees(pour: Preferences.key))
+        let ecrit = try #require(try JSONSerialization.jsonObject(with: donnees) as? [String: Any])
+        #expect(ecrit["boutonsMasques"] as? [String] == ["quetes", "boss", "palette"])
+        for cle in ["quetesBouton", "bossBouton", "chasseBouton", "zaapBouton"] {
+            #expect(ecrit[cle] == nil, "\(cle)")
+        }
+    }
+
+    @Test("La nouvelle clé prime sur les anciens booléens ; un bouton inconnu est ignoré")
+    func boutonsMasquesPrime() {
+        let sauvegarde = """
+        {"characterOrder":["Aeryn"],"hotKeys":[],"barVisible":true,"showNumbers":true,"defaultsVersion":7,
+         "quetesBouton":false,"boutonsMasques":["chasse","venuDuFutur"]}
+        """
+        let prefs = Preferences.forTesting(store: StockageMemoire([Preferences.key: Data(sauvegarde.utf8)]))
+        #expect(prefs.boutonsMasques == [.chasse])
+        #expect(prefs.characterOrder == ["Aeryn"])
     }
 }
