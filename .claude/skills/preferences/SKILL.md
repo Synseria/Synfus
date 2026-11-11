@@ -25,6 +25,10 @@ user-invocable: false
   d'une ancienne sauvegarde, la clé laisse le défaut. Seules les clés d'origine sont `.requis`.
 - **Une clé ne se renomme jamais** : les tests d'empreinte de `PreferencesTests` figent le JSON
   écrit, et « une sauvegarde amputée des clés récentes se relit » garde la compatibilité.
+- Plusieurs clés remplacées par une seule : la nouvelle clé prime ; tant qu'une sauvegarde ne
+  l'a pas, les anciennes sont relues pour la composer (`Reglage.boutonsMasques`, qui reprend
+  `quetesBouton`, `bossBouton`…). Un type sauvegardé qui s'élargit garde sa forme d'avant
+  (`CibleBoss` s'écrit en chaîne, comme `Boss`).
 - Les conformances `Codable` de `Ecriture`/`Lecture` sont `@MainActor`, ce qui laisse les
   closures toucher `Preferences`.
 - `nil` peut valoir « le défaut courant » (zones de lecture) : le défaut suit alors ses
