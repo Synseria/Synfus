@@ -140,8 +140,16 @@ enum IdentifiantInstallation {
         SHA256.hash(data: Data("\(app):\(materiel)".utf8)).map { String(format: "%02x", $0) }.joined()
     }
 
-    /// `nil` si le Mac ne donne pas son UUID (jamais vu) : l'appelant tire
-    /// alors un UUID au hasard et le garde.
+    /// L'identifiant tiré de `materiel`, ou, si le Mac ne le donne pas, d'un
+    /// UUID tiré au hasard une fois et gardé dans `secours`.
+    static func fixer(materiel: String?, app: String, secours: inout String?) -> String {
+        if let materiel { return calculer(materiel: materiel, app: app) }
+        let tire = secours ?? UUID().uuidString
+        secours = tire
+        return calculer(materiel: tire, app: app)
+    }
+
+    /// `nil` si le Mac ne donne pas son UUID (jamais vu).
     static func materiel() -> String? {
         let service = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("IOPlatformExpertDevice"))
         guard service != 0 else { return nil }
