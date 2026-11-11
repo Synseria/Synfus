@@ -257,6 +257,13 @@ struct UsageTests {
         #expect(a == IdentifiantInstallation.calculer(materiel: "UUID-1", app: "fr.synseria.Synfus"))
         #expect(a != IdentifiantInstallation.calculer(materiel: "UUID-1", app: "fr.synseria.Autre"))
         #expect(a.wholeMatch(of: #/[0-9a-f]{64}/#) != nil)
+
+        var secours: String?
+        #expect(IdentifiantInstallation.fixer(materiel: "UUID-1", app: "fr.synseria.Synfus", secours: &secours) == a)
+        #expect(secours == nil)
+        let tire = IdentifiantInstallation.fixer(materiel: nil, app: "fr.synseria.Synfus", secours: &secours)
+        #expect(secours != nil)
+        #expect(IdentifiantInstallation.fixer(materiel: nil, app: "fr.synseria.Synfus", secours: &secours) == tire)
     }
 
     @Test("Le jour : fuseau de l'utilisateur, et décalage d'une clé")

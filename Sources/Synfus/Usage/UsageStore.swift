@@ -44,10 +44,20 @@ final class UsageStore: ObservableObject {
     private static let attenteApresEchec: TimeInterval = 3600
     private static let session = URLSession(configuration: .ephemeral)
 
+    /// Fixé à la création du store, jamais pendant un rendu : le tirer peut
+    /// écrire `historique` (identifiant de secours).
+    private let installation: String
+
     init(fichier: URL?) {
         self.fichier = fichier
-        historique = fichier.flatMap { try? Data(contentsOf: $0) }
+        var historique = fichier.flatMap { try? Data(contentsOf: $0) }
             .flatMap { try? Self.decodeur.decode(HistoriqueUsage.self, from: $0) } ?? HistoriqueUsage()
+        let secours = historique.identifiantDeSecours
+        installation = IdentifiantInstallation.fixer(materiel: IdentifiantInstallation.materiel(),
+                                                     app: Bundle.main.bundleIdentifier ?? "fr.synseria.Synfus",
+                                                     secours: &historique.identifiantDeSecours)
+        modifie = historique.identifiantDeSecours != secours
+        self.historique = historique
     }
 
     func start() {
@@ -122,17 +132,6 @@ final class UsageStore: ObservableObject {
                              systeme: ContexteUsage.systeme(ProcessInfo.processInfo.operatingSystemVersion),
                              architecture: ContexteUsage.architectureCourante)
     }
-
-    private lazy var installation: String = {
-        let app = Bundle.main.bundleIdentifier ?? "fr.synseria.Synfus"
-        if let materiel = IdentifiantInstallation.materiel() {
-            return IdentifiantInstallation.calculer(materiel: materiel, app: app)
-        }
-        let secours = historique.identifiantDeSecours ?? UUID().uuidString
-        historique.identifiantDeSecours = secours
-        modifie = true
-        return IdentifiantInstallation.calculer(materiel: secours, app: app)
-    }()
 
     private func envoyer(maintenant: Date) {
         guard Preferences.shared.partagerStatistiques, let configuration = Self.configuration,
