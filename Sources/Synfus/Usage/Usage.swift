@@ -89,7 +89,7 @@ enum EvenementUsage: String, CaseIterable, Codable, Sendable {
     }
 }
 
-/// Une journée d'utilisation, sur le calendrier de l'utilisateur.
+/// Une journée d'utilisation, dans le fuseau de l'utilisateur.
 struct JourUsage: Codable, Equatable, Sendable {
     /// `2026-11-09` (`JourUsage.cle`).
     let jour: String
@@ -116,13 +116,22 @@ struct JourUsage: Codable, Equatable, Sendable {
         secondesAvecPersos > 0 ? persosSecondes / secondesAvecPersos : nil
     }
 
-    static func date(_ cle: String, calendrier: Calendar = .current) -> Date? {
+    /// Grégorien quel que soit le calendrier du Mac (bouddhiste, japonais…) :
+    /// les clés se comparent en texte et partent telles quelles au collecteur.
+    /// Le fuseau, lui, est celui de l'utilisateur : sa journée.
+    static var gregorien: Calendar {
+        var calendrier = Calendar(identifier: .gregorian)
+        calendrier.timeZone = .current
+        return calendrier
+    }
+
+    static func date(_ cle: String, calendrier: Calendar = JourUsage.gregorien) -> Date? {
         let parties = cle.split(separator: "-").compactMap { Int($0) }
         guard parties.count == 3 else { return nil }
         return calendrier.date(from: DateComponents(year: parties[0], month: parties[1], day: parties[2]))
     }
 
-    static func cle(_ date: Date, calendrier: Calendar = .current) -> String {
+    static func cle(_ date: Date, calendrier: Calendar = JourUsage.gregorien) -> String {
         let c = calendrier.dateComponents([.year, .month, .day], from: date)
         return String(format: "%04d-%02d-%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0)
     }
@@ -206,7 +215,7 @@ struct HistoriqueUsage: Codable, Equatable, Sendable {
 
     /// Les compteurs des `nombreDeJours` derniers jours jusqu'à `aujourdhui`
     /// compris, ou de tout l'historique (`nil`).
-    func totaux(sur nombreDeJours: Int?, aujourdhui: String, calendrier: Calendar = .current) -> [EvenementUsage: Int] {
+    func totaux(sur nombreDeJours: Int?, aujourdhui: String, calendrier: Calendar = JourUsage.gregorien) -> [EvenementUsage: Int] {
         var bruts: [String: Int] = [:]
         if let nombreDeJours {
             let debut = Self.decaler(aujourdhui, de: -(nombreDeJours - 1), calendrier: calendrier)
@@ -225,7 +234,7 @@ struct HistoriqueUsage: Codable, Equatable, Sendable {
     /// Moyenne, sur les jours de la période où un perso au moins était
     /// connecté, du nombre de persos connectés et du nombre de persos joués.
     func moyennesPersos(sur nombreDeJours: Int?, aujourdhui: String,
-                        calendrier: Calendar = .current) -> (connectes: Double, joues: Double)? {
+                        calendrier: Calendar = JourUsage.gregorien) -> (connectes: Double, joues: Double)? {
         let debut = nombreDeJours.map { Self.decaler(aujourdhui, de: -($0 - 1), calendrier: calendrier) } ?? ""
         let actifs = jours.filter { $0.jour >= debut && $0.jour <= aujourdhui && $0.persosMoyenne != nil }
         guard !actifs.isEmpty else { return nil }
@@ -252,7 +261,7 @@ struct HistoriqueUsage: Codable, Equatable, Sendable {
         }
     }
 
-    static func decaler(_ cle: String, de jours: Int, calendrier: Calendar = .current) -> String {
+    static func decaler(_ cle: String, de jours: Int, calendrier: Calendar = JourUsage.gregorien) -> String {
         guard let date = JourUsage.date(cle, calendrier: calendrier),
               let decalee = calendrier.date(byAdding: .day, value: jours, to: date)
         else { return cle }

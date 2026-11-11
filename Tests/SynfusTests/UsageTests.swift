@@ -178,10 +178,21 @@ struct UsageTests {
         #expect(a.wholeMatch(of: #/[0-9a-f]{64}/#) != nil)
     }
 
-    @Test("Le jour : calendrier de l'utilisateur, et décalage d'une clé")
+    @Test("Le jour : fuseau de l'utilisateur, et décalage d'une clé")
     func jours() {
         let date = calendrier.date(from: DateComponents(year: 2026, month: 3, day: 1, hour: 0, minute: 30))!
         #expect(JourUsage.cle(date, calendrier: calendrier) == "2026-03-01")
         #expect(HistoriqueUsage.decaler("2026-03-01", de: -1, calendrier: calendrier) == "2026-02-28")
+    }
+
+    @Test("La clé d'un jour est grégorienne, même sur un Mac en calendrier bouddhiste")
+    func calendrierGregorien() {
+        #expect(JourUsage.gregorien.identifier == .gregorian)
+        #expect(JourUsage.gregorien.timeZone == .current)
+        var bouddhiste = Calendar(identifier: .buddhist)
+        bouddhiste.timeZone = .current
+        let date = JourUsage.date("2026-11-10")!
+        #expect(JourUsage.cle(date) == "2026-11-10")
+        #expect(JourUsage.cle(date, calendrier: bouddhiste) != "2026-11-10")
     }
 }
