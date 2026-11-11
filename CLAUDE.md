@@ -55,7 +55,7 @@ SYNFUS_CAPTURE=~/Library/Logs/Synfus/captures/x.png sh test.sh RealCapture   # O
   correction touche un chemin, vérifier que son jumeau en bénéficie. Foyers : lecture AX
   `AccessibilityReader` ; processus Dofus `DofusProcesses` ; titres `WindowTitle` ; fermeture
   `ClientTerminator` ; presse-papiers `PressePapiers` ; API DofusDB `DofusDB` (lots d'identifiants : `parIdentifiants`) ; images du jeu `ImagesDofusDB` (vues de carte : `VueCarte`, toujours réduites) ; effectif `republierEffectif` ; coût d'un trajet depuis le perso `ZaapClipboard` (`cout(depuis:)`, `tournee`) ; zaaps actifs indexés `ZaapClipboard.zaapsSitues` ; classes
-  `ClassesStore.catalogue` ; marque `SynfusMark` ; libellés `L()` ; texte lu comparé à des noms `Ressemblance` ;
+  `ClassesStore.catalogue` ; marque `SynfusMark` (ses variantes `IconeApp`, posées par `IconeAppliquee`) ; libellés `L()` ; texte lu comparé à des noms `Ressemblance` ;
   zones de lecture `GenreLecture` ; coches, décoches, objectif en cours et étape des quêtes `Preferences.cocher` / `appliquer` (`CochesQuete`) ; coût d'un trajet `ItineraireZaap.cartes` ; distance à pied `ItineraireZaap.aPied` ; case hors du Monde des Douze `ReseauSousZones.horsDesDouze` (une entrée de palette vers une case : `versCase`) ;
   geste compté pour les statistiques `UsageStore.compter` ; plusieurs réglages d'un geste, une écriture `Preferences.enUneEcriture` ; résultat redemandé à chaque rendu
   `DernierCalcul` (sous la clé de ses entrées ; réglages des trajets et carte : `ZaapClipboard.revisionTrajets`).
@@ -87,14 +87,14 @@ Point d'entrée `SynfusMain` (`App/App.swift`). Composants : singletons `@MainAc
 la plupart `ObservableObject`. `applicationDidFinishLaunching` démarre, dans l'ordre :
 `WindowManager` → `FreezeWatcher` → `HotKeyManager.rebind()` → `MenuBarController` →
 `AttentionWatcher` → `ClickAdvanceWatcher` → `FloatingBarController` → `LecteurEcran` →
-`CarteStore` → `ClassesStore` → `QuetesStore.preparer()` → `DonneesDuJeu` → `PaletteModele` → `ZaapClipboard` → `MiseAJour` → `UsageStore`.
+`CarteStore` → `ClassesStore` → `QuetesStore.preparer()` → `DonneesDuJeu` → `PaletteModele` → `ZaapClipboard` → `MiseAJour` → `UsageStore` → `IconeAppliquee`.
 
 `Sources/Synfus/` est rangé par domaine (SwiftPM compile les sous-dossiers sans déclaration). Un
 nouveau fichier va dans le dossier de son domaine ; un fichier sans domaine en annonce un nouveau.
 
 | Dossier | Contenu |
 | --- | --- |
-| `App/` | Point d'entrée et `--dump-*`, intégrité du bundle, démarrage automatique, `PressePapiers`, `DofusDB` (client de l'API), `ImagesDofusDB`, `Ressources` (bundle, dossier de l'utilisateur), `DernierCalcul` (pur), `DonneesDuJeu` (données DofusDB revues chaque jour) |
+| `App/` | Point d'entrée et `--dump-*`, intégrité du bundle, démarrage automatique, `PressePapiers`, `DofusDB` (client de l'API), `ImagesDofusDB`, `Ressources` (bundle, dossier de l'utilisateur), `IconeAppliquee` (icône choisie posée sur le bundle), `DernierCalcul` (pur), `DonneesDuJeu` (données DofusDB revues chaque jour) |
 | `Accessibilite/` | `AccessibilityReader` (lecture AX, `DofusProcesses`), `--dump-windows`, `CrossSpaceTitles` |
 | `Clients/` | `DofusClient`, `WindowTitle`, `ClientMemory`, `Equipes`, `Rotation` (purs) ; `WindowManager` (+`PremierPlan`, `+Effectif`, `+Focus`, `+Fermeture`), `ClientInventoryEngine`, `ClientTerminator`, `FreezeWatcher` |
 | `Invitations/` | `/invite Nom` : `InvitationComposer` (pur), `InvitationClipboard` |
@@ -116,7 +116,7 @@ nouveau fichier va dans le dossier de son domaine ; un fichier sans domaine en a
 | `Lecture/` | OCR position, combat, suivis de chasse et de quêtes, vie et tchat : `ZoneEcran`, `PositionCarte`, `LectureCombat`, `LumaBitmap`, `Ressemblance`, `DetectionZones` (purs), `LecteurEcran` (+ `GenreLecture`, `DiagnosticLecture`, `MoteurOCR`), `CapturesCalibrage`, `AutoCalibrage` (zones retrouvées sur une capture) |
 | `Preferences/` | `Preferences`, protocole `PreferencesStore` |
 | `Classes/` | `DofusClass` (table intégrée, `Catalogue`, purs), `ClassesDofusDB` (liste `breeds`, cache disque, fusion), `ClassesStore` (emblèmes DofusDB ou icône de l'utilisateur) |
-| `Marque/` | L'Œuf ajouré : `SynfusMark` (CoreGraphics pur, icône et glyphe), `SynfusGlyph` (barre de menus) |
+| `Marque/` | L'Œuf ajouré : `SynfusMark` (CoreGraphics pur, icône et glyphe), `Couvee` (l'autre motif), `IconeApp` (pur : motif × fond), `SynfusGlyph` (barre de menus) |
 | `Localisation/` | `L()`, choix de langue ; tables dans `Resources/Localisation/` |
 | `Interface/` | `MenuBarController`, `ConfirmationFermeture`, `ImagesCarte` (vignette de carte, vue agrandie au survol, pictogramme d'un lieu) ; `Barre/` (barre flottante) ; `Reglages/` (une vue par onglet) |
 
