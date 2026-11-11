@@ -230,7 +230,7 @@ struct QuetesTests {
     func dofusPourLesNoobs() {
         #expect(DofusPourLesNoobs.candidats("La voie du guerrier") == ["la-voie-du-guerrier"])
         #expect(DofusPourLesNoobs.candidats("Naissance d'une vocation") == ["naissance-dune-vocation", "naissance-d-une-vocation"])
-        #expect(DofusPourLesNoobs.candidats(Boss.ilyzaelle.donjon).contains("belvedere-d-ilyzaelle"))
+        #expect(DofusPourLesNoobs.candidats("Belvédère d'Ilyzaelle").contains("belvedere-d-ilyzaelle"))
         #expect(DofusPourLesNoobs.candidats("Pense-bête") == ["pense-bete", "pense-becircte"])
         #expect(DofusPourLesNoobs.candidats("L'éternelle moisson").contains("leacuteternelle-moisson"))
         #expect(DofusPourLesNoobs.candidats("Esprit, es-tu là ?").first == "esprit-es-tu-la")

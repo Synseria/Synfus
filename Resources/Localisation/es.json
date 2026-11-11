@@ -53,6 +53,8 @@
   "boss.attente.combat": "Esperando un combate. En el turno del personaje de delante, Synfus lee su vida y el canal de combate.",
   "boss.autoriser": "Permitir la grabación de pantalla",
   "boss.autoriser.aide": "Leer la vida y el canal de combate requiere el permiso «Grabación de pantalla».",
+  "boss.autre": "Otro jefe…",
+  "boss.autre.recherche": "Ayuda en combate ",
   "boss.confusion.aucune": "Sin confusión",
   "boss.confusion.contreHoraire": "Confusión 90° antihoraria",
   "boss.confusion.demiTour": "Confusión 180°",

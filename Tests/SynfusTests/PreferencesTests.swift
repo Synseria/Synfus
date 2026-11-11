@@ -574,7 +574,7 @@ struct PreferencesTests {
         #expect(prefs.quetesDecoches == ["18": [103]])
         #expect(prefs.quetesCochesLues == ["18": [104]])
         #expect(prefs.chasseHotKey == HotKey(keyCode: 5, modifiers: 2048))
-        #expect(prefs.bossChoisi == .kimbo)
+        #expect(prefs.bossChoisi == .special(.kimbo))
         #expect(prefs.boutonsMasques == [.quetes, .boss, .chasse, .palette])
         #expect(prefs.lireCombatDerriere == true)
         #expect(prefs.vuesCartes == false)
@@ -647,7 +647,7 @@ struct PreferencesTests {
         prefs.quetesDecoches = ["18": [103]]
         prefs.quetesCochesLues = ["18": [104]]
         prefs.chasseHotKey = HotKey(keyCode: 5, modifiers: 2048)
-        prefs.bossChoisi = .kimbo
+        prefs.bossChoisi = .special(.kimbo)
         prefs.boutonsMasques = [.palette, .chasse, .boss, .quetes]
         prefs.lireCombatDerriere = true
         prefs.vuesCartes = false

@@ -12,18 +12,20 @@ final class AideBoss: ObservableObject {
     @Published private(set) var suivi = SuiviConfusion()
     @Published private(set) var tours = ToursCombat()
     @Published private(set) var session = SessionBoss()
-    /// La fiche DofusDB de chaque boss déjà demandée (`chargerFiche`).
-    @Published private(set) var fiches: [Boss: FicheCombat] = [:]
+    /// La fiche DofusDB de chaque boss déjà demandée, par monstre (`chargerFiche`).
+    @Published private(set) var fiches: [Int: FicheCombat] = [:]
 
     /// Le dernier état de combat vu de chaque perso.
     private var combatsVus: [String: EtatCombat] = [:]
     private var abonnement: AnyCancellable?
     private var abonnementSalle: AnyCancellable?
-    /// La salle de boss où la dernière position lue a mis le perso devant :
-    /// le boss n'est choisi qu'en y entrant, un choix à la main dans la salle
-    /// tient.
-    private var salle: Boss?
-    private var ficheDemandee: Set<Boss> = []
+    private var abonnementDonjons: AnyCancellable?
+    /// La dernière zone lue du perso devant, relue quand la liste des donjons arrive.
+    private var zone: String?
+    /// Le donjon où la dernière position lue a mis le perso devant : son boss
+    /// n'est choisi qu'en y entrant, un choix à la main dedans tient.
+    private var donjonIci: Int?
+    private var ficheDemandee: Set<Int> = []
 
     private init() {
         // Les valeurs émises, pas la propriété : `@Published` publie avant
@@ -37,33 +39,55 @@ final class AideBoss: ObservableObject {
                 self?.lire(zone: perso.flatMap { positions[$0] }?.zone)
             }
         }
+        abonnementDonjons = DonjonsStore.shared.$donjons.dropFirst().sink { [weak self] _ in
+            Task { @MainActor in self?.lire(zone: self?.zone) }
+        }
     }
 
-    /// Entrer dans la salle d'un boss le choisit : le panneau, ouvert ou
-    /// rouvert, montre le bon. Jamais d'ouverture d'office.
+    /// Entrer dans un donjon choisit son boss : le panneau, ouvert ou rouvert,
+    /// montre le bon. Jamais d'ouverture d'office. La liste des donjons se
+    /// demande à la première zone lue.
     private func lire(zone: String?) {
-        let ici = Boss.dans(zone: zone)
-        guard ici != salle else { return }
-        salle = ici
-        if let ici, ici != boss { choisir(ici) }
+        self.zone = zone
+        guard let donjons = DonjonsStore.shared.donjons else {
+            if zone != nil { DonjonsStore.shared.charger() }
+            return
+        }
+        let ici = donjons.donjon(zone: zone)
+        guard ici?.id != donjonIci else { return }
+        donjonIci = ici?.id
+        guard let ici, let premier = ici.boss.first else { return }
+        let cible = CibleBoss.boss(premier, donjon: ici.id)
+        if cible != boss { choisir(cible) }
     }
 
     /// Demande une fois par lancement la fiche DofusDB du boss ; muette en
     /// cas d'échec (la mécanique se passe d'elle).
-    func chargerFiche(_ boss: Boss) {
-        guard ficheDemandee.insert(boss).inserted else { return }
+    func chargerFiche(_ boss: CibleBoss) {
+        let monstre = boss.monstre
+        guard ficheDemandee.insert(monstre).inserted else { return }
         Task {
-            guard let fiche = try? await FicheCombat.telecharger(monstre: boss.monstre) else {
-                ficheDemandee.remove(boss)
+            guard let fiche = try? await FicheCombat.telecharger(monstre: monstre) else {
+                ficheDemandee.remove(monstre)
                 return
             }
-            fiches[boss] = fiche
+            fiches[monstre] = fiche
         }
     }
 
-    var boss: Boss { Preferences.shared.bossChoisi }
+    var boss: CibleBoss { Preferences.shared.bossChoisi }
 
-    func choisir(_ boss: Boss) {
+    /// Le donjon du boss suivi : le sien pour un boss de donjon, celui que
+    /// DofusDB lui donne pour un boss à mécanique.
+    var donjon: Donjon? {
+        let donjons = DonjonsStore.shared.donjons
+        switch boss {
+        case .special(let special): return donjons?.donjon(boss: special.monstre)
+        case .donjon(_, let id): return donjons?.donjon(id: id)
+        }
+    }
+
+    func choisir(_ boss: CibleBoss) {
         Preferences.shared.bossChoisi = boss
         BossPanel.shared.revoirLectures()
     }
@@ -85,18 +109,18 @@ final class AideBoss: ObservableObject {
     // MARK: - Lectures
 
     func recevoirVie(_ lignes: [String], perso: String) {
-        guard boss == .harebourg, let vie = Harebourg.vie(lignes) else { return }
+        guard boss == .special(.harebourg), let vie = Harebourg.vie(lignes) else { return }
         suivi.vie(vie, perso: perso, le: Date())
     }
 
     func recevoirTchat(_ lignes: [String], perso: String) {
-        switch boss {
+        switch boss.special {
         case .harebourg:
             let noms = WindowManager.shared.clients.map(\.name)
             suivi.tchat(lignes, fenetre: perso, persos: noms, le: Date())
         case .kimbo:
             if let etat = Kimbo.etat(lignes), etat != session.kimbo { session.kimbo = etat }
-        case .toxoliath, .ilyzaelle, .talKasha:
+        case .toxoliath, .ilyzaelle, .talKasha, nil:
             break
         }
     }
