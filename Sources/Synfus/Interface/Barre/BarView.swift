@@ -171,14 +171,21 @@ struct BarView: View {
                 chip(index: index, client: client)
             }
             separator
-            // Les panneaux de jeu d'abord, du plus servi au plus rare, puis
-            // les fenêtres ; le même ordre que le menu de la barre de menus.
-            if prefs.quetesBouton { quetesButton }
-            if prefs.bossBouton { bossButton }
-            if prefs.chasseBouton { chasseButton }
-            arrangeMenu
-            if prefs.zaapBouton { zaapButton }
-            autoFocusToggle
+            ForEach(BoutonBarre.affiches(sauf: prefs.boutonsMasques), id: \.self) { bouton in
+                vue(de: bouton)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func vue(de bouton: BoutonBarre) -> some View {
+        switch bouton {
+        case .quetes: quetesButton.contextMenu { MasquerBouton(bouton: bouton) }
+        case .boss: bossButton.contextMenu { MasquerBouton(bouton: bouton) }
+        case .chasse: chasseButton.contextMenu { MasquerBouton(bouton: bouton) }
+        case .rangement: ArrangeMenuButton()
+        case .palette: zaapButton
+        case .passageAuto: autoFocusToggle.contextMenu { MasquerBouton(bouton: bouton) }
         }
     }
 
@@ -198,7 +205,11 @@ struct BarView: View {
         ) {
             PalettePanel.shared.basculer()
         }
-        .contextMenu { zaapsFavoris }
+        .contextMenu {
+            zaapsFavoris
+            Divider()
+            MasquerBouton(bouton: .palette)
+        }
     }
 
     /// Le panneau de chasse au trésor : il prend le clavier sans activer
@@ -253,13 +264,6 @@ struct BarView: View {
                 }
             }
         }
-    }
-
-    /// Le rangement, sous la main : dispositions et bascules de plein écran,
-    /// là où on les cherche — cachés dans le seul clic droit, ils étaient
-    /// introuvables.
-    private var arrangeMenu: some View {
-        ArrangeMenuButton()
     }
 
     /// Bascule du passage automatique. Doublé par un raccourci global, pour

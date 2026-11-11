@@ -26,6 +26,9 @@ contenu (`Tools/notes-de-version.sh`), et `sh build.sh --publish` refuse une ver
 ### Améliorations
 
 - Une pastille en combat, sans que ce soit son tour, prend un cadre rose discret.
+- **Boutons de la barre au choix** (Réglages → Barre) : quêtes, boss, chasse, rangement, palette et
+  passage automatique s'affichent ou se masquent un par un, et un clic droit sur l'un d'eux propose
+  « Masquer ce bouton ».
 - Les **rappels du combat d'un boss** se copient d'un clic pour le tchat ; l'icône de leur titre
   les copie tous à la suite.
 - **Palette** : rouverte, elle reprend où on l'a laissée — recherche toute sélectionnée (une
