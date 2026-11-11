@@ -12,17 +12,49 @@ struct DiagnosticUsage: Codable, Equatable, Sendable {
     /// La version de Synfus qui l'a produit.
     let version: String
     /// Le JSON de MetricKit (piles d'appels, adresses, rien de l'utilisateur),
-    /// coupé à `tailleMaximale`.
+    /// réduit par `reduire`.
     let contenu: String
 
-    /// Le corps d'un envoi est borné à 64 Kio par le collecteur.
-    static let tailleMaximale = 40_000
+    /// En octets, une fois échappé dans le corps de l'envoi : le collecteur
+    /// borne ce corps à 64 Kio, le reste (contexte, attributs) tient dans la marge.
+    static let tailleMaximale = 60_000
 
     init(genre: Genre, version: String, json: Data) {
         self.genre = genre
         self.version = version
-        let texte = String(bytes: json, encoding: .utf8) ?? ""
-        contenu = texte.count > Self.tailleMaximale ? String(texte.prefix(Self.tailleMaximale)) : texte
+        contenu = Self.reduire(json)
+    }
+
+    /// Le rapport sous `limite` une fois échappé, et toujours du JSON valide
+    /// (`Tools/symboliser.sh` le relit) : entier s'il tient, sinon les piles
+    /// du fil en faute, sinon les seules métadonnées. Couper le texte casserait
+    /// le JSON.
+    static func reduire(_ json: Data, limite: Int = tailleMaximale) -> String {
+        if let texte = String(bytes: json, encoding: .utf8), tailleEchappee(texte) <= limite { return texte }
+        guard let racine = (try? JSONSerialization.jsonObject(with: json)) as? [String: Any] else { return "{}" }
+        var essais: [[String: Any]] = []
+        if var arbre = racine["callStackTree"] as? [String: Any], let piles = arbre["callStacks"] as? [[String: Any]] {
+            // Sans fil désigné (blocage, excès), la première pile est celle du fil principal.
+            let enFaute = piles.filter { $0["threadAttributed"] as? Bool == true }
+            arbre["callStacks"] = enFaute.isEmpty ? Array(piles.prefix(1)) : enFaute
+            var reduite = racine
+            reduite["callStackTree"] = arbre
+            essais.append(reduite)
+        }
+        essais.append(racine.filter { ["diagnosticMetaData", "version"].contains($0.key) })
+        for essai in essais {
+            guard let data = try? JSONSerialization.data(withJSONObject: essai, options: [.sortedKeys, .withoutEscapingSlashes]),
+                  let texte = String(bytes: data, encoding: .utf8)
+            else { continue }
+            if tailleEchappee(texte) <= limite { return texte }
+        }
+        return "{}"
+    }
+
+    /// La place que prend `texte` en valeur de chaîne dans le corps JSON.
+    static func tailleEchappee(_ texte: String) -> Int {
+        (try? JSONSerialization.data(withJSONObject: texte, options: [.fragmentsAllowed, .withoutEscapingSlashes]))?.count
+            ?? .max
     }
 }
 

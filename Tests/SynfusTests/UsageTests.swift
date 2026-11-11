@@ -153,15 +153,58 @@ struct UsageTests {
         #expect(valeurs["jour"]?["stringValue"] as? String == "2026-11-09")
     }
 
-    @Test("Diagnostics : dix gardés au plus, un par envoi, coupés sous la limite du collecteur")
+    /// Un rapport au format de MetricKit : une pile par fil, `remplissage`
+    /// octets de cadres dans chacune.
+    private func rapportMetricKit(enFaute: Int, autre: Int, guillemets: Bool = false) throws -> Data {
+        func pile(_ attribuee: Bool, _ remplissage: Int) -> [String: Any] {
+            let symbole = guillemets ? String(repeating: "\"\\", count: remplissage / 2) : String(repeating: "a", count: remplissage)
+            return ["threadAttributed": attribuee,
+                    "callStackRootFrames": [["binaryName": "Synfus", "address": 4_300_000_000, "symbole": symbole]]]
+        }
+        let racine: [String: Any] = [
+            "version": "1.0.0",
+            "diagnosticMetaData": ["appVersion": "0.13.0", "platformArchitecture": "arm64"],
+            "callStackTree": ["callStackPerThread": true, "callStacks": [pile(false, autre), pile(true, enFaute)]],
+        ]
+        return try JSONSerialization.data(withJSONObject: racine)
+    }
+
+    private func objet(_ contenu: String) throws -> [String: Any] {
+        try #require(try JSONSerialization.jsonObject(with: Data(contenu.utf8)) as? [String: Any])
+    }
+
+    @Test("Diagnostic trop long : réduit au fil en faute, puis aux métadonnées, toujours du JSON")
+    func reductionDiagnostic() throws {
+        let court = try rapportMetricKit(enFaute: 100, autre: 100)
+        #expect(DiagnosticUsage.reduire(court) == String(bytes: court, encoding: .utf8))
+
+        let autreLong = try objet(DiagnosticUsage.reduire(try rapportMetricKit(enFaute: 1_000, autre: 80_000)))
+        let piles = try #require((autreLong["callStackTree"] as? [String: Any])?["callStacks"] as? [[String: Any]])
+        #expect(piles.count == 1 && piles.first?["threadAttributed"] as? Bool == true)
+        #expect((autreLong["diagnosticMetaData"] as? [String: Any])?["appVersion"] as? String == "0.13.0")
+
+        let enFauteLong = try objet(DiagnosticUsage.reduire(try rapportMetricKit(enFaute: 80_000, autre: 100)))
+        #expect(Set(enFauteLong.keys) == ["version", "diagnosticMetaData"])
+
+        // Sous la limite en octets bruts, au-dessus une fois échappé.
+        let echappe = try rapportMetricKit(enFaute: 20_000, autre: 100, guillemets: true)
+        #expect(echappe.count < DiagnosticUsage.tailleMaximale)
+        let reduit = DiagnosticUsage.reduire(echappe)
+        #expect(DiagnosticUsage.tailleEchappee(reduit) <= DiagnosticUsage.tailleMaximale)
+        #expect(try objet(reduit)["callStackTree"] == nil)
+
+        #expect(DiagnosticUsage.reduire(Data(String(repeating: "x", count: 70_000).utf8)) == "{}")
+    }
+
+    @Test("Diagnostics : dix gardés au plus, le plus ancien d'abord, un corps sous la limite du collecteur")
     func diagnostics() throws {
         var historique = HistoriqueUsage()
-        let long = Data(("{\"x\":\"" + String(repeating: "a", count: 60_000) + "\"}").utf8)
+        let long = try rapportMetricKit(enFaute: 30_000, autre: 30_000, guillemets: true)
         historique.ajouter((0..<12).map { DiagnosticUsage(genre: .plantage, version: "0.13.\($0)", json: long) })
         #expect(historique.diagnostics.count == HistoriqueUsage.diagnosticsMaximum)
         let premier = try #require(historique.diagnosticAEnvoyer)
         #expect(premier.version == "0.13.2")
-        #expect(premier.contenu.count == DiagnosticUsage.tailleMaximale)
+        #expect(DiagnosticUsage.tailleEchappee(premier.contenu) <= DiagnosticUsage.tailleMaximale)
 
         let data = RapportUsage.corps([], diagnostics: [premier], contexte: contexte, envoi: Date())
         #expect(data.count < 65_536)
