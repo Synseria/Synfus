@@ -104,6 +104,21 @@ struct UsageTests {
         #expect(relu.totaux(sur: nil, aujourdhui: "2026-11-10", calendrier: calendrier).isEmpty)
     }
 
+    @Test("Un historique amputé ou d'une autre version se relit, champs absents à leur défaut")
+    func relectureTolerante() throws {
+        let json = """
+        {"identifiantDeSecours": "ABC", "champFutur": 3,
+         "jours": [{"jour": "2026-11-10", "compteurs": {"palette": 2}}, {"jour": "2026-11-11", "envoye": "oui"}]}
+        """
+        let relu = try JSONDecoder().decode(HistoriqueUsage.self, from: Data(json.utf8))
+        #expect(relu.identifiantDeSecours == "ABC")
+        #expect(relu.jour("2026-11-10")?.nombre(.palette) == 2)
+        #expect(relu.jour("2026-11-10")?.envoye == false)
+        #expect(relu.jour("2026-11-11")?.envoye == false)
+        #expect(relu.diagnostics.isEmpty && relu.cumul.isEmpty && relu.depuis == nil)
+        #expect(try JSONDecoder().decode(HistoriqueUsage.self, from: Data("{}".utf8)) == HistoriqueUsage())
+    }
+
     @Test("Le rapport : OTLP JSON, seulement des clés que le collecteur garde, aucun nom de perso")
     func rapport() throws {
         var historique = HistoriqueUsage()
