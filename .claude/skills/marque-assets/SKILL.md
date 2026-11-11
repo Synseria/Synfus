@@ -1,6 +1,6 @@
 ---
 name: marque-assets
-description: Classes du jeu (table intégrée rafraîchie par DofusDB) et leurs emblèmes (DofusDB, gardés dans les caches de l'utilisateur, ou l'icône qu'il pose — jamais embarqués, CGU Dofus 13.2), et la marque « l'Œuf ajouré » dessinée par le code (SynfusMark, SynfusGlyph, icône du bundle). Charger avant de toucher Classes/ (DofusClass, ClassesDofusDB, ClassesStore), Marque/, Tools/ (AppIconExport, generate-app-icons.sh) ou Resources/.
+description: Classes du jeu (table intégrée rafraîchie par DofusDB) et leurs emblèmes (DofusDB, gardés dans les caches de l'utilisateur, ou l'icône qu'il pose — jamais embarqués, CGU Dofus 13.2), et la marque « l'Œuf ajouré » dessinée par le code (SynfusMark, Couvee, SynfusGlyph, icône du bundle) et ses variantes au choix (IconeApp, IconeAppliquee). Charger avant de toucher Classes/ (DofusClass, ClassesDofusDB, ClassesStore), Marque/, App/IconeAppliquee.swift, Tools/ (AppIconExport, generate-app-icons.sh) ou Resources/.
 user-invocable: false
 ---
 
@@ -38,16 +38,33 @@ user-invocable: false
 ## La marque — `Sources/Synfus/Marque/`
 
 - L'Œuf ajouré (un Dofus en treillis de rubans ondés, blanc bleuté, éclairé du dedans, posé sur
-  un feuillage à l'accent de l'app, sur une tuile bleu nuit — macOS 26 enferme dans un carré
-  gris, réduite, toute icône qui n'est pas une tuile) est décrit **une seule fois** dans
+  un feuillage à l'accent de l'app, sur une tuile — macOS 26 enferme dans un carré gris,
+  réduite, toute icône du bundle qui n'est pas une tuile) est décrit **une seule fois** dans
   `SynfusMark.swift` : CoreGraphics pur, n'importe que CoreGraphics et Foundation
-  (`Tools/AppIconExport.swift` le compile tel quel ; un `import AppKit` le casse). Tracés
-  originaux, aucun asset du jeu.
-- Periphery peut signaler `SynfusMark.image` comme du code mort : il ne sert qu'à
-  `Tools/AppIconExport.swift`, compilé hors du paquet. Faux positif attendu — ne pas supprimer.
-- Usages : icône du bundle (`./Tools/generate-app-icons.sh` → `Resources/Synfus.{icns,png}`) et
-  symbole de la barre de menus (`SynfusGlyph.menuBarImage()` → `SynfusMark.dessinerGlyphe`).
-  Ne jamais retoucher les PNG : modifier `SynfusMark`, relancer le script.
+  (`Tools/AppIconExport.swift` le compile avec `Couvee.swift` et `IconeApp.swift` ; un
+  `import AppKit` ou un `L()` dans ces trois fichiers le casse). Tracés originaux, aucun asset du jeu.
+- **Variantes** (`IconeApp`, pur, Codable : motif × fond, Réglages → Général) : motifs `oeuf`
+  et `couvee` (`Couvee.swift`, l'ancien logo, repère 256, sans fond propre) ; fonds `nuit`,
+  `foret`, `aube` (teintes dans `SynfusMark.teintes`) et `transparent` (pas de tuile : le motif
+  prend tout le carré, l'ombre portée d'un calque sous lui). `SynfusMark.image(pixelSize:icone:)`
+  centre chaque motif par son `cadre`, à 92 % de la tuile. Un nouveau motif : son `cadre`, son
+  `dessiner(pixels:)`, une ligne dans `poser`, et son fichier dans `generate-app-icons.sh`.
+- Le **défaut** `IconeApp.parDefaut` (oeuf + nuit) est celui du bundle : ne régénérer les icônes
+  (`./Tools/generate-app-icons.sh` → `Resources/Synfus.{icns,png}`) que s'il change. Ne jamais
+  retoucher les PNG : modifier le dessin, relancer le script. Tué (`Killed: 9`) en écrivant dans
+  `Resources/` : lancer le générateur vers `$TMPDIR`, copier, puis `iconutil`.
+- `setShadow` prend décalage et flou en **pixels**, hors de la transformation : les multiplier
+  par l'échelle du rendu, sinon l'ombre noie le carré des petites tailles.
+- **Icône choisie** : `App/IconeAppliquee` est le seul à la poser — `NSApp.applicationIconImage`
+  et `NSWorkspace.setIcon` sur le bundle (le défaut retire l'icône posée : `nil`), à chaque choix
+  et au lancement si elle n'est pas le défaut (une mise à jour remplace le bundle). Rendu hors de
+  main ; hors bundle, rien. `setIcon` ajoute `Icon\r` et `com.apple.FinderInfo` au bundle :
+  lancement et TCC tiennent (le code signé est intact), mais `codesign --verify --strict` refuse
+  le bundle installé — ne jamais vérifier ni re-signer l'app en place (`InstallateurMiseAJour`
+  vérifie l'app téléchargée ; `build.sh` signe une copie neuve).
+- Usages du dessin : icône du bundle, icône choisie et ses vignettes (`IconeAppliquee.vignette`),
+  symbole de la barre de menus (`SynfusGlyph.menuBarImage()` → `SynfusMark.dessinerGlyphe`, l'Œuf
+  quel que soit le choix).
 - Repère 1024 × 1024, y vers le bas. `treillis(pixels:)` allège le treillis en petit (moins de
   rubans, plus larges) ; le trait ne descend pas sous `traitMinimalPixels`.
 - Le treillis de devant est **une pièce** : contours de tout puis plein de tout, coupés par la
