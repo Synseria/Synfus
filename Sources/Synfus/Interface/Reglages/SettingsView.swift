@@ -19,7 +19,7 @@ enum GroupeReglages: CaseIterable {
 
 /// Sections des réglages, listées dans la barre latérale.
 enum SettingsSection: String, CaseIterable, Identifiable {
-    case general, apparence, barre
+    case general, theme, barre
     case raccourcis, attention, enchainer, invitations
     case palette, trajets, chasse, boss
     case zaaps, lieux, quetes, pnj
@@ -30,7 +30,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
 
     var groupe: GroupeReglages {
         switch self {
-        case .general, .apparence, .barre: return .synfus
+        case .general, .theme, .barre: return .synfus
         case .raccourcis, .attention, .enchainer, .invitations: return .clavier
         case .palette, .trajets, .chasse, .boss: return .jeu
         case .zaaps, .lieux, .quetes, .pnj: return .donnees
@@ -42,7 +42,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
     var label: String {
         switch self {
         case .general: return L("reglages.general")
-        case .apparence: return L("reglages.apparence")
+        case .theme: return L("reglages.theme")
         case .barre: return L("reglages.barre")
         case .raccourcis: return L("reglages.raccourcis")
         case .attention: return L("reglages.attention")
@@ -67,7 +67,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
     var icon: String {
         switch self {
         case .general: return "gearshape"
-        case .apparence: return "swatchpalette"
+        case .theme: return "swatchpalette"
         case .barre: return "rectangle.topthird.inset.filled"
         case .raccourcis: return "keyboard"
         case .attention: return "bolt"
@@ -125,8 +125,8 @@ struct SettingsView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(width: 920, height: 680)
-        // La teinte des fonds choisie dans Apparence : celle de la fenêtre, que le formulaire laisse voir.
-        .background(Couleurs.fenetre)
+        // La teinte des fonds choisie dans Thème : celle de la fenêtre, que le formulaire laisse voir.
+        .background(Color.jeton(\.fenetre))
     }
 
     private var sidebar: some View {
@@ -135,8 +135,8 @@ struct SettingsView: View {
                 ForEach(GroupeReglages.allCases, id: \.self) { groupe in
                     if let titre = groupe.titre {
                         Text(titre)
-                            .font(.synfus(.raccourci))
-                            .foregroundStyle(Couleurs.encreSecondaire)
+                            .font(Jetons.Typo.raccourci.police)
+                            .foregroundStyle(Color.jeton(\.encreSecondaire))
                             .padding(.horizontal, Jetons.Espace.deux)
                             .padding(.top, Jetons.Espace.deux)
                             .padding(.bottom, Jetons.Espace.un)
@@ -149,7 +149,7 @@ struct SettingsView: View {
             .padding(Jetons.Espace.deux)
         }
         .frame(width: 170)
-        .background(Couleurs.creux)
+        .background(Color.jeton(\.creux))
     }
 
     private func sidebarRow(_ item: SettingsSection) -> some View {
@@ -160,7 +160,7 @@ struct SettingsView: View {
                 Image(systemName: item.icon).frame(width: Jetons.Taille.touche)
                 Text(item.label)
             }
-                .font(.synfus(section == item ? .corpsFort : .corps))
+                .font((section == item ? Jetons.Typo.corpsFort : Jetons.Typo.corps).police)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, Jetons.Espace.deux)
                 .padding(.vertical, Jetons.Espace.un)
@@ -175,7 +175,7 @@ struct SettingsView: View {
     private var detail: some View {
         switch section {
         case .general: GeneralSettings()
-        case .apparence: ApparenceSettings()
+        case .theme: ThemeSettings()
         case .barre: BarreSettings()
         case .raccourcis: ShortcutsSettings()
         case .attention: AttentionSettings()

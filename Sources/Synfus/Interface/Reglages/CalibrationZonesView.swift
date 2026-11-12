@@ -30,12 +30,12 @@ extension GenreLecture: Identifiable {
     /// de tour pour le combat, le safran d'un trésor pour la chasse.
     @MainActor var teinte: Color {
         switch self {
-        case .position: return Couleurs.primaire
+        case .position: return Color.jeton(\.primaire)
         case .combat: return CombatBadge.rose
-        case .chasse: return Couleurs.safran
-        case .quetes: return Couleurs.succes
-        case .vie: return Couleurs.danger
-        case .tchat: return Couleurs.suggestionSynfus
+        case .chasse: return Color.jeton(\.safran)
+        case .quetes: return Color.jeton(\.succes)
+        case .vie: return Color.jeton(\.danger)
+        case .tchat: return Color.jeton(\.suggestionSynfus)
         }
     }
 }
@@ -76,19 +76,19 @@ struct CalibrationZonesView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Jetons.Espace.deux) {
-            Text(L("calibration.titre", genre.libelle)).font(.synfus(.titre))
+            Text(L("calibration.titre", genre.libelle)).font(Jetons.Typo.titre.police)
             Text(genre.consigne)
-                .font(.synfus(.petit))
-                .foregroundStyle(Couleurs.encreSecondaire)
+                .font(Jetons.Typo.petit.police)
+                .foregroundStyle(Color.jeton(\.encreSecondaire))
                 .fixedSize(horizontal: false, vertical: true)
 
             image
                 .frame(width: Self.largeurImage, height: Self.hauteurImage)
-                .background(RoundedRectangle(cornerRadius: Jetons.Rayon.controle).fill(Couleurs.creux))
+                .background(RoundedRectangle(cornerRadius: Jetons.Rayon.controle).fill(Color.jeton(\.creux)))
             if let capture {
                 Text(L("calibration.capturee", capture.date.formatted(date: .abbreviated, time: .shortened)))
-                    .font(.synfus(.petit))
-                    .foregroundStyle(Couleurs.encreTertiaire)
+                    .font(Jetons.Typo.petit.police)
+                    .foregroundStyle(Color.jeton(\.encreTertiaire))
             }
 
             essaiVue
@@ -113,7 +113,7 @@ struct CalibrationZonesView: View {
         }
         .padding(Jetons.Espace.quatre)
         .frame(width: Self.largeurImage + Jetons.Espace.huit)
-        .background(Couleurs.fenetre)
+        .background(Color.jeton(\.fenetre))
         .task {
             capture = CapturesCalibrage.gardee(genre)
             essayer()
@@ -165,8 +165,8 @@ struct CalibrationZonesView: View {
         } else {
             Text(decompte != nil ? L("calibration.enCours")
                  : echec ?? (manager.clients.isEmpty ? L("calibration.aucunPerso") : L("calibration.aucuneCapture")))
-                .font(.synfus(.petit))
-                .foregroundStyle(Couleurs.encreSecondaire)
+                .font(Jetons.Typo.petit.police)
+                .foregroundStyle(Color.jeton(\.encreSecondaire))
                 .multilineTextAlignment(.center)
                 .padding(Jetons.Espace.six)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -188,17 +188,17 @@ struct CalibrationZonesView: View {
                     .overlay(Rectangle().strokeBorder(genre.teinte, lineWidth: Jetons.Trait.filet))
                 VStack(alignment: .leading, spacing: Jetons.Espace.un) {
                     HStack(spacing: Jetons.Espace.un) {
-                        Text(L("calibration.essai")).font(.synfus(.raccourci))
+                        Text(L("calibration.essai")).font(Jetons.Typo.raccourci.police)
                         if essaiEnCours != nil { ProgressView().controlSize(.mini) }
                     }
                     if let essai {
                         Text(L("calibration.essai.compris", essai.compris))
-                            .font(.synfus(.petit))
+                            .font(Jetons.Typo.petit.police)
                             .fixedSize(horizontal: false, vertical: true)
                         Text(L("diagnostic.position.brut",
                                essai.lignes.isEmpty ? "—" : essai.lignes.joined(separator: " ⏎ ")))
-                            .font(.synfus(.codeInterface))
-                            .foregroundStyle(Couleurs.encreTertiaire)
+                            .font(Jetons.Typo.codeInterface.police)
+                            .foregroundStyle(Color.jeton(\.encreTertiaire))
                             .lineLimit(6)
                             .textSelection(.enabled)
                     }

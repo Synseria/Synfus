@@ -79,7 +79,7 @@ struct UsageSettings: View {
 
     private func valeur(_ titre: String, _ texte: String) -> some View {
         Ligne(titre: titre) {
-            Text(texte).monospacedDigit().foregroundStyle(Couleurs.encreSecondaire)
+            Text(texte).monospacedDigit().foregroundStyle(Color.jeton(\.encreSecondaire))
         }
     }
 
@@ -121,13 +121,13 @@ struct DonneesEnvoyeesVue: View {
             .fixedSize()
             ScrollView {
                 Text(texte ?? L("stats.rienAEnvoyer"))
-                    .font(.synfus(.codeInterface))
+                    .font(Jetons.Typo.codeInterface.police)
                     .textSelection(.enabled)
-                    .foregroundStyle(texte == nil ? Couleurs.encreSecondaire : Couleurs.encre)
+                    .foregroundStyle(texte == nil ? Color.jeton(\.encreSecondaire) : Color.jeton(\.encre))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(Jetons.Espace.deux)
             }
-            .background(RoundedRectangle(cornerRadius: Jetons.Rayon.controle).fill(Couleurs.creux))
+            .background(RoundedRectangle(cornerRadius: Jetons.Rayon.controle).fill(Color.jeton(\.creux)))
             HStack {
                 Button(L("menu.copier")) { if let texte { PressePapiers.copier(texte) } }
                     .buttonStyle(.bouton(.secondaire))
@@ -140,7 +140,7 @@ struct DonneesEnvoyeesVue: View {
         }
         .padding(Jetons.Espace.quatre)
         .frame(width: 620, height: 520)
-        .background(Couleurs.fenetre)
+        .background(Color.jeton(\.fenetre))
     }
 }
 

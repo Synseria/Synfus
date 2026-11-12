@@ -26,7 +26,7 @@ struct EnchainerSettings: View {
                           aide: clicks.seenClicks == 0 ? L("raccourcis.enchainer.clicsCaptes.aide") : nil) {
                         Text("\(clicks.seenClicks)")
                             .monospacedDigit()
-                            .foregroundStyle(clicks.seenClicks == 0 ? Couleurs.alerte : Couleurs.encreSecondaire)
+                            .foregroundStyle(clicks.seenClicks == 0 ? Color.jeton(\.alerte) : Color.jeton(\.encreSecondaire))
                     }
                 }
             }

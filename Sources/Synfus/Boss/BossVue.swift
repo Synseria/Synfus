@@ -43,7 +43,7 @@ struct BossVue: View {
             .padding(Jetons.Espace.trois)
         }
         .frame(width: Self.largeur, alignment: .leading)
-        .font(.synfus(.note))
+        .font(Jetons.Typo.note.police)
         .surfaceFlottante()
         // L'autorisation donnée, la lecture démarre sans attendre un
         // changement d'app.
@@ -57,13 +57,13 @@ struct BossVue: View {
 
 
     private var entete: some View {
-        EnTetePanneau(icone: "scope", teinte: Couleurs.safran, menu: Self.menu) {
-            Text(Self.nom(prefs.bossChoisi, donjons: donjons.donjons)).font(.synfus(.corpsFort))
+        EnTetePanneau(icone: "scope", teinte: Color.jeton(\.safran), menu: Self.menu) {
+            Text(Self.nom(prefs.bossChoisi, donjons: donjons.donjons)).font(Jetons.Typo.corpsFort.police)
                 .padding(.leading, Jetons.Espace.un)
-            Image(systemName: "chevron.down").font(.synfus(.micro)).foregroundStyle(Couleurs.encreSecondaire)
+            Image(systemName: "chevron.down").font(Jetons.Typo.micro.police).foregroundStyle(Color.jeton(\.encreSecondaire))
                 .padding(.leading, Jetons.Espace.un)
             if let perso = lecteur.persoDevant {
-                Text(perso).font(.synfus(.petit)).foregroundStyle(Couleurs.encreSecondaire)
+                Text(perso).font(Jetons.Typo.petit.police).foregroundStyle(Color.jeton(\.encreSecondaire))
                     .lineLimit(1)
                     .padding(.horizontal, Jetons.Espace.un)
             }
@@ -97,10 +97,10 @@ struct BossVue: View {
     /// Le tour du combat compté chez le perso devant, à corriger d'un clic.
     private var ligneTour: some View {
         HStack(spacing: Jetons.Espace.un) {
-            Image(systemName: "clock").foregroundStyle(Couleurs.encreSecondaire)
+            Image(systemName: "clock").foregroundStyle(Color.jeton(\.encreSecondaire))
             Text(aide.tour.map { L("boss.tour", $0) } ?? L("boss.tour.attente"))
-                .font(.synfus(aide.tour != nil ? .raccourci : .petit))
-                .foregroundStyle(aide.tour == nil ? Couleurs.encreSecondaire : Couleurs.encre)
+                .font((aide.tour != nil ? Jetons.Typo.raccourci : Jetons.Typo.petit).police)
+                .foregroundStyle(aide.tour == nil ? Color.jeton(\.encreSecondaire) : Color.jeton(\.encre))
                 .help(L("boss.tour.aide"))
             Spacer()
             PetitBouton(icone: "minus", aide: L("boss.tour.moins")) { aide.corrigerTour(-1) }
@@ -113,8 +113,8 @@ struct BossVue: View {
     private var autorisation: some View {
         HStack(spacing: Jetons.Espace.deux) {
             Text(L("boss.autoriser.aide"))
-                .font(.synfus(.petit))
-                .foregroundStyle(Couleurs.encreSecondaire)
+                .font(Jetons.Typo.petit.police)
+                .foregroundStyle(Color.jeton(\.encreSecondaire))
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
             Button { previews.requestAuthorization() } label: { Image(systemName: "lock") }
@@ -131,8 +131,8 @@ struct BossVue: View {
             HStack(spacing: Jetons.Espace.un) {
                 Button { rappels.toggle() } label: {
                     Label(L("boss.rappels"), systemImage: rappels ? "chevron.down" : "chevron.right")
-                        .font(.synfus(.raccourci))
-                        .foregroundStyle(Couleurs.encreSecondaire)
+                        .font(Jetons.Typo.raccourci.police)
+                        .foregroundStyle(Color.jeton(\.encreSecondaire))
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -140,8 +140,8 @@ struct BossVue: View {
                 if rappels {
                     Button { copier(liste.joined(separator: " "), signal: "") } label: {
                         Image(systemName: copie == "" ? "checkmark" : "doc.on.doc")
-                            .font(.synfus(.petit))
-                            .foregroundStyle(Couleurs.encreSecondaire)
+                            .font(Jetons.Typo.petit.police)
+                            .foregroundStyle(Color.jeton(\.encreSecondaire))
                     }
                     .buttonStyle(.bouton(.tertiaire, dense: true))
                     .aide(L("boss.rappels.copier"))
@@ -156,8 +156,8 @@ struct BossVue: View {
                             Spacer(minLength: 0)
                             if copie == rappel { Image(systemName: "checkmark") }
                         }
-                        .font(.synfus(.petit))
-                        .foregroundStyle(Couleurs.encreSecondaire)
+                        .font(Jetons.Typo.petit.police)
+                        .foregroundStyle(Color.jeton(\.encreSecondaire))
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -185,8 +185,8 @@ struct BossVue: View {
                 Button { conseils.toggle() } label: {
                     Label(L("donjon.conseils", nombre: liste.count, liste.count),
                           systemImage: conseils ? "chevron.down" : "chevron.right")
-                        .font(.synfus(.raccourci))
-                        .foregroundStyle(Couleurs.encreSecondaire)
+                        .font(Jetons.Typo.raccourci.police)
+                        .foregroundStyle(Color.jeton(\.encreSecondaire))
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -194,12 +194,12 @@ struct BossVue: View {
                 if conseils {
                     ForEach(Array(liste.enumerated()), id: \.offset) { _, conseil in
                         Text("• " + conseil.titre)
-                            .font(.synfus(.petit))
-                            .foregroundStyle(Couleurs.encreSecondaire)
+                            .font(Jetons.Typo.petit.police)
+                            .foregroundStyle(Color.jeton(\.encreSecondaire))
                             .fixedSize(horizontal: false, vertical: true)
                             .help(conseil.detail)
                     }
-                    Text(L("donjon.conseils.source")).font(.synfus(.petit)).foregroundStyle(Couleurs.encreTertiaire)
+                    Text(L("donjon.conseils.source")).font(Jetons.Typo.petit.police).foregroundStyle(Color.jeton(\.encreTertiaire))
                 }
             }
         }
@@ -250,8 +250,8 @@ struct PetitBouton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: icone)
-                .font(.synfus(.raccourci))
-                .frame(width: Jetons.Taille.controleDense, height: Jetons.Taille.controleDense)
+                .font(Jetons.Typo.raccourci.police)
+                .frame(width: Jetons.Taille.cibleMin, height: Jetons.Taille.cibleMin)
         }
         .buttonStyle(.etat())
         .aide(aide)
@@ -271,7 +271,7 @@ struct ChoixBoss<Valeur: Hashable>: View {
                 let actif = option.valeur == actuel
                 Button { choisir(actif ? nil : option.valeur) } label: {
                     Text(option.titre)
-                        .font(.synfus(.raccourci))
+                        .font(Jetons.Typo.raccourci.police)
                         .frame(maxWidth: .infinity, minHeight: Jetons.Taille.cibleMin)
                 }
                 .buttonStyle(.etat(choisi: actif))

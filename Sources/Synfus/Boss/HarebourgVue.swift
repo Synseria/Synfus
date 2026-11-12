@@ -18,8 +18,8 @@ struct HarebourgVue: View {
         if let tour = aide.tour {
             Label(tour % 2 == 1 ? L("boss.harebourg.impair") : L("boss.harebourg.pair"),
                   systemImage: tour % 2 == 1 ? "shield" : "arrow.left.arrow.right")
-                .font(.synfus(.petit))
-                .foregroundStyle(Couleurs.encreSecondaire)
+                .font(Jetons.Typo.petit.police)
+                .foregroundStyle(Color.jeton(\.encreSecondaire))
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -32,11 +32,11 @@ struct HarebourgVue: View {
                 .frame(width: 96, height: 48)
             VStack(alignment: .leading, spacing: Jetons.Espace.un) {
                 Text(Self.titre(estimation.confusion.visee))
-                    .font(.synfus(.titre))
-                    .foregroundStyle(estimation.enTour ? Couleurs.primaireEncre : Couleurs.encreSecondaire)
+                    .font(Jetons.Typo.titre.police)
+                    .foregroundStyle(estimation.enTour ? Color.jeton(\.primaireEncre) : Color.jeton(\.encreSecondaire))
                 Text(Self.libelle(estimation.confusion))
-                    .font(.synfus(.petit))
-                    .foregroundStyle(Couleurs.encreSecondaire)
+                    .font(Jetons.Typo.petit.police)
+                    .foregroundStyle(Color.jeton(\.encreSecondaire))
             }
             .fixedSize(horizontal: false, vertical: true)
         }
@@ -45,19 +45,19 @@ struct HarebourgVue: View {
     @ViewBuilder
     private func details(_ estimation: SuiviConfusion.Estimation) -> some View {
         Label(source(estimation), systemImage: icone(estimation.source))
-            .font(.synfus(.petit))
-            .foregroundStyle(Couleurs.encreSecondaire)
+            .font(Jetons.Typo.petit.police)
+            .foregroundStyle(Color.jeton(\.encreSecondaire))
             .fixedSize(horizontal: false, vertical: true)
         if let voisine = estimation.voisine {
             Label(L("boss.frontiere", Self.titre(voisine.visee)), systemImage: "exclamationmark.triangle")
-                .font(.synfus(.petit))
-                .foregroundStyle(Couleurs.safranTexte)
+                .font(Jetons.Typo.petit.police)
+                .foregroundStyle(Color.jeton(\.safranTexte))
                 .fixedSize(horizontal: false, vertical: true)
         }
         if estimation.enTour, estimation.compteLesCoups {
             HStack(spacing: Jetons.Espace.un) {
                 Text(L("boss.coups", nombre: estimation.coups, estimation.coups))
-                    .font(.synfus(.petit))
+                    .font(Jetons.Typo.petit.police)
                     .help(L("boss.coups.aide"))
                 Spacer()
                 PetitBouton(icone: "minus", aide: L("boss.coups.moins")) { aide.coup(-1) }
@@ -99,8 +99,8 @@ struct HarebourgVue: View {
                 Text(L("boss.rienLu"))
             }
         }
-        .font(.synfus(.petit))
-        .foregroundStyle(Couleurs.encreSecondaire)
+        .font(Jetons.Typo.petit.police)
+        .foregroundStyle(Color.jeton(\.encreSecondaire))
         .fixedSize(horizontal: false, vertical: true)
         if enCombat, aide.vieLue == nil {
             Button(L("lecture.ouvrir")) { SettingsWindowController.shared.show(section: .lecture) }
@@ -115,14 +115,14 @@ struct HarebourgVue: View {
     private var aLaMain: some View {
         let choisie = aide.estimation.flatMap { $0.source == .manuelle && $0.coups == 0 ? $0.confusion : nil }
         return HStack(spacing: Jetons.Espace.un) {
-            Text(L("boss.aLaMain")).font(.synfus(.petit)).foregroundStyle(Couleurs.encreSecondaire)
+            Text(L("boss.aLaMain")).font(Jetons.Typo.petit.police).foregroundStyle(Color.jeton(\.encreSecondaire))
             Spacer()
             ForEach([Harebourg.Confusion.aucune, .horaire, .demiTour, .contreHoraire], id: \.self) { confusion in
                 let active = choisie == confusion
                 Button { aide.choisir(active ? nil : confusion) } label: {
                     Image(systemName: Self.symbole(confusion))
-                        .font(.synfus(.raccourci))
-                        .frame(width: Jetons.Taille.rangee, height: Jetons.Taille.controleDense)
+                        .font(Jetons.Typo.raccourci.police)
+                        .frame(width: Jetons.Taille.rangee, height: Jetons.Taille.cibleMin)
                 }
                 .buttonStyle(.etat(choisi: active))
                 .aide(Self.libelle(confusion))
@@ -190,18 +190,18 @@ struct SchemaVisee: View {
             }
             for x in -Self.rayon...Self.rayon {
                 for y in -Self.rayon...Self.rayon {
-                    contexte.stroke(losange(x, y), with: .color(Couleurs.filet), lineWidth: Jetons.Trait.filet)
+                    contexte.stroke(losange(x, y), with: .color(Color.jeton(\.filet)), lineWidth: Jetons.Trait.filet)
                 }
             }
             let visee = confusion.caseVisee(cible: Self.cible)
-            contexte.fill(losange(0, 0), with: .color(Couleurs.encreSecondaire))
-            contexte.fill(losange(visee.x, visee.y), with: .color(Couleurs.primaire))
-            contexte.stroke(losange(Self.cible.x, Self.cible.y), with: .color(Couleurs.danger), lineWidth: Jetons.Trait.etat)
+            contexte.fill(losange(0, 0), with: .color(Color.jeton(\.encreSecondaire)))
+            contexte.fill(losange(visee.x, visee.y), with: .color(Color.jeton(\.primaire)))
+            contexte.stroke(losange(Self.cible.x, Self.cible.y), with: .color(Color.jeton(\.danger)), lineWidth: Jetons.Trait.etat)
             if visee != Self.cible {
                 var trait = Path()
                 trait.move(to: point(visee.x, visee.y))
                 trait.addLine(to: point(Self.cible.x, Self.cible.y))
-                contexte.stroke(trait, with: .color(Couleurs.encreSecondaire), style: StrokeStyle(lineWidth: Jetons.Trait.filet, dash: [Jetons.Trait.focus, Jetons.Trait.focus]))
+                contexte.stroke(trait, with: .color(Color.jeton(\.encreSecondaire)), style: StrokeStyle(lineWidth: Jetons.Trait.filet, dash: [Jetons.Trait.focus, Jetons.Trait.focus]))
             }
         }
         .accessibilityHidden(true)

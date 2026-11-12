@@ -269,7 +269,7 @@ private struct PreviewPanelView: View {
     private func thumbnail(for client: DofusClient, number: Int? = nil) -> some View {
         VStack(alignment: .leading, spacing: Jetons.Espace.un) {
             ZStack {
-                Couleurs.creux
+                Color.jeton(\.creux)
                 if let image = service.previews[client.slotKey] {
                     Image(nsImage: image)
                         .resizable()
@@ -285,17 +285,17 @@ private struct PreviewPanelView: View {
             HStack(spacing: Jetons.Espace.un) {
                 if let number {
                     Text("\(number)")
-                        .font(.synfus(.micro))
-                        .foregroundStyle(Couleurs.encreSecondaire)
+                        .font(Jetons.Typo.micro.police)
+                        .foregroundStyle(Color.jeton(\.encreSecondaire))
                 }
                 Text(client.name)
-                    .font(.synfus(.raccourci))
+                    .font(Jetons.Typo.raccourci.police)
                     .lineLimit(1)
                 Spacer(minLength: 0)
                 if let position = lecteur.positions[client.name] {
                     Text(position.coordonnees)
-                        .font(.synfus(.codeInterface))
-                        .foregroundStyle(Couleurs.encreSecondaire)
+                        .font(Jetons.Typo.codeInterface.police)
+                        .foregroundStyle(Color.jeton(\.encreSecondaire))
                         .help(position.zone ?? "")
                 }
             }
@@ -310,21 +310,21 @@ private struct PreviewPanelView: View {
         return VStack(alignment: .leading, spacing: Jetons.Espace.un) {
             HStack(spacing: Jetons.Espace.un) {
                 Text(client.name)
-                    .font(.synfus(.raccourci))
+                    .font(Jetons.Typo.raccourci.police)
                     .lineLimit(1)
                 Text(position?.coordonnees ?? (service.authorized ? "…" : "—"))
-                    .font(.synfus(.codeInterface))
-                    .foregroundStyle(Couleurs.encreSecondaire)
+                    .font(Jetons.Typo.codeInterface.police)
+                    .foregroundStyle(Color.jeton(\.encreSecondaire))
             }
             if let zone = position?.zone {
                 Text(zone)
-                    .font(.synfus(.petit))
-                    .foregroundStyle(Couleurs.encreSecondaire)
+                    .font(Jetons.Typo.petit.police)
+                    .foregroundStyle(Color.jeton(\.encreSecondaire))
                     .lineLimit(1)
             } else if !service.authorized {
                 Text(L("apercu.autorisationRequise"))
-                    .font(.synfus(.petit))
-                    .foregroundStyle(Couleurs.encreSecondaire)
+                    .font(Jetons.Typo.petit.police)
+                    .foregroundStyle(Color.jeton(\.encreSecondaire))
             }
         }
         .frame(maxWidth: 260, alignment: .leading)
@@ -336,8 +336,8 @@ private struct PreviewPanelView: View {
         Text(service.authorized
              ? L("apercu.captureEnCours")
              : L("apercu.autorisationRequise"))
-            .font(.synfus(.petit))
-            .foregroundStyle(Couleurs.encreSecondaire)
+            .font(Jetons.Typo.petit.police)
+            .foregroundStyle(Color.jeton(\.encreSecondaire))
             .multilineTextAlignment(.center)
             .padding(Jetons.Espace.deux)
     }

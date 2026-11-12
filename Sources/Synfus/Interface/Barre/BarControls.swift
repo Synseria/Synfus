@@ -149,7 +149,7 @@ struct ModeButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: icone)
-                .font(.synfus(.note))
+                .font(Jetons.Typo.note.police)
                 .foregroundStyle(etat.encre)
                 .contentTransition(.symbolEffect(.replace))
                 .frame(width: Jetons.Taille.cibleMin, height: Jetons.Taille.cibleMin)
@@ -197,13 +197,13 @@ struct ArrangeMenuButton: View {
             MasquerBouton(bouton: .rangement)
         } label: {
             Image(systemName: "rectangle.3.group")
-                .font(.synfus(.note))
-                .foregroundStyle(Couleurs.encre)
+                .font(Jetons.Typo.note.police)
+                .foregroundStyle(Color.jeton(\.encre))
                 .frame(width: Jetons.Taille.cibleMin, height: Jetons.Taille.cibleMin)
                 .fondEtat(EtatVisuel(survole: survole))
         }
         .menuStyle(.borderlessButton)
-        .tint(Couleurs.encre)
+        .tint(Color.jeton(\.encre))
         .menuIndicator(.hidden)
         .fixedSize()
         .onHover { survole = $0 }
@@ -231,8 +231,8 @@ struct GearButton: View {
             SettingsWindowController.shared.show()
         } label: {
             Image(systemName: "gearshape")
-                .font(.synfus(.petit))
-                .foregroundStyle(survole ? Couleurs.encre : Couleurs.encreSecondaire)
+                .font(Jetons.Typo.petit.police)
+                .foregroundStyle(survole ? Color.jeton(\.encre) : Color.jeton(\.encreSecondaire))
                 .frame(width: Jetons.Taille.cibleMin, height: Jetons.Taille.cibleMin)
                 .fondEtat(EtatVisuel(survole: survole))
         }
@@ -253,7 +253,7 @@ struct GearButton: View {
 struct AlertPulse: View {
     var body: some View {
         RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous)
-            .strokeBorder(Couleurs.alerte, lineWidth: Jetons.Trait.etat)
+            .strokeBorder(Color.jeton(\.alerte), lineWidth: Jetons.Trait.etat)
             .modifier(Battement(bas: 0.2, demiPeriode: Jetons.Duree.feuille * 2))
     }
 }
@@ -288,13 +288,13 @@ private struct Battement: ViewModifier {
 struct CopiedBadge: View {
     var body: some View {
         RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous)
-            .strokeBorder(Couleurs.primaire, lineWidth: Jetons.Trait.etat)
+            .strokeBorder(Color.jeton(\.primaire), lineWidth: Jetons.Trait.etat)
             .overlay(alignment: .topTrailing) {
                 Image(systemName: "doc.on.clipboard.fill")
-                    .font(.synfus(.micro))
-                    .foregroundStyle(Couleurs.encreSurPrimaire)
+                    .font(Jetons.Typo.micro.police)
+                    .foregroundStyle(Color.jeton(\.encreSurPrimaire))
                     .padding(Jetons.Espace.un)
-                    .background(Circle().fill(Couleurs.primaire))
+                    .background(Circle().fill(Color.jeton(\.primaire)))
                     .offset(x: Jetons.Espace.un, y: -Jetons.Espace.un)
             }
             .transition(.opacity)
@@ -313,7 +313,7 @@ struct CopiedBadge: View {
 struct SwitchBlink: View {
     var body: some View {
         RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous)
-            .strokeBorder(Couleurs.encreSurPrimaire, lineWidth: Jetons.Trait.focus)
+            .strokeBorder(Color.jeton(\.encreSurPrimaire), lineWidth: Jetons.Trait.focus)
             .modifier(Battement(bas: 0.1, demiPeriode: Jetons.Duree.menu))
             .allowsHitTesting(false)
     }
@@ -350,7 +350,7 @@ struct CombatBadge: View {
             // En combat, pas son tour : le cadre en retrait, l'épée grise.
             ZStack(alignment: .topTrailing) {
                 RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous)
-                    .strokeBorder(Couleurs.encreTertiaire, lineWidth: Jetons.Trait.etat)
+                    .strokeBorder(Color.jeton(\.encreTertiaire), lineWidth: Jetons.Trait.etat)
                 pastille(nil)
             }
             .help(L("barre.combat.enCombat"))
@@ -366,17 +366,17 @@ struct CombatBadge: View {
         Group {
             if let texte {
                 Text(texte)
-                    .font(.synfus(.micro))
+                    .font(Jetons.Typo.micro.police)
                     .monospacedDigit()
                     .padding(.horizontal, Jetons.Espace.un)
             } else {
                 Image(systemName: "figure.fencing")
-                    .font(.synfus(.micro))
+                    .font(Jetons.Typo.micro.police)
                     .padding(Jetons.Espace.un)
             }
         }
         .foregroundStyle(Color.white)
-        .background(Capsule().fill(etat.enCombat && etat != .pasMonTour && etat != .placement ? Self.rose : Couleurs.encreSecondaire))
+        .background(Capsule().fill(etat.enCombat && etat != .pasMonTour && etat != .placement ? Self.rose : Color.jeton(\.encreSecondaire)))
         .offset(x: Jetons.Espace.un, y: -Jetons.Espace.un)
     }
 }

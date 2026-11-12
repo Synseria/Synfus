@@ -1,5 +1,5 @@
 // Engendré par Synseria-Design — ne pas retoucher : changer jetons.json ou apps/Synfus.json, puis sh propager.sh.
-// jetons.json 62bb9e43bf029f2a · contenu 771e4d39a18a452a
+// jetons.json 8e252f614957292a · contenu b56031ec79795f71
 import SwiftUI
 
 /// Les valeurs de design Synseria telles que Synfus les reçoit : toute couleur, taille ou durée
@@ -8,13 +8,12 @@ enum Jetons {
     enum Apparence: Sendable, Hashable { case clair, sombre }
 
     enum Prereglage: String, CaseIterable, Sendable, Identifiable {
-        case azur, jade, violet, framboise, corail, ardoise
+        case azur, jade, framboise, corail, ardoise
         var id: String { rawValue }
         var nom: String {
             switch self {
             case .azur: "Azur"
             case .jade: "Jade"
-            case .violet: "Violet"
             case .framboise: "Framboise"
             case .corail: "Corail"
             case .ardoise: "Ardoise"
@@ -25,7 +24,6 @@ enum Jetons {
             switch self {
             case .azur: 260
             case .jade: 172
-            case .violet: 295
             case .framboise: 10
             case .corail: 38
             case .ardoise: 262
@@ -33,11 +31,10 @@ enum Jetons {
         }
     }
 
-    /// « Autre… » refuse une teinte trop proche du safran : la primaire ne doit pas se confondre
-    /// avec la secondaire, qui dit « regarde ici ».
+    /// « Autre… » refuse une teinte trop proche du safran, qui dit « regarde ici », ou d'une couleur
+    /// que l'app réserve à un sens : la primaire ne se confond avec aucune.
     static func teinteAcceptee(_ teinte: Int) -> Bool {
-        let ecart = abs((((teinte - 84) % 360) + 540) % 360 - 180)
-        return ecart >= 30
+        [84, 293].allSatisfy { abs(((teinte - $0) % 360 + 540) % 360 - 180) >= 30 }
     }
 
     /// La couleur de l'app : un préréglage, ou « Autre… » = une teinte OKLCH en degrés.
@@ -46,7 +43,8 @@ enum Jetons {
     enum Fonds: Sendable, Hashable { case primaire, nuit, neutre, teinte(Int) }
 
     static let couleurParDefaut = Couleur.prereglage(.jade)
-    static let fondsParDefaut = Fonds.primaire
+    /// Tant que l'utilisateur n'a rien choisi : le même défaut dans toutes les apps.
+    static func fondsParDefaut(_ apparence: Apparence) -> Fonds { apparence == .sombre ? .nuit : .primaire }
     static let apparences: [Apparence] = [.clair, .sombre]
 
     struct RVB: Sendable, Hashable {
@@ -86,14 +84,16 @@ enum Jetons {
         let danger: RVB
         let alerte: RVB
         let succes: RVB
+        let dangerPlein: RVB
+        let encreSurDanger: RVB
         let suggestionSynfus: RVB
     }
 
-    static func theme(_ couleur: Couleur = couleurParDefaut, fonds: Fonds = fondsParDefaut,
+    static func theme(_ couleur: Couleur = couleurParDefaut, fonds: Fonds? = nil,
                       _ apparence: Apparence) -> Theme {
         let sombre = apparence == .sombre
         let rangee: Int
-        switch fonds {
+        switch fonds ?? fondsParDefaut(apparence) {
         case .primaire:
             switch couleur {
             case .prereglage(let p): rangee = p.teinte
@@ -131,8 +131,10 @@ enum Jetons {
             safranTexte: sombre ? RVB(0xffc53d) : RVB(0x895900),
             safranFond: sombre ? RVB(0xffc53d, opacite: 0.2) : RVB(0xffc53d, opacite: 0.22),
             danger: sombre ? RVB(0xff7a7a) : RVB(0xc4161c),
-            alerte: sombre ? RVB(0xffb84d) : RVB(0x8f5200),
-            succes: sombre ? RVB(0x5dd68a) : RVB(0x18753a),
+            alerte: sombre ? RVB(0xf38c47) : RVB(0xb04d00),
+            succes: sombre ? RVB(0x5ed689) : RVB(0x1a7539),
+            dangerPlein: sombre ? RVB(0xca3732) : RVB(0x84000a),
+            encreSurDanger: sombre ? RVB(0xffffff) : RVB(0xffffff),
             suggestionSynfus: sombre ? RVB(0x9e73f2) : RVB(0x7c4de0))
     }
 
@@ -158,14 +160,12 @@ enum Jetons {
 
     enum Taille {
         static let controle: CGFloat = 28
-        static let controleDense: CGFloat = 22
         static let boutonIcone: CGFloat = 28
         static let cibleMin: CGFloat = 24
         static let `case`: CGFloat = 14
         static let interrupteurLargeur: CGFloat = 32
         static let interrupteurHauteur: CGFloat = 18
         static let rangee: CGFloat = 28
-        static let rangeeDense: CGFloat = 24
         static let rangeePalette: CGFloat = 36
         static let touche: CGFloat = 18
         static let iconeBarre: CGFloat = 17
@@ -611,317 +611,317 @@ f4f4f4 ffffff ececec dddddd 7e7e7e 1b1b1b 5e5e5e 858585 151515 1e1e1e 2b2b2b 3b3
         /// « Autre… » : plein clair, encre teintée claire, plein sombre, encre teintée sombre.
         static let primaires = lire("""
 b43368 962554 f089aa fab9cc
-b43366 972553 f089a9 fab9cb
+b43366 962553 f089a9 fab9cb
 b53364 972551 f189a7 fab9ca
 b53362 972550 f189a6 fab9c9
-b63360 98254e f289a4 fbb9c8
-b6335e 98254c f289a3 fbb9c7
-b6325d 98254b f289a1 fbb9c6
-b7325b 992549 f389a0 fbb9c5
-b73259 992548 f3899e fcb9c4
+b63360 97244e f289a4 fbb9c8
+b6335e 98244c f289a3 fbb9c7
+b6325d 98244b f289a1 fbb9c6
+b7325b 982449 f389a0 fbb9c5
+b73259 992447 f3899e fcb9c4
 b73257 992446 f3899d fcb9c3
-b83255 9a2444 f3899b fcb9c2
-b83253 9a2442 f4899a fcb9c1
+b83255 992444 f3899b fcb9c2
+b83253 992442 f4899a fcb9c1
 b83251 9a2441 f48998 fcb9c0
-b9324f 9a253f f48a96 fcb9bf
-b9334d 9a253d f48a95 fcb9be
-b9334b 9b253b f58a93 fdb9bd
-b93349 9b253a f58a92 fdbabc
-b93347 9b2538 f58a90 fdbabb
-b93345 9b2536 f58a8f fdbabb
-ba3343 9b2534 f58a8d fdbaba
-ba3441 9b2532 f58a8b fdbab9
-ba343e 9b2630 f58b8a fdbab8
-ba343c 9b262e f58b88 fdbab7
-ba343a 9b262c f58b87 fdbab6
-ba3538 9c262a f58b85 fdbab5
-ba3535 9c2728 f58b84 fdbbb4
-ba3533 9c2726 f58c82 fdbbb3
-ba3630 9c2724 f58c81 fdbbb2
-ba362e 9b2821 f58c7f fdbbb2
-ba362b 9b281f f58c7e fdbbb1
-ba3728 9b281c f58d7c fdbbb0
-ba3725 9b291a f58d7b fdbbaf
-ba3822 9b2917 f58d79 fdbcae
-b9381f 9b2a13 f58d77 fcbcad
-b9391b 9b2a10 f48e76 fcbcac
-b93917 9b2b0b f48e74 fcbcac
-b93a13 9b2b06 f48e73 fcbcab
-b93a0e 9a2c01 f48f71 fcbdaa
-b83b07 992d00 f48f70 fcbda9
-b83c00 983000 f38f6e fbbda8
-b73e00 973200 f3906d fbbda8
-b54000 953300 f3906c fbbda7
-b44200 943500 f2916a fbbea6
-b24400 933600 f29169 fbbea5
-b14500 923800 f29167 fabea5
-af4700 913900 f19266 fabea4
-ae4800 903a00 f19264 fabfa3
-ad4a00 8e3c00 f19363 f9bfa2
-ab4b00 8d3d00 f09362 f9bfa2
-aa4c00 8c3e00 f09360 f9bfa1
-a94e00 8b3f00 ef945f f8c0a0
-a84f00 8a4000 ef945d f8c0a0
-a75000 894100 ee955c f8c09f
-a65100 894100 ee955b f7c09e
-a55200 884200 ed9659 f7c19e
-a45300 874300 ed9658 f7c19d
-a25400 864400 ec9757 f6c19d
-a15500 854500 eb9756 f6c19c
-a05500 844500 eb9854 f5c29c
-9f5600 834600 ea9853 f5c29b
-9e5700 824700 ea9952 f4c29a
-9d5800 824700 e99951 f4c39a
-9c5900 814800 e89a50 f3c399
-9c5900 804900 e79a4e f3c399
-9b5a00 7f4900 e79b4d f2c499
-9a5b00 7e4a00 e69b4c f2c498
-995b00 7e4a00 e59c4b f1c498
-985c00 7d4b00 e49c4a f1c497
-975d00 7c4b00 e49d49 f0c597
-965d00 7b4c00 e39e48 f0c596
-955e00 7b4c00 e29e47 efc596
-945e00 7a4d00 e19f46 efc696
-935f00 794d00 e09f45 eec695
-936000 794e00 dfa045 edc695
-926000 784e00 dfa044 edc795
-916100 774f00 dea143 ecc795
-906100 764f00 dda242 ecc794
-8f6200 765000 dca242 ebc894
-8e6200 755000 dba341 eac894
-8d6300 745000 daa341 eac894
-8d6300 745100 d9a440 e9c994
-8c6400 735100 d8a440 e8c993
-8b6400 725200 d7a53f e7c993
-8a6500 715200 d6a63f e7ca93
-896500 715200 d5a63e e6ca93
-886600 705300 d4a73e e5ca93
-886600 6f5300 d2a73e e5cb93
-876700 6f5400 d1a83e e4cb93
-866700 6e5400 d0a83e e3cb93
-856800 6d5400 cfa93e e2cc93
-846800 6c5500 ceaa3e e1cc93
-836800 6c5500 cdaa3e e1cd93
-826900 6b5500 cbab3e e0cd93
-816900 6a5600 caab3e dfcd93
-816a00 695600 c9ac3e dece93
-806a00 685600 c8ad3f ddce93
-7f6b00 685700 c6ad3f ddce93
-7e6b00 675700 c5ae40 dccf94
-7d6c00 665800 c4ae40 dbcf94
-7c6c00 665800 c3af41 dacf94
-7b6c00 645800 c1af41 d9d094
-7a6d00 635800 c0b042 d8d094
-796d00 635900 bfb042 d8d095
-786e00 625900 bdb143 d7d195
-776e00 615900 bcb244 d6d195
-766f00 605a00 bab245 d5d196
-756f00 5f5a00 b9b345 d4d296
-746f00 5e5a00 b8b346 d3d296
-737000 5d5b00 b6b447 d2d297
-727000 5c5b00 b5b448 d1d397
-707100 5b5b00 b3b549 d0d397
-6f7100 5a5b00 b2b54a cfd398
-6e7200 595c00 b0b64b ced398
-6d7200 585c00 afb64c cdd499
-6c7300 575d00 adb74d cdd499
-6a7300 565d00 abb74f ccd49a
-697400 545d00 aab850 cbd59a
-677400 535e00 a8b851 cad59b
-667500 525e00 a7b952 c9d59b
-657500 515e00 a5b953 c8d69c
-637500 4f5f00 a3ba55 c7d69c
-617600 4e5f00 a2ba56 c6d69d
-607600 4d5f00 a0bb57 c5d69e
-5e7700 4b5f00 9fbb59 c4d79e
-5c7800 4a6000 9dbc5a c3d79f
-5a7800 486000 9bbc5b c2d79f
-587900 466000 99bd5d c1d8a0
-567900 456100 98bd5e c0d8a1
-547a00 426100 96bd60 bfd8a1
-527a00 406100 94be61 bed8a2
-4f7b00 3f6200 92be62 bdd9a3
-4d7b00 3c6200 91bf64 bcd9a4
-4a7c00 3a6300 8fbf65 bbd9a4
-477d00 376300 8dbf67 bad9a5
-437d00 346400 8bc068 b9daa6
-407e00 326400 89c06a b8daa7
-3c7f00 2e6400 88c16b b7daa7
-377f00 2a6500 86c16d b6daa8
-328000 266500 84c16e b5daa9
-2c8100 216500 82c270 b4dbaa
-258101 1b6600 80c271 b3dbab
-208209 136600 7ec273 b2dbab
-1a8210 076700 7cc375 b1dbac
-118316 006706 7ac376 b0dbad
-05831a 006611 78c378 afdcae
-008321 006618 76c479 aedcaf
-008328 00661d 74c47b aedcb0
-00832d 006622 72c47c addcb0
-008232 006626 70c47e acdcb1
-008236 006629 6ec580 abddb2
-00823a 00662c 6cc581 aaddb3
-00823d 00662f 6ac583 a9ddb4
-008240 006531 68c584 a8ddb5
-008143 006533 66c686 a7ddb6
-008146 006536 64c688 a6ddb7
-008148 006538 62c689 a5ddb8
-00814b 00653a 5fc68b a4deb9
-00814d 00653c 5dc68c a4deba
-00814f 00653d 5bc78e a3deba
-008051 00653f 59c790 a2debb
-008053 006541 57c791 a1debc
-008055 006542 54c793 a0debd
-008057 006544 52c794 9fdebe
-008058 006545 50c796 9fdebf
-00805a 006446 4ec898 9edec0
-00805b 006447 4bc899 9ddec1
-007f5d 006448 49c89b 9cdfc2
-007f5e 00644a 46c89c 9cdfc3
-007f60 00644b 44c89e 9bdfc4
-007f61 00644c 42c8a0 9adfc5
-007f62 00644d 3fc8a1 9adfc6
-007f64 00644e 3dc8a3 99dfc7
-007f65 00644f 3ac8a4 98dfc8
-007e66 006451 38c8a6 98dfc9
-007e67 006452 35c8a8 97dfca
-007e68 006453 32c8a9 96dfcb
-007e6a 006454 30c8ab 96dfcc
-007e6b 006454 2dc8ac 95dfcd
-007e6c 006355 2ac8ae 95dfce
-007e6d 006356 27c8af 94dfcf
-007e6e 006357 24c8b1 94dfd0
-007d6f 006357 21c8b3 93dfd1
-007d70 006358 1ec8b4 93dfd1
-007d71 006359 1ac8b6 92dfd2
-007d72 00635a 17c8b7 92dfd3
-007d73 00635b 13c8b9 91dfd4
-007d74 00635c 0fc8ba 91dfd5
-007d75 00635d 0ac8bc 91dfd6
-007d76 00635e 04c8bd 90dfd7
-007c77 00635f 00c8bf 90dfd8
-007c77 00635f 00c7c0 90dfd9
-007c78 00625f 00c7c1 90dfda
-007c79 006260 00c7c3 8fdedb
-007c7a 006261 00c7c4 8fdedc
-007c7b 006262 00c7c6 8fdedd
-007c7c 006262 00c7c7 8fdedd
-007c7d 006263 00c6c8 8fdede
-007b7e 006264 00c6ca 8fdedf
-007b7f 006265 00c6cb 8edee0
-007b7f 006266 00c6cc 8edee1
-007b80 006267 00c6ce 8edee2
-007b81 006267 00c5cf 8edee3
-007b82 006268 00c5d0 8edde4
-007b83 006268 00c5d2 8edde4
-007b84 006169 00c5d3 8edde5
-007a85 00616a 00c5d4 8fdde6
-007a85 00616b 00c4d6 8fdde7
-007a86 00616b 00c4d7 8fdde8
-007a87 00616c 00c4d8 8fdde8
-007a88 00616d 00c4da 8fdce9
-007a89 00616e 00c3db 8fdcea
-007a8a 00616f 02c3dc 90dceb
-00798b 00616f 07c3de 90dceb
-00798c 00606f 0cc3df 90dcec
-00798d 006070 11c2e0 90dced
-00798d 006071 15c2e1 91dbee
-00798e 006072 18c2e2 91dbee
-00798f 006073 1cc1e3 91dbef
-007890 006074 1fc1e4 92dbf0
-007891 006075 22c1e5 92dbf1
-007892 006076 25c0e6 93daf1
-007893 006077 28c0e7 93daf2
-007894 006077 2bc0e9 94daf3
-007895 005f78 2dbfea 94daf3
-007796 005f79 30bfeb 95d9f4
-007797 005f7a 33beeb 95d9f4
-007798 005f7b 35beec 96d9f5
-007799 005f7c 38beed 96d9f6
-00779a 005f7d 3abdee 97d8f6
-00769c 005f7e 3dbdef 98d8f7
-00769d 005f7f 3fbcf0 98d8f7
-00769e 005e7f 41bcf1 99d8f8
-00769f 005e81 44bcf2 99d7f8
-0075a0 005e82 46bbf2 9ad7f9
-0075a2 005e83 48bbf3 9bd7f9
-0075a3 005e85 4abaf4 9bd7fa
-0074a4 005e86 4dbaf5 9cd6fa
-0074a6 005d86 4fb9f6 9dd6fb
-0074a7 005d88 51b9f6 9ed6fb
-0073a9 005d89 53b8f7 9ed6fc
-0073aa 005d8b 55b8f8 9fd5fc
-0073ac 005c8c 58b8f8 a0d5fd
-0072ae 005c8d 5ab7f9 a1d5fd
-0072af 005c8f 5cb7f9 a2d4fd
-0071b1 005b90 5eb6fa a2d4fe
-0071b3 005b92 60b6fa a3d4fe
-0070b5 005b94 62b5fb a4d4fe
-0070b7 005a95 64b5fb a5d3ff
-006fb9 005a98 66b4fc a6d3ff
-006fbb 005a9a 68b4fc a7d3ff
-006ebe 00599c 6ab3fd a8d2ff
-006dc1 00599f 6cb3fd a9d2ff
-006cc3 0058a1 6eb2fe aad2ff
-006bc6 0057a3 70b2fe abd1ff
-006aca 0057a7 71b1fe acd1ff
-096acb 0056aa 73b1ff add1ff
-1369cb 0655ab 75b0ff aed0ff
-1a68cb 0e55ab 77b0ff afd0ff
-2068cb 1454ab 79afff b0d0ff
-2567cc 1954ab 7bafff b1d0ff
-2966cc 1d53ab 7daeff b2cfff
-2d66cc 2152ac 7faeff b3cfff
-3065cc 2452ac 81adff b4cfff
-3465cc 2751ac 83adff b5ceff
-3764cd 2a51ac 84acff b5ceff
-3a63cd 2d50ac 86acff b6ceff
-3d63cd 2f50ac 88abff b7cdff
-4062cd 324fac 8aabff b8cdff
-4261cd 344eac 8baaff b9cdff
-4561cd 364eac 8daaff bacdff
-4760cd 384dac 8ea9ff bbccff
-4a5fcc 3b4dac 90a9ff bcccff
-4c5fcc 3d4cac 92a8ff bdccff
-4e5ecc 3e4cac 93a8ff bdcbff
-505dcc 404bab 95a7ff becbff
-525dcc 424aab 96a7ff bfcbff
-555ccb 444aab 98a6ff c0caff
-575bcb 4649ab 99a5ff c1caff
-595bcb 4849ab 9ba5ff c2caff
-5a5acb 4948aa 9da4ff c3c9ff
-5c5aca 4b48aa 9ea4ff c3c9ff
-5e59ca 4d47aa a0a3fe c4c9ff
-6058c9 4e47a9 a1a3fe c5c8ff
-6258c9 5046a9 a3a2fd c6c8ff
-6457c9 5145a9 a4a2fd c7c8ff
-6556c8 5345a8 a6a1fd c8c7ff
-6756c8 5444a8 a7a1fc c9c7ff
-6955c7 5644a7 a9a0fc cac7ff
-6a55c6 5743a7 aaa0fb cbc6ff
-6c54c6 5843a6 ac9ffb cbc6fe
-6e53c5 5a42a6 ad9ffa ccc6fe
-6f53c5 5b42a5 ae9efa cdc5fe
-7152c4 5d41a4 b09ef9 cec5fd
-7252c3 5e41a4 b19df9 cfc5fd
-7451c2 5f40a3 b39df8 d0c5fd
-7550c2 6040a3 b49cf7 d1c4fc
-7750c1 623fa2 b59cf7 d2c4fc
-784fc0 633fa1 b79cf6 d3c4fb
-7a4fbf 643ea0 b89bf5 d3c3fb
-7b4ebe 653ea0 b99bf5 d4c3fa
-7d4dbe 673d9f bb9af4 d5c3fa
-7e4dbd 683d9e bc9af3 d6c3f9
+b9324f 9a243f f48a96 fcb9bf
+b9334d 9a243d f48a95 fcb9be
+b9334b 9a243b f58a93 fdb9bd
+b93349 9a2439 f58a92 fdbabc
+b93347 9a2437 f58a90 fdbabb
+b93345 9a2436 f58a8f fdbabb
+ba3343 9a2534 f58a8d fdbaba
+ba3441 9a2431 f58a8b fdbab9
+ba343e 9a2530 f58b8a fdbab8
+ba343c 9b252e f58b88 fdbab7
+ba343a 9b252c f58b87 fdbab6
+ba3538 9a2529 f58b85 fdbab5
+ba3535 9a2527 f58b84 fdbbb4
+ba3533 9a2625 f58c82 fdbbb3
+ba3630 9a2623 f58c81 fdbbb2
+ba362e 9a2720 f58c7f fdbbb2
+ba362b 9a271e f58c7e fdbbb1
+ba3728 9a271b f58d7c fdbbb0
+ba3725 9a2819 f58d7b fdbbaf
+ba3822 9a2815 f58d79 fdbcae
+b9381f 9a2913 f58d77 fcbcad
+b9391b 9a290e f48e76 fcbcac
+b93917 992909 f48e74 fcbcac
+b93a13 992a04 f48e73 fcbcab
+b93a0e 992b00 f48f71 fcbdaa
+b83b07 972d00 f48f70 fcbda9
+b83c00 952f00 f38f6e fbbda8
+b73e00 943100 f3906d fbbda8
+b54000 933200 f3906c fbbda7
+b44200 923400 f2916a fbbea6
+b24400 903500 f29169 fbbea5
+b14500 8f3700 f29167 fabea5
+af4700 8d3800 f19266 fabea4
+ae4800 8c3900 f19264 fabfa3
+ad4a00 8c3a00 f19363 f9bfa2
+ab4b00 8b3b00 f09362 f9bfa2
+aa4c00 893c00 f09360 f9bfa1
+a94e00 883d00 ef945f f8c0a0
+a84f00 873e00 ef945d f8c0a0
+a75000 863f00 ee955c f8c09f
+a65100 854000 ee955b f7c09e
+a55200 844100 ed9659 f7c19e
+a45300 834100 ed9658 f7c19d
+a25400 824200 ec9757 f6c19d
+a15500 814300 eb9756 f6c19c
+a05500 814300 eb9854 f5c29c
+9f5600 7f4400 ea9853 f5c29b
+9e5700 7f4400 ea9952 f4c29a
+9d5800 7d4500 e99951 f4c39a
+9c5900 7d4500 e89a50 f3c399
+9c5900 7c4600 e79a4e f3c399
+9b5a00 7b4700 e79b4d f2c499
+9a5b00 7b4700 e69b4c f2c498
+995b00 794700 e59c4b f1c498
+985c00 794800 e49c4a f1c497
+975d00 784900 e49d49 f0c597
+965d00 774900 e39e48 f0c596
+955e00 764900 e29e47 efc596
+945e00 754a00 e19f46 efc696
+935f00 754a00 e09f45 eec695
+936000 734a00 dfa045 edc695
+926000 734b00 dfa044 edc795
+916100 724b00 dea143 ecc795
+906100 724c00 dda242 ecc794
+8f6200 714c00 dca242 ebc894
+8e6200 704d00 dba341 eac894
+8d6300 704d00 daa341 eac894
+8d6300 6f4d00 d9a440 e9c994
+8c6400 6e4e00 d8a440 e8c993
+8b6400 6e4e00 d7a53f e7c993
+8a6500 6d4e00 d6a63f e7ca93
+896500 6c4f00 d5a63e e6ca93
+886600 6c4f00 d4a73e e5ca93
+886600 6a4f00 d2a73e e5cb93
+876700 694f00 d1a83e e4cb93
+866700 695000 d0a83e e3cb93
+856800 685000 cfa93e e2cc93
+846800 675100 ceaa3e e1cc93
+836800 675100 cdaa3e e1cd93
+826900 665100 cbab3e e0cd93
+816900 655100 caab3e dfcd93
+816a00 655200 c9ac3e dece93
+806a00 645200 c8ad3f ddce93
+7f6b00 635300 c6ad3f ddce93
+7e6b00 625300 c5ae40 dccf94
+7d6c00 615300 c4ae40 dbcf94
+7c6c00 605300 c3af41 dacf94
+7b6c00 605400 c1af41 d9d094
+7a6d00 5f5400 c0b042 d8d094
+796d00 5e5400 bfb042 d8d095
+786e00 5d5500 bdb143 d7d195
+776e00 5d5500 bcb244 d6d195
+766f00 5b5500 bab245 d5d196
+756f00 5a5500 b9b345 d4d296
+746f00 595600 b8b346 d3d296
+737000 595600 b6b447 d2d297
+727000 575600 b5b448 d1d397
+707100 565700 b3b549 d0d397
+6f7100 565700 b2b54a cfd398
+6e7200 555700 b0b64b ced398
+6d7200 535800 afb64c cdd499
+6c7300 535800 adb74d cdd499
+6a7300 515800 abb74f ccd49a
+697400 505900 aab850 cbd59a
+677400 4f5900 a8b851 cad59b
+667500 4e5900 a7b952 c9d59b
+657500 4c5a00 a5b953 c8d69c
+637500 4b5a00 a3ba55 c7d69c
+617600 4a5a00 a2ba56 c6d69d
+607600 485a00 a0bb57 c5d69e
+5e7700 475b00 9fbb59 c4d79e
+5c7800 465b00 9dbc5a c3d79f
+5a7800 445b00 9bbc5b c2d79f
+587900 425c00 99bd5d c1d8a0
+567900 415c00 98bd5e c0d8a1
+547a00 3f5c00 96bd60 bfd8a1
+527a00 3d5d00 94be61 bed8a2
+4f7b00 3b5d00 92be62 bdd9a3
+4d7b00 395d00 91bf64 bcd9a4
+4a7c00 375e00 8fbf65 bbd9a4
+477d00 345e00 8dbf67 bad9a5
+437d00 315f00 8bc068 b9daa6
+407e00 2f5f00 89c06a b8daa7
+3c7f00 2b5f00 88c16b b7daa7
+377f00 285f00 86c16d b6daa8
+328000 246000 84c16e b5daa9
+2c8100 1f6000 82c270 b4dbaa
+258101 196000 80c271 b3dbab
+208209 126100 7ec273 b2dbab
+1a8210 076100 7cc375 b1dbac
+118316 006206 7ac376 b0dbad
+05831a 00610f 78c378 afdcae
+008321 006116 76c479 aedcaf
+008328 00611b 74c47b aedcb0
+00832d 006120 72c47c addcb0
+008232 006123 70c47e acdcb1
+008236 006127 6ec580 abddb2
+00823a 00612a 6cc581 aaddb3
+00823d 00612c 6ac583 a9ddb4
+008240 00602e 68c584 a8ddb5
+008143 006031 66c686 a7ddb6
+008146 006033 64c688 a6ddb7
+008148 006035 62c689 a5ddb8
+00814b 006037 5fc68b a4deb9
+00814d 006038 5dc68c a4deba
+00814f 00603a 5bc78e a3deba
+008051 00603c 59c790 a2debb
+008053 00603d 57c791 a1debc
+008055 00603f 54c793 a0debd
+008057 005f3f 52c794 9fdebe
+008058 005f41 50c796 9fdebf
+00805a 005f42 4ec898 9edec0
+00805b 005f43 4bc899 9ddec1
+007f5d 005f45 49c89b 9cdfc2
+007f5e 005f46 46c89c 9cdfc3
+007f60 005f47 44c89e 9bdfc4
+007f61 005f48 42c8a0 9adfc5
+007f62 005f49 3fc8a1 9adfc6
+007f64 005f4a 3dc8a3 99dfc7
+007f65 005f4b 3ac8a4 98dfc8
+007e66 005f4c 38c8a6 98dfc9
+007e67 005f4d 35c8a8 97dfca
+007e68 005f4f 32c8a9 96dfcb
+007e6a 005f4f 30c8ab 96dfcc
+007e6b 005e4f 2dc8ac 95dfcd
+007e6c 005e50 2ac8ae 95dfce
+007e6d 005e51 27c8af 94dfcf
+007e6e 005e52 24c8b1 94dfd0
+007d6f 005e53 21c8b3 93dfd1
+007d70 005e54 1ec8b4 93dfd1
+007d71 005e55 1ac8b6 92dfd2
+007d72 005e56 17c8b7 92dfd3
+007d73 005e56 13c8b9 91dfd4
+007d74 005e57 0fc8ba 91dfd5
+007d75 005e58 0ac8bc 91dfd6
+007d76 005e59 04c8bd 90dfd7
+007c77 005e5a 00c8bf 90dfd8
+007c77 005e5b 00c7c0 90dfd9
+007c78 005e5b 00c7c1 90dfda
+007c79 005e5b 00c7c3 8fdedb
+007c7a 005d5c 00c7c4 8fdedc
+007c7b 005d5d 00c7c6 8fdedd
+007c7c 005d5d 00c7c7 8fdedd
+007c7d 005d5e 00c6c8 8fdede
+007b7e 005d5f 00c6ca 8fdedf
+007b7f 005d60 00c6cb 8edee0
+007b7f 005d61 00c6cc 8edee1
+007b80 005d61 00c6ce 8edee2
+007b81 005d62 00c5cf 8edee3
+007b82 005d63 00c5d0 8edde4
+007b83 005d64 00c5d2 8edde4
+007b84 005d64 00c5d3 8edde5
+007a85 005c64 00c5d4 8fdde6
+007a85 005c65 00c4d6 8fdde7
+007a86 005c66 00c4d7 8fdde8
+007a87 005c67 00c4d8 8fdde8
+007a88 005c68 00c4da 8fdce9
+007a89 005c68 00c3db 8fdcea
+007a8a 005c69 02c3dc 90dceb
+00798b 005c6a 07c3de 90dceb
+00798c 005c6a 0cc3df 90dcec
+00798d 005b6a 11c2e0 90dced
+00798d 005b6b 15c2e1 91dbee
+00798e 005b6c 18c2e2 91dbee
+00798f 005b6d 1cc1e3 91dbef
+007890 005b6e 1fc1e4 92dbf0
+007891 005b6f 22c1e5 92dbf1
+007892 005b70 25c0e6 93daf1
+007893 005b71 28c0e7 93daf2
+007894 005b72 2bc0e9 94daf3
+007895 005b72 2dbfea 94daf3
+007796 005a73 30bfeb 95d9f4
+007797 005a73 33beeb 95d9f4
+007798 005a75 35beec 96d9f5
+007799 005a76 38beed 96d9f6
+00779a 005a77 3abdee 97d8f6
+00769c 005a78 3dbdef 98d8f7
+00769d 005a79 3fbcf0 98d8f7
+00769e 005a7a 41bcf1 99d8f8
+00769f 005a7a 44bcf2 99d7f8
+0075a0 00597b 46bbf2 9ad7f9
+0075a2 00597c 48bbf3 9bd7f9
+0075a3 00597e 4abaf4 9bd7fa
+0074a4 00597f 4dbaf5 9cd6fa
+0074a6 005980 4fb9f6 9dd6fb
+0074a7 005881 51b9f6 9ed6fb
+0073a9 005882 53b8f7 9ed6fc
+0073aa 005884 55b8f8 9fd5fc
+0073ac 005886 58b8f8 a0d5fd
+0072ae 005786 5ab7f9 a1d5fd
+0072af 005788 5cb7f9 a2d4fd
+0071b1 005789 5eb6fa a2d4fe
+0071b3 00568a 60b6fa a3d4fe
+0070b5 00568d 62b5fb a4d4fe
+0070b7 00568f 64b5fb a5d3ff
+006fb9 005590 66b4fc a6d3ff
+006fbb 005593 68b4fc a7d3ff
+006ebe 005594 6ab3fd a8d2ff
+006dc1 005497 6cb3fd a9d2ff
+006cc3 00549a 6eb2fe aad2ff
+006bc6 00539c 70b2fe abd1ff
+006aca 00529e 71b1fe acd1ff
+096acb 0052a3 73b1ff add1ff
+1369cb 0051a6 75b0ff aed0ff
+1a68cb 0750a6 77b0ff afd0ff
+2068cb 0f50a7 79afff b0d0ff
+2567cc 1550a7 7bafff b1d0ff
+2966cc 194fa8 7daeff b2cfff
+2d66cc 1e4fa8 7faeff b3cfff
+3065cc 214ea8 81adff b4cfff
+3465cc 244ea9 83adff b5ceff
+3764cd 274ea9 84acff b5ceff
+3a63cd 2a4da9 86acff b6ceff
+3d63cd 2d4daa 88abff b7cdff
+4062cd 2f4ca9 8aabff b8cdff
+4261cd 324ca9 8baaff b9cdff
+4561cd 344ba9 8daaff bacdff
+4760cd 364ba9 8ea9ff bbccff
+4a5fcc 394aa9 90a9ff bcccff
+4c5fcc 3b4aaa 92a8ff bdccff
+4e5ecc 3d49a9 93a8ff bdcbff
+505dcc 3f49a9 95a7ff becbff
+525dcc 4149a9 96a7ff bfcbff
+555ccb 4348a9 98a6ff c0caff
+575bcb 4548a9 99a5ff c1caff
+595bcb 4647a9 9ba5ff c2caff
+5a5acb 4846a8 9da4ff c3c9ff
+5c5aca 4a46a9 9ea4ff c3c9ff
+5e59ca 4b46a8 a0a3fe c4c9ff
+6058c9 4d45a8 a1a3fe c5c8ff
+6258c9 4e45a7 a3a2fd c6c8ff
+6457c9 5044a7 a4a2fd c7c8ff
+6556c8 5244a7 a6a1fd c8c7ff
+6756c8 5343a7 a7a1fc c9c7ff
+6955c7 5543a6 a9a0fc cac7ff
+6a55c6 5642a6 aaa0fb cbc6ff
+6c54c6 5842a6 ac9ffb cbc6fe
+6e53c5 5942a5 ad9ffa ccc6fe
+6f53c5 5b41a5 ae9efa cdc5fe
+7152c4 5c41a4 b09ef9 cec5fd
+7252c3 5e40a3 b19df9 cfc5fd
+7451c2 5e3fa2 b39df8 d0c5fd
+7550c2 603fa2 b49cf7 d1c4fc
+7750c1 613fa2 b59cf7 d2c4fc
+784fc0 633ea1 b79cf6 d3c4fb
+7a4fbf 643da0 b89bf5 d3c3fb
+7b4ebe 653d9f b99bf5 d4c3fa
+7d4dbe 663d9f bb9af4 d5c3fa
+7e4dbd 683c9e bc9af3 d6c3f9
 7f4cbc 693c9d bd99f2 d7c2f9
-814cbb 6a3c9d bf99f1 d8c2f8
+814cbb 6a3b9c bf99f1 d8c2f8
 824bba 6b3b9c c098f1 d9c2f8
 834bb9 6c3b9b c198f0 d9c1f7
 854ab8 6e3a9a c298ef dac1f7
 864ab7 6f3a99 c497ee dbc1f6
 8749b6 703998 c597ed dcc1f6
-8848b5 713997 c696ec ddc0f5
+8848b5 713897 c696ec ddc0f5
 8a48b3 723896 c796eb ddc0f5
-8b47b2 733895 c895ea dec0f4
+8b47b2 733795 c895ea dec0f4
 8c47b1 743794 c995e9 dfc0f3
 8d46b0 753793 cb95e8 e0bff3
 8e46af 763692 cc94e7 e1bff2
@@ -939,7 +939,7 @@ a05500 844500 eb9854 f5c29c
 9b409f 813185 d890da e9bde9
 9c3f9e 823083 d990d9 eabce9
 9d3f9c 833082 da8fd7 eabce8
-9e3e9b 843081 db8fd6 ebbce7
+9e3e9b 832f81 db8fd6 ebbce7
 9f3e99 842f80 dc8fd5 ecbce6
 a03d98 852f7e dd8ed4 ecbce6
 a13d96 862e7d de8ed2 edbce5
@@ -958,26 +958,25 @@ ab3883 8e2a6d e78bc2 f3bada
 ab3782 8f296b e88bc1 f4bad9
 ac3780 8f296a e88bbf f4bad9
 ad377e 902968 e98bbe f5bad8
-ad367d 912867 ea8abc f5bad7
+ad367d 902866 ea8abc f5bad7
 ae367b 912865 ea8abb f6b9d6
-af3679 922864 eb8ab9 f6b9d5
+af3679 912764 eb8ab9 f6b9d5
 af3578 922862 ec8ab8 f6b9d4
 b03576 932761 ec8ab7 f7b9d3
 b03574 93275f ed8ab5 f7b9d2
-b13572 94275e ed8ab4 f8b9d1
+b13572 93265e ed8ab4 f8b9d1
 b23471 94265c ee8ab2 f8b9d0
-b2346f 95265b ee89b1 f8b9cf
+b2346f 94265a ee89b1 f8b9cf
 b3346d 952659 ef89af f9b9ce
-b3346b 962658 ef89ae f9b9cd
-b4336a 962656 f089ac f9b9cc
+b3346b 952557 ef89ae f9b9cd
+b4336a 962556 f089ac f9b9cc
 """)
         static let prereglages = lire("""
-0b5fe0 004cbd 7cadff b1ceff
-0e7a62 00644f 4bcba9 9fe2cc
-753ad2 602ab0 b79cff d3c5ff
-cf365f a61e47 f27f93 f9b1bb
-c6481b 9f3104 ea8869 f2b5a2
-687284 515969 9aa2b0 bcc1ca
+0b5fe0 004aba 7cadff b1ceff
+0e7a62 005f4c 4bcba9 9fe2cc
+cf365f a11642 f27f93 f9b1bb
+c6481b 992d00 ea8869 f3b6a3
+4c5667 3a4352 b6becc d9dee7
 """)
         private static func lire(_ texte: String) -> [[UInt32]] {
             texte.split(separator: "\n").map { $0.split(separator: " ").map { UInt32($0, radix: 16) ?? 0 } }

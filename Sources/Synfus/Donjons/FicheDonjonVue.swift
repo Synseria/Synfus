@@ -21,7 +21,7 @@ struct FicheDonjonVue: View {
             let actions = modele.cartes.actions
             VStack(alignment: .leading, spacing: Jetons.Espace.deux) {
                 if let niveau = donjon.niveau {
-                    Text(L("donjon.niveau", niveau)).font(.synfus(.raccourci))
+                    Text(L("donjon.niveau", niveau)).font(Jetons.Typo.raccourci.police)
                 }
                 // Sur une ligne : faute de place (beaucoup de clefs), elle défile.
                 ViewThatFits(in: .horizontal) {
@@ -67,8 +67,8 @@ struct FicheDonjonVue: View {
                 }
             }
         }
-        .font(.synfus(.petit))
-        .foregroundStyle(Couleurs.encreSecondaire)
+        .font(Jetons.Typo.petit.police)
+        .foregroundStyle(Color.jeton(\.encreSecondaire))
     }
 
     private func carte(_ action: ActionFiche, _ detail: DetailDonjon?) -> some View {
@@ -129,7 +129,7 @@ struct FicheDonjonVue: View {
         case .succes:
             ForEach(Array((detail?.succes ?? []).enumerated()), id: \.offset) { _, succes in
                 Text("• " + (Lieu.traduit(succes.noms, langue) ?? "?"))
-                    .font(.synfus(.petit))
+                    .font(Jetons.Typo.petit.police)
                     .help(Lieu.traduit(succes.description, langue) ?? "")
             }
         case .entree, .guide: EmptyView()
@@ -141,21 +141,21 @@ struct FicheDonjonVue: View {
         VStack(alignment: .leading, spacing: Jetons.Espace.un) {
             ForEach(Array((store.conseils[id] ?? []).enumerated()), id: \.offset) { _, conseil in
                 Text("• " + conseil.titre)
-                    .font(.synfus(.petit))
+                    .font(Jetons.Typo.petit.police)
                     .fixedSize(horizontal: false, vertical: true)
                     .help(conseil.detail)
             }
             Text(L("donjon.conseils.source"))
-                .font(.synfus(.petit))
-                .foregroundStyle(Couleurs.encreTertiaire)
+                .font(Jetons.Typo.petit.police)
+                .foregroundStyle(Color.jeton(\.encreTertiaire))
         }
     }
 
     private func ligne(_ monstre: DetailDonjon.Monstre) -> some View {
         VStack(alignment: .leading, spacing: Jetons.Espace.un) {
             HStack(spacing: Jetons.Espace.un) {
-                if monstre.boss { Image(systemName: "crown").foregroundStyle(Couleurs.safranTexte) }
-                Text(Lieu.traduit(monstre.noms, langue) ?? "?").font(.synfus(monstre.boss ? .raccourci : .petit))
+                if monstre.boss { Image(systemName: "crown").foregroundStyle(Color.jeton(\.safranTexte)) }
+                Text(Lieu.traduit(monstre.noms, langue) ?? "?").font((monstre.boss ? Jetons.Typo.raccourci : Jetons.Typo.petit).police)
             }
             FicheCombatVue(fiche: monstre.fiche)
         }
@@ -174,22 +174,22 @@ private struct CarteAction: View {
     var body: some View {
         HStack(spacing: Jetons.Espace.un) {
             Image(systemName: icone)
-                .foregroundStyle(choisie || ouverte == true ? Couleurs.primaireEncre : Couleurs.encreSecondaire)
+                .foregroundStyle(choisie || ouverte == true ? Color.jeton(\.primaireEncre) : Color.jeton(\.encreSecondaire))
             Text(titre)
-                .foregroundStyle(ouverte == true && !choisie ? Couleurs.primaireEncre : Couleurs.encre)
+                .foregroundStyle(ouverte == true && !choisie ? Color.jeton(\.primaireEncre) : Color.jeton(\.encre))
                 .lineLimit(1)
             if let ouverte {
                 Image(systemName: ouverte ? "chevron.down" : "chevron.right")
-                    .font(.synfus(.micro))
-                    .foregroundStyle(Couleurs.encreSecondaire)
+                    .font(Jetons.Typo.micro.police)
+                    .foregroundStyle(Color.jeton(\.encreSecondaire))
             }
         }
-        .font(.synfus(.petit))
+        .font(Jetons.Typo.petit.police)
         .padding(.horizontal, Jetons.Espace.deux)
         .padding(.vertical, Jetons.Espace.un)
         .fondEtat(choisie ? .choisi : .repos)
         .overlay(RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous)
-            .strokeBorder(choisie ? Couleurs.primaire : ouverte == true ? Couleurs.primaireEncre : Couleurs.filet,
+            .strokeBorder(choisie ? Color.jeton(\.primaire) : ouverte == true ? Color.jeton(\.primaireEncre) : Color.jeton(\.filet),
                           lineWidth: choisie ? Jetons.Trait.etat : Jetons.Trait.filet))
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(choisie ? [.isButton, .isSelected] : .isButton)

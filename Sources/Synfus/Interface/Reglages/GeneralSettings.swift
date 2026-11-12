@@ -44,13 +44,19 @@ struct GeneralSettings: View {
                 languageRow
                 Ligne(titre: L("general.version"), etat: miseAJour.etat.libelle) {
                     HStack(spacing: Jetons.Espace.deux) {
-                        Text(AppIntegrity.displayName).foregroundStyle(Couleurs.encreSecondaire).textSelection(.enabled)
+                        Text(AppIntegrity.displayName).foregroundStyle(Color.jeton(\.encreSecondaire)).textSelection(.enabled)
                         ActionMiseAJour()
                     }
                 }
                 Interrupteur(titre: L("maj.verifier"), aide: L("maj.verifier.aide"), isOn: $prefs.verifierMisesAJour)
             } header: {
                 SectionTitle(L("general.systeme"))
+            }
+
+            Section {
+                IconesReglables()
+            } header: {
+                SectionTitle(L("general.icones"))
             }
         }
     }
@@ -82,9 +88,9 @@ struct GeneralSettings: View {
     private var quarantineWarning: some View {
         VStack(alignment: .leading, spacing: Jetons.Espace.un) {
             HStack(spacing: Jetons.Espace.un) {
-                Image(systemName: "exclamationmark.triangle").foregroundStyle(Couleurs.alerte)
+                Image(systemName: "exclamationmark.triangle").foregroundStyle(Color.jeton(\.alerte))
                 Text(L("general.quarantaine"))
-                    .font(.synfus(.raccourci))
+                    .font(Jetons.Typo.raccourci.police)
                 HelpTip(L("general.quarantaine.aide"))
             }
             CopiableCommand(command: AppIntegrity.quarantineFix)

@@ -26,7 +26,7 @@ struct ShortcutsSettings: View {
                                 hotKey: binding(forSlot: slot))
                 }
                 if manager.effectif.isEmpty {
-                    Text(L("raccourcis.aucunPerso")).foregroundStyle(Couleurs.encreSecondaire)
+                    Text(L("raccourcis.aucunPerso")).foregroundStyle(Color.jeton(\.encreSecondaire))
                 }
             } header: {
                 SectionTitle(L("raccourcis.allerAUnPerso"), help: L("raccourcis.allerAUnPerso.aide"))

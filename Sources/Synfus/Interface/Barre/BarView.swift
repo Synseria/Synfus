@@ -115,7 +115,7 @@ struct BarView: View {
                 VStack(spacing: Jetons.Espace.un) {
                     ForEach(0..<3, id: \.self) { _ in
                         Circle()
-                            .fill(Couleurs.encreTertiaire)
+                            .fill(Color.jeton(\.encreTertiaire))
                             .frame(width: Jetons.Trait.focus, height: Jetons.Trait.focus)
                     }
                 }
@@ -130,7 +130,7 @@ struct BarView: View {
     /// les bascules se lisaient comme une pastille de plus.
     private var separator: some View {
         Capsule()
-            .fill(Couleurs.filet)
+            .fill(Color.jeton(\.filet))
             .frame(width: Jetons.Trait.filet, height: Jetons.Espace.quatre)
             .padding(.horizontal, Jetons.Espace.un)
             .allowsHitTesting(false)
@@ -155,8 +155,8 @@ struct BarView: View {
             .help(L("barre.accessibiliteRequise"))
         } else if manager.clients.isEmpty {
             Text(L("barre.aucunPerso"))
-                .font(.synfus(.petit))
-                .foregroundStyle(Couleurs.encreSecondaire)
+                .font(Jetons.Typo.petit.police)
+                .foregroundStyle(Color.jeton(\.encreSecondaire))
                 .padding(.horizontal, Jetons.Espace.deux)
                 .padding(.vertical, Jetons.Espace.un)
         } else {
@@ -164,8 +164,8 @@ struct BarView: View {
             // de connecté le dit, et la rangée reste là pour revenir à « Tous ».
             if manager.effectif.isEmpty {
                 Text(L("barre.aucunPersoEquipe"))
-                    .font(.synfus(.petit))
-                    .foregroundStyle(Couleurs.encreSecondaire)
+                    .font(Jetons.Typo.petit.police)
+                    .foregroundStyle(Color.jeton(\.encreSecondaire))
                     .padding(.horizontal, Jetons.Espace.deux)
                     .padding(.vertical, Jetons.Espace.un)
             }
@@ -303,15 +303,13 @@ struct BarView: View {
             } else {
                 Circle().fill(icons.catalogue.color(for: className))
                 Text(icons.catalogue.abbreviation(for: className))
-                    .font(.synfus(.micro))
-                    // Le blanc et non une encre : les couleurs de classe viennent du jeu, toutes assez
-                    // soutenues pour qu'il y soit lisible.
-                    .foregroundStyle(Color.white)
+                    .font(Jetons.Typo.micro.police)
+                    .foregroundStyle(Color.texteSurClasse)
             }
         }
         .frame(width: Jetons.Taille.touche + Jetons.Trait.focus, height: Jetons.Taille.touche + Jetons.Trait.focus)
         .overlay(
-            Circle().strokeBorder(active ? Couleurs.encreSurPrimaire : Couleurs.filet, lineWidth: Jetons.Trait.filet)
+            Circle().strokeBorder(active ? Color.jeton(\.encreSurPrimaire) : Color.jeton(\.filet), lineWidth: Jetons.Trait.filet)
         )
     }
 
@@ -339,21 +337,21 @@ struct BarView: View {
 
                 VStack(alignment: .leading, spacing: 0) {
                     Text(client.name)
-                        .font(.synfus(active ? .corpsFort : .corps))
+                        .font((active ? Jetons.Typo.corpsFort : Jetons.Typo.corps).police)
                         .lineLimit(1)
                         .fixedSize()
                     if prefs.showClasses, let className = client.characterClass {
                         Text(className)
-                            .font(.synfus(.petit))
-                            .foregroundStyle(active ? Couleurs.encreSurPrimaire : Couleurs.encreSecondaire)
+                            .font(Jetons.Typo.petit.police)
+                            .foregroundStyle(active ? Color.jeton(\.encreSurPrimaire) : Color.jeton(\.encreSecondaire))
                             .lineLimit(1)
                     }
                 }
 
                 if prefs.showNumbers {
                     Text("\(index + 1)")
-                        .font(.synfus(.micro))
-                        .foregroundStyle(active ? Couleurs.encreSurPrimaire : Couleurs.encreSecondaire)
+                        .font(Jetons.Typo.micro.police)
+                        .foregroundStyle(active ? Color.jeton(\.encreSurPrimaire) : Color.jeton(\.encreSecondaire))
                 }
 
                 // Rien de plus : l'enchaînement au clic suit l'ordre de la barre,
@@ -373,7 +371,7 @@ struct BarView: View {
                     CombatBadge(etat: etat)
                 }
             }
-            .foregroundStyle(active ? EtatVisuel.courant.encre : client.dormant ? Couleurs.encreSecondaire : Couleurs.encre)
+            .foregroundStyle(active ? EtatVisuel.courant.encre : client.dormant ? Color.jeton(\.encreSecondaire) : Color.jeton(\.encre))
         }
         .buttonStyle(.plain)
         .disabled(closing)
@@ -400,7 +398,7 @@ struct BarView: View {
                         ZaapClipboard.shared.copierTrajet(vers: cible, sousZone: nil, dansLesDouze: true)
                     }
                 }
-                Button(L("barre.fermer", client.name)) { manager.close(client) }
+                Button(L("barre.fermer", client.name)) { ConfirmationFermeture.fermer(client) }
             }
         }
         .overlay { if invitations.copiesRecentes.contains(client.slotKey) { CopiedBadge() } }

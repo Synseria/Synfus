@@ -63,9 +63,9 @@ final class ApercuCarte {
     private func vue(_ carte: Int) -> some View {
         VueCarte(carte: carte, cote: max(Self.taille.width, Self.taille.height))
             .aspectRatio(contentMode: .fit)
-            .background(Couleurs.creux)
+            .background(Color.jeton(\.creux))
             .clipShape(RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous).strokeBorder(Couleurs.filet, lineWidth: Jetons.Trait.filet))
+            .overlay(RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous).strokeBorder(Color.jeton(\.filet), lineWidth: Jetons.Trait.filet))
     }
 
     private func construire() -> NSPanel {
@@ -121,7 +121,7 @@ struct MiniatureCarte: View {
             VueCarte(carte: carte, cote: max(taille.width, taille.height))
                 .aspectRatio(contentMode: .fill)
                 .frame(width: taille.width, height: taille.height)
-                .background(Couleurs.creux)
+                .background(Color.jeton(\.creux))
                 .clipShape(RoundedRectangle(cornerRadius: Jetons.Rayon.pastille, style: .continuous))
                 .apercuCarteAuSurvol(agrandir ? carte : nil)
         }
@@ -168,22 +168,22 @@ struct FondCarte: View {
         if prefs.vuesCartes, Ressources.visuelsDuJeu, let carte {
             // L'image ne sert que d'ambiance et le texte de la case passe dessus : elle est voilée de
             // `surface`, plus franchement vers le bas où le texte se pose. Seul dégradé de l'app.
-            Couleurs.surface
+            Color.jeton(\.surface)
                 .overlay { VueCarte(carte: carte, cote: Self.cote).scaledToFill().opacity(Self.voileImage) }
                 .overlay {
-                    LinearGradient(colors: [.clear, Couleurs.surface.opacity(Self.voileTexte)],
+                    LinearGradient(colors: [.clear, Color.jeton(\.surface).opacity(Self.voileTexte)],
                                    startPoint: .top, endPoint: .bottom)
                 }
                 .overlay { teinte ?? .clear }
                 .clipShape(forme)
                 .overlay(contour)
         } else {
-            forme.fill(teinte ?? Couleurs.surface).overlay(contour)
+            forme.fill(teinte ?? Color.jeton(\.surface)).overlay(contour)
         }
     }
 
     private var contour: some View {
-        forme.strokeBorder(teinte == nil ? Couleurs.filet : Couleurs.primaire,
+        forme.strokeBorder(teinte == nil ? Color.jeton(\.filet) : Color.jeton(\.primaire),
                            lineWidth: teinte == nil ? Jetons.Trait.filet : Jetons.Trait.etat)
     }
 }

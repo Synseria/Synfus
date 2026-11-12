@@ -68,11 +68,11 @@ struct ShortcutRecorder: View {
             Button(action: toggle) {
                 Group {
                     if recording {
-                        Text(label).font(.synfus(.corps)).foregroundStyle(Couleurs.primaireEncre)
+                        Text(label).font(Jetons.Typo.corps.police).foregroundStyle(Color.jeton(\.primaireEncre))
                     } else if let hotKey {
                         ToucheRaccourci(hotKey.displayString)
                     } else {
-                        Text(label).font(.synfus(.corps)).foregroundStyle(Couleurs.encreSecondaire)
+                        Text(label).font(Jetons.Typo.corps.police).foregroundStyle(Color.jeton(\.encreSecondaire))
                     }
                 }
                 .frame(minWidth: Jetons.Espace.huit * 3, minHeight: Jetons.Taille.controle)
@@ -83,9 +83,9 @@ struct ShortcutRecorder: View {
                     } else {
                         // Un champ : `surface` et `contourControle`.
                         RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous)
-                            .fill(Couleurs.surface)
+                            .fill(Color.jeton(\.surface))
                             .overlay(RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous)
-                                .strokeBorder(Couleurs.contourControle, lineWidth: Jetons.Trait.filet))
+                                .strokeBorder(Color.jeton(\.contourControle), lineWidth: Jetons.Trait.filet))
                     }
                 }
                 .fondEtat(recording ? .choisi : .repos)
@@ -98,7 +98,7 @@ struct ShortcutRecorder: View {
                 session.stop(id)
             } label: {
                 Image(systemName: "xmark.circle.fill")
-                    .foregroundStyle(Couleurs.encreTertiaire)
+                    .foregroundStyle(Color.jeton(\.encreTertiaire))
             }
             .buttonStyle(.plain)
             .opacity(hotKey == nil ? 0 : 1)

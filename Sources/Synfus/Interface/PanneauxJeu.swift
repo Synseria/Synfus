@@ -56,7 +56,7 @@ struct BoutonEnTete: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: icone)
-                .font(.synfus(.raccourci))
+                .font(Jetons.Typo.raccourci.police)
                 .frame(width: Jetons.Taille.cibleMin, height: Jetons.Taille.cibleMin)
         }
         .buttonStyle(.etat(nue: true))
@@ -99,7 +99,7 @@ struct EnTetePanneau<Titre: View, Boutons: View>: View {
                 .padding(.vertical, Jetons.Espace.un)
         }
         .padding(.trailing, Jetons.Espace.un)
-        .font(.synfus(.note))
+        .font(Jetons.Typo.note.police)
         // Les zones de glisser prennent la hauteur des boutons, sans tirer
         // l'en-tête vers le bas.
         .fixedSize(horizontal: false, vertical: true)

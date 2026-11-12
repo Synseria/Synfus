@@ -41,24 +41,24 @@ struct TeamSectorView: View {
                 switch secteur {
                 case .tous:
                     Image(systemName: "person.3")
-                        .font(.synfus(.petit))
+                        .font(Jetons.Typo.petit.police)
                 case .equipe(let index):
                     Text("\(index + 1)")
-                        .font(.synfus(.raccourci))
+                        .font(Jetons.Typo.raccourci.police)
                         .padding(.trailing, Jetons.Espace.un)
                     ForEach(membres, id: \.self) { membre in
                         point(for: membre)
                     }
                 case .nouvelle:
                     Image(systemName: "plus")
-                        .font(.synfus(.raccourci))
+                        .font(Jetons.Typo.raccourci.police)
                 }
             }
             .padding(.horizontal, agrandi ? Jetons.Espace.trois : Jetons.Espace.deux)
             // Le « + » est une cible, pas un libellé : il prend de la place.
             .frame(minWidth: secteur == .nouvelle ? (agrandi ? Jetons.Espace.dix + Jetons.Espace.deux : Jetons.Espace.huit) : 0)
             .frame(height: agrandi ? Jetons.Taille.cibleMin : Jetons.Taille.touche)
-            .foregroundStyle(secteur == .nouvelle && etat == .repos ? Couleurs.encreSecondaire : etat.encre)
+            .foregroundStyle(secteur == .nouvelle && etat == .repos ? Color.jeton(\.encreSecondaire) : etat.encre)
             .fondEtat(etat)
         }
         .buttonStyle(.plain)
@@ -79,7 +79,7 @@ struct TeamSectorView: View {
     private func point(for membre: TeamMember) -> some View {
         Group {
             if !membre.connecte {
-                Circle().strokeBorder(Couleurs.encreTertiaire, lineWidth: Jetons.Trait.etat)
+                Circle().strokeBorder(Color.jeton(\.encreTertiaire), lineWidth: Jetons.Trait.etat)
             } else if let custom = icons.icon(for: membre.classe) {
                 Image(nsImage: custom)
                     .resizable()

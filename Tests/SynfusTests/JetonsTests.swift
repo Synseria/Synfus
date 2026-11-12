@@ -34,11 +34,28 @@ struct JetonsTests {
         try fichiers(sauf: exclus).flatMap { url in try code(url).map { (url.lastPathComponent, $0) } }
     }
 
-    @Test("Aucune vue ne prend une couleur d'état ni l'accent du système hors de Couleurs")
+    /// Les fichiers où une couleur ou une police peut se construire sans jeton : le fichier engendré et
+    /// ce qui fournit le thème courant, la marque et les classes (dessinées à part), les mesures de la
+    /// lecture d'écran, les zones de calibrage (reconnues à leur teinte), le rose du bouton « Fin de
+    /// tour » du jeu, et le menu système, dont le texte secondaire s'inverse tout seul à la sélection.
+    private let horsJetons: Set<String> = ["Jetons.swift", "ThemeCourant.swift", "SynfusMark.swift", "Couvee.swift",
+                                           "SigneSynseria.swift", "DofusClass.swift", "CalibrationZonesView.swift",
+                                           "BarControls.swift", "MenuBarController.swift"]
+
+    @Test("Aucune couleur ne se construit hors des jetons")
     func couleursParLesJetons() throws {
-        let motif = /accentColor|[^a-zA-Z.]\.(orange|green|yellow|mint)\b|Color\.(orange|green|yellow|mint)\b/
-        // Les zones se reconnaissent à leur teinte, et la marque a sa palette.
-        for (fichier, ligne) in try lignes(sauf: ["Couleurs.swift", "Jetons.swift", "CalibrationZonesView.swift", "SynfusMark.swift"]) {
+        let motif = /accentColor|Color\(\.sRGB|Color\(red:|Color\(white:|Color\(hue:|NSColor\((srgbRed|red|white|calibrated|deviceRed)|Color\.(white|black|orange|green|yellow|mint|red|blue)\b|[^a-zA-Z.]\.(orange|green|yellow|mint)\b|NSColor\.(label|secondaryLabel|tertiaryLabel|controlAccent|system[A-Z])/
+        for (fichier, ligne) in try lignes(sauf: horsJetons) {
+            #expect(!ligne.contains(motif), "\(fichier) : \(ligne)")
+        }
+    }
+
+    @Test("Aucun accès à un jeton ne contourne Jetons")
+    func accesParJetons() throws {
+        // Les anciens points de passage (façade `Couleurs`, `Font.synfus`) et toute liste de jetons recopiée
+        // (`static var primaire: Color`) : un jeton se lit par son chemin dans le thème courant.
+        let motif = /\bCouleurs\b|Typographie|\.synfus\(|static (var|let) (fenetre|surface|creux|filet|encre|primaire|safran|danger|alerte|succes|nuit)\w*\b/
+        for (fichier, ligne) in try lignes(sauf: ["Jetons.swift"]) {
             #expect(!ligne.contains(motif), "\(fichier) : \(ligne)")
         }
     }
@@ -47,8 +64,7 @@ struct JetonsTests {
     func policesParLEchelle() throws {
         let motif = /\.system\(size|weight:|\.fontWeight\(\.(?!semibold)|\.font\(\.(caption|footnote|subheadline|callout|headline|title|body)/
         // Le menu de la barre de menus est en `NSFont`, hors de SwiftUI ; le mot du signe suit la taille de son emblème.
-        for (fichier, ligne) in try lignes(sauf: ["Typographie.swift", "Jetons.swift", "SynfusMark.swift", "MenuBarController.swift",
-                                                  "SigneSynseria.swift"]) {
+        for (fichier, ligne) in try lignes(sauf: ["Jetons.swift", "SynfusMark.swift", "MenuBarController.swift", "SigneSynseria.swift"]) {
             #expect(!ligne.contains(motif), "\(fichier) : \(ligne)")
         }
     }

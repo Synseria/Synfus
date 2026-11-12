@@ -35,27 +35,27 @@ struct PaletteVue: View {
     private var recherche: some View {
         HStack(spacing: Jetons.Espace.deux) {
             Image(systemName: "magnifyingglass")
-                .font(.synfus(.titre))
-                .foregroundStyle(Couleurs.encreSecondaire)
+                .font(Jetons.Typo.titre.police)
+                .foregroundStyle(Color.jeton(\.encreSecondaire))
             TextField(L("palette.invite"), text: $modele.requete)
                 .textFieldStyle(.plain)
-                .font(.synfus(.titre))
+                .font(Jetons.Typo.titre.police)
                 .focused($champ, equals: .recherche)
                 .help(L("raccourcis.palette.aide"))
             // D'où partent distances et trajets : le dernier perso lu devant,
             // pas forcément celui qu'on croit quand on joue plusieurs comptes.
             Label(modele.origine, systemImage: "location")
-                .font(.synfus(.petit))
-                .foregroundStyle(Couleurs.encreSecondaire)
+                .font(Jetons.Typo.petit.police)
+                .foregroundStyle(Color.jeton(\.encreSecondaire))
                 .lineLimit(1)
                 .fixedSize()
                 .help(L("palette.depuis.aide"))
             if let mode {
                 Text(mode)
-                    .font(.synfus(.raccourci))
+                    .font(Jetons.Typo.raccourci.police)
                     .foregroundStyle(EtatVisuel.courant.encre)
                     .padding(.horizontal, Jetons.Espace.deux)
-                    .frame(height: Jetons.Taille.controleDense)
+                    .frame(height: Jetons.Taille.cibleMin)
                     .fondEtat(.courant, rayon: Jetons.Rayon.capsule)
             }
         }
@@ -70,10 +70,10 @@ struct PaletteVue: View {
                 let choisi = modele.filtre == filtre
                 let etat: EtatVisuel = choisi ? .courant : EtatVisuel(survole: filtreSurvole == filtre)
                 Text(filtre.titre)
-                    .font(.synfus(choisi ? .raccourci : .petit))
+                    .font((choisi ? Jetons.Typo.raccourci : Jetons.Typo.petit).police)
                     .foregroundStyle(choisi ? etat.encre : etat.encreSecondaire)
                     .padding(.horizontal, Jetons.Espace.deux)
-                    .frame(height: Jetons.Taille.controleDense)
+                    .frame(height: Jetons.Taille.cibleMin)
                     .fondEtat(etat, rayon: Jetons.Rayon.capsule)
                     .onHover { filtreSurvole = $0 ? filtre : nil }
                     .onTapGesture { modele.choisir(filtre) }
@@ -81,8 +81,8 @@ struct PaletteVue: View {
             }
             Spacer(minLength: Jetons.Espace.deux)
             Label(modele.tri.titre, systemImage: "arrow.up.arrow.down")
-                .font(.synfus(.petit))
-                .foregroundStyle(Couleurs.encreSecondaire)
+                .font(Jetons.Typo.petit.police)
+                .foregroundStyle(Color.jeton(\.encreSecondaire))
                 .lineLimit(1)
                 .fixedSize()
                 .contentShape(Rectangle())
@@ -118,8 +118,8 @@ struct PaletteVue: View {
                      : modele.filtre == .ici && !modele.positionConnue
                         ? (sansLecture ? L("palette.ici.sansPosition") : L("palette.ici.pasEncore"))
                         : L("palette.aucun"))
-                    .font(.synfus(.corps))
-                    .foregroundStyle(Couleurs.encreSecondaire)
+                    .font(Jetons.Typo.corps.police)
+                    .foregroundStyle(Color.jeton(\.encreSecondaire))
                     .multilineTextAlignment(.center)
                 if sansLecture {
                     Button(L("lecture.ouvrir")) { SettingsWindowController.shared.show(section: .lecture) }
@@ -158,21 +158,21 @@ struct PaletteVue: View {
     private var recents: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: Jetons.Espace.un) {
-                Image(systemName: "clock.arrow.circlepath").foregroundStyle(Couleurs.encreSecondaire)
+                Image(systemName: "clock.arrow.circlepath").foregroundStyle(Color.jeton(\.encreSecondaire))
                 ForEach(modele.recents) { entree in
                     Text(entree.titre)
-                        .font(.synfus(.codeInterface))
+                        .font(Jetons.Typo.codeInterface.police)
                         .lineLimit(1)
                         .padding(.horizontal, Jetons.Espace.deux)
-                        .frame(height: Jetons.Taille.controleDense)
-                        .background(Capsule().fill(Couleurs.creux))
+                        .frame(height: Jetons.Taille.cibleMin)
+                        .background(Capsule().fill(Color.jeton(\.creux)))
                         .onTapGesture { modele.executer(entree) }
                         .help(entree.titre)
                         .accessibilityAddTraits(.isButton)
                 }
             }
         }
-        .font(.synfus(.petit))
+        .font(Jetons.Typo.petit.police)
     }
 
     private var grille: some View {
@@ -238,12 +238,12 @@ struct PaletteVue: View {
         if let edition = modele.edition {
             HStack(spacing: Jetons.Espace.deux) {
                 Text(L("palette.etiquette.pour", edition.titre))
-                    .font(.synfus(.note))
-                    .foregroundStyle(Couleurs.encreSecondaire)
+                    .font(Jetons.Typo.note.police)
+                    .foregroundStyle(Color.jeton(\.encreSecondaire))
                     .lineLimit(1)
                 TextField(L("palette.etiquette.exemple"), text: $modele.texteEtiquette)
                     .textFieldStyle(.roundedBorder)
-                    .font(.synfus(.note))
+                    .font(Jetons.Typo.note.police)
                     .focused($champ, equals: .etiquette)
                 ToucheRaccourci("↵")
                 ToucheRaccourci("esc")
@@ -267,8 +267,8 @@ struct PaletteVue: View {
                 Spacer()
                 aide("esc", L("palette.touche.fermer"))
             }
-            .font(.synfus(.petit))
-            .foregroundStyle(Couleurs.encreSecondaire)
+            .font(Jetons.Typo.petit.police)
+            .foregroundStyle(Color.jeton(\.encreSecondaire))
             .padding(.horizontal, Jetons.Espace.quatre)
             .frame(height: Jetons.Taille.rangeePalette)
         }
@@ -319,27 +319,27 @@ private struct CarteZaap: View {
                 if let etiquette = entree.etiquette { PastilleEtiquette(texte: etiquette) }
                 Spacer(minLength: 0)
                 if entree.favori {
-                    Image(systemName: "star.fill").font(.synfus(.micro)).foregroundStyle(Couleurs.safranTexte)
+                    Image(systemName: "star.fill").font(Jetons.Typo.micro.police).foregroundStyle(Color.jeton(\.safranTexte))
                 }
             }
             .frame(height: Jetons.Espace.quatre)
             Text(entree.titre)
-                .font(.synfus(.corpsFort))
+                .font(Jetons.Typo.corpsFort.police)
                 .lineLimit(1)
             HStack(spacing: Jetons.Espace.un) {
                 Text(entree.itineraire ?? entree.sousTitre ?? "")
                     .lineLimit(1)
-                    .foregroundStyle(Couleurs.encreSecondaire)
+                    .foregroundStyle(Color.jeton(\.encreSecondaire))
                 Spacer(minLength: 0)
                 Text(entree.detail ?? "")
-                    .font(.synfus(.codeInterface))
-                    .foregroundStyle(Couleurs.encreSecondaire)
+                    .font(Jetons.Typo.codeInterface.police)
+                    .foregroundStyle(Color.jeton(\.encreSecondaire))
             }
-            .font(.synfus(.petit))
+            .font(Jetons.Typo.petit.police)
         }
         .padding(Jetons.Espace.deux)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background { FondCarte(carte: entree.carte, teinte: choisie ? Couleurs.primaireFond : nil) }
+        .background { FondCarte(carte: entree.carte, teinte: choisie ? Color.jeton(\.primaireFond) : nil) }
         .contentShape(Rectangle())
     }
 }
@@ -356,45 +356,45 @@ private struct LigneResultat: View {
         HStack(spacing: Jetons.Espace.trois) {
             PictogrammeLieu(gfx: entree.pictogramme) {
                 Image(systemName: icone)
-                    .font(.synfus(.corps))
-                    .foregroundStyle(choisie ? Couleurs.primaireEncre : Couleurs.encreSecondaire)
+                    .font(Jetons.Typo.corps.police)
+                    .foregroundStyle(choisie ? Color.jeton(\.primaireEncre) : Color.jeton(\.encreSecondaire))
             }
-            .frame(width: Jetons.Taille.controleDense, height: Jetons.Taille.controleDense)
+            .frame(width: Jetons.Taille.cibleMin, height: Jetons.Taille.cibleMin)
             .frame(width: Jetons.Taille.rangee, height: Jetons.Taille.rangee)
-            .background(RoundedRectangle(cornerRadius: Jetons.Rayon.pastille, style: .continuous).fill(Couleurs.creux))
+            .background(RoundedRectangle(cornerRadius: Jetons.Rayon.pastille, style: .continuous).fill(Color.jeton(\.creux)))
             VStack(alignment: .leading, spacing: Jetons.Espace.un) {
                 HStack(spacing: Jetons.Espace.un) {
-                    Text(entree.titre).font(.synfus(.corps)).lineLimit(1)
+                    Text(entree.titre).font(Jetons.Typo.corps.police).lineLimit(1)
                     if let etiquette = entree.etiquette { PastilleEtiquette(texte: etiquette) }
                     if entree.favori {
-                        Image(systemName: "star.fill").font(.synfus(.micro)).foregroundStyle(Couleurs.safranTexte)
+                        Image(systemName: "star.fill").font(Jetons.Typo.micro.police).foregroundStyle(Color.jeton(\.safranTexte))
                     }
                     if entree.interieur { EtiquetteInterieur(taille: .petit) }
                 }
                 if entree.sousTitre != nil || entree.itineraire != nil {
                     HStack(spacing: Jetons.Espace.un) {
-                        if let sousTitre = entree.sousTitre { Text(sousTitre).foregroundStyle(Couleurs.encreSecondaire) }
+                        if let sousTitre = entree.sousTitre { Text(sousTitre).foregroundStyle(Color.jeton(\.encreSecondaire)) }
                         // Le zaap retenu, à lire avant d'Entrée : le trajet copié y passe.
                         if let itineraire = entree.itineraire {
-                            Text(itineraire).foregroundStyle(Couleurs.primaireEncre).layoutPriority(1)
+                            Text(itineraire).foregroundStyle(Color.jeton(\.primaireEncre)).layoutPriority(1)
                         }
                     }
-                    .font(.synfus(.petit))
+                    .font(Jetons.Typo.petit.police)
                     .lineLimit(1)
                 }
             }
             Spacer(minLength: Jetons.Espace.deux)
             if let detail = entree.detail {
                 Text(detail)
-                    .font(.synfus(.codeInterface))
-                    .foregroundStyle(Couleurs.encreSecondaire)
+                    .font(Jetons.Typo.codeInterface.police)
+                    .foregroundStyle(Color.jeton(\.encreSecondaire))
                     .lineLimit(1)
             }
             if let carte = entree.carte { MiniatureCarte(carte: carte, taille: Self.vignette) }
             if entree.effet.sePlie {
                 Image(systemName: deplie ? "chevron.down" : "chevron.right")
-                    .font(.synfus(.raccourci))
-                    .foregroundStyle(Couleurs.encreSecondaire)
+                    .font(Jetons.Typo.raccourci.police)
+                    .foregroundStyle(Color.jeton(\.encreSecondaire))
                     .frame(width: Jetons.Taille.case)
             }
         }
@@ -431,10 +431,10 @@ struct EtiquetteInterieur: View {
 
     var body: some View {
         Text(L("carte.interieur"))
-            .font(.synfus(taille))
-            .foregroundStyle(Couleurs.encreSecondaire)
+            .font(taille.police)
+            .foregroundStyle(Color.jeton(\.encreSecondaire))
             .padding(.horizontal, Jetons.Espace.un)
-            .overlay(Capsule().strokeBorder(Couleurs.contourControle, lineWidth: Jetons.Trait.filet))
+            .overlay(Capsule().strokeBorder(Color.jeton(\.contourControle), lineWidth: Jetons.Trait.filet))
             .lineLimit(1)
             .help(L("carte.interieur.aide"))
     }
@@ -445,10 +445,10 @@ struct PastilleEtiquette: View {
 
     var body: some View {
         Text(texte)
-            .font(.synfus(.raccourci))
-            .foregroundStyle(Couleurs.encreSurSafran)
+            .font(Jetons.Typo.raccourci.police)
+            .foregroundStyle(Color.jeton(\.nuitProfond))
             .padding(.horizontal, Jetons.Espace.un)
-            .background(RoundedRectangle(cornerRadius: Jetons.Rayon.pastille).fill(Couleurs.safran))
+            .background(RoundedRectangle(cornerRadius: Jetons.Rayon.pastille).fill(Color.jeton(\.safran)))
             .lineLimit(1)
     }
 }
