@@ -46,7 +46,7 @@ struct QuetesSettings: View {
                 .cadreDeListe(premiere: false, derniere: rang == affichees.count - 1 && quetes.count <= Self.limite)
             }
             if quetes.count > Self.limite {
-                Text(L("lieux.affiner", quetes.count)).foregroundStyle(Couleurs.encreSecondaire)
+                Text(L("lieux.affiner", quetes.count)).foregroundStyle(Color.jeton(\.encreSecondaire))
                     .cadreDeListe(premiere: false, derniere: true)
             }
         }

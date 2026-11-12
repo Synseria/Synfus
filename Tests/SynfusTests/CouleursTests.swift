@@ -23,9 +23,15 @@ struct CouleursTests {
     @Test("« Autre… » refuse une teinte proche du safran")
     func autreRefuseLeSafran() {
         for proche in [84, 56, 70, 113] { #expect(!Jetons.teinteAcceptee(proche), "\(proche)") }
-        for loin in [0, 38, 54, 114, 150, 295, 350] { #expect(Jetons.teinteAcceptee(loin), "\(loin)") }
+        for loin in [0, 38, 54, 114, 150, 350] { #expect(Jetons.teinteAcceptee(loin), "\(loin)") }
         #expect(Jetons.Couleur(ecrit: "teinte:90") == nil)
         #expect(Jetons.Couleur(ecrit: "teinte:200") == .teinte(200))
+    }
+
+    @Test("« Autre… » refuse aussi la teinte que l'app réserve à ses suggestions")
+    func autreRefuseLaSuggestion() {
+        for proche in [293, 270, 316] { #expect(!Jetons.teinteAcceptee(proche), "\(proche)") }
+        #expect(Jetons.Couleur(ecrit: "teinte:293") == nil)
     }
 
     @Test("La couleur et les fonds se relisent")
@@ -42,11 +48,33 @@ struct CouleursTests {
         #expect(encore.couleurDeLApp == .prereglage(.corail) && encore.fondsDeLApp == .neutre)
     }
 
-    @Test("Le défaut est le jade, et les fonds suivent la primaire")
+    @Test("Le défaut est le jade, et les fonds sont en Auto : primaire en clair, nuit en sombre")
     func defauts() {
         let prefs = Preferences.forTesting(store: MemoireDeTest())
         #expect(prefs.couleurDeLApp == .prereglage(.jade))
-        #expect(prefs.fondsDeLApp == .primaire)
+        #expect(prefs.fondsDeLApp == nil)
+        #expect(Jetons.fondsParDefaut(.clair) == .primaire && Jetons.fondsParDefaut(.sombre) == .nuit)
+        #expect(Jetons.theme(.prereglage(.jade), fonds: nil, .sombre) == Jetons.theme(.prereglage(.jade), fonds: .nuit, .sombre))
+        #expect(Jetons.theme(.prereglage(.jade), fonds: nil, .clair) == Jetons.theme(.prereglage(.jade), fonds: .primaire, .clair))
+    }
+
+    @Test("Revenir à Auto efface le choix des fonds de la sauvegarde")
+    func retourALAuto() {
+        let store = MemoireDeTest()
+        let prefs = Preferences.forTesting(store: store)
+        prefs.fondsDeLApp = .neutre
+        prefs.fondsDeLApp = nil
+        #expect(Preferences.forTesting(store: store).fondsDeLApp == nil)
+    }
+
+    @Test("Une ancienne sauvegarde en violet retombe sur le défaut sans perdre le reste")
+    func violetRetire() {
+        let store = MemoireDeTest()
+        store.enregistrer(Data(#"{"characterOrder":["A"],"hotKeys":[],"barVisible":true,"showNumbers":true,"couleurDeLApp":"violet","fondsDeLApp":"nuit"}"#.utf8),
+                          pour: Preferences.key)
+        let prefs = Preferences.forTesting(store: store)
+        #expect(prefs.characterOrder == ["A"])
+        #expect(prefs.couleurDeLApp == Jetons.couleurParDefaut && prefs.fondsDeLApp == .nuit)
     }
 
     @Test("Une valeur illisible laisse les défauts sans rendre la sauvegarde illisible")
@@ -56,21 +84,21 @@ struct CouleursTests {
                           pour: Preferences.key)
         let prefs = Preferences.forTesting(store: store)
         #expect(prefs.characterOrder == ["A"])
-        #expect(prefs.couleurDeLApp == Jetons.couleurParDefaut && prefs.fondsDeLApp == Jetons.fondsParDefaut)
+        #expect(prefs.couleurDeLApp == Jetons.couleurParDefaut && prefs.fondsDeLApp == nil)
     }
 
-    @Test("La façade lit le thème des jetons du réglage courant")
+    @Test("Le thème courant lit les jetons du réglage courant")
     func facade() {
         let prefs = Preferences.shared
         let avant = (prefs.couleurDeLApp, prefs.fondsDeLApp)
         defer { (prefs.couleurDeLApp, prefs.fondsDeLApp) = avant }
-        prefs.couleurDeLApp = .prereglage(.violet)
+        prefs.couleurDeLApp = .prereglage(.azur)
         prefs.fondsDeLApp = .nuit
         for apparence in Jetons.apparences {
-            #expect(Couleurs.theme(apparence) == Jetons.theme(.prereglage(.violet), fonds: .nuit, apparence))
+            #expect(ThemeCourant.theme(apparence) == Jetons.theme(.prereglage(.azur), fonds: .nuit, apparence))
         }
         prefs.couleurDeLApp = .prereglage(.corail)
-        #expect(Couleurs.theme(.clair).primaire == Jetons.theme(.prereglage(.corail), fonds: .nuit, .clair).primaire)
+        #expect(ThemeCourant.theme(.clair).primaire == Jetons.theme(.prereglage(.corail), fonds: .nuit, .clair).primaire)
     }
 
     @Test("Chaque préréglage garde ses textes lisibles, en clair et en sombre")
@@ -80,6 +108,7 @@ struct CouleursTests {
                 let theme = Jetons.theme(.prereglage(prereglage), apparence)
                 #expect(contraste(theme.encreSurPrimaire, theme.primaire) >= 4.5, "\(prereglage) \(apparence) : texte sur plein")
                 #expect(contraste(theme.primaireEncre, theme.fenetre) >= 4.5, "\(prereglage) \(apparence) : couleur écrite")
+                #expect(contraste(theme.encreSurDanger, theme.dangerPlein) >= 4.5, "\(prereglage) \(apparence) : texte sur destructif")
             }
         }
     }

@@ -14,8 +14,8 @@ private struct Consigne: View {
         } icon: {
             Image(systemName: icone)
         }
-        .font(.synfus(forte ? .corpsFort : .petit))
-        .foregroundStyle(urgente ? Couleurs.safranTexte : forte ? Couleurs.encre : Couleurs.encreSecondaire)
+        .font((forte ? Jetons.Typo.corpsFort : Jetons.Typo.petit).police)
+        .foregroundStyle(urgente ? Color.jeton(\.safranTexte) : forte ? Color.jeton(\.encre) : Color.jeton(\.encreSecondaire))
     }
 }
 
@@ -28,7 +28,7 @@ struct KimboVue: View {
     @ObservedObject private var aide = AideBoss.shared
 
     var body: some View {
-        Text(L("boss.kimbo.question")).font(.synfus(.petit)).foregroundStyle(Couleurs.encreSecondaire)
+        Text(L("boss.kimbo.question")).font(Jetons.Typo.petit.police).foregroundStyle(Color.jeton(\.encreSecondaire))
         ChoixBoss(choix: [(Kimbo.Etat.impair, L("boss.kimbo.terreEau")), (.pair, L("boss.kimbo.airFeu"))],
                   actuel: aide.session.kimbo) { etat in aide.noter { session, _ in session.kimbo = etat } }
         if let etat = aide.session.kimbo {
@@ -145,13 +145,13 @@ struct TalKashaVue: View {
     var body: some View {
         let glyphes = aide.session.glyphesTalKasha
         HStack(spacing: Jetons.Espace.un) {
-            Text(L("boss.talKasha.glyphes")).font(.synfus(.petit)).foregroundStyle(Couleurs.encreSecondaire)
+            Text(L("boss.talKasha.glyphes")).font(Jetons.Typo.petit.police).foregroundStyle(Color.jeton(\.encreSecondaire))
             Spacer()
             ForEach(1...TalKasha.glyphesRequis, id: \.self) { rang in
                 Text(String(repeating: "I", count: rang))
-                    .font(.synfus(.corpsFort))
-                    .frame(width: Jetons.Espace.huit, height: Jetons.Taille.controleDense)
-                    .foregroundStyle(rang <= glyphes ? EtatVisuel.choisi.encre : Couleurs.encreSecondaire)
+                    .font(Jetons.Typo.corpsFort.police)
+                    .frame(width: Jetons.Espace.huit, height: Jetons.Taille.cibleMin)
+                    .foregroundStyle(rang <= glyphes ? EtatVisuel.choisi.encre : Color.jeton(\.encreSecondaire))
                     .fondEtat(rang <= glyphes ? .choisi : .repos)
             }
             PetitBouton(icone: "minus", aide: L("boss.talKasha.moins")) {

@@ -113,10 +113,11 @@ final class Preferences: ObservableObject {
     /// à la charge de l'appelant comme `menuBarIcon`.
     @Published var iconeApp: IconeApp = .parDefaut { didSet { save() } }
 
-    /// La couleur de l'app et la teinte de ses fonds (Réglages ▸ Apparence) : tout le reste
-    /// des couleurs vient des jetons, par `Couleurs`.
+    /// La couleur de l'app et la teinte de ses fonds (Réglages ▸ Thème) : tout le reste
+    /// des couleurs vient des jetons, par `ThemeCourant`.
     @Published var couleurDeLApp: Jetons.Couleur = Jetons.couleurParDefaut { didSet { save() } }
-    @Published var fondsDeLApp: Jetons.Fonds = Jetons.fondsParDefaut { didSet { save() } }
+    /// `nil` = Auto : primaire en clair, nuit en sombre (`Jetons.fondsParDefaut`).
+    @Published var fondsDeLApp: Jetons.Fonds? { didSet { save() } }
 
     /// Achever les clients gelés à la fermeture (voir `FreezeWatcher`). Activé
     /// par défaut : la règle d'abattage est assez stricte pour ne viser que des
@@ -513,7 +514,7 @@ final class Preferences: ObservableObject {
         .facultatif("menuBarIcon", \.menuBarIcon),
         .facultatif("iconeApp", \.iconeApp),
         .enTexte("couleurDeLApp", \.couleurDeLApp, ecrit: \.ecrit, lu: Jetons.Couleur.init(ecrit:)),
-        .enTexte("fondsDeLApp", \.fondsDeLApp, ecrit: \.ecrit, lu: Jetons.Fonds.init(ecrit:)),
+        .enTexteOptionnel("fondsDeLApp", \.fondsDeLApp, ecrit: \.ecrit, lu: Jetons.Fonds.init(ecrit:)),
         .facultatif("showPreviewOnHover", \.showPreviewOnHover),
         .optionnel("previewHotKey", \.previewHotKey),
         .facultatif("advanceOnClick", \.advanceOnClick),
@@ -699,6 +700,22 @@ final class Preferences: ObservableObject {
             ecrit: @escaping @MainActor (V) -> String, lu: @escaping @MainActor (String) -> V?
         ) -> Reglage {
             Reglage(ecrire: { try $1.encode(ecrit($0[keyPath: chemin]), forKey: cle) },
+                    lire: { conteneur in
+                        guard let texte = try conteneur.decodeIfPresent(String.self, forKey: cle),
+                              let valeur = lu(texte)
+                        else { return nil }
+                        return { $0[keyPath: chemin] = valeur }
+                    })
+        }
+
+        /// Comme `enTexte`, pour un choix qui peut ne pas être fait : `nil` (Auto) n'est pas écrit.
+        static func enTexteOptionnel<V>(
+            _ cle: Cle, _ chemin: ReferenceWritableKeyPath<Preferences, V?>,
+            ecrit: @escaping @MainActor (V) -> String, lu: @escaping @MainActor (String) -> V?
+        ) -> Reglage {
+            Reglage(ecrire: { prefs, conteneur in
+                        try conteneur.encodeIfPresent(prefs[keyPath: chemin].map(ecrit), forKey: cle)
+                    },
                     lire: { conteneur in
                         guard let texte = try conteneur.decodeIfPresent(String.self, forKey: cle),
                               let valeur = lu(texte)

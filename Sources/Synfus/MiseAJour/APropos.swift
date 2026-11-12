@@ -9,9 +9,9 @@ struct AProposVue: View {
         VStack(spacing: Jetons.Espace.quatre) {
             SigneSynseria(hauteur: 44)
             VStack(spacing: Jetons.Espace.deux) {
-                Text(AppIntegrity.displayName).font(.synfus(.corpsFort)).foregroundStyle(Couleurs.encre)
+                Text(AppIntegrity.displayName).font(Jetons.Typo.corpsFort.police).foregroundStyle(Color.jeton(\.encre))
                 if let etat = miseAJour.etat.libelle {
-                    Text(etat).font(.synfus(.note)).foregroundStyle(Couleurs.encreSecondaire)
+                    Text(etat).font(Jetons.Typo.note.police).foregroundStyle(Color.jeton(\.encreSecondaire))
                         .multilineTextAlignment(.center)
                 }
             }
@@ -19,7 +19,7 @@ struct AProposVue: View {
         }
         .padding(Jetons.Espace.six)
         .frame(width: 340)
-        .background(Couleurs.fenetre)
+        .background(Color.jeton(\.fenetre))
     }
 }
 

@@ -83,7 +83,7 @@ enum SynfusMark {
     private static let lueurCoeur = SynfusRGB(hex: 0xF2FAFF)
     private static let lueurMilieu = SynfusRGB(hex: 0xB5DAF7)
     private static let lueurBord = SynfusRGB(hex: 0x7FB2E0)
-    /// L'accent de l'app (`Couleurs.primaire`) et ses nuances.
+    /// L'accent de l'app (`Color.jeton(\.primaire)`) et ses nuances.
     private static let feuilleClair = SynfusRGB(hex: 0x5FD3AE)
     private static let feuilleMilieu = SynfusRGB(hex: 0x30A687)
     private static let feuilleSombre = SynfusRGB(hex: 0x1A6E58)

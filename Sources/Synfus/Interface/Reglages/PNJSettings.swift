@@ -23,27 +23,27 @@ struct PNJSettings: View {
             ForEach(affiches, id: \.element.id) { rang, pnj in
                 VStack(alignment: .leading, spacing: Jetons.Espace.un) {
                     HStack(spacing: Jetons.Espace.un) {
-                        Text(Lieu.traduit(pnj.noms, langue) ?? "?").font(.synfus(.corpsFort))
+                        Text(Lieu.traduit(pnj.noms, langue) ?? "?").font(Jetons.Typo.corpsFort.police)
                         Spacer()
                         BoutonEtiquette(cle: pnj.cle)
                         BoutonFavori(cle: pnj.cle)
                     }
                     ForEach(Array(pnj.passages.enumerated()), id: \.offset) { rang, passage in
                         HStack(spacing: Jetons.Espace.deux) {
-                            Text(lieu(passage, langue)).foregroundStyle(rang == 0 ? Couleurs.encre : Couleurs.encreSecondaire)
-                            Text(L("pnj.quetes", nombre: passage.quetes, passage.quetes)).font(.synfus(.petit)).foregroundStyle(Couleurs.encreSecondaire)
+                            Text(lieu(passage, langue)).foregroundStyle(rang == 0 ? Color.jeton(\.encre) : Color.jeton(\.encreSecondaire))
+                            Text(L("pnj.quetes", nombre: passage.quetes, passage.quetes)).font(Jetons.Typo.petit.police).foregroundStyle(Color.jeton(\.encreSecondaire))
                             Spacer()
                             BoutonTrajet(x: passage.position.x, y: passage.position.y, sousZone: passage.sousZone)
                             if let carte = passage.carte { MiniatureCarte(carte: carte) }
                         }
-                        .font(.synfus(.note))
+                        .font(Jetons.Typo.note.police)
                     }
                 }
                 .padding(.vertical, Jetons.Espace.un)
                 .cadreDeListe(premiere: false, derniere: rang == affiches.count - 1 && pnjs.count <= Self.limite)
             }
             if pnjs.count > Self.limite {
-                Text(L("lieux.affiner", pnjs.count)).foregroundStyle(Couleurs.encreSecondaire)
+                Text(L("lieux.affiner", pnjs.count)).foregroundStyle(Color.jeton(\.encreSecondaire))
                     .cadreDeListe(premiere: false, derniere: true)
             }
         }

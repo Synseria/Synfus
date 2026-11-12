@@ -40,10 +40,8 @@ struct ClassesSettings: View {
                 } else {
                     Circle().fill(breed.color)
                     Text(icons.catalogue.abbreviation(for: breed.label))
-                        .font(.synfus(.raccourci))
-                        // Le blanc et non une encre : les couleurs de classe viennent du jeu, toutes assez
-                        // soutenues pour qu'il y soit lisible.
-                        .foregroundStyle(Color.white)
+                        .font(Jetons.Typo.raccourci.police)
+                        .foregroundStyle(Color.texteSurClasse)
                 }
             }
             .frame(width: Jetons.Taille.cibleMin, height: Jetons.Taille.cibleMin)
@@ -54,8 +52,8 @@ struct ClassesSettings: View {
 
             if custom != nil, let provenance {
                 Text(provenance == .tienne ? L("classes.provenance.tienne") : L("classes.provenance.dofusdb"))
-                    .font(.synfus(.petit))
-                    .foregroundStyle(Couleurs.encreSecondaire)
+                    .font(Jetons.Typo.petit.police)
+                    .foregroundStyle(Color.jeton(\.encreSecondaire))
             }
             if provenance == .tienne {
                 Button(L("classes.retirer")) { icons.removeIcon(forKey: breed.key) }

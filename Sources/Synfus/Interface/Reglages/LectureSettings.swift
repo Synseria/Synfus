@@ -31,7 +31,7 @@ struct LectureSettings: View {
                             .help(L("diagnostic.position.toutLire.aide"))
                             .disabled(!previews.authorized || manager.clients.isEmpty)
                     }
-                    .foregroundStyle(etatEnDefaut ? Couleurs.alerte : Couleurs.encre)
+                    .foregroundStyle(etatEnDefaut ? Color.jeton(\.alerte) : Color.jeton(\.encre))
                 }
             }
             // Chasse et suivi de quêtes se lisent à la demande, depuis leur
@@ -120,8 +120,8 @@ struct LectureSettings: View {
     private func zoneLue(_ genre: GenreLecture, _ image: NSImage) -> some View {
         VStack(alignment: .leading, spacing: Jetons.Espace.un) {
             Text(L("diagnostic.lecture.zoneVue", genre.libelle, lecture.dernierPerso ?? "?"))
-                .font(.synfus(.petit))
-                .foregroundStyle(Couleurs.encreTertiaire)
+                .font(Jetons.Typo.petit.police)
+                .foregroundStyle(Color.jeton(\.encreTertiaire))
             Image(nsImage: image)
                 .resizable()
                 .interpolation(.medium)
@@ -130,14 +130,14 @@ struct LectureSettings: View {
                 .clipShape(RoundedRectangle(cornerRadius: Jetons.Rayon.pastille))
             if let lignes = lecture.lignes[genre] {
                 Text(L("diagnostic.position.brut", lignes.joined(separator: " ⏎ ")))
-                    .font(.synfus(.codeInterface))
-                    .foregroundStyle(Couleurs.encreTertiaire)
+                    .font(Jetons.Typo.codeInterface.police)
+                    .foregroundStyle(Color.jeton(\.encreTertiaire))
                     .textSelection(.enabled)
             }
             if genre == .combat, let couleur = lecture.couleur {
                 Text(L("diagnostic.lecture.couleur", Int(couleur * 100)))
-                    .font(.synfus(.codeInterface))
-                    .foregroundStyle(Couleurs.encreTertiaire)
+                    .font(Jetons.Typo.codeInterface.police)
+                    .foregroundStyle(Color.jeton(\.encreTertiaire))
             }
         }
     }

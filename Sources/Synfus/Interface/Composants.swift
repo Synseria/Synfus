@@ -18,23 +18,23 @@ enum EtatVisuel: Equatable {
     @MainActor var fond: Color {
         switch self {
         case .repos: .clear
-        case .survol: Couleurs.survol
-        case .presse: Couleurs.pression
-        case .choisi: Couleurs.primaireFond
-        case .courant: Couleurs.primaire
-        case .desactive: Couleurs.creux
+        case .survol: Color.jeton(\.survol)
+        case .presse: Color.jeton(\.pression)
+        case .choisi: Color.jeton(\.primaireFond)
+        case .courant: Color.jeton(\.primaire)
+        case .desactive: Color.jeton(\.creux)
         }
     }
 
-    @MainActor var contour: Color? { self == .choisi ? Couleurs.primaire : nil }
+    @MainActor var contour: Color? { self == .choisi ? Color.jeton(\.primaire) : nil }
 
     /// L'encre du contenu : un contenu à voix s'écrit en encres, jamais en blanc conditionnel.
     @MainActor var encre: Color {
         switch self {
-        case .courant: Couleurs.encreSurPrimaire
-        case .choisi: Couleurs.primaireEncre
-        case .desactive: Couleurs.encreTertiaire
-        case .repos, .survol, .presse: Couleurs.encre
+        case .courant: Color.jeton(\.encreSurPrimaire)
+        case .choisi: Color.jeton(\.primaireEncre)
+        case .desactive: Color.jeton(\.encreTertiaire)
+        case .repos, .survol, .presse: Color.jeton(\.encre)
         }
     }
 
@@ -42,7 +42,7 @@ enum EtatVisuel: Equatable {
     @MainActor var encreSecondaire: Color {
         switch self {
         case .courant, .choisi, .desactive: encre
-        case .repos, .survol, .presse: Couleurs.encreSecondaire
+        case .repos, .survol, .presse: Color.jeton(\.encreSecondaire)
         }
     }
 }
@@ -60,8 +60,8 @@ extension View {
     /// Dans une fenêtre : une carte en `surface` bordée d'un `filet`, sans ombre. Jamais dans une autre carte.
     func carte(rayon: CGFloat = Jetons.Rayon.carte) -> some View {
         let forme = RoundedRectangle(cornerRadius: rayon, style: .continuous)
-        return background(forme.fill(Couleurs.surface))
-            .overlay(forme.strokeBorder(Couleurs.filet, lineWidth: Jetons.Trait.filet))
+        return background(forme.fill(Color.jeton(\.surface)))
+            .overlay(forme.strokeBorder(Color.jeton(\.filet), lineWidth: Jetons.Trait.filet))
     }
 
     /// Ce qui flotte sur le jeu : barre, palette, panneaux. Rayon `panneau` ; l'ombre `flottant` est
@@ -80,7 +80,7 @@ private struct SurfaceFlottante: ViewModifier {
         let forme = RoundedRectangle(cornerRadius: Jetons.Rayon.panneau, style: .continuous)
         if Ressources.captureDocumentation {
             // `cacheDisplay` ne dessine ni le verre ni les matériaux, qui échantillonnent l'écran.
-            content.background(forme.fill(Couleurs.surface))
+            content.background(forme.fill(Color.jeton(\.surface)))
         } else if verre, #available(macOS 26.0, *) {
             content.glassEffect(.regular, in: .rect(cornerRadius: Jetons.Rayon.panneau))
         } else {
@@ -99,58 +99,56 @@ struct ToucheRaccourci: View {
     var body: some View {
         let forme = RoundedRectangle(cornerRadius: Jetons.Rayon.pastille, style: .continuous)
         Text(texte)
-            .font(.synfus(.raccourci))
-            .foregroundStyle(Couleurs.encre)
+            .font(Jetons.Typo.raccourci.police)
+            .foregroundStyle(Color.jeton(\.encre))
             .padding(.horizontal, Jetons.Espace.un)
             .frame(minWidth: Jetons.Taille.touche, minHeight: Jetons.Taille.touche)
-            .background(forme.fill(Couleurs.creux))
-            .overlay(forme.strokeBorder(Couleurs.filet, lineWidth: Jetons.Trait.filet))
+            .background(forme.fill(Color.jeton(\.creux)))
+            .overlay(forme.strokeBorder(Color.jeton(\.filet), lineWidth: Jetons.Trait.filet))
             .fixedSize()
     }
 }
 
 // MARK: - Boutons
 
-/// Les trois rangs d'un bouton, à `controle` de haut, `Rayon.controle`, `corpsFort` : **principal** plein
-/// (un par zone), **secondaire** bordé, **tertiaire** en `primaireEncre`. Désactivé, le principal redevient
-/// un secondaire grisé.
+/// Les quatre rangs d'un bouton, à `controle` de haut, `Rayon.controle`, `corpsFort` : **principal** plein
+/// (un par zone), **secondaire** bordé, **tertiaire** en `primaireEncre` sans bord, **destructif** plein
+/// `dangerPlein`. Désactivé, un bouton plein redevient un secondaire grisé.
 enum RangBouton { case principal, secondaire, tertiaire, destructif }
 
 struct StyleBouton: ButtonStyle {
     let rang: RangBouton
-    /// `controleDense` au lieu de `controle` : les panneaux posés sur le jeu, où chaque point compte.
+    /// `cibleMin` au lieu de `controle` : les panneaux posés sur le jeu, où chaque point compte.
     var dense = false
     @Environment(\.isEnabled) private var actif
 
     func makeBody(configuration: Configuration) -> some View {
         let forme = RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous)
         let presse = configuration.isPressed
-        let plein = rang == .principal && actif
+        let plein = (rang == .principal || rang == .destructif) && actif
         let encre: Color = switch (rang, actif) {
-        case (_, false): Couleurs.encreTertiaire
-        case (.principal, _): Couleurs.encreSurPrimaire
-        case (.tertiaire, _): Couleurs.primaireEncre
-        case (.destructif, _): Couleurs.danger
-        case (.secondaire, _): Couleurs.encre
+        case (_, false): Color.jeton(\.encreTertiaire)
+        case (.principal, _): Color.jeton(\.encreSurPrimaire)
+        case (.destructif, _): Color.jeton(\.encreSurDanger)
+        case (.tertiaire, _): Color.jeton(\.primaireEncre)
+        case (.secondaire, _): Color.jeton(\.encre)
         }
         let fond: Color = switch (rang, actif) {
-        case (_, false): Couleurs.creux
-        case (.principal, _): presse ? Couleurs.primaireEncre : Couleurs.primaire
-        case (.tertiaire, _): presse ? Couleurs.pression : .clear
-        case (.secondaire, _), (.destructif, _): presse ? Couleurs.pression : Couleurs.surface
+        case (_, false): Color.jeton(\.creux)
+        case (.principal, _): presse ? Color.jeton(\.primaireEncre) : Color.jeton(\.primaire)
+        case (.destructif, _): presse ? Color.jeton(\.danger) : Color.jeton(\.dangerPlein)
+        case (.tertiaire, _): presse ? Color.jeton(\.pression) : .clear
+        case (.secondaire, _): presse ? Color.jeton(\.pression) : Color.jeton(\.surface)
         }
         let borde = !plein && rang != .tertiaire
         configuration.label
-            .font(.synfus(.corpsFort))
+            .font(Jetons.Typo.corpsFort.police)
             .foregroundStyle(encre)
             .padding(.horizontal, Jetons.Espace.trois)
-            .frame(minHeight: dense ? Jetons.Taille.controleDense : Jetons.Taille.controle)
+            .frame(minHeight: dense ? Jetons.Taille.cibleMin : Jetons.Taille.controle)
             .background(forme.fill(fond))
             .overlay {
-                if borde {
-                    forme.strokeBorder(actif && rang == .destructif ? Couleurs.danger : Couleurs.contourControle,
-                                       lineWidth: Jetons.Trait.filet)
-                }
+                if borde { forme.strokeBorder(Color.jeton(\.contourControle), lineWidth: Jetons.Trait.filet) }
             }
             .contentShape(forme)
             .animation(Jetons.Duree.animation(Jetons.Duree.pression), value: presse)
@@ -187,7 +185,7 @@ struct StyleEtat: ButtonStyle {
                 .foregroundStyle(etat.encre)
                 .background {
                     if etat == .repos, !style.nue {
-                        RoundedRectangle(cornerRadius: style.rayon, style: .continuous).fill(Couleurs.creux)
+                        RoundedRectangle(cornerRadius: style.rayon, style: .continuous).fill(Color.jeton(\.creux))
                     }
                 }
                 .fondEtat(etat, rayon: style.rayon)
@@ -201,4 +199,10 @@ extension ButtonStyle where Self == StyleEtat {
                      nue: Bool = false) -> StyleEtat {
         StyleEtat(choisi: choisi, courant: courant, rayon: rayon, nue: nue)
     }
+}
+
+extension View {
+    /// Le texte d'un bouton sans texte : l'infobulle, et son nom pour VoiceOver,
+    /// que `.help` ne donne pas.
+    func aide(_ texte: String) -> some View { help(texte).accessibilityLabel(texte) }
 }

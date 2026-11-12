@@ -4,11 +4,22 @@ import SwiftUI
 struct CharactersSettings: View {
     @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var manager = WindowManager.shared
-    @State private var confirmerOubli = false
 
     /// Les persos connus qu'aucun client ne porte en ce moment.
     private var horsLigne: [String] {
         prefs.characterOrder.filter { !isOnline($0) }
+    }
+
+    /// Un dernier mot avant : la liste des persos fixe la numérotation des emplacements, la vider par
+    /// mégarde décale tous les raccourcis.
+    private func confirmerOubli() {
+        let noms = horsLigne
+        Task {
+            let demande = DemandeConfirmation(
+                titre: L("persos.oublierHorsLigne.confirmation", nombre: noms.count, noms.count),
+                detail: L("persos.oublierHorsLigne.detail"), verbe: L("commun.retirer"))
+            if await Confirmation.demander(demande) { prefs.forget(names: noms) }
+        }
     }
 
     var body: some View {
@@ -21,28 +32,16 @@ struct CharactersSettings: View {
                     prefs.move(fromOffsets: offsets, toOffset: destination)
                     manager.resort()
                 }
-                // Une seule écriture pour toute la fournée, et un dernier mot
-                // avant : la liste des persos est ce qui fixe la numérotation
-                // des emplacements, la vider par mégarde décale tous les
-                // raccourcis.
+                // Une seule écriture pour toute la fournée.
                 Ligne(titre: L("persos.connectesSurConnus", manager.clients.count, prefs.characterOrder.count)) {
-                    Button(L("persos.oublierHorsLigne")) { confirmerOubli = true }
+                    Button(L("persos.oublierHorsLigne")) { confirmerOubli() }
                         .buttonStyle(.bouton(.destructif))
                         .disabled(horsLigne.isEmpty)
-                        .confirmationDialog(
-                            L("persos.oublierHorsLigne.confirmation", nombre: horsLigne.count, horsLigne.count),
-                            isPresented: $confirmerOubli, titleVisibility: .visible
-                        ) {
-                            Button(L("persos.oublierHorsLigne"), role: .destructive) {
-                                prefs.forget(names: horsLigne)
-                            }
-                            Button(L("commun.annuler"), role: .cancel) {}
-                        }
                 }
             } header: {
                 HStack(spacing: Jetons.Espace.un) {
                     SectionTitle(L("persos.ordre"), help: L("persos.ordre.aide"))
-                    Text("·").foregroundStyle(Couleurs.encreTertiaire)
+                    Text("·").foregroundStyle(Color.jeton(\.encreTertiaire))
                     SectionTitle(L("persos.equipes"), help: L("persos.equipes.aide"))
                 }
             }
@@ -62,10 +61,10 @@ struct CharactersSettings: View {
     private func characterRow(index: Int, name: String) -> some View {
         HStack(spacing: Jetons.Espace.deux) {
             Image(systemName: "line.3.horizontal")
-                .font(.synfus(.micro))
-                .foregroundStyle(Couleurs.encreTertiaire)
+                .font(Jetons.Typo.micro.police)
+                .foregroundStyle(Color.jeton(\.encreTertiaire))
             Circle()
-                .fill(isOnline(name) ? Couleurs.succes : Couleurs.encreTertiaire)
+                .fill(isOnline(name) ? Color.jeton(\.succes) : Color.jeton(\.encreTertiaire))
                 .frame(width: Jetons.Espace.deux, height: Jetons.Espace.deux)
                 .accessibilityLabel(isOnline(name) ? L("persos.connecte") : L("persos.horsLigne"))
             Text(name)
@@ -73,14 +72,14 @@ struct CharactersSettings: View {
             teamPicker(for: name)
             if let slot = slotOf(name) {
                 Text("\(slot + 1)")
-                    .font(.synfus(.raccourci))
-                    .foregroundStyle(Couleurs.encreSecondaire)
+                    .font(Jetons.Typo.raccourci.police)
+                    .foregroundStyle(Color.jeton(\.encreSecondaire))
             }
             // Seul l'écart au normal s'écrit : un perso connecté n'a pas besoin de le dire.
             if !isOnline(name) {
                 Text(L("persos.horsLigne"))
-                    .font(.synfus(.petit))
-                    .foregroundStyle(Couleurs.encreTertiaire)
+                    .font(Jetons.Typo.petit.police)
+                    .foregroundStyle(Color.jeton(\.encreTertiaire))
             }
 
             HStack(spacing: Jetons.Espace.un) {
@@ -97,7 +96,7 @@ struct CharactersSettings: View {
                 .aide(L("persos.descendre"))
             }
             .buttonStyle(.bouton(.tertiaire, dense: true))
-            .font(.synfus(.raccourci))
+            .font(Jetons.Typo.raccourci.police)
         }
         .padding(.vertical, Jetons.Espace.un)
         .contentShape(Rectangle())
@@ -120,7 +119,7 @@ struct CharactersSettings: View {
         }
         .labelsHidden()
         .fixedSize()
-        .font(.synfus(.petit))
+        .font(Jetons.Typo.petit.police)
         .help(L("persos.equipeDuPerso"))
     }
 

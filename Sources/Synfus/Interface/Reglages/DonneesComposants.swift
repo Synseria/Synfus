@@ -10,7 +10,7 @@ struct SourceCarte: View {
     @State private var echec: String?
 
     var body: some View {
-        Ligne(titre: echec.map { L("zaap.maj.echec", $0) }
+        Ligne(titre: echec.map { _ in L("zaap.maj.echec") }
                 ?? L("zaap.maj.date", carte.carte.date.formatted(date: .abbreviated, time: .shortened)),
               etat: L("palette.reglages.carte.contenu", carte.carte.lieux.count, carte.carte.zaaps.count),
               aide: L("zaap.maj.aide")) {
@@ -48,7 +48,7 @@ struct SourceQuetes: View {
     }
 
     private var titre: String {
-        if let echec = quetes.echec { return L("zaap.maj.echec", echec) }
+        if quetes.echec != nil { return L("zaap.maj.echec") }
         guard let date = quetes.quetes?.date else { return L("palette.reglages.quetes.aucune") }
         return L("palette.reglages.quetes.date", date.formatted(date: .abbreviated, time: .shortened))
     }
@@ -70,7 +70,7 @@ struct SourceClasses: View {
     }
 
     private var titre: String {
-        if let echec = classes.echec { return L("zaap.maj.echec", echec) }
+        if classes.echec != nil { return L("zaap.maj.echec") }
         guard let date = classes.date else { return L("classes.maj.aucune") }
         return L("classes.maj.date", date.formatted(date: .abbreviated, time: .shortened))
     }
@@ -90,12 +90,12 @@ struct BoutonEtiquette: View {
                 PastilleEtiquette(texte: etiquette)
             } else {
                 Text(L("palette.reglages.etiquette"))
-                    .font(.synfus(.petit))
-                    .foregroundStyle(Couleurs.encreSecondaire)
+                    .font(Jetons.Typo.petit.police)
+                    .foregroundStyle(Color.jeton(\.encreSecondaire))
                     .padding(.horizontal, Jetons.Espace.un)
                     .padding(.vertical, Jetons.Espace.un)
                     .overlay(RoundedRectangle(cornerRadius: Jetons.Rayon.pastille)
-                        .strokeBorder(Couleurs.encreSecondaire.opacity(0.5), style: StrokeStyle(dash: [3, 2])))
+                        .strokeBorder(Color.jeton(\.encreSecondaire).opacity(0.5), style: StrokeStyle(dash: [3, 2])))
             }
         }
         .buttonStyle(.plain)
@@ -127,7 +127,7 @@ struct BoutonFavori: View {
         let favori = prefs.estFavori(cle)
         Button { prefs.basculerFavori(cle) } label: {
             Image(systemName: favori ? "star.fill" : "star")
-                .foregroundStyle(favori ? Couleurs.safranTexte : Couleurs.encreSecondaire)
+                .foregroundStyle(favori ? Color.jeton(\.safranTexte) : Color.jeton(\.encreSecondaire))
         }
         .buttonStyle(.borderless)
         .aide(favori ? L("zaap.favori.retirer") : L("zaap.favori.ajouter"))
@@ -154,10 +154,10 @@ struct BoutonTrajet: View {
             }
         } label: {
             HStack(spacing: Jetons.Espace.un) {
-                Text(Coordonnees.texte(x, y)).font(.synfus(.codeInterface))
+                Text(Coordonnees.texte(x, y)).font(Jetons.Typo.codeInterface.police)
                 Image(systemName: copie ? "checkmark" : "doc.on.clipboard")
             }
-            .foregroundStyle(copie ? Couleurs.primaireEncre : Couleurs.encreSecondaire)
+            .foregroundStyle(copie ? Color.jeton(\.primaireEncre) : Color.jeton(\.encreSecondaire))
         }
         .buttonStyle(.borderless)
         .help(dansLesDouze ? L("ouTrouver.copierTrajet") : L("trajet.copier.horsDesDouze"))

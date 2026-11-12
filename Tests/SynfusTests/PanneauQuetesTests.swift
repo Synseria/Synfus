@@ -237,3 +237,29 @@ struct PanneauQuetesTests {
         #expect(etape.nonOuverts(valides: [], lu: autre).isEmpty)
     }
 }
+
+/// La coordonnée d'un objectif ne s'écrit que si elle diffère de celle de l'objectif juste avant.
+struct CoordonneesObjectifsTests {
+    private func objectif(_ id: Int, _ position: (Int, Int)?, sousZone: Int? = nil) -> FicheQuete.Objectif {
+        FicheQuete.Objectif(id: id, texte: "", position: position.map { PNJ.Position(x: $0.0, y: $0.1) },
+                            carte: nil, combat: false, sujet: nil, sousZone: sousZone)
+    }
+
+    @Test("La première coordonnée s'affiche, la répétée non, la suivante différente oui")
+    func repetition() {
+        let objectifs = [objectif(1, (3, 4)), objectif(2, (3, 4)), objectif(3, (5, 6)), objectif(4, (5, 6)), objectif(5, (3, 4))]
+        #expect(CoordonneesObjectifs.affichees(objectifs) == [1, 3, 5])
+    }
+
+    @Test("Après un objectif sans position, la coordonnée revient")
+    func apresUnSansPosition() {
+        let objectifs = [objectif(1, (3, 4)), objectif(2, nil), objectif(3, (3, 4))]
+        #expect(CoordonneesObjectifs.affichees(objectifs) == [1, 3])
+    }
+
+    @Test("La même case d'un autre monde diffère")
+    func autreMonde() {
+        let objectifs = [objectif(1, (3, 4), sousZone: 10), objectif(2, (3, 4), sousZone: 99)]
+        #expect(CoordonneesObjectifs.affichees(objectifs) == [1, 2])
+    }
+}

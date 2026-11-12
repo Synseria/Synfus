@@ -36,9 +36,9 @@ struct LieuxSettings: View {
             ForEach(affiches, id: \.element.cle) { rang, lieu in
                 Ligne(titre: lieu.nom(en: langue), etat: Self.lieuDit(lieu, langue)) {
                     PictogrammeLieu(gfx: lieu.gfx) {
-                        Image(systemName: "mappin.and.ellipse").foregroundStyle(Couleurs.encreSecondaire)
+                        Image(systemName: "mappin.and.ellipse").foregroundStyle(Color.jeton(\.encreSecondaire))
                     }
-                    .frame(width: Jetons.Taille.controleDense, height: Jetons.Taille.controleDense)
+                    .frame(width: Jetons.Taille.cibleMin, height: Jetons.Taille.cibleMin)
                 } controle: {
                     HStack(spacing: Jetons.Espace.deux) {
                         BoutonEtiquette(cle: lieu.cle)
@@ -50,7 +50,7 @@ struct LieuxSettings: View {
                 .cadreDeListe(premiere: false, derniere: rang == affiches.count - 1 && lieux.count <= Self.limite)
             }
             if lieux.count > Self.limite {
-                Text(L("lieux.affiner", lieux.count)).foregroundStyle(Couleurs.encreSecondaire)
+                Text(L("lieux.affiner", lieux.count)).foregroundStyle(Color.jeton(\.encreSecondaire))
                     .cadreDeListe(premiere: false, derniere: true)
             }
         }

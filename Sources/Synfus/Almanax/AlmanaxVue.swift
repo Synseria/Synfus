@@ -25,20 +25,20 @@ struct AlmanaxVue: View {
             if let bonus = Lieu.traduit(almanax.bonus, langue) {
                 let description = Lieu.traduit(almanax.description, langue)
                 Text(description.map { L("palette.almanax.bonus", bonus, $0) } ?? bonus)
-                    .font(.synfus(.petit))
-                    .foregroundStyle(Couleurs.encreSecondaire)
+                    .font(Jetons.Typo.petit.police)
+                    .foregroundStyle(Color.jeton(\.encreSecondaire))
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.leading, Jetons.Espace.dix)
             }
         }
         .padding(Jetons.Espace.deux)
-        .background(RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous).fill(Couleurs.safranFond))
+        .background(RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous).fill(Color.jeton(\.safranFond)))
     }
 
     /// L'icône vient de DofusDB, à la demande ; sans visuels du jeu, le symbole.
     @ViewBuilder
     private func icone(_ offrande: Almanax.Offrande) -> some View {
-        let symbole = Image(systemName: "calendar").foregroundStyle(Couleurs.safranTexte)
+        let symbole = Image(systemName: "calendar").foregroundStyle(Color.jeton(\.safranTexte))
         if let icone = offrande.icone {
             ImageDofusDB(url: DofusDB.imageObjet(icone)) { symbole }.aspectRatio(contentMode: .fit)
         } else {
@@ -51,8 +51,8 @@ struct AlmanaxVue: View {
         return HStack(spacing: Jetons.Espace.deux) {
             icone(offrande).frame(width: Jetons.Taille.controle, height: Jetons.Taille.controle)
             HStack(spacing: Jetons.Espace.un) {
-                Text(L("palette.almanax")).font(.synfus(.raccourci)).foregroundStyle(Couleurs.safranTexte)
-                Text(L("palette.almanax.offrande", offrande.quantite, nom)).font(.synfus(.corpsFort))
+                Text(L("palette.almanax")).font(Jetons.Typo.raccourci.police).foregroundStyle(Color.jeton(\.safranTexte))
+                Text(L("palette.almanax.offrande", offrande.quantite, nom)).font(Jetons.Typo.corpsFort.police)
                     .lineLimit(1)
             }
             Spacer(minLength: Jetons.Espace.un)
@@ -70,7 +70,7 @@ struct AlmanaxVue: View {
             }
             Button { deplie = deplie == offrande.objet ? nil : offrande.objet } label: {
                 Image(systemName: deplie == offrande.objet ? "chevron.down" : "chevron.right")
-                    .font(.synfus(.raccourci))
+                    .font(Jetons.Typo.raccourci.police)
                     .frame(width: Jetons.Taille.cibleMin, height: Jetons.Taille.cibleMin)
             }
             .buttonStyle(.etat(nue: true))

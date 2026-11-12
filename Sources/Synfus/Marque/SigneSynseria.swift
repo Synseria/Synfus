@@ -41,7 +41,7 @@ struct EmblemeSynseriaVue: View {
     var hauteur: CGFloat
 
     var body: some View {
-        let nuit = Couleurs.nuit, blanc = Color.white, primaire = Couleurs.primaire
+        let nuit = Color.jeton(\.nuit), blanc = Color.white, primaire = Color.jeton(\.primaire)
         Canvas { contexte, taille in
             let echelle = min(taille.width, taille.height) / EmblemeSynseria.cote
             func teinte(_ t: EmblemeSynseria.Teinte) -> Color {
@@ -71,8 +71,8 @@ struct SigneSynseria: View {
     var body: some View {
         HStack(spacing: hauteur * 0.3) {
             EmblemeSynseriaVue(hauteur: hauteur)
-            (Text(EmblemeSynseria.mot.syn).foregroundColor(Couleurs.encre)
-                + Text(EmblemeSynseria.mot.seria).foregroundColor(Couleurs.encreSecondaire))
+            (Text(EmblemeSynseria.mot.syn).foregroundColor(Color.jeton(\.encre))
+                + Text(EmblemeSynseria.mot.seria).foregroundColor(Color.jeton(\.encreSecondaire)))
                 .font(Self.policeDuMot(taille: hauteur * 0.56))
         }
         .accessibilityElement(children: .ignore)

@@ -263,7 +263,7 @@ struct PreferencesTests {
         #expect(prefs.barOnlyWithDofus == false)
         #expect(prefs.menuBarIcon == .logo)
         #expect(prefs.iconeApp == .parDefaut)
-        #expect(prefs.couleurDeLApp == Jetons.couleurParDefaut && prefs.fondsDeLApp == Jetons.fondsParDefaut)
+        #expect(prefs.couleurDeLApp == Jetons.couleurParDefaut && prefs.fondsDeLApp == nil)
         // Masquer la barre reste sans défaut : on ne confisque aucune
         // combinaison réservée par le système sans qu'elle ait été demandée.
         #expect(prefs.toggleBar == nil)
@@ -685,7 +685,7 @@ struct PreferencesTests {
          "autoCenterBar":true,"barOnlyWithDofus":false,"panneauxSeulementDofus":true,"barVisible":true,"bossChoisi":"harebourg",
          "boutonsMasques":[],"characterOrder":[],
          "defaultsVersion":7,"equipes":[],"etiquettes":{},"hotKeys":[null],"inviteFormat":"/invite %nom","inviteGroupee":false,
-         "killFrozenClients":true,"lireCombat":false,"lireCombatDerriere":false,"lirePosition":false,"menuBarIcon":"logo","iconeApp":{"motif":"oeuf","fond":"transparent"},"couleurDeLApp":"jade","fondsDeLApp":"primaire",
+         "killFrozenClients":true,"lireCombat":false,"lireCombatDerriere":false,"lirePosition":false,"menuBarIcon":"logo","iconeApp":{"motif":"oeuf","fond":"transparent"},"couleurDeLApp":"jade",
          "showClasses":true,"showNumbers":true,"showPreviewOnHover":false,
          "signalerBascule":true,"zaapAuto":false,
          "zaapGainMinimal":5,"zaapDuJeu":true,"zaapIntercalees":"/a","verifierMisesAJour":true,"partagerStatistiques":true,"zaapsAjoutes":[],"zaapsChoix":{},"zaapsFavoris":[],"zaapsVueCarte":true,

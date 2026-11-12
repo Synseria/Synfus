@@ -31,8 +31,8 @@ struct OuTrouverVue: View {
                 if let sources = store.objet(id) { objet(sources) } else { attente }
             }
         }
-        .font(.synfus(metriques.detail))
-        .foregroundStyle(Couleurs.encreSecondaire)
+        .font(metriques.detail.police)
+        .foregroundStyle(Color.jeton(\.encreSecondaire))
         .onAppear { store.demander(sujet) }
     }
 
@@ -82,7 +82,7 @@ struct OuTrouverVue: View {
             Label(L("ouTrouver.recette", Lieu.traduit(recette.metier, langue) ?? "?", recette.niveau), systemImage: "hammer")
             Text(recette.ingredients.map { L("quete.ressource", Lieu.traduit($0.noms, langue) ?? "?", $0.quantite) }
                 .joined(separator: " · "))
-                .foregroundStyle(Couleurs.encreTertiaire)
+                .foregroundStyle(Color.jeton(\.encreTertiaire))
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.leading, Jetons.Espace.quatre)
         }
@@ -94,12 +94,12 @@ struct OuTrouverVue: View {
     private func lacheur(_ lacheur: SourcesObjet.Lacheur, _ repaires: [RepaireSitue]) -> some View {
         HStack(spacing: Jetons.Espace.un) {
             Image(systemName: "pawprint").frame(width: Jetons.Espace.trois)
-            Text(Lieu.traduit(lacheur.monstre.noms, langue) ?? "?").foregroundStyle(Couleurs.encre).lineLimit(1)
+            Text(Lieu.traduit(lacheur.monstre.noms, langue) ?? "?").foregroundStyle(Color.jeton(\.encre)).lineLimit(1)
             if lacheur.taux > 0 {
                 Text((lacheur.taux / 100).formatted(.percent.precision(.fractionLength(0...2))
                     .locale(Locale(identifier: langue.rawValue))))
             }
-            if repaires.isEmpty { Text(L("ouTrouver.introuvable")).foregroundStyle(Couleurs.encreTertiaire) }
+            if repaires.isEmpty { Text(L("ouTrouver.introuvable")).foregroundStyle(Color.jeton(\.encreTertiaire)) }
         }
         .padding(.top, Jetons.Espace.un)
         ForEach(Array(repaires.prefix(Self.repairesParLacheur).enumerated()), id: \.offset) { _, repaire in
@@ -121,11 +121,11 @@ struct OuTrouverVue: View {
                 Text(Lieu.traduit(repaire.repaire.noms, langue) ?? "?").lineLimit(1).layoutPriority(1)
                 Spacer(minLength: Jetons.Espace.un)
                 if copie == id {
-                    Text(L("quete.copie")).font(.synfus(.raccourci)).foregroundStyle(Couleurs.primaireEncre)
+                    Text(L("quete.copie")).font(Jetons.Typo.raccourci.police).foregroundStyle(Color.jeton(\.primaireEncre))
                 } else {
                     if let cartes = repaire.cartes { Text(L("ouTrouver.cartes", nombre: cartes, cartes)).lineLimit(1) }
                     Text(Coordonnees.texte(repaire.situation.x, repaire.situation.y))
-                        .font(.synfus(.codeInterface))
+                        .font(Jetons.Typo.codeInterface.police)
                         .lineLimit(1)
                 }
             }
@@ -142,7 +142,7 @@ struct OuTrouverVue: View {
             let reste = nombre - Self.premiers
             Button(L("ouTrouver.plus", nombre: reste, reste)) { tout = true }
                 .buttonStyle(.bouton(.tertiaire, dense: true))
-                .font(.synfus(metriques.detail))
+                .font(metriques.detail.police)
         }
     }
 

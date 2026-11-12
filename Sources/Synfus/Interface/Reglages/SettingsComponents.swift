@@ -38,9 +38,9 @@ struct EnTetePage: View {
 
     var body: some View {
         HStack(spacing: Jetons.Espace.deux) {
-            Text(titre).font(.synfus(.titrePage))
+            Text(titre).font(Jetons.Typo.titrePage.police)
             Spacer(minLength: Jetons.Espace.trois)
-            if let valeur { Text(valeur).font(.synfus(.note)).foregroundStyle(Couleurs.encreSecondaire) }
+            if let valeur { Text(valeur).font(Jetons.Typo.note.police).foregroundStyle(Color.jeton(\.encreSecondaire)) }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, MargeReglages.texte)
@@ -78,10 +78,10 @@ struct Ligne<Controle: View, Icone: View>: View {
                 VStack(alignment: .leading, spacing: Jetons.Espace.un) {
                     HStack(spacing: Jetons.Espace.un) {
                         Text(titre)
-                        if let detail { Text(detail).foregroundStyle(Couleurs.encreSecondaire).lineLimit(1) }
+                        if let detail { Text(detail).foregroundStyle(Color.jeton(\.encreSecondaire)).lineLimit(1) }
                     }
                     if let etat {
-                        Text(etat).font(.synfus(.petit)).foregroundStyle(Couleurs.encreSecondaire)
+                        Text(etat).font(Jetons.Typo.petit.police).foregroundStyle(Color.jeton(\.encreSecondaire))
                     }
                 }
             }
@@ -127,7 +127,7 @@ struct Avertissement: View {
         Ligne(titre: texte, aide: aide) {
             if let bouton { Button(bouton, action: action) }
         }
-        .foregroundStyle(Couleurs.alerte)
+        .foregroundStyle(Color.jeton(\.alerte))
     }
 }
 
@@ -141,15 +141,15 @@ struct HelpTip: View {
     var body: some View {
         Button { showing.toggle() } label: {
             Image(systemName: "info.circle")
-                .font(.synfus(.note))
-                .foregroundStyle(Couleurs.encreSecondaire)
+                .font(Jetons.Typo.note.police)
+                .foregroundStyle(Color.jeton(\.encreSecondaire))
         }
         .buttonStyle(.plain)
         .help(text)
         .accessibilityLabel(text)
         .popover(isPresented: $showing, arrowEdge: .bottom) {
             Text(text)
-                .font(.synfus(.note))
+                .font(Jetons.Typo.note.police)
                 .padding(Jetons.Espace.trois)
                 .frame(width: 300, alignment: .leading)
         }
@@ -192,8 +192,8 @@ struct ShortcutRow: View {
             HStack(spacing: Jetons.Espace.un) {
                 if conflit || refuse {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.synfus(.petit))
-                        .foregroundStyle(Couleurs.alerte)
+                        .font(Jetons.Typo.petit.police)
+                        .foregroundStyle(Color.jeton(\.alerte))
                         .help(conflit ? L("raccourcis.conflit") : L("raccourcis.refuse"))
                 }
                 ShortcutRecorder(hotKey: hotKey, allowsBareKeys: allowsBareKeys)
@@ -250,9 +250,9 @@ struct PermissionRow: View {
     var body: some View {
         Ligne(titre: name, aide: help) {
             HStack(spacing: Jetons.Espace.deux) {
-                Circle().fill(granted ? Couleurs.succes : Couleurs.alerte).frame(width: Jetons.Espace.deux, height: Jetons.Espace.deux)
+                Circle().fill(granted ? Color.jeton(\.succes) : Color.jeton(\.alerte)).frame(width: Jetons.Espace.deux, height: Jetons.Espace.deux)
                 Text(granted ? L("commun.accordee") : L("commun.manquante"))
-                    .foregroundStyle(granted ? Couleurs.encreSecondaire : Couleurs.alerte)
+                    .foregroundStyle(granted ? Color.jeton(\.encreSecondaire) : Color.jeton(\.alerte))
                 if !granted { Button(L("commun.ouvrirReglagesSysteme"), action: open) }
             }
         }
@@ -267,7 +267,7 @@ struct CopiableCommand: View {
     var body: some View {
         HStack(spacing: Jetons.Espace.un) {
             Text(command)
-                .font(.synfus(.codeInterface))
+                .font(Jetons.Typo.codeInterface.police)
                 .textSelection(.enabled)
                 .lineLimit(2)
                 .truncationMode(.middle)
@@ -280,6 +280,6 @@ struct CopiableCommand: View {
             .aide(L("commun.copierCommande"))
         }
         .padding(Jetons.Espace.un)
-        .background(RoundedRectangle(cornerRadius: Jetons.Rayon.pastille).fill(Couleurs.creux))
+        .background(RoundedRectangle(cornerRadius: Jetons.Rayon.pastille).fill(Color.jeton(\.creux)))
     }
 }

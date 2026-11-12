@@ -45,7 +45,7 @@ struct EnTeteListe: View {
 
     var body: some View {
         SectionTitle(titre, help: aide)
-            .font(.synfus(.corpsFort))
+            .font(Jetons.Typo.corpsFort.police)
             .padding(.horizontal, MargeReglages.ligne)
             .padding(.top, Jetons.Espace.quatre)
             .padding(.bottom, Jetons.Espace.un)
@@ -64,9 +64,9 @@ extension View {
         return padding(.horizontal, MargeReglages.ligne)
             .padding(.vertical, Jetons.Espace.deux)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(forme.fill(Couleurs.surface))
+            .background(forme.fill(Color.jeton(\.surface)))
             // Le filet de chaque ligne recouvre celui de la précédente : un seul trait entre deux.
-            .overlay(forme.strokeBorder(Couleurs.filet, lineWidth: Jetons.Trait.filet)
+            .overlay(forme.strokeBorder(Color.jeton(\.filet), lineWidth: Jetons.Trait.filet)
                 .padding(.top, premiere ? 0 : -Jetons.Trait.filet))
     }
 }
