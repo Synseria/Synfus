@@ -68,7 +68,8 @@ struct PaletteVue: View {
         HStack(spacing: Jetons.Espace.un) {
             ForEach(FiltrePalette.allCases, id: \.self) { filtre in
                 let choisi = modele.filtre == filtre
-                let etat: EtatVisuel = choisi ? .choisi : EtatVisuel(survole: filtreSurvole == filtre)
+                // Le filtre est le niveau au-dessus des résultats, que les flèches parcourent : son choix est gris.
+                let etat: EtatVisuel = choisi ? .inactif : EtatVisuel(survole: filtreSurvole == filtre)
                 // Tab et ⇧Tab parcourent les filtres (le panneau) : aucun d'eux ne prend le focus.
                 Button { modele.choisir(filtre) } label: {
                     Text(filtre.titre)
@@ -346,7 +347,7 @@ private struct CarteZaap: View {
         .padding(Jetons.Espace.deux)
         .foregroundStyle(etat.encre)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background { FondCarte(carte: entree.carte, teinte: choisie ? Color.jeton(\.primaireFond) : nil) }
+        .background { FondCarte(carte: entree.carte, choisie: choisie) }
         .contentShape(Rectangle())
     }
 }

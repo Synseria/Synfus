@@ -7,8 +7,13 @@ import SwiftUI
 
 /// Les deux voix du design system et leurs états : le **plein** dit où je suis (un par zone), le
 /// **teinté** dit ce que j'ai choisi. Sélectionné, survolé et pressé restent trois choses distinctes.
+/// Une fenêtre n'a qu'un choix à voix, celui que les flèches déplacent : le choix d'un groupe qui n'a
+/// pas le clavier, ou d'un niveau parent, est `inactif` — gris, sans bord, tout en `encre`.
 enum EtatVisuel: Equatable {
-    case repos, survol, presse, choisi, courant, desactive
+    case repos, survol, presse, choisi, courant, inactif, desactive
+
+    /// Le choix d'un groupe selon qu'il a le clavier : `voix` (teinté ou plein), sinon `inactif`.
+    static func choix(_ voix: EtatVisuel = .choisi, auClavier: Bool) -> EtatVisuel { auClavier ? voix : .inactif }
 
     /// Du survol d'une zone et de la pression d'un bouton à l'état d'un contrôle au repos.
     init(survole: Bool, presse: Bool = false) {
@@ -22,6 +27,7 @@ enum EtatVisuel: Equatable {
         case .presse: Color.jeton(\.pression)
         case .choisi: Color.jeton(\.primaireFond)
         case .courant: Color.jeton(\.primaire)
+        case .inactif: Color.jeton(\.selectionInactive)
         case .desactive: Color.jeton(\.creux)
         }
     }
@@ -34,14 +40,14 @@ enum EtatVisuel: Equatable {
         case .courant: Color.jeton(\.encreSurPrimaire)
         case .choisi: Color.jeton(\.primaireEncre)
         case .desactive: Color.jeton(\.encreTertiaire)
-        case .repos, .survol, .presse: Color.jeton(\.encre)
+        case .repos, .survol, .presse, .inactif: Color.jeton(\.encre)
         }
     }
 
     /// L'encre d'un contenu secondaire (libellé de second rang) dans le même état.
     @MainActor var encreSecondaire: Color {
         switch self {
-        case .courant, .choisi, .desactive: encre
+        case .courant, .choisi, .inactif, .desactive: encre
         case .repos, .survol, .presse: Color.jeton(\.encreSecondaire)
         }
     }
@@ -177,10 +183,11 @@ struct StyleEtat: ButtonStyle {
         let configuration: Configuration
         let style: StyleEtat
         @Environment(\.isEnabled) private var actif
+        @Environment(\.groupeAuClavier) private var auClavier
         @State private var survole = false
 
         var body: some View {
-            let etat: EtatVisuel = !actif ? .desactive : style.courant ? .courant : style.choisi ? .choisi
+            let etat: EtatVisuel = !actif ? .desactive : style.courant ? .courant : style.choisi ? .choix(auClavier: auClavier)
                 : configuration.isPressed ? .presse : survole ? .survol : .repos
             configuration.label
                 .foregroundStyle(etat.encre)
@@ -254,10 +261,11 @@ private struct CranDeSegment: ButtonStyle {
     private struct Contenu: View {
         let configuration: Configuration
         let choisi: Bool
+        @Environment(\.groupeAuClavier) private var auClavier
         @State private var survole = false
 
         var body: some View {
-            let etat: EtatVisuel = choisi ? .choisi : configuration.isPressed ? .presse : survole ? .survol : .repos
+            let etat: EtatVisuel = choisi ? .choix(auClavier: auClavier) : configuration.isPressed ? .presse : survole ? .survol : .repos
             configuration.label
                 .font(Jetons.Typo.corps.police)
                 .foregroundStyle(etat.encre)

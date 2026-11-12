@@ -1,5 +1,5 @@
 // Engendré par Synseria-Design — ne pas retoucher : changer jetons.json ou apps/Synfus.json, puis sh propager.sh.
-// jetons.json 8e252f614957292a · contenu b56031ec79795f71
+// jetons.json 11c41e1e32c58ed2 · contenu d86c302ac9655017
 import SwiftUI
 
 /// Les valeurs de design Synseria telles que Synfus les reçoit : toute couleur, taille ou durée
@@ -72,6 +72,7 @@ enum Jetons {
         let encreTertiaire: RVB
         let survol: RVB
         let pression: RVB
+        let selectionInactive: RVB
         let primaire: RVB
         let primaireEncre: RVB
         let primaireFond: RVB
@@ -121,6 +122,7 @@ enum Jetons {
             encreTertiaire: n[7],
             survol: n[5].voile(sombre ? 0.08 : 0.06),
             pression: n[5].voile(sombre ? 0.14 : 0.12),
+            selectionInactive: n[5].voile(sombre ? 0.14 : 0.1),
             primaire: plein,
             primaireEncre: RVB(ligne[sombre ? 3 : 1]),
             primaireFond: plein.voile(sombre ? 0.22 : 0.12),
@@ -159,16 +161,17 @@ enum Jetons {
     }
 
     enum Taille {
-        static let controle: CGFloat = 28
-        static let boutonIcone: CGFloat = 28
+        static let controle: CGFloat = 32
+        static let boutonIcone: CGFloat = 32
         static let cibleMin: CGFloat = 24
         static let `case`: CGFloat = 14
         static let interrupteurLargeur: CGFloat = 32
         static let interrupteurHauteur: CGFloat = 18
-        static let rangee: CGFloat = 28
-        static let rangeePalette: CGFloat = 36
-        static let touche: CGFloat = 18
-        static let iconeBarre: CGFloat = 17
+        static let rangee: CGFloat = 32
+        static let rangeeNavigation: CGFloat = 36
+        static let rangeePalette: CGFloat = 40
+        static let touche: CGFloat = 20
+        static let iconeBarre: CGFloat = 19
     }
 
     enum Trait {
@@ -193,15 +196,15 @@ enum Jetons {
         }
     }
 
-    struct Ombre: Sendable {
+    struct Ombre: Sendable, Hashable {
         let y, flou: CGFloat
         let couleur: RVB
         static let flottant = Ombre(y: 4, flou: 12, couleur: RVB(0x0e1322, opacite: 0.18))
         static let aide = Ombre(y: 1, flou: 4, couleur: RVB(0x0e1322, opacite: 0.28))
     }
 
-    struct Typo: Sendable {
-        enum Famille: Sendable { case texte, titre, code }
+    struct Typo: Sendable, Hashable {
+        enum Famille: Sendable, Hashable { case texte, titre, code }
         let taille, interligne: CGFloat
         let graisse: Font.Weight
         let famille: Famille
@@ -229,17 +232,18 @@ enum Jetons {
         }()
 
         static let titrePage = Typo(taille: 24, interligne: 30, graisse: .semibold, famille: .titre, chiffresFixes: false)
-        static let titre = Typo(taille: 15, interligne: 20, graisse: .semibold, famille: .titre, chiffresFixes: false)
-        static let corps = Typo(taille: 13, interligne: 18, graisse: .regular, famille: .texte, chiffresFixes: false)
-        static let corpsFort = Typo(taille: 13, interligne: 18, graisse: .semibold, famille: .texte, chiffresFixes: false)
-        static let note = Typo(taille: 12, interligne: 16, graisse: .regular, famille: .texte, chiffresFixes: false)
-        static let petit = Typo(taille: 11, interligne: 14, graisse: .regular, famille: .texte, chiffresFixes: false)
-        static let micro = Typo(taille: 10, interligne: 12, graisse: .medium, famille: .texte, chiffresFixes: false)
-        static let chiffre = Typo(taille: 12, interligne: 16, graisse: .regular, famille: .texte, chiffresFixes: true)
+        static let titre = Typo(taille: 16, interligne: 22, graisse: .semibold, famille: .titre, chiffresFixes: false)
+        static let corps = Typo(taille: 14, interligne: 20, graisse: .regular, famille: .texte, chiffresFixes: false)
+        static let corpsFort = Typo(taille: 14, interligne: 20, graisse: .semibold, famille: .texte, chiffresFixes: false)
+        static let note = Typo(taille: 13, interligne: 18, graisse: .regular, famille: .texte, chiffresFixes: false)
+        static let petit = Typo(taille: 12, interligne: 16, graisse: .regular, famille: .texte, chiffresFixes: false)
+        static let micro = Typo(taille: 11, interligne: 14, graisse: .medium, famille: .texte, chiffresFixes: false)
+        static let chiffre = Typo(taille: 13, interligne: 18, graisse: .regular, famille: .texte, chiffresFixes: true)
         static let grandChiffre = Typo(taille: 24, interligne: 28, graisse: .medium, famille: .titre, chiffresFixes: true)
-        static let code = Typo(taille: 13, interligne: 19, graisse: .regular, famille: .code, chiffresFixes: false)
-        static let codeInterface = Typo(taille: 12, interligne: 16, graisse: .regular, famille: .code, chiffresFixes: false)
-        static let raccourci = Typo(taille: 11, interligne: 14, graisse: .medium, famille: .texte, chiffresFixes: false)
+        static let code = Typo(taille: 14, interligne: 20, graisse: .regular, famille: .code, chiffresFixes: false)
+        static let codeInterface = Typo(taille: 13, interligne: 18, graisse: .regular, famille: .code, chiffresFixes: false)
+        static let raccourci = Typo(taille: 12, interligne: 16, graisse: .medium, famille: .texte, chiffresFixes: false)
+        static let navigation = Typo(taille: 15, interligne: 20, graisse: .medium, famille: .texte, chiffresFixes: false)
     }
 
     /// Rangées 0…359 : teintes des fonds ; 360 : « Neutre ». Huit neutres clairs puis huit sombres,

@@ -154,8 +154,9 @@ extension View {
 /// de la case, l'image en déborde et la forme la rogne.
 struct FondCarte: View {
     let carte: Int?
-    /// Le fond d'une case choisie ; elle prend alors le contour teinté.
-    var teinte: Color?
+    /// Choisie, la case prend le contour `primaire` ; son fond ne se teinte que sans image, qu'un
+    /// voile de couleur salirait.
+    var choisie = false
     @ObservedObject private var prefs = Preferences.shared
     private let forme = RoundedRectangle(cornerRadius: Jetons.Rayon.carte, style: .continuous)
     /// Plus large qu'une case de la grille (palette : 4 au rang sur 660 pt ;
@@ -174,17 +175,16 @@ struct FondCarte: View {
                     LinearGradient(colors: [.clear, Color.jeton(\.surface).opacity(Self.voileTexte)],
                                    startPoint: .top, endPoint: .bottom)
                 }
-                .overlay { teinte ?? .clear }
                 .clipShape(forme)
                 .overlay(contour)
         } else {
-            forme.fill(teinte ?? Color.jeton(\.surface)).overlay(contour)
+            forme.fill(choisie ? Color.jeton(\.primaireFond) : Color.jeton(\.surface)).overlay(contour)
         }
     }
 
     private var contour: some View {
-        forme.strokeBorder(teinte == nil ? Color.jeton(\.filet) : Color.jeton(\.primaire),
-                           lineWidth: teinte == nil ? Jetons.Trait.filet : Jetons.Trait.etat)
+        forme.strokeBorder(choisie ? Color.jeton(\.primaire) : Color.jeton(\.filet),
+                           lineWidth: choisie ? Jetons.Trait.etat : Jetons.Trait.filet)
     }
 }
 

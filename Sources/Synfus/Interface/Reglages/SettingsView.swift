@@ -82,7 +82,6 @@ final class OngletReglages: ObservableObject {
 
 struct SettingsView: View {
     @ObservedObject private var onglet: OngletReglages
-    @State private var survol: SettingsSection?
     private let hauteur: CGFloat
 
     /// `hauteur` : celle de la fenêtre ; les captures d'une page longue la rendent entière.
@@ -121,7 +120,7 @@ struct SettingsView: View {
                         .padding(.top, Jetons.Espace.deux)
                         .padding(.bottom, Jetons.Espace.un)
                     ForEach(SettingsSection.allCases.filter { $0.groupe == groupe }) { item in
-                        sidebarRow(item)
+                        RangeeLaterale(item: item, courante: section == item) { onglet.section = item }
                     }
                 }
             }
@@ -129,31 +128,10 @@ struct SettingsView: View {
             .groupeSelection(L("reglages.titre"), selection: Binding(get: { onglet.section }, set: { onglet.section = $0 }),
                              parmi: GroupeReglages.allCases.flatMap { groupe in
                                  SettingsSection.allCases.filter { $0.groupe == groupe }
-                             }, disposition: .verticale)
+                             }, disposition: .verticale, parent: true)
         }
         .frame(width: 196)
         .background(Color.jeton(\.creux))
-    }
-
-    private func sidebarRow(_ item: SettingsSection) -> some View {
-        Button {
-            onglet.section = item
-        } label: {
-            HStack(spacing: Jetons.Espace.deux) {
-                // Colonne assez large pour le plus large des symboles (`person.3`) : les libellés partent du même x.
-                Image(systemName: item.icon).frame(width: Jetons.Taille.cibleMin)
-                Text(item.label)
-            }
-                .font((section == item ? Jetons.Typo.corpsFort : Jetons.Typo.corps).police)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, Jetons.Espace.deux)
-                .padding(.vertical, Jetons.Espace.un)
-                .foregroundStyle((section == item ? EtatVisuel.courant : .repos).encre)
-                .fondEtat(section == item ? .courant : (survol == item ? .survol : .repos))
-        }
-        .buttonStyle(.plain)
-        .elementDeGroupe()
-        .onHover { survol = $0 ? item : nil }
     }
 
     @ViewBuilder
@@ -170,5 +148,34 @@ struct SettingsView: View {
         case .aides: AidesSettings()
         case .lecture: LectureSettings()
         }
+    }
+}
+
+/// Une entrée de la barre latérale : icône et nom, en `navigation` sur une rangée `rangeeNavigation`.
+/// La page courante est pleine tant que la barre a la voix, grise dès qu'un groupe de la page a le clavier.
+private struct RangeeLaterale: View {
+    let item: SettingsSection
+    let courante: Bool
+    let action: () -> Void
+    @Environment(\.groupeAuClavier) private var auClavier
+    @State private var survole = false
+
+    var body: some View {
+        let etat: EtatVisuel = courante ? .choix(.courant, auClavier: auClavier) : EtatVisuel(survole: survole)
+        Button(action: action) {
+            HStack(spacing: Jetons.Espace.deux) {
+                // Colonne assez large pour le plus large des symboles (`person.3`) : les libellés partent du même x.
+                Image(systemName: item.icon).frame(width: Jetons.Taille.cibleMin)
+                Text(item.label)
+            }
+            .font(Jetons.Typo.navigation.police)
+            .frame(maxWidth: .infinity, minHeight: Jetons.Taille.rangeeNavigation, alignment: .leading)
+            .padding(.horizontal, Jetons.Espace.deux)
+            .foregroundStyle(etat.encre)
+            .fondEtat(etat)
+        }
+        .buttonStyle(.plain)
+        .elementDeGroupe()
+        .onHover { survole = $0 }
     }
 }
