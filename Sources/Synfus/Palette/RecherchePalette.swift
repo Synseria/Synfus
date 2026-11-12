@@ -149,6 +149,8 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
     var ici = false
     /// Sa carte n'est pas en extérieur : le trajet mène devant le bâtiment.
     var interieur = false
+    /// Le symbole propre à l'entrée (une commande, une variable) ; `nil` : celui de son genre.
+    var symbole: String?
     let effet: Effet
 }
 
@@ -339,7 +341,8 @@ enum RecherchePalette {
                 let effet: EntreePalette.Effet = commande.argument == nil
                     ? .copier(commande.texte) : .completer(commande.texte + " ")
                 return EntreePalette(id: "cmd:" + commande.texte, genre: .commande, titre: commande.texte,
-                                     sousTitre: commande.description, detail: commande.argument, effet: effet)
+                                     sousTitre: commande.description, detail: commande.argument,
+                                     symbole: commande.symbole, effet: effet)
             }
     }
 
@@ -348,7 +351,7 @@ enum RecherchePalette {
         return VariableJeu.allCases
             .filter { tape.isEmpty || $0.rawValue.hasPrefix(tape) }
             .map { EntreePalette(id: "var:" + $0.rawValue, genre: .variable, titre: $0.texte,
-                                 sousTitre: $0.description, effet: .copier($0.texte)) }
+                                 sousTitre: $0.description, symbole: $0.symbole, effet: .copier($0.texte)) }
     }
 
     /// Les gestes et les dernières copies : ce que `tout` ajoute aux zaaps,
@@ -390,7 +393,7 @@ enum RecherchePalette {
             // Un boss de donjon a sa fiche (`boss`), où trouver compris : le donjon.
             guard let numero = Int(id), contexte.donjons?.donjon(boss: numero) == nil,
                   let nom = Lieu.traduit(noms, contexte.langue) else { return nil }
-            return EntreePalette(id: "monstre:\(id)", genre: .monstre, titre: nom, sousTitre: L("palette.monstre"),
+            return EntreePalette(id: "monstre:\(id)", genre: .monstre, titre: nom,
                                  effet: .ouTrouver(.monstre(numero)))
         }
         .alphabetiques()
@@ -401,7 +404,7 @@ enum RecherchePalette {
         return quetes.objets.compactMap { id, noms in
             guard let numero = Int(id), let nom = Lieu.traduit(noms, contexte.langue) else { return nil }
             let famille = quetes.famillesObjets[id].flatMap { quetes.familles[String($0)] }.flatMap { Lieu.traduit($0, contexte.langue) }
-            return EntreePalette(id: "objet:\(id)", genre: .objet, titre: nom, sousTitre: famille ?? L("palette.objet"),
+            return EntreePalette(id: "objet:\(id)", genre: .objet, titre: nom, sousTitre: famille,
                                  effet: .ouTrouver(.objet(numero)))
         }
         .alphabetiques()
@@ -449,7 +452,7 @@ enum RecherchePalette {
     static func recents(_ contexte: ContextePalette) -> [EntreePalette] {
         contexte.recents.enumerated().map {
             EntreePalette(id: "recent:\($0.offset)", genre: .recent, titre: $0.element,
-                          sousTitre: L("palette.recent"), effet: .copier($0.element))
+                          effet: .copier($0.element))
         }
     }
 

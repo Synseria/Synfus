@@ -340,7 +340,8 @@ struct BarView: View {
                         .font((active ? Jetons.Typo.corpsFort : Jetons.Typo.corps).police)
                         .lineLimit(1)
                         .fixedSize()
-                    if prefs.showClasses, let className = client.characterClass {
+                    // Nom et classe : une pastille dit toujours les deux ; `showClasses` ne règle que l'emblème.
+                    if let className = client.characterClass {
                         Text(className)
                             .font(Jetons.Typo.petit.police)
                             .foregroundStyle(active ? Color.jeton(\.encreSurPrimaire) : Color.jeton(\.encreSecondaire))
@@ -348,10 +349,9 @@ struct BarView: View {
                     }
                 }
 
+                // Le numéro est la touche qui mène à ce perso : dessiné comme elle, avec le raccourci réel.
                 if prefs.showNumbers {
-                    Text("\(index + 1)")
-                        .font(Jetons.Typo.micro.police)
-                        .foregroundStyle(active ? Color.jeton(\.encreSurPrimaire) : Color.jeton(\.encreSecondaire))
+                    ToucheRaccourci(Self.toucheDuPerso(index: index, raccourcis: prefs.hotKeys))
                 }
 
                 // Rien de plus : l'enchaînement au clic suit l'ordre de la barre,
@@ -566,6 +566,12 @@ struct BarView: View {
                 dragging = nil
                 dropTarget = nil
             }
+    }
+
+    /// Le raccourci du perso à ce rang tel que le clavier le porte, à défaut son numéro.
+    nonisolated static func toucheDuPerso(index: Int, raccourcis: [HotKey?]) -> String {
+        if index < raccourcis.count, let raccourci = raccourcis[index] { return raccourci.displayString }
+        return "\(index + 1)"
     }
 
     private func tooltip(index: Int, client: DofusClient) -> String {

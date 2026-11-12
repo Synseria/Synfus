@@ -42,11 +42,29 @@ private struct ChoixDeCouleur: View {
                         }
                 }
                 .buttonStyle(.etat(choisi: estAutre, rayon: Jetons.Rayon.capsule))
+                .elementDeGroupe()
                 .accessibilityAddTraits(estAutre ? .isSelected : [])
             }
+            .groupeSelection(L("theme.couleur"), selection: Binding(get: { choix }, set: choisir),
+                             parmi: Jetons.Prereglage.allCases.map(Choix.prereglage) + [.autre])
         }
         if case .teinte(let teinte) = courante {
             CurseurDeTeinte(teinte: teinte, accepte: Jetons.teinteAcceptee) { prefs.couleurDeLApp = .teinte($0) }
+        }
+    }
+
+    private enum Choix: Hashable {
+        case prereglage(Jetons.Prereglage), autre
+    }
+
+    private var choix: Choix {
+        if case .prereglage(let p) = courante { .prereglage(p) } else { .autre }
+    }
+
+    private func choisir(_ nouveau: Choix) {
+        switch nouveau {
+        case .prereglage(let p): prefs.couleurDeLApp = .prereglage(p)
+        case .autre: choisirAutre()
         }
     }
 
@@ -62,6 +80,7 @@ private struct ChoixDeCouleur: View {
                 .overlay { if choisie { Circle().strokeBorder(Color.jeton(\.encre), lineWidth: Jetons.Trait.focus) } }
         }
         .buttonStyle(.plain)
+        .elementDeGroupe()
         .aide(nom)
         .accessibilityAddTraits(choisie ? .isSelected : [])
     }
