@@ -1,5 +1,5 @@
 // Engendré par Synseria-Design — ne pas retoucher : changer jetons.json ou apps/Synfus.json, puis sh propager.sh.
-// jetons.json 8e252f614957292a · contenu b56031ec79795f71
+// jetons.json 8e252f614957292a · contenu 6ef8a7a1eea8d269
 import SwiftUI
 
 /// Les valeurs de design Synseria telles que Synfus les reçoit : toute couleur, taille ou durée
@@ -193,15 +193,15 @@ enum Jetons {
         }
     }
 
-    struct Ombre: Sendable {
+    struct Ombre: Sendable, Hashable {
         let y, flou: CGFloat
         let couleur: RVB
         static let flottant = Ombre(y: 4, flou: 12, couleur: RVB(0x0e1322, opacite: 0.18))
         static let aide = Ombre(y: 1, flou: 4, couleur: RVB(0x0e1322, opacite: 0.28))
     }
 
-    struct Typo: Sendable {
-        enum Famille: Sendable { case texte, titre, code }
+    struct Typo: Sendable, Hashable {
+        enum Famille: Sendable, Hashable { case texte, titre, code }
         let taille, interligne: CGFloat
         let graisse: Font.Weight
         let famille: Famille
