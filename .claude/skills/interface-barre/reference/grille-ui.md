@@ -13,11 +13,17 @@ La grille est le skill global `grille-ui`. Ici, seulement ce qui lui manque ou l
 
 ## Jetons
 
-- Couleurs : `Couleurs` — `accent` (trait, voile), `accentPlein` (aplat sous du blanc), `accentTexte`
-  (texte), ambre, suggestion, alerte, succes ; une couleur de classe vient de `DofusClass`.
-- Polices : `.font(.synfus(taille, gras:, design:))`, `TailleTexte` pour seule échelle ; `marque`
-  pour les initiales, numéros et petits symboles, jamais pour un texte. Racine de fenêtre :
-  `.racineSynfus()`. `JetonsTests` tient le tout.
+- Couleurs : `Jetons` (engendré par Synseria-Design, jamais retouché) est la seule source. Le thème
+  courant (réglage × clair/sombre, `ThemeCourant`) se lit par chemin — `Color.jeton(\.surface)` —, dynamique clair/sombre et lu dans un `body` : le changement
+  (Réglages ▸ Thème : couleur de l'app, teinte des fonds, `nil` = Auto) se voit en direct. Aucune liste de jetons
+  recopiée. `primaire` (trait, aplat) + `encreSurPrimaire`
+  (texte posé dessus), `primaireEncre` (couleur écrite), `safran`/`safranTexte`/`safranFond` (« regarde
+  ici », jamais un état), `suggestionSynfus`, `alerte`, `succes`, `danger`, `dangerPlein` + `encreSurDanger` (bouton destructif), neutres ; une couleur de
+  classe vient de `DofusClass`.
+- Polices : `.font(Jetons.Typo.corps.police)`, un rôle de `Jetons.Typo` (titrePage, titre, corps, corpsFort, note,
+  petit, micro, chiffre, grandChiffre, code, codeInterface, raccourci), aucun texte sous `micro` ; ni graisse
+  ni dessin à la carte : appuyer un texte, c'est changer de rôle. Racine de
+  fenêtre : `.racineSynfus()` (teinte = primaire). `JetonsTests` (aucune couleur ni police construite hors de Jetons, aucun ancien point de passage) et `CouleursTests` tiennent le tout.
 - Lignes de réglage : `Ligne`, `Interrupteur`, `RaccourciReglable`. Sous un libellé, `etat:` ne prend
   qu'une valeur, un état, le résultat d'une action ou une mention légale ; une explication va dans
   `aide:` (ⓘ). `Interrupteur` n'a pas d'`etat:`. Un titre de page n'a pas de phrase : `EnTetePage`
@@ -25,6 +31,35 @@ La grille est le skill global `grille-ui`. Ici, seulement ce qui lui manque ou l
 - En-têtes de panneau : `EnTetePanneau` ; tailles de la fiche : `MetriquesQuete`.
 - Un libellé passe par `L()` et se vérifie dans les trois langues : l'espagnol et le français sont
   les plus longs, un nom du jeu peut l'être davantage.
+
+## Dessin commun — `Interface/Composants.swift`
+
+- États : `EtatVisuel` (repos, survol, presse, choisi, courant, désactivé) ; `fondEtat` pour un fond, `StyleEtat`
+  pour une tuile ou une puce cliquable. **Plein** (`courant`) = où je suis, un par zone (perso devant, filtre
+  de la palette, onglet des réglages, équipe active) ; **teinté** (`choisi`) = ce que j'ai choisi (mode
+  allumé, rangée choisie de la palette, direction de la chasse).
+- Boutons : `StyleBouton` (`.bouton(.principal | .secondaire | .tertiaire | .destructif, dense:)`) — le
+  destructif est plein `dangerPlein` ; `dense` (`cibleMin`) pour les panneaux posés sur le jeu. Jamais de « … »
+  sur un bouton (`LocalisationTests`). Réglages : secondaire posé par `PageReglages`/`PageListe`.
+- Tout geste qui détruit passe par `Confirmation.demander(DemandeConfirmation(titre:detail:verbe:))` : feuille
+  « Verbe + objet ? », « Annuler » à gauche, le verbe en destructif à droite, Entrée ne détruit jamais.
+- Une touche de clavier : `ToucheRaccourci`, nulle part ailleurs (palette, enregistreur de raccourci).
+- Fenêtre : `carte()` (surface + filet, sans ombre), fonds `Color.jeton(\.fenetre)` (le formulaire natif laisse voir
+  la teinte choisie). Ce qui flotte : `surfaceFlottante()` ; l'ombre `flottant` est celle de la fenêtre
+  (`hasShadow`), une ombre SwiftUI serait coupée au cadre du panneau.
+- `Tests/ComposantsTests` refuse rayon, marge, espace, police, courbe ou encre du système chiffrés dans une vue.
+
+## Écarts gardés
+
+- Couleurs venues du jeu, hors thème : les classes (`DofusClass`), le rose de « Fin de tour »
+  (`CombatBadge.rose`), `Color.texteSurClasse` (le blanc du sigle sur une couleur de classe).
+- `controleDense` (22) et `rangeeDense` (24) ne sont plus des jetons de Synfus : les panneaux posés sur le jeu
+  prennent `Taille.cibleMin` (24) en attendant qu'ils reviennent.
+- `MetriquesQuete.compact` : écarts de 1 et 2 pt, sous la grille, pour laisser voir le jeu.
+- `FondCarte` : seul dégradé et seul voile d'opacité (`voileImage`, `voileTexte`) ; le texte d'une case
+  passe sur une image du jeu. Voile de zone de `CalibrationZonesView`, opacité de glisser des pastilles.
+- Battement de l'alerte et de la bascule (`Battement`) : l'opacité qui pulse est le signal.
+- Largeurs de colonnes, de champs et de fenêtres (réglages, panneaux) : mises en page, pas des tailles de décor.
 
 ## Relevés dans le code
 

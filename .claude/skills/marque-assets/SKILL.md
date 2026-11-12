@@ -77,3 +77,14 @@ user-invocable: false
   de l'œuf passent par un effacement de l'alpha (`.clear` / `.destinationOut`), jamais par un
   trait. Il a son propre dessin à plat (rubans vus de face, feuilles trapues) : le volume ne
   se lit plus à 18 pt.
+
+## Le signe Synseria — `Marque/SigneSynseria.swift`
+
+- Signe de la maison, distinct de l'Œuf : `EmblemeSynseria.cercles` (pur, repère 64 × 64) reprend la
+  géométrie de `Synseria-Design/marque/synseria-embleme-synfus.svg` ; le plus grand disque de la
+  planète est la `primaire` courante, le reste `Color.jeton(\.nuit)` et blanc. Aucun fichier figé.
+- `SigneSynseria(hauteur:)` = emblème + mot « syn » (`encre`) « seria » (`encreSecondaire`), Outfit 600
+  si installée, sinon SF Pro Rounded 600. Il vit dans « À propos de Synfus » (`MiseAJour/APropos`) et
+  la proposition de mise à jour ; jamais dans le rond, jamais sur la barre de menus (qui garde l'Œuf).
+- Pas un visuel du jeu : autorisé dans le bundle. Toute géométrie du signe se change dans
+  `EmblemeSynseria.cercles`, testée par `SigneSynseriaTests`.

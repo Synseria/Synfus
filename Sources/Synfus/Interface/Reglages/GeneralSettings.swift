@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Onglet Général : ce qui conditionne tout le reste — les deux autorisations
-/// système —, puis le système (icônes, démarrage, langue, version).
+/// système —, puis le système (démarrage, langue, version).
 struct GeneralSettings: View {
     @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var manager = WindowManager.shared
@@ -39,64 +39,25 @@ struct GeneralSettings: View {
             }
 
             Section {
-                Ligne(titre: L("general.iconeApp"), aide: L("general.iconeApp.aide")) {
-                    ChoixIconeApp(choix: Binding(
-                        get: { prefs.iconeApp },
-                        set: { prefs.iconeApp = $0; IconeAppliquee.appliquer($0) }
-                    ))
-                }
-                Ligne(titre: L("general.icone")) {
-                    Picker(L("general.icone"), selection: Binding(
-                        get: { prefs.menuBarIcon },
-                        set: { prefs.menuBarIcon = $0; MenuBarController.shared.refreshIcon() }
-                    )) {
-                        ForEach(MenuBarIcon.allCases) { Text($0.label).tag($0) }
-                    }
-                    .labelsHidden()
-                    .fixedSize()
-                }
                 Interrupteur(titre: L("general.demarrerAvecSession"), isOn: $launchAtLogin)
                     .onChange(of: launchAtLogin) { _, value in LaunchAtLogin.set(value) }
                 languageRow
-                Ligne(titre: L("general.version"), etat: etatMiseAJour) {
-                    HStack(spacing: 8) {
-                        Text(AppIntegrity.displayName).foregroundStyle(.secondary).textSelection(.enabled)
-                        actionMiseAJour
+                Ligne(titre: L("general.version"), etat: miseAJour.etat.libelle) {
+                    HStack(spacing: Jetons.Espace.deux) {
+                        Text(AppIntegrity.displayName).foregroundStyle(Color.jeton(\.encreSecondaire)).textSelection(.enabled)
+                        ActionMiseAJour()
                     }
                 }
                 Interrupteur(titre: L("maj.verifier"), aide: L("maj.verifier.aide"), isOn: $prefs.verifierMisesAJour)
             } header: {
                 SectionTitle(L("general.systeme"))
             }
-        }
-    }
 
-    private var etatMiseAJour: String? {
-        switch miseAJour.etat {
-        case .inconnu: nil
-        case .verification: L("maj.verification")
-        case .aJour: L("maj.aJour")
-        case .disponible(let version): L("maj.disponible", version.numero)
-        case .installation: L("maj.installation")
-        case .echec(.reseau, _): L("maj.echec.reseau")
-        case .echec(.empreinte, _): L("maj.echec.empreinte")
-        case .echec(.image, _), .echec(.app, _): L("maj.echec.image")
-        case .echec(.ecriture, _): L("maj.echec.ecriture")
-        }
-    }
-
-    @ViewBuilder private var actionMiseAJour: some View {
-        switch miseAJour.etat {
-        case .verification, .installation:
-            ProgressView().controlSize(.small)
-        case .disponible:
-            Button(L("maj.installer")) { miseAJour.proposer() }
-        case .echec(.ecriture, let version):
-            Button(L("maj.telecharger")) { NSWorkspace.shared.open(version.page) }
-        case .echec:
-            Button(L("maj.reessayer")) { miseAJour.proposer() }
-        case .inconnu, .aJour:
-            if prefs.verifierMisesAJour { Button(L("maj.rechercher")) { miseAJour.verifier() } }
+            Section {
+                IconesReglables()
+            } header: {
+                SectionTitle(L("general.icones"))
+            }
         }
     }
 
@@ -105,7 +66,7 @@ struct GeneralSettings: View {
     /// prochain lancement parlerait une autre langue que celui-ci.
     private var languageRow: some View {
         Ligne(titre: L("general.langue"), aide: L("general.langue.aide")) {
-            HStack(spacing: 8) {
+            HStack(spacing: Jetons.Espace.deux) {
                 if LangueReglage.auProchainLancement != L10n.courante.langue {
                     Button(L("general.langue.relancer")) { LangueReglage.relancer() }
                 }
@@ -125,69 +86,15 @@ struct GeneralSettings: View {
     /// deviner pourquoi : l'app se lance normalement, rien n'indique qu'elle est
     /// en quarantaine.
     private var quarantineWarning: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                Image(systemName: "exclamationmark.triangle").foregroundStyle(Couleurs.alerte)
+        VStack(alignment: .leading, spacing: Jetons.Espace.un) {
+            HStack(spacing: Jetons.Espace.un) {
+                Image(systemName: "exclamationmark.triangle").foregroundStyle(Color.jeton(\.alerte))
                 Text(L("general.quarantaine"))
-                    .font(.synfus(.petit, gras: true))
+                    .font(Jetons.Typo.raccourci.police)
                 HelpTip(L("general.quarantaine.aide"))
             }
             CopiableCommand(command: AppIntegrity.quarantineFix)
             CopiableCommand(command: AppIntegrity.resetCommand)
-        }
-    }
-}
-
-/// Les huit icônes de l'app, un motif par ligne, un fond par colonne : chacune
-/// est son propre aperçu, la choisie cerclée de l'accent.
-private struct ChoixIconeApp: View {
-    @Binding var choix: IconeApp
-    private let cote: CGFloat = 40
-
-    var body: some View {
-        Grid(horizontalSpacing: 4, verticalSpacing: 4) {
-            ForEach(IconeApp.Motif.allCases, id: \.self) { motif in
-                GridRow {
-                    ForEach(IconeApp.Fond.allCases, id: \.self) { fond in
-                        vignette(IconeApp(motif: motif, fond: fond))
-                    }
-                }
-            }
-        }
-    }
-
-    private func vignette(_ icone: IconeApp) -> some View {
-        Button { choix = icone } label: {
-            Image(nsImage: IconeAppliquee.vignette(icone, cote: cote))
-                .padding(4)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 11)
-                        .strokeBorder(icone == choix ? Couleurs.accent : .clear, lineWidth: 2)
-                }
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .aide(L("general.iconeApp.vignette", icone.motif.nom, icone.fond.nom))
-        .accessibilityAddTraits(icone == choix ? .isSelected : [])
-    }
-}
-
-private extension IconeApp.Motif {
-    var nom: String {
-        switch self {
-        case .oeuf: L("general.iconeApp.oeuf")
-        case .couvee: L("general.iconeApp.couvee")
-        }
-    }
-}
-
-private extension IconeApp.Fond {
-    var nom: String {
-        switch self {
-        case .nuit: L("general.iconeApp.nuit")
-        case .foret: L("general.iconeApp.foret")
-        case .aube: L("general.iconeApp.aube")
-        case .transparent: L("general.iconeApp.transparent")
         }
     }
 }

@@ -16,11 +16,12 @@ struct LieuxSettings: View {
         let langue = L10n.courante.langue
         let lieux = montres(langue)
         let affiches = Array(lieux.prefix(Self.limite).enumerated())
-        PageListe(titre: L("reglages.lieux"), aide: L("lieux.aide")) {
+        PageListe(titre: L("reglages.lieux")) {
             SourceCarte().cadreDeListe(premiere: true, derniere: false)
             InterrupteurVuesCartes().cadreDeListe(premiere: false, derniere: true)
             EnTeteListe(titre: L("lieux.compte", lieux.count), aide: L("palette.reglages.lieux.aide"))
-            HStack(spacing: 10) {
+                .help(L("lieux.aide"))
+            HStack(spacing: Jetons.Espace.deux) {
                 ChampFiltre(invite: L("lieux.filtrer"), texte: $filtre)
                 Picker(L("lieux.categorie"), selection: $categorie) {
                     Text(L("palette.reglages.tous")).tag(Int?.none)
@@ -35,11 +36,11 @@ struct LieuxSettings: View {
             ForEach(affiches, id: \.element.cle) { rang, lieu in
                 Ligne(titre: lieu.nom(en: langue), etat: Self.lieuDit(lieu, langue)) {
                     PictogrammeLieu(gfx: lieu.gfx) {
-                        Image(systemName: "mappin.and.ellipse").foregroundStyle(.secondary)
+                        Image(systemName: "mappin.and.ellipse").foregroundStyle(Color.jeton(\.encreSecondaire))
                     }
-                    .frame(width: 22, height: 22)
+                    .frame(width: Jetons.Taille.cibleMin, height: Jetons.Taille.cibleMin)
                 } controle: {
-                    HStack(spacing: 10) {
+                    HStack(spacing: Jetons.Espace.deux) {
                         BoutonEtiquette(cle: lieu.cle)
                         BoutonFavori(cle: lieu.cle)
                         BoutonTrajet(x: lieu.x, y: lieu.y, sousZone: lieu.idSousZone)
@@ -49,7 +50,7 @@ struct LieuxSettings: View {
                 .cadreDeListe(premiere: false, derniere: rang == affiches.count - 1 && lieux.count <= Self.limite)
             }
             if lieux.count > Self.limite {
-                Text(L("lieux.affiner", lieux.count)).foregroundStyle(.secondary)
+                Text(L("lieux.affiner", lieux.count)).foregroundStyle(Color.jeton(\.encreSecondaire))
                     .cadreDeListe(premiere: false, derniere: true)
             }
         }

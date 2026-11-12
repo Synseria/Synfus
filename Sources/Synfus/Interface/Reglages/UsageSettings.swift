@@ -51,12 +51,7 @@ struct UsageSettings: View {
         let totaux = usage.historique.totaux(sur: periode.jours, aujourdhui: aujourdhui)
         Section {
             Ligne(titre: L("stats.periode"), etat: depuis) {
-                Picker(L("stats.periode"), selection: $periode) {
-                    ForEach(Periode.allCases, id: \.self) { Text($0.libelle).tag($0) }
-                }
-                .labelsHidden()
-                .pickerStyle(.segmented)
-                .fixedSize()
+                Segments(L("stats.periode"), selection: $periode, choix: Periode.allCases.map { ($0, $0.libelle) })
             }
             if let moyennes = usage.historique.moyennesPersos(sur: periode.jours, aujourdhui: aujourdhui) {
                 valeur(L("stats.persosConnectes"), moyennes.connectes.formatted(.number.precision(.fractionLength(1))))
@@ -79,7 +74,7 @@ struct UsageSettings: View {
 
     private func valeur(_ titre: String, _ texte: String) -> some View {
         Ligne(titre: titre) {
-            Text(texte).monospacedDigit().foregroundStyle(.secondary)
+            Text(texte).monospacedDigit().foregroundStyle(Color.jeton(\.encreSecondaire))
         }
     }
 
@@ -111,33 +106,31 @@ struct DonneesEnvoyeesVue: View {
 
     var body: some View {
         let texte = dernier ? usage.historique.dernierRapport : usage.apercuProchainEnvoi()
-        VStack(alignment: .leading, spacing: 12) {
-            Picker(L("stats.voirDonnees"), selection: $dernier) {
-                Text(L("stats.prochainEnvoi")).tag(false)
-                Text(L("stats.dernierEnvoi")).tag(true)
-            }
-            .labelsHidden()
-            .pickerStyle(.segmented)
-            .fixedSize()
+        VStack(alignment: .leading, spacing: Jetons.Espace.trois) {
+            Segments(L("stats.voirDonnees"), selection: $dernier,
+                     choix: [(false, L("stats.prochainEnvoi")), (true, L("stats.dernierEnvoi"))])
             ScrollView {
                 Text(texte ?? L("stats.rienAEnvoyer"))
-                    .font(.synfus(.petit, design: .monospaced))
+                    .font(Jetons.Typo.codeInterface.police)
                     .textSelection(.enabled)
-                    .foregroundStyle(texte == nil ? .secondary : .primary)
+                    .foregroundStyle(texte == nil ? Color.jeton(\.encreSecondaire) : Color.jeton(\.encre))
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(10)
+                    .padding(Jetons.Espace.deux)
             }
-            .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.05)))
+            .background(RoundedRectangle(cornerRadius: Jetons.Rayon.controle).fill(Color.jeton(\.creux)))
             HStack {
                 Button(L("menu.copier")) { if let texte { PressePapiers.copier(texte) } }
+                    .buttonStyle(.bouton(.secondaire))
                     .disabled(texte == nil)
                 Spacer()
                 Button(L("menu.fermer")) { dismiss() }
+                    .buttonStyle(.bouton(.principal))
                     .keyboardShortcut(.defaultAction)
             }
         }
-        .padding(20)
+        .padding(Jetons.Espace.quatre)
         .frame(width: 620, height: 520)
+        .background(Color.jeton(\.fenetre))
     }
 }
 

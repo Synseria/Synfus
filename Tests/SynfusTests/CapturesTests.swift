@@ -10,6 +10,10 @@ import Testing
 @MainActor
 struct CapturesTests {
     nonisolated private static let dossier = ProcessInfo.processInfo.environment["SYNFUS_CAPTURES"]
+    /// `SYNFUS_CAPTURES_APPARENCE=clair` pour les captures en clair ; sombre sinon, celui de la doc.
+    nonisolated private static let clair = ProcessInfo.processInfo.environment["SYNFUS_CAPTURES_APPARENCE"] == "clair"
+    nonisolated private static let schema: ColorScheme = clair ? .light : .dark
+    nonisolated private static let apparence: NSAppearance.Name = clair ? .aqua : .darkAqua
 
     private func contexte() -> ContextePalette {
         var contexte = ContextePalette()
@@ -49,7 +53,7 @@ struct CapturesTests {
         let vue = BarView()
             .padding(24)
             .background(Color(red: 0.11, green: 0.11, blue: 0.13))
-            .environment(\.colorScheme, .dark)
+            .environment(\.colorScheme, Self.schema)
         try ecrire(vue, vers: dossier.appending(path: "barre.png"))
     }
 
@@ -63,7 +67,7 @@ struct CapturesTests {
             let vue = PaletteVue(modele: modele)
                 .padding(24)
                 .background(Color(red: 0.11, green: 0.11, blue: 0.13))
-                .environment(\.colorScheme, .dark)
+                .environment(\.colorScheme, Self.schema)
             try ecrire(vue, vers: dossier.appending(path: nom + ".png"))
         }
     }
@@ -84,7 +88,7 @@ struct CapturesTests {
             .frame(width: 360, height: 560)
             .padding(24)
             .background(Color(red: 0.11, green: 0.11, blue: 0.13))
-            .environment(\.colorScheme, .dark)
+            .environment(\.colorScheme, Self.schema)
         try ecrire(vue, vers: dossier.appending(path: "quete.png"))
     }
 
@@ -110,7 +114,7 @@ struct CapturesTests {
         let vue = ChasseVue()
             .padding(24)
             .background(Color(red: 0.11, green: 0.11, blue: 0.13))
-            .environment(\.colorScheme, .dark)
+            .environment(\.colorScheme, Self.schema)
         try ecrire(vue, vers: dossier.appending(path: "chasse.png"))
     }
 
@@ -125,7 +129,7 @@ struct CapturesTests {
         for (nom, section) in sections.map({ ("reglages-" + $0.rawValue, $0) }) {
             let vue = SettingsView(onglet: OngletReglages(section))
                 .background(Color(nsColor: .windowBackgroundColor))
-                .environment(\.colorScheme, .dark)
+                .environment(\.colorScheme, Self.schema)
             try ecrire(vue, vers: dossier.appending(path: nom + ".png"))
         }
     }
@@ -133,12 +137,12 @@ struct CapturesTests {
     /// Par une fenêtre hors écran : `ImageRenderer` ne dessine ni champ de
     /// texte ni défilement, qui sont des vues AppKit.
     private func ecrire(_ vue: some View, vers url: URL) throws {
-        NSApplication.shared.appearance = NSAppearance(named: .darkAqua)
+        NSApplication.shared.appearance = NSAppearance(named: Self.apparence)
         let hote = NSHostingView(rootView: vue.racineSynfus())
         hote.frame = NSRect(origin: .zero, size: hote.fittingSize)
         let fenetre = NSWindow(contentRect: hote.frame, styleMask: .borderless, backing: .buffered, defer: false)
         fenetre.contentView = hote
-        fenetre.appearance = NSAppearance(named: .darkAqua)
+        fenetre.appearance = NSAppearance(named: Self.apparence)
         hote.layoutSubtreeIfNeeded()
         RunLoop.main.run(until: Date().addingTimeInterval(0.3))
         let rep = try #require(hote.bitmapImageRepForCachingDisplay(in: hote.bounds))

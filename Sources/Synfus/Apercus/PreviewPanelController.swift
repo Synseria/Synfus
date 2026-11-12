@@ -248,23 +248,16 @@ private struct PreviewPanelView: View {
                 EmptyView()
             }
         }
-        .padding(8)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .strokeBorder(Color.primary.opacity(0.12), lineWidth: 0.5)
-                )
-        )
+        .padding(Jetons.Espace.deux)
+        .surfaceFlottante()
         .fixedSize()
     }
 
     private func grid(_ clients: [DofusClient]) -> some View {
         let columns = min(clients.count, 3)
         return LazyVGrid(
-            columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: columns),
-            spacing: 8
+            columns: Array(repeating: GridItem(.flexible(), spacing: Jetons.Espace.deux), count: columns),
+            spacing: Jetons.Espace.deux
         ) {
             ForEach(Array(clients.enumerated()), id: \.element.id) { index, client in
                 thumbnail(for: client, number: index + 1)
@@ -274,9 +267,9 @@ private struct PreviewPanelView: View {
 
     @ViewBuilder
     private func thumbnail(for client: DofusClient, number: Int? = nil) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: Jetons.Espace.un) {
             ZStack {
-                Color.primary.opacity(0.06)
+                Color.jeton(\.creux)
                 if let image = service.previews[client.slotKey] {
                     Image(nsImage: image)
                         .resizable()
@@ -287,22 +280,22 @@ private struct PreviewPanelView: View {
                 }
             }
             .frame(width: Self.thumbnailWidth, height: Self.thumbnailHeight)
-            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous))
 
-            HStack(spacing: 5) {
+            HStack(spacing: Jetons.Espace.un) {
                 if let number {
                     Text("\(number)")
-                        .font(.synfus(.marque, gras: true, design: .rounded))
-                        .foregroundStyle(.secondary)
+                        .font(Jetons.Typo.micro.police)
+                        .foregroundStyle(Color.jeton(\.encreSecondaire))
                 }
                 Text(client.name)
-                    .font(.synfus(.petit, gras: true))
+                    .font(Jetons.Typo.raccourci.police)
                     .lineLimit(1)
                 Spacer(minLength: 0)
                 if let position = lecteur.positions[client.name] {
                     Text(position.coordonnees)
-                        .font(.synfus(.petit, design: .monospaced))
-                        .foregroundStyle(.secondary)
+                        .font(Jetons.Typo.codeInterface.police)
+                        .foregroundStyle(Color.jeton(\.encreSecondaire))
                         .help(position.zone ?? "")
                 }
             }
@@ -314,24 +307,24 @@ private struct PreviewPanelView: View {
     /// lecture part au survol ; le libellé suit dès qu'elle revient.
     private func etiquette(for client: DofusClient) -> some View {
         let position = lecteur.positions[client.name]
-        return VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 6) {
+        return VStack(alignment: .leading, spacing: Jetons.Espace.un) {
+            HStack(spacing: Jetons.Espace.un) {
                 Text(client.name)
-                    .font(.synfus(.petit, gras: true))
+                    .font(Jetons.Typo.raccourci.police)
                     .lineLimit(1)
                 Text(position?.coordonnees ?? (service.authorized ? "…" : "—"))
-                    .font(.synfus(.petit, design: .monospaced))
-                    .foregroundStyle(.secondary)
+                    .font(Jetons.Typo.codeInterface.police)
+                    .foregroundStyle(Color.jeton(\.encreSecondaire))
             }
             if let zone = position?.zone {
                 Text(zone)
-                    .font(.synfus(.petit))
-                    .foregroundStyle(.secondary)
+                    .font(Jetons.Typo.petit.police)
+                    .foregroundStyle(Color.jeton(\.encreSecondaire))
                     .lineLimit(1)
             } else if !service.authorized {
                 Text(L("apercu.autorisationRequise"))
-                    .font(.synfus(.petit))
-                    .foregroundStyle(.secondary)
+                    .font(Jetons.Typo.petit.police)
+                    .foregroundStyle(Color.jeton(\.encreSecondaire))
             }
         }
         .frame(maxWidth: 260, alignment: .leading)
@@ -343,9 +336,9 @@ private struct PreviewPanelView: View {
         Text(service.authorized
              ? L("apercu.captureEnCours")
              : L("apercu.autorisationRequise"))
-            .font(.synfus(.petit))
-            .foregroundStyle(.secondary)
+            .font(Jetons.Typo.petit.police)
+            .foregroundStyle(Color.jeton(\.encreSecondaire))
             .multilineTextAlignment(.center)
-            .padding(8)
+            .padding(Jetons.Espace.deux)
     }
 }

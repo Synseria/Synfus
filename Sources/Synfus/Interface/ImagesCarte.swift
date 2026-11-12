@@ -63,9 +63,9 @@ final class ApercuCarte {
     private func vue(_ carte: Int) -> some View {
         VueCarte(carte: carte, cote: max(Self.taille.width, Self.taille.height))
             .aspectRatio(contentMode: .fit)
-            .background(Color.black.opacity(0.6))
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Color.primary.opacity(0.15)))
+            .background(Color.jeton(\.creux))
+            .clipShape(RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous).strokeBorder(Color.jeton(\.filet), lineWidth: Jetons.Trait.filet))
     }
 
     private func construire() -> NSPanel {
@@ -121,8 +121,8 @@ struct MiniatureCarte: View {
             VueCarte(carte: carte, cote: max(taille.width, taille.height))
                 .aspectRatio(contentMode: .fill)
                 .frame(width: taille.width, height: taille.height)
-                .background(Color.primary.opacity(0.08))
-                .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+                .background(Color.jeton(\.creux))
+                .clipShape(RoundedRectangle(cornerRadius: Jetons.Rayon.pastille, style: .continuous))
                 .apercuCarteAuSurvol(agrandir ? carte : nil)
         }
     }
@@ -154,28 +154,37 @@ extension View {
 /// de la case, l'image en déborde et la forme la rogne.
 struct FondCarte: View {
     let carte: Int?
+    /// Le fond d'une case choisie ; elle prend alors le contour teinté.
     var teinte: Color?
     @ObservedObject private var prefs = Preferences.shared
-    @Environment(\.colorScheme) private var apparence
-    private let forme = RoundedRectangle(cornerRadius: 9, style: .continuous)
+    private let forme = RoundedRectangle(cornerRadius: Jetons.Rayon.carte, style: .continuous)
     /// Plus large qu'une case de la grille (palette : 4 au rang sur 660 pt ;
     /// réglages : 3), que l'image remplit.
     private static let cote: CGFloat = 200
+    private static let voileImage = 0.25
+    private static let voileTexte = 0.7
 
     var body: some View {
         if prefs.vuesCartes, Ressources.visuelsDuJeu, let carte {
-            let sombre = apparence == .dark
-            Color(white: sombre ? 0.17 : 0.95)
-                .overlay { VueCarte(carte: carte, cote: Self.cote).scaledToFill().opacity(0.25) }
+            // L'image ne sert que d'ambiance et le texte de la case passe dessus : elle est voilée de
+            // `surface`, plus franchement vers le bas où le texte se pose. Seul dégradé de l'app.
+            Color.jeton(\.surface)
+                .overlay { VueCarte(carte: carte, cote: Self.cote).scaledToFill().opacity(Self.voileImage) }
                 .overlay {
-                    LinearGradient(colors: [.clear, Color(white: sombre ? 0.12 : 1).opacity(0.7)],
+                    LinearGradient(colors: [.clear, Color.jeton(\.surface).opacity(Self.voileTexte)],
                                    startPoint: .top, endPoint: .bottom)
                 }
                 .overlay { teinte ?? .clear }
                 .clipShape(forme)
+                .overlay(contour)
         } else {
-            forme.fill(teinte ?? Color.primary.opacity(0.05))
+            forme.fill(teinte ?? Color.jeton(\.surface)).overlay(contour)
         }
+    }
+
+    private var contour: some View {
+        forme.strokeBorder(teinte == nil ? Color.jeton(\.filet) : Color.jeton(\.primaire),
+                           lineWidth: teinte == nil ? Jetons.Trait.filet : Jetons.Trait.etat)
     }
 }
 

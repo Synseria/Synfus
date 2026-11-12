@@ -14,10 +14,10 @@ struct LectureSettings: View {
     @State private var resultat: String?
 
     var body: some View {
-        PageReglages(titre: L("reglages.lecture"),
-                     aide: L("diagnostic.lecture.aide")) {
+        PageReglages(titre: L("reglages.lecture")) {
             Section {
                 Interrupteur(titre: L("diagnostic.lecture.position"), isOn: activation(\.lirePosition))
+                    .help(L("diagnostic.lecture.aide"))
                 Interrupteur(titre: L("diagnostic.lecture.combat"), isOn: activation(\.lireCombat))
                 if prefs.lireCombat {
                     Interrupteur(titre: L("lecture.combatDerriere"), aide: L("lecture.combatDerriere.aide"),
@@ -31,14 +31,14 @@ struct LectureSettings: View {
                             .help(L("diagnostic.position.toutLire.aide"))
                             .disabled(!previews.authorized || manager.clients.isEmpty)
                     }
-                    .foregroundStyle(etatEnDefaut ? Couleurs.alerte : Color.primary)
+                    .foregroundStyle(etatEnDefaut ? Color.jeton(\.alerte) : Color.jeton(\.encre))
                 }
             }
             // Chasse et suivi de quêtes se lisent à la demande, depuis leur
             // panneau : leurs zones se calibrent même lecture éteinte.
             Section {
                 Ligne(titre: L("lecture.detecter"), etat: resultat, aide: L("lecture.detecter.aide")) {
-                    HStack(spacing: 8) {
+                    HStack(spacing: Jetons.Espace.deux) {
                         if detection != nil, decompte == nil { ProgressView().controlSize(.small) }
                         Button(decompte.map { L("calibration.decompte", $0) } ?? L("lecture.detecter.bouton")) {
                             detection == nil ? detecter() : annuler()
@@ -118,26 +118,26 @@ struct LectureSettings: View {
     /// Ce que l'OCR a reçu : si le texte n'y est pas, c'est la zone qui est en
     /// cause — à recalibrer —, pas la reconnaissance.
     private func zoneLue(_ genre: GenreLecture, _ image: NSImage) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: Jetons.Espace.un) {
             Text(L("diagnostic.lecture.zoneVue", genre.libelle, lecture.dernierPerso ?? "?"))
-                .font(.synfus(.petit))
-                .foregroundStyle(.tertiary)
+                .font(Jetons.Typo.petit.police)
+                .foregroundStyle(Color.jeton(\.encreTertiaire))
             Image(nsImage: image)
                 .resizable()
                 .interpolation(.medium)
                 .aspectRatio(contentMode: .fit)
                 .frame(maxWidth: 360, maxHeight: 80, alignment: .leading)
-                .clipShape(RoundedRectangle(cornerRadius: 4))
+                .clipShape(RoundedRectangle(cornerRadius: Jetons.Rayon.pastille))
             if let lignes = lecture.lignes[genre] {
                 Text(L("diagnostic.position.brut", lignes.joined(separator: " ⏎ ")))
-                    .font(.synfus(.petit, design: .monospaced))
-                    .foregroundStyle(.tertiary)
+                    .font(Jetons.Typo.codeInterface.police)
+                    .foregroundStyle(Color.jeton(\.encreTertiaire))
                     .textSelection(.enabled)
             }
             if genre == .combat, let couleur = lecture.couleur {
                 Text(L("diagnostic.lecture.couleur", Int(couleur * 100)))
-                    .font(.synfus(.petit, design: .monospaced))
-                    .foregroundStyle(.tertiary)
+                    .font(Jetons.Typo.codeInterface.police)
+                    .foregroundStyle(Color.jeton(\.encreTertiaire))
             }
         }
     }

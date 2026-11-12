@@ -5,10 +5,10 @@ struct TrajetsSettings: View {
     @ObservedObject private var prefs = Preferences.shared
 
     var body: some View {
-        PageReglages(titre: L("reglages.trajets"),
-                     aide: L("zaap.reecriture.aide", ItineraireZaap.ecartZaapDuJeu)) {
+        PageReglages(titre: L("reglages.trajets")) {
             Section {
                 RaccourciReglable(label: L("zaap.raccourci"), help: L("zaap.raccourci.aide"), chemin: \.zaapHotKey)
+                    .help(L("zaap.reecriture.aide", ItineraireZaap.ecartZaapDuJeu))
                 Ligne(titre: L("zaap.gain"), aide: L("zaap.gain.aide")) {
                     Stepper(L("zaap.gain.valeur", nombre: prefs.zaapGainMinimal, prefs.zaapGainMinimal),
                             value: $prefs.zaapGainMinimal, in: ItineraireZaap.gainsPossibles)
@@ -17,7 +17,7 @@ struct TrajetsSettings: View {
                 Ligne(titre: L("zaap.intercalees"), aide: L("zaap.intercalees.aide")) {
                     TextField(L("zaap.intercalees"), text: $prefs.zaapIntercalees, prompt: Text(verbatim: "/a"))
                         .labelsHidden()
-                        .font(.synfus(.note, design: .monospaced))
+                        .font(Jetons.Typo.codeInterface.police)
                         .frame(width: 180)
                 }
                 if prefs.lirePosition {

@@ -19,7 +19,7 @@ enum GroupeReglages: CaseIterable {
 
 /// Sections des réglages, listées dans la barre latérale.
 enum SettingsSection: String, CaseIterable, Identifiable {
-    case general, barre
+    case general, theme, barre
     case raccourcis, attention, enchainer, invitations
     case palette, trajets, chasse, boss
     case zaaps, lieux, quetes, pnj
@@ -30,7 +30,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
 
     var groupe: GroupeReglages {
         switch self {
-        case .general, .barre: return .synfus
+        case .general, .theme, .barre: return .synfus
         case .raccourcis, .attention, .enchainer, .invitations: return .clavier
         case .palette, .trajets, .chasse, .boss: return .jeu
         case .zaaps, .lieux, .quetes, .pnj: return .donnees
@@ -42,6 +42,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
     var label: String {
         switch self {
         case .general: return L("reglages.general")
+        case .theme: return L("reglages.theme")
         case .barre: return L("reglages.barre")
         case .raccourcis: return L("reglages.raccourcis")
         case .attention: return L("reglages.attention")
@@ -66,6 +67,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
     var icon: String {
         switch self {
         case .general: return "gearshape"
+        case .theme: return "swatchpalette"
         case .barre: return "rectangle.topthird.inset.filled"
         case .raccourcis: return "keyboard"
         case .attention: return "bolt"
@@ -104,6 +106,7 @@ final class OngletReglages: ObservableObject {
 
 struct SettingsView: View {
     @ObservedObject private var onglet: OngletReglages
+    @State private var survol: SettingsSection?
 
     init(onglet: OngletReglages = .shared) {
         self.onglet = onglet
@@ -120,59 +123,61 @@ struct SettingsView: View {
             Divider()
             detail
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                // Le rang par défaut d'un bouton des réglages, y compris hors d'un `Form` (Diagnostic, listes).
+                .buttonStyle(.bouton(.secondaire))
         }
         .frame(width: 920, height: 680)
+        // La teinte des fonds choisie dans Thème : celle de la fenêtre, que le formulaire laisse voir.
+        .background(Color.jeton(\.fenetre))
     }
 
     private var sidebar: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: Jetons.Espace.un) {
                 ForEach(GroupeReglages.allCases, id: \.self) { groupe in
                     if let titre = groupe.titre {
                         Text(titre)
-                            .font(.synfus(.petit, gras: true))
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 8)
-                            .padding(.top, 10)
-                            .padding(.bottom, 2)
+                            .font(Jetons.Typo.raccourci.police)
+                            .foregroundStyle(Color.jeton(\.encreSecondaire))
+                            .padding(.horizontal, Jetons.Espace.deux)
+                            .padding(.top, Jetons.Espace.deux)
+                            .padding(.bottom, Jetons.Espace.un)
                     }
                     ForEach(SettingsSection.allCases.filter { $0.groupe == groupe }) { item in
                         sidebarRow(item)
                     }
                 }
             }
-            .padding(8)
+            .padding(Jetons.Espace.deux)
         }
         .frame(width: 170)
-        .background(Color.primary.opacity(0.035))
+        .background(Color.jeton(\.creux))
     }
 
     private func sidebarRow(_ item: SettingsSection) -> some View {
         Button {
             onglet.section = item
         } label: {
-            HStack(spacing: 8) {
-                Image(systemName: item.icon).frame(width: 18)
+            HStack(spacing: Jetons.Espace.deux) {
+                Image(systemName: item.icon).frame(width: Jetons.Taille.touche)
                 Text(item.label)
             }
-                .font(.synfus(.note, gras: section == item))
+                .font((section == item ? Jetons.Typo.corpsFort : Jetons.Typo.corps).police)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 5)
-                .background(
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(section == item ? Couleurs.accentPlein : Color.clear)
-                )
-                .foregroundStyle(section == item ? Color.white : Color.primary)
-                .contentShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .padding(.horizontal, Jetons.Espace.deux)
+                .padding(.vertical, Jetons.Espace.un)
+                .foregroundStyle((section == item ? EtatVisuel.courant : .repos).encre)
+                .fondEtat(section == item ? .courant : (survol == item ? .survol : .repos))
         }
         .buttonStyle(.plain)
+        .onHover { survol = $0 ? item : nil }
     }
 
     @ViewBuilder
     private var detail: some View {
         switch section {
         case .general: GeneralSettings()
+        case .theme: ThemeSettings()
         case .barre: BarreSettings()
         case .raccourcis: ShortcutsSettings()
         case .attention: AttentionSettings()
