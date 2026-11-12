@@ -13,26 +13,26 @@ struct AlmanaxVue: View {
     private var langue: Langue { L10n.courante.langue }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: Jetons.Espace.un) {
             ForEach(almanax.offrandes, id: \.objet) { offrande in
                 ligne(offrande)
                 if deplie == offrande.objet {
                     OuTrouverVue(sujet: .objet(offrande.objet), metriques: .confort)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.leading, 38)
+                        .padding(.leading, Jetons.Espace.dix)
                 }
             }
             if let bonus = Lieu.traduit(almanax.bonus, langue) {
                 let description = Lieu.traduit(almanax.description, langue)
                 Text(description.map { L("palette.almanax.bonus", bonus, $0) } ?? bonus)
                     .font(.synfus(.petit))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Couleurs.encreSecondaire)
                     .fixedSize(horizontal: false, vertical: true)
-                    .padding(.leading, 38)
+                    .padding(.leading, Jetons.Espace.dix)
             }
         }
-        .padding(8)
-        .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Couleurs.safranFond))
+        .padding(Jetons.Espace.deux)
+        .background(RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous).fill(Couleurs.safranFond))
     }
 
     /// L'icône vient de DofusDB, à la demande ; sans visuels du jeu, le symbole.
@@ -48,34 +48,32 @@ struct AlmanaxVue: View {
 
     private func ligne(_ offrande: Almanax.Offrande) -> some View {
         let nom = Lieu.traduit(offrande.noms, langue) ?? "?"
-        return HStack(spacing: 10) {
-            icone(offrande).frame(width: 28, height: 28)
-            HStack(spacing: 6) {
-                Text(L("palette.almanax")).font(.synfus(.petit, gras: true)).foregroundStyle(Couleurs.safranTexte)
+        return HStack(spacing: Jetons.Espace.deux) {
+            icone(offrande).frame(width: Jetons.Taille.controle, height: Jetons.Taille.controle)
+            HStack(spacing: Jetons.Espace.un) {
+                Text(L("palette.almanax")).font(.synfus(.raccourci)).foregroundStyle(Couleurs.safranTexte)
                 Text(L("palette.almanax.offrande", offrande.quantite, nom)).font(.synfus(.corpsFort))
                     .lineLimit(1)
             }
-            Spacer(minLength: 4)
+            Spacer(minLength: Jetons.Espace.un)
             Button { copier(nom) } label: {
                 Label(L("palette.almanax.nom"), systemImage: "doc.on.clipboard")
             }
-            .controlSize(.small)
+            .buttonStyle(.bouton(.secondaire, dense: true))
             .aide(L("palette.almanax.nom.aide"))
             if let allerAuSanctuaire {
                 Button(action: allerAuSanctuaire) {
                     Label(L("palette.almanax.sanctuaire"), systemImage: "arrow.triangle.turn.up.right.diamond")
                 }
-                .controlSize(.small)
+                .buttonStyle(.bouton(.secondaire, dense: true))
                 .aide(L("palette.almanax.sanctuaire.aide"))
             }
             Button { deplie = deplie == offrande.objet ? nil : offrande.objet } label: {
                 Image(systemName: deplie == offrande.objet ? "chevron.down" : "chevron.right")
-                    .font(.synfus(.petit, gras: true))
-                    .frame(width: 20, height: 20)
-                    .contentShape(Rectangle())
+                    .font(.synfus(.raccourci))
+                    .frame(width: Jetons.Taille.cibleMin, height: Jetons.Taille.cibleMin)
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
+            .buttonStyle(.etat(nue: true))
             .aide(L("palette.touche.ouTrouver"))
         }
     }
