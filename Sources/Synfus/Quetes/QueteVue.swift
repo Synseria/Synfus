@@ -87,7 +87,7 @@ struct QueteVue: View {
                     .font(Jetons.Typo.note.police)
                     .foregroundStyle(Color.jeton(\.alerte))
                     .multilineTextAlignment(.center)
-                Button(L("quete.reessayer")) { Task { try? await store.mettreAJour() } }
+                Button(L("commun.reessayer")) { Task { try? await store.mettreAJour() } }
             } else {
                 Text(store.chargement ? L("palette.quetes.chargement") : L("quete.aucune"))
                     .font(Jetons.Typo.note.police)
