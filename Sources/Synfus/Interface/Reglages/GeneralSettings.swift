@@ -42,46 +42,16 @@ struct GeneralSettings: View {
                 Interrupteur(titre: L("general.demarrerAvecSession"), isOn: $launchAtLogin)
                     .onChange(of: launchAtLogin) { _, value in LaunchAtLogin.set(value) }
                 languageRow
-                Ligne(titre: L("general.version"), etat: etatMiseAJour) {
+                Ligne(titre: L("general.version"), etat: miseAJour.etat.libelle) {
                     HStack(spacing: Jetons.Espace.deux) {
                         Text(AppIntegrity.displayName).foregroundStyle(Couleurs.encreSecondaire).textSelection(.enabled)
-                        actionMiseAJour
+                        ActionMiseAJour()
                     }
                 }
                 Interrupteur(titre: L("maj.verifier"), aide: L("maj.verifier.aide"), isOn: $prefs.verifierMisesAJour)
             } header: {
                 SectionTitle(L("general.systeme"))
             }
-        }
-    }
-
-    private var etatMiseAJour: String? {
-        switch miseAJour.etat {
-        case .inconnu: nil
-        case .verification: L("maj.verification")
-        case .aJour: L("maj.aJour")
-        case .disponible(let version): L("maj.disponible", version.numero)
-        case .installation: L("maj.installation")
-        case .echec(.reseau, _): L("maj.echec.reseau")
-        case .echec(.empreinte, _): L("maj.echec.empreinte")
-        case .echec(.image, _), .echec(.app, _): L("maj.echec.image")
-        case .echec(.ecriture, _): L("maj.echec.ecriture")
-        }
-    }
-
-    @ViewBuilder private var actionMiseAJour: some View {
-        switch miseAJour.etat {
-        case .verification, .installation:
-            ProgressView().controlSize(.small)
-        case .disponible:
-            Button(L("maj.installer")) { miseAJour.proposer() }
-                .buttonStyle(.bouton(.principal))
-        case .echec(.ecriture, let version):
-            Button(L("maj.telecharger")) { NSWorkspace.shared.open(version.page) }
-        case .echec:
-            Button(L("maj.reessayer")) { miseAJour.proposer() }
-        case .inconnu, .aJour:
-            if prefs.verifierMisesAJour { Button(L("maj.rechercher")) { miseAJour.verifier() } }
         }
     }
 
