@@ -257,6 +257,14 @@ struct CoordonneesObjectifsTests {
         #expect(CoordonneesObjectifs.affichees(objectifs) == [1, 3])
     }
 
+    @Test("Un premier objectif replié ne prive pas le suivant de sa coordonnée")
+    func premierReplie() {
+        let objectifs = [objectif(1, (-55, 15)), objectif(2, (-55, 15)), objectif(3, (-55, 15))]
+        #expect(CoordonneesObjectifs.affichees(objectifs, repliees: [1]) == [2])
+        #expect(CoordonneesObjectifs.affichees(objectifs, repliees: [1, 2]) == [3])
+        #expect(CoordonneesObjectifs.affichees(objectifs) == [1])
+    }
+
     @Test("La même case d'un autre monde diffère")
     func autreMonde() {
         let objectifs = [objectif(1, (3, 4), sousZone: 10), objectif(2, (3, 4), sousZone: 99)]
