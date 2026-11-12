@@ -34,6 +34,15 @@ struct CouleursTests {
         #expect(Jetons.Couleur(ecrit: "teinte:293") == nil)
     }
 
+    @Test("La teinte d'une couleur : celle du préréglage, ou la sienne ramenée au cercle")
+    func teinteDeLaCouleur() {
+        for prereglage in Jetons.Prereglage.allCases {
+            #expect(Jetons.Couleur.prereglage(prereglage).degres == prereglage.teinte)
+        }
+        #expect(Jetons.Couleur.teinte(210).degres == 210)
+        #expect(Jetons.Couleur.teinte(-10).degres == 350)
+    }
+
     @Test("La couleur et les fonds se relisent")
     func persistance() {
         let store = MemoireDeTest()

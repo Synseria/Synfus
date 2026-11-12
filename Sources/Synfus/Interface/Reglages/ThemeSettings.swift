@@ -87,8 +87,8 @@ private struct ChoixDeCouleur: View {
 
     /// Part de la teinte du préréglage courant, sinon d'un bleu que le safran n'approche pas.
     private func choisirAutre() {
-        guard case .prereglage(let p) = courante else { return }
-        prefs.couleurDeLApp = .teinte(Jetons.teinteAcceptee(p.teinte) ? p.teinte : 200)
+        guard case .prereglage = courante else { return }
+        prefs.couleurDeLApp = .teinte(Jetons.teinteAcceptee(courante.degres) ? courante.degres : 200)
     }
 }
 
@@ -140,7 +140,8 @@ private struct ChoixDesFonds: View {
         case .neutre: prefs.fondsDeLApp = .neutre
         case .autre:
             if case .teinte = prefs.fondsDeLApp { return }
-            prefs.fondsDeLApp = .teinte(268)
+            // Part de la couleur de l'app : les fonds s'accordent d'abord à ce qui est déjà choisi.
+            prefs.fondsDeLApp = .teinte(prefs.couleurDeLApp.degres)
         }
     }
 }
