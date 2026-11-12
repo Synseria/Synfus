@@ -20,7 +20,7 @@ struct FicheCombatVue: View {
             if !elements.frapper.isEmpty {
                 Text(L("combat.fiche.elements", Self.noms(elements.frapper), Self.noms(elements.eviter)))
                     .font(.synfus(.petit))
-                    .foregroundStyle(Couleurs.accentTexte)
+                    .foregroundStyle(Couleurs.primaireEncre)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }

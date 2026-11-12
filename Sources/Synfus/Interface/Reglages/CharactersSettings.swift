@@ -61,7 +61,7 @@ struct CharactersSettings: View {
     private func characterRow(index: Int, name: String) -> some View {
         HStack(spacing: 8) {
             Image(systemName: "line.3.horizontal")
-                .font(.synfus(.marque))
+                .font(.synfus(.micro))
                 .foregroundStyle(.tertiary)
             Circle()
                 .fill(isOnline(name) ? Couleurs.succes : Color.secondary.opacity(0.3))

@@ -154,7 +154,7 @@ struct FicheDonjonVue: View {
     private func ligne(_ monstre: DetailDonjon.Monstre) -> some View {
         VStack(alignment: .leading, spacing: 1) {
             HStack(spacing: 4) {
-                if monstre.boss { Image(systemName: "crown").foregroundStyle(Couleurs.ambre) }
+                if monstre.boss { Image(systemName: "crown").foregroundStyle(Couleurs.safranTexte) }
                 Text(Lieu.traduit(monstre.noms, langue) ?? "?").font(.synfus(.petit, gras: monstre.boss))
             }
             FicheCombatVue(fiche: monstre.fiche)
@@ -174,13 +174,13 @@ private struct CarteAction: View {
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: icone)
-                .foregroundStyle(choisie || ouverte == true ? Couleurs.accentTexte : Color.secondary)
+                .foregroundStyle(choisie || ouverte == true ? Couleurs.primaireEncre : Color.secondary)
             Text(titre)
-                .foregroundStyle(ouverte == true && !choisie ? Couleurs.accentTexte : Color.primary)
+                .foregroundStyle(ouverte == true && !choisie ? Couleurs.primaireEncre : Color.primary)
                 .lineLimit(1)
             if let ouverte {
                 Image(systemName: ouverte ? "chevron.down" : "chevron.right")
-                    .font(.synfus(.marque, gras: true))
+                    .font(.synfus(.micro, gras: true))
                     .foregroundStyle(.secondary)
             }
         }
@@ -195,12 +195,12 @@ private struct CarteAction: View {
     }
 
     private var fond: Color {
-        if choisie { return Couleurs.accent.opacity(0.22) }
+        if choisie { return Couleurs.primaire.opacity(0.22) }
         return ouverte == true ? .clear : Color.primary.opacity(0.06)
     }
 
     private var lisere: Color {
-        if choisie { return Couleurs.accent }
-        return ouverte == true ? Couleurs.accent.opacity(0.45) : Color.primary.opacity(0.08)
+        if choisie { return Couleurs.primaire }
+        return ouverte == true ? Couleurs.primaire.opacity(0.45) : Color.primary.opacity(0.08)
     }
 }

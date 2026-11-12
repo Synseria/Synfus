@@ -58,10 +58,10 @@ struct BossVue: View {
 
 
     private var entete: some View {
-        EnTetePanneau(icone: "scope", teinte: Couleurs.ambre, menu: Self.menu) {
+        EnTetePanneau(icone: "scope", teinte: Couleurs.safran, menu: Self.menu) {
             Text(Self.nom(prefs.bossChoisi, donjons: donjons.donjons)).font(.synfus(.note, gras: true))
                 .padding(.leading, 6)
-            Image(systemName: "chevron.down").font(.synfus(.marque, gras: true)).foregroundStyle(.secondary)
+            Image(systemName: "chevron.down").font(.synfus(.micro, gras: true)).foregroundStyle(.secondary)
                 .padding(.leading, 3)
             if let perso = lecteur.persoDevant {
                 Text(perso).font(.synfus(.petit)).foregroundStyle(.secondary)
@@ -276,9 +276,9 @@ struct ChoixBoss<Valeur: Hashable>: View {
                     Text(option.titre)
                         .font(.synfus(.petit, gras: true))
                         .frame(maxWidth: .infinity, minHeight: 24)
-                        .foregroundStyle(actif ? Color.white : Color.primary)
+                        .foregroundStyle(actif ? Couleurs.encreSurPrimaire : Color.primary)
                         .background(RoundedRectangle(cornerRadius: 7, style: .continuous)
-                            .fill(actif ? Couleurs.accentPlein : Color.primary.opacity(0.08)))
+                            .fill(actif ? Couleurs.primaire : Color.primary.opacity(0.08)))
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)

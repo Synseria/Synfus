@@ -68,7 +68,7 @@ struct ShortcutRecorder: View {
             Button(action: toggle) {
                 Text(label)
                     .font(.synfus(.note, gras: true, design: .rounded))
-                    .foregroundStyle(recording ? Couleurs.accentTexte : .primary)
+                    .foregroundStyle(recording ? Couleurs.primaireEncre : .primary)
                     .frame(minWidth: 92)
                     .padding(.vertical, 4)
                     .padding(.horizontal, 8)
@@ -78,7 +78,7 @@ struct ShortcutRecorder: View {
                             .overlay(
                                 RoundedRectangle(cornerRadius: 6)
                                     .strokeBorder(
-                                        recording ? Couleurs.accent : Color.primary.opacity(0.15),
+                                        recording ? Couleurs.primaire : Color.primary.opacity(0.15),
                                         lineWidth: recording ? 1.5 : 0.5
                                     )
                             )

@@ -38,7 +38,7 @@ struct EnTetePage: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Text(titre).font(.synfus(.grand, gras: true))
+            Text(titre).font(.synfus(.titrePage))
             if let aide { HelpTip(aide) }
             Spacer(minLength: 12)
             if let valeur { Text(valeur).font(.synfus(.note)).foregroundStyle(.secondary) }

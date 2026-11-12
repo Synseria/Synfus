@@ -292,7 +292,7 @@ private struct PreviewPanelView: View {
             HStack(spacing: 5) {
                 if let number {
                     Text("\(number)")
-                        .font(.synfus(.marque, gras: true, design: .rounded))
+                        .font(.synfus(.micro, gras: true, design: .rounded))
                         .foregroundStyle(.secondary)
                 }
                 Text(client.name)

@@ -5,17 +5,17 @@ import CoreGraphics
 /// Une vue n'écrit aucune taille de texte ou de marge de la fiche en dur.
 struct MetriquesQuete: Equatable {
     /// Objectifs, ressources, quêtes suivantes, menu de l'en-tête.
-    let texte: TailleTexte
+    let texte: Jetons.Typo
     /// Nom de la quête.
-    let titre: TailleTexte
+    let titre: Jetons.Typo
     /// Consigne de l'étape.
-    let consigne: TailleTexte
+    let consigne: Jetons.Typo
     /// Position, catégorie, niveau, récompenses, titres de section.
-    let detail: TailleTexte
+    let detail: Jetons.Typo
     /// Coche d'un objectif.
-    let coche: TailleTexte
+    let coche: Jetons.Typo
     /// Pictogramme d'une ressource ou d'une suivante.
-    let icone: TailleTexte
+    let icone: Jetons.Typo
     /// Autour de la fiche.
     let marge: CGFloat
     /// Entre deux sections (en-tête, ressources, étape, suivantes).

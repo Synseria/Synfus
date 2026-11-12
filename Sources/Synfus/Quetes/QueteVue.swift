@@ -114,7 +114,7 @@ struct QueteVue: View {
     /// Le coin bas droit, à saisir pour agrandir le panneau.
     private var poignee: some View {
         Image(systemName: "arrow.down.right")
-            .font(.synfus(.marque, gras: true))
+            .font(.synfus(.micro, gras: true))
             .foregroundStyle(.tertiary)
             .frame(width: 18, height: 18)
             .padding(2)
@@ -127,7 +127,7 @@ struct QueteVue: View {
     /// sauf les boutons ; un clic sur le titre ouvre le menu (`EnTetePanneau`).
     private var enTete: some View {
         let montree = ficheImposee?.id ?? panneau.idMontre
-        return EnTetePanneau(icone: "scroll", teinte: Couleurs.accent,
+        return EnTetePanneau(icone: "scroll", teinte: Couleurs.primaire,
                              menu: ficheImposee == nil ? { @MainActor in QuetePanel.shared.menu() } : nil) {
             menuQuetes(titre: ficheImposee?.nom ?? montree.flatMap { store.nom($0) } ?? L("quete.menu.titre"))
             if lecture.etat == .enCours { ProgressView().controlSize(.mini).padding(.leading, 4) }
@@ -147,13 +147,13 @@ struct QueteVue: View {
         return HStack(spacing: 4) {
             Text(titre).font(.synfus(metriques.titre, gras: true)).lineLimit(3).fixedSize(horizontal: false, vertical: true)
                 .help(titre)
-            Image(systemName: "chevron.down").font(.synfus(.marque, gras: true)).foregroundStyle(.secondary)
+            Image(systemName: "chevron.down").font(.synfus(.micro, gras: true)).foregroundStyle(.secondary)
             if nouvelles > 0, ficheImposee == nil {
                 Text("\(nouvelles)")
-                    .font(.synfus(.marque, gras: true))
-                    .foregroundStyle(.white)
+                    .font(.synfus(.micro, gras: true))
+                    .foregroundStyle(Couleurs.encreSurPrimaire)
                     .padding(.horizontal, 4)
-                    .background(Capsule().fill(Couleurs.accentPlein))
+                    .background(Capsule().fill(Couleurs.primaire))
                     .help(L("quete.menu.nouvelles"))
             }
         }
@@ -188,7 +188,7 @@ struct QueteVue: View {
             if let exigences = Self.exigences(fiche.exigences, classes: ClassesStore.shared.catalogue) {
                 Label(L("quete.exigences", exigences), systemImage: "lock")
                     .font(.synfus(metriques.detail))
-                    .foregroundStyle(Couleurs.ambre)
+                    .foregroundStyle(Couleurs.safranTexte)
                     .fixedSize(horizontal: false, vertical: true)
             }
             // Sortie du suivi du jeu entre deux lectures (`HistoriqueSuivi`) :
@@ -250,8 +250,8 @@ struct QueteVue: View {
             .fixedSize()
             .padding(.horizontal, 5)
             .padding(.vertical, 1)
-            .background(Capsule().fill(Couleurs.ambre.opacity(0.25)))
-            .foregroundStyle(Couleurs.ambre)
+            .background(Capsule().fill(Couleurs.safranFond))
+            .foregroundStyle(Couleurs.safranTexte)
     }
 
     // MARK: - Ressources
@@ -275,7 +275,7 @@ struct QueteVue: View {
                         HStack(alignment: .firstTextBaseline, spacing: 6) {
                             Image(systemName: copiee == id ? "checkmark" : "shippingbox")
                                 .font(.synfus(metriques.icone))
-                                .foregroundStyle(copiee == id ? Couleurs.accentTexte : Color.secondary)
+                                .foregroundStyle(copiee == id ? Couleurs.primaireEncre : Color.secondary)
                                 .frame(width: 14)
                             // Le nom d'abord : à l'étroit, c'est la catégorie qui se tronque.
                             Text(L("quete.ressource", ressource.nom, ressource.quantite))
@@ -417,7 +417,7 @@ struct QueteVue: View {
         .controlSize(.small)
         HStack {
             Spacer()
-            if achevee { bouton.buttonStyle(.borderedProminent).tint(Couleurs.accentPlein) } else { bouton }
+            if achevee { bouton.buttonStyle(.borderedProminent).tint(Couleurs.primaire) } else { bouton }
         }
         .padding(.top, metriques.ecartLignes)
     }
@@ -522,8 +522,8 @@ struct QueteVue: View {
                 : enCours ? "smallcircle.filled.circle" : nonOuvert ? "circle.dashed" : "circle"
         }
 
-        var teinte: Color {
-            valide ? Couleurs.accent : suggere ? Couleurs.suggestion : enCours ? Color.primary : Color.secondary
+        @MainActor var teinte: Color {
+            valide ? Couleurs.primaire : suggere ? Couleurs.suggestionSynfus : enCours ? Color.primary : Color.secondary
         }
     }
 
@@ -573,7 +573,7 @@ struct QueteVue: View {
                                 if let numero = etat.numero, !valide {
                                     Text(L("quete.ordre", numero))
                                         .font(.synfus(metriques.detail, gras: true))
-                                        .foregroundStyle(Couleurs.ambre)
+                                        .foregroundStyle(Couleurs.safranTexte)
                                 }
                                 if let position = objectif.position {
                                     detail(id: id, Coordonnees.texte(position.x, position.y), monospace: true)
@@ -583,7 +583,7 @@ struct QueteVue: View {
                                     if suggere, copiee != id {
                                         Text(L("quete.suggestion"))
                                             .font(.synfus(metriques.detail, gras: true))
-                                            .foregroundStyle(Couleurs.suggestion)
+                                            .foregroundStyle(Couleurs.suggestionSynfus)
                                     }
                                 } else {
                                     detail(id: id, L("quete.nonSitue"), monospace: false)
@@ -608,9 +608,9 @@ struct QueteVue: View {
             .background {
                 if etat.aFaire, !valide {
                     RoundedRectangle(cornerRadius: 6)
-                        .fill(Couleurs.ambre.opacity(0.12))
+                        .fill(Couleurs.safranFond)
                         .overlay(alignment: .leading) {
-                            Capsule().fill(Couleurs.ambre).frame(width: Self.traitAFaire).padding(.vertical, 2)
+                            Capsule().fill(Couleurs.safran).frame(width: Self.traitAFaire).padding(.vertical, 2)
                         }
                 }
             }
@@ -669,7 +669,7 @@ struct QueteVue: View {
     @ViewBuilder
     private func detail(id: String, _ texte: String?, monospace: Bool) -> some View {
         if copiee == id {
-            Text(L("quete.copie")).font(.synfus(metriques.detail, gras: true)).foregroundStyle(Couleurs.accentTexte)
+            Text(L("quete.copie")).font(.synfus(metriques.detail, gras: true)).foregroundStyle(Couleurs.primaireEncre)
         } else if let texte {
             Text(texte)
                 .font(.synfus(metriques.detail, design: monospace ? .monospaced : .default))
@@ -685,7 +685,7 @@ struct QueteVue: View {
             contenu()
                 .padding(.horizontal, metriques.ligneHorizontale)
                 .padding(.vertical, metriques.ligneVerticale)
-                .background(RoundedRectangle(cornerRadius: 6).fill(copiee == id ? Couleurs.accent.opacity(0.15) : Color.clear))
+                .background(RoundedRectangle(cornerRadius: 6).fill(copiee == id ? Couleurs.primaire.opacity(0.15) : Color.clear))
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

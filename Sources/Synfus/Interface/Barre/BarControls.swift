@@ -178,7 +178,7 @@ struct ModeButton: View {
         Button(action: action) {
             Image(systemName: icone)
                 .font(.synfus(.note))
-                .foregroundStyle(actif ? Couleurs.accentTexte : Color.secondary)
+                .foregroundStyle(actif ? Couleurs.primaireEncre : Color.secondary)
                 .contentTransition(.symbolEffect(.replace))
                 .frame(width: 24, height: 24)
                 .background(
@@ -196,7 +196,7 @@ struct ModeButton: View {
     }
 
     private var fond: Color {
-        if actif { return Couleurs.accent.opacity(survole ? 0.22 : 0.18) }
+        if actif { return Couleurs.primaire.opacity(survole ? 0.22 : 0.18) }
         return survole ? Color.primary.opacity(0.08) : .clear
     }
 }
@@ -329,13 +329,13 @@ private struct Battement: ViewModifier {
 struct CopiedBadge: View {
     var body: some View {
         RoundedRectangle(cornerRadius: 8, style: .continuous)
-            .strokeBorder(Couleurs.accent, lineWidth: 1.5)
+            .strokeBorder(Couleurs.primaire, lineWidth: 1.5)
             .overlay(alignment: .topTrailing) {
                 Image(systemName: "doc.on.clipboard.fill")
-                    .font(.synfus(.marque, gras: true))
-                    .foregroundStyle(.white)
+                    .font(.synfus(.micro, gras: true))
+                    .foregroundStyle(Couleurs.encreSurPrimaire)
                     .padding(2)
-                    .background(Circle().fill(Couleurs.accentPlein))
+                    .background(Circle().fill(Couleurs.primaire))
                     .offset(x: 4, y: -4)
             }
             .transition(.opacity)
@@ -355,7 +355,7 @@ struct SwitchBlink: View {
     var body: some View {
         RoundedRectangle(cornerRadius: 8, style: .continuous)
             .strokeBorder(Color.white, lineWidth: 2)
-            .shadow(color: Couleurs.accent, radius: 4)
+            .shadow(color: Couleurs.primaire, radius: 4)
             .modifier(Battement(bas: 0.1, demiPeriode: 0.2))
             .allowsHitTesting(false)
     }
@@ -406,12 +406,12 @@ struct CombatBadge: View {
         Group {
             if let texte {
                 Text(texte)
-                    .font(.synfus(.marque, gras: true, design: .rounded))
+                    .font(.synfus(.micro, gras: true, design: .rounded))
                     .monospacedDigit()
                     .padding(.horizontal, 3)
             } else {
                 Image(systemName: "figure.fencing")
-                    .font(.synfus(.marque, gras: true))
+                    .font(.synfus(.micro, gras: true))
                     .padding(2)
             }
         }

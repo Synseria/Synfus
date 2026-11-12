@@ -97,7 +97,7 @@ sa bascule). Toute nouvelle option suit la règle.
   ne construit que ce qui paraît — chaque ligne y est un enfant direct, cadrée par `cadreDeListe` ;
   tri et textes cherchés gardés par `ListeCherchable` (règle de la palette, `RecherchePalette.Champs`). Toute ligne passe par `Ligne` (libellé à gauche, contrôle à droite,
   valeur ou état en gris par `etat:`, ⓘ), `Interrupteur` ou `RaccourciReglable` (doublons et réenregistrement) : c'est ce qui tient l'alignement — jamais un `HStack`
-  maison. Libellés sans deux-points ni « / ». Couleurs : `Couleurs` (accent vert d'eau, ambre). `SettingsWindowController` doit appeler
+  maison. Libellés sans deux-points ni « / ». Couleurs : `Couleurs` (jetons du design system ; l'onglet Apparence règle la couleur de l'app et la teinte des fonds). `SettingsWindowController` doit appeler
   `NSApp.activate(ignoringOtherApps:)` (app accessory) ; la fenêtre s'ouvre sous la barre
   (`visibleBarFrame`), au centre sinon.
 - Un message qui dit « Réglages › … » s'accompagne d'un bouton qui y mène :

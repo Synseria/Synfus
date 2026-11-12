@@ -127,7 +127,7 @@ struct BoutonFavori: View {
         let favori = prefs.estFavori(cle)
         Button { prefs.basculerFavori(cle) } label: {
             Image(systemName: favori ? "star.fill" : "star")
-                .foregroundStyle(favori ? Couleurs.ambre : Color.secondary)
+                .foregroundStyle(favori ? Couleurs.safranTexte : Color.secondary)
         }
         .buttonStyle(.borderless)
         .aide(favori ? L("zaap.favori.retirer") : L("zaap.favori.ajouter"))
@@ -157,7 +157,7 @@ struct BoutonTrajet: View {
                 Text(Coordonnees.texte(x, y)).font(.synfus(.petit, design: .monospaced))
                 Image(systemName: copie ? "checkmark" : "doc.on.clipboard")
             }
-            .foregroundStyle(copie ? Couleurs.accentTexte : Color.secondary)
+            .foregroundStyle(copie ? Couleurs.primaireEncre : Color.secondary)
         }
         .buttonStyle(.borderless)
         .help(dansLesDouze ? L("ouTrouver.copierTrajet") : L("trajet.copier.horsDesDouze"))

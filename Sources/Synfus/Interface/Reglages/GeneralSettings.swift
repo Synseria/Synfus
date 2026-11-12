@@ -162,7 +162,7 @@ private struct ChoixIconeApp: View {
                 .padding(4)
                 .overlay {
                     RoundedRectangle(cornerRadius: 11)
-                        .strokeBorder(icone == choix ? Couleurs.accent : .clear, lineWidth: 2)
+                        .strokeBorder(icone == choix ? Couleurs.primaire : .clear, lineWidth: 2)
                 }
                 .contentShape(Rectangle())
         }
