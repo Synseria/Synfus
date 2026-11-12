@@ -32,13 +32,13 @@ struct AlmanaxVue: View {
             }
         }
         .padding(8)
-        .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Couleurs.ambre.opacity(0.12)))
+        .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Couleurs.safranFond))
     }
 
     /// L'icône vient de DofusDB, à la demande ; sans visuels du jeu, le symbole.
     @ViewBuilder
     private func icone(_ offrande: Almanax.Offrande) -> some View {
-        let symbole = Image(systemName: "calendar").foregroundStyle(Couleurs.ambre)
+        let symbole = Image(systemName: "calendar").foregroundStyle(Couleurs.safranTexte)
         if let icone = offrande.icone {
             ImageDofusDB(url: DofusDB.imageObjet(icone)) { symbole }.aspectRatio(contentMode: .fit)
         } else {
@@ -51,8 +51,8 @@ struct AlmanaxVue: View {
         return HStack(spacing: 10) {
             icone(offrande).frame(width: 28, height: 28)
             HStack(spacing: 6) {
-                Text(L("palette.almanax")).font(.synfus(.petit, gras: true)).foregroundStyle(Couleurs.ambre)
-                Text(L("palette.almanax.offrande", offrande.quantite, nom)).font(.synfus(.corps, gras: true))
+                Text(L("palette.almanax")).font(.synfus(.petit, gras: true)).foregroundStyle(Couleurs.safranTexte)
+                Text(L("palette.almanax.offrande", offrande.quantite, nom)).font(.synfus(.corpsFort))
                     .lineLimit(1)
             }
             Spacer(minLength: 4)

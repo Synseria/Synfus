@@ -58,14 +58,14 @@ struct TeamSectorView: View {
             // Le « + » est une cible, pas un libellé : il prend de la place.
             .frame(minWidth: secteur == .nouvelle ? (agrandi ? 48 : 34) : 0)
             .frame(height: agrandi ? 24 : 19)
-            .foregroundStyle(actif ? Color.white : (secteur == .nouvelle ? Color.secondary : Color.primary))
+            .foregroundStyle(actif ? Couleurs.encreSurPrimaire : (secteur == .nouvelle ? Color.secondary : Color.primary))
             .background(
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
                     .fill(fond)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .strokeBorder(cible ? Couleurs.accent : Color.clear, lineWidth: 1.5)
+                    .strokeBorder(cible ? Couleurs.primaire : Color.clear, lineWidth: 1.5)
             )
             .contentShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
         }
@@ -78,8 +78,8 @@ struct TeamSectorView: View {
     }
 
     private var fond: Color {
-        if actif { return Couleurs.accentPlein }
-        if cible { return Couleurs.accent.opacity(0.18) }
+        if actif { return Couleurs.primaire }
+        if cible { return Couleurs.primaire.opacity(0.18) }
         return survole ? Color.primary.opacity(0.08) : .clear
     }
 

@@ -15,7 +15,7 @@ private struct Consigne: View {
             Image(systemName: icone)
         }
         .font(.synfus(forte ? .corps : .petit, gras: forte))
-        .foregroundStyle(urgente ? Couleurs.ambre : forte ? Color.primary : Color.secondary)
+        .foregroundStyle(urgente ? Couleurs.safranTexte : forte ? Color.primary : Color.secondary)
     }
 }
 
@@ -151,9 +151,9 @@ struct TalKashaVue: View {
                 Text(String(repeating: "I", count: rang))
                     .font(.synfus(.note, gras: true, design: .serif))
                     .frame(width: 30, height: 22)
-                    .foregroundStyle(rang <= glyphes ? Color.white : Color.secondary)
+                    .foregroundStyle(rang <= glyphes ? Couleurs.encreSurPrimaire : Color.secondary)
                     .background(RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(rang <= glyphes ? Couleurs.accentPlein : Color.primary.opacity(0.08)))
+                        .fill(rang <= glyphes ? Couleurs.primaire : Color.primary.opacity(0.08)))
             }
             PetitBouton(icone: "minus", aide: L("boss.talKasha.moins")) {
                 aide.noter { session, _ in session.glyphesTalKasha = max(session.glyphesTalKasha - 1, 0) }

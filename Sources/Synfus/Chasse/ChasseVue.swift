@@ -29,7 +29,7 @@ struct ChasseVue: View {
     }
 
     private var entete: some View {
-        EnTetePanneau(icone: "map", teinte: Couleurs.ambre) {
+        EnTetePanneau(icone: "map", teinte: Couleurs.safran) {
             Text(L("chasse.titre")).font(.synfus(.note, gras: true))
                 .padding(.horizontal, 6)
                 .padding(.vertical, 3)
@@ -87,11 +87,11 @@ struct ChasseVue: View {
         let choisie = modele.direction == direction
         return Button { modele.choisir(direction) } label: {
             Image(systemName: direction.symbole)
-                .font(.synfus(.titre, gras: true))
+                .font(.synfus(.titre))
                 .frame(width: 36, height: 36)
-                .foregroundStyle(choisie ? Color.white : Color.primary)
+                .foregroundStyle(choisie ? Couleurs.encreSurPrimaire : Color.primary)
                 .background(RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(choisie ? Couleurs.accentPlein : Color.primary.opacity(0.08)))
+                    .fill(choisie ? Couleurs.primaire : Color.primary.opacity(0.08)))
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -103,10 +103,10 @@ struct ChasseVue: View {
         if previews.authorized {
             Button { modele.lire() } label: {
                 Image(systemName: "text.viewfinder")
-                    .font(.synfus(.titre, gras: true))
+                    .font(.synfus(.titre))
                     .frame(width: 36, height: 36)
-                    .foregroundStyle(Couleurs.ambre)
-                    .background(Circle().fill(Couleurs.ambre.opacity(0.18)))
+                    .foregroundStyle(Couleurs.safranTexte)
+                    .background(Circle().fill(Couleurs.safranFond))
                     .contentShape(Circle())
             }
             .buttonStyle(.plain)
@@ -178,7 +178,7 @@ struct ChasseVue: View {
                         .padding(.horizontal, 7)
                         .padding(.vertical, 2)
                         .background(Capsule().fill(modele.cible == cible
-                                                   ? Couleurs.accent.opacity(0.3)
+                                                   ? Couleurs.primaire.opacity(0.3)
                                                    : Color.primary.opacity(0.08)))
                 }
                 .buttonStyle(.plain)
@@ -202,7 +202,7 @@ struct ChasseVue: View {
                     Group {
                         switch constat.resultat {
                         case .trouve(let x, let y, let distance):
-                            Text(L("chasse.trouve", nombre: distance, Coordonnees.texte(x, y), distance)).font(.synfus(.corps, gras: true))
+                            Text(L("chasse.trouve", nombre: distance, Coordonnees.texte(x, y), distance)).font(.synfus(.corpsFort))
                         case .introuvable:
                             Text(L("chasse.introuvable", EtapeChasse.portee)).foregroundStyle(Couleurs.alerte)
                         case .phorreur:
@@ -215,14 +215,14 @@ struct ChasseVue: View {
                 if case .trouve = constat.resultat {
                     Button { modele.copier() } label: {
                         Image(systemName: modele.copieRecente ? "checkmark" : "doc.on.doc")
-                            .foregroundStyle(modele.copieRecente ? Couleurs.accentTexte : Color.secondary)
+                            .foregroundStyle(modele.copieRecente ? Couleurs.primaireEncre : Color.secondary)
                     }
                     .buttonStyle(.borderless)
                     .aide(L("chasse.copier"))
                 }
             }
             .padding(10)
-            .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Couleurs.accent.opacity(0.12)))
+            .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Couleurs.primaire.opacity(0.12)))
         }
     }
 }

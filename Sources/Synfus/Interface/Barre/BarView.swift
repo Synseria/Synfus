@@ -301,7 +301,7 @@ struct BarView: View {
             } else {
                 Circle().fill(icons.catalogue.color(for: className))
                 Text(icons.catalogue.abbreviation(for: className))
-                    .font(.synfus(.marque, gras: true, design: .rounded))
+                    .font(.synfus(.micro, gras: true, design: .rounded))
                     .foregroundStyle(.white)
             }
         }
@@ -341,15 +341,15 @@ struct BarView: View {
                     if prefs.showClasses, let className = client.characterClass {
                         Text(className)
                             .font(.synfus(.petit))
-                            .foregroundStyle(active ? Color.white : Color.secondary)
+                            .foregroundStyle(active ? Couleurs.encreSurPrimaire : Color.secondary)
                             .lineLimit(1)
                     }
                 }
 
                 if prefs.showNumbers {
                     Text("\(index + 1)")
-                        .font(.synfus(.marque, gras: true, design: .rounded))
-                        .foregroundStyle(active ? Color.white : Color.secondary)
+                        .font(.synfus(.micro, gras: true, design: .rounded))
+                        .foregroundStyle(active ? Couleurs.encreSurPrimaire : Color.secondary)
                 }
 
                 // Rien de plus : l'enchaînement au clic suit l'ordre de la barre,
@@ -361,7 +361,7 @@ struct BarView: View {
             .fixedSize(horizontal: true, vertical: false)
             .background(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(active ? Couleurs.accentPlein : Color.clear)
+                    .fill(active ? Couleurs.primaire : Color.clear)
             )
             .overlay { if alerting { AlertPulse() } }
             .overlay { if manager.basculeSignalee == client.slotKey { SwitchBlink() } }
@@ -372,7 +372,7 @@ struct BarView: View {
                     CombatBadge(etat: etat)
                 }
             }
-            .foregroundStyle(active ? Color.white : Color.primary)
+            .foregroundStyle(active ? Couleurs.encreSurPrimaire : Color.primary)
             .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
         .buttonStyle(.plain)

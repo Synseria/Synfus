@@ -22,7 +22,7 @@ struct PNJSettings: View {
             ForEach(affiches, id: \.element.id) { rang, pnj in
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
-                        Text(Lieu.traduit(pnj.noms, langue) ?? "?").font(.synfus(.corps, gras: true))
+                        Text(Lieu.traduit(pnj.noms, langue) ?? "?").font(.synfus(.corpsFort))
                         Spacer()
                         BoutonEtiquette(cle: pnj.cle)
                         BoutonFavori(cle: pnj.cle)

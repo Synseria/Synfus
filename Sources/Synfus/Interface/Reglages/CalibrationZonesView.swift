@@ -76,7 +76,7 @@ struct CalibrationZonesView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(L("calibration.titre", genre.libelle)).font(.synfus(.titre, gras: true))
+            Text(L("calibration.titre", genre.libelle)).font(.synfus(.titre))
             Text(genre.consigne)
                 .font(.synfus(.petit))
                 .foregroundStyle(.secondary)
@@ -107,7 +107,7 @@ struct CalibrationZonesView: View {
                 Spacer()
                 Button(L("calibration.terminer")) { dismiss() }
                     .keyboardShortcut(.defaultAction)
-                    .tint(Couleurs.accentPlein)
+                    .tint(Couleurs.primaire)
             }
         }
         .padding(16)

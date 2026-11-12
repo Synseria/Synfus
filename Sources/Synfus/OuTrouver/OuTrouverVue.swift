@@ -121,7 +121,7 @@ struct OuTrouverVue: View {
                 Text(Lieu.traduit(repaire.repaire.noms, langue) ?? "?").lineLimit(1).layoutPriority(1)
                 Spacer(minLength: 4)
                 if copie == id {
-                    Text(L("quete.copie")).fontWeight(.semibold).foregroundStyle(Couleurs.accentTexte)
+                    Text(L("quete.copie")).fontWeight(.semibold).foregroundStyle(Couleurs.primaireEncre)
                 } else {
                     if let cartes = repaire.cartes { Text(L("ouTrouver.cartes", nombre: cartes, cartes)).lineLimit(1) }
                     Text(Coordonnees.texte(repaire.situation.x, repaire.situation.y))

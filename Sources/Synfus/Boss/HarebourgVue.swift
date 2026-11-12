@@ -32,8 +32,8 @@ struct HarebourgVue: View {
                 .frame(width: 96, height: 48)
             VStack(alignment: .leading, spacing: 2) {
                 Text(Self.titre(estimation.confusion.visee))
-                    .font(.synfus(.titre, gras: true))
-                    .foregroundStyle(estimation.enTour ? Couleurs.accentTexte : Color.secondary)
+                    .font(.synfus(.titre))
+                    .foregroundStyle(estimation.enTour ? Couleurs.primaireEncre : Color.secondary)
                 Text(Self.libelle(estimation.confusion))
                     .font(.synfus(.petit))
                     .foregroundStyle(.secondary)
@@ -51,7 +51,7 @@ struct HarebourgVue: View {
         if let voisine = estimation.voisine {
             Label(L("boss.frontiere", Self.titre(voisine.visee)), systemImage: "exclamationmark.triangle")
                 .font(.synfus(.petit))
-                .foregroundStyle(Couleurs.ambre)
+                .foregroundStyle(Couleurs.safranTexte)
                 .fixedSize(horizontal: false, vertical: true)
         }
         if estimation.enTour, estimation.compteLesCoups {
@@ -123,9 +123,9 @@ struct HarebourgVue: View {
                     Image(systemName: Self.symbole(confusion))
                         .font(.synfus(.petit, gras: true))
                         .frame(width: 26, height: 22)
-                        .foregroundStyle(active ? Color.white : Color.primary)
+                        .foregroundStyle(active ? Couleurs.encreSurPrimaire : Color.primary)
                         .background(RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .fill(active ? Couleurs.accentPlein : Color.primary.opacity(0.08)))
+                            .fill(active ? Couleurs.primaire : Color.primary.opacity(0.08)))
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -199,7 +199,7 @@ struct SchemaVisee: View {
             }
             let visee = confusion.caseVisee(cible: Self.cible)
             contexte.fill(losange(0, 0), with: .color(.primary.opacity(0.55)))
-            contexte.fill(losange(visee.x, visee.y), with: .color(Couleurs.accent))
+            contexte.fill(losange(visee.x, visee.y), with: .color(Couleurs.primaire))
             contexte.stroke(losange(Self.cible.x, Self.cible.y), with: .color(.red), lineWidth: 1.5)
             if visee != Self.cible {
                 var trait = Path()

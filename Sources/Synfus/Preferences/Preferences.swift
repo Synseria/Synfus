@@ -113,6 +113,11 @@ final class Preferences: ObservableObject {
     /// à la charge de l'appelant comme `menuBarIcon`.
     @Published var iconeApp: IconeApp = .parDefaut { didSet { save() } }
 
+    /// La couleur de l'app et la teinte de ses fonds (Réglages ▸ Apparence) : tout le reste
+    /// des couleurs vient des jetons, par `Couleurs`.
+    @Published var couleurDeLApp: Jetons.Couleur = Jetons.couleurParDefaut { didSet { save() } }
+    @Published var fondsDeLApp: Jetons.Fonds = Jetons.fondsParDefaut { didSet { save() } }
+
     /// Achever les clients gelés à la fermeture (voir `FreezeWatcher`). Activé
     /// par défaut : la règle d'abattage est assez stricte pour ne viser que des
     /// processus déjà morts en pratique, et c'est tout l'intérêt de la fonction
@@ -507,6 +512,8 @@ final class Preferences: ObservableObject {
         .facultatif("autoCenterBar", \.autoCenterBar),
         .facultatif("menuBarIcon", \.menuBarIcon),
         .facultatif("iconeApp", \.iconeApp),
+        .enTexte("couleurDeLApp", \.couleurDeLApp, ecrit: \.ecrit, lu: Jetons.Couleur.init(ecrit:)),
+        .enTexte("fondsDeLApp", \.fondsDeLApp, ecrit: \.ecrit, lu: Jetons.Fonds.init(ecrit:)),
         .facultatif("showPreviewOnHover", \.showPreviewOnHover),
         .optionnel("previewHotKey", \.previewHotKey),
         .facultatif("advanceOnClick", \.advanceOnClick),
@@ -680,6 +687,21 @@ final class Preferences: ObservableObject {
             Reglage(ecrire: { try $1.encodeIfPresent($0[keyPath: chemin], forKey: cle) },
                     lire: { conteneur in
                         guard let valeur = try conteneur.decodeIfPresent(V.self, forKey: cle)
+                        else { return nil }
+                        return { $0[keyPath: chemin] = valeur }
+                    })
+        }
+
+        /// Une valeur écrite en texte : une valeur illisible (version plus récente, JSON
+        /// retouché) laisse le défaut au lieu de rendre toute la sauvegarde illisible.
+        static func enTexte<V>(
+            _ cle: Cle, _ chemin: ReferenceWritableKeyPath<Preferences, V>,
+            ecrit: @escaping @MainActor (V) -> String, lu: @escaping @MainActor (String) -> V?
+        ) -> Reglage {
+            Reglage(ecrire: { try $1.encode(ecrit($0[keyPath: chemin]), forKey: cle) },
+                    lire: { conteneur in
+                        guard let texte = try conteneur.decodeIfPresent(String.self, forKey: cle),
+                              let valeur = lu(texte)
                         else { return nil }
                         return { $0[keyPath: chemin] = valeur }
                     })

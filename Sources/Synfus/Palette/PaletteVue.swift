@@ -39,7 +39,7 @@ struct PaletteVue: View {
                 .foregroundStyle(.secondary)
             TextField(L("palette.invite"), text: $modele.requete)
                 .textFieldStyle(.plain)
-                .font(.synfus(.grand))
+                .font(.synfus(.titre, design: .default))
                 .focused($champ, equals: .recherche)
                 .help(L("raccourcis.palette.aide"))
             // D'où partent distances et trajets : le dernier perso lu devant,
@@ -53,10 +53,10 @@ struct PaletteVue: View {
             if let mode {
                 Text(mode)
                     .font(.synfus(.petit, gras: true))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Couleurs.encreSurPrimaire)
                     .padding(.horizontal, 7)
                     .padding(.vertical, 2)
-                    .background(Capsule().fill(Couleurs.accentPlein))
+                    .background(Capsule().fill(Couleurs.primaire))
             }
         }
         .padding(.horizontal, 16)
@@ -70,10 +70,10 @@ struct PaletteVue: View {
                 let choisi = modele.filtre == filtre
                 Text(filtre.titre)
                     .font(.synfus(.petit, gras: choisi))
-                    .foregroundStyle(choisi ? Color.white : Color.secondary)
+                    .foregroundStyle(choisi ? Couleurs.encreSurPrimaire : Color.secondary)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
-                    .background(Capsule().fill(choisi ? Couleurs.accentPlein : Color.primary.opacity(0.06)))
+                    .background(Capsule().fill(choisi ? Couleurs.primaire : Color.primary.opacity(0.06)))
                     .contentShape(Capsule())
                     .onTapGesture { modele.choisir(filtre) }
                     .accessibilityAddTraits(choisi ? [.isButton, .isSelected] : .isButton)
@@ -333,7 +333,7 @@ private struct CarteZaap: View {
                 if let etiquette = entree.etiquette { PastilleEtiquette(texte: etiquette) }
                 Spacer(minLength: 0)
                 if entree.favori {
-                    Image(systemName: "star.fill").font(.synfus(.marque)).foregroundStyle(Couleurs.ambre)
+                    Image(systemName: "star.fill").font(.synfus(.micro)).foregroundStyle(Couleurs.safranTexte)
                 }
             }
             .frame(height: 16)
@@ -353,9 +353,9 @@ private struct CarteZaap: View {
         }
         .padding(9)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background { FondCarte(carte: entree.carte, teinte: choisie ? Couleurs.accent.opacity(0.22) : nil) }
+        .background { FondCarte(carte: entree.carte, teinte: choisie ? Couleurs.primaire.opacity(0.22) : nil) }
         .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous)
-            .strokeBorder(choisie ? Couleurs.accent : Color.primary.opacity(0.08)))
+            .strokeBorder(choisie ? Couleurs.primaire : Color.primary.opacity(0.08)))
         .contentShape(Rectangle())
     }
 }
@@ -372,7 +372,7 @@ private struct LigneResultat: View {
             PictogrammeLieu(gfx: entree.pictogramme) {
                 Image(systemName: icone)
                     .font(.synfus(.corps))
-                    .foregroundStyle(choisie ? Couleurs.accentTexte : Color.secondary)
+                    .foregroundStyle(choisie ? Couleurs.primaireEncre : Color.secondary)
             }
             .frame(width: 22, height: 22)
             .frame(width: 26, height: 26)
@@ -382,7 +382,7 @@ private struct LigneResultat: View {
                     Text(entree.titre).font(.synfus(.corps)).lineLimit(1)
                     if let etiquette = entree.etiquette { PastilleEtiquette(texte: etiquette) }
                     if entree.favori {
-                        Image(systemName: "star.fill").font(.synfus(.marque)).foregroundStyle(Couleurs.ambre)
+                        Image(systemName: "star.fill").font(.synfus(.micro)).foregroundStyle(Couleurs.safranTexte)
                     }
                     if entree.interieur { EtiquetteInterieur(taille: .petit) }
                 }
@@ -391,7 +391,7 @@ private struct LigneResultat: View {
                         if let sousTitre = entree.sousTitre { Text(sousTitre).foregroundStyle(.secondary) }
                         // Le zaap retenu, à lire avant d'Entrée : le trajet copié y passe.
                         if let itineraire = entree.itineraire {
-                            Text(itineraire).foregroundStyle(Couleurs.accentTexte).layoutPriority(1)
+                            Text(itineraire).foregroundStyle(Couleurs.primaireEncre).layoutPriority(1)
                         }
                     }
                     .font(.synfus(.petit))
@@ -416,7 +416,7 @@ private struct LigneResultat: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
         .background(RoundedRectangle(cornerRadius: 8, style: .continuous)
-            .fill(choisie ? Couleurs.accent.opacity(0.22) : Color.clear))
+            .fill(choisie ? Couleurs.primaire.opacity(0.22) : Color.clear))
         .contentShape(Rectangle())
     }
 
@@ -443,7 +443,7 @@ private struct LigneResultat: View {
 /// Une carte qui n'est pas en extérieur : `/travel` mène devant, il reste
 /// à entrer. La palette et le panneau des quêtes la disent pareil.
 struct EtiquetteInterieur: View {
-    let taille: TailleTexte
+    let taille: Jetons.Typo
 
     var body: some View {
         Text(L("carte.interieur"))
@@ -465,7 +465,7 @@ struct PastilleEtiquette: View {
             .foregroundStyle(.black.opacity(0.85))
             .padding(.horizontal, 5)
             .padding(.vertical, 1)
-            .background(RoundedRectangle(cornerRadius: 4).fill(Couleurs.ambre))
+            .background(RoundedRectangle(cornerRadius: 4).fill(Couleurs.safran))
             .lineLimit(1)
     }
 }

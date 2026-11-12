@@ -13,11 +13,15 @@ La grille est le skill global `grille-ui`. Ici, seulement ce qui lui manque ou l
 
 ## Jetons
 
-- Couleurs : `Couleurs` — `accent` (trait, voile), `accentPlein` (aplat sous du blanc), `accentTexte`
-  (texte), ambre, suggestion, alerte, succes ; une couleur de classe vient de `DofusClass`.
-- Polices : `.font(.synfus(taille, gras:, design:))`, `TailleTexte` pour seule échelle ; `marque`
-  pour les initiales, numéros et petits symboles, jamais pour un texte. Racine de fenêtre :
-  `.racineSynfus()`. `JetonsTests` tient le tout.
+- Couleurs : `Couleurs`, façade de `Jetons` (engendré par Synseria-Design, jamais retouché) pour le
+  réglage courant (Réglages ▸ Apparence : couleur de l'app, teinte des fonds), dynamique clair/sombre
+  et lue dans un `body` : le changement se voit en direct. `primaire` (trait, aplat) + `encreSurPrimaire`
+  (texte posé dessus), `primaireEncre` (couleur écrite), `safran`/`safranTexte`/`safranFond` (« regarde
+  ici », jamais un état), `suggestionSynfus`, `alerte`, `succes`, `danger`, neutres ; une couleur de
+  classe vient de `DofusClass`.
+- Polices : `.font(.synfus(role, gras:, design:))`, `role` = un `Jetons.Typo` (titrePage, titre, corps,
+  corpsFort, note, petit, micro, chiffre, grandChiffre, raccourci), aucun texte sous `micro`. Racine de
+  fenêtre : `.racineSynfus()` (teinte = primaire). `JetonsTests` et `CouleursTests` tiennent le tout.
 - Lignes de réglage : `Ligne`, `Interrupteur`, `RaccourciReglable`. Sous un libellé, `etat:` ne prend
   qu'une valeur, un état, le résultat d'une action ou une mention légale ; une explication va dans
   `aide:` (ⓘ). `Interrupteur` n'a pas d'`etat:`. Un titre de page n'a pas de phrase : `EnTetePage`
