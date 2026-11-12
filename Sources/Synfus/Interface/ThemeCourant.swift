@@ -46,6 +46,12 @@ enum ThemeCourant {
 extension Color {
     /// Un jeton du thème courant.
     @MainActor static func jeton(_ jeton: ThemeCourant.Jeton) -> Color { Color(nsColor: ThemeCourant.nsColor(jeton)) }
+
+    /// Un jeton lu dans une apparence fixe : ce qui se pose sur un voile nuit s'écrit en clair,
+    /// que la fenêtre soit claire ou sombre.
+    @MainActor static func jeton(_ jeton: ThemeCourant.Jeton, en apparence: Jetons.Apparence) -> Color {
+        ThemeCourant.theme(apparence)[keyPath: jeton].couleur
+    }
 }
 
 /// À poser sur la racine de chaque fenêtre : sans elle, un contrôle du système y prend l'accent
