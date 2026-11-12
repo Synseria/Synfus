@@ -92,6 +92,33 @@ struct CapturesTests {
         try ecrire(vue, vers: dossier.appending(path: "quete.png"))
     }
 
+    @Test("Capture du panneau de quête sans quête épinglée, au suivi long", .enabled(if: dossier != nil))
+    func queteVide() throws {
+        let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
+        try FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)
+        let modele = try QuetesTests.quetes()
+        var json = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(modele)) as? [String: Any])
+        let premiere = try #require((json["quetes"] as? [[String: Any]])?.first)
+        let noms = ["Apprentissage : Écaflip, le joueur de dés", "L'éternelle moisson", "Le sang du wabbit GM",
+                    "Apprentissage : Éniripsa, la guérisseuse du village", "Chasseur de têtes", "Les fils de la forêt maudite",
+                    "Une affaire de famille", "Le retour de l'enfant prodigue", "Trois pas vers la lumière"]
+        json["quetes"] = noms.enumerated().map { rang, nom -> [String: Any] in
+            var quete = premiere
+            quete["id"] = 9000 + rang
+            quete["noms"] = ["fr": nom]
+            return quete
+        }
+        let quetes = try JSONDecoder().decode(Quetes.self, from: JSONSerialization.data(withJSONObject: json))
+        QuetesStore.shared.poserPourCaptures(quetes)
+        LectureSuivi.shared.poserPourCaptures(reconnues: noms.indices.map { SuiviQuetes.Reconnue(id: 9000 + $0, etape: nil) })
+        let vue = QueteVue()
+            .frame(width: 360, height: 480)
+            .padding(24)
+            .background(Color(red: 0.11, green: 0.11, blue: 0.13))
+            .environment(\.colorScheme, Self.schema)
+        try ecrire(vue, vers: dossier.appending(path: "quete-vide.png"))
+    }
+
     /// Sans la vue des cartes : elle viendrait de DofusDB, et une capture du
     /// dépôt ne porte aucun visuel du jeu (CGU Dofus, art. 13.2).
     private static func sansCartes(_ fiche: FicheQuete) -> FicheQuete {
