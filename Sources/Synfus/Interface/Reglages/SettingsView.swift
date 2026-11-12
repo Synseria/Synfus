@@ -140,7 +140,8 @@ struct SettingsView: View {
             onglet.section = item
         } label: {
             HStack(spacing: Jetons.Espace.deux) {
-                Image(systemName: item.icon).frame(width: Jetons.Taille.touche)
+                // Colonne assez large pour le plus large des symboles (`person.3`) : les libellés partent du même x.
+                Image(systemName: item.icon).frame(width: Jetons.Taille.cibleMin)
                 Text(item.label)
             }
                 .font((section == item ? Jetons.Typo.corpsFort : Jetons.Typo.corps).police)

@@ -25,8 +25,9 @@ struct GroupeSelectionTests {
     func grille() {
         let grille = DispositionGroupe.grille(colonnes: 4)
         #expect(grille.voisin(depuis: 5, parmi: 8, .haut) == 1)
-        #expect(grille.voisin(depuis: 5, parmi: 8, .bas) == 7)
-        #expect(grille.voisin(depuis: 6, parmi: 8, .bas) == 7)
+        #expect(grille.voisin(depuis: 5, parmi: 8, .bas) == 5)
+        #expect(grille.voisin(depuis: 2, parmi: 8, .bas) == 6)
+        #expect(grille.voisin(depuis: 2, parmi: 8, .haut) == 2)
         #expect(grille.voisin(depuis: 5, parmi: 8, .gauche) == 4)
         #expect(grille.voisin(depuis: 5, parmi: 8, .droite) == 6)
     }
