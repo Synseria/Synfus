@@ -3,7 +3,8 @@ import Foundation
 /// Comparer un texte lu (OCR, saisie) à des noms connus malgré les fautes :
 /// une forme normalisée commune, et une distance d'édition qui trouve un nom
 /// **dans** une ligne. Pur ; partagé par la chasse (indices) et le suivi de
-/// quêtes, qui lisent la même police avec les mêmes écorchures.
+/// quêtes, qui lisent la même police avec les mêmes écorchures, et par les
+/// fautes de frappe de la palette.
 enum Ressemblance {
     /// Sans accents ni casse, ligatures dépliées, ponctuation réduite à un
     /// espace : « Crâne » et « crane », « Œuf » et « oeuf », « Pense-bête »

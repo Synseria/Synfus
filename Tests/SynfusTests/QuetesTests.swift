@@ -240,12 +240,13 @@ struct QuetesTests {
         #expect(DofusPourLesNoobs.page("pense-bete").absoluteString == "https://www.dofuspourlesnoobs.com/pense-bete.html")
     }
 
-    @Test("/pnj et le filtre PNJ : le trajet vers sa position")
+    @Test("/pnj et le filtre Créatures : le trajet vers sa position")
     func paletteePNJ() throws {
         let contexte = try contexte()
         #expect(RecherchePalette.entrees("/pnj wogew", contexte).first?.detail == "[-1,-39]")
         #expect(RecherchePalette.entrees("/pnj otomai", contexte).first?.sousTitre?.hasPrefix("Village d'Amakna · Amakna") == true)
-        #expect(RecherchePalette.entrees("", contexte, filtre: .pnj).allSatisfy { $0.genre == .pnj })
+        let creatures = RecherchePalette.entrees("", contexte, filtre: .creatures)
+        #expect(creatures.contains { $0.genre == .pnj } && creatures.allSatisfy { $0.genre == .pnj || $0.genre == .monstre })
         #expect(RecherchePalette.entrees("wogew", contexte, filtre: .quetes).map(\.genre) == [.quete])
     }
 

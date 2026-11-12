@@ -95,7 +95,7 @@ struct BancDonneesTests {
         let index = IndexPalette(contexte, connus: champs)
         _ = index.tout
         _ = index.quetes
-        for requete in ["a", "bo", "bonta", "/quete a", "/pnj "] {
+        for requete in ["a", "bo", "bonta", "funoroshi", "/quete a", "/pnj "] {
             Sortie.dire("palette — frappe « \(requete) » : \(Self.chrono { _ = RecherchePalette.entrees(requete, index) })")
         }
         Sortie.dire("palette — frappe « a », tri alphabétique : \(Self.chrono { _ = RecherchePalette.entrees("a", index, tri: .alphabetique) })")
