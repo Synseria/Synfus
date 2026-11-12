@@ -57,13 +57,13 @@ final class MenuBarController: NSObject, NSMenuDelegate {
                 item.isEnabled = false
                 menu.addItem(item)
             } else {
-                add(to: menu, title: L("maj.menu.installer", version.numero), action: #selector(installUpdate))
+                add(to: menu, title: L("maj.menu.installer", version.numero), action: #selector(installUpdate), icone: "arrow.down.circle")
             }
             menu.addItem(.separator())
         }
 
         if !manager.accessibilityGranted {
-            add(to: menu, title: L("menu.autoriser"), action: #selector(requestAccess))
+            add(to: menu, title: L("menu.autoriser"), action: #selector(requestAccess), icone: "lock.open")
             menu.addItem(.separator())
         } else if manager.clients.isEmpty {
             let empty = NSMenuItem(title: L("barre.aucunPerso"), action: nil, keyEquivalent: "")
@@ -89,31 +89,39 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             menu.addItem(.separator())
         }
 
-        // Les panneaux de jeu dans l'ordre de la barre, puis les fenêtres et
-        // la barre, puis Synfus lui-même.
-        add(to: menu, title: L("menu.quetes"), action: #selector(openQuests), raccourci: prefs.quetesHotKey)
-        add(to: menu, title: L("menu.boss"), action: #selector(openBoss), raccourci: prefs.bossHotKey)
-        add(to: menu, title: L("menu.chasse"), action: #selector(openHunt), raccourci: prefs.chasseHotKey)
-        add(to: menu, title: L("menu.palette"), action: #selector(openPalette), raccourci: prefs.paletteHotKey)
+        // La palette, geste le plus fréquent, puis les panneaux de jeu ; les
+        // fenêtres et la barre ; Synfus lui-même ; enfin ce qui détruit, à part.
+        add(to: menu, title: L("menu.palette"), action: #selector(openPalette), raccourci: prefs.paletteHotKey,
+            icone: "command")
+        add(to: menu, title: L("menu.quetes"), action: #selector(openQuests), raccourci: prefs.quetesHotKey,
+            icone: "scroll").state = QuetePanel.shared.ouvert ? .on : .off
+        add(to: menu, title: L("menu.chasse"), action: #selector(openHunt), raccourci: prefs.chasseHotKey,
+            icone: "map").state = ChassePanel.shared.ouvert ? .on : .off
+        add(to: menu, title: L("menu.boss"), action: #selector(openBoss), raccourci: prefs.bossHotKey,
+            icone: "scope").state = BossPanel.shared.ouvert ? .on : .off
         menu.addItem(.separator())
 
         menu.addItem(arrangeSubmenu(enabled: manager.accessibilityGranted
                                              && !manager.clients.isEmpty))
         if !manager.clients.isEmpty {
-            add(to: menu, title: L("menu.lancerSession"), action: #selector(launchSession), raccourci: prefs.sessionHotKey)
+            add(to: menu, title: L("menu.lancerSession"), action: #selector(launchSession), raccourci: prefs.sessionHotKey,
+                icone: "play")
         }
-        add(to: menu, title: prefs.barVisible ? L("menu.masquerBarre") : L("menu.afficherBarre"), action: #selector(toggleBar))
-        add(to: menu, title: L("menu.recentrerBarre"), action: #selector(recenterBar))
+        add(to: menu, title: prefs.barVisible ? L("menu.masquerBarre") : L("menu.afficherBarre"), action: #selector(toggleBar),
+            raccourci: prefs.toggleBar, icone: prefs.barVisible ? "eye.slash" : "eye")
+        add(to: menu, title: L("menu.recentrerBarre"), action: #selector(recenterBar), icone: "dot.viewfinder")
         menu.addItem(.separator())
 
-        add(to: menu, title: L("menu.apropos"), action: #selector(openAbout))
-        add(to: menu, title: L("menu.reglages"), action: #selector(openSettings))
+        add(to: menu, title: L("menu.apropos"), action: #selector(openAbout), icone: "info.circle")
+        add(to: menu, title: L("menu.reglages"), action: #selector(openSettings), icone: "gearshape")
+        menu.addItem(.separator())
         // Reconstruit à chaque ouverture : l'item n'apparaît que s'il y a
         // quelqu'un à fermer, inutile de jouer avec `isEnabled`.
         if !manager.clients.isEmpty {
-            add(to: menu, title: L("menu.fermerTous"), action: #selector(closeAllClients))
+            add(to: menu, title: L("menu.fermerTous"), action: #selector(closeAllClients), icone: "xmark.circle")
+            menu.addItem(.separator())
         }
-        add(to: menu, title: L("menu.quitter"), action: #selector(quit))
+        add(to: menu, title: L("menu.quitter"), action: #selector(quit), icone: "power")
     }
 
     /// Sous-menu « Ranger les fenêtres » : une entrée par disposition. Le
@@ -121,6 +129,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     /// c'est elle qu'il rejoue.
     private func arrangeSubmenu(enabled: Bool) -> NSMenuItem {
         let parent = NSMenuItem(title: L("menu.rangerFenetres"), action: nil, keyEquivalent: "")
+        parent.image = NSImage(systemSymbolName: "rectangle.3.group", accessibilityDescription: nil)
         let submenu = NSMenu()
         let prefs = Preferences.shared
         for (index, disposition) in Disposition.allCases.enumerated() {
@@ -157,6 +166,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         let manager = WindowManager.shared
         let prefs = Preferences.shared
         let parent = NSMenuItem(title: L("equipes.equipe"), action: nil, keyEquivalent: "")
+        parent.image = NSImage(systemSymbolName: "person.2", accessibilityDescription: nil)
         if let hotKey = prefs.equipeSuivanteHotKey {
             parent.attributedTitle = attributed(name: L("equipes.equipe"), shortcut: hotKey.displayString)
         }
@@ -181,9 +191,11 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     /// Le raccourci, global (Carbon), est montré à titre indicatif : un key
     /// equivalent de menu ne marcherait que Synfus au premier plan.
     @discardableResult
-    private func add(to menu: NSMenu, title: String, action: Selector, raccourci: HotKey? = nil) -> NSMenuItem {
+    private func add(to menu: NSMenu, title: String, action: Selector, raccourci: HotKey? = nil,
+                     icone: String? = nil) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
         item.target = self
+        item.image = icone.flatMap { NSImage(systemSymbolName: $0, accessibilityDescription: nil) }
         if let raccourci { item.attributedTitle = attributed(name: title, shortcut: raccourci.displayString) }
         menu.addItem(item)
         return item
@@ -244,15 +256,15 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     }
 
     @objc private func openQuests() {
-        QuetePanel.shared.ouvrir()
+        QuetePanel.shared.basculer()
     }
 
     @objc private func openHunt() {
-        ChassePanel.shared.ouvrir()
+        ChassePanel.shared.basculer()
     }
 
     @objc private func openBoss() {
-        BossPanel.shared.ouvrir()
+        BossPanel.shared.basculer()
     }
 
     @objc private func openPalette() {
