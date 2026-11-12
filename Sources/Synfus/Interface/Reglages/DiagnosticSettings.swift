@@ -17,11 +17,11 @@ struct DiagnosticSettings: View {
         VStack(spacing: 0) {
             EnTetePage(titre: L("reglages.diagnostic"))
             ScrollView {
-                VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: Jetons.Espace.deux) {
                     content
                 }
                 .padding(.horizontal, MargeReglages.texte)
-                .padding(.vertical, 14)
+                .padding(.vertical, Jetons.Espace.trois)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             Divider()
@@ -31,19 +31,19 @@ struct DiagnosticSettings: View {
                 // si elle monte à ~1 s alors que la barre reste fluide, c'est
                 // que le déport fait son travail.
                 Text(L("diagnostic.dernierInventaire", Int(managerDiagnostics.lastInventoryDuration * 1000)))
-                    .font(.synfus(.petit, design: .monospaced))
-                    .foregroundStyle(managerDiagnostics.lastInventoryDuration > 0.5 ? Couleurs.alerte : Color.secondary)
+                    .font(.synfus(.codeInterface))
+                    .foregroundStyle(managerDiagnostics.lastInventoryDuration > 0.5 ? Couleurs.alerte : Couleurs.encreSecondaire)
                 Spacer()
             }
             .padding(.horizontal, MargeReglages.texte)
-            .padding(.vertical, 10)
+            .padding(.vertical, Jetons.Espace.deux)
         }
     }
 
     @ViewBuilder
     private var content: some View {
-            HStack(spacing: 6) {
-                Text(L("diagnostic.fenetres")).font(.synfus(.note, gras: true))
+            HStack(spacing: Jetons.Espace.un) {
+                Text(L("diagnostic.fenetres")).font(.synfus(.corpsFort))
                 HelpTip(L("diagnostic.fenetres.aide"))
             }
 
@@ -55,27 +55,27 @@ struct DiagnosticSettings: View {
                        : L("diagnostic.accessibiliteManquante"))
                     .font(.synfus(.petit))
                     .foregroundStyle(Couleurs.alerte)
-                    .padding(.top, 6)
+                    .padding(.top, Jetons.Espace.un)
             } else {
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: Jetons.Espace.deux) {
                         ForEach(manager.clients) { client in
-                            VStack(alignment: .leading, spacing: 2) {
+                            VStack(alignment: .leading, spacing: Jetons.Espace.un) {
                                 Text(client.name)
-                                    .font(.synfus(.note, gras: true))
+                                    .font(.synfus(.corpsFort))
                                 Text(L("diagnostic.titre", client.rawTitle))
-                                    .font(.synfus(.petit, design: .monospaced))
-                                    .foregroundStyle(.secondary)
+                                    .font(.synfus(.codeInterface))
+                                    .foregroundStyle(Couleurs.encreSecondaire)
                                     .textSelection(.enabled)
                                 Text("pid \(client.pid)")
-                                    .font(.synfus(.petit, design: .monospaced))
-                                    .foregroundStyle(.tertiary)
+                                    .font(.synfus(.codeInterface))
+                                    .foregroundStyle(Couleurs.encreTertiaire)
                                 if prefs.lirePosition {
                                     positionLine(for: client)
                                 }
                                 if prefs.lireCombat {
                                     Text(L("diagnostic.combat.ligne", EtatCombat.libelle(lecteur.combats[client.name])))
-                                        .font(.synfus(.petit, design: .monospaced))
-                                        .foregroundStyle(.secondary)
+                                        .font(.synfus(.codeInterface))
+                                        .foregroundStyle(Couleurs.encreSecondaire)
                                 }
                                 if previews.authorized {
                                     Text(previews.unmatched.contains(client.slotKey)
@@ -83,35 +83,35 @@ struct DiagnosticSettings: View {
                                          : previews.previews[client.slotKey] != nil
                                            ? L("diagnostic.apercu.capture")
                                            : L("diagnostic.apercu.pasDemande"))
-                                        .font(.synfus(.petit, design: .monospaced))
-                                        .foregroundStyle(.tertiary)
+                                        .font(.synfus(.codeInterface))
+                                        .foregroundStyle(Couleurs.encreTertiaire)
                                 }
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(8)
-                            .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.04)))
+                            .padding(Jetons.Espace.deux)
+                            .background(RoundedRectangle(cornerRadius: Jetons.Rayon.controle).fill(Couleurs.creux))
                         }
                     }
             }
 
-            Divider().padding(.vertical, 4)
+            Divider().padding(.vertical, Jetons.Espace.un)
             arrangementSection
 
             if !freezes.journal.isEmpty {
-                Divider().padding(.vertical, 4)
-                VStack(alignment: .leading, spacing: 4) {
+                Divider().padding(.vertical, Jetons.Espace.un)
+                VStack(alignment: .leading, spacing: Jetons.Espace.un) {
                     Text(L("diagnostic.gelesAcheves"))
-                        .font(.synfus(.note, gras: true))
+                        .font(.synfus(.corpsFort))
                     ForEach(freezes.journal.suffix(5)) { abattu in
                         Text(abattu.date.formatted(date: .omitted, time: .standard) + "  "
                              + L("diagnostic.gelesAcheves.ligne", abattu.nom, Int(abattu.pid)))
-                            .font(.synfus(.petit, design: .monospaced))
-                            .foregroundStyle(.secondary)
+                            .font(.synfus(.codeInterface))
+                            .foregroundStyle(Couleurs.encreSecondaire)
                     }
                 }
             }
 
-            Divider().padding(.vertical, 4)
+            Divider().padding(.vertical, Jetons.Espace.un)
             attentionProbeSection
     }
 
@@ -122,17 +122,17 @@ struct DiagnosticSettings: View {
         if let lignes = lecture.lignesPosition[client.name] {
             let position = lecteur.positions[client.name]
             Text(L("diagnostic.position.ligne", PositionCarte.libelle(position)))
-                .font(.synfus(.petit, design: .monospaced))
-                .foregroundStyle(position == nil ? Couleurs.alerte : Color.secondary)
+                .font(.synfus(.codeInterface))
+                .foregroundStyle(position == nil ? Couleurs.alerte : Couleurs.encreSecondaire)
                 .textSelection(.enabled)
             Text(L("diagnostic.position.brut", lignes.joined(separator: " ⏎ ")))
-                .font(.synfus(.petit, design: .monospaced))
-                .foregroundStyle(.tertiary)
+                .font(.synfus(.codeInterface))
+                .foregroundStyle(Couleurs.encreTertiaire)
                 .textSelection(.enabled)
         } else {
             Text(L("diagnostic.position.pasEncore"))
-                .font(.synfus(.petit, design: .monospaced))
-                .foregroundStyle(.tertiary)
+                .font(.synfus(.codeInterface))
+                .foregroundStyle(Couleurs.encreTertiaire)
         }
     }
 
@@ -140,39 +140,39 @@ struct DiagnosticSettings: View {
     /// hypothèses — l'écran cible, la bonne volonté du client — et laisse des
     /// fenêtres de côté par principe : tout cela doit se lire quelque part.
     private var arrangementSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                Text(L("diagnostic.rangement")).font(.synfus(.note, gras: true))
+        VStack(alignment: .leading, spacing: Jetons.Espace.un) {
+            HStack(spacing: Jetons.Espace.un) {
+                Text(L("diagnostic.rangement")).font(.synfus(.corpsFort))
                 HelpTip(L("diagnostic.rangement.aide"))
             }
 
             if let rapport = arranger.dernierRapport {
                 Text(L("diagnostic.rangement.entete", rapport.titre, rapport.ecran)
                      + " — " + rapport.date.formatted(date: .omitted, time: .standard))
-                    .font(.synfus(.petit, design: .monospaced))
-                    .foregroundStyle(.secondary)
+                    .font(.synfus(.codeInterface))
+                    .foregroundStyle(Couleurs.encreSecondaire)
                 if !rapport.rangees.isEmpty {
                     Text(L("diagnostic.rangement.ranges", rapport.rangees.joined(separator: ", ")))
-                        .font(.synfus(.petit, design: .monospaced))
-                        .foregroundStyle(.secondary)
+                        .font(.synfus(.codeInterface))
+                        .foregroundStyle(Couleurs.encreSecondaire)
                 }
                 ForEach(rapport.ecartees) { ecartee in
                     Text(L("diagnostic.rangement.ecarte", ecartee.nom, ecartee.raison))
-                        .font(.synfus(.petit, design: .monospaced))
+                        .font(.synfus(.codeInterface))
                         .foregroundStyle(Couleurs.alerte)
                 }
             } else {
                 Text(L("diagnostic.rangement.aucun"))
                     .font(.synfus(.petit))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Couleurs.encreSecondaire)
             }
         }
     }
 
     private var attentionProbeSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: Jetons.Espace.un) {
             HStack {
-                Text(L("diagnostic.attention")).font(.synfus(.note, gras: true))
+                Text(L("diagnostic.attention")).font(.synfus(.corpsFort))
                 HelpTip(L("diagnostic.attention.aide"))
                 Spacer()
                 Button(probe.running ? L("diagnostic.attention.arreter") : L("diagnostic.attention.demarrer")) { probe.toggle() }
@@ -181,13 +181,13 @@ struct DiagnosticSettings: View {
 
 
             if !attention.pairing.isEmpty {
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: Jetons.Espace.un) {
                     Text(L("diagnostic.attention.appariement"))
-                        .font(.synfus(.petit, gras: true))
+                        .font(.synfus(.raccourci))
                     ForEach(Array(attention.pairing.enumerated()), id: \.offset) { _, pair in
                         Text("\(pair.dock)  →  \(pair.character)")
-                            .font(.synfus(.petit, design: .monospaced))
-                            .foregroundStyle(.secondary)
+                            .font(.synfus(.codeInterface))
+                            .foregroundStyle(Couleurs.encreSecondaire)
                     }
                     // Une icône de plus (ou de moins) que de processus Dofus, et
                     // l'appariement rang ↔ processus ne vaut plus rien : mieux
@@ -199,32 +199,32 @@ struct DiagnosticSettings: View {
                             .foregroundStyle(Couleurs.alerte)
                     }
                 }
-                .padding(.bottom, 4)
+                .padding(.bottom, Jetons.Espace.un)
             }
 
             if let lecture = attention.dockReading {
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: Jetons.Espace.un) {
                     Text(L("diagnostic.attention.releve"))
-                        .font(.synfus(.petit, gras: true))
+                        .font(.synfus(.raccourci))
                     Text(lecture)
-                        .font(.synfus(.petit, design: .monospaced))
-                        .foregroundStyle(.secondary)
+                        .font(.synfus(.codeInterface))
+                        .foregroundStyle(Couleurs.encreSecondaire)
                 }
-                .padding(.bottom, 4)
+                .padding(.bottom, Jetons.Espace.un)
             }
 
             if !probe.watchedItems.isEmpty {
                 Text(L("diagnostic.attention.iconesSurveillees", probe.watchedItems.joined(separator: ", ")))
-                    .font(.synfus(.petit, design: .monospaced))
-                    .foregroundStyle(.secondary)
+                    .font(.synfus(.codeInterface))
+                    .foregroundStyle(Couleurs.encreSecondaire)
             }
 
-            HStack(spacing: 10) {
+            HStack(spacing: Jetons.Espace.deux) {
                 Button(L("diagnostic.attention.journal")) { probe.revealLog() }
                     .font(.synfus(.petit))
                 Text(AttentionProbe.logURL.path)
-                    .font(.synfus(.petit, design: .monospaced))
-                    .foregroundStyle(.tertiary)
+                    .font(.synfus(.codeInterface))
+                    .foregroundStyle(Couleurs.encreTertiaire)
                     .lineLimit(1)
                     .truncationMode(.head)
                     .textSelection(.enabled)
@@ -234,18 +234,18 @@ struct DiagnosticSettings: View {
                 if probe.running {
                     Text(L("diagnostic.attention.enEcoute"))
                         .font(.synfus(.petit))
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(Couleurs.encreTertiaire)
                 }
             } else {
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 3) {
+                    VStack(alignment: .leading, spacing: Jetons.Espace.un) {
                         ForEach(probe.events) { event in
-                            VStack(alignment: .leading, spacing: 1) {
+                            VStack(alignment: .leading, spacing: Jetons.Espace.un) {
                                 Text("\(event.time.formatted(date: .omitted, time: .standard))  \(event.label)")
-                                    .font(.synfus(.petit, gras: true, design: .monospaced))
+                                    .font(.synfus(.codeInterface))
                                 Text(event.detail)
-                                    .font(.synfus(.petit, design: .monospaced))
-                                    .foregroundStyle(.secondary)
+                                    .font(.synfus(.codeInterface))
+                                    .foregroundStyle(Couleurs.encreSecondaire)
                                     .textSelection(.enabled)
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)

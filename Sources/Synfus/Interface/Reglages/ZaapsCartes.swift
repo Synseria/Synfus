@@ -9,8 +9,10 @@ struct CarteZaapReglages: View {
 
     var body: some View {
         let actif = CatalogueZaaps.estActif(zaap, choix: prefs.zaapsChoix)
-        VStack(alignment: .leading, spacing: 5) {
-            HStack(spacing: 6) {
+        // Un zaap désactivé : `encreTertiaire` sur `creux`, comme tout ce qui ne répond plus.
+        let encre = actif ? Couleurs.encre : Couleurs.encreTertiaire
+        VStack(alignment: .leading, spacing: Jetons.Espace.un) {
+            HStack(spacing: Jetons.Espace.un) {
                 BoutonEtiquette(cle: zaap.cle)
                 Spacer(minLength: 0)
                 BoutonFavori(cle: zaap.cle)
@@ -21,23 +23,25 @@ struct CarteZaapReglages: View {
                     .controlSize(.mini)
             }
             Text(zaap.nom(en: langue))
-                .font(.synfus(.note, gras: true))
+                .font(.synfus(.corpsFort))
+                .foregroundStyle(encre)
                 .lineLimit(1)
-            HStack(spacing: 4) {
+            HStack(spacing: Jetons.Espace.un) {
                 Text(zaap.zone(en: langue) ?? (prefs.zaapsAjoutes.contains(zaap) ? L("zaap.ajoute") : ""))
                     .lineLimit(1)
                 if zaap.monde != Zaap.mondeDesDouze {
                     Text(L("zaap.autreCarte")).foregroundStyle(Couleurs.alerte)
                 }
                 Spacer(minLength: 0)
-                Text(Coordonnees.texte(zaap.x, zaap.y)).font(.synfus(.petit, design: .monospaced))
+                Text(Coordonnees.texte(zaap.x, zaap.y)).font(.synfus(.codeInterface))
             }
             .font(.synfus(.petit))
-            .foregroundStyle(.secondary)
+            .foregroundStyle(actif ? Couleurs.encreSecondaire : Couleurs.encreTertiaire)
         }
-        .padding(9)
-        .background { FondCarte(carte: zaap.idCarte) }
-        .opacity(actif ? 1 : 0.55)
+        .padding(Jetons.Espace.deux)
+        .background { if actif { FondCarte(carte: zaap.idCarte) } else {
+            RoundedRectangle(cornerRadius: Jetons.Rayon.carte, style: .continuous).fill(Couleurs.creux)
+        } }
         .contextMenu {
             if prefs.zaapsAjoutes.contains(zaap) {
                 Button(L("zaap.supprimer"), role: .destructive) {
@@ -61,22 +65,22 @@ struct AjoutZaap: View {
 
     var body: some View {
         Button { ouvert = true } label: {
-            VStack(spacing: 4) {
+            VStack(spacing: Jetons.Espace.un) {
                 Image(systemName: "plus")
                 Text(L("zaap.ajout")).font(.synfus(.petit))
             }
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity, minHeight: 62)
-            .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous)
-                .strokeBorder(Color.secondary.opacity(0.4), style: StrokeStyle(dash: [4, 3])))
+            .foregroundStyle(Couleurs.encreSecondaire)
+            .frame(maxWidth: .infinity, minHeight: Jetons.Taille.rangeePalette + Jetons.Taille.controle - Jetons.Espace.deux)
+            .overlay(RoundedRectangle(cornerRadius: Jetons.Rayon.carte, style: .continuous)
+                .strokeBorder(Couleurs.contourControle, style: StrokeStyle(lineWidth: Jetons.Trait.filet, dash: [Jetons.Espace.un, Jetons.Espace.un])))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .popover(isPresented: $ouvert, arrowEdge: .bottom) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(L("zaap.ajout.aide")).font(.synfus(.petit)).foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: Jetons.Espace.deux) {
+                Text(L("zaap.ajout.aide")).font(.synfus(.petit)).foregroundStyle(Couleurs.encreSecondaire)
                     .frame(width: 260, alignment: .leading)
-                HStack(spacing: 6) {
+                HStack(spacing: Jetons.Espace.un) {
                     TextField(L("zaap.ajout.nom"), text: $nom)
                     TextField("x", text: $x).frame(width: 50)
                     TextField("y", text: $y).frame(width: 50)
@@ -95,7 +99,7 @@ struct AjoutZaap: View {
                     .disabled(nouveau == nil)
                 }
             }
-            .padding(12)
+            .padding(Jetons.Espace.trois)
         }
     }
 

@@ -11,7 +11,7 @@ struct ChasseSettings: View {
             Section {
                 RaccourciReglable(label: L("chasse.raccourci"), chemin: \.chasseHotKey)
                 Ligne(titre: L("chasse.indices"), etat: source) {
-                    HStack(spacing: 8) {
+                    HStack(spacing: Jetons.Espace.deux) {
                         if modele.chargementIndices { ProgressView().controlSize(.small) }
                         Button(L("chasse.indices.maj")) { Task { await modele.chargerIndices(forcer: true) } }
                             .disabled(modele.chargementIndices)

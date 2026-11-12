@@ -11,7 +11,7 @@ struct ClassesSettings: View {
             Section {
                 SourceClasses()
                 Ligne(titre: L("classes.dossier"), etat: L("classes.mentionAnkama")) {
-                    HStack(spacing: 8) {
+                    HStack(spacing: Jetons.Espace.deux) {
                         Button(L("classes.recharger")) { icons.reloadAll() }
                         Button(L("classes.ouvrirDossier")) { NSWorkspace.shared.open(icons.directory) }
                     }
@@ -29,7 +29,7 @@ struct ClassesSettings: View {
         let custom = icons.icon(forKey: breed.key)
         let provenance = icons.provenance(forKey: breed.key)
 
-        return HStack(spacing: 10) {
+        return HStack(spacing: Jetons.Espace.deux) {
             ZStack {
                 if let custom {
                     Image(nsImage: custom)
@@ -40,11 +40,13 @@ struct ClassesSettings: View {
                 } else {
                     Circle().fill(breed.color)
                     Text(icons.catalogue.abbreviation(for: breed.label))
-                        .font(.synfus(.petit, gras: true, design: .rounded))
-                        .foregroundStyle(.white)
+                        .font(.synfus(.raccourci))
+                        // Le blanc et non une encre : les couleurs de classe viennent du jeu, toutes assez
+                        // soutenues pour qu'il y soit lisible.
+                        .foregroundStyle(Color.white)
                 }
             }
-            .frame(width: 24, height: 24)
+            .frame(width: Jetons.Taille.cibleMin, height: Jetons.Taille.cibleMin)
 
             Text(breed.nomLocalise)
 
@@ -53,14 +55,14 @@ struct ClassesSettings: View {
             if custom != nil, let provenance {
                 Text(provenance == .tienne ? L("classes.provenance.tienne") : L("classes.provenance.dofusdb"))
                     .font(.synfus(.petit))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Couleurs.encreSecondaire)
             }
             if provenance == .tienne {
                 Button(L("classes.retirer")) { icons.removeIcon(forKey: breed.key) }
             }
             Button(custom == nil ? L("classes.choisir") : L("classes.remplacer")) { chooseIcon(for: breed) }
         }
-        .padding(.vertical, 1)
+        .padding(.vertical, Jetons.Espace.un)
         .onDrop(of: [.fileURL], isTargeted: nil) { providers in
             drop(providers, for: breed)
         }

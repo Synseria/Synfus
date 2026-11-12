@@ -27,15 +27,15 @@ extension GenreLecture: Identifiable {
     }
 
     /// Couleur du cadre de la zone sur la capture — le rose du bouton de fin
-    /// de tour pour le combat, l'or d'un trésor pour la chasse.
-    var teinte: Color {
+    /// de tour pour le combat, le safran d'un trésor pour la chasse.
+    @MainActor var teinte: Color {
         switch self {
-        case .position: return .blue
-        case .combat: return Color(red: 0.76, green: 0.44, blue: 0.73)
-        case .chasse: return Color(red: 0.85, green: 0.65, blue: 0.13)
-        case .quetes: return Color(red: 0.30, green: 0.68, blue: 0.45)
-        case .vie: return .red
-        case .tchat: return Color(red: 0.55, green: 0.55, blue: 0.85)
+        case .position: return Couleurs.primaire
+        case .combat: return CombatBadge.rose
+        case .chasse: return Couleurs.safran
+        case .quetes: return Couleurs.succes
+        case .vie: return Couleurs.danger
+        case .tchat: return Couleurs.suggestionSynfus
         }
     }
 }
@@ -75,20 +75,20 @@ struct CalibrationZonesView: View {
     private static let hauteurImage: CGFloat = 400
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: Jetons.Espace.deux) {
             Text(L("calibration.titre", genre.libelle)).font(.synfus(.titre))
             Text(genre.consigne)
                 .font(.synfus(.petit))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Couleurs.encreSecondaire)
                 .fixedSize(horizontal: false, vertical: true)
 
             image
                 .frame(width: Self.largeurImage, height: Self.hauteurImage)
-                .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.05)))
+                .background(RoundedRectangle(cornerRadius: Jetons.Rayon.controle).fill(Couleurs.creux))
             if let capture {
                 Text(L("calibration.capturee", capture.date.formatted(date: .abbreviated, time: .shortened)))
                     .font(.synfus(.petit))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(Couleurs.encreTertiaire)
             }
 
             essaiVue
@@ -106,12 +106,14 @@ struct CalibrationZonesView: View {
                 if detection != nil { ProgressView().controlSize(.small) }
                 Spacer()
                 Button(L("calibration.terminer")) { dismiss() }
+                    .buttonStyle(.bouton(.principal))
                     .keyboardShortcut(.defaultAction)
-                    .tint(Couleurs.primaire)
             }
+            .buttonStyle(.bouton(.secondaire))
         }
-        .padding(16)
-        .frame(width: Self.largeurImage + 32)
+        .padding(Jetons.Espace.quatre)
+        .frame(width: Self.largeurImage + Jetons.Espace.huit)
+        .background(Couleurs.fenetre)
         .task {
             capture = CapturesCalibrage.gardee(genre)
             essayer()
@@ -138,7 +140,8 @@ struct CalibrationZonesView: View {
                         .frame(width: cadre.width, height: cadre.height)
                         .offset(x: cadre.minX, y: cadre.minY)
                     Rectangle()
-                        .strokeBorder(genre.teinte, lineWidth: 2)
+                        .strokeBorder(genre.teinte, lineWidth: Jetons.Trait.focus)
+                        // Le voile de la zone, qui laisse lire la capture dessous.
                         .background(genre.teinte.opacity(0.15))
                         .frame(width: max(zone.width, 1), height: max(zone.height, 1))
                         .offset(x: zone.minX, y: zone.minY)
@@ -163,9 +166,9 @@ struct CalibrationZonesView: View {
             Text(decompte != nil ? L("calibration.enCours")
                  : echec ?? (manager.clients.isEmpty ? L("calibration.aucunPerso") : L("calibration.aucuneCapture")))
                 .font(.synfus(.petit))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Couleurs.encreSecondaire)
                 .multilineTextAlignment(.center)
-                .padding(24)
+                .padding(Jetons.Espace.six)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
@@ -176,16 +179,16 @@ struct CalibrationZonesView: View {
     private var essaiVue: some View {
         if let capture, let recadree = capture.image.cropping(
             to: genre.zone.pixels(dans: CGSize(width: capture.image.width, height: capture.image.height))) {
-            HStack(alignment: .top, spacing: 10) {
+            HStack(alignment: .top, spacing: Jetons.Espace.deux) {
                 Image(decorative: recadree, scale: 1)
                     .resizable()
                     .interpolation(.high)
                     .aspectRatio(contentMode: .fit)
                     .frame(maxWidth: 200, maxHeight: 120, alignment: .topLeading)
-                    .overlay(Rectangle().strokeBorder(genre.teinte.opacity(0.6), lineWidth: 1))
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 6) {
-                        Text(L("calibration.essai")).font(.synfus(.petit, gras: true))
+                    .overlay(Rectangle().strokeBorder(genre.teinte, lineWidth: Jetons.Trait.filet))
+                VStack(alignment: .leading, spacing: Jetons.Espace.un) {
+                    HStack(spacing: Jetons.Espace.un) {
+                        Text(L("calibration.essai")).font(.synfus(.raccourci))
                         if essaiEnCours != nil { ProgressView().controlSize(.mini) }
                     }
                     if let essai {
@@ -194,8 +197,8 @@ struct CalibrationZonesView: View {
                             .fixedSize(horizontal: false, vertical: true)
                         Text(L("diagnostic.position.brut",
                                essai.lignes.isEmpty ? "—" : essai.lignes.joined(separator: " ⏎ ")))
-                            .font(.synfus(.petit, design: .monospaced))
-                            .foregroundStyle(.tertiary)
+                            .font(.synfus(.codeInterface))
+                            .foregroundStyle(Couleurs.encreTertiaire)
                             .lineLimit(6)
                             .textSelection(.enabled)
                     }

@@ -64,25 +64,31 @@ struct ShortcutRecorder: View {
     private var recording: Bool { session.active == id }
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: Jetons.Espace.un) {
             Button(action: toggle) {
-                Text(label)
-                    .font(.synfus(.note, gras: true, design: .rounded))
-                    .foregroundStyle(recording ? Couleurs.primaireEncre : .primary)
-                    .frame(minWidth: 92)
-                    .padding(.vertical, 4)
-                    .padding(.horizontal, 8)
-                    .background(
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(Color.primary.opacity(0.06))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .strokeBorder(
-                                        recording ? Couleurs.primaire : Color.primary.opacity(0.15),
-                                        lineWidth: recording ? 1.5 : 0.5
-                                    )
-                            )
-                    )
+                Group {
+                    if recording {
+                        Text(label).font(.synfus(.corps)).foregroundStyle(Couleurs.primaireEncre)
+                    } else if let hotKey {
+                        ToucheRaccourci(hotKey.displayString)
+                    } else {
+                        Text(label).font(.synfus(.corps)).foregroundStyle(Couleurs.encreSecondaire)
+                    }
+                }
+                .frame(minWidth: Jetons.Espace.huit * 3, minHeight: Jetons.Taille.controle)
+                .padding(.horizontal, Jetons.Espace.deux)
+                .background {
+                    if recording {
+                        EmptyView()
+                    } else {
+                        // Un champ : `surface` et `contourControle`.
+                        RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous)
+                            .fill(Couleurs.surface)
+                            .overlay(RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous)
+                                .strokeBorder(Couleurs.contourControle, lineWidth: Jetons.Trait.filet))
+                    }
+                }
+                .fondEtat(recording ? .choisi : .repos)
             }
             .buttonStyle(.plain)
             .help(recording ? L("raccourci.pressez.aide") : L("raccourci.enregistrer.aide"))
@@ -92,7 +98,7 @@ struct ShortcutRecorder: View {
                 session.stop(id)
             } label: {
                 Image(systemName: "xmark.circle.fill")
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(Couleurs.encreTertiaire)
             }
             .buttonStyle(.plain)
             .opacity(hotKey == nil ? 0 : 1)

@@ -20,17 +20,17 @@ struct PNJSettings: View {
             ChampFiltre(invite: L("pnj.filtrer"), texte: $filtre)
                 .cadreDeListe(premiere: true, derniere: affiches.isEmpty)
             ForEach(affiches, id: \.element.id) { rang, pnj in
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 6) {
+                VStack(alignment: .leading, spacing: Jetons.Espace.un) {
+                    HStack(spacing: Jetons.Espace.un) {
                         Text(Lieu.traduit(pnj.noms, langue) ?? "?").font(.synfus(.corpsFort))
                         Spacer()
                         BoutonEtiquette(cle: pnj.cle)
                         BoutonFavori(cle: pnj.cle)
                     }
                     ForEach(Array(pnj.passages.enumerated()), id: \.offset) { rang, passage in
-                        HStack(spacing: 8) {
-                            Text(lieu(passage, langue)).foregroundStyle(rang == 0 ? Color.primary : Color.secondary)
-                            Text(L("pnj.quetes", nombre: passage.quetes, passage.quetes)).font(.synfus(.petit)).foregroundStyle(.secondary)
+                        HStack(spacing: Jetons.Espace.deux) {
+                            Text(lieu(passage, langue)).foregroundStyle(rang == 0 ? Couleurs.encre : Couleurs.encreSecondaire)
+                            Text(L("pnj.quetes", nombre: passage.quetes, passage.quetes)).font(.synfus(.petit)).foregroundStyle(Couleurs.encreSecondaire)
                             Spacer()
                             BoutonTrajet(x: passage.position.x, y: passage.position.y, sousZone: passage.sousZone)
                             if let carte = passage.carte { MiniatureCarte(carte: carte) }
@@ -38,11 +38,11 @@ struct PNJSettings: View {
                         .font(.synfus(.note))
                     }
                 }
-                .padding(.vertical, 2)
+                .padding(.vertical, Jetons.Espace.un)
                 .cadreDeListe(premiere: false, derniere: rang == affiches.count - 1 && pnjs.count <= Self.limite)
             }
             if pnjs.count > Self.limite {
-                Text(L("lieux.affiner", pnjs.count)).foregroundStyle(.secondary)
+                Text(L("lieux.affiner", pnjs.count)).foregroundStyle(Couleurs.encreSecondaire)
                     .cadreDeListe(premiere: false, derniere: true)
             }
         }

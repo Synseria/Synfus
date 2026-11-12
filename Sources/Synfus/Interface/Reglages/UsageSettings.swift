@@ -79,7 +79,7 @@ struct UsageSettings: View {
 
     private func valeur(_ titre: String, _ texte: String) -> some View {
         Ligne(titre: titre) {
-            Text(texte).monospacedDigit().foregroundStyle(.secondary)
+            Text(texte).monospacedDigit().foregroundStyle(Couleurs.encreSecondaire)
         }
     }
 
@@ -111,7 +111,7 @@ struct DonneesEnvoyeesVue: View {
 
     var body: some View {
         let texte = dernier ? usage.historique.dernierRapport : usage.apercuProchainEnvoi()
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: Jetons.Espace.trois) {
             Picker(L("stats.voirDonnees"), selection: $dernier) {
                 Text(L("stats.prochainEnvoi")).tag(false)
                 Text(L("stats.dernierEnvoi")).tag(true)
@@ -121,23 +121,26 @@ struct DonneesEnvoyeesVue: View {
             .fixedSize()
             ScrollView {
                 Text(texte ?? L("stats.rienAEnvoyer"))
-                    .font(.synfus(.petit, design: .monospaced))
+                    .font(.synfus(.codeInterface))
                     .textSelection(.enabled)
-                    .foregroundStyle(texte == nil ? .secondary : .primary)
+                    .foregroundStyle(texte == nil ? Couleurs.encreSecondaire : Couleurs.encre)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(10)
+                    .padding(Jetons.Espace.deux)
             }
-            .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.05)))
+            .background(RoundedRectangle(cornerRadius: Jetons.Rayon.controle).fill(Couleurs.creux))
             HStack {
                 Button(L("menu.copier")) { if let texte { PressePapiers.copier(texte) } }
+                    .buttonStyle(.bouton(.secondaire))
                     .disabled(texte == nil)
                 Spacer()
                 Button(L("menu.fermer")) { dismiss() }
+                    .buttonStyle(.bouton(.principal))
                     .keyboardShortcut(.defaultAction)
             }
         }
-        .padding(20)
+        .padding(Jetons.Espace.quatre)
         .frame(width: 620, height: 520)
+        .background(Couleurs.fenetre)
     }
 }
 
