@@ -44,6 +44,7 @@ struct JetonsTests {
 
     @Test("Aucune couleur ne se construit hors des jetons")
     func couleursParLesJetons() throws {
+        // swiftlint:disable:next accent_systeme - le motif nomme ce qu'il interdit
         let motif = /accentColor|Color\(\.sRGB|Color\(red:|Color\(white:|Color\(hue:|NSColor\((srgbRed|red|white|calibrated|deviceRed)|Color\.(white|black|orange|green|yellow|mint|red|blue)\b|[^a-zA-Z.]\.(orange|green|yellow|mint)\b|NSColor\.(label|secondaryLabel|tertiaryLabel|controlAccent|system[A-Z])/
         for (fichier, ligne) in try lignes(sauf: horsJetons) {
             #expect(!ligne.contains(motif), "\(fichier) : \(ligne)")

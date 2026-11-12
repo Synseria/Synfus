@@ -557,18 +557,7 @@ struct QueteVue: View {
                 let action: (() -> Void)? = valide && objectif.position == nil ? nil : { copierTrajet(objectif, quete: quete) }
                 ligneCopiable(id: id, aide: Self.aide(objectif), action: action) {
                     VStack(alignment: .leading, spacing: Jetons.Espace.un) {
-                        if replie {
-                            Text(objectif.texte)
-                                .font(metriques.texte.police)
-                                .foregroundStyle(Color.jeton(\.encreSecondaire))
-                                .lineLimit(1)
-                                .truncationMode(.tail)
-                        } else {
-                            Text(objectif.texte)
-                                .font((etat.enCours && !valide ? metriques.texteFort : metriques.texte).police)
-                                .foregroundStyle(valide || etat.nonOuvert ? Color.jeton(\.encreSecondaire) : Color.jeton(\.encre))
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
+                        texteObjectif(objectif, etat: etat, replie: replie)
                         if !replie {
                             HStack(spacing: Jetons.Espace.un) {
                                 if let numero = etat.numero, !valide {
@@ -620,6 +609,23 @@ struct QueteVue: View {
             // et non située est désactivé, et n'aurait pas de survol.
             .apercuCarteAuSurvol(objectif.carte)
             if let sujet = objectif.sujet, !replie { ouTrouver(sujet, retrait: Self.colonneCoche + 2) }
+        }
+    }
+
+    /// Le texte d'un objectif : sur une ligne grisée une fois fait, appuyé quand il est en cours.
+    @ViewBuilder
+    private func texteObjectif(_ objectif: FicheQuete.Objectif, etat: EtatObjectif, replie: Bool) -> some View {
+        if replie {
+            Text(objectif.texte)
+                .font(metriques.texte.police)
+                .foregroundStyle(Color.jeton(\.encreSecondaire))
+                .lineLimit(1)
+                .truncationMode(.tail)
+        } else {
+            Text(objectif.texte)
+                .font((etat.enCours && !etat.valide ? metriques.texteFort : metriques.texte).police)
+                .foregroundStyle(etat.valide || etat.nonOuvert ? Color.jeton(\.encreSecondaire) : Color.jeton(\.encre))
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 

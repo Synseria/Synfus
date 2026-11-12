@@ -14,8 +14,7 @@ La grille est le skill global `grille-ui`. Ici, seulement ce qui lui manque ou l
 ## Jetons
 
 - Couleurs : `Jetons` (engendré par Synseria-Design, jamais retouché) est la seule source. Le thème
-  courant (réglage × clair/sombre, `ThemeCourant`) se lit par chemin — `Color.jeton(\.surface)`,
-  `NSColor.jeton(\.encre)` —, dynamique clair/sombre et lu dans un `body` : le changement
+  courant (réglage × clair/sombre, `ThemeCourant`) se lit par chemin — `Color.jeton(\.surface)` —, dynamique clair/sombre et lu dans un `body` : le changement
   (Réglages ▸ Thème : couleur de l'app, teinte des fonds, `nil` = Auto) se voit en direct. Aucune liste de jetons
   recopiée. `primaire` (trait, aplat) + `encreSurPrimaire`
   (texte posé dessus), `primaireEncre` (couleur écrite), `safran`/`safranTexte`/`safranFond` (« regarde
