@@ -52,11 +52,3 @@ struct MetriquesQuete: Equatable {
 
     static func pour(compact: Bool) -> MetriquesQuete { compact ? .compact : .confort }
 }
-
-/// Deux jeux de métriques se comparent par leurs rôles de texte.
-extension Jetons.Typo: Equatable {
-    static func == (gauche: Self, droite: Self) -> Bool {
-        gauche.taille == droite.taille && gauche.interligne == droite.interligne && gauche.graisse == droite.graisse
-            && gauche.famille == droite.famille && gauche.chiffresFixes == droite.chiffresFixes
-    }
-}
