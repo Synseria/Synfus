@@ -335,40 +335,51 @@ struct PaletteVue: View {
     }
 }
 
-/// Une carte de zaap : étiquette, nom, zone et coordonnées.
+/// Une carte de zaap : nom et zone en haut, étiquette et coordonnées en bas. Sur l'image de la
+/// carte, le texte est clair ; sans image, il prend les encres du thème.
 private struct CarteZaap: View {
     let entree: EntreePalette
     let choisie: Bool
+    @ObservedObject private var prefs = Preferences.shared
 
     private var etat: EtatVisuel { choisie ? .choisi : .repos }
+    private var surImage: Bool { FondCarte.surImage(entree.carte) }
+    private var encre: Color { surImage ? FondCarte.encreSurImage : etat.encre }
+    private var encreSecondaire: Color { surImage ? FondCarte.encreSecondaireSurImage : etat.encreSecondaire }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Jetons.Espace.un) {
+            VStack(alignment: .leading, spacing: 0) {
+                Text(entree.titre)
+                    .font(Jetons.Typo.corpsFort.police)
+                    .foregroundStyle(encre)
+                    .lineLimit(1)
+                    .padding(.trailing, entree.favori ? Jetons.Espace.quatre : 0)
+                Text(entree.itineraire ?? entree.sousTitre ?? "")
+                    .font(Jetons.Typo.petit.police)
+                    .foregroundStyle(encreSecondaire)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: Jetons.Espace.quatre)
             HStack(spacing: Jetons.Espace.un) {
                 if let etiquette = entree.etiquette { PastilleEtiquette(texte: etiquette) }
                 Spacer(minLength: 0)
-                if entree.favori {
-                    Image(systemName: "star.fill").font(Jetons.Typo.micro.police).foregroundStyle(Color.jeton(\.safranTexte))
-                }
-            }
-            .frame(height: Jetons.Espace.quatre)
-            Text(entree.titre)
-                .font(Jetons.Typo.corpsFort.police)
-                .lineLimit(1)
-            HStack(spacing: Jetons.Espace.un) {
-                Text(entree.itineraire ?? entree.sousTitre ?? "")
-                    .lineLimit(1)
-                    .foregroundStyle(etat.encreSecondaire)
-                Spacer(minLength: 0)
                 Text(entree.detail ?? "")
                     .font(Jetons.Typo.codeInterface.police)
-                    .foregroundStyle(etat.encreSecondaire)
+                    .foregroundStyle(encreSecondaire)
+                    .lineLimit(1)
             }
-            .font(Jetons.Typo.petit.police)
+            .frame(minHeight: Jetons.Espace.quatre)
         }
         .padding(Jetons.Espace.deux)
-        .foregroundStyle(etat.encre)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .overlay(alignment: .topTrailing) {
+            if entree.favori {
+                Image(systemName: "star.fill").font(Jetons.Typo.micro.police)
+                    .foregroundStyle(surImage ? Color.jeton(\.safran) : Color.jeton(\.safranTexte))
+                    .padding(Jetons.Espace.deux)
+            }
+        }
         .background { FondCarte(carte: entree.carte, choisie: choisie) }
         .contentShape(Rectangle())
     }
