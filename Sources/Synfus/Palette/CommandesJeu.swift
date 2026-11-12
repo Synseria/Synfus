@@ -51,6 +51,37 @@ enum CommandeJeu: CaseIterable, Sendable {
         }
     }
 
+    /// Un symbole par commande : deux lignes de la liste ne se confondent jamais.
+    var symbole: String {
+        switch self {
+        case .zaap: return "point.3.connected.trianglepath.dotted"
+        case .travel: return "figure.walk"
+        case .invite: return "person.badge.plus"
+        case .quete: return "scroll"
+        case .pnj: return "person.wave.2"
+        case .w: return "envelope"
+        case .p: return "person.3"
+        case .g: return "shield"
+        case .a: return "flag"
+        case .t: return "person.2"
+        case .r: return "megaphone"
+        case .b: return "cart"
+        case .whois: return "person.crop.circle.badge.questionmark"
+        case .whoami: return "person.crop.circle"
+        case .away: return "moon"
+        case .invisible: return "eye.slash"
+        case .amiAjouter: return "person.fill.badge.plus"
+        case .amiRetirer: return "person.fill.badge.minus"
+        case .list: return "list.bullet"
+        case .kick: return "person.fill.xmark"
+        case .spectator: return "eye"
+        case .time: return "clock"
+        case .ping: return "antenna.radiowaves.left.and.right"
+        case .mapid: return "number"
+        case .clear: return "eraser"
+        }
+    }
+
     var description: String {
         switch self {
         case .zaap: return L("palette.cmd.zaap")
@@ -87,6 +118,22 @@ enum VariableJeu: String, CaseIterable, Sendable {
     case pos, zone, souszone, nom, lvl, xp, vie, viemax, viep, guilde, stats
 
     var texte: String { "%\(rawValue)%" }
+
+    var symbole: String {
+        switch self {
+        case .pos: return "mappin"
+        case .zone: return "globe.europe.africa"
+        case .souszone: return "map"
+        case .nom: return "person"
+        case .lvl: return "star"
+        case .xp: return "chart.line.uptrend.xyaxis"
+        case .vie: return "heart"
+        case .viemax: return "heart.fill"
+        case .viep: return "percent"
+        case .guilde: return "shield"
+        case .stats: return "list.bullet.rectangle"
+        }
+    }
 
     var description: String {
         switch self {

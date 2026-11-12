@@ -211,8 +211,8 @@ extension View {
 // MARK: - Segments
 
 /// Le choix d'une valeur parmi quelques-unes, côte à côte : piste `creux` bordée d'un `filet`, le cran
-/// choisi teinté (`primaireFond`, contour `primaire`, `primaireEncre`). Les flèches déplacent la
-/// sélection elle-même ; aucun anneau de focus sur un cran. Le seul segment de l'app.
+/// choisi teinté (`primaireFond`, contour `primaire`, `primaireEncre`). Au clavier :
+/// `groupeSelection`. Le seul segment de l'app.
 struct Segments<Valeur: Hashable>: View {
     let titre: String
     let choix: [(valeur: Valeur, libelle: String)]
@@ -231,6 +231,7 @@ struct Segments<Valeur: Hashable>: View {
                 let valeur = choix[rang].valeur
                 Button(choix[rang].libelle) { selection = valeur }
                     .buttonStyle(CranDeSegment(choisi: valeur == selection))
+                    .elementDeGroupe()
                     .accessibilityAddTraits(valeur == selection ? .isSelected : [])
             }
         }
@@ -238,19 +239,7 @@ struct Segments<Valeur: Hashable>: View {
         .background(piste.fill(Color.jeton(\.creux)))
         .overlay(piste.strokeBorder(Color.jeton(\.filet), lineWidth: Jetons.Trait.filet))
         .fixedSize()
-        .focusable()
-        .focusEffectDisabled()
-        .onKeyPress(.leftArrow) { deplacer(-1) }
-        .onKeyPress(.rightArrow) { deplacer(1) }
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(titre)
-    }
-
-    private func deplacer(_ pas: Int) -> KeyPress.Result {
-        guard let rang = choix.firstIndex(where: { $0.valeur == selection }) else { return .ignored }
-        let suivant = min(max(rang + pas, 0), choix.count - 1)
-        selection = choix[suivant].valeur
-        return .handled
+        .groupeSelection(titre, selection: $selection, parmi: choix.map(\.valeur))
     }
 }
 
