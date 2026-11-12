@@ -2,8 +2,8 @@ import SwiftUI
 
 /// Les briques communes des réglages. La règle d'interface : **un réglage
 /// par ligne, le libellé à gauche, le contrôle à droite** (`Ligne`), sous le
-/// libellé une valeur ou un état en gris (`etat`), toute explication derrière
-/// un ⓘ — jamais une phrase à l'écran. Libellés : sans deux-points ni « / »,
+/// libellé une valeur ou un état en gris (`etat`), toute explication en
+/// infobulle de la ligne, un ⓘ au plus par bloc — jamais une phrase à l'écran. Libellés : sans deux-points ni « / »,
 /// un nom (« Gain minimal ») ou un infinitif (« Afficher la barre »).
 
 /// Le bord gauche du texte d'une page, celui des lignes d'un `Form` groupé.
@@ -49,7 +49,7 @@ struct EnTetePage: View {
     }
 }
 
-/// Une ligne : libellé (ⓘ, état) à gauche, précédé d'une icône s'il y en a
+/// Une ligne : libellé (état) à gauche, précédé d'une icône s'il y en a
 /// une, contrôle à droite.
 struct Ligne<Controle: View, Icone: View>: View {
     let titre: String
@@ -79,7 +79,6 @@ struct Ligne<Controle: View, Icone: View>: View {
                     HStack(spacing: Jetons.Espace.un) {
                         Text(titre)
                         if let detail { Text(detail).foregroundStyle(Couleurs.encreSecondaire).lineLimit(1) }
-                        if let aide { HelpTip(aide) }
                     }
                     if let etat {
                         Text(etat).font(.synfus(.petit)).foregroundStyle(Couleurs.encreSecondaire)
@@ -87,6 +86,10 @@ struct Ligne<Controle: View, Icone: View>: View {
                 }
             }
         }
+        // L'explication d'une ligne est une infobulle sur toute la ligne, jamais un ⓘ : le seul ⓘ d'un
+        // bloc est celui de son titre (`SectionTitle`).
+        .help(aide ?? "")
+        .accessibilityHint(aide ?? "")
     }
 }
 
