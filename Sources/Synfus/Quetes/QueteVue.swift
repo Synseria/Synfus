@@ -60,7 +60,8 @@ struct QueteVue: View {
                             if !fiche.suivantes.isEmpty { suivantes(fiche) }
                         }
                         .padding(metriques.marge)
-                        .padding(.bottom, Jetons.Espace.deux)
+                        // La dernière ligne reste au-dessus de la poignée de redimensionnement.
+                        .padding(.bottom, Jetons.Taille.touche + 2 * Jetons.Espace.un + Jetons.Espace.deux)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .onChange(of: fiche.id) { defilement.scrollTo(Self.haut, anchor: .top) }
@@ -378,7 +379,8 @@ struct QueteVue: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.bottom, Jetons.Espace.un)
             }
-            let coordonnees = CoordonneesObjectifs.affichees(etape.objectifs)
+            let repliees = Set(etape.objectifs.filter { coches.contains($0.id) && copiee != Self.idLigne($0) }.map(\.id))
+            let coordonnees = CoordonneesObjectifs.affichees(etape.objectifs, repliees: repliees)
             ForEach(etape.objectifs, id: \.id) { objectif in
                 ligneObjectif(objectif, quete: fiche.id, coordonnee: coordonnees.contains(objectif.id),
                               etat: .init(valide: coches.contains(objectif.id), suggere: suggeres.contains(objectif.id),
