@@ -67,6 +67,7 @@ struct CharactersSettings: View {
             Circle()
                 .fill(isOnline(name) ? Couleurs.succes : Couleurs.encreTertiaire)
                 .frame(width: Jetons.Espace.deux, height: Jetons.Espace.deux)
+                .accessibilityLabel(isOnline(name) ? L("persos.connecte") : L("persos.horsLigne"))
             Text(name)
             Spacer()
             teamPicker(for: name)
@@ -75,9 +76,12 @@ struct CharactersSettings: View {
                     .font(.synfus(.raccourci))
                     .foregroundStyle(Couleurs.encreSecondaire)
             }
-            Text(isOnline(name) ? L("persos.connecte") : L("persos.horsLigne"))
-                .font(.synfus(.petit))
-                .foregroundStyle(Couleurs.encreTertiaire)
+            // Seul l'écart au normal s'écrit : un perso connecté n'a pas besoin de le dire.
+            if !isOnline(name) {
+                Text(L("persos.horsLigne"))
+                    .font(.synfus(.petit))
+                    .foregroundStyle(Couleurs.encreTertiaire)
+            }
 
             HStack(spacing: Jetons.Espace.un) {
                 Button { moveCharacter(at: index, by: -1) } label: {

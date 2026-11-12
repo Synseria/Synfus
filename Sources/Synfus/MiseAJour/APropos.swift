@@ -20,7 +20,6 @@ struct AProposVue: View {
         .padding(Jetons.Espace.six)
         .frame(width: 340)
         .background(Couleurs.fenetre)
-        .racineSynfus()
     }
 }
 
@@ -32,7 +31,7 @@ final class AProposController {
 
     func afficher() {
         if fenetre == nil {
-            let nouvelle = NSWindow(contentViewController: NSHostingController(rootView: AProposVue()))
+            let nouvelle = NSWindow(contentViewController: NSHostingController(rootView: AProposVue().racineSynfus()))
             nouvelle.styleMask = [.titled, .closable]
             nouvelle.title = L("apropos.titre")
             nouvelle.isReleasedWhenClosed = false

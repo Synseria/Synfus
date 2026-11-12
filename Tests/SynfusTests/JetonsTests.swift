@@ -46,8 +46,9 @@ struct JetonsTests {
     @Test("Toute police de vue passe par l'échelle")
     func policesParLEchelle() throws {
         let motif = /\.system\(size|weight:|\.fontWeight\(\.(?!semibold)|\.font\(\.(caption|footnote|subheadline|callout|headline|title|body)/
-        // Le menu de la barre de menus est en `NSFont`, hors de SwiftUI.
-        for (fichier, ligne) in try lignes(sauf: ["Typographie.swift", "Jetons.swift", "SynfusMark.swift", "MenuBarController.swift"]) {
+        // Le menu de la barre de menus est en `NSFont`, hors de SwiftUI ; le mot du signe suit la taille de son emblème.
+        for (fichier, ligne) in try lignes(sauf: ["Typographie.swift", "Jetons.swift", "SynfusMark.swift", "MenuBarController.swift",
+                                                  "SigneSynseria.swift"]) {
             #expect(!ligne.contains(motif), "\(fichier) : \(ligne)")
         }
     }

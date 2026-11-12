@@ -12,9 +12,11 @@ struct QuetesSettings: View {
         let langue = L10n.courante.langue
         let quetes = montrees(langue)
         let affichees = Array(quetes.prefix(Self.limite).enumerated())
-        PageListe(titre: L("reglages.quetes"), aide: L("quetes.aide")) {
+        PageListe(titre: L("reglages.quetes")) {
             SourceQuetes().cadreDeListe(premiere: true, derniere: false)
-            RaccourciReglable(label: L("quetes.raccourci"), chemin: \.quetesHotKey).cadreDeListe(premiere: false, derniere: true)
+            RaccourciReglable(label: L("quetes.raccourci"), chemin: \.quetesHotKey)
+                .help(L("quetes.aide"))
+                .cadreDeListe(premiere: false, derniere: true)
             EnTeteListe(titre: L("quetes.panneau"))
             Interrupteur(titre: L("quetes.compact"), aide: L("quetes.compact.aide"), isOn: $prefs.quetesCompact)
                 .cadreDeListe(premiere: true, derniere: false)

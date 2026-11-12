@@ -6,10 +6,10 @@ struct ChasseSettings: View {
     @ObservedObject private var modele = ChasseModele.shared
 
     var body: some View {
-        PageReglages(titre: L("chasse.titre"),
-                     aide: L("chasse.aide")) {
+        PageReglages(titre: L("chasse.titre")) {
             Section {
                 RaccourciReglable(label: L("chasse.raccourci"), chemin: \.chasseHotKey)
+                    .help(L("chasse.aide"))
                 Ligne(titre: L("chasse.indices"), etat: source) {
                     HStack(spacing: Jetons.Espace.deux) {
                         if modele.chargementIndices { ProgressView().controlSize(.small) }

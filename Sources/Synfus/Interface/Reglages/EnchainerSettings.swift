@@ -6,13 +6,13 @@ struct EnchainerSettings: View {
     @ObservedObject private var clicks = ClickAdvanceWatcher.shared
 
     var body: some View {
-        PageReglages(titre: L("reglages.enchainer"),
-                     aide: L("raccourcis.enchainer.aide")) {
+        PageReglages(titre: L("reglages.enchainer")) {
             Section {
                 Interrupteur(titre: L("raccourcis.enchainer.bascule"), isOn: Binding(
                     get: { prefs.advanceOnClick },
                     set: { prefs.advanceOnClick = $0; ClickAdvanceWatcher.shared.apply() }
                 ))
+                .help(L("raccourcis.enchainer.aide"))
                 if prefs.advanceOnClick {
                     Ligne(titre: L("raccourcis.enchainer.touche"), aide: L("raccourcis.enchainer.touche.aide")) {
                         Picker(L("raccourcis.enchainer.touche"), selection: $prefs.advanceModifier) {

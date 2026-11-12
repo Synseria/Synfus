@@ -13,10 +13,11 @@ struct PNJSettings: View {
         let langue = L10n.courante.langue
         let pnjs = montres(langue)
         let affiches = Array(pnjs.prefix(Self.limite).enumerated())
-        PageListe(titre: L("reglages.pnj"), aide: L("pnj.aide")) {
+        PageListe(titre: L("reglages.pnj")) {
             SourceQuetes().cadreDeListe(premiere: true, derniere: false)
             InterrupteurVuesCartes().cadreDeListe(premiere: false, derniere: true)
             EnTeteListe(titre: L("pnj.compte", pnjs.count))
+                .help(L("pnj.aide"))
             ChampFiltre(invite: L("pnj.filtrer"), texte: $filtre)
                 .cadreDeListe(premiere: true, derniere: affiches.isEmpty)
             ForEach(affiches, id: \.element.id) { rang, pnj in

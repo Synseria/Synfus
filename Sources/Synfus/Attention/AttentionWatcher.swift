@@ -214,7 +214,7 @@ final class AttentionWatcher: ObservableObject {
             return L("attention.releve.sansBandeau")
         }
         let ecarts = inventory.items
-            .map { String(format: "%+.0f", $0.position.y - strip.minY) }
+            .map { String(format: "%+.0f\u{00A0}px", $0.position.y - strip.minY) }
             .joined(separator: ", ")
         return L("attention.releve.bandeau", strip.minY, strip.height)
             + (ecarts.isEmpty ? L("attention.releve.aucune") : ecarts)

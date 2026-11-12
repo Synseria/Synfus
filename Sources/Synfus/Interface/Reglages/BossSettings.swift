@@ -7,9 +7,10 @@ struct BossSettings: View {
     @ObservedObject private var previews = WindowPreviewService.shared
 
     var body: some View {
-        PageReglages(titre: L("boss.titre"), aide: L("boss.aide")) {
+        PageReglages(titre: L("boss.titre")) {
             Section {
                 RaccourciReglable(label: L("boss.raccourci"), chemin: \.bossHotKey)
+                    .help(L("boss.aide"))
                 ForEach(Boss.allCases, id: \.self) { boss in
                     Ligne(titre: BossVue.nom(boss), aide: Self.resume(boss)) {
                         Button(L("boss.ouvrir")) { BossPanel.shared.ouvrir(.special(boss)) }
@@ -19,7 +20,7 @@ struct BossSettings: View {
             if !previews.authorized {
                 Section {
                     Ligne(titre: L("boss.lecture"), aide: L("boss.lecture.aide")) {
-                        Button(L("boss.autoriser")) { previews.requestAuthorization() }
+                        Button(L("boss.lecture.autoriser")) { previews.requestAuthorization() }
                     }
                 }
             }
