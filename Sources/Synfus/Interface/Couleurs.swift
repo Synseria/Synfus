@@ -69,6 +69,8 @@ enum Couleurs {
 
     // MARK: - Les neutres
 
+    /// Le fond de l'emblème Synseria.
+    static var nuit: Color { couleur(\.nuit) }
     static var fenetre: Color { couleur(\.fenetre) }
     static var surface: Color { couleur(\.surface) }
     static var creux: Color { couleur(\.creux) }
