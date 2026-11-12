@@ -16,10 +16,11 @@ struct LieuxSettings: View {
         let langue = L10n.courante.langue
         let lieux = montres(langue)
         let affiches = Array(lieux.prefix(Self.limite).enumerated())
-        PageListe(titre: L("reglages.lieux"), aide: L("lieux.aide")) {
+        PageListe(titre: L("reglages.lieux")) {
             SourceCarte().cadreDeListe(premiere: true, derniere: false)
             InterrupteurVuesCartes().cadreDeListe(premiere: false, derniere: true)
             EnTeteListe(titre: L("lieux.compte", lieux.count), aide: L("palette.reglages.lieux.aide"))
+                .help(L("lieux.aide"))
             HStack(spacing: Jetons.Espace.deux) {
                 ChampFiltre(invite: L("lieux.filtrer"), texte: $filtre)
                 Picker(L("lieux.categorie"), selection: $categorie) {

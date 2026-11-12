@@ -118,7 +118,10 @@ struct ChasseVue: View {
 
     private var indice: some View {
         VStack(alignment: .leading, spacing: Jetons.Espace.un) {
-            TextField(L("chasse.indice"), text: $modele.saisie)
+            // L'attente s'écrit dans le champ lui-même, en gris, puis il redevient « Indice ».
+            TextField(L("chasse.indice"), text: $modele.saisie,
+                      prompt: Text(modele.indices.isEmpty && modele.echecIndices == nil
+                                   ? L("chasse.indices.chargement") : L("chasse.indice")))
                 .textFieldStyle(.roundedBorder)
                 .onSubmit { modele.validerSaisie() }
             ForEach(modele.suggestions, id: \.self) { cible in
@@ -139,8 +142,6 @@ struct ChasseVue: View {
                         Button(L("quete.reessayer")) { Task { await modele.chargerIndices(forcer: true) } }
                             .buttonStyle(.bouton(.secondaire, dense: true))
                     }
-                } else {
-                    Text(L("chasse.indices.chargement")).font(.synfus(.petit)).foregroundStyle(Couleurs.encreSecondaire)
                 }
             }
         }

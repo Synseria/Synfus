@@ -9,12 +9,11 @@ import SwiftUI
 struct PageListe<Contenu: View>: View {
     let titre: String
     var valeur: String?
-    var aide: String?
     @ViewBuilder let contenu: Contenu
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            EnTetePage(titre: titre, valeur: valeur, aide: aide)
+            EnTetePage(titre: titre, valeur: valeur)
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) { contenu }
                     .labeledContentStyle(StyleLigneListe())

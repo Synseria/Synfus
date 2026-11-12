@@ -14,10 +14,10 @@ struct LectureSettings: View {
     @State private var resultat: String?
 
     var body: some View {
-        PageReglages(titre: L("reglages.lecture"),
-                     aide: L("diagnostic.lecture.aide")) {
+        PageReglages(titre: L("reglages.lecture")) {
             Section {
                 Interrupteur(titre: L("diagnostic.lecture.position"), isOn: activation(\.lirePosition))
+                    .help(L("diagnostic.lecture.aide"))
                 Interrupteur(titre: L("diagnostic.lecture.combat"), isOn: activation(\.lireCombat))
                 if prefs.lireCombat {
                     Interrupteur(titre: L("lecture.combatDerriere"), aide: L("lecture.combatDerriere.aide"),

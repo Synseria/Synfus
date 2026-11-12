@@ -16,13 +16,11 @@ enum MargeReglages {
 /// Une page de réglages : son titre, puis ses groupes.
 struct PageReglages<Contenu: View>: View {
     let titre: String
-    /// L'explication, derrière le ⓘ du titre.
-    var aide: String?
     @ViewBuilder let contenu: Contenu
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            EnTetePage(titre: titre, aide: aide)
+            EnTetePage(titre: titre)
             Form { contenu }
                 .formStyle(.grouped)
                 .scrollContentBackground(.hidden)
@@ -34,14 +32,13 @@ struct PageReglages<Contenu: View>: View {
 /// Le titre d'une page, pour celles qui ne sont pas un formulaire.
 struct EnTetePage: View {
     let titre: String
-    /// Un compte ou un état de la page, jamais une phrase.
+    /// Un compte ou un état de la page, jamais une phrase. Jamais de ⓘ près d'un titre : l'explication
+    /// passe en infobulle (`.help`) sur la ligne qu'elle éclaire.
     var valeur: String?
-    var aide: String?
 
     var body: some View {
         HStack(spacing: Jetons.Espace.deux) {
             Text(titre).font(.synfus(.titrePage))
-            if let aide { HelpTip(aide) }
             Spacer(minLength: Jetons.Espace.trois)
             if let valeur { Text(valeur).font(.synfus(.note)).foregroundStyle(Couleurs.encreSecondaire) }
         }

@@ -92,6 +92,7 @@ struct QueteVue: View {
                     .font(.synfus(.note))
                     .foregroundStyle(Couleurs.encreSecondaire)
                     .multilineTextAlignment(.center)
+                    .help(L("quete.aucune.aide"))
                 let lues = lecture.reconnues.compactMap { reconnue in store.nom(reconnue.id).map { (reconnue, $0) } }
                 if !lues.isEmpty {
                     Text(L("quete.vide.suivi")).font(.synfus(.raccourci)).foregroundStyle(Couleurs.encreSecondaire)

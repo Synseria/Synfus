@@ -17,7 +17,7 @@ struct ShortcutsSettings: View {
     }
 
     var body: some View {
-        PageReglages(titre: L("reglages.raccourcis"), aide: L("raccourcis.aide")) {
+        PageReglages(titre: L("reglages.raccourcis")) {
             Section {
                 // Une ligne par perso connecté : les emplacements suivent l'effectif.
                 ForEach(0..<min(manager.effectif.count, prefs.hotKeys.count), id: \.self) { slot in
@@ -34,6 +34,7 @@ struct ShortcutsSettings: View {
 
             Section {
                 RaccourciReglable(label: L("raccourcis.persoSuivant"), chemin: \.cycleNext)
+                    .help(L("raccourcis.aide"))
                 RaccourciReglable(label: L("raccourcis.persoPrecedent"), chemin: \.cyclePrevious)
                 RaccourciReglable(label: L("raccourcis.afficherMasquerBarre"), chemin: \.toggleBar)
                 RaccourciReglable(label: L("raccourcis.voirTous"), help: L("raccourcis.voirTous.aide"),

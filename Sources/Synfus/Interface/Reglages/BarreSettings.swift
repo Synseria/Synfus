@@ -7,13 +7,13 @@ struct BarreSettings: View {
     @ObservedObject private var previews = WindowPreviewService.shared
 
     var body: some View {
-        PageReglages(titre: L("reglages.barre"),
-                     aide: L("general.barre.aide")) {
+        PageReglages(titre: L("reglages.barre")) {
             Section {
                 Interrupteur(titre: L("general.barre.afficher"), isOn: Binding(
                     get: { prefs.barVisible },
                     set: { prefs.barVisible = $0; FloatingBarController.shared.apply() }
                 ))
+                .help(L("general.barre.aide"))
                 if prefs.barVisible {
                     Interrupteur(titre: L("general.barre.seulementDofus"), isOn: Binding(
                         get: { prefs.barOnlyWithDofus },
