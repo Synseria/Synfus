@@ -49,4 +49,13 @@ struct ComposantsTests {
         #expect(EtatVisuel.desactive.encre != EtatVisuel.repos.encre)
         #expect(EtatVisuel.courant.encre != EtatVisuel.repos.encre)
     }
+
+    @Test("Sans le clavier, un choix perd sa voix et son bord")
+    func choixInactif() {
+        #expect(EtatVisuel.choix(auClavier: true) == .choisi)
+        #expect(EtatVisuel.choix(.courant, auClavier: true) == .courant)
+        #expect(EtatVisuel.choix(auClavier: false) == .inactif)
+        #expect(EtatVisuel.choix(.courant, auClavier: false) == .inactif)
+        #expect(EtatVisuel.inactif.contour == nil)
+    }
 }
