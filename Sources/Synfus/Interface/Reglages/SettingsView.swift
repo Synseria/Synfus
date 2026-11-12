@@ -1,41 +1,37 @@
 import SwiftUI
 
-/// Les groupes de la barre latérale : peu de réglages par onglet, des
-/// onglets rangés par sujet.
+/// Les groupes de la barre latérale : quatre petits titres, jamais repliables.
 enum GroupeReglages: CaseIterable {
-    case synfus, clavier, jeu, donnees, persos, avance
+    case synfus, personnages, jeu, avance
 
-    var titre: String? {
+    var titre: String {
         switch self {
-        case .synfus: return nil
-        case .clavier: return L("reglages.groupe.clavier")
+        case .synfus: return L("reglages.groupe.synfus")
+        case .personnages: return L("reglages.groupe.personnages")
         case .jeu: return L("reglages.groupe.jeu")
-        case .donnees: return L("reglages.groupe.donnees")
-        case .persos: return L("reglages.groupe.persos")
         case .avance: return L("reglages.groupe.avance")
         }
     }
 }
 
-/// Sections des réglages, listées dans la barre latérale.
+/// Sections des réglages, listées dans la barre latérale : dix entrées, chacune une page dont les blocs
+/// reprennent les anciens onglets (Statistiques dans Général, Classes dans Personnages, Enchaîner et
+/// Attention dans Raccourcis, Invitations dans Palette, Zaaps, Lieux et Trajets dans Carte, PNJ dans
+/// Quêtes, Diagnostic dans Lecture de l'écran).
 enum SettingsSection: String, CaseIterable, Identifiable {
-    case general, theme, barre
-    case raccourcis, attention, enchainer, invitations
-    case palette, trajets, chasse, boss
-    case zaaps, lieux, quetes, pnj
-    case persos, classes
-    case lecture, diagnostic, usage
+    case general, theme
+    case personnages, barre, raccourcis
+    case palette, carte, quetes, aides
+    case lecture
 
     var id: String { rawValue }
 
     var groupe: GroupeReglages {
         switch self {
-        case .general, .theme, .barre: return .synfus
-        case .raccourcis, .attention, .enchainer, .invitations: return .clavier
-        case .palette, .trajets, .chasse, .boss: return .jeu
-        case .zaaps, .lieux, .quetes, .pnj: return .donnees
-        case .persos, .classes: return .persos
-        case .lecture, .diagnostic, .usage: return .avance
+        case .general, .theme: return .synfus
+        case .personnages, .barre, .raccourcis: return .personnages
+        case .palette, .carte, .quetes, .aides: return .jeu
+        case .lecture: return .avance
         }
     }
 
@@ -43,24 +39,14 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         switch self {
         case .general: return L("reglages.general")
         case .theme: return L("reglages.theme")
+        case .personnages: return L("reglages.personnages")
         case .barre: return L("reglages.barre")
         case .raccourcis: return L("reglages.raccourcis")
-        case .attention: return L("reglages.attention")
-        case .enchainer: return L("reglages.enchainer")
-        case .invitations: return L("reglages.invitations")
         case .palette: return L("reglages.palette")
-        case .trajets: return L("reglages.trajets")
-        case .chasse: return L("chasse.titre")
-        case .boss: return L("boss.titre")
-        case .zaaps: return L("reglages.zaaps")
-        case .lieux: return L("reglages.lieux")
+        case .carte: return L("reglages.carte")
         case .quetes: return L("reglages.quetes")
-        case .pnj: return L("reglages.pnj")
-        case .persos: return L("reglages.persos")
-        case .classes: return L("reglages.classes")
+        case .aides: return L("reglages.aides")
         case .lecture: return L("reglages.lecture")
-        case .diagnostic: return L("reglages.diagnostic")
-        case .usage: return L("reglages.usage")
         }
     }
 
@@ -68,24 +54,14 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         switch self {
         case .general: return "gearshape"
         case .theme: return "swatchpalette"
+        case .personnages: return "person.3"
         case .barre: return "rectangle.topthird.inset.filled"
         case .raccourcis: return "keyboard"
-        case .attention: return "bolt"
-        case .enchainer: return "cursorarrow.click"
-        case .invitations: return "person.badge.plus"
         case .palette: return "command"
-        case .trajets: return "arrow.triangle.turn.up.right.diamond"
-        case .chasse: return "map"
-        case .boss: return "scope"
-        case .zaaps: return "point.3.connected.trianglepath.dotted"
-        case .lieux: return "mappin.and.ellipse"
+        case .carte: return "map"
         case .quetes: return "scroll"
-        case .pnj: return "person.wave.2"
-        case .persos: return "person.3"
-        case .classes: return "paintpalette"
+        case .aides: return "scope"
         case .lecture: return "text.viewfinder"
-        case .diagnostic: return "stethoscope"
-        case .usage: return "chart.bar"
         }
     }
 }
@@ -107,9 +83,12 @@ final class OngletReglages: ObservableObject {
 struct SettingsView: View {
     @ObservedObject private var onglet: OngletReglages
     @State private var survol: SettingsSection?
+    private let hauteur: CGFloat
 
-    init(onglet: OngletReglages = .shared) {
+    /// `hauteur` : celle de la fenêtre ; les captures d'une page longue la rendent entière.
+    init(onglet: OngletReglages = .shared, hauteur: CGFloat = 680) {
         self.onglet = onglet
+        self.hauteur = hauteur
     }
 
     private var section: SettingsSection { onglet.section }
@@ -126,7 +105,7 @@ struct SettingsView: View {
                 // Le rang par défaut d'un bouton des réglages, y compris hors d'un `Form` (Diagnostic, listes).
                 .buttonStyle(.bouton(.secondaire))
         }
-        .frame(width: 920, height: 680)
+        .frame(width: 920, height: hauteur)
         // La teinte des fonds choisie dans Thème : celle de la fenêtre, que le formulaire laisse voir.
         .background(Color.jeton(\.fenetre))
     }
@@ -135,14 +114,12 @@ struct SettingsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Jetons.Espace.un) {
                 ForEach(GroupeReglages.allCases, id: \.self) { groupe in
-                    if let titre = groupe.titre {
-                        Text(titre)
-                            .font(Jetons.Typo.raccourci.police)
-                            .foregroundStyle(Color.jeton(\.encreSecondaire))
-                            .padding(.horizontal, Jetons.Espace.deux)
-                            .padding(.top, Jetons.Espace.deux)
-                            .padding(.bottom, Jetons.Espace.un)
-                    }
+                    Text(groupe.titre)
+                        .font(Jetons.Typo.raccourci.police)
+                        .foregroundStyle(Color.jeton(\.encreSecondaire))
+                        .padding(.horizontal, Jetons.Espace.deux)
+                        .padding(.top, Jetons.Espace.deux)
+                        .padding(.bottom, Jetons.Espace.un)
                     ForEach(SettingsSection.allCases.filter { $0.groupe == groupe }) { item in
                         sidebarRow(item)
                     }
@@ -150,7 +127,7 @@ struct SettingsView: View {
             }
             .padding(Jetons.Espace.deux)
         }
-        .frame(width: 170)
+        .frame(width: 196)
         .background(Color.jeton(\.creux))
     }
 
@@ -178,24 +155,14 @@ struct SettingsView: View {
         switch section {
         case .general: GeneralSettings()
         case .theme: ThemeSettings()
+        case .personnages: CharactersSettings()
         case .barre: BarreSettings()
         case .raccourcis: ShortcutsSettings()
-        case .attention: AttentionSettings()
-        case .enchainer: EnchainerSettings()
-        case .invitations: InvitationsSettings()
         case .palette: PaletteSettings()
-        case .trajets: TrajetsSettings()
-        case .chasse: ChasseSettings()
-        case .boss: BossSettings()
-        case .zaaps: ZaapsSettings()
-        case .lieux: LieuxSettings()
+        case .carte: CarteSettings()
         case .quetes: QuetesSettings()
-        case .pnj: PNJSettings()
-        case .persos: CharactersSettings()
-        case .classes: ClassesSettings()
+        case .aides: AidesSettings()
         case .lecture: LectureSettings()
-        case .diagnostic: DiagnosticSettings()
-        case .usage: UsageSettings()
         }
     }
 }

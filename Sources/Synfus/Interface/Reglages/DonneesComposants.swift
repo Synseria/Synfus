@@ -59,8 +59,7 @@ struct SourceClasses: View {
     @ObservedObject private var classes = ClassesStore.shared
 
     var body: some View {
-        Ligne(titre: titre, etat: L("classes.maj.contenu", classes.catalogue.breeds.count),
-              aide: L("classes.maj.aide")) {
+        Ligne(titre: titre, aide: L("classes.maj.aide")) {
             HStack(spacing: Jetons.Espace.deux) {
                 if classes.chargement { ProgressView().controlSize(.small) }
                 Button(L("classes.maj")) { Task { try? await classes.mettreAJour() } }
@@ -76,8 +75,7 @@ struct SourceClasses: View {
     }
 }
 
-/// L'étiquette libre d'un zaap ou d'un lieu : la pastille, ou « + Étiquette »,
-/// qui s'écrit au clic.
+/// L'étiquette libre d'un zaap ou d'un lieu : la pastille, ou l'icône qui l'écrit au clic.
 struct BoutonEtiquette: View {
     let cle: String
     @ObservedObject private var prefs = Preferences.shared
@@ -89,13 +87,8 @@ struct BoutonEtiquette: View {
             if let etiquette = prefs.etiquettes[cle] {
                 PastilleEtiquette(texte: etiquette)
             } else {
-                Text(L("palette.reglages.etiquette"))
-                    .font(Jetons.Typo.petit.police)
-                    .foregroundStyle(Color.jeton(\.encreSecondaire))
-                    .padding(.horizontal, Jetons.Espace.un)
-                    .padding(.vertical, Jetons.Espace.un)
-                    .overlay(RoundedRectangle(cornerRadius: Jetons.Rayon.pastille)
-                        .strokeBorder(Color.jeton(\.encreSecondaire).opacity(0.5), style: StrokeStyle(dash: [3, 2])))
+                Image(systemName: "tag").foregroundStyle(Color.jeton(\.encreSecondaire))
+                    .aide(L("palette.reglages.etiquette"))
             }
         }
         .buttonStyle(.plain)
