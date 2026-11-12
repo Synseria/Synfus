@@ -134,6 +134,7 @@ struct StyleBouton: ButtonStyle {
         case (.secondaire, _): Color.jeton(\.encre)
         }
         let fond: Color = switch (rang, actif) {
+        case (.tertiaire, false): .clear
         case (_, false): Color.jeton(\.creux)
         case (.principal, _): presse ? Color.jeton(\.primaireEncre) : Color.jeton(\.primaire)
         case (.destructif, _): presse ? Color.jeton(\.danger) : Color.jeton(\.dangerPlein)
@@ -205,4 +206,66 @@ extension View {
     /// Le texte d'un bouton sans texte : l'infobulle, et son nom pour VoiceOver,
     /// que `.help` ne donne pas.
     func aide(_ texte: String) -> some View { help(texte).accessibilityLabel(texte) }
+}
+
+// MARK: - Segments
+
+/// Le choix d'une valeur parmi quelques-unes, côte à côte : piste `creux` bordée d'un `filet`, le cran
+/// choisi teinté (`primaireFond`, contour `primaire`, `primaireEncre`). Les flèches déplacent la
+/// sélection elle-même ; aucun anneau de focus sur un cran. Le seul segment de l'app.
+struct Segments<Valeur: Hashable>: View {
+    let titre: String
+    let choix: [(valeur: Valeur, libelle: String)]
+    @Binding var selection: Valeur
+
+    init(_ titre: String, selection: Binding<Valeur>, choix: [(valeur: Valeur, libelle: String)]) {
+        self.titre = titre
+        self.choix = choix
+        _selection = selection
+    }
+
+    var body: some View {
+        let piste = RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous)
+        HStack(spacing: Jetons.Trait.focusEcart) {
+            ForEach(choix.indices, id: \.self) { rang in
+                let valeur = choix[rang].valeur
+                Button(choix[rang].libelle) { selection = valeur }
+                    .buttonStyle(CranDeSegment(choisi: valeur == selection))
+                    .accessibilityAddTraits(valeur == selection ? .isSelected : [])
+            }
+        }
+        .padding(Jetons.Trait.focusEcart)
+        .background(piste.fill(Color.jeton(\.creux)))
+        .overlay(piste.strokeBorder(Color.jeton(\.filet), lineWidth: Jetons.Trait.filet))
+        .fixedSize()
+        .focusable()
+        .focusEffectDisabled()
+        .onKeyPress(.leftArrow) { deplacer(-1) }
+        .onKeyPress(.rightArrow) { deplacer(1) }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(titre)
+    }
+
+    private func deplacer(_ pas: Int) -> KeyPress.Result {
+        guard let rang = choix.firstIndex(where: { $0.valeur == selection }) else { return .ignored }
+        let suivant = min(max(rang + pas, 0), choix.count - 1)
+        selection = choix[suivant].valeur
+        return .handled
+    }
+}
+
+private struct CranDeSegment: ButtonStyle {
+    let choisi: Bool
+    @State private var survole = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        let etat: EtatVisuel = choisi ? .choisi : configuration.isPressed ? .presse : survole ? .survol : .repos
+        configuration.label
+            .font(Jetons.Typo.corps.police)
+            .foregroundStyle(etat.encre)
+            .padding(.horizontal, Jetons.Espace.trois)
+            .frame(minHeight: Jetons.Taille.controle - 2 * Jetons.Trait.focusEcart)
+            .fondEtat(etat, rayon: Jetons.Rayon.controle - Jetons.Trait.focusEcart)
+            .onHover { survole = $0 }
+    }
 }

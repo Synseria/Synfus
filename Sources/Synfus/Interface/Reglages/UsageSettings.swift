@@ -51,12 +51,7 @@ struct UsageSettings: View {
         let totaux = usage.historique.totaux(sur: periode.jours, aujourdhui: aujourdhui)
         Section {
             Ligne(titre: L("stats.periode"), etat: depuis) {
-                Picker(L("stats.periode"), selection: $periode) {
-                    ForEach(Periode.allCases, id: \.self) { Text($0.libelle).tag($0) }
-                }
-                .labelsHidden()
-                .pickerStyle(.segmented)
-                .fixedSize()
+                Segments(L("stats.periode"), selection: $periode, choix: Periode.allCases.map { ($0, $0.libelle) })
             }
             if let moyennes = usage.historique.moyennesPersos(sur: periode.jours, aujourdhui: aujourdhui) {
                 valeur(L("stats.persosConnectes"), moyennes.connectes.formatted(.number.precision(.fractionLength(1))))
@@ -112,13 +107,8 @@ struct DonneesEnvoyeesVue: View {
     var body: some View {
         let texte = dernier ? usage.historique.dernierRapport : usage.apercuProchainEnvoi()
         VStack(alignment: .leading, spacing: Jetons.Espace.trois) {
-            Picker(L("stats.voirDonnees"), selection: $dernier) {
-                Text(L("stats.prochainEnvoi")).tag(false)
-                Text(L("stats.dernierEnvoi")).tag(true)
-            }
-            .labelsHidden()
-            .pickerStyle(.segmented)
-            .fixedSize()
+            Segments(L("stats.voirDonnees"), selection: $dernier,
+                     choix: [(false, L("stats.prochainEnvoi")), (true, L("stats.dernierEnvoi"))])
             ScrollView {
                 Text(texte ?? L("stats.rienAEnvoyer"))
                     .font(Jetons.Typo.codeInterface.police)
