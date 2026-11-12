@@ -16,7 +16,9 @@ enum DispositionGroupe: Equatable, Sendable {
     func voisin(depuis rang: Int?, parmi total: Int, _ fleche: FlecheGroupe) -> Int? {
         guard total > 0, let pas = pas(fleche) else { return nil }
         guard let rang else { return 0 }
-        return min(max(rang + pas, 0), total - 1)
+        let vise = rang + pas
+        // En grille, borner à la première ou dernière case ferait changer de colonne : on reste sur place.
+        return (0..<total).contains(vise) ? vise : rang
     }
 
     private func pas(_ fleche: FlecheGroupe) -> Int? {
@@ -41,8 +43,9 @@ private struct GroupeSelection<Id: Hashable>: ViewModifier {
             .focusable()
             .focusEffectDisabled()
             .onKeyPress(keys: [.leftArrow, .rightArrow, .upArrow, .downArrow], phases: [.down, .repeat]) { touche in
-                // ⌘ + flèche, ⌥ + flèche : aux gestes du système, pas au groupe.
-                guard touche.modifiers.isEmpty, let fleche = Self.fleche(touche.key),
+                // ⌘ + flèche, ⌥ + flèche : aux gestes du système, pas au groupe. Une flèche porte
+                // `.numericPad` : le test ne vise que les vrais modificateurs.
+                guard touche.modifiers.isDisjoint(with: [.command, .option, .control, .shift]), let fleche = Self.fleche(touche.key),
                       let rang = disposition.voisin(depuis: ordre.firstIndex(of: selection), parmi: ordre.count, fleche)
                 else { return .ignored }
                 selection = ordre[rang]

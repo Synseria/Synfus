@@ -105,12 +105,20 @@ struct ShortcutsSettings: View {
                     }
                 }
                 Ligne(titre: L("raccourcis.tous")) {
-                    Button(L("commun.retablir")) {
-                        prefs.resetShortcuts()
-                        rebind()
-                    }
+                    Button(L("commun.retablir")) { confirmerRetablissement() }
                 }
             }
+        }
+    }
+
+    private func confirmerRetablissement() {
+        Task {
+            let demande = DemandeConfirmation(
+                titre: L("raccourcis.retablir.confirmation"), detail: L("raccourcis.retablir.detail"),
+                verbe: L("commun.retablir"))
+            guard await Confirmation.demander(demande) else { return }
+            prefs.resetShortcuts()
+            rebind()
         }
     }
 
