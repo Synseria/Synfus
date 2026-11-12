@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Les briques de dessin communes, écrites sur les jetons : voix d'état, cartes, surface qui flotte,
+// Les briques de dessin communes, écrites sur les jetons : voix d'état, cartes, surface qui flotte,
 /// touche de raccourci, rangs de boutons. Une vue n'écrit ni couleur, ni rayon, ni durée.
 
 // MARK: - Langage d'état
