@@ -344,8 +344,8 @@ private struct CarteZaap: View {
 
     private var etat: EtatVisuel { choisie ? .choisi : .repos }
     private var surImage: Bool { FondCarte.surImage(entree.carte) }
-    private var encre: Color { surImage ? FondCarte.encreSurImage : etat.encre }
-    private var encreSecondaire: Color { surImage ? FondCarte.encreSecondaireSurImage : etat.encreSecondaire }
+    private var encre: Color { surImage ? Color.jeton(\.encre, en: .sombre) : etat.encre }
+    private var encreSecondaire: Color { surImage ? Color.jeton(\.encreSecondaire, en: .sombre) : etat.encreSecondaire }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Jetons.Espace.un) {

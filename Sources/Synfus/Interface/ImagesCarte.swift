@@ -169,9 +169,6 @@ struct FondCarte: View {
         carte != nil && Preferences.shared.vuesCartes && Ressources.visuelsDuJeu
     }
 
-    /// Les encres du thème sombre, lisibles sur le voile `nuitProfond` dans les deux thèmes.
-    @MainActor static var encreSurImage: Color { ThemeCourant.theme(.sombre).encre.couleur }
-    @MainActor static var encreSecondaireSurImage: Color { ThemeCourant.theme(.sombre).encreSecondaire.couleur }
 
     var body: some View {
         if Self.surImage(carte), let carte {
