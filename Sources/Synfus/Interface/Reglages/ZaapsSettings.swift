@@ -29,12 +29,7 @@ struct ZaapsSettings: View {
             EnTeteListe(titre: L("zaaps.grille"), aide: L("zaap.liste.aide"))
             HStack(spacing: Jetons.Espace.deux) {
                 ChampFiltre(invite: L("palette.reglages.filtrer"), texte: $filtre)
-                Picker(L("palette.reglages.vue"), selection: $vue) {
-                    ForEach(Vue.allCases, id: \.self) { Text($0.libelle).tag($0) }
-                }
-                .labelsHidden()
-                .pickerStyle(.segmented)
-                .fixedSize()
+                Segments(L("palette.reglages.vue"), selection: $vue, choix: Vue.allCases.map { ($0, $0.libelle) })
             }
             .cadreDeListe(premiere: true, derniere: false)
             // Paresseuse dans la pile paresseuse : seules les cases à l'écran

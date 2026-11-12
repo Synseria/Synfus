@@ -30,8 +30,14 @@ private struct ChoixDeCouleur: View {
                 ForEach(Jetons.Prereglage.allCases) { prereglage in
                     pastille(prereglage)
                 }
-                Button(L("theme.autre")) { choisirAutre() }
-                    .buttonStyle(.etat(choisi: estAutre, rayon: Jetons.Rayon.capsule))
+                Button { choisirAutre() } label: {
+                    Text(L("theme.autre"))
+                        .font(Jetons.Typo.corps.police)
+                        .padding(.horizontal, Jetons.Espace.trois)
+                        .frame(height: Jetons.Taille.controle)
+                }
+                .buttonStyle(.etat(choisi: estAutre, rayon: Jetons.Rayon.capsule))
+                .accessibilityAddTraits(estAutre ? .isSelected : [])
             }
         }
         if case .teinte(let teinte) = courante {
@@ -47,7 +53,8 @@ private struct ChoixDeCouleur: View {
             Circle().fill(plein)
                 .frame(width: Jetons.Taille.controle - Jetons.Espace.deux, height: Jetons.Taille.controle - Jetons.Espace.deux)
                 .padding(Jetons.Trait.focusEcart)
-                .overlay { if choisie { Circle().strokeBorder(Color.jeton(\.primaireEncre), lineWidth: Jetons.Trait.focus) } }
+                // Un anneau d'`encre` : lisible sur toutes les pastilles, en clair comme en sombre.
+                .overlay { if choisie { Circle().strokeBorder(Color.jeton(\.encre), lineWidth: Jetons.Trait.focus) } }
         }
         .buttonStyle(.plain)
         .aide(nom)
@@ -92,16 +99,9 @@ private struct ChoixDesFonds: View {
 
     var body: some View {
         Ligne(titre: L("theme.fonds")) {
-            Picker(L("theme.fonds"), selection: Binding(get: { choix }, set: choisir)) {
-                Text(L("commun.auto")).tag(Choix.auto)
-                Text(L("theme.fonds.primaire")).tag(Choix.primaire)
-                Text(L("theme.fonds.nuit")).tag(Choix.nuit)
-                Text(L("theme.fonds.neutre")).tag(Choix.neutre)
-                Text(L("theme.autre")).tag(Choix.autre)
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .fixedSize()
+            Segments(L("theme.fonds"), selection: Binding(get: { choix }, set: choisir), choix: [
+                (Choix.auto, L("commun.auto")), (.primaire, L("theme.fonds.primaire")), (.nuit, L("theme.fonds.nuit")),
+                (.neutre, L("theme.fonds.neutre")), (.autre, L("theme.autre"))])
         }
         if case .teinte(let teinte) = prefs.fondsDeLApp {
             CurseurDeTeinte(teinte: teinte, accepte: { _ in true }) { prefs.fondsDeLApp = .teinte($0) }
