@@ -77,7 +77,7 @@ struct Bloc<Contenu: View, Entete: View>: View {
         VStack(alignment: .leading, spacing: Jetons.Espace.deux) {
             if let titre {
                 HStack(spacing: Jetons.Espace.deux) {
-                    SectionTitle(titre, help: aide).help(infobulle ?? "")
+                    SectionTitle(titre, help: aide).infobulleSiPresente(infobulle)
                     Spacer(minLength: Jetons.Espace.trois)
                     entete
                 }
@@ -186,8 +186,7 @@ struct Ligne<Controle: View, Icone: View>: View {
             controle
         }
         // L'explication d'une ligne est une infobulle sur toute la ligne : jamais une phrase à l'écran.
-        .help(aide ?? "")
-        .accessibilityHint(aide ?? "")
+        .infobulleSiPresente(aide, indice: true)
         .rangee()
     }
 }
@@ -366,5 +365,17 @@ struct CopiableCommand: View {
         }
         .padding(Jetons.Espace.un)
         .background(RoundedRectangle(cornerRadius: Jetons.Rayon.pastille).fill(Color.jeton(\.creux)))
+    }
+}
+
+extension View {
+    /// Une infobulle vide masquerait celle qu'un appelant pose autour : sans texte, rien n'est posé.
+    @ViewBuilder
+    func infobulleSiPresente(_ texte: String?, indice: Bool = false) -> some View {
+        if let texte {
+            if indice { help(texte).accessibilityHint(texte) } else { help(texte) }
+        } else {
+            self
+        }
     }
 }

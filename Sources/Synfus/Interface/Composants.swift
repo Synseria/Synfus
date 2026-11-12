@@ -189,7 +189,8 @@ struct StyleEtat: ButtonStyle {
                         RoundedRectangle(cornerRadius: style.rayon, style: .continuous).fill(Color.jeton(\.creux))
                     }
                 }
-                .fondEtat(etat, rayon: style.rayon)
+                // Une puce nue désactivée n'a pas de tuile : l'encre tertiaire suffit.
+                .fondEtat(style.nue && etat == .desactive ? .repos : etat, rayon: style.rayon)
                 .onHover { survole = $0 }
         }
     }
@@ -245,16 +246,25 @@ struct Segments<Valeur: Hashable>: View {
 
 private struct CranDeSegment: ButtonStyle {
     let choisi: Bool
-    @State private var survole = false
 
     func makeBody(configuration: Configuration) -> some View {
-        let etat: EtatVisuel = choisi ? .choisi : configuration.isPressed ? .presse : survole ? .survol : .repos
-        configuration.label
-            .font(Jetons.Typo.corps.police)
-            .foregroundStyle(etat.encre)
-            .padding(.horizontal, Jetons.Espace.trois)
-            .frame(minHeight: Jetons.Taille.controle - 2 * Jetons.Trait.focusEcart)
-            .fondEtat(etat, rayon: Jetons.Rayon.controle - Jetons.Trait.focusEcart)
-            .onHover { survole = $0 }
+        Contenu(configuration: configuration, choisi: choisi)
+    }
+
+    private struct Contenu: View {
+        let configuration: Configuration
+        let choisi: Bool
+        @State private var survole = false
+
+        var body: some View {
+            let etat: EtatVisuel = choisi ? .choisi : configuration.isPressed ? .presse : survole ? .survol : .repos
+            configuration.label
+                .font(Jetons.Typo.corps.police)
+                .foregroundStyle(etat.encre)
+                .padding(.horizontal, Jetons.Espace.trois)
+                .frame(minHeight: Jetons.Taille.controle - 2 * Jetons.Trait.focusEcart)
+                .fondEtat(etat, rayon: Jetons.Rayon.controle - Jetons.Trait.focusEcart)
+                .onHover { survole = $0 }
+        }
     }
 }

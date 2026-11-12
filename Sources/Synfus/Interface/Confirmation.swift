@@ -65,7 +65,8 @@ enum Confirmation {
             }
             let hote = NSHostingController(rootView: vue.racineSynfus())
             let nouvelle = NSWindow(contentViewController: hote)
-            nouvelle.styleMask = porteuse?.canBecomeKey == true ? [] : [.titled, .fullSizeContentView]
+            // Sans barre de titre une NSWindow ne devient jamais key : ni ⎋ ni Tab n'atteindraient la feuille.
+            nouvelle.styleMask = [.titled, .fullSizeContentView]
             nouvelle.titlebarAppearsTransparent = true
             nouvelle.titleVisibility = .hidden
             fenetre = nouvelle
