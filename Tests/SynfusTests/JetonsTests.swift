@@ -72,8 +72,10 @@ struct JetonsTests {
     @Test("Toute police de vue passe par l'échelle")
     func policesParLEchelle() throws {
         let motif = /\.system\(size|weight:|\.fontWeight\(\.(?!semibold)|\.font\(\.(caption|footnote|subheadline|callout|headline|title|body)/
-        // Le menu de la barre de menus est en `NSFont`, hors de SwiftUI.
-        for (fichier, ligne) in try lignes(sauf: ["Typographie.swift", "SynfusMark.swift", "MenuBarController.swift"]) {
+        // Le menu de la barre de menus est en `NSFont`, hors de SwiftUI ; `Jetons.swift` est engendré
+        // par Synseria-Design et définit l'échelle commune.
+        let exceptions: Set = ["Typographie.swift", "Jetons.swift", "SynfusMark.swift", "MenuBarController.swift"]
+        for (fichier, ligne) in try lignes(sauf: exceptions) {
             #expect(!ligne.contains(motif), "\(fichier) : \(ligne)")
         }
     }
