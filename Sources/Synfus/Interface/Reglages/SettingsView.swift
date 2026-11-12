@@ -126,6 +126,10 @@ struct SettingsView: View {
                 }
             }
             .padding(Jetons.Espace.deux)
+            .groupeSelection(L("reglages.titre"), selection: Binding(get: { onglet.section }, set: { onglet.section = $0 }),
+                             parmi: GroupeReglages.allCases.flatMap { groupe in
+                                 SettingsSection.allCases.filter { $0.groupe == groupe }
+                             }, disposition: .verticale)
         }
         .frame(width: 196)
         .background(Color.jeton(\.creux))
@@ -147,6 +151,7 @@ struct SettingsView: View {
                 .fondEtat(section == item ? .courant : (survol == item ? .survol : .repos))
         }
         .buttonStyle(.plain)
+        .elementDeGroupe()
         .onHover { survol = $0 ? item : nil }
     }
 

@@ -56,6 +56,15 @@ sa bascule). Toute nouvelle option suit la règle.
 - Réordonner les pastilles : `DragGesture` en espace de coordonnées nommé ; le drag & drop
   système ne démarre pas de façon fiable depuis un panneau non activable.
 - Badges en overlay (`CopiedBadge`, `CombatBadge`) : la barre ne change pas de taille.
+- Une pastille dit le nom et la classe (`showClasses` ne règle que l'emblème) ; son numéro est une
+  `ToucheRaccourci` portant le raccourci réel du rang (`BarView.toucheDuPerso`), le numéro à défaut.
+- **Clavier des groupes** : tout groupe à choix unique (segments, barre latérale, pastilles de couleur, icônes
+  de l'app) passe par `groupeSelection` — Tab entre et sort, les flèches déplacent la sélection, aucun anneau —
+  et ses boutons par `elementDeGroupe()`. Les filtres de la palette suivent Tab/⇧Tab (le panneau garde le
+  clavier du champ, ←/→ y restent au texte). Un choix multiple garde l'anneau système et Espace.
+- Palette : la portée de la recherche se dit dans le filtre choisi, jamais par un mot de genre sur la rangée
+  (pas de « Monstre », « Objet », « Quête » en sous-titre) ; l'icône de la rangée est dans un carré
+  `primaireFond`, celle d'une commande ou d'une variable est la sienne (`symbole`).
 
 ## Rangée d'équipes — `TeamRow.swift` (modèle : skill `inventaire-clients`)
 

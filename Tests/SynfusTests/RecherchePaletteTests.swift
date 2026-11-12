@@ -66,7 +66,7 @@ struct RecherchePaletteTests {
         #expect(monstres.map(\.titre) == ["Amakna Bwork", "Bworkette"])
         #expect(monstres.last?.effet == .ouTrouver(.monstre(792)) && RecherchePalette.texte(de: .ouTrouver(.monstre(792)), avecQuetes) == nil)
         let objets = RecherchePalette.entrees("", avecQuetes, filtre: .objets)
-        #expect(objets.map(\.sousTitre) == ["Ressource", L("palette.objet")])
+        #expect(objets.map(\.sousTitre) == ["Ressource", nil])
         #expect(objets.first?.effet == .ouTrouver(.objet(2179)))
         // « amakna » : zaaps et lieux d'abord, le monstre après.
         let tout = RecherchePalette.entrees("amakna", avecQuetes)

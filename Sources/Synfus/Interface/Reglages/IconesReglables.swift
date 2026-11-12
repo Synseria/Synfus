@@ -40,6 +40,10 @@ private struct ChoixIconeApp: View {
                 }
             }
         }
+        .groupeSelection(L("general.iconeApp"), selection: $choix,
+                         parmi: IconeApp.Motif.allCases.flatMap { motif in
+                             IconeApp.Fond.allCases.map { IconeApp(motif: motif, fond: $0) }
+                         }, disposition: .grille(colonnes: IconeApp.Fond.allCases.count))
     }
 
     private func vignette(_ icone: IconeApp) -> some View {
@@ -48,6 +52,7 @@ private struct ChoixIconeApp: View {
                 .padding(Jetons.Espace.un)
         }
         .buttonStyle(.etat(choisi: icone == choix, nue: true))
+        .elementDeGroupe()
         .aide(L("general.iconeApp.vignette", icone.motif.nom, icone.fond.nom))
         .accessibilityAddTraits(icone == choix ? .isSelected : [])
     }
