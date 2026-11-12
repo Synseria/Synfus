@@ -66,7 +66,7 @@ struct DiagnosticSettings: View {
                                     .font(Jetons.Typo.codeInterface.police)
                                     .foregroundStyle(Color.jeton(\.encreSecondaire))
                                     .textSelection(.enabled)
-                                Text("pid \(client.pid)")
+                                Text(verbatim: "pid " + String(client.pid))
                                     .font(Jetons.Typo.codeInterface.police)
                                     .foregroundStyle(Color.jeton(\.encreTertiaire))
                                 if prefs.lirePosition {

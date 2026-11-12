@@ -123,6 +123,8 @@ struct SettingsView: View {
             Divider()
             detail
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                // Le rang par défaut d'un bouton des réglages, y compris hors d'un `Form` (Diagnostic, listes).
+                .buttonStyle(.bouton(.secondaire))
         }
         .frame(width: 920, height: 680)
         // La teinte des fonds choisie dans Thème : celle de la fenêtre, que le formulaire laisse voir.
