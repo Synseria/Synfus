@@ -135,34 +135,6 @@ enum CurseurArrierePlan {
     static func autoriser() { _ = fait }
 }
 
-/// Fond de la barre : Liquid Glass sur macOS 26, matériau translucide en deçà.
-/// Un seul binaire couvre les deux — la bascule se fait à l'exécution, il n'y a
-/// donc pas de build séparé à maintenir pour les versions antérieures.
-struct BarBackground: ViewModifier {
-    func body(content: Content) -> some View {
-        if Ressources.captureDocumentation {
-            // `cacheDisplay` ne dessine ni le verre ni les matériaux, qui
-            // échantillonnent l'écran : un fond plein, à leur teinte.
-            content.background(
-                RoundedRectangle(cornerRadius: 13, style: .continuous)
-                    .fill(Color(white: 0.2))
-                    .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.12), lineWidth: 0.5)))
-        } else if #available(macOS 26.0, *) {
-            content.glassEffect(.regular, in: .rect(cornerRadius: 13))
-        } else {
-            content.background(
-                RoundedRectangle(cornerRadius: 13, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 13, style: .continuous)
-                            .strokeBorder(Color.primary.opacity(0.12), lineWidth: 0.5)
-                    )
-            )
-        }
-    }
-}
-
 /// Gabarit commun des bascules de mode — éclair du passage automatique, menu
 /// de rangement. Au repos le bouton est nu : le fond n'apparaît qu'au
 /// survol ou quand le mode est actif, la barre ne montre plus une rangée de
@@ -178,27 +150,19 @@ struct ModeButton: View {
         Button(action: action) {
             Image(systemName: icone)
                 .font(.synfus(.note))
-                .foregroundStyle(actif ? Couleurs.primaireEncre : Color.secondary)
+                .foregroundStyle(etat.encre)
                 .contentTransition(.symbolEffect(.replace))
-                .frame(width: 24, height: 24)
-                .background(
-                    RoundedRectangle(cornerRadius: 7, style: .continuous)
-                        .fill(fond)
-                )
-                .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+                .frame(width: Jetons.Taille.cibleMin, height: Jetons.Taille.cibleMin)
+                .fondEtat(etat)
         }
         .buttonStyle(.plain)
         .onHover { survole = $0 }
-        .animation(.easeOut(duration: 0.15), value: survole)
-        .animation(.easeOut(duration: 0.15), value: actif)
         .aide(aide)
         .accessibilityAddTraits(actif ? .isSelected : [])
     }
 
-    private var fond: Color {
-        if actif { return Couleurs.primaire.opacity(survole ? 0.22 : 0.18) }
-        return survole ? Color.primary.opacity(0.08) : .clear
-    }
+    /// Un mode allumé est un choix : la voix teintée.
+    private var etat: EtatVisuel { actif ? .choisi : EtatVisuel(survole: survole) }
 }
 
 /// Les entrées du menu de rangement — les mêmes sous le bouton de la barre et
@@ -234,20 +198,15 @@ struct ArrangeMenuButton: View {
         } label: {
             Image(systemName: "rectangle.3.group")
                 .font(.synfus(.note))
-                .foregroundStyle(Color.secondary)
-                .frame(width: 24, height: 24)
-                .background(
-                    RoundedRectangle(cornerRadius: 7, style: .continuous)
-                        .fill(survole ? Color.primary.opacity(0.08) : Color.clear)
-                )
-                .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+                .foregroundStyle(Couleurs.encre)
+                .frame(width: Jetons.Taille.cibleMin, height: Jetons.Taille.cibleMin)
+                .fondEtat(EtatVisuel(survole: survole))
         }
         .menuStyle(.borderlessButton)
-        .tint(Color.secondary)
+        .tint(Couleurs.encre)
         .menuIndicator(.hidden)
         .fixedSize()
         .onHover { survole = $0 }
-        .animation(.easeOut(duration: 0.15), value: survole)
         .aide(L("barre.rangerAide"))
     }
 }
@@ -273,9 +232,9 @@ struct GearButton: View {
         } label: {
             Image(systemName: "gearshape")
                 .font(.synfus(.petit))
-                .foregroundStyle(survole ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tertiary))
-                .frame(width: 24, height: 24)
-                .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+                .foregroundStyle(survole ? Couleurs.encre : Couleurs.encreSecondaire)
+                .frame(width: Jetons.Taille.cibleMin, height: Jetons.Taille.cibleMin)
+                .fondEtat(EtatVisuel(survole: survole))
         }
         .buttonStyle(.plain)
         .onHover { survole = $0 }
@@ -283,7 +242,7 @@ struct GearButton: View {
     }
 }
 
-/// Contour orange qui pulse autour d'une pastille dont le perso réclame
+/// Contour d'alerte qui pulse autour d'une pastille dont le perso réclame
 /// l'attention.
 ///
 /// L'animation est portée par cette vue, et cette vue n'existe que le temps de
@@ -293,9 +252,9 @@ struct GearButton: View {
 /// deux fois par seconde en permanence, alerte ou pas.
 struct AlertPulse: View {
     var body: some View {
-        RoundedRectangle(cornerRadius: 8, style: .continuous)
-            .strokeBorder(Couleurs.alerte, lineWidth: 1.5)
-            .modifier(Battement(bas: 0.2, demiPeriode: 0.55))
+        RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous)
+            .strokeBorder(Couleurs.alerte, lineWidth: Jetons.Trait.etat)
+            .modifier(Battement(bas: 0.2, demiPeriode: Jetons.Duree.feuille * 2))
     }
 }
 
@@ -314,7 +273,7 @@ private struct Battement: ViewModifier {
                 if sansMouvement {
                     haut = true
                 } else {
-                    withAnimation(.easeInOut(duration: demiPeriode).repeatForever(autoreverses: true)) {
+                    withAnimation(Jetons.Duree.animation(demiPeriode).repeatForever(autoreverses: true)) {
                         haut = false
                     }
                 }
@@ -328,15 +287,15 @@ private struct Battement: ViewModifier {
 /// à la taille de la barre.
 struct CopiedBadge: View {
     var body: some View {
-        RoundedRectangle(cornerRadius: 8, style: .continuous)
-            .strokeBorder(Couleurs.primaire, lineWidth: 1.5)
+        RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous)
+            .strokeBorder(Couleurs.primaire, lineWidth: Jetons.Trait.etat)
             .overlay(alignment: .topTrailing) {
                 Image(systemName: "doc.on.clipboard.fill")
-                    .font(.synfus(.micro, gras: true))
+                    .font(.synfus(.micro))
                     .foregroundStyle(Couleurs.encreSurPrimaire)
-                    .padding(2)
+                    .padding(Jetons.Espace.un)
                     .background(Circle().fill(Couleurs.primaire))
-                    .offset(x: 4, y: -4)
+                    .offset(x: Jetons.Espace.un, y: -Jetons.Espace.un)
             }
             .transition(.opacity)
             .allowsHitTesting(false)
@@ -353,10 +312,9 @@ struct CopiedBadge: View {
 /// contour qui clignote se voit du coin de l'œil, sans rien poser sur le jeu.
 struct SwitchBlink: View {
     var body: some View {
-        RoundedRectangle(cornerRadius: 8, style: .continuous)
-            .strokeBorder(Color.white, lineWidth: 2)
-            .shadow(color: Couleurs.primaire, radius: 4)
-            .modifier(Battement(bas: 0.1, demiPeriode: 0.2))
+        RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous)
+            .strokeBorder(Couleurs.encreSurPrimaire, lineWidth: Jetons.Trait.focus)
+            .modifier(Battement(bas: 0.1, demiPeriode: Jetons.Duree.menu))
             .allowsHitTesting(false)
     }
 }
@@ -371,14 +329,16 @@ struct SwitchBlink: View {
 struct CombatBadge: View {
     let etat: EtatCombat
 
+    /// Le rose du bouton « Fin de tour » du jeu : la barre répète la couleur qu'on lit à l'écran, elle
+    /// n'est pas à nous.
     static let rose = Color(red: 0.76, green: 0.44, blue: 0.73)
 
     var body: some View {
         switch etat {
         case .monTour(let fin):
             ZStack(alignment: .topTrailing) {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .strokeBorder(Self.rose, lineWidth: 2)
+                RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous)
+                    .strokeBorder(Self.rose, lineWidth: Jetons.Trait.focus)
                 TimelineView(.periodic(from: .now, by: 1)) { contexte in
                     pastille(fin.map { "\(max(0, Int($0.timeIntervalSince(contexte.date).rounded())))" })
                         .help(L("barre.combat.monTour",
@@ -389,9 +349,9 @@ struct CombatBadge: View {
         case .placement, .pasMonTour:
             // En combat, pas son tour : le cadre en retrait, l'épée grise.
             ZStack(alignment: .topTrailing) {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .strokeBorder(Self.rose.opacity(0.4), lineWidth: 1.5)
-                pastille(nil).opacity(0.8)
+                RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous)
+                    .strokeBorder(Couleurs.encreTertiaire, lineWidth: Jetons.Trait.etat)
+                pastille(nil)
             }
             .help(L("barre.combat.enCombat"))
             .allowsHitTesting(false)
@@ -406,17 +366,17 @@ struct CombatBadge: View {
         Group {
             if let texte {
                 Text(texte)
-                    .font(.synfus(.micro, gras: true, design: .rounded))
+                    .font(.synfus(.micro))
                     .monospacedDigit()
-                    .padding(.horizontal, 3)
+                    .padding(.horizontal, Jetons.Espace.un)
             } else {
                 Image(systemName: "figure.fencing")
-                    .font(.synfus(.micro, gras: true))
-                    .padding(2)
+                    .font(.synfus(.micro))
+                    .padding(Jetons.Espace.un)
             }
         }
-        .foregroundStyle(.white)
-        .background(Capsule().fill(etat.enCombat && etat != .pasMonTour && etat != .placement ? Self.rose : Color.gray))
-        .offset(x: 5, y: -5)
+        .foregroundStyle(Color.white)
+        .background(Capsule().fill(etat.enCombat && etat != .pasMonTour && etat != .placement ? Self.rose : Couleurs.encreSecondaire))
+        .offset(x: Jetons.Espace.un, y: -Jetons.Espace.un)
     }
 }

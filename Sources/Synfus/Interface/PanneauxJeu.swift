@@ -46,7 +46,7 @@ enum PanneauxJeu {
     }
 }
 
-/// Un bouton d'en-tête de panneau : une cible de 22 pt, quelle que soit
+/// Un bouton d'en-tête de panneau : une cible de 24 pt, quelle que soit
 /// l'icône, au même dessin partout.
 struct BoutonEnTete: View {
     let icone: String
@@ -56,12 +56,10 @@ struct BoutonEnTete: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: icone)
-                .font(.synfus(.petit, gras: true))
-                .foregroundStyle(.secondary)
-                .frame(width: 24, height: 24)
-                .contentShape(Rectangle())
+                .font(.synfus(.raccourci))
+                .frame(width: Jetons.Taille.cibleMin, height: Jetons.Taille.cibleMin)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.etat(nue: true))
         .aide(aide)
     }
 }
@@ -84,8 +82,8 @@ struct EnTetePanneau<Titre: View, Boutons: View>: View {
         HStack(spacing: 0) {
             Image(systemName: icone)
                 .foregroundStyle(teinte)
-                .padding(.leading, 10)
-                .padding(.trailing, 4)
+                .padding(.leading, Jetons.Espace.deux)
+                .padding(.trailing, Jetons.Espace.un)
                 .frame(maxHeight: .infinity)
                 .overlay(WindowDragArea())
             // Le titre d'abord : sans priorité, la zone de glisser, flexible
@@ -97,10 +95,10 @@ struct EnTetePanneau<Titre: View, Boutons: View>: View {
                 .overlay(WindowDragArea(menu: menu))
                 .layoutPriority(1)
             WindowDragArea().frame(minWidth: 4, maxWidth: .infinity, maxHeight: .infinity)
-            HStack(spacing: 4) { boutons }
-                .padding(.vertical, 3)
+            HStack(spacing: Jetons.Espace.un) { boutons }
+                .padding(.vertical, Jetons.Espace.un)
         }
-        .padding(.trailing, 4)
+        .padding(.trailing, Jetons.Espace.un)
         .font(.synfus(.note))
         // Les zones de glisser prennent la hauteur des boutons, sans tirer
         // l'en-tête vers le bas.

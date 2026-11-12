@@ -37,58 +37,50 @@ struct TeamSectorView: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 2) {
+            HStack(spacing: Jetons.Espace.un) {
                 switch secteur {
                 case .tous:
                     Image(systemName: "person.3")
                         .font(.synfus(.petit))
                 case .equipe(let index):
                     Text("\(index + 1)")
-                        .font(.synfus(.petit, gras: true, design: .rounded))
-                        .padding(.trailing, 1)
+                        .font(.synfus(.raccourci))
+                        .padding(.trailing, Jetons.Espace.un)
                     ForEach(membres, id: \.self) { membre in
                         point(for: membre)
                     }
                 case .nouvelle:
                     Image(systemName: "plus")
-                        .font(.synfus(.petit, gras: true))
+                        .font(.synfus(.raccourci))
                 }
             }
-            .padding(.horizontal, agrandi ? 12 : 7)
+            .padding(.horizontal, agrandi ? Jetons.Espace.trois : Jetons.Espace.deux)
             // Le « + » est une cible, pas un libellé : il prend de la place.
-            .frame(minWidth: secteur == .nouvelle ? (agrandi ? 48 : 34) : 0)
-            .frame(height: agrandi ? 24 : 19)
-            .foregroundStyle(actif ? Couleurs.encreSurPrimaire : (secteur == .nouvelle ? Color.secondary : Color.primary))
-            .background(
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(fond)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .strokeBorder(cible ? Couleurs.primaire : Color.clear, lineWidth: 1.5)
-            )
-            .contentShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+            .frame(minWidth: secteur == .nouvelle ? (agrandi ? Jetons.Espace.dix + Jetons.Espace.deux : Jetons.Espace.huit) : 0)
+            .frame(height: agrandi ? Jetons.Taille.cibleMin : Jetons.Taille.touche)
+            .foregroundStyle(secteur == .nouvelle && etat == .repos ? Couleurs.encreSecondaire : etat.encre)
+            .fondEtat(etat)
         }
         .buttonStyle(.plain)
         // Le « + » ne fait rien au clic : il attend qu'on y dépose un perso.
         .disabled(secteur == .nouvelle)
         .onHover { survole = $0 }
-        .animation(.easeOut(duration: 0.15), value: cible)
         .help(aide)
     }
 
-    private var fond: Color {
-        if actif { return Couleurs.primaire }
-        if cible { return Couleurs.primaire.opacity(0.18) }
-        return survole ? Color.primary.opacity(0.08) : .clear
+    /// Plein : l'équipe active ; teinté : la cible du dépôt en cours.
+    private var etat: EtatVisuel {
+        actif ? .courant : cible ? .choisi : EtatVisuel(survole: survole)
     }
 
-    /// Le point d'un membre : sa classe, atténué s'il n'est pas connecté —
+    /// Le point d'un membre : sa classe, un anneau vide s'il n'est pas connecté —
     /// même source de couleur et d'icône que le badge des pastilles.
     @ViewBuilder
     private func point(for membre: TeamMember) -> some View {
         Group {
-            if let custom = icons.icon(for: membre.classe) {
+            if !membre.connecte {
+                Circle().strokeBorder(Couleurs.encreTertiaire, lineWidth: Jetons.Trait.etat)
+            } else if let custom = icons.icon(for: membre.classe) {
                 Image(nsImage: custom)
                     .resizable()
                     .interpolation(.high)
@@ -98,8 +90,7 @@ struct TeamSectorView: View {
                 Circle().fill(icons.catalogue.color(for: membre.classe))
             }
         }
-        .frame(width: 12, height: 12)
-        .opacity(membre.connecte ? 1 : 0.35)
+        .frame(width: Jetons.Espace.trois, height: Jetons.Espace.trois)
     }
 
     private var aide: String {
