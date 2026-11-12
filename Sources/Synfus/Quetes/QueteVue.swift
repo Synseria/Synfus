@@ -60,7 +60,7 @@ struct QueteVue: View {
                             if !fiche.suivantes.isEmpty { suivantes(fiche) }
                         }
                         .padding(metriques.marge)
-                        .padding(.bottom, 8)
+                        .padding(.bottom, Jetons.Espace.deux)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .onChange(of: fiche.id) { defilement.scrollTo(Self.haut, anchor: .top) }
@@ -72,8 +72,7 @@ struct QueteVue: View {
         }
         .frame(minWidth: QuetePanel.tailleMinimale.width, maxWidth: .infinity,
                minHeight: QuetePanel.tailleMinimale.height, maxHeight: .infinity, alignment: .top)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Color.primary.opacity(0.12)))
+        .surfaceFlottante()
         .bordsRedimensionnables(coin: poignee)
     }
 
@@ -81,7 +80,7 @@ struct QueteVue: View {
     /// d'un clic, et où en chercher une autre. Quêtes indisponibles : pourquoi,
     /// et de quoi réessayer.
     private var vide: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: Jetons.Espace.deux) {
             if store.quetes == nil, !store.chargement, let echec = store.echec {
                 Text(L("quete.indisponible", echec))
                     .font(.synfus(.note))
@@ -91,14 +90,14 @@ struct QueteVue: View {
             } else {
                 Text(store.chargement ? L("palette.quetes.chargement") : L("quete.aucune"))
                     .font(.synfus(.note))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Couleurs.encreSecondaire)
                     .multilineTextAlignment(.center)
                 let lues = lecture.reconnues.compactMap { reconnue in store.nom(reconnue.id).map { (reconnue, $0) } }
                 if !lues.isEmpty {
-                    Text(L("quete.vide.suivi")).font(.synfus(.petit, gras: true)).foregroundStyle(.secondary)
+                    Text(L("quete.vide.suivi")).font(.synfus(.raccourci)).foregroundStyle(Couleurs.encreSecondaire)
                     ForEach(lues, id: \.0.id) { reconnue, nom in
                         Button { lecture.choisir(reconnue) } label: { Label(nom, systemImage: "pin") }
-                            .buttonStyle(.borderless)
+                            .buttonStyle(.bouton(.tertiaire, dense: true))
                     }
                 }
             }
@@ -106,18 +105,19 @@ struct QueteVue: View {
                 PalettePanel.shared.ouvrir()
                 PaletteModele.shared.requete = "/quete "
             }
+            .buttonStyle(.bouton(.principal, dense: true))
         }
-        .padding(16)
+        .padding(Jetons.Espace.quatre)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     /// Le coin bas droit, à saisir pour agrandir le panneau.
     private var poignee: some View {
         Image(systemName: "arrow.down.right")
-            .font(.synfus(.micro, gras: true))
-            .foregroundStyle(.tertiary)
-            .frame(width: 18, height: 18)
-            .padding(2)
+            .font(.synfus(.micro))
+            .foregroundStyle(Couleurs.encreTertiaire)
+            .frame(width: Jetons.Taille.touche, height: Jetons.Taille.touche)
+            .padding(Jetons.Espace.un)
     }
 
     // MARK: - En-tête du panneau
@@ -130,7 +130,7 @@ struct QueteVue: View {
         return EnTetePanneau(icone: "scroll", teinte: Couleurs.primaire,
                              menu: ficheImposee == nil ? { @MainActor in QuetePanel.shared.menu() } : nil) {
             menuQuetes(titre: ficheImposee?.nom ?? montree.flatMap { store.nom($0) } ?? L("quete.menu.titre"))
-            if lecture.etat == .enCours { ProgressView().controlSize(.mini).padding(.leading, 4) }
+            if lecture.etat == .enCours { ProgressView().controlSize(.mini).padding(.leading, Jetons.Espace.un) }
         } boutons: {
             if let montree {
                 BoutonEnTete(icone: "pin.slash", aide: L("quete.desepingler")) { QuetePanel.shared.desepingler(montree) }
@@ -144,22 +144,22 @@ struct QueteVue: View {
     /// panneau n'a pas encore.
     private func menuQuetes(titre: String) -> some View {
         let nouvelles = MenuQuetes.nouvelles(lecture.reconnues, epinglees: prefs.quetesEpinglees)
-        return HStack(spacing: 4) {
-            Text(titre).font(.synfus(metriques.titre, gras: true)).lineLimit(3).fixedSize(horizontal: false, vertical: true)
+        return HStack(spacing: Jetons.Espace.un) {
+            Text(titre).font(.synfus(metriques.titreFort)).lineLimit(3).fixedSize(horizontal: false, vertical: true)
                 .help(titre)
-            Image(systemName: "chevron.down").font(.synfus(.micro, gras: true)).foregroundStyle(.secondary)
+            Image(systemName: "chevron.down").font(.synfus(.micro)).foregroundStyle(Couleurs.encreSecondaire)
             if nouvelles > 0, ficheImposee == nil {
                 Text("\(nouvelles)")
-                    .font(.synfus(.micro, gras: true))
+                    .font(.synfus(.micro))
                     .foregroundStyle(Couleurs.encreSurPrimaire)
-                    .padding(.horizontal, 4)
+                    .padding(.horizontal, Jetons.Espace.un)
                     .background(Capsule().fill(Couleurs.primaire))
                     .help(L("quete.menu.nouvelles"))
             }
         }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 3)
-        .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.06)))
+        .padding(.horizontal, Jetons.Espace.un)
+        .padding(.vertical, Jetons.Espace.un)
+        .background(RoundedRectangle(cornerRadius: Jetons.Rayon.controle).fill(Couleurs.creux))
     }
 
     // MARK: - En-tête
@@ -170,21 +170,21 @@ struct QueteVue: View {
         let niveau = Text(L("quete.niveau", nombre: fiche.etapes.count, fiche.niveau, fiche.etapes.count))
         return VStack(alignment: .leading, spacing: metriques.ecartLignes) {
             if fiche.groupe || fiche.donjon {
-                HStack(spacing: 4) { badges(fiche) }
+                HStack(spacing: Jetons.Espace.un) { badges(fiche) }
             }
             ViewThatFits(in: .horizontal) {
-                HStack(spacing: 6) {
+                HStack(spacing: Jetons.Espace.un) {
                     niveau
-                    Spacer(minLength: 4)
+                    Spacer(minLength: Jetons.Espace.un)
                     boutonGuide(fiche)
                 }
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: Jetons.Espace.un) {
                     niveau
                     boutonGuide(fiche)
                 }
             }
             .font(.synfus(metriques.detail))
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Couleurs.encreSecondaire)
             if let exigences = Self.exigences(fiche.exigences, classes: ClassesStore.shared.catalogue) {
                 Label(L("quete.exigences", exigences), systemImage: "lock")
                     .font(.synfus(metriques.detail))
@@ -197,7 +197,7 @@ struct QueteVue: View {
                 Button { QuetePanel.shared.desepingler(fiche.id) } label: {
                     Label(L("quete.terminee"), systemImage: "flag.checkered")
                 }
-                .controlSize(.small)
+                .buttonStyle(.bouton(.secondaire, dense: true))
                 .help(L("quete.terminee.aide"))
             }
         }
@@ -217,13 +217,13 @@ struct QueteVue: View {
                 guideEnCours = false
             }
         } label: {
-            HStack(spacing: 3) {
+            HStack(spacing: Jetons.Espace.un) {
                 if guideEnCours { ProgressView().controlSize(.mini) }
                 Text(L("quete.guide"))
                 Image(systemName: "arrow.up.right.square")
             }
         }
-        .buttonStyle(.borderless)
+        .buttonStyle(.bouton(.tertiaire, dense: true))
         .disabled(guideEnCours)
     }
 
@@ -248,8 +248,8 @@ struct QueteVue: View {
             .font(.synfus(metriques.detail))
             .lineLimit(1)
             .fixedSize()
-            .padding(.horizontal, 5)
-            .padding(.vertical, 1)
+            .padding(.horizontal, Jetons.Espace.un)
+            .padding(.vertical, Jetons.Espace.un)
             .background(Capsule().fill(Couleurs.safranFond))
             .foregroundStyle(Couleurs.safranTexte)
     }
@@ -265,23 +265,23 @@ struct QueteVue: View {
                     copier(ressources.map { L("quete.ressource", $0.nom, $0.quantite) }.joined(separator: ", "),
                            ligne: "ressources")
                 }
-                .buttonStyle(.borderless)
+                .buttonStyle(.bouton(.tertiaire, dense: true))
                 .font(.synfus(metriques.detail))
             }
             ForEach(Array(ressources.enumerated()), id: \.offset) { indice, ressource in
                 let id = "ressource:\(indice)"
                 HStack(alignment: .firstTextBaseline, spacing: 0) {
                     ligneCopiable(id: id, aide: L("quete.copierNom"), action: { copier(ressource.nom, ligne: id) }) {
-                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        HStack(alignment: .firstTextBaseline, spacing: Jetons.Espace.un) {
                             Image(systemName: copiee == id ? "checkmark" : "shippingbox")
                                 .font(.synfus(metriques.icone))
-                                .foregroundStyle(copiee == id ? Couleurs.primaireEncre : Color.secondary)
-                                .frame(width: 14)
+                                .foregroundStyle(copiee == id ? Couleurs.primaireEncre : Couleurs.encreSecondaire)
+                                .frame(width: Jetons.Taille.case)
                             // Le nom d'abord : à l'étroit, c'est la catégorie qui se tronque.
                             Text(L("quete.ressource", ressource.nom, ressource.quantite))
                                 .font(.synfus(metriques.texte))
                                 .layoutPriority(1)
-                            Spacer(minLength: 4)
+                            Spacer(minLength: Jetons.Espace.un)
                             detail(id: id, ressource.categorie, monospace: false)
                         }
                     }
@@ -301,9 +301,9 @@ struct QueteVue: View {
             if deplie { deplies.remove(sujet) } else { deplies.insert(sujet) }
         } label: {
             Image(systemName: deplie ? "chevron.down" : "chevron.right")
-                .font(.synfus(metriques.icone, gras: true))
-                .foregroundStyle(.secondary)
-                .frame(width: 16)
+                .font(.synfus(metriques.icone))
+                .foregroundStyle(Couleurs.encreSecondaire)
+                .frame(width: Jetons.Espace.quatre)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -348,7 +348,7 @@ struct QueteVue: View {
         let numeros = Dictionary(uniqueKeysWithValues: tournee.enumerated().map { ($1, $0 + 1) })
         return VStack(alignment: .leading, spacing: metriques.ecartLignes) {
             if plusieurs {
-                HStack(spacing: 6) {
+                HStack(spacing: Jetons.Espace.un) {
                     Button { changerEtape(fiche, rang - 1) } label: { Image(systemName: "chevron.left") }
                         .disabled(rang == 0)
                         .aide(L("quete.etapePrecedente"))
@@ -362,10 +362,10 @@ struct QueteVue: View {
                         .disabled(rang >= fiche.etapes.count - 1)
                         .aide(L("quete.etapeSuivante"))
                 }
-                .buttonStyle(.borderless)
-                .tint(Color.secondary)
+                .buttonStyle(.bouton(.tertiaire, dense: true))
+                .tint(Couleurs.encreSecondaire)
             } else {
-                HStack(spacing: 6) {
+                HStack(spacing: Jetons.Espace.un) {
                     titreSection(L("quete.objectifs"))
                     persosLus(lus)
                 }
@@ -373,9 +373,9 @@ struct QueteVue: View {
             if prefs.quetesConsigne, let description = etape.description {
                 Text(description)
                     .font(.synfus(metriques.consigne))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Couleurs.encreSecondaire)
                     .fixedSize(horizontal: false, vertical: true)
-                    .padding(.bottom, 2)
+                    .padding(.bottom, Jetons.Espace.un)
             }
             ForEach(etape.objectifs, id: \.id) { objectif in
                 ligneObjectif(objectif, quete: fiche.id,
@@ -387,13 +387,13 @@ struct QueteVue: View {
                 Button { copierTrajet(premier, quete: fiche.id) } label: {
                     Label(L("quete.tournee"), systemImage: "point.topleft.down.to.point.bottomright.curvepath")
                 }
-                .controlSize(.small)
+                .buttonStyle(.bouton(.secondaire, dense: true))
                 .help(L("quete.tournee.aide"))
             }
             if !etape.recompenses.vides {
                 Text(L("quete.recompenses", Self.recompenses(etape.recompenses)))
                     .font(.synfus(metriques.detail))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Couleurs.encreSecondaire)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, metriques.ecartLignes)
             }
@@ -414,10 +414,9 @@ struct QueteVue: View {
             Label(L("quete.etapeSuivante"), systemImage: "chevron.right")
                 .labelStyle(TitreAvantIcone())
         }
-        .controlSize(.small)
         HStack {
             Spacer()
-            if achevee { bouton.buttonStyle(.borderedProminent).tint(Couleurs.primaire) } else { bouton }
+            bouton.buttonStyle(.bouton(achevee ? .principal : .secondaire, dense: true))
         }
         .padding(.top, metriques.ecartLignes)
     }
@@ -428,12 +427,12 @@ struct QueteVue: View {
     private func persosLus(_ lus: [HistoriqueSuivi.EtapeLue]) -> some View {
         if !lus.isEmpty {
             let maintenant = Date()
-            HStack(spacing: 1) {
+            HStack(spacing: Jetons.Espace.un) {
                 Image(systemName: "person.fill")
                 Text("\(lus.count)")
             }
-            .font(.synfus(metriques.detail, gras: true))
-            .foregroundStyle(.secondary)
+            .font(.synfus(metriques.detailFort))
+            .foregroundStyle(Couleurs.encreSecondaire)
             .fixedSize()
             .help(L("quete.persos", nombre: lus.count, lus.count,
                     lus.map { Self.lu($0, maintenant: maintenant) }.joined(separator: "\n")))
@@ -523,7 +522,7 @@ struct QueteVue: View {
         }
 
         @MainActor var teinte: Color {
-            valide ? Couleurs.primaire : suggere ? Couleurs.suggestionSynfus : enCours ? Color.primary : Color.secondary
+            valide ? Couleurs.primaire : suggere ? Couleurs.suggestionSynfus : enCours ? Couleurs.encre : Couleurs.encreSecondaire
         }
     }
 
@@ -538,7 +537,7 @@ struct QueteVue: View {
         let valide = etat.valide, suggere = etat.suggere && !valide
         let replie = valide && copiee != id
         return VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .firstTextBaseline, spacing: 2) {
+            HStack(alignment: .firstTextBaseline, spacing: Jetons.Espace.un) {
                 Button { prefs.cocher(objectif.id, de: quete, !valide) } label: {
                     Image(systemName: etat.icone)
                         .font(.synfus(metriques.coche))
@@ -555,24 +554,24 @@ struct QueteVue: View {
                 // Fait et sans trajet, la ligne n'a plus rien à faire.
                 let action: (() -> Void)? = valide && objectif.position == nil ? nil : { copierTrajet(objectif, quete: quete) }
                 ligneCopiable(id: id, aide: Self.aide(objectif), action: action) {
-                    VStack(alignment: .leading, spacing: 1) {
+                    VStack(alignment: .leading, spacing: Jetons.Espace.un) {
                         if replie {
                             Text(objectif.texte)
                                 .font(.synfus(metriques.texte))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Couleurs.encreSecondaire)
                                 .lineLimit(1)
                                 .truncationMode(.tail)
                         } else {
                             Text(objectif.texte)
-                                .font(.synfus(metriques.texte, gras: etat.enCours && !valide))
-                                .foregroundStyle(valide || etat.nonOuvert ? Color.secondary : Color.primary)
+                                .font(.synfus(etat.enCours && !valide ? metriques.texteFort : metriques.texte))
+                                .foregroundStyle(valide || etat.nonOuvert ? Couleurs.encreSecondaire : Couleurs.encre)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         if !replie {
-                            HStack(spacing: 6) {
+                            HStack(spacing: Jetons.Espace.un) {
                                 if let numero = etat.numero, !valide {
                                     Text(L("quete.ordre", numero))
-                                        .font(.synfus(metriques.detail, gras: true))
+                                        .font(.synfus(metriques.detailFort))
                                         .foregroundStyle(Couleurs.safranTexte)
                                 }
                                 if let position = objectif.position {
@@ -582,7 +581,7 @@ struct QueteVue: View {
                                     }
                                     if suggere, copiee != id {
                                         Text(L("quete.suggestion"))
-                                            .font(.synfus(metriques.detail, gras: true))
+                                            .font(.synfus(metriques.detailFort))
                                             .foregroundStyle(Couleurs.suggestionSynfus)
                                     }
                                 } else {
@@ -591,7 +590,7 @@ struct QueteVue: View {
                                 if etat.nonOuvert, !valide, copiee != id {
                                     Text(L("quete.nonOuvert"))
                                         .font(.synfus(metriques.detail))
-                                        .foregroundStyle(.tertiary)
+                                        .foregroundStyle(Couleurs.encreTertiaire)
                                         .lineLimit(1)
                                 }
                                 Spacer(minLength: 0)
@@ -607,10 +606,10 @@ struct QueteVue: View {
             }
             .background {
                 if etat.aFaire, !valide {
-                    RoundedRectangle(cornerRadius: 6)
+                    RoundedRectangle(cornerRadius: Jetons.Rayon.controle)
                         .fill(Couleurs.safranFond)
                         .overlay(alignment: .leading) {
-                            Capsule().fill(Couleurs.safran).frame(width: Self.traitAFaire).padding(.vertical, 2)
+                            Capsule().fill(Couleurs.safran).frame(width: Self.traitAFaire).padding(.vertical, Jetons.Espace.un)
                         }
                 }
             }
@@ -642,13 +641,13 @@ struct QueteVue: View {
             titreSection(L("quete.suivantes"))
             ForEach(fiche.suivantes, id: \.id) { suivante in
                 ligneCopiable(id: "suivante:\(suivante.id)", aide: nil, action: { QuetePanel.shared.ouvrir(suivante.id) }) {
-                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    HStack(alignment: .firstTextBaseline, spacing: Jetons.Espace.un) {
                         Image(systemName: "arrow.turn.down.right")
                             .font(.synfus(metriques.icone))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 14)
+                            .foregroundStyle(Couleurs.encreSecondaire)
+                            .frame(width: Jetons.Taille.case)
                         Text(suivante.nom).font(.synfus(metriques.texte)).layoutPriority(1)
-                        Spacer(minLength: 4)
+                        Spacer(minLength: Jetons.Espace.un)
                         detail(id: "suivante:\(suivante.id)", L("quete.niveauCourt", suivante.niveau), monospace: false)
                     }
                 }
@@ -660,8 +659,8 @@ struct QueteVue: View {
 
     private func titreSection(_ texte: String) -> some View {
         Text(texte)
-            .font(.synfus(metriques.detail, gras: true))
-            .foregroundStyle(.secondary)
+            .font(.synfus(metriques.detailFort))
+            .foregroundStyle(Couleurs.encreSecondaire)
     }
 
     /// Le détail d'une ligne, en petit et en gris, ou « Copié » le temps de
@@ -669,11 +668,11 @@ struct QueteVue: View {
     @ViewBuilder
     private func detail(id: String, _ texte: String?, monospace: Bool) -> some View {
         if copiee == id {
-            Text(L("quete.copie")).font(.synfus(metriques.detail, gras: true)).foregroundStyle(Couleurs.primaireEncre)
+            Text(L("quete.copie")).font(.synfus(metriques.detailFort)).foregroundStyle(Couleurs.primaireEncre)
         } else if let texte {
             Text(texte)
-                .font(.synfus(metriques.detail, design: monospace ? .monospaced : .default))
-                .foregroundStyle(.secondary)
+                .font(.synfus(monospace ? .codeInterface : metriques.detail))
+                .foregroundStyle(Couleurs.encreSecondaire)
                 .lineLimit(1)
         }
     }
@@ -685,10 +684,8 @@ struct QueteVue: View {
             contenu()
                 .padding(.horizontal, metriques.ligneHorizontale)
                 .padding(.vertical, metriques.ligneVerticale)
-                .background(RoundedRectangle(cornerRadius: 6).fill(copiee == id ? Couleurs.primaire.opacity(0.15) : Color.clear))
-                .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.etat(choisi: copiee == id, nue: true))
         .disabled(action == nil)
         .help(action == nil ? "" : aide ?? "")
     }
@@ -710,7 +707,7 @@ struct QueteVue: View {
 /// Le texte puis l'icône : « Étape suivante › ».
 private struct TitreAvantIcone: LabelStyle {
     func makeBody(configuration: Configuration) -> some View {
-        HStack(spacing: 4) {
+        HStack(spacing: Jetons.Espace.un) {
             configuration.title
             configuration.icon
         }

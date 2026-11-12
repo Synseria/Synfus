@@ -22,7 +22,7 @@ struct BossVue: View {
         VStack(alignment: .leading, spacing: 0) {
             entete
             Divider()
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: Jetons.Espace.deux) {
                 if let fiche = aide.fiches[prefs.bossChoisi.monstre] { FicheCombatVue(fiche: fiche) }
                 if previews.authorized {
                     ligneTour
@@ -40,12 +40,11 @@ struct BossVue: View {
                 if let special = prefs.bossChoisi.special { rappelsVue(special) }
                 conseilsVue
             }
-            .padding(12)
+            .padding(Jetons.Espace.trois)
         }
         .frame(width: Self.largeur, alignment: .leading)
         .font(.synfus(.note))
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Color.primary.opacity(0.12)))
+        .surfaceFlottante()
         // L'autorisation donnée, la lecture démarre sans attendre un
         // changement d'app.
         .onChange(of: previews.authorized) { BossPanel.shared.revoirVisibilite(force: false) }
@@ -59,14 +58,14 @@ struct BossVue: View {
 
     private var entete: some View {
         EnTetePanneau(icone: "scope", teinte: Couleurs.safran, menu: Self.menu) {
-            Text(Self.nom(prefs.bossChoisi, donjons: donjons.donjons)).font(.synfus(.note, gras: true))
-                .padding(.leading, 6)
-            Image(systemName: "chevron.down").font(.synfus(.micro, gras: true)).foregroundStyle(.secondary)
-                .padding(.leading, 3)
+            Text(Self.nom(prefs.bossChoisi, donjons: donjons.donjons)).font(.synfus(.corpsFort))
+                .padding(.leading, Jetons.Espace.un)
+            Image(systemName: "chevron.down").font(.synfus(.micro)).foregroundStyle(Couleurs.encreSecondaire)
+                .padding(.leading, Jetons.Espace.un)
             if let perso = lecteur.persoDevant {
-                Text(perso).font(.synfus(.petit)).foregroundStyle(.secondary)
+                Text(perso).font(.synfus(.petit)).foregroundStyle(Couleurs.encreSecondaire)
                     .lineLimit(1)
-                    .padding(.horizontal, 6)
+                    .padding(.horizontal, Jetons.Espace.un)
             }
         } boutons: {
             if let nom = aide.donjon?.nomFrancais {
@@ -97,11 +96,11 @@ struct BossVue: View {
 
     /// Le tour du combat compté chez le perso devant, à corriger d'un clic.
     private var ligneTour: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "clock").foregroundStyle(.secondary)
+        HStack(spacing: Jetons.Espace.un) {
+            Image(systemName: "clock").foregroundStyle(Couleurs.encreSecondaire)
             Text(aide.tour.map { L("boss.tour", $0) } ?? L("boss.tour.attente"))
-                .font(.synfus(.petit, gras: aide.tour != nil))
-                .foregroundStyle(aide.tour == nil ? Color.secondary : Color.primary)
+                .font(.synfus(aide.tour != nil ? .raccourci : .petit))
+                .foregroundStyle(aide.tour == nil ? Couleurs.encreSecondaire : Couleurs.encre)
                 .help(L("boss.tour.aide"))
             Spacer()
             PetitBouton(icone: "minus", aide: L("boss.tour.moins")) { aide.corrigerTour(-1) }
@@ -112,14 +111,14 @@ struct BossVue: View {
     }
 
     private var autorisation: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Jetons.Espace.deux) {
             Text(L("boss.autoriser.aide"))
                 .font(.synfus(.petit))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Couleurs.encreSecondaire)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
             Button { previews.requestAuthorization() } label: { Image(systemName: "lock") }
-                .buttonStyle(.borderless)
+                .buttonStyle(.bouton(.tertiaire, dense: true))
                 .aide(L("boss.autoriser"))
         }
     }
@@ -128,12 +127,12 @@ struct BossVue: View {
     /// groupe ; l'icône du titre les copie tous, à la suite.
     private func rappelsVue(_ boss: Boss) -> some View {
         let liste = Self.rappels(boss)
-        return VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 6) {
+        return VStack(alignment: .leading, spacing: Jetons.Espace.un) {
+            HStack(spacing: Jetons.Espace.un) {
                 Button { rappels.toggle() } label: {
                     Label(L("boss.rappels"), systemImage: rappels ? "chevron.down" : "chevron.right")
-                        .font(.synfus(.petit, gras: true))
-                        .foregroundStyle(.secondary)
+                        .font(.synfus(.raccourci))
+                        .foregroundStyle(Couleurs.encreSecondaire)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -142,23 +141,23 @@ struct BossVue: View {
                     Button { copier(liste.joined(separator: " "), signal: "") } label: {
                         Image(systemName: copie == "" ? "checkmark" : "doc.on.doc")
                             .font(.synfus(.petit))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Couleurs.encreSecondaire)
                     }
-                    .buttonStyle(.borderless)
+                    .buttonStyle(.bouton(.tertiaire, dense: true))
                     .aide(L("boss.rappels.copier"))
                 }
             }
             if rappels {
                 ForEach(liste, id: \.self) { rappel in
                     Button { copier(rappel, signal: rappel) } label: {
-                        HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        HStack(alignment: .firstTextBaseline, spacing: Jetons.Espace.un) {
                             Text("• " + rappel)
                                 .fixedSize(horizontal: false, vertical: true)
                             Spacer(minLength: 0)
                             if copie == rappel { Image(systemName: "checkmark") }
                         }
                         .font(.synfus(.petit))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Couleurs.encreSecondaire)
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -182,12 +181,12 @@ struct BossVue: View {
     @ViewBuilder
     private var conseilsVue: some View {
         if let liste = aide.donjon.flatMap({ donjons.conseils[$0.id] }), !liste.isEmpty {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: Jetons.Espace.un) {
                 Button { conseils.toggle() } label: {
                     Label(L("donjon.conseils", nombre: liste.count, liste.count),
                           systemImage: conseils ? "chevron.down" : "chevron.right")
-                        .font(.synfus(.petit, gras: true))
-                        .foregroundStyle(.secondary)
+                        .font(.synfus(.raccourci))
+                        .foregroundStyle(Couleurs.encreSecondaire)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -196,11 +195,11 @@ struct BossVue: View {
                     ForEach(Array(liste.enumerated()), id: \.offset) { _, conseil in
                         Text("• " + conseil.titre)
                             .font(.synfus(.petit))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Couleurs.encreSecondaire)
                             .fixedSize(horizontal: false, vertical: true)
                             .help(conseil.detail)
                     }
-                    Text(L("donjon.conseils.source")).font(.synfus(.petit)).foregroundStyle(.tertiary)
+                    Text(L("donjon.conseils.source")).font(.synfus(.petit)).foregroundStyle(Couleurs.encreTertiaire)
                 }
             }
         }
@@ -251,12 +250,10 @@ struct PetitBouton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: icone)
-                .font(.synfus(.petit, gras: true))
-                .frame(width: 22, height: 20)
-                .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Color.primary.opacity(0.08)))
-                .contentShape(Rectangle())
+                .font(.synfus(.raccourci))
+                .frame(width: Jetons.Taille.controleDense, height: Jetons.Taille.controleDense)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.etat())
         .aide(aide)
     }
 }
@@ -269,19 +266,15 @@ struct ChoixBoss<Valeur: Hashable>: View {
     let choisir: (Valeur?) -> Void
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: Jetons.Espace.un) {
             ForEach(choix, id: \.valeur) { option in
                 let actif = option.valeur == actuel
                 Button { choisir(actif ? nil : option.valeur) } label: {
                     Text(option.titre)
-                        .font(.synfus(.petit, gras: true))
-                        .frame(maxWidth: .infinity, minHeight: 24)
-                        .foregroundStyle(actif ? Couleurs.encreSurPrimaire : Color.primary)
-                        .background(RoundedRectangle(cornerRadius: 7, style: .continuous)
-                            .fill(actif ? Couleurs.primaire : Color.primary.opacity(0.08)))
-                        .contentShape(Rectangle())
+                        .font(.synfus(.raccourci))
+                        .frame(maxWidth: .infinity, minHeight: Jetons.Taille.cibleMin)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.etat(choisi: actif))
             }
         }
     }

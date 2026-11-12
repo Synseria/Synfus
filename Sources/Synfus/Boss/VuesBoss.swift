@@ -14,8 +14,8 @@ private struct Consigne: View {
         } icon: {
             Image(systemName: icone)
         }
-        .font(.synfus(forte ? .corps : .petit, gras: forte))
-        .foregroundStyle(urgente ? Couleurs.safranTexte : forte ? Color.primary : Color.secondary)
+        .font(.synfus(forte ? .corpsFort : .petit))
+        .foregroundStyle(urgente ? Couleurs.safranTexte : forte ? Couleurs.encre : Couleurs.encreSecondaire)
     }
 }
 
@@ -28,7 +28,7 @@ struct KimboVue: View {
     @ObservedObject private var aide = AideBoss.shared
 
     var body: some View {
-        Text(L("boss.kimbo.question")).font(.synfus(.petit)).foregroundStyle(.secondary)
+        Text(L("boss.kimbo.question")).font(.synfus(.petit)).foregroundStyle(Couleurs.encreSecondaire)
         ChoixBoss(choix: [(Kimbo.Etat.impair, L("boss.kimbo.terreEau")), (.pair, L("boss.kimbo.airFeu"))],
                   actuel: aide.session.kimbo) { etat in aide.noter { session, _ in session.kimbo = etat } }
         if let etat = aide.session.kimbo {
@@ -74,14 +74,14 @@ struct ToxoliathVue: View {
             HStack(alignment: .top) {
                 Consigne(texte: L("boss.toxoliath.toxmose", touche + Toxoliath.dureeToxmose - 1),
                          icone: "drop.triangle", urgente: true)
-                Spacer(minLength: 4)
+                Spacer(minLength: Jetons.Espace.un)
                 PetitBouton(icone: "xmark", aide: L("boss.toxoliath.toxmose.annuler")) {
                     aide.noter { session, _ in session.toxoliathTouche = nil }
                 }
             }
         } else {
             Button(L("boss.toxoliath.touche")) { aide.noter { session, tour in session.toxoliathTouche = tour ?? 1 } }
-                .controlSize(.small)
+                .buttonStyle(.bouton(.secondaire, dense: true))
                 .help(L("boss.toxoliath.touche.aide"))
         }
     }
@@ -125,13 +125,13 @@ struct IlyzaelleVue: View {
                     if session.ilyzaelle50 != nil { session.ilyzaelle50 = nil } else { session.ilyzaelle75 = nil }
                 }
             }
-            .controlSize(.small)
+            .buttonStyle(.bouton(.secondaire, dense: true))
         }
     }
 
     private func seuil(_ titre: String, noter: @escaping (inout SessionBoss, Int) -> Void) -> some View {
         Button(titre) { aide.noter { session, tour in noter(&session, tour ?? 1) } }
-            .controlSize(.small)
+            .buttonStyle(.bouton(.secondaire, dense: true))
     }
 }
 
@@ -144,16 +144,15 @@ struct TalKashaVue: View {
 
     var body: some View {
         let glyphes = aide.session.glyphesTalKasha
-        HStack(spacing: 6) {
-            Text(L("boss.talKasha.glyphes")).font(.synfus(.petit)).foregroundStyle(.secondary)
+        HStack(spacing: Jetons.Espace.un) {
+            Text(L("boss.talKasha.glyphes")).font(.synfus(.petit)).foregroundStyle(Couleurs.encreSecondaire)
             Spacer()
             ForEach(1...TalKasha.glyphesRequis, id: \.self) { rang in
                 Text(String(repeating: "I", count: rang))
-                    .font(.synfus(.note, gras: true, design: .serif))
-                    .frame(width: 30, height: 22)
-                    .foregroundStyle(rang <= glyphes ? Couleurs.encreSurPrimaire : Color.secondary)
-                    .background(RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(rang <= glyphes ? Couleurs.primaire : Color.primary.opacity(0.08)))
+                    .font(.synfus(.corpsFort))
+                    .frame(width: Jetons.Espace.huit, height: Jetons.Taille.controleDense)
+                    .foregroundStyle(rang <= glyphes ? EtatVisuel.choisi.encre : Couleurs.encreSecondaire)
+                    .fondEtat(rang <= glyphes ? .choisi : .repos)
             }
             PetitBouton(icone: "minus", aide: L("boss.talKasha.moins")) {
                 aide.noter { session, _ in session.glyphesTalKasha = max(session.glyphesTalKasha - 1, 0) }
