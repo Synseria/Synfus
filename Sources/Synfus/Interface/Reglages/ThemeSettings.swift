@@ -35,6 +35,11 @@ private struct ChoixDeCouleur: View {
                         .font(Jetons.Typo.corps.police)
                         .padding(.horizontal, Jetons.Espace.trois)
                         .frame(height: Jetons.Taille.controle)
+                        .overlay {
+                            if !estAutre {
+                                Capsule().strokeBorder(Color.jeton(\.contourControle), lineWidth: Jetons.Trait.filet)
+                            }
+                        }
                 }
                 .buttonStyle(.etat(choisi: estAutre, rayon: Jetons.Rayon.capsule))
                 .accessibilityAddTraits(estAutre ? .isSelected : [])
