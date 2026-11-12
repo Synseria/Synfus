@@ -31,14 +31,14 @@ struct LectureSettings: View {
                             .help(L("diagnostic.position.toutLire.aide"))
                             .disabled(!previews.authorized || manager.clients.isEmpty)
                     }
-                    .foregroundStyle(etatEnDefaut ? Couleurs.alerte : Color.primary)
+                    .foregroundStyle(etatEnDefaut ? Couleurs.alerte : Couleurs.encre)
                 }
             }
             // Chasse et suivi de quêtes se lisent à la demande, depuis leur
             // panneau : leurs zones se calibrent même lecture éteinte.
             Section {
                 Ligne(titre: L("lecture.detecter"), etat: resultat, aide: L("lecture.detecter.aide")) {
-                    HStack(spacing: 8) {
+                    HStack(spacing: Jetons.Espace.deux) {
                         if detection != nil, decompte == nil { ProgressView().controlSize(.small) }
                         Button(decompte.map { L("calibration.decompte", $0) } ?? L("lecture.detecter.bouton")) {
                             detection == nil ? detecter() : annuler()
@@ -118,26 +118,26 @@ struct LectureSettings: View {
     /// Ce que l'OCR a reçu : si le texte n'y est pas, c'est la zone qui est en
     /// cause — à recalibrer —, pas la reconnaissance.
     private func zoneLue(_ genre: GenreLecture, _ image: NSImage) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: Jetons.Espace.un) {
             Text(L("diagnostic.lecture.zoneVue", genre.libelle, lecture.dernierPerso ?? "?"))
                 .font(.synfus(.petit))
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(Couleurs.encreTertiaire)
             Image(nsImage: image)
                 .resizable()
                 .interpolation(.medium)
                 .aspectRatio(contentMode: .fit)
                 .frame(maxWidth: 360, maxHeight: 80, alignment: .leading)
-                .clipShape(RoundedRectangle(cornerRadius: 4))
+                .clipShape(RoundedRectangle(cornerRadius: Jetons.Rayon.pastille))
             if let lignes = lecture.lignes[genre] {
                 Text(L("diagnostic.position.brut", lignes.joined(separator: " ⏎ ")))
-                    .font(.synfus(.petit, design: .monospaced))
-                    .foregroundStyle(.tertiary)
+                    .font(.synfus(.codeInterface))
+                    .foregroundStyle(Couleurs.encreTertiaire)
                     .textSelection(.enabled)
             }
             if genre == .combat, let couleur = lecture.couleur {
                 Text(L("diagnostic.lecture.couleur", Int(couleur * 100)))
-                    .font(.synfus(.petit, design: .monospaced))
-                    .foregroundStyle(.tertiary)
+                    .font(.synfus(.codeInterface))
+                    .foregroundStyle(Couleurs.encreTertiaire)
             }
         }
     }

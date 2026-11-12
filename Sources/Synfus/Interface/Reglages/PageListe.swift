@@ -18,9 +18,10 @@ struct PageListe<Contenu: View>: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) { contenu }
                     .labeledContentStyle(StyleLigneListe())
+                    .buttonStyle(.bouton(.secondaire))
                     .padding(.horizontal, MargeReglages.texte - MargeReglages.ligne)
-                    .padding(.top, 10)
-                    .padding(.bottom, 20)
+                    .padding(.top, Jetons.Espace.deux)
+                    .padding(.bottom, Jetons.Espace.quatre)
             }
         }
     }
@@ -30,9 +31,9 @@ struct PageListe<Contenu: View>: View {
 /// les autres onglets.
 private struct StyleLigneListe: LabeledContentStyle {
     func makeBody(configuration: Configuration) -> some View {
-        HStack(spacing: 12) {
+        HStack(spacing: Jetons.Espace.trois) {
             configuration.label
-            Spacer(minLength: 8)
+            Spacer(minLength: Jetons.Espace.deux)
             configuration.content
         }
     }
@@ -47,8 +48,8 @@ struct EnTeteListe: View {
         SectionTitle(titre, help: aide)
             .font(.synfus(.corpsFort))
             .padding(.horizontal, MargeReglages.ligne)
-            .padding(.top, 18)
-            .padding(.bottom, 6)
+            .padding(.top, Jetons.Espace.quatre)
+            .padding(.bottom, Jetons.Espace.un)
     }
 }
 
@@ -56,17 +57,17 @@ extension View {
     /// Une ligne d'une section de `PageListe` : le cadre s'arrondit en haut de
     /// la première, en bas de la dernière ; un filet sépare les autres.
     func cadreDeListe(premiere: Bool, derniere: Bool) -> some View {
-        let rayon: CGFloat = 8
+        let rayon = Jetons.Rayon.carte
+        let forme = UnevenRoundedRectangle(
+            topLeadingRadius: premiere ? rayon : 0, bottomLeadingRadius: derniere ? rayon : 0,
+            bottomTrailingRadius: derniere ? rayon : 0, topTrailingRadius: premiere ? rayon : 0,
+            style: .continuous)
         return padding(.horizontal, MargeReglages.ligne)
-            .padding(.vertical, 8)
+            .padding(.vertical, Jetons.Espace.deux)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(UnevenRoundedRectangle(
-                topLeadingRadius: premiere ? rayon : 0, bottomLeadingRadius: derniere ? rayon : 0,
-                bottomTrailingRadius: derniere ? rayon : 0, topTrailingRadius: premiere ? rayon : 0,
-                style: .continuous)
-                .fill(Color.primary.opacity(0.045)))
-            .overlay(alignment: .top) {
-                if !premiere { Divider().padding(.horizontal, MargeReglages.ligne) }
-            }
+            .background(forme.fill(Couleurs.surface))
+            // Le filet de chaque ligne recouvre celui de la précédente : un seul trait entre deux.
+            .overlay(forme.strokeBorder(Couleurs.filet, lineWidth: Jetons.Trait.filet)
+                .padding(.top, premiere ? 0 : -Jetons.Trait.filet))
     }
 }

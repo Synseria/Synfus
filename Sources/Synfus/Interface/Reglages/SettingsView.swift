@@ -106,6 +106,7 @@ final class OngletReglages: ObservableObject {
 
 struct SettingsView: View {
     @ObservedObject private var onglet: OngletReglages
+    @State private var survol: SettingsSection?
 
     init(onglet: OngletReglages = .shared) {
         self.onglet = onglet
@@ -124,51 +125,50 @@ struct SettingsView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(width: 920, height: 680)
+        // La teinte des fonds choisie dans Apparence : celle de la fenêtre, que le formulaire laisse voir.
+        .background(Couleurs.fenetre)
     }
 
     private var sidebar: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: Jetons.Espace.un) {
                 ForEach(GroupeReglages.allCases, id: \.self) { groupe in
                     if let titre = groupe.titre {
                         Text(titre)
-                            .font(.synfus(.petit, gras: true))
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 8)
-                            .padding(.top, 10)
-                            .padding(.bottom, 2)
+                            .font(.synfus(.raccourci))
+                            .foregroundStyle(Couleurs.encreSecondaire)
+                            .padding(.horizontal, Jetons.Espace.deux)
+                            .padding(.top, Jetons.Espace.deux)
+                            .padding(.bottom, Jetons.Espace.un)
                     }
                     ForEach(SettingsSection.allCases.filter { $0.groupe == groupe }) { item in
                         sidebarRow(item)
                     }
                 }
             }
-            .padding(8)
+            .padding(Jetons.Espace.deux)
         }
         .frame(width: 170)
-        .background(Color.primary.opacity(0.035))
+        .background(Couleurs.creux)
     }
 
     private func sidebarRow(_ item: SettingsSection) -> some View {
         Button {
             onglet.section = item
         } label: {
-            HStack(spacing: 8) {
-                Image(systemName: item.icon).frame(width: 18)
+            HStack(spacing: Jetons.Espace.deux) {
+                Image(systemName: item.icon).frame(width: Jetons.Taille.touche)
                 Text(item.label)
             }
-                .font(.synfus(.note, gras: section == item))
+                .font(.synfus(section == item ? .corpsFort : .corps))
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 5)
-                .background(
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(section == item ? Couleurs.primaire : Color.clear)
-                )
-                .foregroundStyle(section == item ? Couleurs.encreSurPrimaire : Color.primary)
-                .contentShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .padding(.horizontal, Jetons.Espace.deux)
+                .padding(.vertical, Jetons.Espace.un)
+                .foregroundStyle((section == item ? EtatVisuel.courant : .repos).encre)
+                .fondEtat(section == item ? .courant : (survol == item ? .survol : .repos))
         }
         .buttonStyle(.plain)
+        .onHover { survol = $0 ? item : nil }
     }
 
     @ViewBuilder

@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// Onglet Apparence : la couleur de l'app et la teinte des fonds. Tout s'applique en direct,
-/// dans les réglages comme dans la barre et les panneaux (`Couleurs`).
+/// Onglet Apparence : la couleur de l'app, la teinte des fonds et les icônes (app, barre de menus).
+/// Couleurs et fonds s'appliquent en direct, dans les réglages comme dans la barre et les panneaux
+/// (`Couleurs`).
 struct ApparenceSettings: View {
     var body: some View {
         PageReglages(titre: L("reglages.apparence")) {
@@ -9,6 +10,80 @@ struct ApparenceSettings: View {
                 ChoixDeCouleur()
                 ChoixDesFonds()
             }
+            Section { IconesReglables() }
+        }
+    }
+}
+
+/// Les deux icônes : celle de l'app (Finder, alertes) et celle de la barre de menus.
+private struct IconesReglables: View {
+    @ObservedObject private var prefs = Preferences.shared
+
+    var body: some View {
+        Ligne(titre: L("apparence.iconeApp"), aide: L("apparence.iconeApp.aide")) {
+            ChoixIconeApp(choix: Binding(
+                get: { prefs.iconeApp },
+                set: { prefs.iconeApp = $0; IconeAppliquee.appliquer($0) }
+            ))
+        }
+        Ligne(titre: L("apparence.icone")) {
+            Picker(L("apparence.icone"), selection: Binding(
+                get: { prefs.menuBarIcon },
+                set: { prefs.menuBarIcon = $0; MenuBarController.shared.refreshIcon() }
+            )) {
+                ForEach(MenuBarIcon.allCases) { Text($0.label).tag($0) }
+            }
+            .labelsHidden()
+            .fixedSize()
+        }
+    }
+}
+
+/// Les huit icônes de l'app, un motif par ligne, un fond par colonne : chacune
+/// est son propre aperçu, la choisie teintée.
+private struct ChoixIconeApp: View {
+    @Binding var choix: IconeApp
+    private let cote = Jetons.Espace.dix
+
+    var body: some View {
+        Grid(horizontalSpacing: Jetons.Espace.un, verticalSpacing: Jetons.Espace.un) {
+            ForEach(IconeApp.Motif.allCases, id: \.self) { motif in
+                GridRow {
+                    ForEach(IconeApp.Fond.allCases, id: \.self) { fond in
+                        vignette(IconeApp(motif: motif, fond: fond))
+                    }
+                }
+            }
+        }
+    }
+
+    private func vignette(_ icone: IconeApp) -> some View {
+        Button { choix = icone } label: {
+            Image(nsImage: IconeAppliquee.vignette(icone, cote: cote))
+                .padding(Jetons.Espace.un)
+        }
+        .buttonStyle(.etat(choisi: icone == choix, nue: true))
+        .aide(L("apparence.iconeApp.vignette", icone.motif.nom, icone.fond.nom))
+        .accessibilityAddTraits(icone == choix ? .isSelected : [])
+    }
+}
+
+private extension IconeApp.Motif {
+    var nom: String {
+        switch self {
+        case .oeuf: L("apparence.iconeApp.oeuf")
+        case .couvee: L("apparence.iconeApp.couvee")
+        }
+    }
+}
+
+private extension IconeApp.Fond {
+    var nom: String {
+        switch self {
+        case .nuit: L("apparence.iconeApp.nuit")
+        case .foret: L("apparence.iconeApp.foret")
+        case .aube: L("apparence.iconeApp.aube")
+        case .transparent: L("apparence.iconeApp.transparent")
         }
     }
 }
@@ -31,7 +106,7 @@ private struct ChoixDeCouleur: View {
                     pastille(prereglage)
                 }
                 Button(L("apparence.autre")) { choisirAutre() }
-                    .foregroundStyle(estAutre ? Couleurs.primaireEncre : Color.primary)
+                    .buttonStyle(.etat(choisi: estAutre, rayon: Jetons.Rayon.capsule))
             }
         }
         if case .teinte(let teinte) = courante {
@@ -142,7 +217,7 @@ private struct CurseurDeTeinte: View {
                     }
                 Text("\(Int(valeur))°")
                     .font(.synfus(.chiffre))
-                    .foregroundStyle(refusee ? Couleurs.danger : Color.secondary)
+                    .foregroundStyle(refusee ? Couleurs.danger : Couleurs.encreSecondaire)
                     .frame(width: 40, alignment: .trailing)
                 if refusee {
                     Image(systemName: "nosign")

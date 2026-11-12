@@ -29,8 +29,8 @@ enum MenuBarIcon: String, Codable, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .logo: return L("general.icone.logo")
-        case .symbole: return L("general.icone.symbole")
+        case .logo: return L("apparence.icone.logo")
+        case .symbole: return L("apparence.icone.symbole")
         }
     }
 }

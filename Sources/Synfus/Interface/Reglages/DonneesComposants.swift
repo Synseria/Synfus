@@ -14,7 +14,7 @@ struct SourceCarte: View {
                 ?? L("zaap.maj.date", carte.carte.date.formatted(date: .abbreviated, time: .shortened)),
               etat: L("palette.reglages.carte.contenu", carte.carte.lieux.count, carte.carte.zaaps.count),
               aide: L("zaap.maj.aide")) {
-            HStack(spacing: 8) {
+            HStack(spacing: Jetons.Espace.deux) {
                 if miseAJour { ProgressView().controlSize(.small) }
                 Button(L("zaap.maj")) {
                     miseAJour = true
@@ -38,7 +38,7 @@ struct SourceQuetes: View {
         Ligne(titre: titre,
               etat: quetes.quetes.map { L("palette.reglages.quetes.contenu", $0.quetes.count, $0.pnjs.count) },
               aide: L("palette.reglages.quetes.aide")) {
-            HStack(spacing: 8) {
+            HStack(spacing: Jetons.Espace.deux) {
                 if quetes.chargement { ProgressView().controlSize(.small) }
                 Button(L("palette.reglages.quetes.maj")) { Task { try? await quetes.mettreAJour() } }
                     .disabled(quetes.chargement)
@@ -61,7 +61,7 @@ struct SourceClasses: View {
     var body: some View {
         Ligne(titre: titre, etat: L("classes.maj.contenu", classes.catalogue.breeds.count),
               aide: L("classes.maj.aide")) {
-            HStack(spacing: 8) {
+            HStack(spacing: Jetons.Espace.deux) {
                 if classes.chargement { ProgressView().controlSize(.small) }
                 Button(L("classes.maj")) { Task { try? await classes.mettreAJour() } }
                     .disabled(classes.chargement)
@@ -91,23 +91,23 @@ struct BoutonEtiquette: View {
             } else {
                 Text(L("palette.reglages.etiquette"))
                     .font(.synfus(.petit))
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 1)
-                    .overlay(RoundedRectangle(cornerRadius: 4)
-                        .strokeBorder(Color.secondary.opacity(0.5), style: StrokeStyle(dash: [3, 2])))
+                    .foregroundStyle(Couleurs.encreSecondaire)
+                    .padding(.horizontal, Jetons.Espace.un)
+                    .padding(.vertical, Jetons.Espace.un)
+                    .overlay(RoundedRectangle(cornerRadius: Jetons.Rayon.pastille)
+                        .strokeBorder(Couleurs.encreSecondaire.opacity(0.5), style: StrokeStyle(dash: [3, 2])))
             }
         }
         .buttonStyle(.plain)
         .popover(isPresented: $edition, arrowEdge: .bottom) {
-            HStack(spacing: 8) {
+            HStack(spacing: Jetons.Espace.deux) {
                 TextField(L("palette.etiquette.exemple"), text: $texte)
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 160)
                     .onSubmit(valider)
                 Button(L("palette.reglages.ok"), action: valider)
             }
-            .padding(10)
+            .padding(Jetons.Espace.deux)
         }
     }
 
@@ -127,7 +127,7 @@ struct BoutonFavori: View {
         let favori = prefs.estFavori(cle)
         Button { prefs.basculerFavori(cle) } label: {
             Image(systemName: favori ? "star.fill" : "star")
-                .foregroundStyle(favori ? Couleurs.safranTexte : Color.secondary)
+                .foregroundStyle(favori ? Couleurs.safranTexte : Couleurs.encreSecondaire)
         }
         .buttonStyle(.borderless)
         .aide(favori ? L("zaap.favori.retirer") : L("zaap.favori.ajouter"))
@@ -153,11 +153,11 @@ struct BoutonTrajet: View {
                 copie = false
             }
         } label: {
-            HStack(spacing: 4) {
-                Text(Coordonnees.texte(x, y)).font(.synfus(.petit, design: .monospaced))
+            HStack(spacing: Jetons.Espace.un) {
+                Text(Coordonnees.texte(x, y)).font(.synfus(.codeInterface))
                 Image(systemName: copie ? "checkmark" : "doc.on.clipboard")
             }
-            .foregroundStyle(copie ? Couleurs.primaireEncre : Color.secondary)
+            .foregroundStyle(copie ? Couleurs.primaireEncre : Couleurs.encreSecondaire)
         }
         .buttonStyle(.borderless)
         .help(dansLesDouze ? L("ouTrouver.copierTrajet") : L("trajet.copier.horsDesDouze"))

@@ -17,7 +17,7 @@ struct TrajetsSettings: View {
                 Ligne(titre: L("zaap.intercalees"), aide: L("zaap.intercalees.aide")) {
                     TextField(L("zaap.intercalees"), text: $prefs.zaapIntercalees, prompt: Text(verbatim: "/a"))
                         .labelsHidden()
-                        .font(.synfus(.note, design: .monospaced))
+                        .font(.synfus(.codeInterface))
                         .frame(width: 180)
                 }
                 if prefs.lirePosition {

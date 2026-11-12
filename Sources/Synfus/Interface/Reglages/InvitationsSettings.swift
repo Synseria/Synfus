@@ -16,7 +16,7 @@ struct InvitationsSettings: View {
                 Ligne(titre: L("raccourcis.invitation.format"), aide: L("raccourcis.invitation.format.aide")) {
                     TextField(L("raccourcis.invitation.format"), text: $prefs.inviteFormat)
                         .labelsHidden()
-                        .font(.synfus(.note, design: .monospaced))
+                        .font(.synfus(.codeInterface))
                         .frame(width: 180)
                 }
             }

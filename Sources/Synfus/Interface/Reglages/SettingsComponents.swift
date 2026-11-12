@@ -25,6 +25,8 @@ struct PageReglages<Contenu: View>: View {
             EnTetePage(titre: titre, aide: aide)
             Form { contenu }
                 .formStyle(.grouped)
+                .scrollContentBackground(.hidden)
+                .buttonStyle(.bouton(.secondaire))
         }
     }
 }
@@ -37,16 +39,16 @@ struct EnTetePage: View {
     var aide: String?
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Jetons.Espace.deux) {
             Text(titre).font(.synfus(.titrePage))
             if let aide { HelpTip(aide) }
-            Spacer(minLength: 12)
-            if let valeur { Text(valeur).font(.synfus(.note)).foregroundStyle(.secondary) }
+            Spacer(minLength: Jetons.Espace.trois)
+            if let valeur { Text(valeur).font(.synfus(.note)).foregroundStyle(Couleurs.encreSecondaire) }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, MargeReglages.texte)
-        .padding(.top, 22)
-        .padding(.bottom, 4)
+        .padding(.top, Jetons.Espace.six)
+        .padding(.bottom, Jetons.Espace.un)
     }
 }
 
@@ -74,16 +76,16 @@ struct Ligne<Controle: View, Icone: View>: View {
         LabeledContent {
             controle
         } label: {
-            HStack(spacing: 8) {
+            HStack(spacing: Jetons.Espace.deux) {
                 icone
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 6) {
+                VStack(alignment: .leading, spacing: Jetons.Espace.un) {
+                    HStack(spacing: Jetons.Espace.un) {
                         Text(titre)
-                        if let detail { Text(detail).foregroundStyle(.secondary).lineLimit(1) }
+                        if let detail { Text(detail).foregroundStyle(Couleurs.encreSecondaire).lineLimit(1) }
                         if let aide { HelpTip(aide) }
                     }
                     if let etat {
-                        Text(etat).font(.synfus(.petit)).foregroundStyle(.secondary)
+                        Text(etat).font(.synfus(.petit)).foregroundStyle(Couleurs.encreSecondaire)
                     }
                 }
             }
@@ -140,7 +142,7 @@ struct HelpTip: View {
         Button { showing.toggle() } label: {
             Image(systemName: "info.circle")
                 .font(.synfus(.note))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Couleurs.encreSecondaire)
         }
         .buttonStyle(.plain)
         .help(text)
@@ -148,7 +150,7 @@ struct HelpTip: View {
         .popover(isPresented: $showing, arrowEdge: .bottom) {
             Text(text)
                 .font(.synfus(.note))
-                .padding(12)
+                .padding(Jetons.Espace.trois)
                 .frame(width: 300, alignment: .leading)
         }
     }
@@ -165,7 +167,7 @@ struct SectionTitle: View {
     }
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: Jetons.Espace.un) {
             Text(title)
             if let help { HelpTip(help) }
         }
@@ -187,7 +189,7 @@ struct ShortcutRow: View {
 
     var body: some View {
         Ligne(titre: label, detail: detail, aide: help) {
-            HStack(spacing: 6) {
+            HStack(spacing: Jetons.Espace.un) {
                 if conflit || refuse {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.synfus(.petit))
@@ -247,10 +249,10 @@ struct PermissionRow: View {
 
     var body: some View {
         Ligne(titre: name, aide: help) {
-            HStack(spacing: 8) {
-                Circle().fill(granted ? Couleurs.succes : Couleurs.alerte).frame(width: 8, height: 8)
+            HStack(spacing: Jetons.Espace.deux) {
+                Circle().fill(granted ? Couleurs.succes : Couleurs.alerte).frame(width: Jetons.Espace.deux, height: Jetons.Espace.deux)
                 Text(granted ? L("commun.accordee") : L("commun.manquante"))
-                    .foregroundStyle(granted ? Color.secondary : Couleurs.alerte)
+                    .foregroundStyle(granted ? Couleurs.encreSecondaire : Couleurs.alerte)
                 if !granted { Button(L("commun.ouvrirReglagesSysteme"), action: open) }
             }
         }
@@ -263,9 +265,9 @@ struct CopiableCommand: View {
     let command: String
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: Jetons.Espace.un) {
             Text(command)
-                .font(.synfus(.petit, design: .monospaced))
+                .font(.synfus(.codeInterface))
                 .textSelection(.enabled)
                 .lineLimit(2)
                 .truncationMode(.middle)
@@ -274,10 +276,10 @@ struct CopiableCommand: View {
             } label: {
                 Image(systemName: "doc.on.doc")
             }
-            .buttonStyle(.borderless)
+            .buttonStyle(.bouton(.tertiaire, dense: true))
             .aide(L("commun.copierCommande"))
         }
-        .padding(6)
-        .background(RoundedRectangle(cornerRadius: 5).fill(Color.primary.opacity(0.06)))
+        .padding(Jetons.Espace.un)
+        .background(RoundedRectangle(cornerRadius: Jetons.Rayon.pastille).fill(Couleurs.creux))
     }
 }

@@ -27,6 +27,7 @@ struct CharactersSettings: View {
                 // raccourcis.
                 Ligne(titre: L("persos.connectesSurConnus", manager.clients.count, prefs.characterOrder.count)) {
                     Button(L("persos.oublierHorsLigne")) { confirmerOubli = true }
+                        .buttonStyle(.bouton(.destructif))
                         .disabled(horsLigne.isEmpty)
                         .confirmationDialog(
                             L("persos.oublierHorsLigne.confirmation", nombre: horsLigne.count, horsLigne.count),
@@ -39,9 +40,9 @@ struct CharactersSettings: View {
                         }
                 }
             } header: {
-                HStack(spacing: 6) {
+                HStack(spacing: Jetons.Espace.un) {
                     SectionTitle(L("persos.ordre"), help: L("persos.ordre.aide"))
-                    Text("·").foregroundStyle(.tertiary)
+                    Text("·").foregroundStyle(Couleurs.encreTertiaire)
                     SectionTitle(L("persos.equipes"), help: L("persos.equipes.aide"))
                 }
             }
@@ -59,26 +60,26 @@ struct CharactersSettings: View {
     /// du glisser à toute la ligne — viser le seul texte demandait une précision
     /// pénible — et les flèches offrent un déplacement au clic, infaillible.
     private func characterRow(index: Int, name: String) -> some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Jetons.Espace.deux) {
             Image(systemName: "line.3.horizontal")
                 .font(.synfus(.micro))
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(Couleurs.encreTertiaire)
             Circle()
-                .fill(isOnline(name) ? Couleurs.succes : Color.secondary.opacity(0.3))
-                .frame(width: 7, height: 7)
+                .fill(isOnline(name) ? Couleurs.succes : Couleurs.encreTertiaire)
+                .frame(width: Jetons.Espace.deux, height: Jetons.Espace.deux)
             Text(name)
             Spacer()
             teamPicker(for: name)
             if let slot = slotOf(name) {
                 Text("\(slot + 1)")
-                    .font(.synfus(.petit, gras: true, design: .rounded))
-                    .foregroundStyle(.secondary)
+                    .font(.synfus(.raccourci))
+                    .foregroundStyle(Couleurs.encreSecondaire)
             }
             Text(isOnline(name) ? L("persos.connecte") : L("persos.horsLigne"))
                 .font(.synfus(.petit))
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(Couleurs.encreTertiaire)
 
-            HStack(spacing: 2) {
+            HStack(spacing: Jetons.Espace.un) {
                 Button { moveCharacter(at: index, by: -1) } label: {
                     Image(systemName: "chevron.up")
                 }
@@ -91,10 +92,10 @@ struct CharactersSettings: View {
                 .disabled(index == prefs.characterOrder.count - 1)
                 .aide(L("persos.descendre"))
             }
-            .buttonStyle(.borderless)
-            .font(.synfus(.petit, gras: true))
+            .buttonStyle(.bouton(.tertiaire, dense: true))
+            .font(.synfus(.raccourci))
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, Jetons.Espace.un)
         .contentShape(Rectangle())
         .contextMenu {
             Button(L("persos.retirer")) { prefs.forget(name: name) }
