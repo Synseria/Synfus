@@ -24,13 +24,18 @@ struct BarView: View {
     @State private var hoverTask: Task<Void, Never>?
     /// Perso pour lequel cette attente a été lancée. Cf. `hover(_:inside:)`.
     @State private var hoverTarget: String?
+    /// La pastille sous le curseur, pour sa voix de survol (distincte de l'attente de l'aperçu).
+    @State private var survolChip: String?
+    /// Une pastille qu'on tient s'efface à peine ; le reste ne bouge pas de place.
+    private static let opaciteGlisse = 0.35
+    private static let echelleGlisse = 1.06
 
     /// Repère commun aux cadres des pastilles et au geste de réordonnancement.
     private static let barSpace = "synfusBar"
 
     var body: some View {
-        VStack(spacing: 3) {
-            HStack(spacing: 4) {
+        VStack(spacing: Jetons.Espace.un) {
+            HStack(spacing: Jetons.Espace.un) {
                 handle
                 content
                 settingsButton
@@ -43,15 +48,15 @@ struct BarView: View {
                 teamRow.frame(maxWidth: .infinity)
             }
         }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 4)
+        .padding(.horizontal, Jetons.Espace.un)
+        .padding(.vertical, Jetons.Espace.un)
         // Sur les deux rangées : les cadres des secteurs et des pastilles
         // doivent se comparer dans un seul repère.
         .coordinateSpace(name: Self.barSpace)
         .background(WindowDragArea())   // tout le fond libre déplace la barre
-        .modifier(BarBackground())
+        .surfaceFlottante(verre: true)
         .fixedSize()
-        .animation(sansMouvement ? nil : .easeOut(duration: 0.15), value: dragging != nil)
+        .animation(sansMouvement ? nil : Jetons.Duree.animation(Jetons.Duree.etat), value: dragging != nil)
         .contextMenu { contextMenu }
         .onChange(of: manager.effectif) { _, effectif in pruneChipFrames(effectif) }
         .onChange(of: prefs.equipes.count) { _, _ in pruneSectorFrames() }
@@ -59,7 +64,7 @@ struct BarView: View {
 
     /// « Tous », une case par équipe, et « + » tant qu'on peut en créer une.
     private var teamRow: some View {
-        HStack(spacing: 3) {
+        HStack(spacing: Jetons.Espace.un) {
             sector(.tous)
             ForEach(prefs.equipes.indices, id: \.self) { index in
                 sector(.equipe(index))
@@ -105,18 +110,18 @@ struct BarView: View {
     /// l'icône du bundle, un overlay de jeu reste un outil. La zone sensible,
     /// le curseur en main ouverte et l'infobulle sont inchangés.
     private var handle: some View {
-        HStack(spacing: 3) {
+        HStack(spacing: Jetons.Espace.un) {
             ForEach(0..<2, id: \.self) { _ in
-                VStack(spacing: 3) {
+                VStack(spacing: Jetons.Espace.un) {
                     ForEach(0..<3, id: \.self) { _ in
                         Circle()
-                            .fill(Color.primary.opacity(0.28))
-                            .frame(width: 2.5, height: 2.5)
+                            .fill(Couleurs.encreTertiaire)
+                            .frame(width: Jetons.Trait.focus, height: Jetons.Trait.focus)
                     }
                 }
             }
         }
-        .frame(width: 15, height: 26)
+        .frame(width: Jetons.Espace.quatre, height: Jetons.Taille.controle)
         .overlay(WindowDragArea())
         .help(L("barre.glisser"))
     }
@@ -125,9 +130,9 @@ struct BarView: View {
     /// les bascules se lisaient comme une pastille de plus.
     private var separator: some View {
         Capsule()
-            .fill(Color.primary.opacity(0.15))
-            .frame(width: 1, height: 14)
-            .padding(.horizontal, 2)
+            .fill(Couleurs.filet)
+            .frame(width: Jetons.Trait.filet, height: Jetons.Espace.quatre)
+            .padding(.horizontal, Jetons.Espace.un)
             .allowsHitTesting(false)
     }
 
@@ -135,7 +140,7 @@ struct BarView: View {
     /// passer par la barre de menus. Hors du contenu conditionnel : c'est quand
     /// rien ne marche qu'on cherche les réglages.
     private var settingsButton: some View {
-        GearButton().padding(.leading, 2)
+        GearButton().padding(.leading, Jetons.Espace.un)
     }
 
     @ViewBuilder
@@ -145,27 +150,24 @@ struct BarView: View {
                 manager.requestAccessibility()
             } label: {
                 Label(L("barre.autoriser"), systemImage: "lock.shield")
-                    .font(.synfus(.petit, gras: true))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.bouton(.tertiaire))
             .help(L("barre.accessibiliteRequise"))
         } else if manager.clients.isEmpty {
             Text(L("barre.aucunPerso"))
                 .font(.synfus(.petit))
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 5)
+                .foregroundStyle(Couleurs.encreSecondaire)
+                .padding(.horizontal, Jetons.Espace.deux)
+                .padding(.vertical, Jetons.Espace.un)
         } else {
             // L'effectif — l'équipe active, ou tous. Une équipe sans personne
             // de connecté le dit, et la rangée reste là pour revenir à « Tous ».
             if manager.effectif.isEmpty {
                 Text(L("barre.aucunPersoEquipe"))
                     .font(.synfus(.petit))
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
+                    .foregroundStyle(Couleurs.encreSecondaire)
+                    .padding(.horizontal, Jetons.Espace.deux)
+                    .padding(.vertical, Jetons.Espace.un)
             }
             ForEach(Array(manager.effectif.enumerated()), id: \.element.id) { index, client in
                 chip(index: index, client: client)
@@ -301,13 +303,15 @@ struct BarView: View {
             } else {
                 Circle().fill(icons.catalogue.color(for: className))
                 Text(icons.catalogue.abbreviation(for: className))
-                    .font(.synfus(.micro, gras: true, design: .rounded))
-                    .foregroundStyle(.white)
+                    .font(.synfus(.micro))
+                    // Le blanc et non une encre : les couleurs de classe viennent du jeu, toutes assez
+                    // soutenues pour qu'il y soit lisible.
+                    .foregroundStyle(Color.white)
             }
         }
-        .frame(width: 20, height: 20)
+        .frame(width: Jetons.Taille.touche + Jetons.Trait.focus, height: Jetons.Taille.touche + Jetons.Trait.focus)
         .overlay(
-            Circle().strokeBorder(Color.white.opacity(active ? 0.5 : 0.15), lineWidth: 1)
+            Circle().strokeBorder(active ? Couleurs.encreSurPrimaire : Couleurs.filet, lineWidth: Jetons.Trait.filet)
         )
     }
 
@@ -322,47 +326,44 @@ struct BarView: View {
             UsageStore.shared.compter(.basculeBarre)
             manager.focus(client, signaler: false)
         } label: {
-            HStack(spacing: 5) {
+            HStack(spacing: Jetons.Espace.un) {
                 // La fermeture en cours prend la place du badge : le geste a
                 // été entendu, la pastille le dit — et disparaîtra seule.
                 if closing {
                     ProgressView()
                         .controlSize(.small)
-                        .frame(width: 20, height: 20)
+                        .frame(width: Jetons.Taille.touche + Jetons.Trait.focus, height: Jetons.Taille.touche + Jetons.Trait.focus)
                 } else if prefs.showClasses {
                     classBadge(for: client.characterClass, active: active)
                 }
 
                 VStack(alignment: .leading, spacing: 0) {
                     Text(client.name)
-                        .font(.synfus(.note, gras: active))
+                        .font(.synfus(active ? .corpsFort : .corps))
                         .lineLimit(1)
                         .fixedSize()
                     if prefs.showClasses, let className = client.characterClass {
                         Text(className)
                             .font(.synfus(.petit))
-                            .foregroundStyle(active ? Couleurs.encreSurPrimaire : Color.secondary)
+                            .foregroundStyle(active ? Couleurs.encreSurPrimaire : Couleurs.encreSecondaire)
                             .lineLimit(1)
                     }
                 }
 
                 if prefs.showNumbers {
                     Text("\(index + 1)")
-                        .font(.synfus(.micro, gras: true, design: .rounded))
-                        .foregroundStyle(active ? Couleurs.encreSurPrimaire : Color.secondary)
+                        .font(.synfus(.micro))
+                        .foregroundStyle(active ? Couleurs.encreSurPrimaire : Couleurs.encreSecondaire)
                 }
 
                 // Rien de plus : l'enchaînement au clic suit l'ordre de la barre,
                 // et le surlignage du perso courant dit déjà où l'on en est. Une
                 // coche « déjà passé » n'ajoutait qu'un clignotement de plus.
             }
-            .padding(.horizontal, 7)
-            .padding(.vertical, 4)
+            .padding(.horizontal, Jetons.Espace.deux)
+            .padding(.vertical, Jetons.Espace.un)
             .fixedSize(horizontal: true, vertical: false)
-            .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(active ? Couleurs.primaire : Color.clear)
-            )
+            .fondEtat(active ? .courant : closing ? .desactive : EtatVisuel(survole: survolChip == client.slotKey))
             .overlay { if alerting { AlertPulse() } }
             .overlay { if manager.basculeSignalee == client.slotKey { SwitchBlink() } }
             // L'état de combat lu à l'écran : contour rose et décompte quand
@@ -372,8 +373,7 @@ struct BarView: View {
                     CombatBadge(etat: etat)
                 }
             }
-            .foregroundStyle(active ? Couleurs.encreSurPrimaire : Color.primary)
-            .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .foregroundStyle(active ? EtatVisuel.courant.encre : client.dormant ? Couleurs.encreSecondaire : Couleurs.encre)
         }
         .buttonStyle(.plain)
         .disabled(closing)
@@ -407,11 +407,14 @@ struct BarView: View {
         .help(tooltip(index: index, client: client))
         // Un perso sur un autre espace reste cliquable, mais on ne le donne pas
         // pour présent : sa vignette et son titre datent de sa dernière visite.
-        .opacity(dragging == client.name ? 0.35 : (closing ? 0.45 : client.dormant ? 0.55 : 1))
-        .scaleEffect(dragging == client.name ? 1.06 : 1)
+        .opacity(dragging == client.name ? Self.opaciteGlisse : 1)
+        .scaleEffect(dragging == client.name ? Self.echelleGlisse : 1)
         .background(chipFrameReader(for: client.name))
         .simultaneousGesture(reorderGesture(for: client))
-        .onHover { inside in hover(client, inside: inside) }
+        .onHover { inside in
+            survolChip = inside ? client.slotKey : (survolChip == client.slotKey ? nil : survolChip)
+            hover(client, inside: inside)
+        }
     }
 
     /// Ouvre l'aperçu après un court délai : sans lui, le simple fait de
@@ -547,7 +550,7 @@ struct BarView: View {
                 guard let target = chipFrames.first(where: { entry in
                     entry.key != client.name && entry.value.contains(value.location)
                 })?.key else { return }
-                withAnimation(sansMouvement ? nil : .easeInOut(duration: 0.15)) {
+                withAnimation(sansMouvement ? nil : Jetons.Duree.animation(Jetons.Duree.etat)) {
                     Preferences.shared.swapOrder(client.name, target)
                     // Un tri, pas un inventaire : rien n'a changé côté clients.
                     WindowManager.shared.resort()
