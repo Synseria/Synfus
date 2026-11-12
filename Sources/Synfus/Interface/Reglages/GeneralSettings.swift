@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Onglet Général : ce qui conditionne tout le reste — les deux autorisations
-/// système —, puis le système (démarrage, langue, version).
+/// Onglet Général : ce qui conditionne tout le reste — les deux autorisations système —, puis le
+/// système (démarrage, langue, version), les icônes et les statistiques.
 struct GeneralSettings: View {
     @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var manager = WindowManager.shared
@@ -13,32 +13,27 @@ struct GeneralSettings: View {
 
     var body: some View {
         PageReglages(titre: L("reglages.general")) {
-            Section {
+            Bloc(L("general.autorisations")) {
                 PermissionRow(
                     name: L("general.accessibilite"),
                     granted: manager.accessibilityGranted,
-                    help: L("general.accessibilite.aide")
+                    help: aideAutorisation(L("general.accessibilite.aide")),
+                    etat: aRedonner(manager.accessibilityGranted)
                 ) { manager.requestAccessibility() }
 
                 PermissionRow(
                     name: L("general.enregistrementEcran"),
                     granted: previews.authorized,
-                    help: L("general.enregistrementEcran.aide")
+                    help: aideAutorisation(L("general.enregistrementEcran.aide")),
+                    etat: aRedonner(previews.authorized)
                 ) { previews.requestAuthorization() }
-
-                if miseAJour.apresMiseAJour, !manager.accessibilityGranted || !previews.authorized {
-                    Avertissement(texte: L("maj.autorisations", AppIntegrity.version ?? ""),
-                                  aide: L("maj.autorisations.aide"))
-                }
 
                 if AppIntegrity.isQuarantined {
                     quarantineWarning
                 }
-            } header: {
-                SectionTitle(L("general.autorisations"))
             }
 
-            Section {
+            Bloc(L("general.systeme")) {
                 Interrupteur(titre: L("general.demarrerAvecSession"), isOn: $launchAtLogin)
                     .onChange(of: launchAtLogin) { _, value in LaunchAtLogin.set(value) }
                 languageRow
@@ -49,16 +44,23 @@ struct GeneralSettings: View {
                     }
                 }
                 Interrupteur(titre: L("maj.verifier"), aide: L("maj.verifier.aide"), isOn: $prefs.verifierMisesAJour)
-            } header: {
-                SectionTitle(L("general.systeme"))
             }
 
-            Section {
+            Bloc(L("general.icones")) {
                 IconesReglables()
-            } header: {
-                SectionTitle(L("general.icones"))
             }
+
+            BlocsStatistiques()
         }
+    }
+
+    /// Après une mise à jour (versions ad hoc), une autorisation manquante se redonne : la ligne le dit.
+    private func aRedonner(_ accordee: Bool) -> String? {
+        miseAJour.apresMiseAJour && !accordee ? L("maj.autorisations") : nil
+    }
+
+    private func aideAutorisation(_ aide: String) -> String {
+        miseAJour.apresMiseAJour ? aide + "\n\n" + L("maj.autorisations.aide") : aide
     }
 
     /// La langue de l'interface. La table est chargée au lancement : le choix
@@ -81,20 +83,15 @@ struct GeneralSettings: View {
         }
     }
 
-    /// Sans cet avertissement, l'utilisateur coche la case dans les Réglages,
-    /// voit Synfus continuer à réclamer l'autorisation, et n'a aucun moyen de
-    /// deviner pourquoi : l'app se lance normalement, rien n'indique qu'elle est
-    /// en quarantaine.
+    /// Sans cet avertissement, l'utilisateur coche la case dans les Réglages, voit Synfus continuer à
+    /// réclamer l'autorisation, et n'a aucun moyen de deviner pourquoi : l'app se lance normalement, rien
+    /// n'indique qu'elle est en quarantaine.
+    @ViewBuilder
     private var quarantineWarning: some View {
-        VStack(alignment: .leading, spacing: Jetons.Espace.un) {
-            HStack(spacing: Jetons.Espace.un) {
-                Image(systemName: "exclamationmark.triangle").foregroundStyle(Color.jeton(\.alerte))
-                Text(L("general.quarantaine"))
-                    .font(Jetons.Typo.raccourci.police)
-                HelpTip(L("general.quarantaine.aide"))
-            }
-            CopiableCommand(command: AppIntegrity.quarantineFix)
-            CopiableCommand(command: AppIntegrity.resetCommand)
+        Ligne(titre: L("general.quarantaine"), aide: L("general.quarantaine.aide")) {
+            Image(systemName: "exclamationmark.triangle").foregroundStyle(Color.jeton(\.alerte))
         }
+        CopiableCommand(command: AppIntegrity.quarantineFix).rangee()
+        CopiableCommand(command: AppIntegrity.resetCommand).rangee()
     }
 }

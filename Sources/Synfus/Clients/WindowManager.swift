@@ -117,6 +117,8 @@ final class WindowManager: ObservableObject {
         accessibilityGranted = true
         self.clients = clients
         effectif = clients
+        // Comme l'inventaire : un personnage vu entre dans la liste des personnages connus.
+        prefs.registerIfNeeded(names: clients.map(\.name))
     }
     #endif
 

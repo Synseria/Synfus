@@ -1,16 +1,19 @@
 import SwiftUI
 
-/// Onglet Persos : ordre des persos connus, fermeture des clients gelés.
+/// Onglet Personnages : leur ordre et leurs équipes, la fermeture des clients gelés, les icônes de classe.
 struct CharactersSettings: View {
     @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var manager = WindowManager.shared
 
-    /// Les persos connus qu'aucun client ne porte en ce moment.
+    /// Les personnages connus qu'aucun client ne porte en ce moment.
     private var horsLigne: [String] {
         prefs.characterOrder.filter { !isOnline($0) }
     }
 
-    /// Un dernier mot avant : la liste des persos fixe la numérotation des emplacements, la vider par
+    /// Compté dans la liste, d'où il vient : un client sans nom de personnage (écran de connexion) n'y est pas.
+    private var connectes: Int { prefs.characterOrder.count - horsLigne.count }
+
+    /// Un dernier mot avant : la liste des personnages fixe la numérotation des emplacements, la vider par
     /// mégarde décale tous les raccourcis.
     private func confirmerOubli() {
         let noms = horsLigne
@@ -23,41 +26,33 @@ struct CharactersSettings: View {
     }
 
     var body: some View {
-        PageReglages(titre: L("reglages.persos")) {
-            Section {
+        PageReglages(titre: L("reglages.personnages")) {
+            Bloc(L("persos.ordre"), aide: L("persos.ordre.aide") + "\n\n" + L("persos.equipes.aide")) {
                 ForEach(Array(prefs.characterOrder.enumerated()), id: \.element) { index, name in
                     characterRow(index: index, name: name)
                 }
-                .onMove { offsets, destination in
-                    prefs.move(fromOffsets: offsets, toOffset: destination)
-                    manager.resort()
-                }
-                // Une seule écriture pour toute la fournée.
-                Ligne(titre: L("persos.connectesSurConnus", manager.clients.count, prefs.characterOrder.count)) {
-                    Button(L("persos.oublierHorsLigne")) { confirmerOubli() }
-                        .buttonStyle(.bouton(.destructif))
-                        .disabled(horsLigne.isEmpty)
-                }
-            } header: {
-                HStack(spacing: Jetons.Espace.un) {
-                    SectionTitle(L("persos.ordre"), help: L("persos.ordre.aide"))
-                    Text("·").foregroundStyle(Color.jeton(\.encreTertiaire))
-                    SectionTitle(L("persos.equipes"), help: L("persos.equipes.aide"))
+                Ligne(titre: L("persos.connectes")) {
+                    HStack(spacing: Jetons.Espace.deux) {
+                        Text(L("persos.connectesSurConnus", connectes, prefs.characterOrder.count))
+                            .foregroundStyle(Color.jeton(\.encreSecondaire))
+                        // Seul ce qui sert existe : sans personnage hors ligne, rien à retirer.
+                        if !horsLigne.isEmpty {
+                            Button(L("persos.oublierHorsLigne")) { confirmerOubli() }
+                                .buttonStyle(.bouton(.destructif))
+                        }
+                    }
                 }
             }
-
-            Section {
+            Bloc(L("persos.fermeture")) {
                 Interrupteur(titre: L("persos.acheverGeles"), aide: L("persos.acheverGeles.aide"),
                              isOn: $prefs.killFrozenClients)
-            } header: {
-                SectionTitle(L("persos.fermeture"))
             }
+            BlocsClasses()
         }
     }
 
-    /// Une ligne de la liste des persos. `contentShape` étend la zone de prise
-    /// du glisser à toute la ligne — viser le seul texte demandait une précision
-    /// pénible — et les flèches offrent un déplacement au clic, infaillible.
+    /// Une ligne de la liste. Un glisser sur une autre ligne y place le personnage ; les flèches offrent le
+    /// même déplacement au clic.
     private func characterRow(index: Int, name: String) -> some View {
         HStack(spacing: Jetons.Espace.deux) {
             Image(systemName: "line.3.horizontal")
@@ -70,12 +65,11 @@ struct CharactersSettings: View {
             Text(name)
             Spacer()
             teamPicker(for: name)
-            if let slot = slotOf(name) {
-                Text("\(slot + 1)")
-                    .font(Jetons.Typo.raccourci.police)
-                    .foregroundStyle(Color.jeton(\.encreSecondaire))
-            }
-            // Seul l'écart au normal s'écrit : un perso connecté n'a pas besoin de le dire.
+            Text(slotOf(name).map { "\($0 + 1)" } ?? "")
+                .font(Jetons.Typo.raccourci.police)
+                .foregroundStyle(Color.jeton(\.encreSecondaire))
+                .frame(width: Jetons.Espace.quatre, alignment: .trailing)
+            // Seul l'écart au normal s'écrit : un personnage connecté n'a pas besoin de le dire.
             if !isOnline(name) {
                 Text(L("persos.horsLigne"))
                     .font(Jetons.Typo.petit.police)
@@ -98,8 +92,14 @@ struct CharactersSettings: View {
             .buttonStyle(.bouton(.tertiaire, dense: true))
             .font(Jetons.Typo.raccourci.police)
         }
-        .padding(.vertical, Jetons.Espace.un)
-        .contentShape(Rectangle())
+        .rangee()
+        .draggable(name)
+        .dropDestination(for: String.self) { noms, _ in
+            guard let source = noms.first.flatMap(prefs.characterOrder.firstIndex(of:)) else { return false }
+            prefs.move(fromOffsets: IndexSet(integer: source), toOffset: source < index ? index + 1 : index)
+            manager.resort()
+            return true
+        }
         .contextMenu {
             Button(L("persos.retirer")) { prefs.forget(name: name) }
         }
@@ -118,7 +118,7 @@ struct CharactersSettings: View {
             ForEach(1...max(choix, 1), id: \.self) { Text(L("persos.equipeN", $0)).tag($0) }
         }
         .labelsHidden()
-        .fixedSize()
+        .frame(width: 112)
         .font(Jetons.Typo.petit.police)
         .help(L("persos.equipeDuPerso"))
     }

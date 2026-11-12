@@ -34,7 +34,7 @@ struct ActionMiseAJour: View {
             Button(L("maj.telecharger")) { NSWorkspace.shared.open(version.page) }
                 .buttonStyle(.bouton(.secondaire))
         case .echec:
-            Button(L("maj.reessayer")) { miseAJour.proposer() }
+            Button(L("commun.reessayer")) { miseAJour.proposer() }
                 .buttonStyle(.bouton(.secondaire))
         case .inconnu, .aJour:
             if prefs.verifierMisesAJour {

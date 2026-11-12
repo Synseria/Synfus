@@ -1,27 +1,31 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Onglet Classes : la liste tirée de DofusDB et l'icône de chaque classe —
+/// Les classes, dans la page des personnages : la liste tirée de DofusDB et l'icône de chaque classe —
 /// l'emblème de DofusDB, ou celle de l'utilisateur, qui prime.
-struct ClassesSettings: View {
+struct BlocsClasses: View {
     @ObservedObject private var icons = ClassesStore.shared
 
     var body: some View {
-        PageReglages(titre: L("reglages.classes")) {
-            Section {
-                SourceClasses()
-                Ligne(titre: L("classes.dossier"), etat: L("classes.mentionAnkama")) {
-                    HStack(spacing: Jetons.Espace.deux) {
-                        Button(L("classes.recharger")) { icons.reloadAll() }
-                        Button(L("classes.ouvrirDossier")) { NSWorkspace.shared.open(icons.directory) }
-                    }
+        Bloc(L("reglages.classes"), aide: L("classes.icones.aide"), paresseux: true) {
+            SourceClasses()
+            Ligne(titre: L("classes.dossier")) {
+                HStack(spacing: Jetons.Espace.deux) {
+                    Button(L("classes.recharger")) { icons.reloadAll() }
+                    Button(L("classes.ouvrirDossier")) { NSWorkspace.shared.open(icons.directory) }
                 }
-                ForEach(icons.catalogue.breeds) { breed in
-                    classRow(breed)
-                }
-            } header: {
-                SectionTitle(L("classes.icones"), help: L("classes.icones.aide"))
             }
+            ForEach(icons.catalogue.breeds) { breed in
+                classRow(breed)
+            }
+            Text(L("classes.mentionAnkama"))
+                .font(Jetons.Typo.petit.police)
+                .foregroundStyle(Color.jeton(\.encreSecondaire))
+                .rangee()
+        } entete: {
+            Text(L("classes.maj.contenu", icons.catalogue.breeds.count))
+                .font(Jetons.Typo.note.police)
+                .foregroundStyle(Color.jeton(\.encreSecondaire))
         }
     }
 
@@ -55,12 +59,13 @@ struct ClassesSettings: View {
                     .font(Jetons.Typo.petit.police)
                     .foregroundStyle(Color.jeton(\.encreSecondaire))
             }
-            if provenance == .tienne {
+            // Retirer n'existe que s'il y a une icône posée à retirer.
+            if custom != nil, provenance == .tienne {
                 Button(L("classes.retirer")) { icons.removeIcon(forKey: breed.key) }
             }
             Button(custom == nil ? L("classes.choisir") : L("classes.remplacer")) { chooseIcon(for: breed) }
         }
-        .padding(.vertical, Jetons.Espace.un)
+        .rangee()
         .onDrop(of: [.fileURL], isTargeted: nil) { providers in
             drop(providers, for: breed)
         }

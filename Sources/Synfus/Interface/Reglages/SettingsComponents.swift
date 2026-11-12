@@ -1,39 +1,41 @@
 import SwiftUI
 
-/// Les briques communes des réglages. La règle d'interface : **un réglage
-/// par ligne, le libellé à gauche, le contrôle à droite** (`Ligne`), sous le
-/// libellé une valeur ou un état en gris (`etat`), toute explication en
-/// infobulle de la ligne, un ⓘ au plus par bloc — jamais une phrase à l'écran. Libellés : sans deux-points ni « / »,
-/// un nom (« Gain minimal ») ou un infinitif (« Afficher la barre »).
+/// Les briques communes des réglages. La règle d'interface : **un réglage par ligne, le libellé à
+/// gauche, le contrôle à droite** (`Ligne`), sous le libellé une valeur ou un état en gris (`etat`),
+/// toute explication en infobulle de la ligne — jamais une phrase à l'écran. Les lignes se rangent
+/// dans un `Bloc` : une carte, un seul dessin pour toutes les pages. Libellés : sans deux-points ni
+/// « / », un nom (« Gain minimal ») ou un infinitif (« Afficher la barre »).
 
-/// Le bord gauche du texte d'une page, celui des lignes d'un `Form` groupé.
+/// Le bord gauche du texte d'une page.
 enum MargeReglages {
     static let texte: CGFloat = 32
-    /// Le retrait d'une ligne dans le cadre d'une `PageListe`.
-    static let ligne: CGFloat = 10
 }
 
-/// Une page de réglages : son titre, puis ses groupes.
+/// Une page de réglages : son titre, puis ses blocs.
 struct PageReglages<Contenu: View>: View {
     let titre: String
+    var valeur: String?
     @ViewBuilder let contenu: Contenu
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            EnTetePage(titre: titre)
-            Form { contenu }
-                .formStyle(.grouped)
-                .scrollContentBackground(.hidden)
-                .buttonStyle(.bouton(.secondaire))
+            EnTetePage(titre: titre, valeur: valeur)
+            ScrollView {
+                VStack(alignment: .leading, spacing: Jetons.Espace.six) { contenu }
+                    .padding(.horizontal, MargeReglages.texte)
+                    .padding(.top, Jetons.Espace.quatre)
+                    .padding(.bottom, Jetons.Espace.six)
+            }
+            .font(Jetons.Typo.corps.police)
+            .buttonStyle(.bouton(.secondaire))
         }
     }
 }
 
-/// Le titre d'une page, pour celles qui ne sont pas un formulaire.
+/// Le titre d'une page.
 struct EnTetePage: View {
     let titre: String
-    /// Un compte ou un état de la page, jamais une phrase. Jamais de ⓘ près d'un titre : l'explication
-    /// passe en infobulle (`.help`) sur la ligne qu'elle éclaire.
+    /// Un compte ou un état de la page, jamais une phrase.
     var valeur: String?
 
     var body: some View {
@@ -49,8 +51,103 @@ struct EnTetePage: View {
     }
 }
 
-/// Une ligne : libellé (état) à gauche, précédé d'une icône s'il y en a
-/// une, contrôle à droite.
+/// Un groupe de lignes sous son titre : une carte (`carte()`), un filet entre deux lignes. Le filet que
+/// chaque ligne porte sous elle, le dernier compris, est rogné au bas du cadre. `paresseux` : une longue
+/// liste ne construit que les lignes qui paraissent. `entete` : le geste qui concerne tout le bloc.
+struct Bloc<Contenu: View, Entete: View>: View {
+    var titre: String?
+    /// Le ⓘ du titre, dernier recours ; `infobulle` : le même texte au seul survol du titre.
+    var aide: String?
+    var infobulle: String?
+    var paresseux = false
+    @ViewBuilder let contenu: Contenu
+    @ViewBuilder let entete: Entete
+
+    init(_ titre: String? = nil, aide: String? = nil, infobulle: String? = nil, paresseux: Bool = false,
+         @ViewBuilder contenu: () -> Contenu, @ViewBuilder entete: () -> Entete) {
+        self.titre = titre
+        self.aide = aide
+        self.infobulle = infobulle
+        self.paresseux = paresseux
+        self.contenu = contenu()
+        self.entete = entete()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Jetons.Espace.deux) {
+            if let titre {
+                HStack(spacing: Jetons.Espace.deux) {
+                    SectionTitle(titre, help: aide).help(infobulle ?? "")
+                    Spacer(minLength: Jetons.Espace.trois)
+                    entete
+                }
+                .font(Jetons.Typo.corpsFort.police)
+                .padding(.horizontal, Jetons.Espace.trois)
+            }
+            lignes
+                .padding(.bottom, -Jetons.Trait.filet)
+                .clipShape(RoundedRectangle(cornerRadius: Jetons.Rayon.carte, style: .continuous))
+                .carte()
+        }
+    }
+
+    @ViewBuilder
+    private var lignes: some View {
+        if paresseux {
+            LazyVStack(alignment: .leading, spacing: 0) { contenu }
+        } else {
+            VStack(alignment: .leading, spacing: 0) { contenu }
+        }
+    }
+}
+
+extension Bloc where Entete == EmptyView {
+    init(_ titre: String? = nil, aide: String? = nil, infobulle: String? = nil, paresseux: Bool = false,
+         @ViewBuilder contenu: () -> Contenu) {
+        self.init(titre, aide: aide, infobulle: infobulle, paresseux: paresseux, contenu: contenu,
+                  entete: { EmptyView() })
+    }
+}
+
+extension View {
+    /// Une ligne de bloc : retrait, hauteur d'un contrôle, filet dessous.
+    func rangee() -> some View {
+        VStack(spacing: 0) {
+            frame(maxWidth: .infinity, minHeight: Jetons.Taille.controle, alignment: .leading)
+                .padding(.horizontal, Jetons.Espace.trois)
+                .padding(.vertical, Jetons.Espace.deux)
+            Rectangle().fill(Color.jeton(\.filet)).frame(height: Jetons.Trait.filet)
+        }
+    }
+}
+
+/// Un état — vide, en attente, erreur — qui occupe le bloc entier : son mot, puis le geste qui le lève.
+/// Une erreur dit « Nom indisponible » et « Réessayer », jamais sa cause.
+struct EtatDeBloc: View {
+    let texte: String
+    var geste: String?
+    var attente = false
+    var action: () -> Void = {}
+
+    var body: some View {
+        VStack(spacing: Jetons.Espace.deux) {
+            if attente { ProgressView().controlSize(.small) }
+            Text(texte).foregroundStyle(Color.jeton(\.encreSecondaire))
+            if let geste { Button(geste, action: action) }
+        }
+        .frame(maxWidth: .infinity, minHeight: Jetons.Taille.rangeePalette * 3)
+        .padding(Jetons.Espace.quatre)
+    }
+}
+
+extension EtatDeBloc {
+    /// « Aucun + nom », suivi de la recherche quand il y en a une.
+    static func aucun(_ nom: String, recherche: String) -> EtatDeBloc {
+        EtatDeBloc(texte: recherche.isEmpty ? nom : L("commun.pourRecherche", nom, recherche))
+    }
+}
+
+/// Une ligne : libellé (état) à gauche, précédé d'une icône s'il y en a une, contrôle à droite.
 struct Ligne<Controle: View, Icone: View>: View {
     let titre: String
     var detail: String?
@@ -88,10 +185,10 @@ struct Ligne<Controle: View, Icone: View>: View {
             Spacer(minLength: Jetons.Espace.trois)
             controle
         }
-        // L'explication d'une ligne est une infobulle sur toute la ligne, jamais un ⓘ : le seul ⓘ d'un
-        // bloc est celui de son titre (`SectionTitle`).
+        // L'explication d'une ligne est une infobulle sur toute la ligne : jamais une phrase à l'écran.
         .help(aide ?? "")
         .accessibilityHint(aide ?? "")
+        .rangee()
     }
 }
 
@@ -115,21 +212,6 @@ struct Interrupteur: View {
                 .toggleStyle(.switch)
                 .controlSize(.small)
         }
-    }
-}
-
-/// Un avertissement d'une ligne, et le geste qui le lève.
-struct Avertissement: View {
-    let texte: String
-    var aide: String?
-    var bouton: String?
-    var action: () -> Void = {}
-
-    var body: some View {
-        Ligne(titre: texte, aide: aide) {
-            if let bouton { Button(bouton, action: action) }
-        }
-        .foregroundStyle(Color.jeton(\.alerte))
     }
 }
 
@@ -247,10 +329,11 @@ struct PermissionRow: View {
     let name: String
     let granted: Bool
     let help: String
+    var etat: String?
     let open: () -> Void
 
     var body: some View {
-        Ligne(titre: name, aide: help) {
+        Ligne(titre: name, etat: etat, aide: help) {
             HStack(spacing: Jetons.Espace.deux) {
                 Circle().fill(granted ? Color.jeton(\.succes) : Color.jeton(\.alerte)).frame(width: Jetons.Espace.deux, height: Jetons.Espace.deux)
                 Text(granted ? L("commun.accordee") : L("commun.manquante"))

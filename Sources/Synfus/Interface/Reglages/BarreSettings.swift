@@ -8,7 +8,7 @@ struct BarreSettings: View {
 
     var body: some View {
         PageReglages(titre: L("reglages.barre")) {
-            Section {
+            Bloc {
                 Interrupteur(titre: L("general.barre.afficher"), isOn: Binding(
                     get: { prefs.barVisible },
                     set: { prefs.barVisible = $0; FloatingBarController.shared.apply() }
@@ -32,18 +32,16 @@ struct BarreSettings: View {
                              }))
             }
             if prefs.barVisible {
-                Section {
+                Bloc(L("barre.boutons")) {
                     ForEach(BoutonBarre.allCases, id: \.self) { bouton in
                         Interrupteur(titre: bouton.libelle, isOn: Binding(
                             get: { !prefs.boutonsMasques.contains(bouton) },
                             set: { prefs.montrer(bouton, $0) }
                         ))
                     }
-                } header: {
-                    SectionTitle(L("barre.boutons"))
                 }
             }
-            Section {
+            Bloc {
                 Interrupteur(titre: L("general.apercus.survol"), aide: L("general.apercus.aide"), isOn: Binding(
                     get: { prefs.showPreviewOnHover },
                     set: { value in
