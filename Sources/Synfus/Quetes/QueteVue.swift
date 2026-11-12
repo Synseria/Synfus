@@ -60,10 +60,11 @@ struct QueteVue: View {
                             if !fiche.suivantes.isEmpty { suivantes(fiche) }
                         }
                         .padding(metriques.marge)
-                        // La dernière ligne reste au-dessus de la poignée de redimensionnement.
-                        .padding(.bottom, Jetons.Taille.touche + 2 * Jetons.Espace.un + Jetons.Espace.deux)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
+                    // Une bande réservée à la poignée de redimensionnement : aucune ligne ne passe
+                    // dessous, même en défilant (une marge dans le contenu ne protège que la dernière).
+                    .padding(.bottom, Jetons.Taille.touche + 2 * Jetons.Espace.un)
                     .onChange(of: fiche.id) { defilement.scrollTo(Self.haut, anchor: .top) }
                     .onChange(of: remontees) { defilement.scrollTo(Self.haut, anchor: .top) }
                 }
