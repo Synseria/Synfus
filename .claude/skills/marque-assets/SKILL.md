@@ -82,7 +82,7 @@ user-invocable: false
 
 - Signe de la maison, distinct de l'Œuf : `EmblemeSynseria.cercles` (pur, repère 64 × 64) reprend la
   géométrie de `Synseria-Design/marque/synseria-embleme-synfus.svg` ; le plus grand disque de la
-  planète est la `primaire` courante, le reste `Couleurs.nuit` et blanc. Aucun fichier figé.
+  planète est la `primaire` courante, le reste `Color.jeton(\.nuit)` et blanc. Aucun fichier figé.
 - `SigneSynseria(hauteur:)` = emblème + mot « syn » (`encre`) « seria » (`encreSecondaire`), Outfit 600
   si installée, sinon SF Pro Rounded 600. Il vit dans « À propos de Synfus » (`MiseAJour/APropos`) et
   la proposition de mise à jour ; jamais dans le rond, jamais sur la barre de menus (qui garde l'Œuf).
