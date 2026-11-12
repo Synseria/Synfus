@@ -49,6 +49,8 @@ enum Couleurs {
 
     /// Trait, voile, aplat de ce qui est choisi : le texte posé dessus est `encreSurPrimaire`.
     static var primaire: Color { couleur(\.primaire) }
+    /// Aplat de ce qui est choisi (voix teintée) : le texte posé dessus est `primaireEncre`.
+    static var primaireFond: Color { couleur(\.primaireFond) }
     /// La couleur de l'app quand elle s'écrit : lisible sur le fond de la fenêtre.
     static var primaireEncre: Color { couleur(\.primaireEncre) }
     static var encreSurPrimaire: Color { couleur(\.encreSurPrimaire) }
@@ -74,6 +76,13 @@ enum Couleurs {
     static var encre: Color { couleur(\.encre) }
     static var encreSecondaire: Color { couleur(\.encreSecondaire) }
     static var encreTertiaire: Color { couleur(\.encreTertiaire) }
+    /// Contour d'un champ ou d'un bouton secondaire (≥ 3:1 sur `surface`).
+    static var contourControle: Color { couleur(\.contourControle) }
+    /// Voile d'un élément survolé, puis pressé.
+    static var survol: Color { couleur(\.survol) }
+    static var pression: Color { couleur(\.pression) }
+    /// Le texte posé sur `safran` : le bleu nuit du thème, lisible en clair comme en sombre.
+    static var encreSurSafran: Color { couleur(\.nuitProfond) }
 }
 
 /// Le témoin de changement des couleurs : `Preferences` est un `ObservableObject`, que SwiftUI ne
