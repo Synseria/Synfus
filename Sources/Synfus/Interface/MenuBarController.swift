@@ -106,6 +106,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         add(to: menu, title: L("menu.recentrerBarre"), action: #selector(recenterBar))
         menu.addItem(.separator())
 
+        add(to: menu, title: L("menu.apropos"), action: #selector(openAbout))
         add(to: menu, title: L("menu.reglages"), action: #selector(openSettings))
         // Reconstruit à chaque ouverture : l'item n'apparaît que s'il y a
         // quelqu'un à fermer, inutile de jouer avec `isEnabled`.
@@ -260,6 +261,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
     @objc private func installUpdate() {
         MiseAJour.shared.proposer()
+    }
+
+    @objc private func openAbout() {
+        AProposController.shared.afficher()
     }
 
     @objc private func openSettings() {

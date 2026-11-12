@@ -263,6 +263,7 @@ struct PreferencesTests {
         #expect(prefs.barOnlyWithDofus == false)
         #expect(prefs.menuBarIcon == .logo)
         #expect(prefs.iconeApp == .parDefaut)
+        #expect(prefs.couleurDeLApp == Jetons.couleurParDefaut && prefs.fondsDeLApp == nil)
         // Masquer la barre reste sans défaut : on ne confisque aucune
         // combinaison réservée par le système sans qu'elle ait été demandée.
         #expect(prefs.toggleBar == nil)
@@ -488,7 +489,7 @@ struct PreferencesTests {
      "inviteFormat":"/w %nom go","inviteGroupee":true,
      "inviteHotKey":{"keyCode":34,"modifiers":256},
      "killFrozenClients":false,"lastArrangement":"principale","lireCombat":true,"lireCombatDerriere":true,
-     "lirePosition":true,"menuBarIcon":"symbole","iconeApp":{"motif":"couvee","fond":"aube"},
+     "lirePosition":true,"menuBarIcon":"symbole","iconeApp":{"motif":"couvee","fond":"aube"},"couleurDeLApp":"teinte:210","fondsDeLApp":"nuit",
      "previewHotKey":{"keyCode":49,"modifiers":2048},
      "sessionHotKey":{"keyCode":1,"modifiers":256},"showClasses":false,
      "showNumbers":false,"showPreviewOnHover":true,"signalerBascule":false,
@@ -529,6 +530,7 @@ struct PreferencesTests {
         #expect(prefs.autoCenterBar == false)
         #expect(prefs.menuBarIcon == .symbole)
         #expect(prefs.iconeApp == IconeApp(motif: .couvee, fond: .aube))
+        #expect(prefs.couleurDeLApp == .teinte(210) && prefs.fondsDeLApp == .nuit)
         #expect(prefs.showPreviewOnHover == true)
         #expect(prefs.previewHotKey == HotKey(keyCode: 49, modifiers: 2048))
         #expect(prefs.advanceOnClick == true)
@@ -603,6 +605,8 @@ struct PreferencesTests {
         prefs.autoCenterBar = false
         prefs.menuBarIcon = .symbole
         prefs.iconeApp = IconeApp(motif: .couvee, fond: .aube)
+        prefs.couleurDeLApp = .teinte(210)
+        prefs.fondsDeLApp = .nuit
         prefs.showPreviewOnHover = true
         prefs.previewHotKey = HotKey(keyCode: 49, modifiers: 2048)
         prefs.advanceOnClick = true
@@ -681,7 +685,7 @@ struct PreferencesTests {
          "autoCenterBar":true,"barOnlyWithDofus":false,"panneauxSeulementDofus":true,"barVisible":true,"bossChoisi":"harebourg",
          "boutonsMasques":[],"characterOrder":[],
          "defaultsVersion":7,"equipes":[],"etiquettes":{},"hotKeys":[null],"inviteFormat":"/invite %nom","inviteGroupee":false,
-         "killFrozenClients":true,"lireCombat":false,"lireCombatDerriere":false,"lirePosition":false,"menuBarIcon":"logo","iconeApp":{"motif":"oeuf","fond":"transparent"},
+         "killFrozenClients":true,"lireCombat":false,"lireCombatDerriere":false,"lirePosition":false,"menuBarIcon":"logo","iconeApp":{"motif":"oeuf","fond":"transparent"},"couleurDeLApp":"jade",
          "showClasses":true,"showNumbers":true,"showPreviewOnHover":false,
          "signalerBascule":true,"zaapAuto":false,
          "zaapGainMinimal":5,"zaapDuJeu":true,"zaapIntercalees":"/a","verifierMisesAJour":true,"partagerStatistiques":true,"zaapsAjoutes":[],"zaapsChoix":{},"zaapsFavoris":[],"zaapsVueCarte":true,

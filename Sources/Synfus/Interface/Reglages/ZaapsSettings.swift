@@ -27,25 +27,20 @@ struct ZaapsSettings: View {
             InterrupteurVuesCartes()
                 .cadreDeListe(premiere: false, derniere: true)
             EnTeteListe(titre: L("zaaps.grille"), aide: L("zaap.liste.aide"))
-            HStack(spacing: 10) {
+            HStack(spacing: Jetons.Espace.deux) {
                 ChampFiltre(invite: L("palette.reglages.filtrer"), texte: $filtre)
-                Picker(L("palette.reglages.vue"), selection: $vue) {
-                    ForEach(Vue.allCases, id: \.self) { Text($0.libelle).tag($0) }
-                }
-                .labelsHidden()
-                .pickerStyle(.segmented)
-                .fixedSize()
+                Segments(L("palette.reglages.vue"), selection: $vue, choix: Vue.allCases.map { ($0, $0.libelle) })
             }
             .cadreDeListe(premiere: true, derniere: false)
             // Paresseuse dans la pile paresseuse : seules les cases à l'écran
             // se construisent, et avec elles leur vue de carte.
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Jetons.Espace.deux), count: 3), spacing: Jetons.Espace.deux) {
                 ForEach(montres(connus, langue), id: \.cle) { zaap in
                     CarteZaapReglages(zaap: zaap, langue: langue)
                 }
                 AjoutZaap()
             }
-            .padding(.vertical, 4)
+            .padding(.vertical, Jetons.Espace.un)
             .cadreDeListe(premiere: false, derniere: true)
         }
     }

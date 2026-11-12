@@ -10,11 +10,11 @@ struct SourceCarte: View {
     @State private var echec: String?
 
     var body: some View {
-        Ligne(titre: echec.map { L("zaap.maj.echec", $0) }
+        Ligne(titre: echec.map { _ in L("zaap.maj.echec") }
                 ?? L("zaap.maj.date", carte.carte.date.formatted(date: .abbreviated, time: .shortened)),
               etat: L("palette.reglages.carte.contenu", carte.carte.lieux.count, carte.carte.zaaps.count),
               aide: L("zaap.maj.aide")) {
-            HStack(spacing: 8) {
+            HStack(spacing: Jetons.Espace.deux) {
                 if miseAJour { ProgressView().controlSize(.small) }
                 Button(L("zaap.maj")) {
                     miseAJour = true
@@ -38,7 +38,7 @@ struct SourceQuetes: View {
         Ligne(titre: titre,
               etat: quetes.quetes.map { L("palette.reglages.quetes.contenu", $0.quetes.count, $0.pnjs.count) },
               aide: L("palette.reglages.quetes.aide")) {
-            HStack(spacing: 8) {
+            HStack(spacing: Jetons.Espace.deux) {
                 if quetes.chargement { ProgressView().controlSize(.small) }
                 Button(L("palette.reglages.quetes.maj")) { Task { try? await quetes.mettreAJour() } }
                     .disabled(quetes.chargement)
@@ -48,7 +48,7 @@ struct SourceQuetes: View {
     }
 
     private var titre: String {
-        if let echec = quetes.echec { return L("zaap.maj.echec", echec) }
+        if quetes.echec != nil { return L("zaap.maj.echec") }
         guard let date = quetes.quetes?.date else { return L("palette.reglages.quetes.aucune") }
         return L("palette.reglages.quetes.date", date.formatted(date: .abbreviated, time: .shortened))
     }
@@ -61,7 +61,7 @@ struct SourceClasses: View {
     var body: some View {
         Ligne(titre: titre, etat: L("classes.maj.contenu", classes.catalogue.breeds.count),
               aide: L("classes.maj.aide")) {
-            HStack(spacing: 8) {
+            HStack(spacing: Jetons.Espace.deux) {
                 if classes.chargement { ProgressView().controlSize(.small) }
                 Button(L("classes.maj")) { Task { try? await classes.mettreAJour() } }
                     .disabled(classes.chargement)
@@ -70,7 +70,7 @@ struct SourceClasses: View {
     }
 
     private var titre: String {
-        if let echec = classes.echec { return L("zaap.maj.echec", echec) }
+        if classes.echec != nil { return L("zaap.maj.echec") }
         guard let date = classes.date else { return L("classes.maj.aucune") }
         return L("classes.maj.date", date.formatted(date: .abbreviated, time: .shortened))
     }
@@ -90,24 +90,24 @@ struct BoutonEtiquette: View {
                 PastilleEtiquette(texte: etiquette)
             } else {
                 Text(L("palette.reglages.etiquette"))
-                    .font(.synfus(.petit))
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 1)
-                    .overlay(RoundedRectangle(cornerRadius: 4)
-                        .strokeBorder(Color.secondary.opacity(0.5), style: StrokeStyle(dash: [3, 2])))
+                    .font(Jetons.Typo.petit.police)
+                    .foregroundStyle(Color.jeton(\.encreSecondaire))
+                    .padding(.horizontal, Jetons.Espace.un)
+                    .padding(.vertical, Jetons.Espace.un)
+                    .overlay(RoundedRectangle(cornerRadius: Jetons.Rayon.pastille)
+                        .strokeBorder(Color.jeton(\.encreSecondaire).opacity(0.5), style: StrokeStyle(dash: [3, 2])))
             }
         }
         .buttonStyle(.plain)
         .popover(isPresented: $edition, arrowEdge: .bottom) {
-            HStack(spacing: 8) {
+            HStack(spacing: Jetons.Espace.deux) {
                 TextField(L("palette.etiquette.exemple"), text: $texte)
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 160)
                     .onSubmit(valider)
                 Button(L("palette.reglages.ok"), action: valider)
             }
-            .padding(10)
+            .padding(Jetons.Espace.deux)
         }
     }
 
@@ -127,7 +127,7 @@ struct BoutonFavori: View {
         let favori = prefs.estFavori(cle)
         Button { prefs.basculerFavori(cle) } label: {
             Image(systemName: favori ? "star.fill" : "star")
-                .foregroundStyle(favori ? Couleurs.ambre : Color.secondary)
+                .foregroundStyle(favori ? Color.jeton(\.safranTexte) : Color.jeton(\.encreSecondaire))
         }
         .buttonStyle(.borderless)
         .aide(favori ? L("zaap.favori.retirer") : L("zaap.favori.ajouter"))
@@ -153,11 +153,11 @@ struct BoutonTrajet: View {
                 copie = false
             }
         } label: {
-            HStack(spacing: 4) {
-                Text(Coordonnees.texte(x, y)).font(.synfus(.petit, design: .monospaced))
+            HStack(spacing: Jetons.Espace.un) {
+                Text(Coordonnees.texte(x, y)).font(Jetons.Typo.codeInterface.police)
                 Image(systemName: copie ? "checkmark" : "doc.on.clipboard")
             }
-            .foregroundStyle(copie ? Couleurs.accentTexte : Color.secondary)
+            .foregroundStyle(copie ? Color.jeton(\.primaireEncre) : Color.jeton(\.encreSecondaire))
         }
         .buttonStyle(.borderless)
         .help(dansLesDouze ? L("ouTrouver.copierTrajet") : L("trajet.copier.horsDesDouze"))

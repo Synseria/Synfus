@@ -29,6 +29,38 @@ struct LocalisationTests {
         }
     }
 
+    /// Un bouton dit son verbe : « … » le ferait hésiter. Seuls les choix de menu (« Autre… ») les gardent.
+    @Test("Aucun bouton ne porte de points de suspension")
+    func boutonsSansSuspension() throws {
+        // Les entrées de menu (`menu.*`, clic droit de la barre) suivent la convention de macOS.
+        let choixDeMenu: Set<String> = ["theme.autre", "barre.fermetureEnCours"]
+        let motif = /Button\(\s*(?:role: [^,]+,\s*)?L\("([^"]+)"/
+        var cles: Set<String> = []
+        for fichier in SourcesDuDepot.fichiers() {
+            let texte = try String(contentsOf: fichier, encoding: .utf8)
+            for trouve in texte.matches(of: motif) { cles.insert(String(trouve.output.1)) }
+        }
+        try #require(!cles.isEmpty)
+        for langue in Langue.allCases {
+            let table = try table(langue)
+            for cle in cles.subtracting(choixDeMenu) where !cle.hasPrefix("menu.") {
+                #expect(!(table[cle] ?? "").contains("…"), "\(langue.rawValue) : \(cle)")
+            }
+        }
+    }
+
+    /// « Verbe + objet ? » : la feuille de confirmation pose une question.
+    @Test("Chaque confirmation est une question")
+    func confirmationsEnQuestion() throws {
+        let titres = ["fermeture.confirmation", "fermeture.confirmation.un", "fermeture.confirmation.client",
+                      "persos.oublierHorsLigne.confirmation", "persos.oublierHorsLigne.confirmation.un",
+                      "zaap.supprimer.confirmation", "quete.menu.toutDesepingler.confirmation"]
+        for langue in Langue.allCases {
+            let table = try table(langue)
+            for cle in titres { #expect((table[cle] ?? "").hasSuffix("?"), "\(langue.rawValue) : \(cle)") }
+        }
+    }
+
     /// `String(format:)` lit ses arguments dans l'ordre : une traduction qui
     /// perd un `%@` ou change un `%lld` en `%@` plante à l'affichage.
     @Test("Les arguments de format sont les mêmes dans chaque langue")

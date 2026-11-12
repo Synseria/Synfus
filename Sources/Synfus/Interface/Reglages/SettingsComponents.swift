@@ -2,8 +2,8 @@ import SwiftUI
 
 /// Les briques communes des réglages. La règle d'interface : **un réglage
 /// par ligne, le libellé à gauche, le contrôle à droite** (`Ligne`), sous le
-/// libellé une valeur ou un état en gris (`etat`), toute explication derrière
-/// un ⓘ — jamais une phrase à l'écran. Libellés : sans deux-points ni « / »,
+/// libellé une valeur ou un état en gris (`etat`), toute explication en
+/// infobulle de la ligne, un ⓘ au plus par bloc — jamais une phrase à l'écran. Libellés : sans deux-points ni « / »,
 /// un nom (« Gain minimal ») ou un infinitif (« Afficher la barre »).
 
 /// Le bord gauche du texte d'une page, celui des lignes d'un `Form` groupé.
@@ -16,15 +16,15 @@ enum MargeReglages {
 /// Une page de réglages : son titre, puis ses groupes.
 struct PageReglages<Contenu: View>: View {
     let titre: String
-    /// L'explication, derrière le ⓘ du titre.
-    var aide: String?
     @ViewBuilder let contenu: Contenu
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            EnTetePage(titre: titre, aide: aide)
+            EnTetePage(titre: titre)
             Form { contenu }
                 .formStyle(.grouped)
+                .scrollContentBackground(.hidden)
+                .buttonStyle(.bouton(.secondaire))
         }
     }
 }
@@ -32,25 +32,24 @@ struct PageReglages<Contenu: View>: View {
 /// Le titre d'une page, pour celles qui ne sont pas un formulaire.
 struct EnTetePage: View {
     let titre: String
-    /// Un compte ou un état de la page, jamais une phrase.
+    /// Un compte ou un état de la page, jamais une phrase. Jamais de ⓘ près d'un titre : l'explication
+    /// passe en infobulle (`.help`) sur la ligne qu'elle éclaire.
     var valeur: String?
-    var aide: String?
 
     var body: some View {
-        HStack(spacing: 8) {
-            Text(titre).font(.synfus(.grand, gras: true))
-            if let aide { HelpTip(aide) }
-            Spacer(minLength: 12)
-            if let valeur { Text(valeur).font(.synfus(.note)).foregroundStyle(.secondary) }
+        HStack(spacing: Jetons.Espace.deux) {
+            Text(titre).font(Jetons.Typo.titrePage.police)
+            Spacer(minLength: Jetons.Espace.trois)
+            if let valeur { Text(valeur).font(Jetons.Typo.note.police).foregroundStyle(Color.jeton(\.encreSecondaire)) }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, MargeReglages.texte)
-        .padding(.top, 22)
-        .padding(.bottom, 4)
+        .padding(.top, Jetons.Espace.six)
+        .padding(.bottom, Jetons.Espace.un)
     }
 }
 
-/// Une ligne : libellé (ⓘ, état) à gauche, précédé d'une icône s'il y en a
+/// Une ligne : libellé (état) à gauche, précédé d'une icône s'il y en a
 /// une, contrôle à droite.
 struct Ligne<Controle: View, Icone: View>: View {
     let titre: String
@@ -71,23 +70,28 @@ struct Ligne<Controle: View, Icone: View>: View {
     }
 
     var body: some View {
-        LabeledContent {
-            controle
-        } label: {
-            HStack(spacing: 8) {
+        // Le contrôle se centre sur le bloc entier du libellé (titre et état), jamais accroché à sa
+        // dernière ligne : c'est ce qui tient l'alignement des lignes à état.
+        HStack(alignment: .center, spacing: Jetons.Espace.trois) {
+            HStack(spacing: Jetons.Espace.deux) {
                 icone
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 6) {
+                VStack(alignment: .leading, spacing: Jetons.Espace.un) {
+                    HStack(spacing: Jetons.Espace.un) {
                         Text(titre)
-                        if let detail { Text(detail).foregroundStyle(.secondary).lineLimit(1) }
-                        if let aide { HelpTip(aide) }
+                        if let detail { Text(detail).foregroundStyle(Color.jeton(\.encreSecondaire)).lineLimit(1) }
                     }
                     if let etat {
-                        Text(etat).font(.synfus(.petit)).foregroundStyle(.secondary)
+                        Text(etat).font(Jetons.Typo.petit.police).foregroundStyle(Color.jeton(\.encreSecondaire))
                     }
                 }
             }
+            Spacer(minLength: Jetons.Espace.trois)
+            controle
         }
+        // L'explication d'une ligne est une infobulle sur toute la ligne, jamais un ⓘ : le seul ⓘ d'un
+        // bloc est celui de son titre (`SectionTitle`).
+        .help(aide ?? "")
+        .accessibilityHint(aide ?? "")
     }
 }
 
@@ -125,7 +129,7 @@ struct Avertissement: View {
         Ligne(titre: texte, aide: aide) {
             if let bouton { Button(bouton, action: action) }
         }
-        .foregroundStyle(Couleurs.alerte)
+        .foregroundStyle(Color.jeton(\.alerte))
     }
 }
 
@@ -139,16 +143,16 @@ struct HelpTip: View {
     var body: some View {
         Button { showing.toggle() } label: {
             Image(systemName: "info.circle")
-                .font(.synfus(.note))
-                .foregroundStyle(.secondary)
+                .font(Jetons.Typo.note.police)
+                .foregroundStyle(Color.jeton(\.encreSecondaire))
         }
         .buttonStyle(.plain)
         .help(text)
         .accessibilityLabel(text)
         .popover(isPresented: $showing, arrowEdge: .bottom) {
             Text(text)
-                .font(.synfus(.note))
-                .padding(12)
+                .font(Jetons.Typo.note.police)
+                .padding(Jetons.Espace.trois)
                 .frame(width: 300, alignment: .leading)
         }
     }
@@ -165,7 +169,7 @@ struct SectionTitle: View {
     }
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: Jetons.Espace.un) {
             Text(title)
             if let help { HelpTip(help) }
         }
@@ -187,11 +191,11 @@ struct ShortcutRow: View {
 
     var body: some View {
         Ligne(titre: label, detail: detail, aide: help) {
-            HStack(spacing: 6) {
+            HStack(spacing: Jetons.Espace.un) {
                 if conflit || refuse {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.synfus(.petit))
-                        .foregroundStyle(Couleurs.alerte)
+                        .font(Jetons.Typo.petit.police)
+                        .foregroundStyle(Color.jeton(\.alerte))
                         .help(conflit ? L("raccourcis.conflit") : L("raccourcis.refuse"))
                 }
                 ShortcutRecorder(hotKey: hotKey, allowsBareKeys: allowsBareKeys)
@@ -247,10 +251,10 @@ struct PermissionRow: View {
 
     var body: some View {
         Ligne(titre: name, aide: help) {
-            HStack(spacing: 8) {
-                Circle().fill(granted ? Couleurs.succes : Couleurs.alerte).frame(width: 8, height: 8)
+            HStack(spacing: Jetons.Espace.deux) {
+                Circle().fill(granted ? Color.jeton(\.succes) : Color.jeton(\.alerte)).frame(width: Jetons.Espace.deux, height: Jetons.Espace.deux)
                 Text(granted ? L("commun.accordee") : L("commun.manquante"))
-                    .foregroundStyle(granted ? Color.secondary : Couleurs.alerte)
+                    .foregroundStyle(granted ? Color.jeton(\.encreSecondaire) : Color.jeton(\.alerte))
                 if !granted { Button(L("commun.ouvrirReglagesSysteme"), action: open) }
             }
         }
@@ -263,9 +267,9 @@ struct CopiableCommand: View {
     let command: String
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: Jetons.Espace.un) {
             Text(command)
-                .font(.synfus(.petit, design: .monospaced))
+                .font(Jetons.Typo.codeInterface.police)
                 .textSelection(.enabled)
                 .lineLimit(2)
                 .truncationMode(.middle)
@@ -274,10 +278,10 @@ struct CopiableCommand: View {
             } label: {
                 Image(systemName: "doc.on.doc")
             }
-            .buttonStyle(.borderless)
+            .buttonStyle(.bouton(.tertiaire, dense: true))
             .aide(L("commun.copierCommande"))
         }
-        .padding(6)
-        .background(RoundedRectangle(cornerRadius: 5).fill(Color.primary.opacity(0.06)))
+        .padding(Jetons.Espace.un)
+        .background(RoundedRectangle(cornerRadius: Jetons.Rayon.pastille).fill(Color.jeton(\.creux)))
     }
 }

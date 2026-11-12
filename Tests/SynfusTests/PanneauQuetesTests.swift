@@ -116,7 +116,7 @@ struct PanneauQuetesTests {
         for (grand, petit) in zip(confort, compact) {
             switch (grand, petit) {
             case let (grand as CGFloat, petit as CGFloat): #expect(petit <= grand)
-            case let (grand as TailleTexte, petit as TailleTexte): #expect(petit <= grand)
+            case let (grand as Jetons.Typo, petit as Jetons.Typo): #expect(petit.taille <= grand.taille)
             case let (grand as CGSize, petit as CGSize): #expect(petit.width <= grand.width && petit.height <= grand.height)
             default: Issue.record("mesure d'un type inattendu : \(grand)")
             }
@@ -235,5 +235,39 @@ struct PanneauQuetesTests {
         let autre = SuiviQuetes.Reconnue(id: 7, etape: nil, aFaire: [99], nonMontres: [4])
         #expect(suggeres(3, autre).isEmpty)
         #expect(etape.nonOuverts(valides: [], lu: autre).isEmpty)
+    }
+}
+
+/// La coordonnée d'un objectif ne s'écrit que si elle diffère de celle de l'objectif juste avant.
+struct CoordonneesObjectifsTests {
+    private func objectif(_ id: Int, _ position: (Int, Int)?, sousZone: Int? = nil) -> FicheQuete.Objectif {
+        FicheQuete.Objectif(id: id, texte: "", position: position.map { PNJ.Position(x: $0.0, y: $0.1) },
+                            carte: nil, combat: false, sujet: nil, sousZone: sousZone)
+    }
+
+    @Test("La première coordonnée s'affiche, la répétée non, la suivante différente oui")
+    func repetition() {
+        let objectifs = [objectif(1, (3, 4)), objectif(2, (3, 4)), objectif(3, (5, 6)), objectif(4, (5, 6)), objectif(5, (3, 4))]
+        #expect(CoordonneesObjectifs.affichees(objectifs) == [1, 3, 5])
+    }
+
+    @Test("Après un objectif sans position, la coordonnée revient")
+    func apresUnSansPosition() {
+        let objectifs = [objectif(1, (3, 4)), objectif(2, nil), objectif(3, (3, 4))]
+        #expect(CoordonneesObjectifs.affichees(objectifs) == [1, 3])
+    }
+
+    @Test("Un premier objectif replié ne prive pas le suivant de sa coordonnée")
+    func premierReplie() {
+        let objectifs = [objectif(1, (-55, 15)), objectif(2, (-55, 15)), objectif(3, (-55, 15))]
+        #expect(CoordonneesObjectifs.affichees(objectifs, repliees: [1]) == [2])
+        #expect(CoordonneesObjectifs.affichees(objectifs, repliees: [1, 2]) == [3])
+        #expect(CoordonneesObjectifs.affichees(objectifs) == [1])
+    }
+
+    @Test("La même case d'un autre monde diffère")
+    func autreMonde() {
+        let objectifs = [objectif(1, (3, 4), sousZone: 10), objectif(2, (3, 4), sousZone: 99)]
+        #expect(CoordonneesObjectifs.affichees(objectifs) == [1, 2])
     }
 }

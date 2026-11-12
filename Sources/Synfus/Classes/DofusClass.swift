@@ -142,3 +142,9 @@ enum DofusClass {
         }
     }
 }
+
+extension Color {
+    /// Le texte posé sur la couleur d'une classe, qui vient du jeu et non du thème : toutes sont assez
+    /// soutenues pour que le blanc y soit lisible, clair comme sombre.
+    static let texteSurClasse = Color.white
+}

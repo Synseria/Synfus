@@ -8,19 +8,19 @@ struct FicheCombatVue: View {
 
     var body: some View {
         let res = fiche.resistances
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: Jetons.Espace.un) {
             Text(L("combat.fiche", fiche.niveau, fiche.vie.formatted(), fiche.pa, fiche.pm))
-                .font(.synfus(.petit, gras: true))
+                .font(Jetons.Typo.raccourci.police)
             Text(L("combat.fiche.resistances", res[.neutre] ?? 0, res[.terre] ?? 0, res[.feu] ?? 0,
                    res[.eau] ?? 0, res[.air] ?? 0))
-                .font(.synfus(.petit))
-                .foregroundStyle(.secondary)
+                .font(Jetons.Typo.petit.police)
+                .foregroundStyle(Color.jeton(\.encreSecondaire))
                 .fixedSize(horizontal: false, vertical: true)
             let elements = fiche.elements
             if !elements.frapper.isEmpty {
                 Text(L("combat.fiche.elements", Self.noms(elements.frapper), Self.noms(elements.eviter)))
-                    .font(.synfus(.petit))
-                    .foregroundStyle(Couleurs.accentTexte)
+                    .font(Jetons.Typo.petit.police)
+                    .foregroundStyle(Color.jeton(\.primaireEncre))
                     .fixedSize(horizontal: false, vertical: true)
             }
         }

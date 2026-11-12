@@ -1,5 +1,6 @@
 import AppKit
 import Combine
+import SwiftUI
 
 /// Les mises à jour depuis les releases GitHub : vérifiées au lancement puis
 /// chaque jour (`Preferences.verifierMisesAJour`), proposées dans le menu et
@@ -107,6 +108,9 @@ final class MiseAJour: ObservableObject {
         let alerte = NSAlert()
         alerte.messageText = L("maj.alerte.titre", version.numero)
         alerte.informativeText = L("maj.alerte.texte")
+        let signe = NSHostingView(rootView: SigneSynseria(hauteur: 28).racineSynfus())
+        signe.frame.size = signe.fittingSize
+        alerte.accessoryView = signe
         alerte.addButton(withTitle: L("maj.alerte.installer"))
         alerte.addButton(withTitle: L("commun.annuler"))
         alerte.addButton(withTitle: L("maj.nouveautes"))

@@ -23,6 +23,9 @@ user-invocable: false
   `reglages`, qui donne la clé JSON et en dérive écriture et lecture.
 - Un nouveau réglage entre en `.facultatif` (ou `.optionnel` si `nil` est permis) : absente
   d'une ancienne sauvegarde, la clé laisse le défaut. Seules les clés d'origine sont `.requis`.
+- Un choix écrit en texte (`.enTexte`, `.enTexteOptionnel`) : une valeur illisible — un préréglage retiré
+  comme `violet` — laisse le défaut au lieu de rendre la sauvegarde illisible. `nil` est le choix « Auto »
+  (`fondsDeLApp`) : il n'est pas écrit, et revenir à Auto l'efface.
 - **Une clé ne se renomme jamais** : les tests d'empreinte de `PreferencesTests` figent le JSON
   écrit, et « une sauvegarde amputée des clés récentes se relit » garde la compatibilité.
 - Plusieurs clés remplacées par une seule : la nouvelle clé prime ; tant qu'une sauvegarde ne

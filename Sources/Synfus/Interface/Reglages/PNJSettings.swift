@@ -13,36 +13,37 @@ struct PNJSettings: View {
         let langue = L10n.courante.langue
         let pnjs = montres(langue)
         let affiches = Array(pnjs.prefix(Self.limite).enumerated())
-        PageListe(titre: L("reglages.pnj"), aide: L("pnj.aide")) {
+        PageListe(titre: L("reglages.pnj")) {
             SourceQuetes().cadreDeListe(premiere: true, derniere: false)
             InterrupteurVuesCartes().cadreDeListe(premiere: false, derniere: true)
             EnTeteListe(titre: L("pnj.compte", pnjs.count))
+                .help(L("pnj.aide"))
             ChampFiltre(invite: L("pnj.filtrer"), texte: $filtre)
                 .cadreDeListe(premiere: true, derniere: affiches.isEmpty)
             ForEach(affiches, id: \.element.id) { rang, pnj in
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 6) {
-                        Text(Lieu.traduit(pnj.noms, langue) ?? "?").font(.synfus(.corps, gras: true))
+                VStack(alignment: .leading, spacing: Jetons.Espace.un) {
+                    HStack(spacing: Jetons.Espace.un) {
+                        Text(Lieu.traduit(pnj.noms, langue) ?? "?").font(Jetons.Typo.corpsFort.police)
                         Spacer()
                         BoutonEtiquette(cle: pnj.cle)
                         BoutonFavori(cle: pnj.cle)
                     }
                     ForEach(Array(pnj.passages.enumerated()), id: \.offset) { rang, passage in
-                        HStack(spacing: 8) {
-                            Text(lieu(passage, langue)).foregroundStyle(rang == 0 ? Color.primary : Color.secondary)
-                            Text(L("pnj.quetes", nombre: passage.quetes, passage.quetes)).font(.synfus(.petit)).foregroundStyle(.secondary)
+                        HStack(spacing: Jetons.Espace.deux) {
+                            Text(lieu(passage, langue)).foregroundStyle(rang == 0 ? Color.jeton(\.encre) : Color.jeton(\.encreSecondaire))
+                            Text(L("pnj.quetes", nombre: passage.quetes, passage.quetes)).font(Jetons.Typo.petit.police).foregroundStyle(Color.jeton(\.encreSecondaire))
                             Spacer()
                             BoutonTrajet(x: passage.position.x, y: passage.position.y, sousZone: passage.sousZone)
                             if let carte = passage.carte { MiniatureCarte(carte: carte) }
                         }
-                        .font(.synfus(.note))
+                        .font(Jetons.Typo.note.police)
                     }
                 }
-                .padding(.vertical, 2)
+                .padding(.vertical, Jetons.Espace.un)
                 .cadreDeListe(premiere: false, derniere: rang == affiches.count - 1 && pnjs.count <= Self.limite)
             }
             if pnjs.count > Self.limite {
-                Text(L("lieux.affiner", pnjs.count)).foregroundStyle(.secondary)
+                Text(L("lieux.affiner", pnjs.count)).foregroundStyle(Color.jeton(\.encreSecondaire))
                     .cadreDeListe(premiere: false, derniere: true)
             }
         }
