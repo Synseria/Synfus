@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// L'almanax du jour en tête de la palette : l'offrande et ses deux temps —
-/// le nom copié pour l'hôtel de vente, puis le trajet jusqu'au Sanctuaire pour
-/// la rendre ; le chevron déplie où la trouver — et le bonus du jour.
+/// L'almanax du jour en tête de la palette : l'offrande, le nom à copier pour
+/// l'hôtel de vente, le trajet jusqu'au Sanctuaire pour la rendre ; le chevron
+/// déplie où la trouver — et le bonus du jour.
 struct AlmanaxVue: View {
     let almanax: Almanax
     let copier: (String) -> Void
@@ -57,15 +57,15 @@ struct AlmanaxVue: View {
             }
             Spacer(minLength: Jetons.Espace.un)
             Button { copier(nom) } label: {
-                Label(L("palette.almanax.nom"), systemImage: "doc.on.clipboard")
+                Label(L("palette.almanax.copier"), systemImage: "doc.on.clipboard").labelStyle(.iconOnly)
             }
             .buttonStyle(.bouton(.secondaire, dense: true))
-            .aide(L("palette.almanax.nom.aide"))
+            .aide(L("palette.almanax.copier"))
             if let allerAuSanctuaire {
                 Button(action: allerAuSanctuaire) {
                     Label(L("palette.almanax.sanctuaire"), systemImage: "arrow.triangle.turn.up.right.diamond")
                 }
-                .buttonStyle(.bouton(.secondaire, dense: true))
+                .buttonStyle(.bouton(.principal, dense: true))
                 .aide(L("palette.almanax.sanctuaire.aide"))
             }
             Button { deplie = deplie == offrande.objet ? nil : offrande.objet } label: {
