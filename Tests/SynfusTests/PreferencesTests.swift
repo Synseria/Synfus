@@ -478,9 +478,10 @@ struct PreferencesTests {
      "boutonsMasques":["quetes","boss","chasse","palette"],"characterOrder":["Aeryn","Nova"],
      "chasseHotKey":{"keyCode":5,"modifiers":2048},
      "cycleNext":{"keyCode":122,"modifiers":0},"cyclePrevious":{"keyCode":120,"modifiers":0},
-     "defaultsVersion":7,"equipeSuivanteHotKey":{"keyCode":17,"modifiers":256},
+     "defaultsVersion":8,"equipeSuivanteHotKey":{"keyCode":17,"modifiers":256},
      "etiquettes":{"1:-78,-41":"Fri 1"},"lieuxFavoris":["lieu:2738"],"pnjsFavoris":["pnj:6309"],
-     "paletteHotKey":{"keyCode":47,"modifiers":256},"paletteRecents":["/zaap 5,7"],"paletteTri":"type","quetesEpinglees":[18,42],"quetesEtape":{"18":2},
+     "paletteHotKey":{"keyCode":47,"modifiers":256},"paletteRecents":["/zaap 5,7"],"paletteTri":"type",
+     "paletteFrequentation":{"lieu:2738":{"dernier":12,"fois":3}},"quetesEpinglees":[18,42],"quetesEtape":{"18":2},
      "quetesValides":{"18":[102,104]},"quetesMasquerObjets":true,
      "quetesCompact":false,"quetesConsigne":false,"quetesVignettes":true,
      "quetesEnCours":{"18":104},"quetesCocherSuivi":false,"quetesDecoches":{"18":[103]},"quetesCochesLues":{"18":[104]},
@@ -568,6 +569,7 @@ struct PreferencesTests {
         #expect(prefs.paletteHotKey == HotKey(keyCode: 47, modifiers: 256))
         #expect(prefs.paletteRecents == ["/zaap 5,7"])
         #expect(prefs.paletteTri == .type)
+        #expect(prefs.paletteFrequentation == FrequentationPalette(["lieu:2738": .init(fois: 3, dernier: 12)]))
         #expect(prefs.quetesEpinglees == [18, 42])
         #expect(prefs.quetesEtape == ["18": 2])
         #expect(prefs.quetesValides == ["18": [102, 104]])
@@ -644,6 +646,7 @@ struct PreferencesTests {
         prefs.paletteHotKey = HotKey(keyCode: 47, modifiers: 256)
         prefs.paletteRecents = ["/zaap 5,7"]
         prefs.paletteTri = .type
+        prefs.paletteFrequentation = FrequentationPalette(["lieu:2738": .init(fois: 3, dernier: 12)])
         prefs.quetesEpinglees = [18, 42]
         prefs.quetesEtape = ["18": 2]
         prefs.quetesValides = ["18": [102, 104]]
@@ -684,12 +687,12 @@ struct PreferencesTests {
         {"advanceModifier":"fn","advanceOnClick":false,"attentionAction":"highlight",
          "autoCenterBar":true,"barOnlyWithDofus":false,"panneauxSeulementDofus":true,"barVisible":true,"bossChoisi":"harebourg",
          "boutonsMasques":[],"characterOrder":[],
-         "defaultsVersion":7,"equipes":[],"etiquettes":{},"hotKeys":[null],"inviteFormat":"/invite %nom","inviteGroupee":false,
+         "defaultsVersion":8,"equipes":[],"etiquettes":{},"hotKeys":[null],"inviteFormat":"/invite %nom","inviteGroupee":false,
          "killFrozenClients":true,"lireCombat":false,"lireCombatDerriere":false,"lirePosition":false,"menuBarIcon":"logo","iconeApp":{"motif":"oeuf","fond":"transparent"},"couleurDeLApp":"jade",
          "showClasses":true,"showNumbers":true,"showPreviewOnHover":false,
          "signalerBascule":true,"zaapAuto":false,
          "zaapGainMinimal":5,"zaapDuJeu":true,"zaapIntercalees":"/a","verifierMisesAJour":true,"partagerStatistiques":true,"zaapsAjoutes":[],"zaapsChoix":{},"zaapsFavoris":[],"zaapsVueCarte":true,
-         "lieuxFavoris":[],"pnjsFavoris":[],"paletteRecents":[],"paletteTri":"proximite","quetesEpinglees":[],"quetesEtape":{},
+         "lieuxFavoris":[],"pnjsFavoris":[],"paletteRecents":[],"paletteTri":"auto","paletteFrequentation":{},"quetesEpinglees":[],"quetesEtape":{},
          "quetesValides":{},"quetesMasquerObjets":false,
          "quetesCompact":true,"quetesConsigne":true,"quetesVignettes":false,
          "quetesEnCours":{},"quetesCocherSuivi":true,"quetesDecoches":{},"quetesCochesLues":{}}
@@ -805,6 +808,39 @@ extension PreferencesTests {
         let choisie = relue(invite: #"{"keyCode":34,"modifiers":256}"#)
         #expect(choisie.inviteHotKey == HotKey(keyCode: 34, modifiers: 256))
         #expect(choisie.paletteHotKey == HotKey.defaultPalette)
+    }
+}
+
+/// Le tri et les habitudes de la palette.
+extension PreferencesTests {
+    /// Une sauvegarde écrivait toujours son tri : l'ancien défaut passe à « Auto »,
+    /// un autre choix reste, un tri inconnu laisse le défaut sans rendre la sauvegarde illisible.
+    @Test("Génération 8 : le tri « Proximité » d'avant passe à « Auto », un autre choix reste")
+    func generationTriAuto() {
+        func relue(tri: String, generation: Int = 7) -> Preferences {
+            let ancien = """
+            {"characterOrder":["Aeryn"],"hotKeys":[],"barVisible":true,"showNumbers":true,
+             "defaultsVersion":\(generation),"paletteTri":"\(tri)"}
+            """
+            return Preferences.forTesting(store: StockageMemoire([Preferences.key: Data(ancien.utf8)]))
+        }
+        #expect(relue(tri: "proximite").paletteTri == .auto)
+        #expect(relue(tri: "alphabetique").paletteTri == .alphabetique)
+        #expect(relue(tri: "proximite", generation: 8).paletteTri == .proximite)
+        let inconnu = relue(tri: "venuDuFutur")
+        #expect(inconnu.paletteTri == .auto && inconnu.characterOrder == ["Aeryn"])
+    }
+
+    @Test("Les habitudes de la palette se relisent après sauvegarde")
+    func frequentationRelue() {
+        let (prefs, store) = neuves()
+        prefs.paletteFrequentation.noter("lieu:2738")
+        prefs.paletteFrequentation.noter("pnj:6309")
+        prefs.paletteFrequentation.noter("lieu:2738")
+        let relues = Preferences.forTesting(store: store)
+        #expect(relues.paletteFrequentation.comptes == [
+            "lieu:2738": .init(fois: 2, dernier: 3), "pnj:6309": .init(fois: 1, dernier: 2),
+        ])
     }
 }
 

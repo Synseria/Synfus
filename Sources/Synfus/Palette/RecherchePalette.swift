@@ -27,19 +27,18 @@ enum ActionPalette: Equatable, Sendable {
     }
 }
 
-/// Ce que Tab fait défiler : la famille de résultats montrée, ou ce qui est
-/// sur la case du perso (`ici`) : quêtes qui y commencent, PNJ, lieux.
+/// Ce que Tab fait défiler : la famille de résultats montrée — les zaaps sont
+/// des lieux, PNJ, monstres et boss des créatures —, ou ce qui est sur la case
+/// du perso (`ici`) : quêtes qui y commencent, PNJ, lieux.
 enum FiltrePalette: CaseIterable, Sendable {
-    case tout, zaaps, lieux, quetes, pnj, monstres, objets, ici
+    case tout, lieux, quetes, creatures, objets, ici
 
     var titre: String {
         switch self {
         case .tout: return L("palette.filtre.tout")
-        case .zaaps: return L("palette.filtre.zaaps")
         case .lieux: return L("palette.filtre.lieux")
         case .quetes: return L("palette.filtre.quetes")
-        case .pnj: return L("palette.filtre.pnj")
-        case .monstres: return L("palette.filtre.monstres")
+        case .creatures: return L("palette.filtre.creatures")
         case .objets: return L("palette.filtre.objets")
         case .ici: return L("palette.filtre.ici")
         }
@@ -48,11 +47,9 @@ enum FiltrePalette: CaseIterable, Sendable {
     func garde(_ entree: EntreePalette) -> Bool {
         switch self {
         case .tout: return true
-        case .zaaps: return entree.genre == .zaap
-        case .lieux: return entree.genre == .lieu
+        case .lieux: return entree.genre == .zaap || entree.genre == .lieu
         case .quetes: return entree.genre == .quete
-        case .pnj: return entree.genre == .pnj
-        case .monstres: return entree.genre == .monstre
+        case .creatures: return entree.genre == .pnj || entree.genre == .monstre
         case .objets: return entree.genre == .objet
         case .ici: return entree.ici
         }
@@ -65,12 +62,14 @@ enum FiltrePalette: CaseIterable, Sendable {
     }
 }
 
-/// L'ordre des résultats, après les zaaps qui passent toujours devant.
-enum TriPalette: String, CaseIterable, Codable, Sendable {
-    case proximite, alphabetique, type
+/// L'ordre des résultats : « Auto » (`ScorePalette`), ou un tri explicite
+/// après les zaaps, qui y passent toujours devant.
+enum TriPalette: String, CaseIterable, Sendable {
+    case auto, proximite, alphabetique, type
 
     var titre: String {
         switch self {
+        case .auto: return L("commun.auto")
         case .proximite: return L("palette.tri.proximite")
         case .alphabetique: return L("palette.tri.alphabetique")
         case .type: return L("palette.tri.type")
@@ -152,6 +151,18 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
     /// Le symbole propre à l'entrée (une commande, une variable) ; `nil` : celui de son genre.
     var symbole: String?
     let effet: Effet
+
+    /// La fiche d'un boss de donjon (`RecherchePalette.boss`) ou l'aide à son combat.
+    var estBoss: Bool {
+        switch effet {
+        case .donjon: return genre == .monstre
+        case .action(.boss): return true
+        default: return false
+        }
+    }
+
+    /// Après le reste : les monstres et objets par milliers, sauf les boss, qu'on cherche exprès.
+    var enDernier: Bool { genre.enDernier && !estBoss }
 }
 
 /// Ce que la recherche doit savoir du monde, figé à l'ouverture.
@@ -180,32 +191,33 @@ struct ContextePalette: Sendable {
     var quetes: Quetes?
     /// `nil` tant qu'ils ne sont pas téléchargés.
     var donjons: Donjons?
+    /// Les habitudes, que le tri « Auto » fait remonter.
+    var frequentation = FrequentationPalette()
 }
 
 /// La recherche de la palette. Pure : un texte et un contexte, des entrées
 /// triées. Les préfixes choisissent le mode — `/zaap`, `/travel`, `/invite`,
 /// `/` (commandes), `%` (variables) — ; sans préfixe, tout se cherche, dans
-/// la famille du filtre. Les zaaps passent toujours devant, puis le tri.
+/// la famille du filtre, rangé par le tri.
 enum RecherchePalette {
     static let limite = 200
 
     static func entrees(_ requete: String, _ contexte: ContextePalette,
-                        filtre: FiltrePalette = .tout, tri: TriPalette = .proximite) -> [EntreePalette] {
+                        filtre: FiltrePalette = .tout, tri: TriPalette = .auto) -> [EntreePalette] {
         entrees(requete, IndexPalette(contexte), filtre: filtre, tri: tri)
     }
 
     static func entrees(_ requete: String, _ index: IndexPalette,
-                        filtre: FiltrePalette = .tout, tri: TriPalette = .proximite) -> [EntreePalette] {
+                        filtre: FiltrePalette = .tout, tri: TriPalette = .auto) -> [EntreePalette] {
         let texte = requete.trimmingCharacters(in: .whitespaces)
         func classer(_ fiches: [Fiche], _ mots: [String]) -> [EntreePalette] {
-            RecherchePalette.classer(fiches, mots, tri: tri)
+            RecherchePalette.classer(fiches, mots, tri: tri, frequentation: index.contexte.frequentation)
         }
         if texte.isEmpty {
             // La grille : tous les favoris d'abord — zaaps, lieux, PNJ —, puis
             // les autres zaaps du plus proche ; sauf filtre sur une famille,
             // montrée entière.
             if filtre == .tout { return index.accueil }
-            if filtre == .zaaps { return index.zaaps.map(\.entree) }
             return classer(index.tout.filter { filtre.garde($0.entree) }, [])
         }
         if texte.hasPrefix("%") { return variables(texte) }
@@ -271,14 +283,17 @@ enum RecherchePalette {
         }
     }
 
-    /// Sans rien taper : les favoris, du plus proche au plus loin, puis les
-    /// autres zaaps. Un PNJ n'y paraît qu'à sa position habituelle.
+    /// Sans rien taper : les favoris, les plus choisis puis les plus proches
+    /// (`ScorePalette`), puis les autres zaaps. Un PNJ n'y paraît qu'à sa
+    /// position habituelle.
     static func accueil(_ contexte: ContextePalette, zaaps: [EntreePalette], lieux: [EntreePalette]) -> [EntreePalette] {
         let favorisPNJ = pnjs(contexte, seulement: contexte.favoris.filter { $0.hasPrefix(PNJ.prefixeCle) })
-        let favoris = (zaaps + lieux + favorisPNJ).filter(\.favori).enumerated().sorted { a, b in
-            comparerDistances(a.element, b.element) ?? (a.offset < b.offset)
+        let favoris = (zaaps + lieux + favorisPNJ).filter(\.favori)
+        let scores = favoris.map {
+            ScorePalette($0, correspondance: nil, compte: contexte.frequentation.compte(de: $0))
         }
-        return favoris.map(\.element) + zaaps.filter { !$0.favori }
+        let ordre = favoris.indices.sorted { ScorePalette.avant(scores[$0], scores[$1]) ?? ($0 < $1) }
+        return ordre.map { favoris[$0] } + zaaps.filter { !$0.favori }
     }
 
     /// Favoris d'abord, puis du plus proche au plus loin.
@@ -533,34 +548,86 @@ enum RecherchePalette {
         CategorieLieu.transport.rawValue: ["transport"],
     ]
 
+    /// Sous ce nombre de résultats exacts, la recherche tolère une faute de
+    /// frappe : chaque frappe sur les milliers de fiches n'en paie pas le coût.
+    static let seuilTolerance = 8
+
+    /// Une fiche retenue, son score calculé une fois : `premiers` compare souvent.
+    private struct Retenue {
+        let rang: Int
+        let score: ScorePalette
+    }
+
     /// Garde les entrées dont chaque mot tapé trouve un écho, puis les range :
-    /// les zaaps devant, les favoris en tête de chaque famille, puis le tri ;
-    /// à égalité, la meilleure correspondance (étiquette, nom, zone). Seules
-    /// les `limite` premières sont rangées (`premiers`) : une lettre en retient
-    /// des milliers.
-    private static func classer(_ fiches: [Fiche], _ mots: [String], tri: TriPalette) -> [EntreePalette] {
-        var retenues: [(rang: Int, score: Int)] = []
-        retenues.reserveCapacity(fiches.count)
-        for (rang, fiche) in fiches.enumerated() {
-            var score = 0
-            let garde = mots.allSatisfy { mot in
-                let points = fiche.champs.points(mot)
-                score += points
-                return points > 0
-            }
-            if garde { retenues.append((rang, score)) }
+    /// les monstres et objets en dernier (`enDernier`), puis « Auto »
+    /// (`ScorePalette`), ou les zaaps devant, les favoris en tête de chaque
+    /// famille et le tri explicite, à égalité la meilleure correspondance.
+    /// Trop peu d'échos exacts : les échos à une faute près (`approchees`)
+    /// viennent après eux. Seules les `limite` premières sont rangées
+    /// (`premiers`) : une lettre en retient des milliers.
+    private static func classer(_ fiches: [Fiche], _ mots: [String], tri: TriPalette,
+                                frequentation: FrequentationPalette) -> [EntreePalette] {
+        let habitudes = tri == .auto ? frequentation : FrequentationPalette()
+        func retenue(_ rang: Int, _ points: Int) -> Retenue {
+            let entree = fiches[rang].entree
+            return Retenue(rang: rang, score: ScorePalette(entree, correspondance: mots.isEmpty ? nil : points,
+                                                           compte: habitudes.compte(de: entree)))
         }
-        return premiers(retenues, limite) { a, b in
+        var exactes: [Retenue] = []
+        exactes.reserveCapacity(fiches.count)
+        for (rang, fiche) in fiches.enumerated() {
+            var points = 0
+            let garde = mots.allSatisfy { mot in
+                let echo = fiche.champs.points(mot)
+                points += echo
+                return echo > 0
+            }
+            if garde { exactes.append(retenue(rang, points)) }
+        }
+        let avant = { (a: Retenue, b: Retenue) -> Bool in
             let (fa, fb) = (fiches[a.rang], fiches[b.rang])
             let (ea, eb) = (fa.entree, fb.entree)
+            if ea.enDernier != eb.enDernier { return eb.enDernier }
+            if tri == .auto { return ScorePalette.avant(a.score, b.score) ?? (a.rang < b.rang) }
             if (ea.genre == .zaap) != (eb.genre == .zaap) { return ea.genre == .zaap }
-            if ea.genre.enDernier != eb.genre.enDernier { return eb.genre.enDernier }
             if ea.favori != eb.favori { return ea.favori }
-            if let ordre = comparer(fa, fb, tri) { return ordre }
-            if a.score != b.score { return a.score > b.score }
+            if let ordre = RecherchePalette.comparer(fa, fb, tri) { return ordre }
+            let (pa, pb) = (a.score.correspondance ?? 0, b.score.correspondance ?? 0)
+            if pa != pb { return pa > pb }
             return a.rang < b.rang
         }
-        .map { fiches[$0.rang].entree }
+        var rangees = premiers(exactes, limite, avant: avant)
+        if exactes.count < seuilTolerance {
+            let gardees = Set(exactes.map(\.rang))
+            let tolerees = approchees(fiches, mots, sauf: gardees).map { retenue($0.rang, $0.points) }
+            rangees += premiers(tolerees, limite - rangees.count, avant: avant)
+        }
+        return rangees.map { fiches[$0.rang].entree }
+    }
+
+    /// Les fiches dont chaque mot tapé trouve un écho, exact ou à une faute
+    /// près (`Champs.approche`), au moins un approché ; `sauf` : celles déjà
+    /// retenues par l'exact.
+    private static func approchees(_ fiches: [Fiche], _ mots: [String], sauf gardees: Set<Int>)
+        -> [(rang: Int, points: Int)] {
+        let motifs = mots.map { mot in
+            (mot: mot, fautes: Champs.tolerance(mot), forme: Ressemblance.Forme(mot))
+        }
+        guard motifs.contains(where: { $0.fautes != nil }) else { return [] }
+        var retenues: [(rang: Int, points: Int)] = []
+        for (rang, fiche) in fiches.enumerated() where !gardees.contains(rang) {
+            var points = 0, approche = false
+            let garde = motifs.allSatisfy { motif in
+                let echo = fiche.champs.points(motif.mot)
+                if echo > 0 { points += echo; return true }
+                guard let fautes = motif.fautes, fiche.champs.approche(motif.forme, tolerance: fautes) else { return false }
+                points += Champs.pointsApproches
+                approche = true
+                return true
+            }
+            if garde, approche { retenues.append((rang, points)) }
+        }
+        return retenues
     }
 
     /// Les `limite` premiers d'`elements` selon `avant` : ce que donnerait
@@ -587,9 +654,11 @@ enum RecherchePalette {
         return retenus
     }
 
-    /// `nil` à égalité.
+    /// Un tri explicite ; `nil` à égalité, et pour « Auto », que `ScorePalette` range.
     private static func comparer(_ a: Fiche, _ b: Fiche, _ tri: TriPalette) -> Bool? {
         switch tri {
+        case .auto:
+            return nil
         case .proximite:
             return comparerDistances(a.entree, b.entree)
         case .alphabetique:
@@ -602,12 +671,7 @@ enum RecherchePalette {
     }
 
     private static func comparerDistances(_ a: EntreePalette, _ b: EntreePalette) -> Bool? {
-        switch (a.distance, b.distance) {
-        case let (da?, db?) where da != db: return da < db
-        case (_?, nil): return true
-        case (nil, _?): return false
-        default: return nil
-        }
+        ScorePalette.plusProche(a.distance, b.distance)
     }
 
     /// Persos, puis lieux par catégorie (temples, hôtels de vente, ateliers…),
@@ -649,6 +713,10 @@ enum RecherchePalette {
         /// qu'aucun mot tapé ne contient : un seul passage pour un mot cherché
         /// au milieu d'un autre.
         private let interieur: String
+        /// Les mots du titre et de l'étiquette, prêts pour la borne basse de
+        /// `Ressemblance` : une fiche trop loin d'un mot approché s'écarte sans
+        /// calculer de distance.
+        private let forme: Ressemblance.Forme
 
         /// Tout ce dont les champs dépendent : une entrée qui garde sa clé garde ses champs.
         static func cle(_ entree: EntreePalette) -> String {
@@ -671,6 +739,7 @@ enum RecherchePalette {
                 + (categorie.flatMap { RecherchePalette.motsDeCategorie[$0] } ?? [])
             cleAlphabetique = Self.cleAlphabetique(nom)
             interieur = (self.titre + self.lieu).joined(separator: "\u{1F}")
+            forme = Ressemblance.Forme((self.titre + self.etiquette).joined(separator: " "))
         }
 
         /// Chaque suite de chiffres calée à droite sur `chiffres` : « 9 » avant « 10 ».
@@ -703,6 +772,31 @@ enum RecherchePalette {
             if lieu.contains(where: { $0.hasPrefix(mot) }) { return 40 }
             if mot.count >= 3, interieur.contains(mot) { return 20 }
             return 0
+        }
+
+        /// Moins que tout écho exact.
+        static let pointsApproches = 10
+
+        /// Un mot plus court ressemble à trop d'autres pour tolérer une faute.
+        static let lettresTolerees = 4
+
+        /// Les fautes qu'un mot tapé tolère : une, deux à partir de huit lettres ;
+        /// `nil` sous `lettresTolerees`.
+        static func tolerance(_ mot: String) -> Int? {
+            let lettres = mot.count
+            guard lettres >= lettresTolerees else { return nil }
+            return lettres >= 8 ? 2 : 1
+        }
+
+        /// Un mot du titre ou de l'étiquette commence à `tolerance` fautes près
+        /// par le mot tapé : « funoro » répond à « Founoroshi ».
+        func approche(_ motif: Ressemblance.Forme, tolerance: Int) -> Bool {
+            guard !motif.tropLoin(de: forme, tolerance: tolerance) else { return false }
+            func repond(_ mot: String) -> Bool {
+                mot.count >= Self.lettresTolerees
+                    && Ressemblance.distanceAuDebut(motif, Ressemblance.Forme(mot), auPlus: tolerance) != nil
+            }
+            return titre.contains(where: repond) || etiquette.contains(where: repond)
         }
     }
 

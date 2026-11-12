@@ -62,7 +62,7 @@ struct RecherchePaletteTests {
             objets: ["7294": ["fr": "Poils de Pétartifoux"], "2179": ["fr": "Dent de dragodinde"]],
             monstres: ["792": ["fr": "Bworkette"], "100": ["fr": "Amakna Bwork"]], nomsPNJ: [:], sousZones: [:],
             famillesObjets: ["2179": 9], familles: ["9": ["fr": "Ressource"]], emotes: [:], titres: [:], metiers: [:], camps: [:])
-        let monstres = RecherchePalette.entrees("", avecQuetes, filtre: .monstres)
+        let monstres = RecherchePalette.entrees("", avecQuetes, filtre: .creatures)
         #expect(monstres.map(\.titre) == ["Amakna Bwork", "Bworkette"])
         #expect(monstres.last?.effet == .ouTrouver(.monstre(792)) && RecherchePalette.texte(de: .ouTrouver(.monstre(792)), avecQuetes) == nil)
         let objets = RecherchePalette.entrees("", avecQuetes, filtre: .objets)
@@ -71,7 +71,7 @@ struct RecherchePaletteTests {
         // « amakna » : zaaps et lieux d'abord, le monstre après.
         let tout = RecherchePalette.entrees("amakna", avecQuetes)
         let monstre = try #require(tout.firstIndex { $0.genre == .monstre })
-        #expect(tout[..<monstre].allSatisfy { !$0.genre.enDernier } && tout[monstre...].allSatisfy(\.genre.enDernier))
+        #expect(tout[..<monstre].allSatisfy { !$0.enDernier } && tout[monstre...].allSatisfy(\.enDernier))
     }
 
     @Test("Un PNJ sur une carte intérieure est dit « intérieur » : /travel mène devant")
@@ -228,9 +228,9 @@ struct RecherchePaletteTests {
 
     // MARK: - Filtres et tris
 
-    @Test("Sans préfixe, les zaaps passent devant les lieux")
+    @Test("Un tri explicite : les zaaps passent devant les lieux")
     func zaapsDevant() {
-        let entrees = RecherchePalette.entrees("amakna", contexte())
+        let entrees = RecherchePalette.entrees("amakna", contexte(), tri: .proximite)
         let premierLieu = entrees.firstIndex { $0.genre == .lieu }
         let dernierZaap = entrees.lastIndex { $0.genre == .zaap }
         #expect(premierLieu != nil && dernierZaap != nil && dernierZaap! < premierLieu!)
@@ -238,16 +238,19 @@ struct RecherchePaletteTests {
 
     @Test("Le filtre ne garde qu'une famille ; vide, il liste la famille entière")
     func filtres() {
-        #expect(RecherchePalette.entrees("amakna", contexte(), filtre: .lieux).allSatisfy { $0.genre == .lieu })
+        let lieux = RecherchePalette.entrees("amakna", contexte(), filtre: .lieux)
+        #expect(lieux.contains { $0.genre == .zaap } && lieux.allSatisfy { $0.genre == .zaap || $0.genre == .lieu })
         #expect(RecherchePalette.entrees("", contexte(), filtre: .quetes).isEmpty)
         #expect(FiltrePalette.tout.suivant(-1) == FiltrePalette.allCases.last)
     }
 
-    @Test("Les trois tris : proximité, alphabétique, type")
+    @Test("Les tris explicites : proximité, alphabétique, type")
     func tris() {
         let proches = RecherchePalette.entrees("/travel banque", contexte(), tri: .proximite).compactMap(\.distance)
         #expect(proches == proches.sorted())
-        let titres = RecherchePalette.entrees("", contexte(), filtre: .lieux, tri: .alphabetique).map(\.titre)
+        // Les zaaps, devant, puis les lieux.
+        let titres = RecherchePalette.entrees("", contexte(), filtre: .lieux, tri: .alphabetique)
+            .filter { $0.genre == .lieu }.map(\.titre)
         #expect(titres == titres.sorted { $0.localizedStandardCompare($1) == .orderedAscending })
         let categories = RecherchePalette.entrees("", contexte(), filtre: .lieux, tri: .type).compactMap(\.categorie)
         #expect(categories == categories.sorted())
