@@ -148,6 +148,13 @@ final class LectureSuivi: ObservableObject {
         revoir()
     }
 
+    #if DEBUG
+    /// Un suivi lu d'exemple pour les captures (`CapturesTests`) : aucun écran n'est lu.
+    func poserPourCaptures(reconnues: [SuiviQuetes.Reconnue]) {
+        self.reconnues = reconnues
+    }
+    #endif
+
     /// Ce que le panneau montre : la dernière lecture du perso devant, et si
     /// l'écran l'a montrée il y a moins de `fraicheur`.
     private func revoir() {
