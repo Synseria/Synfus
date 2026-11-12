@@ -116,6 +116,8 @@ struct CapturesTests {
             .background(Color(red: 0.11, green: 0.11, blue: 0.13))
             .environment(\.colorScheme, Self.schema)
         try ecrire(vue, vers: dossier.appending(path: "chasse.png"))
+        ChasseModele.shared.poserEchecPourCaptures()
+        try ecrire(vue, vers: dossier.appending(path: "chasse-indisponible.png"))
     }
 
     @Test("Captures des réglages", .enabled(if: dossier != nil))
@@ -124,14 +126,23 @@ struct CapturesTests {
         try FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)
         equipe()
         CarteStore.shared.poserPourCaptures(Carte.integree)
+        QuetesStore.shared.poserPourCaptures(try QuetesTests.quetes())
         let toutes = ProcessInfo.processInfo.environment["SYNFUS_CAPTURES_TOUT"] != nil
-        let sections: [SettingsSection] = toutes ? SettingsSection.allCases : [.zaaps, .raccourcis, .lecture]
+        // `SYNFUS_CAPTURES_HAUTEUR` : la fenêtre plus haute, pour voir une page longue en entier.
+        let hauteur = ProcessInfo.processInfo.environment["SYNFUS_CAPTURES_HAUTEUR"].flatMap(Double.init) ?? 680
+        let sections: [SettingsSection] = toutes ? SettingsSection.allCases : [.carte, .raccourcis, .lecture]
         for (nom, section) in sections.map({ ("reglages-" + $0.rawValue, $0) }) {
-            let vue = SettingsView(onglet: OngletReglages(section))
+            let vue = SettingsView(onglet: OngletReglages(section), hauteur: CGFloat(hauteur))
                 .background(Color(nsColor: .windowBackgroundColor))
                 .environment(\.colorScheme, Self.schema)
             try ecrire(vue, vers: dossier.appending(path: nom + ".png"))
         }
+        // L'échec du téléchargement des quêtes : l'état occupe le bloc entier.
+        QuetesStore.shared.poserPourCaptures(nil, echec: "hors ligne")
+        let vue = SettingsView(onglet: OngletReglages(.quetes), hauteur: CGFloat(hauteur))
+            .background(Color(nsColor: .windowBackgroundColor))
+            .environment(\.colorScheme, Self.schema)
+        try ecrire(vue, vers: dossier.appending(path: "reglages-quetes-indisponibles.png"))
     }
 
     /// Par une fenêtre hors écran : `ImageRenderer` ne dessine ni champ de

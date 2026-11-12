@@ -68,12 +68,12 @@ sa bascule). Toute nouvelle option suit la règle.
   `coordinateSpace` sur le `VStack` : pastilles et secteurs dans un seul repère.
 - La rangée change la hauteur du panneau : `FloatingBarController.topEdge` tient le **bord
   haut** (AppKit garde l'origine en bas à gauche).
-- L'onglet Persos offre la même affectation par un `Picker` par ligne.
+- L'onglet Personnages offre la même affectation par un `Picker` par ligne.
 
 ## Vues des cartes — `Interface/ImagesCarte.swift`
 
 - Toute vue de carte passe par `VueCarte` (deux pixels par point de son plus grand côté, jamais
-  l'image entière) : `MiniatureCarte` (palette, onglets Lieux et PNJ, panneau des quêtes),
+  l'image entière) : `MiniatureCarte` (palette, listes des lieux et des PNJ, lignes de zaaps, panneau des quêtes),
   `FondCarte` (cases de zaaps), `ApercuCarte`. `ImagesDofusDB` décode hors main (ImageIO) et
   range les copies réduites dans un `NSCache` borné à 64 Mo décodés ; seules les images sans
   `cote` — emblèmes, pictogrammes, petits et en nombre fini — restent à vie. Masquée par
@@ -89,15 +89,20 @@ sa bascule). Toute nouvelle option suit la règle.
 
 ## Réglages et menu
 
-- `Reglages/SettingsView.swift` : barre latérale en groupes (`GroupeReglages`), un
-  onglet par sujet et peu de réglages par onglet — mieux vaut un onglet de plus qu'un onglet
-  chargé —, une vue par onglet, chacune une `PageReglages` (titre, ⓘ,
-  `Form` groupé) : aucune phrase à l'écran, une explication va dans `aide:`. Les onglets de longue liste (Zaaps, Lieux, Quêtes, PNJ) sont des `PageListe` : un `Form`
-  construit toutes ses lignes à l'ouverture (600 ms pour 300 lieux), la `LazyVStack` de `PageListe`
-  ne construit que ce qui paraît — chaque ligne y est un enfant direct, cadrée par `cadreDeListe` ;
-  tri et textes cherchés gardés par `ListeCherchable` (règle de la palette, `RecherchePalette.Champs`). Toute ligne passe par `Ligne` (libellé à gauche, contrôle à droite,
-  valeur ou état en gris par `etat:`, ⓘ), `Interrupteur` ou `RaccourciReglable` (doublons et réenregistrement) : c'est ce qui tient l'alignement — jamais un `HStack`
-  maison. Libellés sans deux-points ni « / ». Couleurs : `Color.jeton(\.chemin)` (jetons du design system ; l'onglet Thème règle la couleur de l'app et la teinte des fonds, Auto par défaut ; les icônes de l'app et de la barre de menus sont dans Général) ; dessin commun (états, boutons, touche, cartes, surface flottante) : `Interface/Composants.swift`, détail dans `reference/grille-ui.md`. `SettingsWindowController` doit appeler
+- `Reglages/SettingsView.swift` : barre latérale de dix entrées (`SettingsSection`) sous quatre petits
+  titres non repliables (`GroupeReglages`) : Synfus (Général + Statistiques, Thème), Personnages
+  (Personnages + Classes, Barre, Raccourcis + Enchaîner + Attention), En jeu (Palette + Invitations,
+  Carte = Trajets + Zaaps + Lieux, Quêtes + PNJ, Aides = Chasse + Boss), Avancé (Lecture de l'écran +
+  Diagnostic). Une page fusionnée est une suite de `Bloc`, jamais des onglets dans l'onglet. Chaque page est
+  une `PageReglages` (titre, défilement) de `Bloc` : une carte (`carte()`), un filet entre les lignes ; une
+  ligne est `Ligne` (libellé à gauche, contrôle à droite, valeur ou état en gris par `etat:`, explication en
+  `aide:`), `Interrupteur`, `RaccourciReglable`, ou toute vue passée par `.rangee()` — jamais un `HStack`
+  maison, jamais une carte dans une carte. Une longue liste (zaaps, lieux, quêtes, PNJ) est un
+  `Bloc(paresseux: true)` : ses lignes ne se construisent qu'à l'écran ; tri et textes cherchés gardés par
+  `ListeCherchable`. Un état vide, en attente ou en erreur est un `EtatDeBloc` qui prend le bloc entier
+  (« Nom indisponible » + « Réessayer », sans la cause). Aucune phrase à l'écran ; ⓘ au dernier recours
+  (`aide:` du bloc), sinon `infobulle:`. Libellés sans deux-points ni « / », jamais abrégés (« Personnage »,
+  pas « Perso »). Couleurs : `Color.jeton(\.chemin)` (jetons du design system ; l'onglet Thème règle la couleur de l'app et la teinte des fonds, Auto par défaut ; les icônes de l'app et de la barre de menus sont dans Général) ; dessin commun (états, boutons, touche, cartes, surface flottante) : `Interface/Composants.swift`, détail dans `reference/grille-ui.md`. `SettingsWindowController` doit appeler
   `NSApp.activate(ignoringOtherApps:)` (app accessory) ; la fenêtre s'ouvre sous la barre
   (`visibleBarFrame`), au centre sinon.
 - Un message qui dit « Réglages › … » s'accompagne d'un bouton qui y mène :

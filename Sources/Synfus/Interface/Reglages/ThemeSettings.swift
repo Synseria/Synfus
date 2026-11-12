@@ -5,7 +5,7 @@ import SwiftUI
 struct ThemeSettings: View {
     var body: some View {
         PageReglages(titre: L("reglages.theme")) {
-            Section {
+            Bloc {
                 ChoixDeCouleur()
                 ChoixDesFonds()
             }

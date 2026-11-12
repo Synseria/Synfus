@@ -1,9 +1,9 @@
 import SwiftUI
 
-/// Onglet Usage : l'interrupteur du partage, puis le JSON exact de ce qui part
-/// et ce que Synfus a compté. Compteurs montrés au seul partage : c'est ce qui
-/// donne envie de le laisser allumé.
-struct UsageSettings: View {
+/// Les statistiques, dans la page Général : l'interrupteur du partage, puis ce que Synfus a compté et le
+/// JSON exact de ce qui part. Compteurs montrés au seul partage : c'est ce qui donne envie de le laisser
+/// allumé.
+struct BlocsStatistiques: View {
     @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var usage = UsageStore.shared
     @State private var periode = Periode.semaine
@@ -30,43 +30,45 @@ struct UsageSettings: View {
     }
 
     var body: some View {
-        PageReglages(titre: L("reglages.usage")) {
-            Section {
-                Interrupteur(titre: L("stats.partager"), aide: L("stats.partager.aide"),
-                             isOn: $prefs.partagerStatistiques)
-                if prefs.partagerStatistiques {
-                    Ligne(titre: L("stats.dernierEnvoi"), etat: dernierEnvoi) {
+        Bloc(L("stats.titre")) {
+            Interrupteur(titre: L("stats.partager"), aide: L("stats.partager.aide"),
+                         isOn: $prefs.partagerStatistiques)
+            if prefs.partagerStatistiques {
+                Ligne(titre: L("stats.dernierEnvoi")) {
+                    HStack(spacing: Jetons.Espace.deux) {
+                        Text(dernierEnvoi).foregroundStyle(Color.jeton(\.encreSecondaire))
                         Button(L("stats.voirDonnees")) { donnees = true }
                     }
                 }
             }
-            if prefs.partagerStatistiques { compteurs }
         }
         .sheet(isPresented: $donnees) { DonneesEnvoyeesVue() }
+        if prefs.partagerStatistiques { compteurs }
     }
 
     @ViewBuilder
     private var compteurs: some View {
         let aujourdhui = UsageStore.aujourdhui()
         let totaux = usage.historique.totaux(sur: periode.jours, aujourdhui: aujourdhui)
-        Section {
-            Ligne(titre: L("stats.periode"), etat: depuis) {
-                Segments(L("stats.periode"), selection: $periode, choix: Periode.allCases.map { ($0, $0.libelle) })
+        Bloc {
+            Ligne(titre: L("stats.periode")) {
+                HStack(spacing: Jetons.Espace.deux) {
+                    if let depuis { Text(depuis).foregroundStyle(Color.jeton(\.encreSecondaire)) }
+                    Segments(L("stats.periode"), selection: $periode, choix: Periode.allCases.map { ($0, $0.libelle) })
+                }
             }
             if let moyennes = usage.historique.moyennesPersos(sur: periode.jours, aujourdhui: aujourdhui) {
-                valeur(L("stats.persosConnectes"), moyennes.connectes.formatted(.number.precision(.fractionLength(1))))
-                valeur(L("stats.persosJoues"), moyennes.joues.formatted(.number.precision(.fractionLength(1))))
+                valeur(L("stats.persosConnectes"), personnages(moyennes.connectes))
+                valeur(L("stats.persosJoues"), personnages(moyennes.joues))
             }
         }
         ForEach(EvenementUsage.Famille.allCases, id: \.self) { famille in
             let evenements = EvenementUsage.allCases.filter { $0.famille == famille && totaux[$0, default: 0] > 0 }
             if !evenements.isEmpty {
-                Section {
+                Bloc(titre(famille)) {
                     ForEach(evenements, id: \.self) { evenement in
                         valeur(evenement.libelle, totaux[evenement, default: 0].formatted())
                     }
-                } header: {
-                    SectionTitle(titre(famille))
                 }
             }
         }
@@ -76,6 +78,12 @@ struct UsageSettings: View {
         Ligne(titre: titre) {
             Text(texte).monospacedDigit().foregroundStyle(Color.jeton(\.encreSecondaire))
         }
+    }
+
+    /// Une moyenne de personnages, son unité accordée : en français, singulier jusqu'à deux (« 1,9 personnage »).
+    private func personnages(_ moyenne: Double) -> String {
+        let accord = L10n.courante.langue == .fr ? Int(moyenne) : (moyenne == 1 ? 1 : 2)
+        return L("stats.personnages", nombre: accord, moyenne.formatted(.number.precision(.fractionLength(1))))
     }
 
     private func titre(_ famille: EvenementUsage.Famille) -> String {
@@ -91,6 +99,7 @@ struct UsageSettings: View {
         return L("stats.depuis", premier.formatted(date: .long, time: .omitted))
     }
 
+    /// Une date à droite de la ligne, ou « Jamais » : la valeur, pas un sous-texte.
     private var dernierEnvoi: String {
         usage.historique.dernierEnvoi.map { $0.formatted(date: .abbreviated, time: .shortened) }
             ?? L("stats.jamais")

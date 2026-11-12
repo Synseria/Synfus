@@ -1,10 +1,11 @@
 import SwiftUI
 
-/// Onglet Raccourcis : rien que des combinaisons, une par ligne.
+/// Onglet Raccourcis : une combinaison par ligne, puis l'enchaînement au clic et la réaction à l'attention.
 struct ShortcutsSettings: View {
     @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var manager = WindowManager.shared
     @ObservedObject private var hotKeys = HotKeyManager.shared
+    @ObservedObject private var clicks = ClickAdvanceWatcher.shared
 
     /// Les combinaisons données deux fois : le système n'en enregistre qu'une,
     /// et l'autre ligne restait affichée comme si elle marchait.
@@ -18,21 +19,19 @@ struct ShortcutsSettings: View {
 
     var body: some View {
         PageReglages(titre: L("reglages.raccourcis")) {
-            Section {
-                // Une ligne par perso connecté : les emplacements suivent l'effectif.
+            // Une ligne par personnage connecté : les emplacements suivent l'effectif.
+            Bloc(L("raccourcis.allerAUnPerso"), infobulle: L("raccourcis.allerAUnPerso.aide")) {
                 ForEach(0..<min(manager.effectif.count, prefs.hotKeys.count), id: \.self) { slot in
                     ShortcutRow(label: L("raccourcis.perso", slot + 1), detail: manager.effectif[slot].name,
                                 conflit: enConflit(prefs.hotKeys[slot]),
                                 hotKey: binding(forSlot: slot))
                 }
                 if manager.effectif.isEmpty {
-                    Text(L("raccourcis.aucunPerso")).foregroundStyle(Color.jeton(\.encreSecondaire))
+                    EtatDeBloc(texte: L("barre.aucunPerso"))
                 }
-            } header: {
-                SectionTitle(L("raccourcis.allerAUnPerso"), help: L("raccourcis.allerAUnPerso.aide"))
             }
 
-            Section {
+            Bloc(L("raccourcis.naviguer")) {
                 RaccourciReglable(label: L("raccourcis.persoSuivant"), chemin: \.cycleNext)
                     .help(L("raccourcis.aide"))
                 RaccourciReglable(label: L("raccourcis.persoPrecedent"), chemin: \.cyclePrevious)
@@ -45,33 +44,79 @@ struct ShortcutsSettings: View {
                 }
                 Interrupteur(titre: L("raccourcis.signalerBascule"), aide: L("raccourcis.signalerBascule.aide"),
                              isOn: $prefs.signalerBascule)
-            } header: {
-                SectionTitle(L("raccourcis.naviguer"))
             }
 
-            Section {
+            Bloc(L("raccourcis.fenetres")) {
                 RaccourciReglable(label: L("raccourcis.ranger"), help: L("raccourcis.ranger.aide"), chemin: \.arrangeHotKey)
                 RaccourciReglable(label: L("raccourcis.lancerSession"), help: L("raccourcis.lancerSession.aide"), chemin: \.sessionHotKey)
                 if !prefs.equipes.isEmpty {
                     RaccourciReglable(label: L("raccourcis.equipeSuivante"), help: L("raccourcis.equipeSuivante.aide"), chemin: \.equipeSuivanteHotKey)
                 }
-            } header: {
-                SectionTitle(L("raccourcis.fenetres"))
             }
 
-            Section {
-                if !hotKeys.rejected.isEmpty {
-                    Avertissement(texte: L("raccourcis.refusees",
-                                           hotKeys.rejected.map(\.displayString).joined(separator: ", ")))
+            Bloc(L("reglages.enchainer")) {
+                Ligne(titre: L("raccourcis.enchainer.bascule"),
+                      aide: L("raccourcis.enchainer.aide") + "\n\n" + L("raccourcis.enchainer.touche.aide")) {
+                    HStack(spacing: Jetons.Espace.deux) {
+                        if prefs.advanceOnClick {
+                            Picker(L("raccourcis.enchainer.touche"), selection: $prefs.advanceModifier) {
+                                ForEach(ClickModifier.allCases) { Text($0.label).tag($0) }
+                            }
+                            .labelsHidden()
+                            .fixedSize()
+                        }
+                        Toggle(L("raccourcis.enchainer.bascule"), isOn: Binding(
+                            get: { prefs.advanceOnClick },
+                            set: { prefs.advanceOnClick = $0; ClickAdvanceWatcher.shared.apply() }
+                        ))
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                        .controlSize(.small)
+                    }
                 }
-                Ligne(titre: L("raccourcis.retablir.titre")) {
-                    Button(L("raccourcis.retablir")) {
+                if prefs.advanceOnClick {
+                    Ligne(titre: L("raccourcis.enchainer.clicsCaptes"),
+                          etat: clicks.lastModifiers.map { L("raccourcis.enchainer.dernierClic", $0) },
+                          aide: clicks.seenClicks == 0 ? L("raccourcis.enchainer.clicsCaptes.aide") : nil) {
+                        Text("\(clicks.seenClicks)")
+                            .monospacedDigit()
+                            .foregroundStyle(clicks.seenClicks == 0 ? Color.jeton(\.alerte) : Color.jeton(\.encreSecondaire))
+                    }
+                }
+            }
+
+            Bloc(L("reglages.attention")) {
+                Ligne(titre: L("raccourcis.attention.reaction"), aide: aideAttention) {
+                    Picker(L("raccourcis.attention.reaction"), selection: $prefs.attentionAction) {
+                        ForEach(AttentionAction.allCases) { Text($0.label).tag($0) }
+                    }
+                    .labelsHidden()
+                    .fixedSize()
+                }
+                RaccourciReglable(label: L("raccourcis.attention.bascule"), chemin: \.toggleAutoFocus)
+            }
+
+            Bloc {
+                if !hotKeys.rejected.isEmpty {
+                    Ligne(titre: L("raccourcis.refusees")) {
+                        HStack(spacing: Jetons.Espace.un) {
+                            ForEach(hotKeys.rejected.map(\.displayString), id: \.self) { ToucheRaccourci($0) }
+                        }
+                    }
+                }
+                Ligne(titre: L("raccourcis.tous")) {
+                    Button(L("commun.retablir")) {
                         prefs.resetShortcuts()
                         rebind()
                     }
                 }
             }
         }
+    }
+
+    private var aideAttention: String {
+        let reactions = AttentionAction.allCases.map { "\($0.label)\n\($0.explanation)" }
+        return ([L("raccourcis.attention.aide")] + reactions).joined(separator: "\n\n")
     }
 
     // MARK: - Utilitaires

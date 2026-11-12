@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// Onglet Lieux : les repères du jeu — banques, hôtels de vente, ateliers,
-/// temples, donjons, transports —, à étiqueter, mettre en favori, rejoindre.
-struct LieuxSettings: View {
+/// Les lieux : les repères du jeu — banques, hôtels de vente, ateliers, temples, donjons, transports —,
+/// à étiqueter, mettre en favori, rejoindre.
+struct BlocLieux: View {
     @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var carte = CarteStore.shared
     @State private var filtre = ""
@@ -15,12 +15,7 @@ struct LieuxSettings: View {
     var body: some View {
         let langue = L10n.courante.langue
         let lieux = montres(langue)
-        let affiches = Array(lieux.prefix(Self.limite).enumerated())
-        PageListe(titre: L("reglages.lieux")) {
-            SourceCarte().cadreDeListe(premiere: true, derniere: false)
-            InterrupteurVuesCartes().cadreDeListe(premiere: false, derniere: true)
-            EnTeteListe(titre: L("lieux.compte", lieux.count), aide: L("palette.reglages.lieux.aide"))
-                .help(L("lieux.aide"))
+        Bloc(L("reglages.lieux"), aide: L("palette.reglages.lieux.aide"), paresseux: true) {
             HStack(spacing: Jetons.Espace.deux) {
                 ChampFiltre(invite: L("lieux.filtrer"), texte: $filtre)
                 Picker(L("lieux.categorie"), selection: $categorie) {
@@ -29,11 +24,20 @@ struct LieuxSettings: View {
                 }
                 .labelsHidden()
                 .fixedSize()
-                Toggle(L("lieux.marques"), isOn: $marquesSeulement)
-                    .toggleStyle(.checkbox)
+                Button { marquesSeulement.toggle() } label: {
+                    Text(L("lieux.marques"))
+                        .font(Jetons.Typo.corps.police)
+                        .padding(.horizontal, Jetons.Espace.trois)
+                        .frame(height: Jetons.Taille.controle)
+                }
+                .buttonStyle(.etat(choisi: marquesSeulement, rayon: Jetons.Rayon.capsule))
+                .accessibilityAddTraits(marquesSeulement ? .isSelected : [])
             }
-            .cadreDeListe(premiere: true, derniere: affiches.isEmpty)
-            ForEach(affiches, id: \.element.cle) { rang, lieu in
+            .rangee()
+            if lieux.isEmpty {
+                EtatDeBloc.aucun(L("lieux.aucun"), recherche: filtre)
+            }
+            ForEach(lieux.prefix(Self.limite), id: \.cle) { lieu in
                 Ligne(titre: lieu.nom(en: langue), etat: Self.lieuDit(lieu, langue)) {
                     PictogrammeLieu(gfx: lieu.gfx) {
                         Image(systemName: "mappin.and.ellipse").foregroundStyle(Color.jeton(\.encreSecondaire))
@@ -47,12 +51,14 @@ struct LieuxSettings: View {
                         MiniatureCarte(carte: lieu.idCarte)
                     }
                 }
-                .cadreDeListe(premiere: false, derniere: rang == affiches.count - 1 && lieux.count <= Self.limite)
             }
             if lieux.count > Self.limite {
-                Text(L("lieux.affiner", lieux.count)).foregroundStyle(Color.jeton(\.encreSecondaire))
-                    .cadreDeListe(premiere: false, derniere: true)
+                Text(L("lieux.affiner", lieux.count)).foregroundStyle(Color.jeton(\.encreSecondaire)).rangee()
             }
+        } entete: {
+            Text(L("lieux.compte", lieux.count))
+                .font(Jetons.Typo.note.police)
+                .foregroundStyle(Color.jeton(\.encreSecondaire))
         }
     }
 

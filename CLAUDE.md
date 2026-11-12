@@ -118,7 +118,7 @@ nouveau fichier va dans le dossier de son domaine ; un fichier sans domaine en a
 | `Classes/` | `DofusClass` (table intégrée, `Catalogue`, purs), `ClassesDofusDB` (liste `breeds`, cache disque, fusion), `ClassesStore` (emblèmes DofusDB ou icône de l'utilisateur) |
 | `Marque/` | L'Œuf ajouré : `SynfusMark` (CoreGraphics pur, icône et glyphe), `Couvee` (l'autre motif), `IconeApp` (pur : motif × fond), `SynfusGlyph` (barre de menus, qui garde l'Œuf), `SigneSynseria` (`EmblemeSynseria` pur : cercles du SVG de la marque, planète à la `primaire` ; vue du signe) |
 | `Localisation/` | `L()`, choix de langue ; tables dans `Resources/Localisation/` |
-| `Interface/` | `Jetons` (engendré), `ThemeCourant` (le réglage × clair/sombre, seul code de couleur hors de Jetons), `MenuBarController`, `Confirmation` (la feuille « Verbe + objet ? »), `ConfirmationFermeture`, `Composants` (états, cartes, surface flottante, touche, boutons), `ImagesCarte` (vignette de carte, vue agrandie au survol, pictogramme d'un lieu) ; `Barre/` (barre flottante) ; `Reglages/` (une vue par onglet) |
+| `Interface/` | `Jetons` (engendré), `ThemeCourant` (le réglage × clair/sombre, seul code de couleur hors de Jetons), `MenuBarController`, `Confirmation` (la feuille « Verbe + objet ? »), `ConfirmationFermeture`, `Composants` (états, cartes, surface flottante, touche, boutons), `ImagesCarte` (vignette de carte, vue agrandie au survol, pictogramme d'un lieu) ; `Barre/` (barre flottante) ; `Reglages/` (une vue par page : `PageReglages` de `Bloc`) |
 
 ## Skills de domaine
 
