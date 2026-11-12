@@ -13,14 +13,18 @@ struct ChasseVue: View {
         VStack(alignment: .leading, spacing: 0) {
             entete
             Divider()
-            VStack(alignment: .leading, spacing: Jetons.Espace.deux) {
-                depart
-                boussole.frame(maxWidth: .infinity)
-                indice
-                lus
-                resultat
+            if indicesIndisponibles {
+                indisponibles
+            } else {
+                VStack(alignment: .leading, spacing: Jetons.Espace.deux) {
+                    depart
+                    boussole.frame(maxWidth: .infinity)
+                    indice
+                    lus
+                    resultat
+                }
+                .padding(Jetons.Espace.trois)
             }
-            .padding(Jetons.Espace.trois)
         }
         .frame(width: 216, alignment: .leading)
         .font(Jetons.Typo.note.police)
@@ -38,8 +42,26 @@ struct ChasseVue: View {
         }
     }
 
+    // MARK: - Indices indisponibles
+
+    /// Sans la liste des indices, rien ne se cherche : l'état occupe le panneau entier.
+    private var indicesIndisponibles: Bool {
+        modele.indices.isEmpty && modele.echecIndices != nil && !modele.chargementIndices
+    }
+
+    private var indisponibles: some View {
+        VStack(spacing: Jetons.Espace.deux) {
+            Text(L("chasse.indices.indisponibles")).foregroundStyle(Color.jeton(\.encreSecondaire))
+            Button(L("commun.reessayer")) { Task { await modele.chargerIndices(forcer: true) } }
+                .buttonStyle(.bouton(.secondaire, dense: true))
+        }
+        .frame(maxWidth: .infinity, minHeight: Jetons.Taille.rangeePalette * 3)
+        .padding(Jetons.Espace.trois)
+    }
+
     // MARK: - Départ
 
+    /// Les coordonnées de départ, centrées sous l'en-tête, avec la position du personnage à reprendre.
     private var depart: some View {
         HStack(spacing: Jetons.Espace.un) {
             Image(systemName: "flag").foregroundStyle(Color.jeton(\.encreSecondaire))
@@ -52,10 +74,11 @@ struct ChasseVue: View {
                 .buttonStyle(.bouton(.tertiaire, dense: true))
                 .disabled(LecteurEcran.shared.positionDuPersoDevant == nil)
                 .aide(L("chasse.depart.reprendre"))
-            Spacer()
         }
+        .multilineTextAlignment(.center)
         .textFieldStyle(.roundedBorder)
         .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Boussole
@@ -118,10 +141,9 @@ struct ChasseVue: View {
 
     private var indice: some View {
         VStack(alignment: .leading, spacing: Jetons.Espace.un) {
-            // L'attente s'écrit dans le champ lui-même, en gris, puis il redevient « Indice ».
-            TextField(L("chasse.indice"), text: $modele.saisie,
-                      prompt: Text(modele.indices.isEmpty && modele.echecIndices == nil
-                                   ? L("chasse.indices.chargement") : L("chasse.indice")))
+            // Ce que le champ attend s'écrit dans son texte d'exemple : le chargement, puis une direction,
+            // puis l'indice.
+            TextField(L("chasse.indice"), text: $modele.saisie, prompt: Text(attente))
                 .textFieldStyle(.roundedBorder)
                 .onSubmit { modele.validerSaisie() }
             ForEach(modele.suggestions, id: \.self) { cible in
@@ -133,18 +155,12 @@ struct ChasseVue: View {
                 }
                 .buttonStyle(.etat(nue: true))
             }
-            if modele.indices.isEmpty {
-                if let echec = modele.echecIndices, !modele.chargementIndices {
-                    HStack(spacing: Jetons.Espace.un) {
-                        Text(L("chasse.indices.echec", echec))
-                            .font(Jetons.Typo.petit.police)
-                            .foregroundStyle(Color.jeton(\.alerte))
-                        Button(L("quete.reessayer")) { Task { await modele.chargerIndices(forcer: true) } }
-                            .buttonStyle(.bouton(.secondaire, dense: true))
-                    }
-                }
-            }
         }
+    }
+
+    private var attente: String {
+        if modele.indices.isEmpty { return L("chasse.indices.chargement") }
+        return modele.direction == nil ? L("chasse.direction.choisir") : L("chasse.indice")
     }
 
     // MARK: - Indices lus
