@@ -1,8 +1,7 @@
 import SwiftUI
 
-/// Onglet Lecture de l'écran : lire la position et le combat par OCR, le
-/// calibrage de chaque zone, les zones lues, ce que ça coûte. L'activer est
-/// la demande d'autorisation — le seul endroit où la lecture la fait.
+/// Onglet Lecture de l'écran : lire la position et le combat par OCR, le calibrage de chaque zone, les
+/// zones lues, ce que ça coûte, puis le diagnostic de ce que Synfus voit.
 struct LectureSettings: View {
     @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var manager = WindowManager.shared
@@ -15,60 +14,73 @@ struct LectureSettings: View {
 
     var body: some View {
         PageReglages(titre: L("reglages.lecture")) {
-            Section {
-                Interrupteur(titre: L("diagnostic.lecture.position"), isOn: activation(\.lirePosition))
-                    .help(L("diagnostic.lecture.aide"))
-                Interrupteur(titre: L("diagnostic.lecture.combat"), isOn: activation(\.lireCombat))
-                if prefs.lireCombat {
-                    Interrupteur(titre: L("lecture.combatDerriere"), aide: L("lecture.combatDerriere.aide"),
-                                 isOn: $prefs.lireCombatDerriere)
+            // Chasse et suivi de quêtes se lisent à la demande, depuis leur panneau : leurs zones se
+            // calibrent même lecture éteinte. La position et le combat se lisent en continu, d'où leur
+            // interrupteur ; l'allumer est la demande d'autorisation, le seul endroit où la lecture la fait.
+            Bloc(L("lecture.zones"), aide: L("lecture.zones.aide")) {
+                if let resultat {
+                    Text(resultat).foregroundStyle(Color.jeton(\.encreSecondaire)).rangee()
                 }
-                if prefs.lirePosition || prefs.lireCombat {
+                ForEach(GenreLecture.allCases) { genre in
+                    ligneZone(genre)
+                    if genre == .combat, prefs.lireCombat {
+                        Interrupteur(titre: L("lecture.combatDerriere"), aide: L("lecture.combatDerriere.aide"),
+                                     isOn: $prefs.lireCombatDerriere)
+                    }
+                }
+            } entete: {
+                HStack(spacing: Jetons.Espace.deux) {
+                    if detection != nil, decompte == nil { ProgressView().controlSize(.small) }
+                    Button(decompte.map { L("calibration.decompte", $0) } ?? L("lecture.detecter.bouton")) {
+                        detection == nil ? detecter() : annuler()
+                    }
+                    .disabled(manager.clients.isEmpty || (detection != nil && decompte == nil))
+                    .help(L("lecture.detecter.aide"))
+                }
+            }
+            if prefs.lirePosition || prefs.lireCombat {
+                Bloc {
                     Ligne(titre: etatLecture,
                           etat: L("diagnostic.position.stats", lecture.lectures,
-                                       Int(lecture.derniereDuree * 1000), lecture.sautes)) {
+                                  Int(lecture.derniereDuree * 1000), lecture.sautes)) {
                         Button(L("diagnostic.position.toutLire")) { LecteurEcran.shared.toutLire() }
                             .help(L("diagnostic.position.toutLire.aide"))
                             .disabled(!previews.authorized || manager.clients.isEmpty)
                     }
                     .foregroundStyle(etatEnDefaut ? Color.jeton(\.alerte) : Color.jeton(\.encre))
                 }
-            }
-            // Chasse et suivi de quêtes se lisent à la demande, depuis leur
-            // panneau : leurs zones se calibrent même lecture éteinte.
-            Section {
-                Ligne(titre: L("lecture.detecter"), etat: resultat, aide: L("lecture.detecter.aide")) {
-                    HStack(spacing: Jetons.Espace.deux) {
-                        if detection != nil, decompte == nil { ProgressView().controlSize(.small) }
-                        Button(decompte.map { L("calibration.decompte", $0) } ?? L("lecture.detecter.bouton")) {
-                            detection == nil ? detecter() : annuler()
-                        }
-                        .disabled(manager.clients.isEmpty || (detection != nil && decompte == nil))
-                    }
-                }
-                ForEach(GenreLecture.allCases) { genre in
-                    Ligne(titre: genre.libelle,
-                          etat: prefs[keyPath: genre.reglage] == nil
-                              ? L("lecture.zone.defaut") : L("lecture.zone.calibree")) {
-                        Button(L("lecture.calibrer")) { calibrage = genre }
-                    }
-                }
-            } header: {
-                SectionTitle(L("lecture.zones"), help: L("lecture.zones.aide"))
-            }
-            if prefs.lirePosition || prefs.lireCombat {
-                Section {
-                    ForEach(GenreLecture.allCases) { genre in
-                        if let image = lecture.captures[genre] {
-                            zoneLue(genre, image)
+                if GenreLecture.allCases.contains(where: { lecture.captures[$0] != nil }) {
+                    Bloc(L("lecture.zonesLues")) {
+                        ForEach(GenreLecture.allCases) { genre in
+                            if let image = lecture.captures[genre] {
+                                zoneLue(genre, image)
+                            }
                         }
                     }
-                } header: {
-                    SectionTitle(L("lecture.zonesLues"))
                 }
             }
+            Text(L("reglages.diagnostic")).font(Jetons.Typo.titre.police)
+                .padding(.horizontal, Jetons.Espace.trois)
+            BlocsDiagnostic()
         }
         .sheet(item: $calibrage) { CalibrationZonesView(genre: $0) }
+    }
+
+    /// Une zone : son nom, son interrupteur s'il y en a un, « Calibrer ». Seul l'écart au normal s'écrit.
+    private func ligneZone(_ genre: GenreLecture) -> some View {
+        Ligne(titre: genre.libelle,
+              etat: prefs[keyPath: genre.reglage] == nil ? nil : L("lecture.zone.calibree"),
+              aide: genre == .position ? L("diagnostic.lecture.aide") : nil) {
+            HStack(spacing: Jetons.Espace.deux) {
+                if let chemin = genre.activation {
+                    Toggle(genre.libelle, isOn: activation(chemin))
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                        .controlSize(.small)
+                }
+                Button(L("lecture.calibrer")) { calibrage = genre }
+            }
+        }
     }
 
     /// Après le décompte (le temps de revenir au jeu), une capture du perso
@@ -140,6 +152,7 @@ struct LectureSettings: View {
                     .foregroundStyle(Color.jeton(\.encreTertiaire))
             }
         }
+        .rangee()
     }
 
     private var etatLecture: String {
@@ -158,6 +171,17 @@ struct LectureSettings: View {
         switch lecture.etat {
         case .nonAutorise, .sansCoordonnees, .echecCapture: return true
         default: return false
+        }
+    }
+}
+
+private extension GenreLecture {
+    /// L'interrupteur d'une lecture continue ; les autres genres se lisent à la demande.
+    @MainActor var activation: ReferenceWritableKeyPath<Preferences, Bool>? {
+        switch self {
+        case .position: \.lirePosition
+        case .combat: \.lireCombat
+        case .chasse, .quetes, .vie, .tchat: nil
         }
     }
 }

@@ -31,6 +31,18 @@ final class QuetesStore: ObservableObject {
         enVigueur?.nom(id)
     }
 
+    #if DEBUG
+    /// Les quêtes d'exemple (ou leur échec) des captures de la documentation (`CapturesTests`) : rien ne
+    /// se lit sur le disque ni ne se télécharge.
+    func poserPourCaptures(_ quetes: Quetes?, echec: String? = nil) {
+        lues = true
+        preparation = Task {}
+        self.quetes = quetes
+        enVigueur = quetes.map { QuetesEnVigueur($0, langue: L10n.courante.langue) }
+        self.echec = echec
+    }
+    #endif
+
     func preparer() {
         guard preparation == nil, !chargement else { return }
         let lire = !lues
