@@ -50,6 +50,14 @@ final class ChasseModele: ObservableObject {
         return IndicesChasse.rechercher(saisie, parmi: indices, langue: langue, limite: 6).map(EtapeChasse.Cible.indice)
     }
 
+    #if DEBUG
+    /// Les indices indisponibles, pour la capture de la documentation (`CapturesTests`).
+    func poserEchecPourCaptures() {
+        indices = []
+        echecIndices = "hors ligne"
+    }
+    #endif
+
     // MARK: - Ouverture
 
     /// À l'ouverture du panneau : le départ là où se tient le perso devant,
