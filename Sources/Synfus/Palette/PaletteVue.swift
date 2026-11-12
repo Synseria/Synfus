@@ -68,16 +68,20 @@ struct PaletteVue: View {
         HStack(spacing: Jetons.Espace.un) {
             ForEach(FiltrePalette.allCases, id: \.self) { filtre in
                 let choisi = modele.filtre == filtre
-                let etat: EtatVisuel = choisi ? .courant : EtatVisuel(survole: filtreSurvole == filtre)
-                Text(filtre.titre)
-                    .font((choisi ? Jetons.Typo.raccourci : Jetons.Typo.petit).police)
-                    .foregroundStyle(choisi ? etat.encre : etat.encreSecondaire)
-                    .padding(.horizontal, Jetons.Espace.deux)
-                    .frame(height: Jetons.Taille.cibleMin)
-                    .fondEtat(etat, rayon: Jetons.Rayon.capsule)
-                    .onHover { filtreSurvole = $0 ? filtre : nil }
-                    .onTapGesture { modele.choisir(filtre) }
-                    .accessibilityAddTraits(choisi ? [.isButton, .isSelected] : .isButton)
+                let etat: EtatVisuel = choisi ? .choisi : EtatVisuel(survole: filtreSurvole == filtre)
+                // Tab et ⇧Tab parcourent les filtres (le panneau) : aucun d'eux ne prend le focus.
+                Button { modele.choisir(filtre) } label: {
+                    Text(filtre.titre)
+                        .font((choisi ? Jetons.Typo.raccourci : Jetons.Typo.petit).police)
+                        .foregroundStyle(choisi ? etat.encre : etat.encreSecondaire)
+                        .padding(.horizontal, Jetons.Espace.deux)
+                        .frame(height: Jetons.Taille.cibleMin)
+                        .fondEtat(etat, rayon: Jetons.Rayon.capsule)
+                }
+                .buttonStyle(.plain)
+                .elementDeGroupe()
+                .onHover { filtreSurvole = $0 ? filtre : nil }
+                .accessibilityAddTraits(choisi ? .isSelected : [])
             }
             Spacer(minLength: Jetons.Espace.deux)
             Label(modele.tri.titre, systemImage: "arrow.up.arrow.down")
@@ -274,27 +278,27 @@ struct PaletteVue: View {
         }
     }
 
-    /// Ce qu'Entrée fera de la sélection — le texte même qui sera copié.
+    /// Ce qu'Entrée fera de la sélection, en un verbe.
     private var entree: String {
-        guard modele.entrees.indices.contains(modele.selection) else { return L("palette.touche.valider") }
+        guard modele.entrees.indices.contains(modele.selection) else { return L("palette.touche.copier") }
         let entree = modele.entrees[modele.selection]
         if entree.id == modele.deplie {
             return modele.cartes.valide(modele.carte).map(aide) ?? L("palette.touche.replier")
         }
         switch entree.effet {
-        case .copier, .trajet: return L("palette.touche.copier", modele.texteACopier(entree) ?? "")
+        case .copier, .trajet: return L("palette.touche.copier")
         case .completer: return L("palette.touche.completer")
         case .action: return L("palette.touche.faire")
         case .ouvrirQuete: return L("palette.touche.ouvrir")
         case .ouTrouver: return L("palette.touche.ouTrouver")
-        case .donjon: return L("palette.touche.fiche")
+        case .donjon: return L("palette.touche.deplier")
         }
     }
 
     private func aide(_ action: ActionFiche) -> String {
         switch action {
-        case .entree(let lieu): return L("palette.touche.copier", modele.trajet(vers: lieu) ?? "")
-        case .guide: return L("palette.touche.guide")
+        case .entree(let lieu): return L("palette.touche.copier")
+        case .guide: return L("palette.touche.ouvrir")
         case .clef, .conseils, .monstres, .succes:
             return modele.ouvertes.contains(action) ? L("palette.touche.replier") : L("palette.touche.deplier")
         }
@@ -313,6 +317,8 @@ private struct CarteZaap: View {
     let entree: EntreePalette
     let choisie: Bool
 
+    private var etat: EtatVisuel { choisie ? .choisi : .repos }
+
     var body: some View {
         VStack(alignment: .leading, spacing: Jetons.Espace.un) {
             HStack(spacing: Jetons.Espace.un) {
@@ -329,15 +335,16 @@ private struct CarteZaap: View {
             HStack(spacing: Jetons.Espace.un) {
                 Text(entree.itineraire ?? entree.sousTitre ?? "")
                     .lineLimit(1)
-                    .foregroundStyle(Color.jeton(\.encreSecondaire))
+                    .foregroundStyle(etat.encreSecondaire)
                 Spacer(minLength: 0)
                 Text(entree.detail ?? "")
                     .font(Jetons.Typo.codeInterface.police)
-                    .foregroundStyle(Color.jeton(\.encreSecondaire))
+                    .foregroundStyle(etat.encreSecondaire)
             }
             .font(Jetons.Typo.petit.police)
         }
         .padding(Jetons.Espace.deux)
+        .foregroundStyle(etat.encre)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background { FondCarte(carte: entree.carte, teinte: choisie ? Color.jeton(\.primaireFond) : nil) }
         .contentShape(Rectangle())
@@ -361,10 +368,12 @@ private struct LigneResultat: View {
             }
             .frame(width: Jetons.Taille.cibleMin, height: Jetons.Taille.cibleMin)
             .frame(width: Jetons.Taille.rangee, height: Jetons.Taille.rangee)
-            .background(RoundedRectangle(cornerRadius: Jetons.Rayon.pastille, style: .continuous).fill(Color.jeton(\.creux)))
+            // Le carré teinté de l'icône ; sur la rangée choisie, qui l'est déjà, il passe en `surface`.
+            .background(RoundedRectangle(cornerRadius: Jetons.Rayon.pastille, style: .continuous)
+                .fill(Color.jeton(choisie ? \.surface : \.primaireFond)))
             VStack(alignment: .leading, spacing: Jetons.Espace.un) {
                 HStack(spacing: Jetons.Espace.un) {
-                    Text(entree.titre).font(Jetons.Typo.corps.police).lineLimit(1)
+                    Text(entree.titre).font(Jetons.Typo.corps.police).foregroundStyle(etat.encre).lineLimit(1)
                     if let etiquette = entree.etiquette { PastilleEtiquette(texte: etiquette) }
                     if entree.favori {
                         Image(systemName: "star.fill").font(Jetons.Typo.micro.police).foregroundStyle(Color.jeton(\.safranTexte))
@@ -373,9 +382,10 @@ private struct LigneResultat: View {
                 }
                 if entree.sousTitre != nil || entree.itineraire != nil {
                     HStack(spacing: Jetons.Espace.un) {
-                        if let sousTitre = entree.sousTitre { Text(sousTitre).foregroundStyle(Color.jeton(\.encreSecondaire)) }
+                        if let sousTitre = entree.sousTitre { Text(sousTitre).foregroundStyle(etat.encreSecondaire) }
                         // Le zaap retenu, à lire avant d'Entrée : le trajet copié y passe.
                         if let itineraire = entree.itineraire {
+                            if entree.sousTitre != nil { Text("·").foregroundStyle(etat.encreSecondaire) }
                             Text(itineraire).foregroundStyle(Color.jeton(\.primaireEncre)).layoutPriority(1)
                         }
                     }
@@ -387,7 +397,7 @@ private struct LigneResultat: View {
             if let detail = entree.detail {
                 Text(detail)
                     .font(Jetons.Typo.codeInterface.police)
-                    .foregroundStyle(Color.jeton(\.encreSecondaire))
+                    .foregroundStyle(etat.encreSecondaire)
                     .lineLimit(1)
             }
             if let carte = entree.carte { MiniatureCarte(carte: carte, taille: Self.vignette) }
@@ -400,14 +410,17 @@ private struct LigneResultat: View {
         }
         .padding(.horizontal, Jetons.Espace.deux)
         .padding(.vertical, Jetons.Espace.un)
-        .fondEtat(choisie ? .choisi : EtatVisuel(survole: survole))
+        .fondEtat(etat)
         .onHover { survole = $0 }
     }
+
+    private var etat: EtatVisuel { choisie ? .choisi : EtatVisuel(survole: survole) }
 
     /// À la hauteur d'une ligne de deux textes : la liste ne s'allonge pas.
     private static let vignette = CGSize(width: 46, height: 32)
 
     private var icone: String {
+        if let symbole = entree.symbole { return symbole }
         switch entree.genre {
         case .zaap: return "point.3.connected.trianglepath.dotted"
         case .lieu: return "mappin.and.ellipse"
