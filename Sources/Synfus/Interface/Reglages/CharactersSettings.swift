@@ -25,6 +25,15 @@ struct CharactersSettings: View {
         }
     }
 
+    private func confirmerRetrait(_ nom: String) {
+        Task {
+            let demande = DemandeConfirmation(
+                titre: L("persos.retirer.confirmation", nom), detail: L("persos.retirer.detail"),
+                verbe: L("commun.retirer"))
+            if await Confirmation.demander(demande) { prefs.forget(name: nom) }
+        }
+    }
+
     var body: some View {
         PageReglages(titre: L("reglages.personnages")) {
             Bloc(L("persos.ordre"), aide: L("persos.ordre.aide") + "\n\n" + L("persos.equipes.aide")) {
@@ -101,7 +110,7 @@ struct CharactersSettings: View {
             return true
         }
         .contextMenu {
-            Button(L("persos.retirer")) { prefs.forget(name: name) }
+            Button(L("persos.retirer")) { confirmerRetrait(name) }
         }
     }
 

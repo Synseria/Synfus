@@ -360,6 +360,12 @@ struct CombatBadge: View {
         }
     }
 
+    /// Le rose du jeu marque mon tour ; hors de là, la pastille est neutre.
+    private var surRose: Bool {
+        if case .monTour = etat { return true }
+        return false
+    }
+
     /// Le décompte s'il est connu, l'épée sinon.
     @ViewBuilder
     private func pastille(_ texte: String?) -> some View {
@@ -375,8 +381,9 @@ struct CombatBadge: View {
                     .padding(Jetons.Espace.un)
             }
         }
-        .foregroundStyle(Color.white)
-        .background(Capsule().fill(etat.enCombat && etat != .pasMonTour && etat != .placement ? Self.rose : Color.jeton(\.encreSecondaire)))
+        // Le blanc ne vaut que sur le rose du jeu ; sur l'encre du thème, c'est la couleur de la fenêtre qui contraste.
+        .foregroundStyle(surRose ? Color.white : Color.jeton(\.fenetre))
+        .background(Capsule().fill(surRose ? Self.rose : Color.jeton(\.encreSecondaire)))
         .offset(x: Jetons.Espace.un, y: -Jetons.Espace.un)
     }
 }
