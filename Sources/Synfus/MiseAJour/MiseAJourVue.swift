@@ -32,10 +32,15 @@ struct ActionMiseAJour: View {
                 .buttonStyle(.bouton(.principal))
         case .echec(.ecriture, let version):
             Button(L("maj.telecharger")) { NSWorkspace.shared.open(version.page) }
+                .buttonStyle(.bouton(.secondaire))
         case .echec:
             Button(L("maj.reessayer")) { miseAJour.proposer() }
+                .buttonStyle(.bouton(.secondaire))
         case .inconnu, .aJour:
-            if prefs.verifierMisesAJour { Button(L("maj.rechercher")) { miseAJour.verifier() } }
+            if prefs.verifierMisesAJour {
+                Button(L("maj.rechercher")) { miseAJour.verifier() }
+                    .buttonStyle(.bouton(.secondaire))
+            }
         }
     }
 }

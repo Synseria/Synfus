@@ -70,9 +70,9 @@ struct Ligne<Controle: View, Icone: View>: View {
     }
 
     var body: some View {
-        LabeledContent {
-            controle
-        } label: {
+        // Le contrôle se centre sur le bloc entier du libellé (titre et état), jamais accroché à sa
+        // dernière ligne : c'est ce qui tient l'alignement des lignes à état.
+        HStack(alignment: .center, spacing: Jetons.Espace.trois) {
             HStack(spacing: Jetons.Espace.deux) {
                 icone
                 VStack(alignment: .leading, spacing: Jetons.Espace.un) {
@@ -85,6 +85,8 @@ struct Ligne<Controle: View, Icone: View>: View {
                     }
                 }
             }
+            Spacer(minLength: Jetons.Espace.trois)
+            controle
         }
         // L'explication d'une ligne est une infobulle sur toute la ligne, jamais un ⓘ : le seul ⓘ d'un
         // bloc est celui de son titre (`SectionTitle`).

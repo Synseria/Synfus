@@ -81,4 +81,32 @@ struct JetonsTests {
             }
         }
     }
+
+    @Test("Un bouton prend un des quatre rangs, un segment le composant commun")
+    func boutonsEtSegments() throws {
+        // Les réglages héritent du rang secondaire posé sur leur volet (`SettingsView`) ; les barres d'icônes
+        // et le menu contextuel de la palette sont hors rangs.
+        let heritent: Set<String> = ["Reglages", "Barre", "PaletteVue.swift"]
+        let racine = try String(contentsOf: SourcesDuDepot.dossier.appendingPathComponent("Interface/Reglages/SettingsView.swift"),
+                                encoding: .utf8)
+        #expect(racine.contains(".buttonStyle(.bouton(.secondaire))"))
+        for url in SourcesDuDepot.fichiers() {
+            let texte = try code(url).joined(separator: "\n")
+            #expect(!texte.contains(".pickerStyle(.segmented)"), "\(url.lastPathComponent) : utiliser `Segments`")
+            let exempt = url.pathComponents.contains { heritent.contains($0) } || heritent.contains(url.lastPathComponent)
+            if !exempt, texte.contains(/(^|[^A-Za-z])Button\s*[({]/) {
+                #expect(texte.contains(".buttonStyle("), "\(url.lastPathComponent) : un bouton sans rang")
+            }
+        }
+    }
+
+    @Test("Les points de suspension sont le caractère « … », jamais trois points")
+    func pointsDeSuspension() throws {
+        let tables = SourcesDuDepot.dossier.deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Resources/Localisation")
+        for langue in ["fr", "en", "es"] {
+            let texte = try String(contentsOf: tables.appendingPathComponent("\(langue).json"), encoding: .utf8)
+            #expect(!texte.contains("..."), "\(langue).json")
+        }
+    }
 }
