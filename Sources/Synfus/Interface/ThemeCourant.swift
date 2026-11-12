@@ -36,7 +36,7 @@ enum ThemeCourant {
     /// Dynamique : la fermeture ne garde que les deux couleurs déjà calculées, jamais les préférences.
     fileprivate static func nsColor(_ jeton: Jeton) -> NSColor {
         let reglage = ThemeCourant.reglage
-        let (clair, sombre) = (theme(.clair, reglage)[keyPath: jeton].nsColor, theme(.sombre, reglage)[keyPath: jeton].nsColor)
+        let (clair, sombre) = (NSColor(theme(.clair, reglage)[keyPath: jeton].couleur), NSColor(theme(.sombre, reglage)[keyPath: jeton].couleur))
         return NSColor(name: nil) { dessin in
             dessin.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? sombre : clair
         }
@@ -46,17 +46,6 @@ enum ThemeCourant {
 extension Color {
     /// Un jeton du thème courant.
     @MainActor static func jeton(_ jeton: ThemeCourant.Jeton) -> Color { Color(nsColor: ThemeCourant.nsColor(jeton)) }
-}
-
-extension NSColor {
-    @MainActor static func jeton(_ jeton: ThemeCourant.Jeton) -> NSColor { ThemeCourant.nsColor(jeton) }
-}
-
-extension Jetons.RVB {
-    var nsColor: NSColor {
-        NSColor(srgbRed: CGFloat(hex >> 16 & 0xff) / 255, green: CGFloat(hex >> 8 & 0xff) / 255,
-                blue: CGFloat(hex & 0xff) / 255, alpha: opacite)
-    }
 }
 
 /// À poser sur la racine de chaque fenêtre : sans elle, un contrôle du système y prend l'accent
