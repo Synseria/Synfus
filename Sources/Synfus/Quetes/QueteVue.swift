@@ -82,35 +82,45 @@ struct QueteVue: View {
     /// d'un clic, et où en chercher une autre. Quêtes indisponibles : le nom,
     /// et de quoi réessayer.
     private var vide: some View {
-        VStack(spacing: Jetons.Espace.deux) {
-            if store.quetes == nil, !store.chargement, store.echec != nil {
-                Text(L("quete.indisponible"))
-                    .font(Jetons.Typo.note.police)
-                    .foregroundStyle(Color.jeton(\.alerte))
-                    .multilineTextAlignment(.center)
-                Button(L("commun.reessayer")) { Task { try? await store.mettreAJour() } }
-            } else {
-                Text(store.chargement ? L("palette.quetes.chargement") : L("quete.aucune"))
-                    .font(Jetons.Typo.note.police)
-                    .foregroundStyle(Color.jeton(\.encreSecondaire))
-                    .multilineTextAlignment(.center)
-                    .help(L("quete.aucune.aide"))
-                let lues = lecture.reconnues.compactMap { reconnue in store.nom(reconnue.id).map { (reconnue, $0) } }
-                if !lues.isEmpty {
-                    Text(L("quete.vide.suivi")).font(Jetons.Typo.raccourci.police).foregroundStyle(Color.jeton(\.encreSecondaire))
-                    ForEach(lues, id: \.0.id) { reconnue, nom in
-                        Button { lecture.choisir(reconnue) } label: { Label(nom, systemImage: "pin") }
-                            .buttonStyle(.bouton(.tertiaire, dense: true))
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: Jetons.Espace.deux) {
+                    if store.quetes == nil, !store.chargement, store.echec != nil {
+                        Text(L("quete.indisponible"))
+                            .font(Jetons.Typo.note.police)
+                            .foregroundStyle(Color.jeton(\.alerte))
+                        Button(L("commun.reessayer")) { Task { try? await store.mettreAJour() } }
+                    } else {
+                        Text(store.chargement ? L("palette.quetes.chargement") : L("quete.aucune"))
+                            .font(Jetons.Typo.note.police)
+                            .foregroundStyle(Color.jeton(\.encreSecondaire))
+                            .help(L("quete.aucune.aide"))
+                        let lues = lecture.reconnues.compactMap { reconnue in store.nom(reconnue.id).map { (reconnue, $0) } }
+                        if !lues.isEmpty {
+                            Text(L("quete.vide.suivi")).font(Jetons.Typo.raccourci.police).foregroundStyle(Color.jeton(\.encreSecondaire))
+                            ForEach(lues, id: \.0.id) { reconnue, nom in
+                                Button { lecture.choisir(reconnue) } label: {
+                                    Label { Text(nom).multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true) }
+                                        icon: { Image(systemName: "pin") }
+                                }
+                                .buttonStyle(.bouton(.tertiaire, dense: true))
+                            }
+                        }
                     }
                 }
+                .padding(Jetons.Espace.quatre)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             Button(L("quete.chercher")) {
                 PalettePanel.shared.ouvrir()
                 PaletteModele.shared.requete = "/quete "
             }
             .buttonStyle(.bouton(.principal, dense: true))
+            .padding(.horizontal, Jetons.Espace.quatre)
+            // Au-dessus de la bande de la poignée de redimensionnement.
+            .padding(.bottom, Jetons.Taille.touche + 2 * Jetons.Espace.un)
+            .padding(.top, Jetons.Espace.un)
         }
-        .padding(Jetons.Espace.quatre)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
@@ -125,21 +135,16 @@ struct QueteVue: View {
 
     // MARK: - En-tête du panneau
 
-    /// Le menu des quêtes au nom de la montrée, seul endroit où il paraît, puis de quoi
-    /// la désépingler et cacher le panneau. Tout l'en-tête déplace le panneau,
-    /// sauf les boutons ; un clic sur le titre ouvre le menu (`EnTetePanneau`).
+    /// Le menu des quêtes au nom de la montrée, seul endroit où il paraît : on y désépingle,
+    /// et le panneau se ferme par le menu de la barre de menus. Tout l'en-tête déplace
+    /// le panneau ; un clic sur le titre ouvre le menu (`EnTetePanneau`).
     private var enTete: some View {
         let montree = ficheImposee?.id ?? panneau.idMontre
         return EnTetePanneau(icone: "scroll", teinte: Color.jeton(\.primaire),
                              menu: ficheImposee == nil ? { @MainActor in QuetePanel.shared.menu() } : nil) {
             menuQuetes(titre: ficheImposee?.nom ?? montree.flatMap { store.nom($0) } ?? L("quete.menu.titre"))
             if lecture.etat == .enCours { ProgressView().controlSize(.mini).padding(.leading, Jetons.Espace.un) }
-        } boutons: {
-            if let montree {
-                BoutonEnTete(icone: "pin.slash", aide: L("quete.desepingler")) { QuetePanel.shared.desepingler(montree) }
-            }
-            BoutonEnTete(icone: "minus", aide: L("quete.fermer")) { QuetePanel.shared.fermer() }
-        }
+        } boutons: {}
     }
 
     /// Le nom de la quête montrée, ▾ : le menu (`QuetePanel.menu`, ouvert par
@@ -148,7 +153,7 @@ struct QueteVue: View {
     private func menuQuetes(titre: String) -> some View {
         let nouvelles = MenuQuetes.nouvelles(lecture.reconnues, epinglees: prefs.quetesEpinglees)
         return HStack(spacing: Jetons.Espace.un) {
-            Text(titre).font(metriques.titreFort.police).lineLimit(3).fixedSize(horizontal: false, vertical: true)
+            Text(titre).font(metriques.titreFort.police).lineLimit(2).fixedSize(horizontal: false, vertical: true)
                 .help(titre)
             Image(systemName: "chevron.down").font(Jetons.Typo.micro.police).foregroundStyle(Color.jeton(\.encreSecondaire))
             if nouvelles > 0, ficheImposee == nil {

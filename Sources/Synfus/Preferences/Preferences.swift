@@ -204,8 +204,11 @@ final class Preferences: ObservableObject {
     /// Les derniers textes copiés depuis la palette, le plus récent d'abord.
     @Published var paletteRecents: [String] = [] { didSet { save() } }
 
-    /// L'ordre des résultats de la palette, après les zaaps (⌘T).
-    @Published var paletteTri: TriPalette = .proximite { didSet { save() } }
+    /// L'ordre des résultats de la palette (⌘T).
+    @Published var paletteTri: TriPalette = .auto { didSet { save() } }
+
+    /// Les entrées de la palette choisies, combien de fois : le tri « Auto » les fait remonter.
+    @Published var paletteFrequentation = FrequentationPalette() { didSet { save() } }
 
     /// Les quêtes épinglées dans leur panneau, dans l'ordre d'ouverture.
     @Published var quetesEpinglees: [Int] = [] { didSet { save() } }
@@ -372,7 +375,7 @@ final class Preferences: ObservableObject {
     /// reprise correspondante dans `adoptDefaults` — chaque fois que les défauts
     /// changent, sans quoi les installations existantes resteraient sur les
     /// anciens à jamais.
-    static let defaultsVersion = 7
+    static let defaultsVersion = 8
 
     /// Les défauts de la génération 1, ceux qu'une installation existante peut
     /// encore porter sans que l'utilisateur les ait choisis. Seules ces
@@ -384,6 +387,8 @@ final class Preferences: ObservableObject {
     private static let legacyToggleAutoFocus = HotKey(keyCode: 50, modifiers: UInt32(cmdKey))
     /// ⌘:, l'invitation des générations 6 : la palette le prend en 7.
     private static let legacyInvite = HotKey(keyCode: 47, modifiers: UInt32(cmdKey))
+    /// Le tri de la palette jusqu'à la génération 7.
+    private static let legacyPaletteTri = TriPalette.proximite
 
     /// Fait passer une sauvegarde ancienne au jeu de raccourcis courant.
     ///
@@ -438,6 +443,10 @@ final class Preferences: ObservableObject {
             if inviteHotKey == Self.legacyInvite { inviteHotKey = .defaultInvite }
             if paletteHotKey == nil { paletteHotKey = .defaultPalette }
         }
+
+        // La génération 8 range la palette par « Auto » ; une sauvegarde écrivait
+        // toujours son tri, l'ancien défaut ne se distingue pas d'un choix.
+        if from < 8, paletteTri == Self.legacyPaletteTri { paletteTri = .auto }
         return true
     }
 
@@ -558,7 +567,8 @@ final class Preferences: ObservableObject {
         .facultatif("etiquettes", \.etiquettes),
         .optionnel("paletteHotKey", \.paletteHotKey),
         .facultatif("paletteRecents", \.paletteRecents),
-        .facultatif("paletteTri", \.paletteTri),
+        .enTexte("paletteTri", \.paletteTri, ecrit: \.rawValue, lu: TriPalette.init(rawValue:)),
+        .facultatif("paletteFrequentation", \.paletteFrequentation),
         .facultatif("quetesEpinglees", \.quetesEpinglees),
         .facultatif("quetesEtape", \.quetesEtape),
         .facultatif("quetesValides", \.quetesValides),

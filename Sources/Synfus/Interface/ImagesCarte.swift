@@ -147,11 +147,9 @@ extension View {
     }
 }
 
-/// Le fond d'une case de zaap — réglages et palette : la vue de sa carte à
-/// un quart d'opacité sur un fond uni, assombrie vers le bas où sont la zone
-/// et les coordonnées, pour que le texte reste lisible sur n'importe quelle
-/// carte ; `teinte` (la case choisie) par-dessus. Le fond uni tient la taille
-/// de la case, l'image en déborde et la forme la rogne.
+/// Le fond d'une case de zaap — réglages et palette : la vue de sa carte à pleine opacité, noircie
+/// par un voile `nuitProfond` là où le texte se pose (en haut et en bas, rien au milieu) ; sans
+/// image, un fond uni. La forme rogne l'image, qui déborde la case.
 struct FondCarte: View {
     let carte: Int?
     /// Choisie, la case prend le contour `primaire` ; son fond ne se teinte que sans image, qu'un
@@ -162,18 +160,29 @@ struct FondCarte: View {
     /// Plus large qu'une case de la grille (palette : 4 au rang sur 660 pt ;
     /// réglages : 3), que l'image remplit.
     private static let cote: CGFloat = 200
-    private static let voileImage = 0.25
-    private static let voileTexte = 0.7
+    private static let voileTexte = 0.8
+    private static let bandeHaute = 0.4
+    private static let bandeBasse = 0.6
+
+    /// Le texte de la case se pose sur une image : il s'écrit en clair, quel que soit le thème.
+    @MainActor static func surImage(_ carte: Int?) -> Bool {
+        carte != nil && Preferences.shared.vuesCartes && Ressources.visuelsDuJeu
+    }
+
 
     var body: some View {
-        if prefs.vuesCartes, Ressources.visuelsDuJeu, let carte {
-            // L'image ne sert que d'ambiance et le texte de la case passe dessus : elle est voilée de
-            // `surface`, plus franchement vers le bas où le texte se pose. Seul dégradé de l'app.
+        if Self.surImage(carte), let carte {
+            // Seul dégradé de l'app : le voile ne couvre que les bandes du texte, l'image reste entière au milieu.
+            let voile = Color.jeton(\.nuitProfond).opacity(Self.voileTexte)
             Color.jeton(\.surface)
-                .overlay { VueCarte(carte: carte, cote: Self.cote).scaledToFill().opacity(Self.voileImage) }
+                .overlay { VueCarte(carte: carte, cote: Self.cote).scaledToFill() }
                 .overlay {
-                    LinearGradient(colors: [.clear, Color.jeton(\.surface).opacity(Self.voileTexte)],
-                                   startPoint: .top, endPoint: .bottom)
+                    LinearGradient(stops: [
+                        .init(color: voile, location: 0),
+                        .init(color: .clear, location: Self.bandeHaute),
+                        .init(color: .clear, location: Self.bandeBasse),
+                        .init(color: voile, location: 1),
+                    ], startPoint: .top, endPoint: .bottom)
                 }
                 .clipShape(forme)
                 .overlay(contour)

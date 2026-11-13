@@ -35,7 +35,7 @@ final class PaletteModele: ObservableObject {
     @Published private(set) var entrees: [EntreePalette] = []
     /// La famille montrée, que Tab fait défiler.
     @Published private(set) var filtre: FiltrePalette = .tout
-    @Published private(set) var tri: TriPalette = .proximite
+    @Published private(set) var tri: TriPalette = .auto
     @Published var selection = 0
     /// L'entrée dont on écrit l'étiquette, et le texte en cours.
     @Published private(set) var edition: EntreePalette?
@@ -124,8 +124,7 @@ final class PaletteModele: ObservableObject {
     }
 
     var enGrille: Bool {
-        requete.trimmingCharacters(in: .whitespaces).isEmpty
-            && (filtre == .tout || filtre == .zaaps)
+        requete.trimmingCharacters(in: .whitespaces).isEmpty && filtre == .tout
     }
 
     /// Sans elle, le filtre « Ici » n'a rien à montrer.
@@ -222,7 +221,7 @@ final class PaletteModele: ObservableObject {
         recalculer()
     }
 
-    /// ⌘T : proximité, ordre alphabétique, type — et le choix est gardé.
+    /// ⌘T : auto, proximité, ordre alphabétique, type — et le choix est gardé.
     func triSuivant() {
         tri = tri.suivant
         if contexteImpose == nil { Preferences.shared.paletteTri = tri }
@@ -261,9 +260,22 @@ final class PaletteModele: ObservableObject {
         RecherchePalette.texte(de: entree.effet, contexte)
     }
 
-    /// Un clic : la ligne choisie, puis son effet.
+    /// Un clic : la ligne choisie, puis son effet. Ce qui mène au jeu compte
+    /// dans les habitudes (`FrequentationPalette`) — pas une fiche qu'on replie.
     func executer(_ entree: EntreePalette) {
         UsageStore.shared.compter(.palette(entree.genre))
+        guard contexteImpose == nil else { return effectuer(entree) }
+        let prefs = Preferences.shared
+        // Le choix compté et la copie retenue : une seule écriture.
+        prefs.enUneEcriture {
+            if deplie != entree.id, let cle = FrequentationPalette.cle(de: entree) {
+                prefs.paletteFrequentation.noter(cle)
+            }
+            effectuer(entree)
+        }
+    }
+
+    private func effectuer(_ entree: EntreePalette) {
         if let index = entrees.firstIndex(where: { $0.id == entree.id }) {
             selection = index
             carte = nil
@@ -413,6 +425,7 @@ final class PaletteModele: ObservableObject {
         contexte.etiquettes = prefs.etiquettes
         contexte.favoris = prefs.favoris
         contexte.recents = prefs.paletteRecents
+        contexte.frequentation = prefs.paletteFrequentation
         contexte.quetes = QuetesStore.shared.quetes
         contexte.donjons = DonjonsStore.shared.donjons
         contexte.gainMinimal = prefs.zaapGainMinimal

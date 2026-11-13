@@ -35,7 +35,7 @@ struct MetriquesQuete: Equatable {
     let vignette: CGSize
 
     static let confort = MetriquesQuete(
-        texte: .corps, texteFort: .corpsFort, titre: .titre, titreFort: .titre,
+        texte: .corps, texteFort: .corpsFort, titre: .titre, titreFort: .corpsFort,
         consigne: .note, detail: .note, detailFort: .corpsFort, coche: .corps, icone: .note,
         marge: Jetons.Espace.trois, ecartSections: Jetons.Espace.trois, ecartLignes: Jetons.Espace.un,
         ligneHorizontale: Jetons.Espace.deux, ligneVerticale: Jetons.Espace.un,

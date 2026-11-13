@@ -11,6 +11,7 @@ struct PaletteVue: View {
     @ObservedObject private var donjons = DonjonsStore.shared
     @FocusState private var champ: Champ?
     @State private var filtreSurvole: FiltrePalette?
+    @State private var prefixeSurvole: String?
 
     private enum Champ { case recherche, etiquette }
 
@@ -63,7 +64,8 @@ struct PaletteVue: View {
         .frame(height: Jetons.Taille.rangeePalette + Jetons.Espace.quatre)
     }
 
-    /// Les familles que Tab fait défiler, et le tri (⌘T).
+    /// Les familles que Tab fait défiler, les préfixes des commandes et des
+    /// variables, et le tri (⌘T).
     private var filtres: some View {
         HStack(spacing: Jetons.Espace.un) {
             ForEach(FiltrePalette.allCases, id: \.self) { filtre in
@@ -84,6 +86,11 @@ struct PaletteVue: View {
                 .onHover { filtreSurvole = $0 ? filtre : nil }
                 .accessibilityAddTraits(choisi ? .isSelected : [])
             }
+            ToucheRaccourci("⇥")
+                .padding(.leading, Jetons.Espace.un)
+                .help(L("palette.touche.filtre"))
+            prefixe("/", L("palette.touche.commandes"))
+            prefixe("%", L("palette.touche.variables"))
             Spacer(minLength: Jetons.Espace.deux)
             Label(modele.tri.titre, systemImage: "arrow.up.arrow.down")
                 .font(Jetons.Typo.petit.police)
@@ -97,6 +104,28 @@ struct PaletteVue: View {
         }
         .padding(.horizontal, Jetons.Espace.quatre)
         .padding(.bottom, Jetons.Espace.deux)
+    }
+
+    /// Un préfixe de la recherche, dessiné comme un filtre : un clic le pose
+    /// dans le champ, qui garde le clavier.
+    private func prefixe(_ texte: String, _ aide: String) -> some View {
+        let etat = EtatVisuel(survole: prefixeSurvole == texte)
+        return Button {
+            modele.requete = texte
+            champ = .recherche
+        } label: {
+            Text(texte)
+                .font(Jetons.Typo.petit.police)
+                .foregroundStyle(etat.encreSecondaire)
+                .padding(.horizontal, Jetons.Espace.deux)
+                .frame(height: Jetons.Taille.cibleMin)
+                .fondEtat(etat, rayon: Jetons.Rayon.capsule)
+        }
+        .buttonStyle(.plain)
+        .focusable(false)
+        .onHover { prefixeSurvole = $0 ? texte : nil }
+        .help(aide)
+        .accessibilityLabel(aide)
     }
 
     /// Le mode d'une commande tapée ; rien quand on cherche partout, que les filtres disent déjà.
@@ -260,13 +289,6 @@ struct PaletteVue: View {
                 aide("↵", entree)
                     .lineLimit(1)
                     .truncationMode(.middle)
-                // Sans saisie, ↵ a un texte court : la place d'annoncer `/` et `%`.
-                if modele.requete.isEmpty {
-                    aide("/", L("palette.touche.commandes"))
-                    aide("%", L("palette.touche.variables"))
-                } else {
-                    aide("⇥", L("palette.touche.filtre"))
-                }
                 aide("⌘E", L("palette.touche.etiquette"))
                 aide("⌘D", L("palette.touche.favori"))
                 Spacer()
@@ -313,40 +335,51 @@ struct PaletteVue: View {
     }
 }
 
-/// Une carte de zaap : étiquette, nom, zone et coordonnées.
+/// Une carte de zaap : nom et zone en haut, étiquette et coordonnées en bas. Sur l'image de la
+/// carte, le texte est clair ; sans image, il prend les encres du thème.
 private struct CarteZaap: View {
     let entree: EntreePalette
     let choisie: Bool
+    @ObservedObject private var prefs = Preferences.shared
 
     private var etat: EtatVisuel { choisie ? .choisi : .repos }
+    private var surImage: Bool { FondCarte.surImage(entree.carte) }
+    private var encre: Color { surImage ? Color.jeton(\.encre, en: .sombre) : etat.encre }
+    private var encreSecondaire: Color { surImage ? Color.jeton(\.encreSecondaire, en: .sombre) : etat.encreSecondaire }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Jetons.Espace.un) {
+            VStack(alignment: .leading, spacing: 0) {
+                Text(entree.titre)
+                    .font(Jetons.Typo.corpsFort.police)
+                    .foregroundStyle(encre)
+                    .lineLimit(1)
+                    .padding(.trailing, entree.favori ? Jetons.Espace.quatre : 0)
+                Text(entree.itineraire ?? entree.sousTitre ?? "")
+                    .font(Jetons.Typo.petit.police)
+                    .foregroundStyle(encreSecondaire)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: Jetons.Espace.quatre)
             HStack(spacing: Jetons.Espace.un) {
                 if let etiquette = entree.etiquette { PastilleEtiquette(texte: etiquette) }
                 Spacer(minLength: 0)
-                if entree.favori {
-                    Image(systemName: "star.fill").font(Jetons.Typo.micro.police).foregroundStyle(Color.jeton(\.safranTexte))
-                }
-            }
-            .frame(height: Jetons.Espace.quatre)
-            Text(entree.titre)
-                .font(Jetons.Typo.corpsFort.police)
-                .lineLimit(1)
-            HStack(spacing: Jetons.Espace.un) {
-                Text(entree.itineraire ?? entree.sousTitre ?? "")
-                    .lineLimit(1)
-                    .foregroundStyle(etat.encreSecondaire)
-                Spacer(minLength: 0)
                 Text(entree.detail ?? "")
                     .font(Jetons.Typo.codeInterface.police)
-                    .foregroundStyle(etat.encreSecondaire)
+                    .foregroundStyle(encreSecondaire)
+                    .lineLimit(1)
             }
-            .font(Jetons.Typo.petit.police)
+            .frame(minHeight: Jetons.Espace.quatre)
         }
         .padding(Jetons.Espace.deux)
-        .foregroundStyle(etat.encre)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .overlay(alignment: .topTrailing) {
+            if entree.favori {
+                Image(systemName: "star.fill").font(Jetons.Typo.micro.police)
+                    .foregroundStyle(surImage ? Color.jeton(\.safran) : Color.jeton(\.safranTexte))
+                    .padding(Jetons.Espace.deux)
+            }
+        }
         .background { FondCarte(carte: entree.carte, choisie: choisie) }
         .contentShape(Rectangle())
     }
