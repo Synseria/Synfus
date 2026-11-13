@@ -53,8 +53,8 @@ La grille est le skill global `grille-ui`. Ici, seulement ce qui lui manque ou l
 
 - Couleurs venues du jeu, hors thème : les classes (`DofusClass`), le rose de « Fin de tour »
   (`CombatBadge.rose`), `Color.texteSurClasse` (le blanc du sigle sur une couleur de classe).
-- `controleDense` (22) et `rangeeDense` (24) ne sont plus des jetons de Synfus : les panneaux posés sur le jeu
-  prennent `Taille.cibleMin` (24) en attendant qu'ils reviennent.
+- Les panneaux posés sur le jeu prennent `Taille.cibleMin` (24) : `Jetons` n'a pas de taille de contrôle
+  dense.
 - `MetriquesQuete.compact` : écarts de 1 et 2 pt, sous la grille, pour laisser voir le jeu.
 - `FondCarte` : seul dégradé et seul voile d'opacité (`voileImage`, `voileTexte`) ; le texte d'une case
   passe sur une image du jeu. Voile de zone de `CalibrationZonesView`, opacité de glisser des pastilles.
