@@ -188,6 +188,7 @@
   "chasse.copier": "Copier le trajet à nouveau",
   "chasse.depart": "Départ",
   "chasse.depart.reprendre": "Reprendre la position du personnage devant",
+  "chasse.depart.saisir": "Départ à saisir",
   "chasse.direction.choisir": "Choisir une direction",
   "chasse.direction.est": "Est",
   "chasse.direction.nord": "Nord",

@@ -143,6 +143,8 @@ struct CapturesTests {
             .background(Color(red: 0.11, green: 0.11, blue: 0.13))
             .environment(\.colorScheme, Self.schema)
         try ecrire(vue, vers: dossier.appending(path: "chasse.png"))
+        ChasseModele.shared.viderPourCaptures()
+        try ecrire(vue, vers: dossier.appending(path: "chasse-depart-inconnu.png"))
         ChasseModele.shared.poserEchecPourCaptures()
         try ecrire(vue, vers: dossier.appending(path: "chasse-indisponible.png"))
     }

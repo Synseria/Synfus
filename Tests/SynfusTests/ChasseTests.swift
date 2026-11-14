@@ -153,4 +153,12 @@ struct ChasseTests {
         #expect(lues.last == .phorreur)
         if case .indice(let indice) = lues.first { #expect(indice.id == 993) } else { Issue.record("indice attendu") }
     }
+
+    @Test("Le champ de l'indice attend d'abord le départ, puis la direction, puis l'indice")
+    func attenteDuChamp() {
+        #expect(AttenteChasse(departConnu: false, directionChoisie: false) == .depart)
+        #expect(AttenteChasse(departConnu: false, directionChoisie: true) == .depart)
+        #expect(AttenteChasse(departConnu: true, directionChoisie: false) == .direction)
+        #expect(AttenteChasse(departConnu: true, directionChoisie: true) == .indice)
+    }
 }
