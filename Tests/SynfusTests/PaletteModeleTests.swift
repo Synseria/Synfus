@@ -15,4 +15,18 @@ struct PaletteModeleTests {
         modele.triSuivant()
         #expect(modele.tri == .auto)
     }
+
+    @Test("Le pied montre le texte que ↵ copie, trajet compris ; rien pour ce qui ne copie pas")
+    func texteDeLaSelection() {
+        var contexte = ContextePalette()
+        contexte.position = PositionCarte(x: -30, y: -40, zone: nil)
+        contexte.zaaps = ZaapsSitues(CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [], choix: [:]),
+                                     reseau: ReseauSousZones(Carte.integree))
+        let trajet = PaletteModele(contexte: contexte, requete: "6,8")
+        #expect(trajet.texteDeLaSelection == "/zaap 5,7 ; /travel 6,8")
+        let geste = PaletteModele(contexte: contexte, requete: "ranger les fenetres")
+        #expect(geste.entrees.first?.effet == .action(.rangerFenetres))
+        #expect(geste.texteDeLaSelection == nil)
+        #expect(PaletteModele(contexte: contexte, requete: "zzzzzz").texteDeLaSelection == nil)
+    }
 }

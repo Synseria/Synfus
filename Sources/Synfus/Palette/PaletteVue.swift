@@ -373,13 +373,22 @@ struct PaletteVue: View {
                     }
                 } else {
                     aide("↵", entree)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
+                        .layoutPriority(1)
+                    if let texte = modele.texteDeLaSelection {
+                        Text(texte)
+                            .font(Jetons.Typo.codeInterface.police)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                            .help(texte)
+                    }
                     aide("⌘E", L("palette.touche.etiquette"))
+                        .layoutPriority(1)
                     aide("⌘D", L("palette.touche.favori"))
+                        .layoutPriority(1)
                 }
-                Spacer()
+                Spacer(minLength: 0)
                 aide("esc", L("palette.touche.fermer"))
+                    .layoutPriority(1)
             }
             .font(Jetons.Typo.petit.police)
             .foregroundStyle(Color.jeton(\.encreSecondaire))

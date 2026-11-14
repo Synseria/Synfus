@@ -309,6 +309,12 @@ final class PaletteModele: ObservableObject {
         RecherchePalette.texte(de: entree.effet, contexte)
     }
 
+    /// Le texte que ↵ copiera pour la sélection, à lire avant de coller ; `nil` quand ↵ fait autre chose.
+    var texteDeLaSelection: String? {
+        guard entrees.indices.contains(selection), entrees[selection].id != deplie else { return nil }
+        return texteACopier(entrees[selection])
+    }
+
     /// Un clic : la ligne choisie, puis son effet. Ce qui mène au jeu compte
     /// dans les habitudes (`FrequentationPalette`) — pas une fiche qu'on replie.
     func executer(_ entree: EntreePalette) {
