@@ -245,7 +245,7 @@ final class LecteurEcran: ObservableObject {
     /// Le panneau d'aide aux boss paraît ou disparaît (`BossPanel`), ou change
     /// de boss : le combat entre au tour ou en sort, avec en combat les
     /// `genres` du boss (`nil` : panneau caché). Jamais l'enregistrement de
-    /// l'écran demandé.
+    /// l'écran demandé ; sans lui, le tour ne fait que suivre le perso devant.
     func suivreBoss(_ genres: [GenreLecture]?) {
         genresBoss = genres ?? []
         guard (genres != nil) != bossMontre else { return }
@@ -296,8 +296,11 @@ final class LecteurEcran: ObservableObject {
     private func tour() {
         guard timer != nil else { return }
         let manager = WindowManager.shared
-        guard WindowPreviewService.shared.authorized else { diagnostic.etat = .nonAutorise; return }
         let devant = manager.frontmostIsDofus ? manager.clients.first(where: { manager.isFrontmost($0) }) : nil
+        // Le perso devant se sait sans enregistrement de l'écran : le tour et les
+        // notes du panneau des boss en dépendent.
+        if let devant, persoDevant != devant.name { persoDevant = devant.name }
+        guard WindowPreviewService.shared.authorized else { diagnostic.etat = .nonAutorise; return }
         let prefs = Preferences.shared
         if prefs.lireCombat, prefs.lireCombatDerriere {
             for autre in GenreLecture.combatsDerriere(manager.clients, devant: devant)
@@ -310,7 +313,6 @@ final class LecteurEcran: ObservableObject {
             if !busy, file.isEmpty { diagnostic.etat = .attente }
             return pomper()
         }
-        if persoDevant != client.name { persoDevant = client.name }
         oublierTourEchu(client.name)
         for genre in genresActifs where perime(genre, client.name, devant: true) { demander(client, genre) }
         if suiviMontre, QuetesStore.shared.quetes != nil, perime(.quetes, client.name, devant: true) {

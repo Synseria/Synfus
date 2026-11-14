@@ -6,12 +6,13 @@ import SwiftUI
 struct HarebourgVue: View {
     @ObservedObject private var aide = AideBoss.shared
     @ObservedObject private var lecteur = LecteurEcran.shared
+    @ObservedObject private var previews = WindowPreviewService.shared
 
     var body: some View {
         if let estimation = aide.estimation {
             visee(estimation)
             details(estimation)
-        } else {
+        } else if previews.authorized {
             attente
         }
         aLaMain

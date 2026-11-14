@@ -24,19 +24,16 @@ struct BossVue: View {
             Divider()
             VStack(alignment: .leading, spacing: Jetons.Espace.deux) {
                 if let fiche = aide.fiches[prefs.bossChoisi.monstre] { FicheCombatVue(fiche: fiche) }
-                if previews.authorized {
-                    ligneTour
-                    switch prefs.bossChoisi.special {
-                    case .harebourg: HarebourgVue()
-                    case .kimbo: KimboVue()
-                    case .toxoliath: ToxoliathVue()
-                    case .ilyzaelle: IlyzaelleVue()
-                    case .talKasha: TalKashaVue()
-                    case nil: EmptyView()
-                    }
-                } else {
-                    LigneAutorisation()
+                ligneTour
+                switch prefs.bossChoisi.special {
+                case .harebourg: HarebourgVue()
+                case .kimbo: KimboVue()
+                case .toxoliath: ToxoliathVue()
+                case .ilyzaelle: IlyzaelleVue()
+                case .talKasha: TalKashaVue()
+                case nil: EmptyView()
                 }
+                if !previews.authorized { LigneAutorisation() }
                 if let special = prefs.bossChoisi.special { rappelsVue(special) }
                 conseilsVue
             }
