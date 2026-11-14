@@ -651,6 +651,7 @@
   "quete.ici.aide": "%lld quests start here",
   "quete.ici.aide.un": "%lld quest starts here",
   "quete.indisponible": "Quests unavailable",
+  "quete.menu.affichage": "Display",
   "quete.menu.aucune": "No pinned quest",
   "quete.menu.desepingler": "Unpin “%@”",
   "quete.menu.epinglees": "Pinned",

@@ -27,6 +27,8 @@ enum MenuQuetes {
         case geste(Geste)
         /// Un interrupteur de l'affichage, coché quand il est actif.
         case option(Option, actif: Bool)
+        /// Le sous-menu qui range les interrupteurs.
+        case affichage([Element])
         /// Cache le panneau ; les quêtes restent épinglées.
         case fermer
         case separateur
@@ -83,12 +85,11 @@ enum MenuQuetes {
         }
     }
 
-    /// Les interrupteurs repris de l'onglet Quêtes : celui du suivi dans sa
-    /// section, ceux de l'affichage en pied (`affichage`, dans l'ordre).
+    /// Les interrupteurs repris de l'onglet Quêtes, rangés au sous-menu « Affichage » (`affichage`, dans l'ordre).
     enum Option: CaseIterable {
         case compact, consigne, masquerObjets, cocherSuivi
 
-        static let affichage: [Option] = [.compact, .consigne, .masquerObjets]
+        static let affichage: [Option] = [.cocherSuivi, .compact, .consigne, .masquerObjets]
 
         var titre: String {
             switch self {
@@ -138,7 +139,7 @@ enum MenuQuetes {
         }
         elements += [.separateur, .titre(L("quete.menu.suivi"))]
         if aEpingler(reconnues, epinglees: epinglees).count > 1 { elements.append(.toutEpingler) }
-        elements += [.lireSuivi(enCours: etat == .enCours), .option(.cocherSuivi, actif: actives.contains(.cocherSuivi))]
+        elements.append(.lireSuivi(enCours: etat == .enCours))
         elements += reconnues.map { reconnue in
             let titre = reconnue.etape.map { L("quete.menu.reconnueEtape", nom(reconnue.id), $0 + 1) } ?? nom(reconnue.id)
             return .reconnue(reconnue, titre: titre, epinglee: epinglees.contains(reconnue.id))
@@ -150,7 +151,8 @@ enum MenuQuetes {
             elements.append(.message(L("quete.suivi.rien")))
         }
         if etat == .lu, coches > 0 { elements.append(.message(L("quete.suivi.coches", nombre: coches, coches))) }
-        return elements + [.separateur] + Option.affichage.map { .option($0, actif: actives.contains($0)) } + [.separateur, .fermer]
+        let options = Option.affichage.map { Element.option($0, actif: actives.contains($0)) }
+        return elements + [.separateur, .affichage(options), .separateur, .fermer]
     }
 
     /// « Ici, en [x,y] » : les quêtes qui commencent sur la case et les PNJ qui s'y tiennent ; vide sans l'un ni l'autre.
