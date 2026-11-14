@@ -38,7 +38,18 @@ enum ItineraireZaap {
     static func cible(dans texte: String) -> (x: Int, y: Int)? {
         let ligne = texte.trimmingCharacters(in: .whitespacesAndNewlines)
         guard ligne.hasPrefix("/travel "), !ligne.contains(where: \.isNewline) else { return nil }
-        var reste = ligne.dropFirst("/travel ".count).trimmingCharacters(in: .whitespaces)
+        return coordonnees(String(ligne.dropFirst("/travel ".count)))
+    }
+
+    /// La case qu'un texte tapé ou collé dit seul, sans `/travel` : les mêmes formes.
+    static func caseTapee(_ texte: String) -> (x: Int, y: Int)? {
+        let ligne = texte.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !ligne.contains(where: \.isNewline) else { return nil }
+        return coordonnees(ligne)
+    }
+
+    private static func coordonnees(_ texte: String) -> (x: Int, y: Int)? {
+        var reste = texte.trimmingCharacters(in: .whitespaces)
         if reste.hasPrefix("["), reste.hasSuffix("]") {
             reste = String(reste.dropFirst().dropLast())
         }

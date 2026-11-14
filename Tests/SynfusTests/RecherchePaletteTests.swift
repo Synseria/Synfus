@@ -182,6 +182,20 @@ struct RecherchePaletteTests {
                 == .copier("/zaap 5,7 ; /travel 6,8"))
     }
 
+    @Test("Des coordonnées tapées seules : une ligne « Aller en », le trajet, sans préfixe")
+    func coordonneesSeules() throws {
+        let depuis = contexte(position: PositionCarte(x: -30, y: -40, zone: nil))
+        for texte in ["6,8", "[6,8]", "6 8", " 6, 8 "] {
+            let entrees = RecherchePalette.entrees(texte, depuis)
+            #expect(entrees.map(\.titre) == [L("palette.allerEn", Coordonnees.texte(6, 8))], "\(texte)")
+            #expect(RecherchePalette.texte(de: try #require(entrees.first).effet, depuis) == "/zaap 5,7 ; /travel 6,8")
+        }
+        #expect(premiere("6,8", contexte(position: nil))?.effet == .trajet(x: 6, y: 8, sousZone: nil))
+        #expect(FrequentationPalette.cle(de: try #require(RecherchePalette.entrees("6,8", depuis).first)) == nil)
+        #expect(RecherchePalette.entrees("6,8", depuis, filtre: .quetes).isEmpty)
+        #expect(!RecherchePalette.entrees("6", depuis).contains { $0.id.hasPrefix("case:") })
+    }
+
     @Test("/ liste les commandes ; une commande à argument se complète")
     func commandes() {
         let entrees = RecherchePalette.entrees("/", contexte())
@@ -223,7 +237,7 @@ struct RecherchePaletteTests {
         #expect(recents.count == RecherchePalette.nombreDeRecents)
         var avecRecents = contexte()
         avecRecents.recents = ["/travel 12,34"]
-        #expect(premiere("12,34", avecRecents)?.effet == .copier("/travel 12,34"))
+        #expect(premiere("travel", avecRecents)?.effet == .copier("/travel 12,34"))
     }
 
     // MARK: - Filtres et tris

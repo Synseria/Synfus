@@ -32,8 +32,9 @@ struct FrequentationPalette: Codable, Equatable, Sendable {
     /// `nil` pour ce qui ne mène à rien du jeu : commande, variable, geste, copie, invitation.
     static func cle(de entree: EntreePalette) -> String? {
         switch entree.effet {
-        case .trajet, .ouvrirQuete, .ouTrouver, .donjon: return entree.cle ?? entree.id
-        case .copier: return entree.cle
+        case .ouvrirQuete, .ouTrouver, .donjon: return entree.cle ?? entree.id
+        // Une case tapée n'a pas de `cle` : elle ne devient pas une habitude, comme un `/travel x,y`.
+        case .trajet, .copier: return entree.cle
         case .completer, .action: return nil
         }
     }
