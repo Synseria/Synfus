@@ -165,4 +165,14 @@ struct LayoutComputerTests {
         #expect(basculee == hauteur - y)
         #expect(LayoutComputer.flipY(basculee, hauteurPrincipale: hauteur) == y)
     }
+
+    // MARK: - Disposition en cours
+
+    @Test("La disposition cochée est la dernière employée, la mosaïque avant tout rangement")
+    func enCours() {
+        #expect(Disposition.enCours(derniere: nil) == .mosaique)
+        for disposition in Disposition.allCases {
+            #expect(Disposition.enCours(derniere: disposition) == disposition)
+        }
+    }
 }

@@ -17,6 +17,10 @@ enum Disposition: String, Codable, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    /// Celle que rejouent le raccourci et « Lancer la session », et que les
+    /// menus cochent : la dernière employée, la mosaïque avant tout rangement.
+    static func enCours(derniere: Disposition?) -> Disposition { derniere ?? .mosaique }
+
     var label: String {
         switch self {
         case .coteACote: L("rangement.coteACote")

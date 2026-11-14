@@ -794,7 +794,7 @@
   "raccourcis.persoPrecedent": "Personnage précédent",
   "raccourcis.persoSuivant": "Personnage suivant",
   "raccourcis.ranger": "Ranger les fenêtres",
-  "raccourcis.ranger.aide": "Rejoue la dernière disposition employée — côte à côte, mosaïque, un grand + vignettes, empilés — choisie depuis le bouton de la barre, la barre de menus ou le clic droit. Sans défaut : à toi de choisir.",
+  "raccourcis.ranger.aide": "Rejoue la disposition cochée sous « Ranger les fenêtres ». Sans défaut : à toi de choisir.",
   "raccourcis.refuse": "macOS a refusé cette combinaison : une autre app la tient déjà.",
   "raccourcis.refusees": "Refusés par le système",
   "raccourcis.retablir.confirmation": "Rétablir tous les raccourcis ?",
