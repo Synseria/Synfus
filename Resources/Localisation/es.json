@@ -78,7 +78,7 @@
   "boss.ilyzaelle": "Ilyzaelle",
   "boss.ilyzaelle.aide": "Los umbrales del 75 % y del 50 %, Hacia las tinieblas.",
   "boss.ilyzaelle.alliee50": "Aguanta hasta el final del turno %lld: el combate está ganado",
-  "boss.ilyzaelle.alliee75": "Aliada e invulnerable hasta el final del turno %lld: entra en su glifo, +400 % de daño",
+  "boss.ilyzaelle.alliee75": "Aliada e invulnerable hasta el final del turno %lld: entra en su glifo, +400 %% de daño",
   "boss.ilyzaelle.annuler": "Anular el último umbral",
   "boss.ilyzaelle.gagnee": "Han pasado los dos turnos: el combate debería estar ganado.",
   "boss.ilyzaelle.objectif50": "Bájala al 50 % de su vida máxima",

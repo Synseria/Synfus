@@ -78,7 +78,7 @@
   "boss.ilyzaelle": "Ilyzaelle",
   "boss.ilyzaelle.aide": "The 75% and 50% thresholds, Into the Darkness.",
   "boss.ilyzaelle.alliee50": "Hold until the end of turn %lld: the fight is won",
-  "boss.ilyzaelle.alliee75": "Ally and invulnerable until the end of turn %lld: step into her glyph, +400% damage",
+  "boss.ilyzaelle.alliee75": "Ally and invulnerable until the end of turn %lld: step into her glyph, +400%% damage",
   "boss.ilyzaelle.annuler": "Undo the last threshold",
   "boss.ilyzaelle.gagnee": "Both turns have passed: the fight should be won.",
   "boss.ilyzaelle.objectif50": "Bring her down to 50% of her max health",

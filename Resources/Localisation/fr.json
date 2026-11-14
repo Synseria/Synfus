@@ -78,7 +78,7 @@
   "boss.ilyzaelle": "Ilyzaelle",
   "boss.ilyzaelle.aide": "Les seuils de 75 % et de 50 %, Vers les ténèbres.",
   "boss.ilyzaelle.alliee50": "Tiens jusqu'à la fin du tour %lld : le combat est gagné",
-  "boss.ilyzaelle.alliee75": "Alliée et invulnérable jusqu'à la fin du tour %lld : entre dans son glyphe, +400 % de dégâts",
+  "boss.ilyzaelle.alliee75": "Alliée et invulnérable jusqu'à la fin du tour %lld : entre dans son glyphe, +400 %% de dégâts",
   "boss.ilyzaelle.annuler": "Annuler le dernier seuil",
   "boss.ilyzaelle.gagnee": "Les deux tours sont passés : le combat devrait être gagné.",
   "boss.ilyzaelle.objectif50": "Descends-la à 50 % de sa vie maximale",
