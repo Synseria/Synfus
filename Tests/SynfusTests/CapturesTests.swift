@@ -308,6 +308,15 @@ struct CapturesTests {
         try ecrire(vue, vers: dossier.appending(path: "reglages-quetes-indisponibles.png"))
     }
 
+    @Test("Capture de la fenêtre À propos", .enabled(if: dossier != nil))
+    func aPropos() throws {
+        let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
+        try FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)
+        let vue = AProposVue(version: "1.4.2")
+            .environment(\.colorScheme, Self.schema)
+        try ecrire(vue, vers: dossier.appending(path: "a-propos.png"))
+    }
+
     /// Par une fenêtre hors écran : `ImageRenderer` ne dessine ni champ de
     /// texte ni défilement, qui sont des vues AppKit.
     private func ecrire(_ vue: some View, vers url: URL) throws {

@@ -53,6 +53,8 @@ private extension String {
 
 /// Le geste que l'état appelle : Réglages ▸ Général et À propos.
 struct ActionMiseAJour: View {
+    /// Le libellé du bouton de recherche : seul, À propos le dit en entier.
+    var rechercher = L("maj.rechercher")
     @ObservedObject var miseAJour: MiseAJour = .shared
     @ObservedObject private var prefs = Preferences.shared
 
@@ -71,7 +73,7 @@ struct ActionMiseAJour: View {
                 .buttonStyle(.bouton(.secondaire))
         case .inconnu, .aJour:
             if prefs.verifierMisesAJour {
-                Button(L("maj.rechercher")) { miseAJour.verifier() }
+                Button(rechercher) { miseAJour.verifier() }
                     .buttonStyle(.bouton(.secondaire))
             }
         }
