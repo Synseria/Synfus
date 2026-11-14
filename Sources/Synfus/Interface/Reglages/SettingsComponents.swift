@@ -346,7 +346,7 @@ struct PermissionRow: View {
                 Circle().fill(granted ? Color.jeton(\.succes) : Color.jeton(\.alerte)).frame(width: Jetons.Espace.deux, height: Jetons.Espace.deux)
                 Text(granted ? L("commun.accordee") : L("commun.manquante"))
                     .foregroundStyle(granted ? Color.jeton(\.encreSecondaire) : Color.jeton(\.alerte))
-                if !granted { Button(L("commun.ouvrirReglagesSysteme"), action: open) }
+                if !granted { Button(L("autorisation.autoriser"), action: open) }
             }
         }
     }

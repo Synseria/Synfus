@@ -40,7 +40,7 @@ enum MenuQuetes {
 
         var titre: String {
             switch self {
-            case .autoriser: L("quete.suivi.autoriser")
+            case .autoriser: L("autorisation.autoriser")
             case .calibrer: L("quete.suivi.calibrer")
             case .reessayer, .relire: L("commun.reessayer")
             }

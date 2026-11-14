@@ -148,7 +148,7 @@ struct BarView: View {
             Button {
                 manager.requestAccessibility()
             } label: {
-                Label(L("barre.autoriser"), systemImage: "lock.shield")
+                Label(L("autorisation.accessibilite"), systemImage: "lock.shield")
             }
             .buttonStyle(.bouton(.tertiaire))
             .help(L("barre.accessibiliteRequise"))

@@ -63,7 +63,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         }
 
         if !manager.accessibilityGranted {
-            add(to: menu, title: L("menu.autoriser"), action: #selector(requestAccess), icone: "lock.open")
+            add(to: menu, title: L("autorisation.accessibilite"), action: #selector(requestAccess), icone: "lock.open")
             menu.addItem(.separator())
         } else if manager.clients.isEmpty {
             let empty = NSMenuItem(title: L("barre.aucunPerso"), action: nil, keyEquivalent: "")

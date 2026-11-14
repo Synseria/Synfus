@@ -22,7 +22,7 @@ struct GeneralSettings: View {
                 ) { manager.requestAccessibility() }
 
                 PermissionRow(
-                    name: L("general.enregistrementEcran"),
+                    name: L("autorisation.lecture"),
                     granted: previews.authorized,
                     help: aideAutorisation(L("general.enregistrementEcran.aide")),
                     etat: aRedonner(previews.authorized)

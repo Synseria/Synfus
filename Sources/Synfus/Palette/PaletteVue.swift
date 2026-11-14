@@ -76,7 +76,7 @@ struct PaletteVue: View {
                 SettingsWindowController.shared.show(section: .lecture)
             }
         case .sansAutorisation:
-            boutonOrigine(L("palette.origine.autoriser"), aide: L("palette.origine.autoriser.aide")) {
+            boutonOrigine(L("autorisation.lectureEcran"), aide: L("palette.origine.autoriser.aide")) {
                 WindowPreviewService.shared.requestAuthorization()
             }
         case .inconnue:
