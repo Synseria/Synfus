@@ -591,7 +591,7 @@ struct BarView: View {
     @ViewBuilder
     private var contextMenu: some View {
         Button(L("menu.reglages")) { SettingsWindowController.shared.show() }
-        Button(L("menu.recentrerBarre")) { FloatingBarController.shared.recenter() }
+        Button(L("menu.recentrer")) { PanneauxJeu.recentrerBarreEtPanneaux() }
         Button(L("menu.masquerBarre")) { FloatingBarController.shared.toggle() }
         Menu(L("menu.rangerFenetres")) { ArrangementMenuItems() }
         Button(L("menu.lancerSession")) { manager.lancerSession() }

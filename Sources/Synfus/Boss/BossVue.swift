@@ -16,7 +16,7 @@ struct BossVue: View {
     @State private var rappels = false
     @State private var conseils = false
     /// Le rappel tout juste copié (ou tous : `""`), coché le temps du signal.
-    @State private var copie: String?
+    @StateObject private var copie = SignalCopie()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -35,7 +35,7 @@ struct BossVue: View {
                     case nil: EmptyView()
                     }
                 } else {
-                    autorisation
+                    LigneAutorisation()
                 }
                 if let special = prefs.bossChoisi.special { rappelsVue(special) }
                 conseilsVue
@@ -71,7 +71,7 @@ struct BossVue: View {
             if let nom = aide.donjon?.nomFrancais {
                 BoutonEnTete(icone: "book", aide: L("boss.guide")) { Task { await DofusPourLesNoobs.ouvrir(nom) } }
             }
-            BoutonEnTete(icone: "minus", aide: L("quete.fermer.simple")) { BossPanel.shared.fermer() }
+            BoutonEnTete(icone: "xmark", aide: L("quete.fermer.simple")) { BossPanel.shared.fermer() }
         }
     }
 
@@ -91,6 +91,8 @@ struct BossVue: View {
         }
         menu.addItem(.separator())
         menu.addItem(CibleMenu.shared.element(L("boss.autre")) { PalettePanel.shared.ouvrir(requete: L("boss.autre.recherche")) })
+        menu.addItem(.separator())
+        menu.addItem(CibleMenu.shared.element(L("panneau.fermer")) { BossPanel.shared.fermer() })
         return menu
     }
 
@@ -110,19 +112,6 @@ struct BossVue: View {
         .disabled(lecteur.persoDevant == nil)
     }
 
-    private var autorisation: some View {
-        HStack(spacing: Jetons.Espace.deux) {
-            Text(L("boss.autoriser.aide"))
-                .font(Jetons.Typo.petit.police)
-                .foregroundStyle(Color.jeton(\.encreSecondaire))
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: 0)
-            Button { previews.requestAuthorization() } label: { Image(systemName: "lock") }
-                .buttonStyle(.bouton(.tertiaire, dense: true))
-                .aide(L("boss.autoriser"))
-        }
-    }
-
     /// Chaque rappel se copie d'un clic, pour le coller dans le tchat du
     /// groupe ; l'icône du titre les copie tous, à la suite.
     private func rappelsVue(_ boss: Boss) -> some View {
@@ -139,7 +128,7 @@ struct BossVue: View {
                 Spacer(minLength: 0)
                 if rappels {
                     Button { copier(liste.joined(separator: " "), signal: "") } label: {
-                        Image(systemName: copie == "" ? "checkmark" : "doc.on.doc")
+                        IconeCopie(icone: "doc.on.doc", copie: copie.affiche(""))
                             .font(Jetons.Typo.petit.police)
                             .foregroundStyle(Color.jeton(\.encreSecondaire))
                     }
@@ -154,7 +143,7 @@ struct BossVue: View {
                             Text("• " + rappel)
                                 .fixedSize(horizontal: false, vertical: true)
                             Spacer(minLength: 0)
-                            if copie == rappel { Image(systemName: "checkmark") }
+                            IconeCopie(icone: nil, copie: copie.affiche(rappel))
                         }
                         .font(Jetons.Typo.petit.police)
                         .foregroundStyle(Color.jeton(\.encreSecondaire))
@@ -169,11 +158,7 @@ struct BossVue: View {
 
     private func copier(_ texte: String, signal: String) {
         PressePapiers.copier(texte)
-        copie = signal
-        Task {
-            try? await Task.sleep(for: .seconds(1.5))
-            if copie == signal { copie = nil }
-        }
+        copie.signaler(signal)
     }
 
     /// Les conseils de Dofus pour les noobs pour ce combat, dépliés d'un

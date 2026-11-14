@@ -147,6 +147,16 @@ struct CapturesTests {
         try ecrire(vue, vers: dossier.appending(path: "chasse-indisponible.png"))
     }
 
+    @Test("Capture du panneau des boss", .enabled(if: dossier != nil))
+    func boss() throws {
+        let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
+        let vue = BossVue()
+            .padding(24)
+            .background(Color(red: 0.11, green: 0.11, blue: 0.13))
+            .environment(\.colorScheme, Self.schema)
+        try ecrire(vue, vers: dossier.appending(path: "boss.png"))
+    }
+
     @Test("Captures des réglages", .enabled(if: dossier != nil))
     func reglages() throws {
         let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)

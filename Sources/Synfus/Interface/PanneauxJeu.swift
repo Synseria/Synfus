@@ -14,19 +14,76 @@ enum PanneauxJeu {
         BossPanel.shared.revoirVisibilite(force: force)
     }
 
+    /// Remet à leur place d'origine les panneaux ouverts, avec la barre : le geste du menu pour un
+    /// panneau que rien ne ramène — sans bordure ni barre de titre, macOS ne le fait pas.
+    static func recentrerBarreEtPanneaux() {
+        FloatingBarController.shared.recenter()
+        QuetePanel.shared.recentrer()
+        ChassePanel.shared.recentrer()
+        BossPanel.shared.recentrer()
+    }
+
+    // MARK: - Place d'un panneau
+
+    /// Où paraît un panneau qui n'a pas de place gardée, ou que son écran a quittée : le coin haut
+    /// gauche de son cadre, sur la zone visible de l'écran principal et pour sa taille.
+    typealias PlaceParDefaut = (_ zoneVisible: NSRect, _ taille: NSSize) -> NSPoint
+
+    /// La marge dont un point peut déborder d'un écran et compter encore dessus, et la taille du
+    /// bandeau d'un panneau qui doit rester sur un écran pour rester saisissable.
+    nonisolated private static let margeEcran: CGFloat = 40
+
+    /// Un point est-il sur l'un des écrans ? La règle de la barre, qui évite de restaurer sa position
+    /// sur un écran débranché depuis.
+    nonisolated static func surUnEcran(_ point: CGPoint, ecrans: [CGRect]) -> Bool {
+        ecrans.contains { $0.insetBy(dx: -margeEcran, dy: -margeEcran).contains(point) }
+    }
+
+    static func surUnEcran(_ point: CGPoint) -> Bool {
+        surUnEcran(point, ecrans: NSScreen.screens.map(\.frame))
+    }
+
+    /// Un panneau se tient par son bandeau, en haut : il est atteignable tant qu'une part de ce
+    /// bandeau — au moins la marge de large — reste sur un écran, même poussé à moitié hors de l'autre.
+    nonisolated static func bandeauAtteignable(de cadre: NSRect, ecrans: [CGRect]) -> Bool {
+        let bandeau = CGRect(x: cadre.minX, y: cadre.maxY - margeEcran, width: cadre.width, height: margeEcran)
+        return ecrans.contains {
+            let commun = $0.intersection(bandeau)
+            return !commun.isNull && commun.width >= margeEcran && commun.height >= margeEcran / 2
+        }
+    }
+
+    /// Pose le panneau à sa place d'origine.
+    static func placer(_ panel: NSPanel, parDefaut: PlaceParDefaut) {
+        guard let zone = NSScreen.main?.visibleFrame else { return }
+        panel.setFrameTopLeftPoint(parDefaut(zone, panel.frame.size))
+    }
+
+    /// Un panneau dont le bandeau n'est sur aucun écran — l'écran où il était est débranché — reprend
+    /// sa place d'origine ; un autre reste où il est.
+    static func rattraper(_ panel: NSPanel, parDefaut: PlaceParDefaut) {
+        if !bandeauAtteignable(de: panel.frame, ecrans: NSScreen.screens.map(\.frame)) {
+            placer(panel, parDefaut: parDefaut)
+        }
+    }
+
     /// Montre ou cache un panneau voulu `ouvert` : devant Dofus (`visible`),
     /// ou `impose` — ouvert depuis une autre app (menu, bouton de la barre),
     /// il reste là jusqu'au prochain changement d'app plutôt que de ne pas
-    /// paraître. Construit à sa première apparition ; `cache` suit le
-    /// masquage d'un panneau qui était à l'écran. Rend s'il est montré.
+    /// paraître. Construit à sa première apparition, rattrapé s'il paraît hors
+    /// de tout écran ; `cache` suit le masquage d'un panneau qui était à
+    /// l'écran. Rend s'il est montré.
     @discardableResult
     static func appliquer(_ panel: inout NSPanel?, ouvert: Bool, impose: Bool, force: Bool,
-                          construire: () -> NSPanel, cache: () -> Void = {}) -> Bool {
+                          parDefaut: PlaceParDefaut, construire: () -> NSPanel, cache: () -> Void = {}) -> Bool {
         let montre = visible(ouvert: ouvert) || (ouvert && impose)
         if montre {
             let affiche = panel ?? construire()
             panel = affiche
-            if force || !affiche.isVisible { affiche.orderFrontRegardless() }
+            if force || !affiche.isVisible {
+                rattraper(affiche, parDefaut: parDefaut)
+                affiche.orderFrontRegardless()
+            }
         } else if let panel, panel.isVisible {
             panel.orderOut(nil)
             cache()

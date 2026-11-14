@@ -354,6 +354,7 @@ final class PaletteModele: ObservableObject {
     /// Copie, retient parmi les dernières copies et ferme.
     func copier(_ texte: String) {
         PressePapiers.copier(texte)
+        ZaapClipboard.shared.signaler()
         if contexteImpose == nil {
             Preferences.shared.paletteRecents = RecherchePalette.noterRecent(texte, dans: Preferences.shared.paletteRecents)
         }
