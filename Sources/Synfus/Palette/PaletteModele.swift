@@ -127,6 +127,16 @@ final class PaletteModele: ObservableObject {
         requete.trimmingCharacters(in: .whitespaces).isEmpty && filtre == .tout
     }
 
+    /// Pourquoi la liste est vide ; `nil` quand elle ne l'est pas.
+    var vide: VidePalette? {
+        guard entrees.isEmpty else { return nil }
+        return VidePalette.de(
+            carte: contexteImpose == nil ? CarteStore.shared.etat : .prete,
+            requeteVide: requete.trimmingCharacters(in: .whitespaces).isEmpty, filtre: filtre,
+            positionConnue: positionConnue, lectureAllumee: Preferences.shared.lirePosition,
+            quetesEnChargement: QuetesStore.shared.chargement && QuetesStore.shared.quetes == nil)
+    }
+
     /// Sans elle, le filtre « Ici » n'a rien à montrer.
     var positionConnue: Bool { contexte.position != nil }
 
@@ -198,9 +208,17 @@ final class PaletteModele: ObservableObject {
     /// arrive sur sa première carte, l'entrée d'un donjon) ou la replie.
     func valider() {
         if edition != nil { return validerEtiquette() }
-        guard entrees.indices.contains(selection) else { return NSSound.beep() }
+        guard entrees.indices.contains(selection) else { return validerVide() }
         if surLaFiche, let action = cartes.valide(carte) { return agir(action) }
         executer(entrees[selection])
+    }
+
+    /// ↵ sur une liste vide : le geste que la cause propose, sinon rien.
+    private func validerVide() {
+        switch vide?.entree {
+        case .reessayer: CarteStore.shared.reessayer()
+        case nil: NSSound.beep()
+        }
     }
 
     /// Tab : compléter une commande, sinon passer au filtre suivant (⇧Tab :

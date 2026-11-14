@@ -1,5 +1,15 @@
 import Foundation
 
+/// Où en est la carte pour qui l'attend : lue, en cours de lecture ou de téléchargement, ou
+/// sans carte après un échec du téléchargement.
+enum EtatCarte: Equatable, Sendable {
+    case chargement, prete, indisponible
+
+    static func de(vide: Bool, echec: Bool) -> EtatCarte {
+        vide ? (echec ? .indisponible : .chargement) : .prete
+    }
+}
+
 /// La carte en vigueur, pour tout Synfus : zaaps, palette. Lue du disque au
 /// démarrage, rafraîchie depuis DofusDB quand elle a plus de
 /// `DofusDB.peremption`, et au clic « Mettre à jour » ; un échec garde la
@@ -10,6 +20,9 @@ final class CarteStore: ObservableObject {
     static let shared = CarteStore()
 
     @Published private(set) var carte = Carte.vide
+    /// Un téléchargement a échoué sans qu'aucune carte soit en place.
+    @Published private(set) var echec = false
+    var etat: EtatCarte { .de(vide: carte.date == Carte.vide.date, echec: echec) }
     /// Tirés de la carte une fois, pas à chaque lecture : la palette, la
     /// réécriture du `/travel` et les réglages les relisent souvent.
     private var indexee = CarteIndexee(.vide)
@@ -46,6 +59,12 @@ final class CarteStore: ObservableObject {
         try? await mettreAJour()
     }
 
+    /// Redemande la carte, quand il n'y en a aucune.
+    func reessayer() {
+        guard etat == .indisponible else { return }
+        Task { await rafraichirCarte() }
+    }
+
     private func rafraichirInterieurs() async {
         guard DofusDB.perimee(depuis: interieurs.date, maintenant: Date()) else { return }
         await mettreAJourInterieurs()
@@ -55,7 +74,12 @@ final class CarteStore: ObservableObject {
     func poserPourCaptures(_ carte: Carte) { publier(CarteIndexee(carte)) }
 
     func mettreAJour() async throws {
-        let nouvelle = try await CarteDofusDB.telecharger()
+        echec = false
+        let nouvelle: Carte
+        do { nouvelle = try await CarteDofusDB.telecharger() } catch {
+            echec = true
+            throw error
+        }
         publier(await Task.detached(priority: .utility) {
             try? CarteDofusDB.garder(nouvelle)
             return CarteIndexee(nouvelle)
