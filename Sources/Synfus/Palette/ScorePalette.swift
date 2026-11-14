@@ -1,5 +1,5 @@
 /// La pertinence d'un résultat de la palette, le tri « Auto ». Pur. Avec une requête, la
-/// correspondance d'abord, puis le genre (zaap, boss, PNJ, le reste à égalité) ; puis, avec ou
+/// correspondance d'abord, puis le genre (zaap, boss et perso, PNJ, le reste à égalité) ; puis, avec ou
 /// sans requête : favori, habitudes, proximité.
 struct ScorePalette: Equatable, Sendable {
     /// Les points de `Champs.points` ; `nil` sans requête, où ni eux ni le genre ne départagent.
@@ -27,10 +27,10 @@ struct ScorePalette: Equatable, Sendable {
         fois > 0 ? Int.bitWidth - fois.leadingZeroBitCount : 0
     }
 
-    /// Zaap, puis boss (sa fiche ou l'aide au combat), puis PNJ ; le reste à égalité.
+    /// Zaap, puis boss (sa fiche ou l'aide au combat) ou perso, puis PNJ ; le reste à égalité.
     static func rangDeGenre(_ entree: EntreePalette) -> Int {
         if entree.genre == .zaap { return 3 }
-        if entree.estBoss { return 2 }
+        if entree.estBoss || entree.genre == .perso { return 2 }
         return entree.genre == .pnj ? 1 : 0
     }
 
