@@ -17,3 +17,18 @@ struct EtatPersoMenuTests {
         #expect(EtatPersoMenu.de(combat: .horsCombat, appelle: false, dormant: false) == nil)
     }
 }
+
+@Suite("Menu : la lecture de l'écran manquante")
+struct AutorisationsMenuTests {
+    @Test("Proposée seulement si quelque chose la lit")
+    func quandProposer() {
+        func manque(_ position: Bool = false, _ combat: Bool = false, _ apercus: Bool = false, _ panneau: Bool = false,
+                    autorisee: Bool = false) -> Bool {
+            AutorisationsMenu.lectureEcranManque(autorisee: autorisee, lirePosition: position, lireCombat: combat,
+                                                 apercus: apercus, panneauLisant: panneau)
+        }
+        #expect(!manque())
+        #expect(manque(true) && manque(false, true) && manque(false, false, true) && manque(false, false, false, true))
+        #expect(!manque(true, true, true, true, autorisee: true))
+    }
+}
