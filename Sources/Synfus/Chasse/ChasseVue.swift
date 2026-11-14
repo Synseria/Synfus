@@ -38,7 +38,7 @@ struct ChasseVue: View {
                 .padding(.vertical, Jetons.Espace.un)
             if modele.rechercheEnCours || modele.lectureEnCours { ProgressView().controlSize(.mini) }
         } boutons: {
-            BoutonEnTete(icone: "minus", aide: L("quete.fermer.simple")) { ChassePanel.shared.fermer() }
+            BoutonEnTete(icone: "xmark", aide: L("quete.fermer.simple")) { ChassePanel.shared.fermer() }
         }
     }
 

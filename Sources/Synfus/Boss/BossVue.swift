@@ -71,7 +71,7 @@ struct BossVue: View {
             if let nom = aide.donjon?.nomFrancais {
                 BoutonEnTete(icone: "book", aide: L("boss.guide")) { Task { await DofusPourLesNoobs.ouvrir(nom) } }
             }
-            BoutonEnTete(icone: "minus", aide: L("quete.fermer.simple")) { BossPanel.shared.fermer() }
+            BoutonEnTete(icone: "xmark", aide: L("quete.fermer.simple")) { BossPanel.shared.fermer() }
         }
     }
 
@@ -91,6 +91,8 @@ struct BossVue: View {
         }
         menu.addItem(.separator())
         menu.addItem(CibleMenu.shared.element(L("boss.autre")) { PalettePanel.shared.ouvrir(requete: L("boss.autre.recherche")) })
+        menu.addItem(.separator())
+        menu.addItem(CibleMenu.shared.element(L("panneau.fermer")) { BossPanel.shared.fermer() })
         return menu
     }
 

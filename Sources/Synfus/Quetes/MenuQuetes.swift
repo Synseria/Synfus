@@ -23,6 +23,8 @@ enum MenuQuetes {
         case message(String)
         /// Un interrupteur de l'affichage, coché quand il est actif.
         case option(Option, actif: Bool)
+        /// Cache le panneau ; les quêtes restent épinglées.
+        case fermer
         case separateur
     }
 
@@ -84,7 +86,7 @@ enum MenuQuetes {
         }
         if let message = message(etat, reconnues: reconnues) { elements.append(.message(message)) }
         if etat == .lu, coches > 0 { elements.append(.message(L("quete.suivi.coches", nombre: coches, coches))) }
-        return elements + [.separateur] + Option.affichage.map { .option($0, actif: actives.contains($0)) }
+        return elements + [.separateur] + Option.affichage.map { .option($0, actif: actives.contains($0)) } + [.separateur, .fermer]
     }
 
     /// Les quêtes que le suivi montre et que le panneau n'a pas encore : ce

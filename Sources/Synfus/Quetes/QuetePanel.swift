@@ -204,6 +204,8 @@ extension QuetePanel {
                 let item = CibleMenu.shared.element(option.titre) { prefs[keyPath: Self.reglage(option)] = !actif }
                 item.state = actif ? .on : .off
                 menu.addItem(item)
+            case .fermer:
+                menu.addItem(CibleMenu.shared.element(L("panneau.fermer")) { QuetePanel.shared.fermer() })
             case .separateur:
                 menu.addItem(.separator())
             }

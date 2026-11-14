@@ -581,6 +581,7 @@
   "palette.var.xp": "Expérience vers le niveau suivant",
   "palette.var.zone": "Zone",
   "palette.zaap": "Zaap · %@",
+  "panneau.fermer": "Fermer le panneau",
   "persos.acheverGeles": "Achever les clients gelés à la fermeture",
   "persos.acheverGeles.aide": "Un client qui gèle en se fermant reste vivant sans aucune fenêtre. Synfus le sonde et, muet trois fois de suite (~15 s), le force à quitter — que la fermeture soit passée par Synfus ou par le jeu. Les abattages sont consignés dans le Diagnostic.",
   "persos.connecte": "connecté",
