@@ -57,6 +57,20 @@ struct ToxoliathVue: View {
     @ObservedObject private var aide = AideBoss.shared
 
     var body: some View {
+        let touche = aide.session.toxoliathTouche
+        let sous: Int? = if let tour = aide.tour, let touche, Toxoliath.toxmose(toucheAu: touche, tour: tour) { touche } else { nil }
+        // Les deux gestes d'abord, sur une ligne qui ne bouge pas.
+        HStack(spacing: Jetons.Espace.un) {
+            Button(L("boss.toxoliath.touche")) { aide.noter { session, tour in session.toxoliathTouche = tour ?? 1 } }
+                .buttonStyle(.bouton(.secondaire, dense: true))
+                .help(L("boss.toxoliath.touche.aide"))
+                .disabled(sous != nil)
+            Spacer(minLength: 0)
+            PetitBouton(icone: "xmark", aide: L("boss.toxoliath.toxmose.annuler")) {
+                aide.noter { session, _ in session.toxoliathTouche = nil }
+            }
+            .disabled(sous == nil)
+        }
         if let tour = aide.tour {
             if tour < Toxoliath.premierPoisonVolatile {
                 let reste = Toxoliath.premierPoisonVolatile - tour
@@ -74,20 +88,8 @@ struct ToxoliathVue: View {
         } else {
             Consigne(texte: L("boss.toxoliath.avantCombat"), icone: "timer")
         }
-        let touche = aide.session.toxoliathTouche
-        if let tour = aide.tour, Toxoliath.toxmose(toucheAu: touche, tour: tour), let touche {
-            HStack(alignment: .top) {
-                Consigne(texte: L("boss.toxoliath.toxmose", touche + Toxoliath.dureeToxmose - 1),
-                         icone: "drop.triangle", urgente: true)
-                Spacer(minLength: Jetons.Espace.un)
-                PetitBouton(icone: "xmark", aide: L("boss.toxoliath.toxmose.annuler")) {
-                    aide.noter { session, _ in session.toxoliathTouche = nil }
-                }
-            }
-        } else {
-            Button(L("boss.toxoliath.touche")) { aide.noter { session, tour in session.toxoliathTouche = tour ?? 1 } }
-                .buttonStyle(.bouton(.secondaire, dense: true))
-                .help(L("boss.toxoliath.touche.aide"))
+        if let sous {
+            Consigne(texte: L("boss.toxoliath.toxmose", sous + Toxoliath.dureeToxmose - 1), icone: "drop.triangle", urgente: true)
         }
     }
 }
@@ -102,16 +104,33 @@ struct IlyzaelleVue: View {
     var body: some View {
         let tour = aide.tour ?? 1
         let session = aide.session
-        switch Ilyzaelle.phase(seuil75: session.ilyzaelle75, seuil50: session.ilyzaelle50, tour: tour) {
+        let phase = Ilyzaelle.phase(seuil75: session.ilyzaelle75, seuil50: session.ilyzaelle50, tour: tour)
+        // Les gestes d'abord, sur une ligne qui ne bouge pas : le seuil attendu
+        // s'allume quand une phase le demande.
+        HStack(spacing: Jetons.Espace.un) {
+            Button(session.ilyzaelle75 == nil ? L("boss.ilyzaelle.seuil75") : L("boss.ilyzaelle.seuil50")) {
+                aide.noter { session, tour in
+                    if session.ilyzaelle75 == nil { session.ilyzaelle75 = tour ?? 1 } else { session.ilyzaelle50 = tour ?? 1 }
+                }
+            }
+            .buttonStyle(.bouton(.secondaire, dense: true))
+            .disabled(phase != .premiere && phase != .seconde)
+            Spacer(minLength: 0)
+            PetitBouton(icone: "xmark", aide: L("boss.ilyzaelle.annuler")) {
+                aide.noter { session, _ in
+                    if session.ilyzaelle50 != nil { session.ilyzaelle50 = nil } else { session.ilyzaelle75 = nil }
+                }
+            }
+            .disabled(session.ilyzaelle75 == nil)
+        }
+        switch phase {
         case .premiere:
             Consigne(texte: L("boss.ilyzaelle.objectif75"), icone: "target", forte: true)
-            seuil(L("boss.ilyzaelle.seuil75")) { $0.ilyzaelle75 = $1 }
         case .allieeA75(let depuis):
             Consigne(texte: L("boss.ilyzaelle.alliee75", depuis + Ilyzaelle.dureeAlliee - 1), icone: "shield.lefthalf.filled",
                      forte: true)
         case .seconde:
             Consigne(texte: L("boss.ilyzaelle.objectif50"), icone: "target", forte: true)
-            seuil(L("boss.ilyzaelle.seuil50")) { $0.ilyzaelle50 = $1 }
         case .allieeA50(let depuis):
             Consigne(texte: L("boss.ilyzaelle.alliee50", depuis + Ilyzaelle.dureeAlliee - 1), icone: "hourglass",
                      forte: true)
@@ -124,19 +143,6 @@ struct IlyzaelleVue: View {
             Consigne(texte: L("boss.ilyzaelle.tenebres.prochain", Ilyzaelle.prochainVersLesTenebres(depuis: tour)),
                      icone: "arrow.down.right.and.arrow.up.left")
         }
-        if session.ilyzaelle75 != nil {
-            Button(L("boss.ilyzaelle.annuler")) {
-                aide.noter { session, _ in
-                    if session.ilyzaelle50 != nil { session.ilyzaelle50 = nil } else { session.ilyzaelle75 = nil }
-                }
-            }
-            .buttonStyle(.bouton(.secondaire, dense: true))
-        }
-    }
-
-    private func seuil(_ titre: String, noter: @escaping (inout SessionBoss, Int) -> Void) -> some View {
-        Button(titre) { aide.noter { session, tour in noter(&session, tour ?? 1) } }
-            .buttonStyle(.bouton(.secondaire, dense: true))
     }
 }
 
