@@ -111,7 +111,7 @@ nouveau fichier va dans le dossier de son domaine ; un fichier sans domaine en a
 | `Chasse/` | Chasse au trésor : `IndicesChasse`, `EtapeChasse` (purs), `ChasseDofusDB` (indices en cache disque, étape à la demande), `ChasseModele`, `ChassePanel` (panneau key sans activer Synfus), `ChasseVue` |
 | `Attention/` | Rebond du Dock : `BounceDetector`, `DockPairing` (purs), `DockInspector`, `DockGeometryReader`, `AttentionWatcher`, `AttentionProbe` |
 | `Raccourcis/` | Raccourcis Carbon, enregistreur, conflits, enchaînement au clic |
-| `Rangement/` | `LayoutComputer` (pur), `WindowArranger` |
+| `Rangement/` | `LayoutComputer` (pur), `AgencementPrincipal` (pur : le grand suit la bascule de Synfus), `WindowArranger` |
 | `Apercus/` | Captures ScreenCaptureKit, panneau d'aperçu |
 | `Lecture/` | OCR position, combat, suivis de chasse et de quêtes, vie et tchat : `ZoneEcran`, `PositionCarte`, `LectureCombat`, `LumaBitmap`, `Ressemblance`, `DetectionZones` (purs), `LecteurEcran` (+ `GenreLecture`, `DiagnosticLecture`, `MoteurOCR`), `CapturesCalibrage`, `AutoCalibrage` (zones retrouvées sur une capture) |
 | `Preferences/` | `Preferences`, protocole `PreferencesStore` |
