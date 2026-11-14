@@ -84,4 +84,11 @@ struct ComposantsTests {
         #expect(EtatVisuel.choix(.courant, auClavier: false) == .inactif)
         #expect(EtatVisuel.inactif.contour == nil)
     }
+
+    @Test("Le décompte du tour devient critique à cinq secondes, pas avant")
+    func decompteCritique() {
+        #expect(!CombatBadge.estCritique(6))
+        #expect(CombatBadge.estCritique(5))
+        #expect(CombatBadge.estCritique(0))
+    }
 }

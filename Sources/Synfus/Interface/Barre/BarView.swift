@@ -201,9 +201,9 @@ struct BarView: View {
     /// activer l'app, comme celui du rangement.
     private var zaapButton: some View {
         ModeButton(
-            icone: "point.3.connected.trianglepath.dotted",
+            icone: BoutonBarre.palette.symbole,
             actif: zaaps.reecritRecemment || palette.ouvert,
-            aide: L("barre.paletteAide", prefs.paletteHotKey?.displayString ?? L("barre.aucunRaccourci"))
+            aide: infobulle(.palette)
         ) {
             PalettePanel.shared.basculer()
         }
@@ -218,9 +218,9 @@ struct BarView: View {
     /// Synfus, le jeu reste l'app active.
     private var chasseButton: some View {
         ModeButton(
-            icone: "map",
+            icone: BoutonBarre.chasse.symbole,
             actif: chasse.ouvert,
-            aide: L("barre.chasseAide", prefs.chasseHotKey?.displayString ?? L("barre.aucunRaccourci"))
+            aide: infobulle(.chasse)
         ) {
             ChassePanel.shared.basculer()
         }
@@ -229,7 +229,7 @@ struct BarView: View {
     /// Le panneau des quêtes épinglées ; vide, il invite à en chercher une
     /// dans la palette.
     private var quetesButton: some View {
-        ModeButton(icone: "scroll", actif: quetes.ouvert, aide: L("barre.quetesAide")) {
+        ModeButton(icone: BoutonBarre.quetes.symbole, actif: quetes.ouvert, aide: infobulle(.quetes)) {
             QuetePanel.shared.basculer()
         }
     }
@@ -237,9 +237,9 @@ struct BarView: View {
     /// Le panneau d'aide aux boss, posé sur le jeu.
     private var bossButton: some View {
         ModeButton(
-            icone: "scope",
+            icone: BoutonBarre.boss.symbole,
             actif: boss.ouvert,
-            aide: L("barre.bossAide", prefs.bossHotKey?.displayString ?? L("barre.aucunRaccourci"))
+            aide: infobulle(.boss)
         ) {
             BossPanel.shared.basculer()
         }
@@ -273,19 +273,17 @@ struct BarView: View {
     private var autoFocusToggle: some View {
         let on = prefs.attentionAction == .focus
         return ModeButton(
-            icone: on ? "bolt.fill" : "bolt.slash",
+            icone: on ? BoutonBarre.passageAuto.symbole : "bolt.slash",
             actif: on,
-            aide: on
-                ? L("barre.passageAuto.actif", toggleShortcut)
-                : L("barre.passageAuto.inactif", toggleShortcut)
+            aide: infobulle(.passageAuto, nom: on ? L("barre.passageAuto.actif") : L("barre.passageAuto.inactif"))
         ) {
             let prefs = Preferences.shared
             prefs.attentionAction = prefs.attentionAction == .focus ? .highlight : .focus
         }
     }
 
-    private var toggleShortcut: String {
-        prefs.toggleAutoFocus?.displayString ?? L("barre.aucunRaccourci")
+    private func infobulle(_ bouton: BoutonBarre, nom: String? = nil) -> String {
+        bouton.infobulle(touche: bouton.raccourci(prefs)?.displayString, nom: nom)
     }
 
     /// Repère de classe : l'icône choisie dans les réglages, à défaut une
@@ -317,6 +315,9 @@ struct BarView: View {
         let active = manager.isFrontmost(client)
         let alerting = watcher.alerting.contains(client.slotKey)
         let closing = manager.closingPIDs.contains(client.pid)
+        let affichage = AffichagePastille(devant: active, reduireInactifs: prefs.reduirePersosInactifs,
+                                          embleme: prefs.showClasses, touche: prefs.showNumbers,
+                                          aUneClasse: client.characterClass != nil)
 
         return Button {
             // La pastille vient d'être cliquée : la faire clignoter ne dirait
@@ -331,26 +332,28 @@ struct BarView: View {
                     ProgressView()
                         .controlSize(.small)
                         .frame(width: Jetons.Taille.touche + Jetons.Trait.focus, height: Jetons.Taille.touche + Jetons.Trait.focus)
-                } else if prefs.showClasses {
+                } else if affichage.embleme {
                     classBadge(for: client.characterClass, active: active)
                 }
 
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(client.name)
-                        .font((active ? Jetons.Typo.corpsFort : Jetons.Typo.corps).police)
-                        .lineLimit(1)
-                        .fixedSize()
-                    // Nom et classe : une pastille dit toujours les deux ; `showClasses` ne règle que l'emblème.
-                    if let className = client.characterClass {
-                        Text(className)
-                            .font(Jetons.Typo.petit.police)
-                            .foregroundStyle(active ? Color.jeton(\.encreSurPrimaire) : Color.jeton(\.encreSecondaire))
+                if affichage.nom {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(client.name)
+                            .font((active ? Jetons.Typo.corpsFort : Jetons.Typo.corps).police)
                             .lineLimit(1)
+                            .fixedSize()
+                        // Nom et classe : une pastille dit les deux ; `showClasses` ne règle que l'embleme.
+                        if affichage.classe, let className = client.characterClass {
+                            Text(className)
+                                .font(Jetons.Typo.petit.police)
+                                .foregroundStyle(active ? Color.jeton(\.encreSurPrimaire) : Color.jeton(\.encreSecondaire))
+                                .lineLimit(1)
+                        }
                     }
                 }
 
                 // Le numéro est la touche qui mène à ce perso : dessiné comme elle, avec le raccourci réel.
-                if prefs.showNumbers {
+                if affichage.touche {
                     ToucheRaccourci(Self.toucheDuPerso(index: index, raccourcis: prefs.hotKeys))
                 }
 
@@ -358,7 +361,7 @@ struct BarView: View {
                 // et le surlignage du perso courant dit déjà où l'on en est. Une
                 // coche « déjà passé » n'ajoutait qu'un clignotement de plus.
             }
-            .padding(.horizontal, Jetons.Espace.deux)
+            .padding(.horizontal, affichage.nom ? Jetons.Espace.deux : Jetons.Espace.un)
             .padding(.vertical, Jetons.Espace.un)
             .fixedSize(horizontal: true, vertical: false)
             .fondEtat(active ? .courant : closing ? .desactive : EtatVisuel(survole: survolChip == client.slotKey))
@@ -398,6 +401,8 @@ struct BarView: View {
                         ZaapClipboard.shared.copierTrajet(vers: cible, sousZone: nil, dansLesDouze: true)
                     }
                 }
+                menuPlace(de: client)
+                Divider()
                 Button(L("barre.fermer", client.name)) { ConfirmationFermeture.fermer(client) }
             }
         }
@@ -413,6 +418,44 @@ struct BarView: View {
             survolChip = inside ? client.slotKey : (survolChip == client.slotKey ? nil : survolChip)
             hover(client, inside: inside)
         }
+    }
+
+    /// L'équipe et le rang du perso, avec les mêmes écritures que le glisser. Un nom que les
+    /// équipes ne retiennent pas (client au login, homonyme suffixé) n'en a pas.
+    @ViewBuilder
+    private func menuPlace(de client: DofusClient) -> some View {
+        let nom = client.name
+        if WindowTitle.isPersistableName(nom) {
+            let nombre = prefs.equipes.count
+            Menu(L("equipes.equipe")) {
+                Picker(L("equipes.equipe"), selection: Binding(
+                    get: { (Equipes.indexEquipe(de: nom, dans: prefs.equipes) ?? -1) + 1 },
+                    set: { prefs.affecter(nom, aEquipe: $0 == 0 ? nil : $0 - 1) }
+                )) {
+                    Text(L("barre.equipe.aucune")).tag(0)
+                    ForEach(0..<nombre, id: \.self) { Text(L("persos.equipeN", $0 + 1)).tag($0 + 1) }
+                }
+                .pickerStyle(.inline)
+                .labelsHidden()
+                if nombre < Equipes.maximum {
+                    Divider()
+                    Button(L("barre.equipe.nouvelle")) { prefs.affecter(nom, aEquipe: nombre) }
+                }
+            }
+        }
+        deplacer(client, decalage: -1, titre: L("barre.deplacerGauche"))
+        deplacer(client, decalage: 1, titre: L("barre.deplacerDroite"))
+    }
+
+    private func deplacer(_ client: DofusClient, decalage: Int, titre: String) -> some View {
+        let voisin = ClientMemory.voisin(de: client.name, dans: manager.effectif, decalage: decalage,
+                                         order: prefs.characterOrder)
+        return Button(titre) {
+            guard let voisin else { return }
+            prefs.swapOrder(client.name, voisin)
+            manager.resort()
+        }
+        .disabled(voisin == nil)
     }
 
     /// Ouvre l'aperçu après un court délai : sans lui, le simple fait de

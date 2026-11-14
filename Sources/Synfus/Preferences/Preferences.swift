@@ -24,6 +24,8 @@ final class Preferences: ObservableObject {
     @Published var barOrigin: CGPoint? = nil { didSet { save() } }
     @Published var showNumbers: Bool = true { didSet { save() } }
     @Published var showClasses: Bool = true { didSet { save() } }
+    /// Les personnages qui ne sont pas devant se réduisent à leur emblème et leur touche.
+    @Published var reduirePersosInactifs: Bool = false { didSet { save() } }
 
     /// Les boutons de la barre masqués, après les persos ; tous montrés par défaut.
     @Published var boutonsMasques: Set<BoutonBarre> = [] { didSet { save() } }
@@ -519,6 +521,7 @@ final class Preferences: ObservableObject {
         .point(x: "barOriginX", y: "barOriginY", \.barOrigin),
         .requis("showNumbers", \.showNumbers),
         .facultatif("showClasses", \.showClasses),
+        .facultatif("reduirePersosInactifs", \.reduirePersosInactifs),
         .facultatif("attentionAction", \.attentionAction),
         // Sans défaut à la lecture : un raccourci vide est un choix. Les
         // sauvegardes plus anciennes que la clé sont rattrapées par

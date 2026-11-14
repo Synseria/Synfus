@@ -492,7 +492,7 @@ struct PreferencesTests {
      "killFrozenClients":false,"lastArrangement":"principale","lireCombat":true,"lireCombatDerriere":true,
      "lirePosition":true,"menuBarIcon":"symbole","iconeApp":{"motif":"couvee","fond":"aube"},"couleurDeLApp":"teinte:210","fondsDeLApp":"nuit",
      "previewHotKey":{"keyCode":49,"modifiers":2048},
-     "sessionHotKey":{"keyCode":1,"modifiers":256},"showClasses":false,
+     "sessionHotKey":{"keyCode":1,"modifiers":256},"reduirePersosInactifs":false,"showClasses":false,
      "showNumbers":false,"showPreviewOnHover":true,"signalerBascule":false,
      "toggleAutoFocus":{"keyCode":99,"modifiers":0},
      "zaapAuto":true,"zaapGainMinimal":8,"zaapDuJeu":false,"zaapIntercalees":"/a ; /b","verifierMisesAJour":false,"derniereVersionLancee":"0.11.0","partagerStatistiques":false,
@@ -693,7 +693,7 @@ struct PreferencesTests {
          "boutonsMasques":[],"characterOrder":[],
          "defaultsVersion":8,"equipes":[],"etiquettes":{},"hotKeys":[null],"inviteFormat":"/invite %nom","inviteGroupee":false,
          "killFrozenClients":true,"lireCombat":false,"lireCombatDerriere":false,"lirePosition":false,"menuBarIcon":"logo","iconeApp":{"motif":"oeuf","fond":"transparent"},"couleurDeLApp":"jade",
-         "showClasses":true,"showNumbers":true,"showPreviewOnHover":false,
+         "reduirePersosInactifs":false,"showClasses":true,"showNumbers":true,"showPreviewOnHover":false,
          "signalerBascule":true,"zaapAuto":false,
          "zaapGainMinimal":5,"zaapDuJeu":true,"zaapIntercalees":"/a","verifierMisesAJour":true,"partagerStatistiques":true,"zaapsAjoutes":[],"zaapsChoix":{},"zaapsFavoris":[],"zaapsVueCarte":true,
          "lieuxFavoris":[],"pnjsFavoris":[],"paletteRecents":[],"paletteTri":"auto","paletteFrequentation":{},"quetesEpinglees":[],"quetesEtape":{},
@@ -993,6 +993,43 @@ extension PreferencesTests {
         #expect(BoutonBarre.affiches(sauf: []) == BoutonBarre.allCases)
         #expect(BoutonBarre.affiches(sauf: [.palette, .quetes])
                 == [.boss, .chasse, .rangement, .passageAuto])
+    }
+
+    @Test("Chaque bouton a son dessin, et « map » reste à la page Carte")
+    func symbolesDesBoutons() {
+        let symboles = BoutonBarre.allCases.map(\.symbole)
+        #expect(Set(symboles).count == symboles.count)
+        #expect(!symboles.contains("map"))
+    }
+
+    @Test("L'infobulle d'un bouton : son nom, puis sa touche au bout quand elle existe")
+    func infobulleDuBouton() {
+        #expect(BoutonBarre.quetes.infobulle(touche: "⌥Q") == "\(BoutonBarre.quetes.libelle)  ⌥Q")
+        #expect(BoutonBarre.boss.infobulle(touche: nil) == BoutonBarre.boss.libelle)
+        #expect(BoutonBarre.passageAuto.infobulle(touche: "⌘²", nom: "Passage : activé") == "Passage : activé  ⌘²")
+    }
+
+    @Test("Réduire les inactifs : désactivé par défaut, et la sauvegarde l'écrit")
+    func reduirePersosInactifs() {
+        let (prefs, store) = neuves()
+        #expect(prefs.reduirePersosInactifs == false)
+        prefs.reduirePersosInactifs = true
+        let relu = Preferences.forTesting(store: store)
+        #expect(relu.reduirePersosInactifs == true)
+    }
+
+    @Test("Une pastille réduite garde emblème et touche ; celle de devant et celle sans rien à montrer gardent leur nom")
+    func pastilleReduite() {
+        func vue(devant: Bool, reduire: Bool = true, embleme: Bool = true, touche: Bool = true) -> AffichagePastille {
+            AffichagePastille(devant: devant, reduireInactifs: reduire, embleme: embleme, touche: touche, aUneClasse: true)
+        }
+        #expect(vue(devant: false).nom == false)
+        #expect(vue(devant: false).classe == false)
+        #expect(vue(devant: false).embleme && vue(devant: false).touche)
+        #expect(vue(devant: true).nom && vue(devant: true).classe)
+        #expect(vue(devant: false, reduire: false).nom)
+        #expect(vue(devant: false, embleme: false, touche: false).nom)
+        #expect(vue(devant: false, embleme: false).nom == false)
     }
 
     @Test("Masquer puis remontrer un bouton")

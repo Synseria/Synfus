@@ -57,10 +57,10 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .personnages: return "person.3"
         case .barre: return "rectangle.topthird.inset.filled"
         case .raccourcis: return "keyboard"
-        case .palette: return "command"
+        case .palette: return BoutonBarre.palette.symbole
         case .carte: return "map"
-        case .quetes: return "scroll"
-        case .aides: return "scope"
+        case .quetes: return BoutonBarre.quetes.symbole
+        case .aides: return BoutonBarre.boss.symbole
         case .lecture: return "text.viewfinder"
         }
     }

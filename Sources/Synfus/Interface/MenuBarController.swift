@@ -92,13 +92,13 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         // La palette, geste le plus fréquent, puis les panneaux de jeu ; les
         // fenêtres et la barre ; Synfus lui-même ; enfin ce qui détruit, à part.
         add(to: menu, title: L("menu.palette"), action: #selector(openPalette), raccourci: prefs.paletteHotKey,
-            icone: "command")
+            icone: BoutonBarre.palette.symbole)
         add(to: menu, title: L("menu.quetes"), action: #selector(openQuests), raccourci: prefs.quetesHotKey,
-            icone: "scroll").state = QuetePanel.shared.ouvert ? .on : .off
+            icone: BoutonBarre.quetes.symbole).state = QuetePanel.shared.ouvert ? .on : .off
         add(to: menu, title: L("menu.chasse"), action: #selector(openHunt), raccourci: prefs.chasseHotKey,
-            icone: "map").state = ChassePanel.shared.ouvert ? .on : .off
+            icone: BoutonBarre.chasse.symbole).state = ChassePanel.shared.ouvert ? .on : .off
         add(to: menu, title: L("menu.boss"), action: #selector(openBoss), raccourci: prefs.bossHotKey,
-            icone: "scope").state = BossPanel.shared.ouvert ? .on : .off
+            icone: BoutonBarre.boss.symbole).state = BossPanel.shared.ouvert ? .on : .off
         menu.addItem(.separator())
 
         menu.addItem(arrangeSubmenu(enabled: manager.accessibilityGranted
@@ -129,7 +129,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     /// c'est elle qu'il rejoue.
     private func arrangeSubmenu(enabled: Bool) -> NSMenuItem {
         let parent = NSMenuItem(title: L("menu.rangerFenetres"), action: nil, keyEquivalent: "")
-        parent.image = NSImage(systemSymbolName: "rectangle.3.group", accessibilityDescription: nil)
+        parent.image = NSImage(systemSymbolName: BoutonBarre.rangement.symbole, accessibilityDescription: nil)
         let submenu = NSMenu()
         let prefs = Preferences.shared
         for (index, disposition) in Disposition.allCases.enumerated() {
