@@ -238,6 +238,52 @@ struct LigneAutorisation: View {
     }
 }
 
+// MARK: - Retour de copie
+
+/// « C'est dans le presse-papiers » : un seul signe, `IconeCopie`, pendant une seule durée, quelle que
+/// soit la surface. Une surface porte un `SignalCopie` et dit quelle ligne vient d'être copiée ; une
+/// nouvelle copie remplace la précédente sans que l'ancien délai ne l'efface.
+@MainActor
+final class SignalCopie: ObservableObject {
+    /// `Jetons` est engendré et n'a pas de durée de ce genre : celle-ci est la seule de l'app.
+    static let duree: Duration = .seconds(1.2)
+
+    @Published private(set) var ligne: String?
+    private let delai: Duration
+    private var effacement: Task<Void, Never>?
+
+    init(delai: Duration = SignalCopie.duree) { self.delai = delai }
+
+    func signaler(_ ligne: String) {
+        effacement?.cancel()
+        self.ligne = ligne
+        effacement = Task {
+            try? await Task.sleep(for: delai)
+            guard !Task.isCancelled else { return }
+            self.ligne = nil
+        }
+    }
+
+    func affiche(_ ligne: String) -> Bool { self.ligne == ligne }
+}
+
+/// L'icône d'une ligne copiable, qui devient une coche le temps du signal. Les deux se superposent :
+/// la place est celle de l'icône, le texte ne bouge pas. Sans `icone`, la coche seule, dans une place
+/// réservée.
+struct IconeCopie: View {
+    let icone: String?
+    let copie: Bool
+
+    var body: some View {
+        ZStack {
+            if let icone { Image(systemName: icone).opacity(copie ? 0 : 1) }
+            Image(systemName: "checkmark")
+                .foregroundStyle(Color.jeton(\.primaireEncre))
+                .opacity(copie ? 1 : 0)
+        }
+    }
+}
+
 // MARK: - Segments
 
 /// Le choix d'une valeur parmi quelques-unes, côte à côte : piste `creux` bordée d'un `filet`, le cran

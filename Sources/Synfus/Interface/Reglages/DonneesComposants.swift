@@ -133,24 +133,20 @@ struct BoutonTrajet: View {
     let x: Int
     let y: Int
     let sousZone: Int?
-    @State private var copie = false
+    @StateObject private var copie = SignalCopie()
 
     private var dansLesDouze: Bool { !CarteStore.shared.reseau.horsDesDouze(sousZone) }
 
     var body: some View {
         Button {
             ZaapClipboard.shared.copierTrajet(vers: (x, y), sousZone: sousZone, dansLesDouze: dansLesDouze)
-            copie = true
-            Task {
-                try? await Task.sleep(for: .seconds(1.2))
-                copie = false
-            }
+            copie.signaler("trajet")
         } label: {
             HStack(spacing: Jetons.Espace.un) {
                 Text(Coordonnees.texte(x, y)).font(Jetons.Typo.codeInterface.police)
-                Image(systemName: copie ? "checkmark" : "doc.on.clipboard")
+                IconeCopie(icone: "doc.on.clipboard", copie: copie.affiche("trajet"))
             }
-            .foregroundStyle(copie ? Color.jeton(\.primaireEncre) : Color.jeton(\.encreSecondaire))
+            .foregroundStyle(Color.jeton(\.encreSecondaire))
         }
         .buttonStyle(.borderless)
         .help(dansLesDouze ? L("ouTrouver.copierTrajet") : L("trajet.copier.horsDesDouze"))

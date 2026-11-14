@@ -8,6 +8,7 @@ import SwiftUI
 struct ChasseVue: View {
     @ObservedObject private var modele = ChasseModele.shared
     @ObservedObject private var previews = WindowPreviewService.shared
+    @StateObject private var copie = SignalCopie()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -207,9 +208,12 @@ struct ChasseVue: View {
                 }
                 Spacer()
                 if case .trouve = constat.resultat {
-                    Button { modele.copier() } label: {
-                        Image(systemName: modele.copieRecente ? "checkmark" : "doc.on.doc")
-                            .foregroundStyle(modele.copieRecente ? Color.jeton(\.primaireEncre) : Color.jeton(\.encreSecondaire))
+                    Button {
+                        modele.copier()
+                        copie.signaler("trajet")
+                    } label: {
+                        IconeCopie(icone: "doc.on.doc", copie: copie.affiche("trajet"))
+                            .foregroundStyle(Color.jeton(\.encreSecondaire))
                     }
                     .buttonStyle(.bouton(.tertiaire, dense: true))
                     .aide(L("chasse.copier"))

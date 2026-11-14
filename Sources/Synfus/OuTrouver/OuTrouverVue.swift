@@ -11,7 +11,7 @@ struct OuTrouverVue: View {
     @ObservedObject private var store = OuTrouverStore.shared
     /// La position du perso range les repaires.
     @ObservedObject private var lecteur = LecteurEcran.shared
-    @State private var copie: String?
+    @StateObject private var copie = SignalCopie()
     @State private var tout = false
 
     /// Au-delà, « N de plus » : un objet commun a des dizaines de lâcheurs,
@@ -114,20 +114,17 @@ struct OuTrouverVue: View {
         let id = "\(cle):\(repaire.repaire.genre.rawValue):\(repaire.repaire.id)"
         return Button {
             store.copierTrajet(repaire)
-            signaler(id)
+            copie.signaler(id)
         } label: {
             HStack(spacing: Jetons.Espace.un) {
-                Image(systemName: repaire.repaire.genre == .donjon ? "building.columns" : "mappin").frame(width: Jetons.Espace.trois)
+                IconeCopie(icone: repaire.repaire.genre == .donjon ? "building.columns" : "mappin", copie: copie.affiche(id))
+                    .frame(width: Jetons.Espace.trois)
                 Text(Lieu.traduit(repaire.repaire.noms, langue) ?? "?").lineLimit(1).layoutPriority(1)
                 Spacer(minLength: Jetons.Espace.un)
-                if copie == id {
-                    Text(L("quete.copie")).font(Jetons.Typo.raccourci.police).foregroundStyle(Color.jeton(\.primaireEncre))
-                } else {
-                    if let cartes = repaire.cartes { Text(L("ouTrouver.cartes", nombre: cartes, cartes)).lineLimit(1) }
-                    Text(Coordonnees.texte(repaire.situation.x, repaire.situation.y))
-                        .font(Jetons.Typo.codeInterface.police)
-                        .lineLimit(1)
-                }
+                if let cartes = repaire.cartes { Text(L("ouTrouver.cartes", nombre: cartes, cartes)).lineLimit(1) }
+                Text(Coordonnees.texte(repaire.situation.x, repaire.situation.y))
+                    .font(Jetons.Typo.codeInterface.police)
+                    .lineLimit(1)
             }
             .padding(.vertical, Jetons.Espace.un)
             .contentShape(Rectangle())
@@ -143,14 +140,6 @@ struct OuTrouverVue: View {
             Button(L("ouTrouver.plus", nombre: reste, reste)) { tout = true }
                 .buttonStyle(.bouton(.tertiaire, dense: true))
                 .font(metriques.detail.police)
-        }
-    }
-
-    private func signaler(_ id: String) {
-        copie = id
-        Task {
-            try? await Task.sleep(for: .seconds(1.2))
-            if copie == id { copie = nil }
         }
     }
 }
