@@ -243,6 +243,15 @@ struct HarebourgTests {
         #expect(tours.tour("A") == 1)
         tours.combat("A", avant: fin(200), apres: .horsCombat)
         #expect(tours.tour("A") == nil)
+        tours.recommencer(perso: "B")
+        #expect(tours.tour("B") == nil)
+        tours.combat("A", avant: .horsCombat, apres: fin(30))
+        tours.corriger(2, perso: "A")
+        tours.recommencer(perso: "A")
+        #expect(tours.tour("A") == nil)
+        tours.combat("A", avant: .pasMonTour, apres: fin(100))
+        #expect(tours.tour("A") == 1)
+        #expect(ToursCombat.estImpair(1) && ToursCombat.estImpair(3) && !ToursCombat.estImpair(2))
     }
 
     @Test("Une confusion choisie à la main vaut jusqu'à la fin du tour, coups comptés")

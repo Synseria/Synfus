@@ -58,6 +58,16 @@ struct FicheCombat: Equatable, Sendable {
         return (valeurs.filter { $0.1 <= bas + Self.marge }.map(\.0), valeurs.filter { $0.1 >= haut - Self.marge && $0.1 > bas + Self.marge }.map(\.0))
     }
 
+    enum Role: Sendable { case frapper, eviter, neutre }
+
+    /// Ce que la fiche dit de cet élément : à frapper, à éviter, ou rien de
+    /// plus que son pourcentage.
+    func role(_ element: Element) -> Role {
+        let ici = elements
+        if ici.frapper.contains(element) { return .frapper }
+        return ici.eviter.contains(element) ? .eviter : .neutre
+    }
+
     static let ecartUtile = 10
     static let marge = 5
 

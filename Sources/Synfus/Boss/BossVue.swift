@@ -24,19 +24,16 @@ struct BossVue: View {
             Divider()
             VStack(alignment: .leading, spacing: Jetons.Espace.deux) {
                 if let fiche = aide.fiches[prefs.bossChoisi.monstre] { FicheCombatVue(fiche: fiche) }
-                if previews.authorized {
-                    ligneTour
-                    switch prefs.bossChoisi.special {
-                    case .harebourg: HarebourgVue()
-                    case .kimbo: KimboVue()
-                    case .toxoliath: ToxoliathVue()
-                    case .ilyzaelle: IlyzaelleVue()
-                    case .talKasha: TalKashaVue()
-                    case nil: EmptyView()
-                    }
-                } else {
-                    LigneAutorisation()
+                ligneTour
+                switch prefs.bossChoisi.special {
+                case .harebourg: HarebourgVue()
+                case .kimbo: KimboVue()
+                case .toxoliath: ToxoliathVue()
+                case .ilyzaelle: IlyzaelleVue()
+                case .talKasha: TalKashaVue()
+                case nil: EmptyView()
                 }
+                if !previews.authorized { LigneAutorisation() }
                 if let special = prefs.bossChoisi.special { rappelsVue(special) }
                 conseilsVue
             }
@@ -58,8 +55,12 @@ struct BossVue: View {
 
     private var entete: some View {
         EnTetePanneau(icone: "scope", teinte: Color.jeton(\.safran), menu: Self.menu) {
-            Text(Self.nom(prefs.bossChoisi, donjons: donjons.donjons)).font(Jetons.Typo.corpsFort.police)
+            Text(Self.nom(prefs.bossChoisi, donjons: donjons.donjons, garde: prefs.nomsBossChoisi))
+                .font(Jetons.Typo.corpsFort.police)
                 .padding(.leading, Jetons.Espace.un)
+            if donjons.enCours, prefs.bossChoisi.special == nil, prefs.nomsBossChoisi == nil {
+                ProgressView().controlSize(.mini).padding(.leading, Jetons.Espace.un)
+            }
             Image(systemName: "chevron.down").font(Jetons.Typo.micro.police).foregroundStyle(Color.jeton(\.encreSecondaire))
                 .padding(.leading, Jetons.Espace.un)
             if let perso = lecteur.persoDevant {
@@ -79,17 +80,22 @@ struct BossVue: View {
     /// en est un, coché, puis la palette pour en chercher un autre.
     private static func menu() -> NSMenu {
         let menu = NSMenu()
+        menu.autoenablesItems = false
         let choisi = Preferences.shared.bossChoisi
         var cibles = Boss.allCases.map(CibleBoss.special)
         if choisi.special == nil { cibles.append(choisi) }
         for cible in cibles {
-            let item = CibleMenu.shared.element(nom(cible, donjons: DonjonsStore.shared.donjons)) {
+            let item = CibleMenu.shared.element(nom(cible, donjons: DonjonsStore.shared.donjons, garde: Preferences.shared.nomsBossChoisi)) {
                 AideBoss.shared.choisir(cible)
             }
             item.state = cible == choisi ? .on : .off
             menu.addItem(item)
         }
         menu.addItem(.separator())
+        let nouveau = CibleMenu.shared.element(L("boss.nouveauCombat")) { AideBoss.shared.nouveauCombat() }
+        nouveau.image = NSImage(systemSymbolName: "arrow.counterclockwise", accessibilityDescription: nil)
+        nouveau.isEnabled = AideBoss.shared.aDuNote
+        menu.addItem(nouveau)
         menu.addItem(CibleMenu.shared.element(L("boss.autre")) { PalettePanel.shared.ouvrir(requete: L("boss.autre.recherche")) })
         menu.addItem(.separator())
         menu.addItem(CibleMenu.shared.element(L("panneau.fermer")) { BossPanel.shared.fermer() })
@@ -100,15 +106,19 @@ struct BossVue: View {
     private var ligneTour: some View {
         HStack(spacing: Jetons.Espace.un) {
             Image(systemName: "clock").foregroundStyle(Color.jeton(\.encreSecondaire))
-            Text(aide.tour.map { L("boss.tour", $0) } ?? L("boss.tour.attente"))
-                .font((aide.tour != nil ? Jetons.Typo.raccourci : Jetons.Typo.petit).police)
-                .foregroundStyle(aide.tour == nil ? Color.jeton(\.encreSecondaire) : Color.jeton(\.encre))
-                .help(L("boss.tour.aide"))
+            if let tour = aide.tour {
+                Text(L("boss.tour", tour)).font(Jetons.Typo.raccourci.police)
+                Text(ToursCombat.estImpair(tour) ? L("boss.tour.impair") : L("boss.tour.pair"))
+                    .font(Jetons.Typo.petit.police).foregroundStyle(Color.jeton(\.encreSecondaire))
+            } else {
+                Text(L("boss.tour.attente")).font(Jetons.Typo.petit.police).foregroundStyle(Color.jeton(\.encreSecondaire))
+            }
             Spacer()
             PetitBouton(icone: "minus", aide: L("boss.tour.moins")) { aide.corrigerTour(-1) }
                 .disabled((aide.tour ?? 1) <= 1)
             PetitBouton(icone: "plus", aide: L("boss.tour.plus")) { aide.corrigerTour(1) }
         }
+        .help(L("boss.tour.aide"))
         .disabled(lecteur.persoDevant == nil)
     }
 
@@ -192,13 +202,14 @@ struct BossVue: View {
 
     // MARK: - Libellés
 
-    /// Le nom d'un boss de donjon vient de DofusDB ; « ? » tant que la liste
-    /// n'est pas là.
-    static func nom(_ cible: CibleBoss, donjons: Donjons?) -> String {
+    /// Le nom d'un boss de donjon vient de DofusDB : en attendant la liste, celui
+    /// qu'on en gardait, à défaut un titre générique.
+    static func nom(_ cible: CibleBoss, donjons: Donjons?, garde: [String: String]?) -> String {
         switch cible {
         case .special(let boss): return nom(boss)
-        case .donjon(let monstre, _):
-            return donjons?.nomsBoss[monstre].flatMap { Lieu.traduit($0, L10n.courante.langue) } ?? "?"
+        case .donjon:
+            let langue = L10n.courante.langue
+            return cible.nomDonjon(dans: donjons, langue) ?? garde.flatMap { Lieu.traduit($0, langue) } ?? L("boss.donjon")
         }
     }
 
