@@ -79,6 +79,11 @@ final class MenuBarController: NSObject, NSMenuDelegate {
                 item.tag = index
                 item.image = ClassesStore.shared.menuIcon(for: client.characterClass)
                 if manager.isFrontmost(client) { item.state = .on }
+                let combat = prefs.lireCombat ? LecteurEcran.shared.combats[client.name] : nil
+                let appelle = AttentionWatcher.shared.alerting.contains(client.slotKey)
+                if let etat = EtatPersoMenu.de(combat: combat, appelle: appelle, dormant: client.dormant) {
+                    item.badge = NSMenuItemBadge(string: etat.libelle)
+                }
             }
             if manager.effectif.isEmpty {
                 let empty = NSMenuItem(title: L("menu.aucunPersoEquipe"), action: nil, keyEquivalent: "")
