@@ -193,6 +193,17 @@ struct PaletteVue: View {
                 Button(L("lecture.ouvrir")) { SettingsWindowController.shared.show(section: .lecture) }
             case .iciPasEncoreLu:
                 texteVide(L("palette.ici.pasEncore"))
+            case .rienDansLeFiltre(let filtre, let ailleurs):
+                texteVide(L("palette.vide.filtre", filtre.titre))
+                Button { modele.choisir(.tout) } label: {
+                    Text(L("palette.vide.ailleurs", nombre: ailleurs, ailleurs, FiltrePalette.tout.titre))
+                        .font(Jetons.Typo.corps.police)
+                        .foregroundStyle(EtatVisuel.choisi.encre)
+                        .padding(.horizontal, Jetons.Espace.trois)
+                        .frame(height: Jetons.Taille.rangee)
+                        .fondEtat(.choisi)
+                }
+                .buttonStyle(.plain)
             case .aucun:
                 texteVide(L("palette.aucun"))
             }
@@ -309,6 +320,7 @@ struct PaletteVue: View {
                 if let vide = modele.vide {
                     switch vide.entree {
                     case .reessayer: aide("↵", L("palette.carte.reessayer"))
+                    case .toutVoir: aide("↵", FiltrePalette.tout.titre)
                     case nil: EmptyView()
                     }
                 } else {
