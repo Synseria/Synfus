@@ -249,16 +249,19 @@ final class SignalCopie: ObservableObject {
     static let duree: Duration = .seconds(1.2)
 
     @Published private(set) var ligne: String?
-    private let delai: Duration
+    private let attendre: @MainActor () async -> Void
     private var effacement: Task<Void, Never>?
 
-    init(delai: Duration = SignalCopie.duree) { self.delai = delai }
+    /// `attendre` : le délai avant l'effacement, que les tests commandent à la main.
+    init(attendre: @escaping @MainActor () async -> Void = { try? await Task.sleep(for: SignalCopie.duree) }) {
+        self.attendre = attendre
+    }
 
     func signaler(_ ligne: String) {
         effacement?.cancel()
         self.ligne = ligne
         effacement = Task {
-            try? await Task.sleep(for: delai)
+            await attendre()
             guard !Task.isCancelled else { return }
             self.ligne = nil
         }
