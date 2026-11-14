@@ -7,6 +7,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Accessory : pas d'icône dans le Dock, Synfus vit dans la barre de menus.
         NSApp.setActivationPolicy(.accessory)
 
+        ThemeCourant.demarrer()
         buildApplicationMenu()
 
         // Le modèle signale quand la barre et les panneaux du jeu doivent se

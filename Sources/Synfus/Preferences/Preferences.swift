@@ -115,6 +115,8 @@ final class Preferences: ObservableObject {
     /// à la charge de l'appelant comme `menuBarIcon`.
     @Published var iconeApp: IconeApp = .parDefaut { didSet { save() } }
 
+    /// Clair ou sombre pour toute l'app, ou celui de macOS (`ThemeCourant.Apparence`).
+    @Published var apparence: ThemeCourant.Apparence = .auto { didSet { save() } }
     /// La couleur de l'app et la teinte de ses fonds (Réglages ▸ Thème) : tout le reste
     /// des couleurs vient des jetons, par `ThemeCourant`.
     @Published var couleurDeLApp: Jetons.Couleur = Jetons.couleurParDefaut { didSet { save() } }
@@ -534,6 +536,7 @@ final class Preferences: ObservableObject {
         .facultatif("menuBarIcon", \.menuBarIcon),
         .facultatif("iconeApp", \.iconeApp),
         .enTexte("couleurDeLApp", \.couleurDeLApp, ecrit: \.ecrit, lu: Jetons.Couleur.init(ecrit:)),
+        .enTexte("apparence", \.apparence, ecrit: \.rawValue, lu: ThemeCourant.Apparence.init(rawValue:)),
         .enTexteOptionnel("fondsDeLApp", \.fondsDeLApp, ecrit: \.ecrit, lu: Jetons.Fonds.init(ecrit:)),
         .facultatif("showPreviewOnHover", \.showPreviewOnHover),
         .optionnel("previewHotKey", \.previewHotKey),

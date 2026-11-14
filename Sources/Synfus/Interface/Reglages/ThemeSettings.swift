@@ -6,9 +6,22 @@ struct ThemeSettings: View {
     var body: some View {
         PageReglages(titre: L("reglages.theme")) {
             Bloc {
+                ChoixApparence()
                 ChoixDeCouleur()
                 ChoixDesFonds()
             }
+        }
+    }
+}
+
+/// Auto suit macOS ; Clair et Sombre l'imposent à toutes les fenêtres de Synfus.
+private struct ChoixApparence: View {
+    @ObservedObject private var prefs = Preferences.shared
+
+    var body: some View {
+        Ligne(titre: L("theme.apparence")) {
+            Segments(L("theme.apparence"), selection: $prefs.apparence,
+                     choix: ThemeCourant.Apparence.allCases.map { ($0, $0.titre) })
         }
     }
 }
