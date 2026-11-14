@@ -22,8 +22,6 @@ private struct BlocTrajets: View {
 
     var body: some View {
         Bloc(L("reglages.trajets")) {
-            RaccourciReglable(label: L("zaap.raccourci"), help: L("zaap.raccourci.aide"), chemin: \.zaapHotKey)
-                .help(L("zaap.reecriture.aide", ItineraireZaap.ecartZaapDuJeu))
             Ligne(titre: L("zaap.gain"), aide: L("zaap.gain.aide")) {
                 Stepper(L("zaap.gain.valeur", nombre: prefs.zaapGainMinimal, prefs.zaapGainMinimal),
                         value: $prefs.zaapGainMinimal, in: ItineraireZaap.gainsPossibles)

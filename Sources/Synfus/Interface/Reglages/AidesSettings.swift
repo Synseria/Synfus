@@ -8,13 +8,9 @@ struct AidesSettings: View {
     var body: some View {
         PageReglages(titre: L("reglages.aides")) {
             Bloc(L("chasse.titre")) {
-                RaccourciReglable(label: L("chasse.raccourci"), chemin: \.chasseHotKey)
-                    .help(L("chasse.aide"))
                 indices
             }
             Bloc(L("boss.titre")) {
-                RaccourciReglable(label: L("boss.raccourci"), chemin: \.bossHotKey)
-                    .help(L("boss.aide"))
                 ForEach(Boss.allCases, id: \.self) { boss in
                     Ligne(titre: BossVue.nom(boss), aide: Self.resume(boss)) {
                         Button(L("boss.ouvrir")) { BossPanel.shared.ouvrir(.special(boss)) }

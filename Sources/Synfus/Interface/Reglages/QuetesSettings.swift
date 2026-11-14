@@ -9,8 +9,6 @@ struct QuetesSettings: View {
         PageReglages(titre: L("reglages.quetes")) {
             Bloc {
                 SourceQuetes()
-                RaccourciReglable(label: L("quetes.raccourci"), chemin: \.quetesHotKey)
-                    .help(L("quetes.aide"))
             }
             Bloc(L("quetes.panneau")) {
                 Interrupteur(titre: L("quetes.compact"), aide: L("quetes.compact.aide"), isOn: $prefs.quetesCompact)
