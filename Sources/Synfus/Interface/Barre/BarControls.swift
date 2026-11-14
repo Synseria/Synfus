@@ -166,13 +166,18 @@ struct ModeButton: View {
 }
 
 /// Les entrées du menu de rangement — les mêmes sous le bouton de la barre et
-/// dans son menu contextuel, écrites une fois.
+/// dans son menu contextuel, écrites une fois. La disposition en cours est
+/// cochée : un `Toggle` de menu, dont la seule écriture est le rangement.
 struct ArrangementMenuItems: View {
+    @ObservedObject private var prefs = Preferences.shared
+
     var body: some View {
+        let enCours = Disposition.enCours(derniere: prefs.lastArrangement)
         ForEach(Disposition.allCases) { disposition in
-            Button {
-                Task { await WindowArranger.shared.appliquer(disposition) }
-            } label: {
+            Toggle(isOn: Binding(
+                get: { disposition == enCours },
+                set: { _ in Task { await WindowArranger.shared.appliquer(disposition) } }
+            )) {
                 Label(disposition.label, systemImage: disposition.symbolName)
             }
         }

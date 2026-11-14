@@ -794,7 +794,7 @@
   "raccourcis.persoPrecedent": "Personaje anterior",
   "raccourcis.persoSuivant": "Personaje siguiente",
   "raccourcis.ranger": "Ordenar las ventanas",
-  "raccourcis.ranger.aide": "Repite la última disposición usada — lado a lado, mosaico, una grande + miniaturas, apiladas — elegida desde el botón de la barra, la barra de menús o el clic derecho. Sin valor por defecto: tú eliges.",
+  "raccourcis.ranger.aide": "Repite la disposición marcada en «Ordenar las ventanas». Sin valor por defecto: tú eliges.",
   "raccourcis.refuse": "macOS rechazó esta combinación: otra app ya la usa.",
   "raccourcis.refusees": "Rechazados por el sistema",
   "raccourcis.retablir.confirmation": "¿Restablecer todos los atajos?",

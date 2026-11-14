@@ -35,7 +35,7 @@ final class WindowArranger: ObservableObject {
 
     /// Rejoue la dernière disposition choisie — c'est l'action du raccourci.
     func appliquerDerniere(geste: EvenementUsage = .rangement) async {
-        await appliquer(Preferences.shared.lastArrangement ?? .mosaique, geste: geste)
+        await appliquer(.enCours(derniere: Preferences.shared.lastArrangement), geste: geste)
     }
 
     /// Asynchrone parce que l'inventaire l'est : on attend un relevé frais —

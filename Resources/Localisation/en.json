@@ -794,7 +794,7 @@
   "raccourcis.persoPrecedent": "Previous character",
   "raccourcis.persoSuivant": "Next character",
   "raccourcis.ranger": "Arrange windows",
-  "raccourcis.ranger.aide": "Replays the last layout used — side by side, grid, one large + thumbnails, stacked — chosen from the bar button, the menu bar or the right click. No default: your call.",
+  "raccourcis.ranger.aide": "Replays the layout checked under “Arrange windows”. No default: your call.",
   "raccourcis.refuse": "macOS refused this combination: another app already holds it.",
   "raccourcis.refusees": "Refused by the system",
   "raccourcis.retablir.confirmation": "Restore all shortcuts?",
