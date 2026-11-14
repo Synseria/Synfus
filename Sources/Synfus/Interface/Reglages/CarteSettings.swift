@@ -39,7 +39,7 @@ private struct BlocTrajets: View {
             } else {
                 // La réécriture a besoin de la position : l'état se dit dans sa ligne, avec le geste qui le lève.
                 Ligne(titre: L("zaap.auto"), etat: L("zaap.sansPosition"), aide: L("zaap.auto.aide")) {
-                    Button(L("zaap.lirePosition")) {
+                    Button(WindowPreviewService.shared.authorized ? L("zaap.lirePosition") : L("autorisation.lectureEcran")) {
                         prefs.lirePosition = true
                         if !WindowPreviewService.shared.authorized { WindowPreviewService.shared.requestAuthorization() }
                     }
