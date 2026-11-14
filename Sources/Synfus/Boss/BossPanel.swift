@@ -61,7 +61,7 @@ final class BossPanel: NSObject, ObservableObject {
     private func appliquer(force: Bool) {
         let montre = PanneauxJeu.appliquer(&panel, ouvert: ouvert, impose: impose, force: force,
                                            parDefaut: Self.placeParDefaut, construire: construire)
-        LecteurEcran.shared.suivreBoss(montre && WindowPreviewService.shared.authorized ? AideBoss.shared.boss.lectures : nil)
+        LecteurEcran.shared.suivreBoss(montre ? AideBoss.shared.boss.lectures : nil)
     }
 
     private func construire() -> NSPanel {
