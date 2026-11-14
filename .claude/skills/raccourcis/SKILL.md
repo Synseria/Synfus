@@ -60,5 +60,8 @@ user-invocable: false
 - Chaque bascule par `focus()` fait clignoter la pastille atteinte dans la barre
   (`WindowManager.basculeSignalee`, `SwitchBlink`) ; rien ne se pose sur le jeu. Le clic sur
   une pastille passe `signaler: false`. Réglage `signalerBascule`.
+- `focus()` fait aussi suivre le grand d'un « Un grand + vignettes » en cours
+  (`WindowArranger.suivreBascule`, skill `interface-barre` › rangement) : toute bascule de
+  Synfus passe par lui, jamais un clic sur une fenêtre.
 - `cycle` passe par `Clients/Rotation.swift` (pur, testé), qui **saute les injoignables**
   (`unreachablePIDs` : fermeture en cours, suspects de gel). L'accès direct n'y passe pas.

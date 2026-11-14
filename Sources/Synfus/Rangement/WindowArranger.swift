@@ -31,11 +31,16 @@ final class WindowArranger: ObservableObject {
 
     @Published private(set) var dernierRapport: Rapport?
 
+    /// Le « Un grand + vignettes » en cours, que suivent les bascules de Synfus. En mémoire
+    /// seulement : après une relance, il faut ranger de nouveau pour qu'il suive.
+    private var agencement: AgencementPrincipal?
+
     private init() {}
 
     /// Rejoue la dernière disposition choisie — c'est l'action du raccourci.
-    func appliquerDerniere(geste: EvenementUsage = .rangement) async {
-        await appliquer(Preferences.shared.lastArrangement ?? .mosaique, geste: geste)
+    func appliquerDerniere(geste: EvenementUsage = .rangement, grandAuRang: Int? = nil) async {
+        await appliquer(.enCours(derniere: Preferences.shared.lastArrangement), geste: geste,
+                        grandAuRang: grandAuRang)
     }
 
     /// Asynchrone parce que l'inventaire l'est : on attend un relevé frais —
@@ -44,8 +49,13 @@ final class WindowArranger: ObservableObject {
     /// en ressort muet, donc dormant, donc écarté avant tout IPC. Les écritures
     /// AX, elles, restent sur main : ce sont des gestes. `geste` est ce que
     /// les statistiques comptent : un rangement, ou la session qui l'enchaîne.
-    func appliquer(_ disposition: Disposition, geste: EvenementUsage = .rangement) async {
+    /// `grandAuRang` : le rang dans l'effectif du perso qui sera le grand — la
+    /// session, qui bascule ensuite sur lui, le pose en grand d'emblée plutôt
+    /// que de le faire échanger aussitôt avec celui de devant.
+    func appliquer(_ disposition: Disposition, geste: EvenementUsage = .rangement,
+                   grandAuRang: Int? = nil) async {
         UsageStore.shared.compter(geste)
+        agencement = nil
         let manager = WindowManager.shared
         await manager.refreshed()
 
@@ -103,36 +113,86 @@ final class WindowArranger: ObservableObject {
 
         let zone = LayoutComputer.zoneAX(visibleFrame: ecran.visibleFrame,
                                          hauteurPrincipale: hauteurPrincipale)
-        let indexPrincipal = eligibles.firstIndex { $0.pid == manager.frontmostPID } ?? 0
+        let voulu = grandAuRang.flatMap { manager.effectif.indices.contains($0) ? manager.effectif[$0].slotKey : nil }
+        let indexPrincipal = LayoutComputer.indexPrincipal(
+            parmi: eligibles.map(\.slotKey), voulu: voulu,
+            devant: eligibles.first { $0.pid == manager.frontmostPID }?.slotKey)
         let cadres = LayoutComputer.cadres(disposition, nombre: eligibles.count,
                                            indexPrincipal: indexPrincipal, dans: zone)
 
         var rangees: [String] = []
+        var places: [String: AgencementPrincipal.Place] = [:]
         for (client, cadre) in zip(eligibles, cadres) {
             let fenetre = client.axWindow
             // Ranger, c'est vouloir tout voir : une fenêtre réduite est reposée.
             // C'est une opération de fenêtre, pas un évènement.
             AccessibilityReader.unminimize(fenetre)
-            // Taille → position → taille : tant que la fenêtre chevauche son
-            // ancien écran, certains clients plafonnent la taille demandée — le
-            // second passage, fait une fois la fenêtre en place, corrige.
-            var erreur = AccessibilityReader.set(fenetre, size: cadre.size)
-            let deplacement = AccessibilityReader.set(fenetre, position: cadre.origin)
-            if erreur == .success { erreur = deplacement }
-            if erreur == .success { erreur = AccessibilityReader.set(fenetre, size: cadre.size) }
-
+            let erreur = poser(fenetre, cadre)
             if erreur == .success {
                 rangees.append(client.name)
+                if disposition == .principale, let lu = AccessibilityReader.frame(of: fenetre) {
+                    places[client.slotKey] = AgencementPrincipal.Place(voulu: cadre, lu: lu)
+                }
             } else {
                 ecartees.append(Ecartee(nom: client.name,
                                         raison: L("rangement.raison.refus", Int(erreur.rawValue))))
             }
+        }
+        if disposition == .principale {
+            agencement = AgencementPrincipal(places: places, grand: eligibles[indexPrincipal].slotKey)
         }
 
         dernierRapport = Rapport(date: Date(), titre: titre,
                                  ecran: ecran.localizedName, rangees: rangees,
                                  ecartees: ecartees)
         Preferences.shared.lastArrangement = disposition
+    }
+
+    /// Taille → position → taille : tant que la fenêtre chevauche son ancien
+    /// écran, certains clients plafonnent la taille demandée — le second
+    /// passage, fait une fois la fenêtre en place, corrige.
+    private func poser(_ fenetre: AXHandle, _ cadre: CGRect) -> AXError {
+        var erreur = AccessibilityReader.set(fenetre, size: cadre.size)
+        let deplacement = AccessibilityReader.set(fenetre, position: cadre.origin)
+        if erreur == .success { erreur = deplacement }
+        if erreur == .success { erreur = AccessibilityReader.set(fenetre, size: cadre.size) }
+        return erreur
+    }
+
+    // MARK: - Le grand suit la bascule
+
+    /// Dans un « Un grand + vignettes » en cours, le perso que Synfus amène
+    /// devant prend la place du grand, l'ancien grand prend sa vignette. Seul
+    /// `WindowManager.focus` l'appelle : un clic sur une fenêtre n'y passe pas
+    /// et ne réarrange rien — on ne le déduit jamais du premier plan observé.
+    func suivreBascule(vers client: DofusClient) {
+        guard let agencement, agencement.estVignette(client.slotKey) else { return }
+        let manager = WindowManager.shared
+        let concernes = [client.slotKey, agencement.grand]
+        // Un dormant n'a plus d'élément AX lisible, un injoignable coûterait la
+        // borne d'IPC : l'un comme l'autre manque aux lectures, donc abandonne.
+        var fenetres: [String: AXHandle] = [:]
+        for candidat in manager.clients
+        where concernes.contains(candidat.slotKey) && !candidat.dormant && manager.isReachable(candidat) {
+            fenetres[candidat.slotKey] = candidat.axWindow
+        }
+        switch agencement.suite(amene: client.slotKey, lus: fenetres.compactMapValues(AccessibilityReader.frame(of:))) {
+        case .rien:
+            return
+        case .abandonner:
+            self.agencement = nil
+        case .permuter(let permutation):
+            guard let amenee = fenetres[permutation.amene],
+                  let ancienGrand = fenetres[permutation.ancienGrand],
+                  poser(amenee, permutation.cadreAmene) == .success,
+                  poser(ancienGrand, permutation.cadreAncienGrand) == .success
+            else {
+                self.agencement = nil
+                return
+            }
+            self.agencement = agencement.apres(
+                permutation, lus: fenetres.compactMapValues(AccessibilityReader.frame(of:)))
+        }
     }
 
     // MARK: - Plein écran
@@ -149,6 +209,7 @@ final class WindowArranger: ObservableObject {
     func toutSortirDuPleinEcran() async { await pleinEcran(false, titre: L("rangement.toutSortirPleinEcran")) }
 
     private func pleinEcran(_ actif: Bool, titre: String) async {
+        agencement = nil
         let manager = WindowManager.shared
         await manager.refreshed()
 

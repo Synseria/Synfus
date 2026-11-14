@@ -151,14 +151,15 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         }
     }
 
-    /// Sous-menu « Ranger les fenêtres » : une entrée par disposition. Le
-    /// raccourci, s'il existe, est montré sur la dernière disposition employée —
-    /// c'est elle qu'il rejoue.
+    /// Sous-menu « Ranger les fenêtres » : une entrée par disposition. Celle que
+    /// rejouent le raccourci et « Lancer la session » est cochée, et porte le
+    /// raccourci s'il existe.
     private func arrangeSubmenu(enabled: Bool) -> NSMenuItem {
         let parent = NSMenuItem(title: L("menu.rangerFenetres"), action: nil, keyEquivalent: "")
         parent.image = NSImage(systemSymbolName: BoutonBarre.rangement.symbole, accessibilityDescription: nil)
         let submenu = NSMenu()
         let prefs = Preferences.shared
+        let enCours = Disposition.enCours(derniere: prefs.lastArrangement)
         for (index, disposition) in Disposition.allCases.enumerated() {
             let item = NSMenuItem(title: disposition.label,
                                   action: enabled ? #selector(arrange(_:)) : nil,
@@ -167,7 +168,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             item.tag = index
             item.image = NSImage(systemSymbolName: disposition.symbolName,
                                  accessibilityDescription: disposition.label)
-            if disposition == prefs.lastArrangement { item.afficher(prefs.arrangeHotKey) }
+            if disposition == enCours {
+                item.state = .on
+                item.afficher(prefs.arrangeHotKey)
+            }
             submenu.addItem(item)
         }
         submenu.addItem(.separator())

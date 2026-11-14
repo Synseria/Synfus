@@ -17,6 +17,10 @@ enum Disposition: String, Codable, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    /// Celle que rejouent le raccourci et « Lancer la session », et que les
+    /// menus cochent : la dernière employée, la mosaïque avant tout rangement.
+    static func enCours(derniere: Disposition?) -> Disposition { derniere ?? .mosaique }
+
     var label: String {
         switch self {
         case .coteACote: L("rangement.coteACote")
@@ -56,6 +60,12 @@ enum LayoutComputer {
         let colonnes = Int(ceil(Double(nombre).squareRoot()))
         let lignes = Int(ceil(Double(nombre) / Double(colonnes)))
         return (colonnes, lignes)
+    }
+
+    /// Le rang du grand de `.principale` parmi les fenêtres rangées (`cles`) :
+    /// celle qu'on veut, sinon celle de devant, sinon la première.
+    static func indexPrincipal(parmi cles: [String], voulu: String?, devant: String?) -> Int {
+        voulu.flatMap(cles.firstIndex(of:)) ?? devant.flatMap(cles.firstIndex(of:)) ?? 0
     }
 
     /// Les cadres de la disposition dans `zone`, exprimés dans le même repère
