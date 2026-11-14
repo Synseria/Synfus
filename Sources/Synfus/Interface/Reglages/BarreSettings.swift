@@ -34,7 +34,7 @@ struct BarreSettings: View {
             if prefs.barVisible {
                 Bloc(L("barre.boutons")) {
                     ForEach(BoutonBarre.allCases, id: \.self) { bouton in
-                        Interrupteur(titre: bouton.libelle, isOn: Binding(
+                        Interrupteur(titre: bouton.libelle, symbole: bouton.symbole, isOn: Binding(
                             get: { !prefs.boutonsMasques.contains(bouton) },
                             set: { prefs.montrer(bouton, $0) }
                         ))
