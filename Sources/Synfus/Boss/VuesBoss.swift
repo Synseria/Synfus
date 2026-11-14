@@ -32,8 +32,13 @@ struct KimboVue: View {
         ChoixBoss(choix: [(Kimbo.Etat.impair, L("boss.kimbo.terreEau")), (.pair, L("boss.kimbo.airFeu"))],
                   actuel: aide.session.kimbo) { etat in aide.noter { session, _ in session.kimbo = etat } }
         if let etat = aide.session.kimbo {
-            Consigne(texte: etat.glyphesImpairs ? L("boss.kimbo.reste.pair") : L("boss.kimbo.reste.impair"),
-                     icone: "figure.stand", forte: true)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(etat.glyphesImpairs ? L("boss.kimbo.reste.pair") : L("boss.kimbo.reste.impair"))
+                    .font(Jetons.Typo.titre.police).foregroundStyle(Color.jeton(\.primaireEncre))
+                Text(etat.glyphesImpairs ? L("boss.kimbo.reste.pair.detail") : L("boss.kimbo.reste.impair.detail"))
+                    .font(Jetons.Typo.petit.police).foregroundStyle(Color.jeton(\.encreSecondaire))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             Consigne(texte: etat.glyphesImpairs ? L("boss.kimbo.kimbo.impair") : L("boss.kimbo.kimbo.pair"),
                      icone: "scope")
             Consigne(texte: etat.glyphesImpairs ? L("boss.kimbo.frappe.terreEau") : L("boss.kimbo.frappe.airFeu"),
