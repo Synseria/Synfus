@@ -17,8 +17,8 @@ struct HarebourgVue: View {
         }
         aLaMain
         if let tour = aide.tour {
-            Label(tour % 2 == 1 ? L("boss.harebourg.impair") : L("boss.harebourg.pair"),
-                  systemImage: tour % 2 == 1 ? "shield" : "arrow.left.arrow.right")
+            Label(ToursCombat.estImpair(tour) ? L("boss.harebourg.impair") : L("boss.harebourg.pair"),
+                  systemImage: ToursCombat.estImpair(tour) ? "shield" : "arrow.left.arrow.right")
                 .font(Jetons.Typo.petit.police)
                 .foregroundStyle(Color.jeton(\.encreSecondaire))
                 .fixedSize(horizontal: false, vertical: true)

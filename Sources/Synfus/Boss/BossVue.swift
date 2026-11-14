@@ -97,15 +97,19 @@ struct BossVue: View {
     private var ligneTour: some View {
         HStack(spacing: Jetons.Espace.un) {
             Image(systemName: "clock").foregroundStyle(Color.jeton(\.encreSecondaire))
-            Text(aide.tour.map { L("boss.tour", $0) } ?? L("boss.tour.attente"))
-                .font((aide.tour != nil ? Jetons.Typo.raccourci : Jetons.Typo.petit).police)
-                .foregroundStyle(aide.tour == nil ? Color.jeton(\.encreSecondaire) : Color.jeton(\.encre))
-                .help(L("boss.tour.aide"))
+            if let tour = aide.tour {
+                Text(L("boss.tour", tour)).font(Jetons.Typo.raccourci.police)
+                Text(ToursCombat.estImpair(tour) ? L("boss.tour.impair") : L("boss.tour.pair"))
+                    .font(Jetons.Typo.petit.police).foregroundStyle(Color.jeton(\.encreSecondaire))
+            } else {
+                Text(L("boss.tour.attente")).font(Jetons.Typo.petit.police).foregroundStyle(Color.jeton(\.encreSecondaire))
+            }
             Spacer()
             PetitBouton(icone: "minus", aide: L("boss.tour.moins")) { aide.corrigerTour(-1) }
                 .disabled((aide.tour ?? 1) <= 1)
             PetitBouton(icone: "plus", aide: L("boss.tour.plus")) { aide.corrigerTour(1) }
         }
+        .help(L("boss.tour.aide"))
         .disabled(lecteur.persoDevant == nil)
     }
 

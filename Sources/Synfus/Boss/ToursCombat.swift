@@ -22,6 +22,9 @@ struct ToursCombat: Equatable, Sendable {
         tours[perso].flatMap { $0 > 0 ? $0 : nil }
     }
 
+    /// La parité dont dépendent le Comte et Kimbo : un seul endroit la décide.
+    static func estImpair(_ tour: Int) -> Bool { tour % 2 == 1 }
+
     /// Un tour de plus ou de moins, jamais sous le premier.
     mutating func corriger(_ pas: Int, perso: String) {
         tours[perso] = max((tours[perso] ?? 0) + pas, 1)
