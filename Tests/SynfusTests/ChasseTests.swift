@@ -153,4 +153,52 @@ struct ChasseTests {
         #expect(lues.last == .phorreur)
         if case .indice(let indice) = lues.first { #expect(indice.id == 993) } else { Issue.record("indice attendu") }
     }
+
+    // MARK: - Étapes et attente
+
+    @Test("L'historique rend les étapes de la dernière à la première, puis rien")
+    func historiqueEnPile() {
+        var historique = HistoriqueChasse()
+        #expect(historique.vide)
+        #expect(historique.reprendre() == nil)
+        let premiere = HistoriqueChasse.Reprise(departX: nil, departY: nil, direction: .est, cible: .phorreur)
+        let seconde = HistoriqueChasse.Reprise(departX: -3, departY: 0, direction: .nord, cible: .phorreur)
+        historique.noter(premiere)
+        historique.noter(seconde)
+        #expect(!historique.vide)
+        #expect(historique.reprendre() == seconde)
+        #expect(historique.reprendre() == premiere)
+        #expect(historique.vide)
+    }
+
+    @Test("Rouvrir une étape remet la pastille de l'indice lu à sa place")
+    func rouvertureRemetLIndiceLu() {
+        let a = EtapeChasse.Cible.phorreur
+        let b = EtapeChasse.Cible.indice(Indice(id: 1, noms: ["fr": "Cairn"]))
+        let c = EtapeChasse.Cible.indice(Indice(id: 2, noms: ["fr": "Grelot"]))
+        var reprise = HistoriqueChasse.Reprise(departX: 1, departY: 2, direction: .est, cible: b)
+        reprise.rangLu = 1
+        #expect(reprise.rouverture(departX: 1, departY: 2, lues: [a, c]).lues == [a, b, c])
+        #expect(reprise.rouverture(departX: 1, departY: 2, lues: [a, b, c]).lues == [a, b, c])
+        reprise.rangLu = nil
+        #expect(reprise.rouverture(departX: 1, departY: 2, lues: [a]).lues == [a])
+    }
+
+    @Test("Rouvrir une étape ne remplace jamais un départ connu par du vide")
+    func rouvertureGardeLeDepart() {
+        let sansDepart = HistoriqueChasse.Reprise(departX: nil, departY: nil, direction: .nord, cible: .phorreur)
+        let r = sansDepart.rouverture(departX: -3, departY: 4, lues: [])
+        #expect(r.departX == -3 && r.departY == 4)
+        let avecDepart = HistoriqueChasse.Reprise(departX: 5, departY: 6, direction: .nord, cible: .phorreur)
+        let s = avecDepart.rouverture(departX: nil, departY: nil, lues: [])
+        #expect(s.departX == 5 && s.departY == 6)
+    }
+
+    @Test("Le champ de l'indice attend d'abord le départ, puis la direction, puis l'indice")
+    func attenteDuChamp() {
+        #expect(AttenteChasse(departConnu: false, directionChoisie: false) == .depart)
+        #expect(AttenteChasse(departConnu: false, directionChoisie: true) == .depart)
+        #expect(AttenteChasse(departConnu: true, directionChoisie: false) == .direction)
+        #expect(AttenteChasse(departConnu: true, directionChoisie: true) == .indice)
+    }
 }
