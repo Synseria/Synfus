@@ -29,6 +29,19 @@ final class MiseAJour: ObservableObject {
         }
     }
 
+    /// Les nouveautés de la version qui vient d'être installée, tant qu'on ne les a pas ouvertes ; `nil` le
+    /// reste du temps.
+    var nouveautesInstallee: (numero: String, page: URL)? {
+        guard apresMiseAJour, !nouveautesOuvertes, let numero = AppIntegrity.version else { return nil }
+        return (numero, VersionPubliee.page(de: numero))
+    }
+
+    func ouvrirNouveautes(_ page: URL) {
+        nouveautesOuvertes = true
+        NSWorkspace.shared.open(page)
+    }
+
+    private var nouveautesOuvertes = false
     private let installateur = InstallateurMiseAJour()
     private var minuterie: Timer?
     private var subscriptions: Set<AnyCancellable> = []

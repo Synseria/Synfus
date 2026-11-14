@@ -102,6 +102,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         menu.addItem(.separator())
 
         add(to: menu, title: L("menu.apropos"), action: #selector(openAbout), icone: "info.circle")
+        if let nouveautes = MiseAJour.shared.nouveautesInstallee {
+            add(to: menu, title: L("maj.menu.nouveautes", nouveautes.numero), action: #selector(openNouveautes),
+                icone: "sparkles").representedObject = nouveautes.page
+        }
         add(to: menu, title: L("menu.reglages"), action: #selector(openSettings), icone: "gearshape")
         menu.addItem(.separator())
         // Reconstruit à chaque ouverture : l'item n'apparaît que s'il y a
@@ -306,6 +310,11 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
     @objc private func openAbout() {
         AProposController.shared.afficher()
+    }
+
+    @objc private func openNouveautes(_ sender: NSMenuItem) {
+        guard let page = sender.representedObject as? URL else { return }
+        MiseAJour.shared.ouvrirNouveautes(page)
     }
 
     @objc private func openSettings() {

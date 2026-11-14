@@ -13,6 +13,11 @@ struct VersionPubliee: Equatable, Sendable {
     let empreintes: URL
 
     static let depot = "Synseria/Synfus"
+    /// La page d'une release d'après son numéro : celle de la version installée, que l'API n'a pas à dire.
+    static func page(de numero: String) -> URL {
+        URL(string: "https://github.com/\(depot)/releases/tag/v\(numero)")!
+    }
+
     static let api = URL(string: "https://api.github.com/repos/\(depot)/releases/latest")!
 
     /// L'architecture du binaire qui tourne : sous Rosetta, celle d'Intel,
