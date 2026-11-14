@@ -351,6 +351,8 @@
   "general.barre.numeros": "Raccourci de chaque personnage",
   "general.barre.position": "Position en haut de l'écran",
   "general.barre.recentrer": "Recentrer",
+  "general.barre.reduire": "Réduire les personnages inactifs",
+  "general.barre.reduire.aide": "Emblème et touche seulement ; le nom reste dans l'infobulle. Le personnage devant garde son nom.",
   "general.barre.seulementDofus": "Seulement quand Dofus est devant",
   "general.demarrerAvecSession": "Démarrer Synfus avec la session",
   "general.enregistrementEcran": "Enregistrement de l'écran",

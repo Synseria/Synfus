@@ -351,6 +351,8 @@
   "general.barre.numeros": "Shortcut of each character",
   "general.barre.position": "Position at the top of the screen",
   "general.barre.recentrer": "Recenter",
+  "general.barre.reduire": "Shrink inactive characters",
+  "general.barre.reduire.aide": "Emblem and key only; the name stays in the tooltip. The front character keeps its name.",
   "general.barre.seulementDofus": "Only when Dofus is in front",
   "general.demarrerAvecSession": "Start Synfus at login",
   "general.enregistrementEcran": "Screen Recording",

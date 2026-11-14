@@ -33,8 +33,9 @@ struct CapturesTests {
     }
 
     /// Une équipe d'exemple, pour la barre et l'onglet Raccourcis.
-    private func equipe() {
-        let persos = [("Syn-App", "Feca"), ("Syn-Ops", "Huppermage"), ("Brok", "Iop"), ("Cid", "Eniripsa")]
+    private func equipe(huit: Bool = false) {
+        var persos = [("Syn-App", "Feca"), ("Syn-Ops", "Huppermage"), ("Brok", "Iop"), ("Cid", "Eniripsa")]
+        if huit { persos += [("Aeryn", "Cra"), ("Nova", "Sram"), ("Zoé", "Osamodas"), ("Tolbrek", "Sacrieur")] }
         WindowManager.shared.poserPourCaptures(persos.enumerated().map { rang, perso in
             let pid = pid_t(90_000 + rang)
             return DofusClient(pid: pid, slotKey: "\(pid)#0", axWindow: .application(pid),
@@ -55,6 +56,38 @@ struct CapturesTests {
             .background(Color(red: 0.11, green: 0.11, blue: 0.13))
             .environment(\.colorScheme, Self.schema)
         try ecrire(vue, vers: dossier.appending(path: "barre.png"))
+    }
+
+    @Test("Capture de la barre à huit personnages, pleine puis réduite", .enabled(if: dossier != nil))
+    func barreHuitPersos() throws {
+        let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
+        equipe(huit: true)
+        let prefs = Preferences.shared
+        let avant = prefs.reduirePersosInactifs
+        defer { prefs.reduirePersosInactifs = avant }
+        for (nom, reduite) in [("barre-huit-reduite", true), ("barre-huit", false)] {
+            prefs.reduirePersosInactifs = reduite
+            let vue = BarView()
+                .padding(24)
+                .background(Color(red: 0.11, green: 0.11, blue: 0.13))
+                .environment(\.colorScheme, Self.schema)
+            try ecrire(vue, vers: dossier.appending(path: nom + ".png"))
+        }
+    }
+
+    @Test("Capture du décompte du tour, au rose puis dans les cinq dernières secondes", .enabled(if: dossier != nil))
+    func decompteDuTour() throws {
+        let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
+        let vue = HStack(spacing: 40) {
+            ForEach([20.0, 3.0], id: \.self) { reste in
+                Text("Syn-App").padding(Jetons.Espace.trois)
+                    .overlay { CombatBadge(etat: .monTour(fin: Date().addingTimeInterval(reste))) }
+            }
+        }
+        .padding(32)
+        .background(Color(red: 0.11, green: 0.11, blue: 0.13))
+        .environment(\.colorScheme, Self.schema)
+        try ecrire(vue, vers: dossier.appending(path: "combat-decompte.png"))
     }
 
     @Test("Captures de la palette", .enabled(if: dossier != nil))

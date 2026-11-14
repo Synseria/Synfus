@@ -315,6 +315,9 @@ struct BarView: View {
         let active = manager.isFrontmost(client)
         let alerting = watcher.alerting.contains(client.slotKey)
         let closing = manager.closingPIDs.contains(client.pid)
+        let affichage = AffichagePastille(devant: active, reduireInactifs: prefs.reduirePersosInactifs,
+                                          embleme: prefs.showClasses, touche: prefs.showNumbers,
+                                          aUneClasse: client.characterClass != nil)
 
         return Button {
             // La pastille vient d'être cliquée : la faire clignoter ne dirait
@@ -329,26 +332,28 @@ struct BarView: View {
                     ProgressView()
                         .controlSize(.small)
                         .frame(width: Jetons.Taille.touche + Jetons.Trait.focus, height: Jetons.Taille.touche + Jetons.Trait.focus)
-                } else if prefs.showClasses {
+                } else if affichage.embleme {
                     classBadge(for: client.characterClass, active: active)
                 }
 
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(client.name)
-                        .font((active ? Jetons.Typo.corpsFort : Jetons.Typo.corps).police)
-                        .lineLimit(1)
-                        .fixedSize()
-                    // Nom et classe : une pastille dit toujours les deux ; `showClasses` ne règle que l'emblème.
-                    if let className = client.characterClass {
-                        Text(className)
-                            .font(Jetons.Typo.petit.police)
-                            .foregroundStyle(active ? Color.jeton(\.encreSurPrimaire) : Color.jeton(\.encreSecondaire))
+                if affichage.nom {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(client.name)
+                            .font((active ? Jetons.Typo.corpsFort : Jetons.Typo.corps).police)
                             .lineLimit(1)
+                            .fixedSize()
+                        // Nom et classe : une pastille dit les deux ; `showClasses` ne règle que l'embleme.
+                        if affichage.classe, let className = client.characterClass {
+                            Text(className)
+                                .font(Jetons.Typo.petit.police)
+                                .foregroundStyle(active ? Color.jeton(\.encreSurPrimaire) : Color.jeton(\.encreSecondaire))
+                                .lineLimit(1)
+                        }
                     }
                 }
 
                 // Le numéro est la touche qui mène à ce perso : dessiné comme elle, avec le raccourci réel.
-                if prefs.showNumbers {
+                if affichage.touche {
                     ToucheRaccourci(Self.toucheDuPerso(index: index, raccourcis: prefs.hotKeys))
                 }
 
@@ -356,7 +361,7 @@ struct BarView: View {
                 // et le surlignage du perso courant dit déjà où l'on en est. Une
                 // coche « déjà passé » n'ajoutait qu'un clignotement de plus.
             }
-            .padding(.horizontal, Jetons.Espace.deux)
+            .padding(.horizontal, affichage.nom ? Jetons.Espace.deux : Jetons.Espace.un)
             .padding(.vertical, Jetons.Espace.un)
             .fixedSize(horizontal: true, vertical: false)
             .fondEtat(active ? .courant : closing ? .desactive : EtatVisuel(survole: survolChip == client.slotKey))
