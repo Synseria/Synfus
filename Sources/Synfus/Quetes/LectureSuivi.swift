@@ -185,7 +185,26 @@ final class LectureSuivi: ObservableObject {
 
     /// Épingle la quête et la montre, à l'étape que le suivi désigne.
     func choisir(_ reconnue: SuiviQuetes.Reconnue) {
-        if let etape = reconnue.etape { Preferences.shared.quetesEtape[String(reconnue.id)] = etape }
+        retenirEtape(reconnue)
         QuetePanel.shared.ouvrir(reconnue.id)
+    }
+
+    /// Épingle les quêtes du suivi que le panneau n'a pas encore, chacune à
+    /// son étape lue, et montre la première.
+    func toutEpingler() {
+        let prefs = Preferences.shared
+        let nouvelles = MenuQuetes.aEpingler(reconnues, epinglees: prefs.quetesEpinglees)
+        guard let premiere = nouvelles.first else { return }
+        prefs.enUneEcriture {
+            for reconnue in nouvelles {
+                retenirEtape(reconnue)
+                prefs.quetesEpinglees.append(reconnue.id)
+            }
+        }
+        QuetePanel.shared.ouvrir(premiere.id)
+    }
+
+    private func retenirEtape(_ reconnue: SuiviQuetes.Reconnue) {
+        if let etape = reconnue.etape { Preferences.shared.quetesEtape[String(reconnue.id)] = etape }
     }
 }

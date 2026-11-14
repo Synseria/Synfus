@@ -698,6 +698,7 @@
   "quete.tournee": "Copy the route to #1",
   "quete.tournee.aide": "These objectives are open together in the game's quest tracker, to do in any order: numbered in the shortest order from your character, zaaps included.",
   "quete.toutCopier": "Copy all",
+  "quete.toutEpingler": "Pin all",
   "quete.vide.etape": "step %lld",
   "quete.vide.suivi": "In your in-game tracker",
   "quetes.aide": "A quest opens in a transparent panel above the game: resources and routes in one click.",

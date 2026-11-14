@@ -101,7 +101,14 @@ struct QueteVue: View {
                             .help(L("quete.aucune.aide"))
                         let lues = lecture.reconnues.compactMap { reconnue in store.nom(reconnue.id).map { (reconnue, $0) } }
                         if !lues.isEmpty {
-                            Text(L("quete.vide.suivi")).font(Jetons.Typo.raccourci.police).foregroundStyle(Color.jeton(\.encreSecondaire))
+                            HStack {
+                                Text(L("quete.vide.suivi")).font(Jetons.Typo.raccourci.police).foregroundStyle(Color.jeton(\.encreSecondaire))
+                                Spacer(minLength: Jetons.Espace.un)
+                                if lues.count > 1 {
+                                    Button(L("quete.toutEpingler")) { lecture.toutEpingler() }
+                                        .buttonStyle(.bouton(.tertiaire, dense: true))
+                                }
+                            }
                             ForEach(lues, id: \.0.id) { reconnue, nom in
                                 Button { lecture.choisir(reconnue) } label: {
                                     HStack(alignment: .firstTextBaseline, spacing: Jetons.Espace.un) {

@@ -698,6 +698,7 @@
   "quete.tournee": "Copiar el trayecto al n.º 1",
   "quete.tournee.aide": "Estos objetivos están abiertos a la vez en el seguimiento del juego, en cualquier orden: numerados en el orden más corto desde el personaje, zaaps incluidos.",
   "quete.toutCopier": "Copiar todo",
+  "quete.toutEpingler": "Fijar todo",
   "quete.vide.etape": "etapa %lld",
   "quete.vide.suivi": "En tu seguimiento del juego",
   "quetes.aide": "Una misión se abre en un panel transparente sobre el juego: recursos y trayectos en un clic.",

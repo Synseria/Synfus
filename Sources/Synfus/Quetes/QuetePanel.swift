@@ -195,6 +195,10 @@ extension QuetePanel {
                 menu.addItem(item)
             case .toutDesepingler:
                 menu.addItem(CibleMenu.shared.element(L("quete.menu.toutDesepingler")) { QuetePanel.shared.confirmerToutDesepingler() })
+            case .toutEpingler:
+                let item = CibleMenu.shared.element(L("quete.toutEpingler")) { lecture.toutEpingler() }
+                item.image = NSImage(systemSymbolName: "pin", accessibilityDescription: nil)
+                menu.addItem(item)
             case .lireSuivi(let enCours):
                 let item = CibleMenu.shared.element(enCours ? L("quete.suivi.enCours") : L("quete.suivi.lire")) { lecture.lire() }
                 item.image = NSImage(systemSymbolName: "text.viewfinder", accessibilityDescription: nil)
