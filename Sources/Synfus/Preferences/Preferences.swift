@@ -79,6 +79,8 @@ final class Preferences: ObservableObject {
     @Published var verifierMisesAJour: Bool = true { didSet { save() } }
     /// La version du lancement précédent (`MiseAJour.apresMiseAJour`).
     @Published var derniereVersionLancee: String? { didSet { save() } }
+    /// La dernière version annoncée par une notification : chacune ne l'est qu'une fois.
+    @Published var derniereVersionNotifiee: String? { didSet { save() } }
     /// Quand GitHub a répondu pour la dernière fois ; la ligne « Version installée » le dit.
     @Published var derniereVerificationMaj: Date? { didSet { save() } }
     /// Aucune sauvegarde à la lecture : rien n'a encore été réglé.
@@ -588,6 +590,7 @@ final class Preferences: ObservableObject {
         .facultatif("zaapIntercalees", \.zaapIntercalees),
         .facultatif("verifierMisesAJour", \.verifierMisesAJour),
         .optionnel("derniereVersionLancee", \.derniereVersionLancee),
+        .optionnel("derniereVersionNotifiee", \.derniereVersionNotifiee),
         .optionnel("derniereVerificationMaj", \.derniereVerificationMaj),
         .facultatif("partagerStatistiques", \.partagerStatistiques),
         .facultatif("zaapsAjoutes", \.zaapsAjoutes),
