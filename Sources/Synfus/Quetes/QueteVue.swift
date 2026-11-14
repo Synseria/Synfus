@@ -370,6 +370,7 @@ struct QueteVue: View {
                         .help(etape.nom)
                     persosLus(lus)
                     Spacer(minLength: 0)
+                    avancement(etape, valides: coches)
                     Button { changerEtape(fiche, rang + 1) } label: { Image(systemName: "chevron.right") }
                         .disabled(rang >= fiche.etapes.count - 1)
                         .aide(L("quete.etapeSuivante"))
@@ -380,6 +381,8 @@ struct QueteVue: View {
                 HStack(spacing: Jetons.Espace.un) {
                     titreSection(L("quete.objectifs"))
                     persosLus(lus)
+                    Spacer(minLength: 0)
+                    avancement(etape, valides: coches)
                 }
             }
             if prefs.quetesConsigne, let description = etape.description {
@@ -433,6 +436,20 @@ struct QueteVue: View {
             bouton.buttonStyle(.bouton(achevee ? .principal : .secondaire, dense: true))
         }
         .padding(.top, metriques.ecartLignes)
+    }
+
+    /// Les objectifs faits de l'étape sur son total, à côté de son titre ; tous faits, il passe à l'accent.
+    private func avancement(_ etape: FicheQuete.Etape, valides: Set<Int>) -> some View {
+        let faits = etape.faits(valides: valides), total = etape.objectifs.count
+        let fini = total > 0 && faits == total
+        return HStack(spacing: Jetons.Espace.un) {
+            if fini { Image(systemName: "checkmark") }
+            Text(L("quete.avancement", faits, total))
+        }
+        .font(metriques.detailFort.police.monospacedDigit())
+        .foregroundStyle(fini ? Color.jeton(\.primaireEncre) : Color.jeton(\.encreSecondaire))
+        .fixedSize()
+        .help(L("quete.avancement.aide", nombre: faits, faits, total))
     }
 
     /// Combien de persos leur suivi du jeu montre à cette étape ; au survol,
