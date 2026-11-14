@@ -25,7 +25,6 @@ struct TeamSectorView: View {
     /// de dépôt se vise mieux qu'un onglet se lit.
     let agrandi: Bool
     let action: () -> Void
-    @ObservedObject private var icons = ClassesStore.shared
     @State private var survole = false
 
     /// Ce qu'un point a besoin de savoir d'un membre.
@@ -47,7 +46,7 @@ struct TeamSectorView: View {
                         .font(Jetons.Typo.raccourci.police)
                         .padding(.trailing, Jetons.Espace.un)
                     ForEach(membres, id: \.self) { membre in
-                        point(for: membre)
+                        PointPerso(classe: membre.classe, connecte: membre.connecte)
                     }
                 case .nouvelle:
                     Image(systemName: "plus")
@@ -73,26 +72,6 @@ struct TeamSectorView: View {
         actif ? .courant : cible ? .choisi : EtatVisuel(survole: survole)
     }
 
-    /// Le point d'un membre : sa classe, un anneau vide s'il n'est pas connecté —
-    /// même source de couleur et d'icône que le badge des pastilles.
-    @ViewBuilder
-    private func point(for membre: TeamMember) -> some View {
-        Group {
-            if !membre.connecte {
-                Circle().strokeBorder(Color.jeton(\.encreTertiaire), lineWidth: Jetons.Trait.etat)
-            } else if let custom = icons.icon(for: membre.classe) {
-                Image(nsImage: custom)
-                    .resizable()
-                    .interpolation(.high)
-                    .scaledToFill()
-                    .clipShape(Circle())
-            } else {
-                Circle().fill(icons.catalogue.color(for: membre.classe))
-            }
-        }
-        .frame(width: Jetons.Espace.trois, height: Jetons.Espace.trois)
-    }
-
     private var aide: String {
         switch secteur {
         case .tous: return L("equipes.tousLesPersos")
@@ -100,5 +79,31 @@ struct TeamSectorView: View {
             return L("equipes.equipeMembres", index + 1, membres.map(\.nom).joined(separator: ", "))
         case .nouvelle: return L("equipes.glisserPourCreer")
         }
+    }
+}
+
+/// Le point d'un perso : sa classe — emblème ou couleur —, un anneau vide s'il n'est pas connecté.
+/// Même source de couleur et d'icône que le badge des pastilles ; la rangée des équipes et le
+/// panneau des quêtes le montrent.
+struct PointPerso: View {
+    let classe: String?
+    let connecte: Bool
+    @ObservedObject private var icons = ClassesStore.shared
+
+    var body: some View {
+        Group {
+            if !connecte {
+                Circle().strokeBorder(Color.jeton(\.encreTertiaire), lineWidth: Jetons.Trait.etat)
+            } else if let custom = icons.icon(for: classe) {
+                Image(nsImage: custom)
+                    .resizable()
+                    .interpolation(.high)
+                    .scaledToFill()
+                    .clipShape(Circle())
+            } else {
+                Circle().fill(icons.catalogue.color(for: classe))
+            }
+        }
+        .frame(width: Jetons.Espace.trois, height: Jetons.Espace.trois)
     }
 }
