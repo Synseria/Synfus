@@ -15,6 +15,20 @@ enum BoutonBarre: String, CaseIterable, Sendable {
         allCases.filter { !masques.contains($0) }
     }
 
+    /// Le dessin de l'outil, le même dans la barre, le menu, les réglages et
+    /// l'en-tête de son panneau. Le passage automatique, lui, change de dessin
+    /// éteint : voir `BarView`.
+    var symbole: String {
+        switch self {
+        case .quetes: "scroll"
+        case .boss: "scope"
+        case .chasse: "flag.checkered"
+        case .rangement: "rectangle.3.group"
+        case .palette: "command"
+        case .passageAuto: "bolt.fill"
+        }
+    }
+
     var libelle: String {
         switch self {
         case .quetes: L("barre.bouton.quetes")
