@@ -105,21 +105,10 @@ final class MiseAJour: ObservableObject {
     func proposer() {
         guard let version = proposee else { return }
         if case .installation = etat { return }
-        NSApp.activate(ignoringOtherApps: true)
-        let alerte = NSAlert()
-        alerte.messageText = L("maj.alerte.titre", version.numero)
-        alerte.informativeText = L("maj.alerte.texte")
-        let signe = NSHostingView(rootView: SigneSynseria(hauteur: 28).racineSynfus())
-        signe.frame.size = signe.fittingSize
-        alerte.accessoryView = signe
-        alerte.addButton(withTitle: L("maj.alerte.installer"))
-        alerte.addButton(withTitle: L("commun.annuler"))
-        alerte.addButton(withTitle: L("maj.nouveautes"))
-        switch alerte.runModal() {
-        case .alertFirstButtonReturn: installer(version)
-        case .alertThirdButtonReturn: NSWorkspace.shared.open(version.page)
-        default: break
-        }
+        let demande = DemandeConfirmation(titre: L("maj.alerte.titre", version.numero), detail: L("maj.alerte.detail"),
+                                          verbe: L("maj.alerte.installer"), rang: .principal,
+                                          lien: LienConfirmation(titre: L("maj.nouveautes"), url: version.page))
+        Task { if await Confirmation.demander(demande) { installer(version) } }
     }
 
     private func installer(_ version: VersionPubliee) {
