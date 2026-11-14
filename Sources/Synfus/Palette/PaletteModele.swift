@@ -153,6 +153,20 @@ final class PaletteModele: ObservableObject {
     /// Sans elle, le filtre « Ici » n'a rien à montrer.
     var positionConnue: Bool { contexte.position != nil }
 
+    /// Pourquoi la position manque, s'il lui manque quelque chose.
+    var causeOrigine: OriginePalette {
+        .de(positionConnue: positionConnue, lectureAllumee: Preferences.shared.lirePosition,
+            autorise: WindowPreviewService.shared.authorized)
+    }
+
+    /// La position du perso devant, lue tout de suite ; les distances suivent.
+    func lirePosition() {
+        Task {
+            await LecteurEcran.shared.lirePositionDevant()
+            rafraichir()
+        }
+    }
+
     /// D'où partent distances et trajets : le dernier perso lu devant, à
     /// l'ouverture de la palette.
     var origine: String {
