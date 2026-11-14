@@ -29,6 +29,26 @@ enum BoutonBarre: String, CaseIterable, Sendable {
         }
     }
 
+    /// Le raccourci qui ouvre l'outil, s'il en a un.
+    @MainActor
+    func raccourci(_ prefs: Preferences) -> HotKey? {
+        switch self {
+        case .quetes: prefs.quetesHotKey
+        case .boss: prefs.bossHotKey
+        case .chasse: prefs.chasseHotKey
+        case .rangement: prefs.arrangeHotKey
+        case .palette: prefs.paletteHotKey
+        case .passageAuto: prefs.toggleAutoFocus
+        }
+    }
+
+    /// Une forme pour les six infobulles : le nom, puis la touche au bout quand elle existe.
+    /// `nom` remplace le libellé quand l'outil dit son état (passage automatique).
+    func infobulle(touche: String?, nom: String? = nil) -> String {
+        let titre = nom ?? libelle
+        return touche.map { "\(titre)  \($0)" } ?? titre
+    }
+
     var libelle: String {
         switch self {
         case .quetes: L("barre.bouton.quetes")
