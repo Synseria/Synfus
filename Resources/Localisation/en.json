@@ -586,6 +586,7 @@
   "palette.tri.aide": "Result order: auto, distance, A → Z or type (⌘T)",
   "palette.tri.alphabetique": "A → Z",
   "palette.tri.proximite": "Distance",
+  "palette.tri.titre": "Sort",
   "palette.tri.type": "Type",
   "palette.var.guilde": "Guild name",
   "palette.var.lvl": "Level",

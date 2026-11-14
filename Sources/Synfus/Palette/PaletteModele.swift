@@ -268,8 +268,11 @@ final class PaletteModele: ObservableObject {
     }
 
     /// ⌘T : auto, proximité, ordre alphabétique, type — et le choix est gardé.
-    func triSuivant() {
-        tri = tri.suivant
+    func triSuivant() { choisirTri(tri.suivant) }
+
+    /// Un tri, par le menu du bouton ou par ⌘T.
+    func choisirTri(_ nouveau: TriPalette) {
+        tri = nouveau
         if contexteImpose == nil { Preferences.shared.paletteTri = tri }
         selection = 0
         recalculer()

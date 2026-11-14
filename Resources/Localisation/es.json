@@ -586,6 +586,7 @@
   "palette.tri.aide": "Orden de los resultados: auto, cercanía, A → Z o tipo (⌘T)",
   "palette.tri.alphabetique": "A → Z",
   "palette.tri.proximite": "Cercanía",
+  "palette.tri.titre": "Orden",
   "palette.tri.type": "Tipo",
   "palette.var.guilde": "Nombre del gremio",
   "palette.var.lvl": "Nivel",

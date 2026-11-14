@@ -586,6 +586,7 @@
   "palette.tri.aide": "Tri des résultats : auto, proximité, A → Z ou type (⌘T)",
   "palette.tri.alphabetique": "A → Z",
   "palette.tri.proximite": "Proximité",
+  "palette.tri.titre": "Tri",
   "palette.tri.type": "Type",
   "palette.var.guilde": "Nom de la guilde",
   "palette.var.lvl": "Niveau",
