@@ -35,7 +35,7 @@ struct BossVue: View {
                     case nil: EmptyView()
                     }
                 } else {
-                    autorisation
+                    LigneAutorisation()
                 }
                 if let special = prefs.bossChoisi.special { rappelsVue(special) }
                 conseilsVue
@@ -110,19 +110,6 @@ struct BossVue: View {
             PetitBouton(icone: "plus", aide: L("boss.tour.plus")) { aide.corrigerTour(1) }
         }
         .disabled(lecteur.persoDevant == nil)
-    }
-
-    private var autorisation: some View {
-        HStack(spacing: Jetons.Espace.deux) {
-            Text(L("boss.autoriser.aide"))
-                .font(Jetons.Typo.petit.police)
-                .foregroundStyle(Color.jeton(\.encreSecondaire))
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: 0)
-            Button { previews.requestAuthorization() } label: { Image(systemName: "lock") }
-                .buttonStyle(.bouton(.tertiaire, dense: true))
-                .aide(L("boss.autoriser"))
-        }
     }
 
     /// Chaque rappel se copie d'un clic, pour le coller dans le tchat du
