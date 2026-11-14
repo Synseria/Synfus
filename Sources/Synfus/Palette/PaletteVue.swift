@@ -484,7 +484,7 @@ private struct CarteZaap: View {
 
 /// Une ligne de résultat : genre (ou pictogramme du lieu), titre, étiquette,
 /// sous-titre, détail, vue de la carte.
-private struct LigneResultat: View {
+struct LigneResultat: View {
     let entree: EntreePalette
     let choisie: Bool
     var deplie = false

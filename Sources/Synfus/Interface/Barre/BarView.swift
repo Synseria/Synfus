@@ -299,57 +299,19 @@ struct BarView: View {
             UsageStore.shared.compter(.basculeBarre)
             manager.focus(client, signaler: false)
         } label: {
-            HStack(spacing: Jetons.Espace.un) {
-                // La fermeture en cours prend la place du badge : le geste a
-                // été entendu, la pastille le dit — et disparaîtra seule.
-                if closing {
-                    ProgressView()
-                        .controlSize(.small)
-                        .frame(width: Jetons.Taille.touche + Jetons.Trait.focus, height: Jetons.Taille.touche + Jetons.Trait.focus)
-                } else if affichage.embleme {
-                    EmblemeClasse(classe: client.characterClass,
-                                  contour: active ? Color.jeton(\.encreSurPrimaire) : Color.jeton(\.filet))
-                }
-
-                if affichage.nom {
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text(client.name)
-                            .font((active ? Jetons.Typo.corpsFort : Jetons.Typo.corps).police)
-                            .lineLimit(1)
-                            .fixedSize()
-                        // Nom et classe : une pastille dit les deux ; `showClasses` ne règle que l'embleme.
-                        if affichage.classe, let className = client.characterClass {
-                            Text(className)
-                                .font(Jetons.Typo.petit.police)
-                                .foregroundStyle(active ? Color.jeton(\.encreSurPrimaire) : Color.jeton(\.encreSecondaire))
-                                .lineLimit(1)
-                        }
+            PastillePerso(nom: client.name, classe: client.characterClass, devant: active, enFermeture: closing,
+                          dormant: client.dormant,
+                          touche: Self.toucheDuPerso(index: index, raccourcis: prefs.hotKeys),
+                          affichage: affichage, survole: survolChip == client.slotKey)
+                .overlay { if alerting { AlertPulse() } }
+                .overlay { if manager.basculeSignalee == client.slotKey { SwitchBlink() } }
+                // L'état de combat lu à l'écran : contour rose et décompte quand
+                // c'est son tour, une épée quand il est en combat.
+                .overlay(alignment: .topTrailing) {
+                    if prefs.lireCombat, let etat = lecteur.combats[client.name], etat.enCombat {
+                        CombatBadge(etat: etat)
                     }
                 }
-
-                // Le numéro est la touche qui mène à ce perso : dessiné comme elle, avec le raccourci réel.
-                if affichage.touche {
-                    ToucheRaccourci(Self.toucheDuPerso(index: index, raccourcis: prefs.hotKeys))
-                }
-
-                // Rien de plus : l'enchaînement au clic suit l'ordre de la barre,
-                // et le surlignage du perso courant dit déjà où l'on en est. Une
-                // coche « déjà passé » n'ajoutait qu'un clignotement de plus.
-            }
-            .padding(.horizontal, affichage.nom ? Jetons.Espace.deux : Jetons.Espace.un)
-            .padding(.vertical, Jetons.Espace.un)
-            .fixedSize(horizontal: true, vertical: false)
-            .fondEtat(active ? .courant : closing ? .desactive : EtatVisuel(survole: survolChip == client.slotKey))
-            .overlay { if alerting { AlertPulse() } }
-            .overlay { if manager.basculeSignalee == client.slotKey { SwitchBlink() } }
-            // L'état de combat lu à l'écran : contour rose et décompte quand
-            // c'est son tour, une épée quand il est en combat.
-            .overlay(alignment: .topTrailing) {
-                if prefs.lireCombat, let etat = lecteur.combats[client.name], etat.enCombat {
-                    CombatBadge(etat: etat)
-                }
-            }
-            .foregroundStyle(active ? EtatVisuel.courant.encre : client.dormant ? Color.jeton(\.encreSecondaire) : Color.jeton(\.encre))
         }
         .buttonStyle(.plain)
         .disabled(closing)
