@@ -490,7 +490,7 @@ struct PreferencesTests {
      "inviteFormat":"/w %nom go","inviteGroupee":true,
      "inviteHotKey":{"keyCode":34,"modifiers":256},
      "killFrozenClients":false,"lastArrangement":"principale","lireCombat":true,"lireCombatDerriere":true,
-     "lirePosition":true,"menuBarIcon":"symbole","iconeApp":{"motif":"couvee","fond":"aube"},"couleurDeLApp":"teinte:210","fondsDeLApp":"nuit",
+     "lirePosition":true,"menuBarIcon":"symbole","iconeApp":{"motif":"couvee","fond":"aube"},"apparence":"sombre","couleurDeLApp":"teinte:210","fondsDeLApp":"nuit",
      "previewHotKey":{"keyCode":49,"modifiers":2048},
      "sessionHotKey":{"keyCode":1,"modifiers":256},"reduirePersosInactifs":false,"showClasses":false,
      "showNumbers":false,"showPreviewOnHover":true,"signalerBascule":false,
@@ -531,6 +531,7 @@ struct PreferencesTests {
         #expect(prefs.autoCenterBar == false)
         #expect(prefs.menuBarIcon == .symbole)
         #expect(prefs.iconeApp == IconeApp(motif: .couvee, fond: .aube))
+        #expect(prefs.apparence == .sombre)
         #expect(prefs.couleurDeLApp == .teinte(210) && prefs.fondsDeLApp == .nuit)
         #expect(prefs.showPreviewOnHover == true)
         #expect(prefs.previewHotKey == HotKey(keyCode: 49, modifiers: 2048))
@@ -609,6 +610,7 @@ struct PreferencesTests {
         prefs.autoCenterBar = false
         prefs.menuBarIcon = .symbole
         prefs.iconeApp = IconeApp(motif: .couvee, fond: .aube)
+        prefs.apparence = .sombre
         prefs.couleurDeLApp = .teinte(210)
         prefs.fondsDeLApp = .nuit
         prefs.showPreviewOnHover = true
@@ -692,7 +694,7 @@ struct PreferencesTests {
          "autoCenterBar":true,"barOnlyWithDofus":false,"panneauxSeulementDofus":true,"barVisible":true,"bossChoisi":"harebourg",
          "boutonsMasques":[],"characterOrder":[],
          "defaultsVersion":8,"equipes":[],"etiquettes":{},"hotKeys":[null],"inviteFormat":"/invite %nom","inviteGroupee":false,
-         "killFrozenClients":true,"lireCombat":false,"lireCombatDerriere":false,"lirePosition":false,"menuBarIcon":"logo","iconeApp":{"motif":"oeuf","fond":"transparent"},"couleurDeLApp":"jade",
+         "killFrozenClients":true,"lireCombat":false,"lireCombatDerriere":false,"lirePosition":false,"menuBarIcon":"logo","iconeApp":{"motif":"oeuf","fond":"transparent"},"apparence":"auto","couleurDeLApp":"jade",
          "reduirePersosInactifs":false,"showClasses":true,"showNumbers":true,"showPreviewOnHover":false,
          "signalerBascule":true,"zaapAuto":false,
          "zaapGainMinimal":5,"zaapDuJeu":true,"zaapIntercalees":"/a","verifierMisesAJour":true,"partagerStatistiques":true,"zaapsAjoutes":[],"zaapsChoix":{},"zaapsFavoris":[],"zaapsVueCarte":true,

@@ -11,6 +11,35 @@ import SwiftUI
 enum ThemeCourant {
     typealias Jeton = KeyPath<Jetons.Theme, Jetons.RVB>
 
+    /// Clair, sombre, ou celui de macOS. Posé sur l'app entière : fenêtres, panneaux et menus le suivent,
+    /// et les couleurs dynamiques de `nsColor` se résolvent d'après lui.
+    enum Apparence: String, CaseIterable, Sendable {
+        case auto, clair, sombre
+
+        var titre: String {
+            switch self {
+            case .auto: L("commun.auto")
+            case .clair: L("theme.apparence.clair")
+            case .sombre: L("theme.apparence.sombre")
+            }
+        }
+
+        /// `nil` : suivre le système.
+        var nsAppearance: NSAppearance? {
+            switch self {
+            case .auto: nil
+            case .clair: NSAppearance(named: .aqua)
+            case .sombre: NSAppearance(named: .darkAqua)
+            }
+        }
+    }
+
+    /// À l'ouverture : pose l'apparence choisie, puis la suit.
+    static func demarrer() {
+        NSApp.appearance = Preferences.shared.apparence.nsAppearance
+        _ = Suivi.partage
+    }
+
     /// Ce qui détermine tous les jetons ; sans fonds choisis, ceux de l'Auto.
     struct Reglage: Hashable, Sendable {
         var couleur = Jetons.couleurParDefaut
@@ -78,5 +107,6 @@ private final class Suivi {
         // Émis avant l'écriture : la vue relit les préférences au redessin, qui vient après.
         prefs.$couleurDeLApp.dropFirst().sink { [weak self] _ in self?.revision += 1 }.store(in: &abonnements)
         prefs.$fondsDeLApp.dropFirst().sink { [weak self] _ in self?.revision += 1 }.store(in: &abonnements)
+        prefs.$apparence.dropFirst().sink { NSApp.appearance = $0.nsAppearance }.store(in: &abonnements)
     }
 }
