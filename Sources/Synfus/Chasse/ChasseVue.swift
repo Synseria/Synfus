@@ -172,11 +172,13 @@ struct ChasseVue: View {
                 Button { modele.choisir(cible) } label: {
                     Text(cible.nom(en: modele.langue))
                         .font(Jetons.Typo.petit.police)
-                        .lineLimit(1)
-                        .padding(.horizontal, Jetons.Espace.deux)
-                        .frame(height: Jetons.Taille.cibleMin)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, Jetons.Espace.un)
+                        .padding(.vertical, Jetons.Espace.un)
                 }
-                .buttonStyle(.etat(choisi: modele.cible == cible, rayon: Jetons.Rayon.capsule))
+                .buttonStyle(.etat(choisi: modele.cible == cible, nue: true))
             }
         }
     }
