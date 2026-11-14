@@ -265,13 +265,13 @@ final class Preferences: ObservableObject {
     /// Raccourci de la palette. ⌘: par défaut (génération 7).
     @Published var paletteHotKey: HotKey? { didSet { save() } }
 
-    /// Raccourci du panneau de chasse au trésor. Sans défaut.
+    /// Raccourci du panneau de chasse au trésor. ⌥⌘C par défaut (génération 9).
     @Published var chasseHotKey: HotKey? { didSet { save() } }
 
-    /// Raccourci du panneau des quêtes. Sans défaut.
+    /// Raccourci du panneau des quêtes. ⌥⌘Q par défaut (génération 9).
     @Published var quetesHotKey: HotKey? { didSet { save() } }
 
-    /// Raccourci du panneau d'aide aux boss. Sans défaut.
+    /// Raccourci du panneau d'aide aux boss. ⌥⌘B par défaut (génération 9).
     @Published var bossHotKey: HotKey? { didSet { save() } }
 
     /// Le boss que montre le panneau d'aide.
@@ -389,7 +389,7 @@ final class Preferences: ObservableObject {
     /// reprise correspondante dans `adoptDefaults` — chaque fois que les défauts
     /// changent, sans quoi les installations existantes resteraient sur les
     /// anciens à jamais.
-    static let defaultsVersion = 8
+    static let defaultsVersion = 9
 
     /// Les défauts de la génération 1, ceux qu'une installation existante peut
     /// encore porter sans que l'utilisateur les ait choisis. Seules ces
@@ -461,6 +461,16 @@ final class Preferences: ObservableObject {
         // La génération 8 range la palette par « Auto » ; une sauvegarde écrivait
         // toujours son tri, l'ancien défaut ne se distingue pas d'un choix.
         if from < 8, paletteTri == Self.legacyPaletteTri { paletteTri = .auto }
+
+        // La génération 9 donne aux trois panneaux ⌥⌘Q, ⌥⌘C et ⌥⌘B. Seulement à qui n'avait rien réglé,
+        // et jamais une combinaison qu'un autre geste tient déjà : elle reste vide.
+        if from < 9 {
+            for (chemin, defaut) in [(\Preferences.quetesHotKey, HotKey.defaultQuetes),
+                                     (\.chasseHotKey, .defaultChasse), (\.bossHotKey, .defaultBoss)]
+            where self[keyPath: chemin] == nil && !raccourcisGlobaux.contains(defaut) {
+                self[keyPath: chemin] = defaut
+            }
+        }
         return true
     }
 
@@ -489,9 +499,9 @@ final class Preferences: ObservableObject {
         sessionHotKey = nil
         equipeSuivanteHotKey = nil
         zaapHotKey = nil
-        chasseHotKey = nil
-        quetesHotKey = nil
-        bossHotKey = nil
+        chasseHotKey = .defaultChasse
+        quetesHotKey = .defaultQuetes
+        bossHotKey = .defaultBoss
     }
 
     /// Reporte sur la touche sous Échap les raccourcis restés sur le keycode 50.
@@ -653,6 +663,9 @@ final class Preferences: ObservableObject {
             previewHotKey = .defaultPreview
             inviteHotKey = .defaultInvite
             paletteHotKey = .defaultPalette
+            quetesHotKey = .defaultQuetes
+            chasseHotKey = .defaultChasse
+            bossHotKey = .defaultBoss
             loading = false
             completerHotKeys()
             return
