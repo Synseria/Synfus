@@ -7,6 +7,7 @@ struct PaletteVue: View {
     @ObservedObject var modele = PaletteModele.shared
     @ObservedObject private var quetes = QuetesStore.shared
     @ObservedObject private var almanax = AlmanaxStore.shared
+    @ObservedObject private var carte = CarteStore.shared
     /// Le détail d'un donjon arrive après l'ouverture : ↵ et les cartes de sa fiche changent.
     @ObservedObject private var donjons = DonjonsStore.shared
     @FocusState private var champ: Champ?
@@ -145,22 +146,8 @@ struct PaletteVue: View {
 
     @ViewBuilder
     private var resultats: some View {
-        if modele.entrees.isEmpty {
-            let sansLecture = modele.filtre == .ici && !modele.positionConnue && !Preferences.shared.lirePosition
-            VStack(spacing: Jetons.Espace.deux) {
-                Text(quetes.chargement && quetes.quetes == nil ? L("palette.quetes.chargement")
-                     : modele.filtre == .ici && !modele.positionConnue
-                        ? (sansLecture ? L("palette.ici.sansPosition") : L("palette.ici.pasEncore"))
-                        : L("palette.aucun"))
-                    .font(Jetons.Typo.corps.police)
-                    .foregroundStyle(Color.jeton(\.encreSecondaire))
-                    .multilineTextAlignment(.center)
-                if sansLecture {
-                    Button(L("lecture.ouvrir")) { SettingsWindowController.shared.show(section: .lecture) }
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 120)
+        if let vide = modele.vide {
+            videVue(vide)
         } else {
             ScrollViewReader { defilement in
                 ScrollView {
@@ -186,6 +173,39 @@ struct PaletteVue: View {
                 }
             }
         }
+    }
+
+    /// La liste vide dit pourquoi, et propose ce qui répare.
+    private func videVue(_ vide: VidePalette) -> some View {
+        VStack(spacing: Jetons.Espace.deux) {
+            switch vide {
+            case .carteEnChargement:
+                ProgressView().controlSize(.small)
+                texteVide(L("palette.carte.chargement"))
+            case .carteIndisponible:
+                texteVide(L("palette.carte.indisponible"))
+                Button(L("palette.carte.reessayer")) { carte.reessayer() }
+                    .buttonStyle(.bouton(.secondaire))
+            case .quetesEnChargement:
+                texteVide(L("palette.quetes.chargement"))
+            case .iciSansLecture:
+                texteVide(L("palette.ici.sansPosition"))
+                Button(L("lecture.ouvrir")) { SettingsWindowController.shared.show(section: .lecture) }
+            case .iciPasEncoreLu:
+                texteVide(L("palette.ici.pasEncore"))
+            case .aucun:
+                texteVide(L("palette.aucun"))
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 120)
+    }
+
+    private func texteVide(_ texte: String) -> some View {
+        Text(texte)
+            .font(Jetons.Typo.corps.police)
+            .foregroundStyle(Color.jeton(\.encreSecondaire))
+            .multilineTextAlignment(.center)
     }
 
     /// Les dernières copies, en pastilles : un clic recopie.
@@ -286,11 +306,18 @@ struct PaletteVue: View {
             .frame(height: Jetons.Taille.rangeePalette + Jetons.Espace.un)
         } else {
             HStack(spacing: Jetons.Espace.trois) {
-                aide("↵", entree)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                aide("⌘E", L("palette.touche.etiquette"))
-                aide("⌘D", L("palette.touche.favori"))
+                if let vide = modele.vide {
+                    switch vide.entree {
+                    case .reessayer: aide("↵", L("palette.carte.reessayer"))
+                    case nil: EmptyView()
+                    }
+                } else {
+                    aide("↵", entree)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    aide("⌘E", L("palette.touche.etiquette"))
+                    aide("⌘D", L("palette.touche.favori"))
+                }
                 Spacer()
                 aide("esc", L("palette.touche.fermer"))
             }
