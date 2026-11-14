@@ -31,6 +31,7 @@ extension WindowManager {
         // plein écran. Dans l'ordre inverse, le raise s'appliquait à une fenêtre
         // d'un autre espace et ne menait nulle part.
         NSRunningApplication(processIdentifier: client.pid)?.activate()
+        WindowArranger.shared.suivreBascule(vers: client)
 
         // Les attributs AX ne servent qu'à départager plusieurs fenêtres d'un même
         // processus ; on les pose une fois la transition d'espace engagée — et
@@ -73,11 +74,11 @@ extension WindowManager {
     }
 
     /// Le geste « lancer la session » : ranger les fenêtres selon la dernière
-    /// disposition, puis basculer sur le premier perso. Rien que des gestes
-    /// existants, enchaînés — et toujours aucun évènement émis.
+    /// disposition, le premier perso en grand, puis basculer sur lui. Rien que
+    /// des gestes existants, enchaînés — et toujours aucun évènement émis.
     func lancerSession() {
         Task {
-            await WindowArranger.shared.appliquerDerniere(geste: .session)
+            await WindowArranger.shared.appliquerDerniere(geste: .session, grandAuRang: 0)
             if !effectif.isEmpty { focus(slot: 0) }
         }
     }
