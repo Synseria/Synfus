@@ -195,6 +195,7 @@
   "chasse.direction.ouest": "West",
   "chasse.direction.sud": "South",
   "chasse.echec": "Unable to read the step. %@",
+  "chasse.etape.precedente": "Previous step",
   "chasse.indice": "Clue",
   "chasse.indices": "Hunt clues",
   "chasse.indices.aucune": "No clue loaded",

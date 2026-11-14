@@ -195,6 +195,7 @@
   "chasse.direction.ouest": "Oeste",
   "chasse.direction.sud": "Sur",
   "chasse.echec": "No se puede leer la etapa. %@",
+  "chasse.etape.precedente": "Paso anterior",
   "chasse.indice": "Pista",
   "chasse.indices": "Pistas de búsqueda",
   "chasse.indices.aucune": "Ninguna pista cargada",

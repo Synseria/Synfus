@@ -195,6 +195,7 @@
   "chasse.direction.ouest": "Ouest",
   "chasse.direction.sud": "Sud",
   "chasse.echec": "Impossible de lire l'étape. %@",
+  "chasse.etape.precedente": "Étape précédente",
   "chasse.indice": "Indice",
   "chasse.indices": "Indices de chasse",
   "chasse.indices.aucune": "Aucun indice chargé",
