@@ -109,7 +109,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         }
         add(to: menu, title: prefs.barVisible ? L("menu.masquerBarre") : L("menu.afficherBarre"), action: #selector(toggleBar),
             raccourci: prefs.toggleBar, icone: prefs.barVisible ? "eye.slash" : "eye")
-        add(to: menu, title: L("menu.recentrerBarre"), action: #selector(recenterBar), icone: "dot.viewfinder")
+        add(to: menu, title: L("menu.recentrer"), action: #selector(recenterBar), icone: "dot.viewfinder")
         menu.addItem(.separator())
 
         add(to: menu, title: L("menu.apropos"), action: #selector(openAbout), icone: "info.circle")
@@ -252,7 +252,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     }
 
     @objc private func recenterBar() {
-        FloatingBarController.shared.recenter()
+        PanneauxJeu.recentrerBarreEtPanneaux()
     }
 
     @objc private func openQuests() {

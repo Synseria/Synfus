@@ -15,10 +15,11 @@ struct QueteVue: View {
     @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var lecture = LectureSuivi.shared
     @ObservedObject private var lecteur = LecteurEcran.shared
+    @ObservedObject private var previews = WindowPreviewService.shared
     /// Les cartes intérieures, venues après la carte.
     @ObservedObject private var cartes = CarteStore.shared
     /// La ligne qui vient d'être copiée, le temps de le dire.
-    @State private var copiee: String?
+    @StateObject private var copie = SignalCopie()
     @State private var guideEnCours = false
     /// Les lignes dépliées sur où trouver leur objet ou leur monstre.
     @State private var deplies: Set<OuTrouver.Sujet> = []
@@ -85,6 +86,7 @@ struct QueteVue: View {
         VStack(spacing: 0) {
             ScrollView {
                 VStack(alignment: .leading, spacing: Jetons.Espace.deux) {
+                    if !previews.authorized { LigneAutorisation() }
                     if store.quetes == nil, !store.chargement, store.echec != nil {
                         Text(L("quete.indisponible"))
                             .font(Jetons.Typo.note.police)
@@ -269,9 +271,11 @@ struct QueteVue: View {
             HStack {
                 titreSection(L("quete.ressources"))
                 Spacer()
-                Button(copiee == "ressources" ? L("quete.copie") : L("quete.toutCopier")) {
+                Button {
                     copier(ressources.map { L("quete.ressource", $0.nom, $0.quantite) }.joined(separator: ", "),
                            ligne: "ressources")
+                } label: {
+                    Label { Text(L("quete.toutCopier")) } icon: { IconeCopie(icone: "doc.on.doc", copie: copie.affiche("ressources")) }
                 }
                 .buttonStyle(.bouton(.tertiaire, dense: true))
                 .font(metriques.detail.police)
@@ -281,16 +285,16 @@ struct QueteVue: View {
                 HStack(alignment: .firstTextBaseline, spacing: 0) {
                     ligneCopiable(id: id, aide: L("quete.copierNom"), action: { copier(ressource.nom, ligne: id) }) {
                         HStack(alignment: .firstTextBaseline, spacing: Jetons.Espace.un) {
-                            Image(systemName: copiee == id ? "checkmark" : "shippingbox")
+                            IconeCopie(icone: "shippingbox", copie: copie.affiche(id))
                                 .font(metriques.icone.police)
-                                .foregroundStyle(copiee == id ? Color.jeton(\.primaireEncre) : Color.jeton(\.encreSecondaire))
+                                .foregroundStyle(Color.jeton(\.encreSecondaire))
                                 .frame(width: Jetons.Taille.case)
                             // Le nom d'abord : à l'étroit, c'est la catégorie qui se tronque.
                             Text(L("quete.ressource", ressource.nom, ressource.quantite))
                                 .font(metriques.texte.police)
                                 .layoutPriority(1)
                             Spacer(minLength: Jetons.Espace.un)
-                            detail(id: id, ressource.categorie, monospace: false)
+                            detail(ressource.categorie, monospace: false)
                         }
                     }
                     deplier(.objet(ressource.objet))
@@ -385,7 +389,7 @@ struct QueteVue: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.bottom, Jetons.Espace.un)
             }
-            let repliees = Set(etape.objectifs.filter { coches.contains($0.id) && copiee != Self.idLigne($0) }.map(\.id))
+            let repliees = Set(etape.objectifs.filter { coches.contains($0.id) && !copie.affiche(Self.idLigne($0)) }.map(\.id))
             let coordonnees = CoordonneesObjectifs.affichees(etape.objectifs, repliees: repliees)
             ForEach(etape.objectifs, id: \.id) { objectif in
                 ligneObjectif(objectif, quete: fiche.id, coordonnee: coordonnees.contains(objectif.id),
@@ -496,10 +500,10 @@ struct QueteVue: View {
         if let position = objectif.position {
             ZaapClipboard.shared.copierTrajet(vers: (position.x, position.y), sousZone: objectif.sousZone,
                                               dansLesDouze: !CarteStore.shared.reseau.horsDesDouze(objectif.sousZone))
-            signaler(id)
+            copie.signaler(id)
         } else if case .monstre(let monstre)? = objectif.sujet {
             // Rien qui le situe, ou DofusDB muet : un bip plutôt que rien.
-            Task { if await OuTrouverStore.shared.copierLePlusProche(monstre: monstre) { signaler(id) } else { NSSound.beep() } }
+            Task { if await OuTrouverStore.shared.copierLePlusProche(monstre: monstre) { copie.signaler(id) } else { NSSound.beep() } }
         }
         prefs.mettreEnCours(objectif.id, de: quete)
     }
@@ -540,12 +544,12 @@ struct QueteVue: View {
     /// d'avant (`CoordonneesObjectifs`). Un clic sur la ligne copie toujours le trajet et met
     /// l'objectif en cours ; seule la coche valide ou dévalide. Fait, il reste
     /// à sa place — l'ordre de la quête ne bouge pas — sur une ligne grisée,
-    /// sans sa position, une fois le « Copié » passé. La vue de la carte paraît
+    /// sans sa position, une fois le signal de copie passé. La vue de la carte paraît
     /// en grand au survol de la ligne, en vignette avec `quetesVignettes`.
     private func ligneObjectif(_ objectif: FicheQuete.Objectif, quete: Int, coordonnee: Bool, etat: EtatObjectif) -> some View {
         let id = Self.idLigne(objectif)
         let valide = etat.valide, suggere = etat.suggere && !valide
-        let replie = valide && copiee != id
+        let replie = valide && !copie.affiche(id)
         return VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline, spacing: Jetons.Espace.un) {
                 Button { prefs.cocher(objectif.id, de: quete, !valide) } label: {
@@ -574,26 +578,28 @@ struct QueteVue: View {
                                         .foregroundStyle(Color.jeton(\.safranTexte))
                                 }
                                 if let position = objectif.position {
-                                    // Masquée, la ligne garde son « Copié » : le texte est vide, la voix de l'état reste.
-                                    detail(id: id, coordonnee ? Coordonnees.texte(position.x, position.y) : nil, monospace: true)
-                                    if cartes.interieurs.contient(objectif.carte), copiee != id {
+                                    detail(coordonnee ? Coordonnees.texte(position.x, position.y) : nil, monospace: true)
+                                    if cartes.interieurs.contient(objectif.carte) {
                                         EtiquetteInterieur(taille: metriques.detail)
                                     }
-                                    if suggere, copiee != id {
+                                    if suggere {
                                         Text(L("quete.suggestion"))
                                             .font(metriques.detailFort.police)
                                             .foregroundStyle(Color.jeton(\.suggestionSynfus))
                                     }
                                 } else {
-                                    detail(id: id, L("quete.nonSitue"), monospace: false)
+                                    detail(L("quete.nonSitue"), monospace: false)
                                 }
-                                if etat.nonOuvert, !valide, copiee != id {
+                                if etat.nonOuvert, !valide {
                                     Text(L("quete.nonOuvert"))
                                         .font(metriques.detail.police)
                                         .foregroundStyle(Color.jeton(\.encreTertiaire))
                                         .lineLimit(1)
                                 }
                                 Spacer(minLength: 0)
+                                IconeCopie(icone: nil, copie: copie.affiche(id))
+                                    .font(metriques.detail.police)
+                                    .accessibilityHidden(true)
                                 if prefs.quetesVignettes, let carte = objectif.carte {
                                     MiniatureCarte(carte: carte, taille: metriques.vignette, agrandir: false)
                                 }
@@ -665,7 +671,7 @@ struct QueteVue: View {
                             .frame(width: Jetons.Taille.case)
                         Text(suivante.nom).font(metriques.texte.police).layoutPriority(1)
                         Spacer(minLength: Jetons.Espace.un)
-                        detail(id: "suivante:\(suivante.id)", L("quete.niveauCourt", suivante.niveau), monospace: false)
+                        detail(L("quete.niveauCourt", suivante.niveau), monospace: false)
                     }
                 }
             }
@@ -680,13 +686,10 @@ struct QueteVue: View {
             .foregroundStyle(Color.jeton(\.encreSecondaire))
     }
 
-    /// Le détail d'une ligne, en petit et en gris, ou « Copié » le temps de
-    /// le dire. Sur une ligne, il se tronque avant le texte principal.
+    /// Le détail d'une ligne, en petit et en gris. Sur une ligne, il se tronque avant le texte principal.
     @ViewBuilder
-    private func detail(id: String, _ texte: String?, monospace: Bool) -> some View {
-        if copiee == id {
-            Text(L("quete.copie")).font(metriques.detailFort.police).foregroundStyle(Color.jeton(\.primaireEncre))
-        } else if let texte {
+    private func detail(_ texte: String?, monospace: Bool) -> some View {
+        if let texte {
             Text(texte)
                 .font((monospace ? Jetons.Typo.codeInterface : metriques.detail).police)
                 .foregroundStyle(Color.jeton(\.encreSecondaire))
@@ -702,22 +705,14 @@ struct QueteVue: View {
                 .padding(.horizontal, metriques.ligneHorizontale)
                 .padding(.vertical, metriques.ligneVerticale)
         }
-        .buttonStyle(.etat(choisi: copiee == id, nue: true))
+        .buttonStyle(.etat(choisi: copie.affiche(id), nue: true))
         .disabled(action == nil)
         .help(action == nil ? "" : aide ?? "")
     }
 
     private func copier(_ texte: String, ligne: String) {
         PressePapiers.copier(texte)
-        signaler(ligne)
-    }
-
-    private func signaler(_ ligne: String) {
-        copiee = ligne
-        Task {
-            try? await Task.sleep(for: .seconds(1.2))
-            if copiee == ligne { copiee = nil }
-        }
+        copie.signaler(ligne)
     }
 }
 

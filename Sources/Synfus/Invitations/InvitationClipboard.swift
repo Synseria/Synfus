@@ -8,7 +8,7 @@ final class InvitationClipboard: ObservableObject {
     static let shared = InvitationClipboard()
 
     /// `slotKey` des pastilles dont l'invitation vient d'être copiée — la
-    /// barre les marque le temps de `dureeSignal`, puis les oublie.
+    /// barre les marque le temps de `SignalCopie.duree`, puis les oublie.
     @Published private(set) var copiesRecentes: Set<String> = []
 
     /// Le chef du tour en cours — fixé au premier appui, relâché au dernier
@@ -18,7 +18,6 @@ final class InvitationClipboard: ObservableObject {
     private var precedents: [String] = []
     private var curseur: Int?
     private var effacement: Task<Void, Never>?
-    private static let dureeSignal: Duration = .seconds(1.2)
 
     private init() {}
 
@@ -86,7 +85,7 @@ final class InvitationClipboard: ObservableObject {
         effacement?.cancel()
         copiesRecentes = Set(clients.map(\.slotKey))
         effacement = Task {
-            try? await Task.sleep(for: Self.dureeSignal)
+            try? await Task.sleep(for: SignalCopie.duree)
             guard !Task.isCancelled else { return }
             copiesRecentes = []
         }

@@ -28,9 +28,6 @@ final class ChasseModele: ObservableObject {
     @Published private(set) var rienLu = false
     @Published private(set) var constat: Constat?
     @Published private(set) var rechercheEnCours = false
-    /// Le trajet vient d'être copié : la coche du bouton, un instant.
-    @Published private(set) var copieRecente = false
-    private var effacementCopie: Task<Void, Never>?
     @Published private(set) var echec: String?
 
     @Published private(set) var indices: [Indice] = []
@@ -184,12 +181,5 @@ final class ChasseModele: ObservableObject {
         guard case .trouve(let x, let y, _) = constat?.resultat else { return }
         // Une chasse se joue dans le Monde des Douze.
         ZaapClipboard.shared.copierTrajet(vers: (x, y), sousZone: nil, dansLesDouze: true)
-        effacementCopie?.cancel()
-        copieRecente = true
-        effacementCopie = Task {
-            try? await Task.sleep(for: .seconds(1.2))
-            guard !Task.isCancelled else { return }
-            copieRecente = false
-        }
     }
 }
