@@ -1016,6 +1016,19 @@ extension PreferencesTests {
         #expect(BoutonBarre.passageAuto.infobulle(touche: "⌘²", nom: "Passage : activé") == "Passage : activé  ⌘²")
     }
 
+    @Test("Le passage automatique se bascule entre « passer au perso » et « le signaler »")
+    func basculePassageAuto() {
+        let (prefs, _) = neuves()
+        prefs.attentionAction = .highlight
+        prefs.basculerPassageAuto()
+        #expect(prefs.passageAuto && prefs.attentionAction == .focus)
+        prefs.basculerPassageAuto()
+        #expect(!prefs.passageAuto && prefs.attentionAction == .highlight)
+        prefs.attentionAction = .ignore
+        prefs.basculerPassageAuto()
+        #expect(prefs.attentionAction == .focus)
+    }
+
     @Test("Réduire les inactifs : désactivé par défaut, et la sauvegarde l'écrit")
     func reduirePersosInactifs() {
         let (prefs, store) = neuves()

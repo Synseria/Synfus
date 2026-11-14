@@ -107,6 +107,8 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             add(to: menu, title: L("menu.lancerSession"), action: #selector(launchSession), raccourci: prefs.sessionHotKey,
                 icone: "play")
         }
+        add(to: menu, title: BoutonBarre.passageAuto.libelle, action: #selector(toggleAutoFocus),
+            raccourci: prefs.toggleAutoFocus, icone: BoutonBarre.passageAuto.symbole).state = prefs.passageAuto ? .on : .off
         add(to: menu, title: prefs.barVisible ? L("menu.masquerBarre") : L("menu.afficherBarre"), action: #selector(toggleBar),
             raccourci: prefs.toggleBar, icone: prefs.barVisible ? "eye.slash" : "eye")
         add(to: menu, title: L("menu.recentrer"), action: #selector(recenterBar), icone: "dot.viewfinder")
@@ -231,6 +233,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
     @objc private func launchSession() {
         WindowManager.shared.lancerSession()
+    }
+
+    @objc private func toggleAutoFocus() {
+        Preferences.shared.basculerPassageAuto()
     }
 
     @objc private func toggleBar() {
