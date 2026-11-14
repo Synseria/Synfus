@@ -75,6 +75,20 @@ struct LocalisationTests {
         }
     }
 
+    /// Un `%` seul dans un texte formaté en avale le caractère suivant (« +400 % de »
+    /// devient « +400 0e ») : il s'écrit `%%`.
+    @Test("Un texte à arguments écrit son pourcentage « %% »")
+    func pourcentageEchappe() throws {
+        let regex = try NSRegularExpression(pattern: #"%(?:lld|@|%)"#)
+        for langue in Langue.allCases {
+            for (cle, texte) in try table(langue) where texte.contains("%lld") || texte.contains("%@") {
+                let reste = regex.stringByReplacingMatches(in: texte, range: NSRange(texte.startIndex..., in: texte),
+                                                           withTemplate: "")
+                #expect(!reste.contains("%"), "\(langue.rawValue) › \(cle)")
+            }
+        }
+    }
+
     /// Le code ne porte que des clés ; chacune doit exister en français, et
     /// chaque clé française doit servir quelque part — sinon c'est un libellé
     /// mort, ou une faute de frappe qui s'afficherait telle quelle. Une clé
