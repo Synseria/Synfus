@@ -179,6 +179,13 @@ struct QueteVue: View {
             Text(titre).font(metriques.titreFort.police).lineLimit(2).fixedSize(horizontal: false, vertical: true)
                 .help(titre)
             Image(systemName: "chevron.down").font(Jetons.Typo.micro.police).foregroundStyle(Color.jeton(\.encreSecondaire))
+            let ici = ficheImposee == nil ? (QuetePanel.shared.ici()?.aEpingler(prefs.quetesEpinglees).count ?? 0) : 0
+            if ici > 0 {
+                Image(systemName: "exclamationmark.bubble")
+                    .font(Jetons.Typo.petit.police)
+                    .foregroundStyle(Color.jeton(\.safranTexte))
+                    .help(L("quete.ici.aide", nombre: ici, ici))
+            }
             if nouvelles > 0, ficheImposee == nil {
                 Text("\(nouvelles)")
                     .font(Jetons.Typo.micro.police)

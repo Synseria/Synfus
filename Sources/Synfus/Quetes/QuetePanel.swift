@@ -40,6 +40,15 @@ final class QuetePanel: NSObject, ObservableObject {
     /// apparaître du tout.
     private var impose = false
     private var panel: NSPanel?
+    /// Ce dont dépend `ici()`.
+    struct CleIci: Equatable {
+        let position: PositionCarte?
+        let quetes: Date?
+        let langue: Langue
+        let reseauLu: Bool
+    }
+
+    private var iciGarde = DernierCalcul<CleIci, MenuQuetes.Ici?>()
 
     private override init() { super.init() }
 
@@ -176,7 +185,7 @@ extension QuetePanel {
         for element in MenuQuetes.elements(
             epinglees: prefs.quetesEpinglees, montree: idMontre, reconnues: lecture.reconnues,
             etat: lecture.etat, coches: lecture.cochesLues, actives: Set(MenuQuetes.Option.allCases.filter { prefs[keyPath: Self.reglage($0)] }),
-            ici: Self.ici(), nom: { store.nom($0) ?? "…" }) {
+            ici: ici(), nom: { store.nom($0) ?? "…" }) {
             switch element {
             case .titre(let titre):
                 menu.addItem(.sectionHeader(title: titre))
@@ -243,16 +252,22 @@ extension QuetePanel {
 }
 
 extension QuetePanel {
-    /// Ce qui commence sur la case du perso devant, d'après sa position lue.
-    private static func ici() -> MenuQuetes.Ici? {
-        guard let perso = LecteurEcran.shared.positionDuPersoDevant, let quetes = QuetesStore.shared.quetes else { return nil }
+    /// Ce qui commence sur la case du perso devant, d'après sa position lue. L'en-tête le redemande à
+    /// chaque rendu : le balayage des quêtes ne se refait que si la case, les quêtes, la langue ou la
+    /// carte ont changé.
+    func ici() -> MenuQuetes.Ici? {
+        let position = LecteurEcran.shared.positionDuPersoDevant
         let reseau = CarteStore.shared.reseau, langue = L10n.courante.langue
-        return MenuQuetes.Ici(
-            coordonnees: perso.coordonnees,
-            quetes: QuetesIci.quetes(quetes, perso: perso, reseau: reseau).map {
-                .init(id: $0.id, nom: Lieu.traduit($0.noms, langue) ?? "?", niveau: $0.niveau)
-            },
-            pnjs: QuetesIci.pnjs(quetes, perso: perso, reseau: reseau).compactMap { Lieu.traduit($0.noms, langue) })
+        let cle = CleIci(position: position, quetes: QuetesStore.shared.quetes?.date, langue: langue, reseauLu: reseau.estLu)
+        return iciGarde.valeur(pour: cle) {
+            guard let perso = position, let quetes = QuetesStore.shared.quetes else { return nil }
+            return MenuQuetes.Ici(
+                coordonnees: perso.coordonnees,
+                quetes: QuetesIci.quetes(quetes, perso: perso, reseau: reseau).map {
+                    .init(id: $0.id, nom: Lieu.traduit($0.noms, langue) ?? "?", niveau: $0.niveau)
+                },
+                pnjs: QuetesIci.pnjs(quetes, perso: perso, reseau: reseau).compactMap { Lieu.traduit($0.noms, langue) })
+        }
     }
 
     /// Le réglage derrière une option du menu.

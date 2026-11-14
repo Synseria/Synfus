@@ -92,6 +92,30 @@ struct PanneauQuetesTests {
         #expect(!une.contains(.toutEpingler))
     }
 
+    @Test("Une quête qui commence ici et n'est pas épinglée met la section « Ici » en tête du menu")
+    func menuIciEnTete() {
+        let ici = MenuQuetes.Ici(coordonnees: "[1,2]", quetes: [.init(id: 5, nom: "Q5", niveau: 10)], pnjs: [])
+        let tete = MenuQuetes.elements(epinglees: [1], montree: 1, reconnues: [], etat: .lu, coches: 0, actives: [], ici: ici, nom: nom)
+        #expect(tete.first == .titre(L("quete.menu.ici", "[1,2]")))
+        #expect(tete.contains(.ici(id: 5, titre: L("quete.menu.iciQuete", "Q5", 10), epinglee: false)))
+        #expect(ici.aEpingler([5]).isEmpty)
+        // Déjà épinglée : la section reste, mais après les épinglées.
+        let apres = MenuQuetes.elements(epinglees: [5], montree: 5, reconnues: [], etat: .lu, coches: 0, actives: [], ici: ici, nom: nom)
+        #expect(apres.first == .titre(L("quete.menu.epinglees")))
+        #expect(apres.contains(.ici(id: 5, titre: L("quete.menu.iciQuete", "Q5", 10), epinglee: true)))
+    }
+
+    @Test("Ce que l'en-tête redemande à chaque rendu ne se refait que si la case, les quêtes, la langue ou la carte changent")
+    func cleIci() {
+        let date = Date(timeIntervalSince1970: 1_000_000)
+        let cle = QuetePanel.CleIci(position: PositionCarte(x: 1, y: 2, zone: nil), quetes: date, langue: .fr, reseauLu: true)
+        #expect(cle == QuetePanel.CleIci(position: PositionCarte(x: 1, y: 2, zone: nil), quetes: date, langue: .fr, reseauLu: true))
+        #expect(cle != QuetePanel.CleIci(position: PositionCarte(x: 1, y: 3, zone: nil), quetes: date, langue: .fr, reseauLu: true))
+        #expect(cle != QuetePanel.CleIci(position: cle.position, quetes: nil, langue: .fr, reseauLu: true))
+        #expect(cle != QuetePanel.CleIci(position: cle.position, quetes: date, langue: .en, reseauLu: true))
+        #expect(cle != QuetePanel.CleIci(position: cle.position, quetes: date, langue: .fr, reseauLu: false))
+    }
+
     /// Le séparateur, les options, puis le séparateur et « Fermer le panneau », en pied du menu.
     private let pied = 1 + MenuQuetes.Option.affichage.count + 2
 
@@ -110,21 +134,21 @@ struct PanneauQuetesTests {
         #expect(illisible.dropLast(pied).last == .message(L("quete.suivi.illisible")))
     }
 
-    @Test("Le menu dit ce qui commence sur la case du perso, entre les épinglées et le suivi")
+    @Test("Le menu dit ce qui commence sur la case du perso, en tête tant qu'une quête n'est pas épinglée")
     func menuIci() {
         let ici = MenuQuetes.Ici(coordonnees: "[1,2]", quetes: [.init(id: 5, nom: "Q5", niveau: 10),
                                                                .init(id: 18, nom: "Q18", niveau: 70)], pnjs: ["Wogew", "Otomaï"])
         let elements = MenuQuetes.elements(epinglees: [18], montree: 18, reconnues: [], etat: .jamaisLu, coches: 0,
                                            actives: [], ici: ici, nom: nom)
         #expect(Array(elements.prefix(9)) == [
-            .titre(L("quete.menu.epinglees")),
-            .epinglee(id: 18, nom: "Q18", montree: true),
-            .desepingler(id: 18, nom: "Q18"),
-            .separateur,
             .titre(L("quete.menu.ici", "[1,2]")),
             .ici(id: 5, titre: L("quete.menu.iciQuete", "Q5", 10), epinglee: false),
             .ici(id: 18, titre: L("quete.menu.iciQuete", "Q18", 70), epinglee: true),
             .message(L("quete.menu.iciPNJ", "Wogew, Otomaï")),
+            .separateur,
+            .titre(L("quete.menu.epinglees")),
+            .epinglee(id: 18, nom: "Q18", montree: true),
+            .desepingler(id: 18, nom: "Q18"),
             .separateur,
         ])
         let rien = MenuQuetes.elements(epinglees: [18], montree: 18, reconnues: [], etat: .jamaisLu, coches: 0, actives: [],

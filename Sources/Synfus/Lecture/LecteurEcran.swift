@@ -345,6 +345,14 @@ final class LecteurEcran: ObservableObject {
         persoDevant.flatMap { positions[$0] }
     }
 
+    #if DEBUG
+    /// Un perso devant à une position d'exemple pour les captures (`CapturesTests`) : aucun écran n'est lu.
+    func poserPourCaptures(persoDevant perso: String?, position: PositionCarte?) {
+        persoDevant = perso
+        positions = perso.flatMap { nom in position.map { [nom: $0] } } ?? [:]
+    }
+    #endif
+
     /// Le perso devant vient de finir un combat sur la carte où il se tient.
     var combatFiniDevant: Bool {
         persoDevant.map { finsDeCombat.fini($0, en: positions[$0]) } ?? false
