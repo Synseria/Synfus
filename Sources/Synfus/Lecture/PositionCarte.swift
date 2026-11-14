@@ -32,6 +32,15 @@ struct PositionCarte: Equatable, Sendable {
 
     var coordonnees: String { Coordonnees.texte(x, y) }
 
+    /// « Amakna (Pâturages) » : la région avant la parenthèse, la sous-zone dedans. `nil` : la
+    /// ligne lue n'a pas cette forme (nom tronqué, sans parenthèse).
+    var nomsDeZone: (region: String, sousZone: String)? {
+        guard let zone, let ouvrante = zone.firstIndex(of: "("), zone.hasSuffix(")") else { return nil }
+        let region = zone[..<ouvrante].trimmingCharacters(in: .whitespaces)
+        let sousZone = zone[zone.index(after: ouvrante)..<zone.index(before: zone.endIndex)].trimmingCharacters(in: .whitespaces)
+        return region.isEmpty || sousZone.isEmpty ? nil : (region, sousZone)
+    }
+
     /// Au-delà, ce n'est pas une coordonnée de carte mais une erreur de lecture.
     static let borne = 200
 
