@@ -135,19 +135,10 @@ struct HarebourgVue: View {
     /// lue ; un second clic rend la main aux lectures.
     private var aLaMain: some View {
         let choisie = aide.estimation.flatMap { $0.source == .manuelle && $0.coups == 0 ? $0.confusion : nil }
-        return HStack(spacing: Jetons.Espace.un) {
+        return VStack(alignment: .leading, spacing: Jetons.Espace.un) {
             Text(L("boss.aLaMain")).font(Jetons.Typo.petit.police).foregroundStyle(Color.jeton(\.encreSecondaire))
-            Spacer()
-            ForEach([Harebourg.Confusion.aucune, .horaire, .demiTour, .contreHoraire], id: \.self) { confusion in
-                let active = choisie == confusion
-                Button { aide.choisir(active ? nil : confusion) } label: {
-                    Image(systemName: Self.symbole(confusion))
-                        .font(Jetons.Typo.raccourci.police)
-                        .frame(width: Jetons.Taille.rangee, height: Jetons.Taille.cibleMin)
-                }
-                .buttonStyle(.etat(choisi: active))
-                .aide(Self.libelle(confusion))
-            }
+            ChoixBoss(choix: [(Harebourg.Confusion.aucune, "0°"), (.horaire, "90° ↻"), (.demiTour, "180°"), (.contreHoraire, "90° ↺")],
+                      actuel: choisie) { aide.choisir($0) }
         }
         .disabled(lecteur.persoDevant == nil)
     }
@@ -169,15 +160,6 @@ struct HarebourgVue: View {
         case .demiTour: return L("boss.confusion.demiTour")
         case .contreHoraire: return L("boss.confusion.contreHoraire")
         default: return L("boss.confusion.aucune")
-        }
-    }
-
-    private static func symbole(_ confusion: Harebourg.Confusion) -> String {
-        switch confusion {
-        case .horaire: return "arrow.clockwise"
-        case .demiTour: return "arrow.up.arrow.down"
-        case .contreHoraire: return "arrow.counterclockwise"
-        default: return "scope"
         }
     }
 }
