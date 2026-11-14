@@ -197,7 +197,6 @@
   "chasse.indice": "Indice",
   "chasse.indices": "Indices de chasse",
   "chasse.indices.aucune": "Aucun indice chargé",
-  "chasse.indices.chargement": "Chargement des indices…",
   "chasse.indices.date": "%lld indices DofusDB du %@",
   "chasse.indices.indisponibles": "Indices indisponibles",
   "chasse.indices.maj": "Mettre à jour",

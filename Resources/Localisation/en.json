@@ -197,7 +197,6 @@
   "chasse.indice": "Clue",
   "chasse.indices": "Hunt clues",
   "chasse.indices.aucune": "No clue loaded",
-  "chasse.indices.chargement": "Loading clues…",
   "chasse.indices.date": "%lld DofusDB clues from %@",
   "chasse.indices.indisponibles": "Clues unavailable",
   "chasse.indices.maj": "Update",
