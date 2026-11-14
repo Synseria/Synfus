@@ -16,7 +16,7 @@ struct BossVue: View {
     @State private var rappels = false
     @State private var conseils = false
     /// Le rappel tout juste copié (ou tous : `""`), coché le temps du signal.
-    @State private var copie: String?
+    @StateObject private var copie = SignalCopie()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -128,7 +128,7 @@ struct BossVue: View {
                 Spacer(minLength: 0)
                 if rappels {
                     Button { copier(liste.joined(separator: " "), signal: "") } label: {
-                        Image(systemName: copie == "" ? "checkmark" : "doc.on.doc")
+                        IconeCopie(icone: "doc.on.doc", copie: copie.affiche(""))
                             .font(Jetons.Typo.petit.police)
                             .foregroundStyle(Color.jeton(\.encreSecondaire))
                     }
@@ -143,7 +143,7 @@ struct BossVue: View {
                             Text("• " + rappel)
                                 .fixedSize(horizontal: false, vertical: true)
                             Spacer(minLength: 0)
-                            if copie == rappel { Image(systemName: "checkmark") }
+                            IconeCopie(icone: nil, copie: copie.affiche(rappel))
                         }
                         .font(Jetons.Typo.petit.police)
                         .foregroundStyle(Color.jeton(\.encreSecondaire))
@@ -158,11 +158,7 @@ struct BossVue: View {
 
     private func copier(_ texte: String, signal: String) {
         PressePapiers.copier(texte)
-        copie = signal
-        Task {
-            try? await Task.sleep(for: .seconds(1.5))
-            if copie == signal { copie = nil }
-        }
+        copie.signaler(signal)
     }
 
     /// Les conseils de Dofus pour les noobs pour ce combat, dépliés d'un

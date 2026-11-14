@@ -42,6 +42,21 @@ struct ComposantsTests {
         #expect(EtatVisuel(survole: true, presse: true) == .presse)
     }
 
+    @Test("Le signal de copie marque une ligne, s'efface, et une nouvelle copie n'est pas effacée par l'ancien délai")
+    func signalDeCopie() async throws {
+        let signal = SignalCopie(delai: .milliseconds(80))
+        signal.signaler("a")
+        #expect(signal.affiche("a") && !signal.affiche("b"))
+        try await Task.sleep(for: .milliseconds(50))
+        signal.signaler("b")
+        #expect(signal.affiche("b") && !signal.affiche("a"))
+        // Le délai de « a » est échu, pas celui de « b ».
+        try await Task.sleep(for: .milliseconds(50))
+        #expect(signal.affiche("b"))
+        try await Task.sleep(for: .milliseconds(120))
+        #expect(signal.ligne == nil)
+    }
+
     @Test("Seul le teinté a un contour, seul le désactivé change d'encre")
     func voix() {
         #expect(EtatVisuel.choisi.contour != nil)

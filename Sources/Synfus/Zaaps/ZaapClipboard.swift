@@ -10,8 +10,8 @@ import Combine
 final class ZaapClipboard: ObservableObject {
     static let shared = ZaapClipboard()
 
-    /// Le bouton de la barre s'allume le temps de `dureeSignal` après une
-    /// réécriture.
+    /// Le bouton de la barre s'allume le temps de `SignalCopie.duree` après une
+    /// réécriture ou une copie de la palette.
     @Published private(set) var reecritRecemment = false
 
     private var veille: Timer?
@@ -20,7 +20,6 @@ final class ZaapClipboard: ObservableObject {
     private var generationVue = 0
     private var effacement: Task<Void, Never>?
     private var subscriptions: Set<AnyCancellable> = []
-    private static let dureeSignal: Duration = .seconds(1.2)
     private static let intervalleVeille: TimeInterval = 0.5
 
     /// Change avec tout réglage et toute carte : ce qu'on tire des trajets se
@@ -178,11 +177,12 @@ final class ZaapClipboard: ObservableObject {
         generationVue = PressePapiers.generation
     }
 
-    private func signaler() {
+    /// Allume le bouton de la barre un instant : l'écriture est faite, par nous ou par la palette.
+    func signaler() {
         effacement?.cancel()
         reecritRecemment = true
         effacement = Task {
-            try? await Task.sleep(for: Self.dureeSignal)
+            try? await Task.sleep(for: SignalCopie.duree)
             guard !Task.isCancelled else { return }
             reecritRecemment = false
         }
