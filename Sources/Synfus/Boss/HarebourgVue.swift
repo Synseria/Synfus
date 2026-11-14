@@ -7,6 +7,7 @@ struct HarebourgVue: View {
     @ObservedObject private var aide = AideBoss.shared
     @ObservedObject private var lecteur = LecteurEcran.shared
     @ObservedObject private var previews = WindowPreviewService.shared
+    @State private var regleDepliee = false
 
     var body: some View {
         if let estimation = aide.estimation {
@@ -16,12 +17,31 @@ struct HarebourgVue: View {
             attente
         }
         aLaMain
-        if let tour = aide.tour {
-            Label(ToursCombat.estImpair(tour) ? L("boss.harebourg.impair") : L("boss.harebourg.pair"),
-                  systemImage: ToursCombat.estImpair(tour) ? "shield" : "arrow.left.arrow.right")
-                .font(Jetons.Typo.petit.police)
-                .foregroundStyle(Color.jeton(\.encreSecondaire))
-                .fixedSize(horizontal: false, vertical: true)
+        if let tour = aide.tour { regleDuTour(impair: ToursCombat.estImpair(tour)) }
+    }
+
+    /// La réponse du tour en deux mots, la règle entière dépliée d'un clic.
+    private func regleDuTour(impair: Bool) -> some View {
+        VStack(alignment: .leading, spacing: Jetons.Espace.un) {
+            Button { regleDepliee.toggle() } label: {
+                HStack(spacing: Jetons.Espace.un) {
+                    Label(impair ? L("boss.harebourg.impair.court") : L("boss.harebourg.pair.court"),
+                          systemImage: impair ? "shield" : "arrow.left.arrow.right")
+                        .font(Jetons.Typo.corpsFort.police)
+                    Spacer(minLength: 0)
+                    Image(systemName: regleDepliee ? "chevron.down" : "chevron.right")
+                        .font(Jetons.Typo.micro.police)
+                        .foregroundStyle(Color.jeton(\.encreSecondaire))
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            if regleDepliee {
+                Text(impair ? L("boss.harebourg.impair") : L("boss.harebourg.pair"))
+                    .font(Jetons.Typo.petit.police)
+                    .foregroundStyle(Color.jeton(\.encreSecondaire))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 
