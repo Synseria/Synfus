@@ -270,14 +270,13 @@ struct BarView: View {
     /// Bascule du passage automatique. Doublé par un raccourci global, pour
     /// pouvoir l'éteindre sans lâcher le combat des yeux.
     private var autoFocusToggle: some View {
-        let on = prefs.attentionAction == .focus
+        let on = prefs.passageAuto
         return ModeButton(
             icone: on ? BoutonBarre.passageAuto.symbole : "bolt.slash",
             actif: on,
             aide: infobulle(.passageAuto, nom: on ? L("barre.passageAuto.actif") : L("barre.passageAuto.inactif"))
         ) {
-            let prefs = Preferences.shared
-            prefs.attentionAction = prefs.attentionAction == .focus ? .highlight : .focus
+            Preferences.shared.basculerPassageAuto()
         }
     }
 

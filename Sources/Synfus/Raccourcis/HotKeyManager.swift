@@ -61,8 +61,7 @@ final class HotKeyManager: ObservableObject {
                 WindowManager.shared.cycle(by: -1)
             }),
             (prefs.toggleAutoFocus, {
-                let prefs = Preferences.shared
-                prefs.attentionAction = prefs.attentionAction == .focus ? .highlight : .focus
+                Preferences.shared.basculerPassageAuto()
                 FloatingBarController.shared.flashAutoFocusState()
             }),
             (prefs.toggleBar, { FloatingBarController.shared.toggle() }),

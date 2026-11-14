@@ -474,6 +474,14 @@ final class Preferences: ObservableObject {
         return true
     }
 
+    /// Le geste de l'éclair de la barre, de son raccourci et du menu : passer au perso qui réclame
+    /// l'attention, ou seulement le signaler.
+    var passageAuto: Bool { attentionAction == .focus }
+
+    func basculerPassageAuto() {
+        attentionAction = passageAuto ? .highlight : .focus
+    }
+
     /// Tous les raccourcis globaux — ceux dont un doublon se signale, quel
     /// que soit l'onglet qui les règle.
     var raccourcisGlobaux: [HotKey?] {
