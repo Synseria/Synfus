@@ -151,6 +151,15 @@ final class AideBoss: ObservableObject {
 
     func corrigerTour(_ pas: Int) { pourLePersoDevant { tours.corriger(pas, perso: $0) } }
 
+    /// Ce que le combat en cours a laissé : un tour compté, ou une note.
+    var aDuNote: Bool { tour != nil || session != SessionBoss() }
+
+    /// Repartir d'un panneau propre quand Synfus n'a pas lu le placement.
+    func nouveauCombat() {
+        session = SessionBoss()
+        pourLePersoDevant { tours.recommencer(perso: $0) }
+    }
+
     /// Un geste qui note quelque chose du combat en cours.
     func noter(_ modifier: (inout SessionBoss, Int?) -> Void) {
         var nouvelle = session

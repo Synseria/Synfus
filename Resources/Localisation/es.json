@@ -106,6 +106,7 @@
   "boss.kimbo.terreEau": "Tierra / Agua",
   "boss.lecture": "Lectura de la pantalla",
   "boss.lecture.aide": "Con el panel visible, Synfus lee el botón de combate y, en combate, el corazón de vida y el chat del personaje de delante. Sus zonas se calibran en Lectura de la pantalla.",
+  "boss.nouveauCombat": "Nuevo combate",
   "boss.ouvrir": "Abrir",
   "boss.raccourci": "Abrir el panel de ayuda contra jefes",
   "boss.rappel.carillon": "No empieces tu turno en el glifo en cruz del Conde: mata.",

@@ -25,6 +25,12 @@ struct ToursCombat: Equatable, Sendable {
     /// La parité dont dépendent le Comte et Kimbo : un seul endroit la décide.
     static func estImpair(_ tour: Int) -> Bool { tour % 2 == 1 }
 
+    /// Un combat relancé sans placement lu : le décompte repart de zéro, comme
+    /// au placement ; un perso hors combat n'a rien à remettre.
+    mutating func recommencer(perso: String) {
+        if tours[perso] != nil { tours[perso] = 0 }
+    }
+
     /// Un tour de plus ou de moins, jamais sous le premier.
     mutating func corriger(_ pas: Int, perso: String) {
         tours[perso] = max((tours[perso] ?? 0) + pas, 1)
