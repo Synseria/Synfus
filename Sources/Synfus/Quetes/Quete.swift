@@ -295,6 +295,9 @@ struct FicheQuete: Equatable, Sendable {
         let objectifs: [Objectif]
         let recompenses: Recompenses
 
+        /// Combien de ses objectifs sont cochés.
+        func faits(valides: Set<Int>) -> Int { objectifs.count { valides.contains($0.id) } }
+
         /// Les objectifs à proposer de cocher quand le perso se tient en
         /// `position` : ceux de cette carte, encore à faire, que le jeu tient
         /// ouverts. `lu` : ce que la lecture fraîche du suivi du perso devant
