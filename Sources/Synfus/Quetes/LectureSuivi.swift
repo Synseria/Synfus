@@ -15,8 +15,8 @@ final class LectureSuivi: ObservableObject {
     enum Etat: Equatable {
         case jamaisLu
         case enCours
-        /// Aucun perso à capturer, ou l'enregistrement de l'écran refusé.
-        case illisible
+        /// La lecture a échoué, pour cette cause.
+        case illisible(LecteurEcran.EchecLecture)
         /// Les quêtes ne sont pas encore téléchargées.
         case sansQuetes
         case lu
@@ -75,7 +75,11 @@ final class LectureSuivi: ObservableObject {
         guard etat != .enCours else { return }
         etat = .enCours
         Task {
-            guard let lu = await LecteurEcran.shared.lireUneFois(.quetes) else { etat = .illisible; return }
+            let lu: (perso: String, lignes: [String], coupe: Bool)
+            switch await LecteurEcran.shared.essayerLireUneFois(.quetes) {
+            case .success(let lue): lu = lue
+            case .failure(let echec): etat = .illisible(echec); return
+            }
             guard let quetes = await QuetesStore.shared.chargees() else { etat = .sansQuetes; return }
             await traiter(lu.lignes, coupe: lu.coupe, perso: lu.perso, quetes: quetes, demandee: true)
         }

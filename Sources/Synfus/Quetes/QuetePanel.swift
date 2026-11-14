@@ -185,7 +185,7 @@ extension QuetePanel {
         for element in MenuQuetes.elements(
             epinglees: prefs.quetesEpinglees, montree: idMontre, reconnues: lecture.reconnues,
             etat: lecture.etat, coches: lecture.cochesLues, actives: Set(MenuQuetes.Option.allCases.filter { prefs[keyPath: Self.reglage($0)] }),
-            ici: ici(), nom: { store.nom($0) ?? "…" }) {
+            ici: ici(), autorise: WindowPreviewService.shared.authorized, nom: { store.nom($0) ?? "…" }) {
             switch element {
             case .titre(let titre):
                 menu.addItem(.sectionHeader(title: titre))
@@ -222,6 +222,10 @@ extension QuetePanel {
                 let item = NSMenuItem(title: texte, action: nil, keyEquivalent: "")
                 item.isEnabled = false
                 menu.addItem(item)
+            case .geste(let geste):
+                let item = CibleMenu.shared.element(geste.titre) { Self.faire(geste) }
+                item.indentationLevel = 1
+                menu.addItem(item)
             case .option(let option, let actif):
                 let item = CibleMenu.shared.element(option.titre) { prefs[keyPath: Self.reglage(option)] = !actif }
                 item.state = actif ? .on : .off
@@ -237,6 +241,16 @@ extension QuetePanel {
 }
 
 extension QuetePanel {
+    /// Le geste qui lève la cause d'un suivi illisible.
+    private static func faire(_ geste: MenuQuetes.Geste) {
+        switch geste {
+        case .autoriser: WindowPreviewService.shared.requestAuthorization()
+        case .calibrer: SettingsWindowController.shared.show(section: .lecture)
+        case .reessayer: Task { try? await QuetesStore.shared.mettreAJour() }
+        case .relire: LectureSuivi.shared.lire()
+        }
+    }
+
     /// Le menu des étapes (`MenuEtapes`) : en choisir une la montre.
     func menuEtapes(_ entrees: [MenuEtapes.Entree], choisir: @escaping @MainActor (Int) -> Void) -> NSMenu {
         let menu = NSMenu()
