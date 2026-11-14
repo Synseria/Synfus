@@ -106,6 +106,7 @@
   "boss.kimbo.terreEau": "Terre / Eau",
   "boss.lecture": "Lecture de l'écran",
   "boss.lecture.aide": "Panneau montré, Synfus lit le bouton de combat et, en combat, le cœur de vie et le tchat du personnage devant. Leurs zones se calibrent dans Lecture de l'écran.",
+  "boss.nouveauCombat": "Nouveau combat",
   "boss.ouvrir": "Ouvrir",
   "boss.raccourci": "Ouvrir le panneau d'aide aux boss",
   "boss.rappel.carillon": "Ne commence pas ton tour dans le glyphe en croix du Comte : il tue.",

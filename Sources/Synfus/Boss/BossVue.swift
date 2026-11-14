@@ -76,6 +76,7 @@ struct BossVue: View {
     /// en est un, coché, puis la palette pour en chercher un autre.
     private static func menu() -> NSMenu {
         let menu = NSMenu()
+        menu.autoenablesItems = false
         let choisi = Preferences.shared.bossChoisi
         var cibles = Boss.allCases.map(CibleBoss.special)
         if choisi.special == nil { cibles.append(choisi) }
@@ -87,6 +88,10 @@ struct BossVue: View {
             menu.addItem(item)
         }
         menu.addItem(.separator())
+        let nouveau = CibleMenu.shared.element(L("boss.nouveauCombat")) { AideBoss.shared.nouveauCombat() }
+        nouveau.image = NSImage(systemSymbolName: "arrow.counterclockwise", accessibilityDescription: nil)
+        nouveau.isEnabled = AideBoss.shared.aDuNote
+        menu.addItem(nouveau)
         menu.addItem(CibleMenu.shared.element(L("boss.autre")) { PalettePanel.shared.ouvrir(requete: L("boss.autre.recherche")) })
         menu.addItem(.separator())
         menu.addItem(CibleMenu.shared.element(L("panneau.fermer")) { BossPanel.shared.fermer() })
