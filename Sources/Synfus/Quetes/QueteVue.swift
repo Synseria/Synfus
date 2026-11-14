@@ -204,24 +204,17 @@ struct QueteVue: View {
 
     // MARK: - En-tête
 
-    /// Le niveau et le guide, sur deux lignes quand le panneau est trop étroit
-    /// pour une, sous les étiquettes. Le nom est au titre du panneau.
+    /// Le niveau et le guide, sous les étiquettes. Le nom est au titre du panneau.
     private func entete(_ fiche: FicheQuete) -> some View {
         let niveau = Text(L("quete.niveau", nombre: fiche.etapes.count, fiche.niveau, fiche.etapes.count))
         return VStack(alignment: .leading, spacing: metriques.ecartLignes) {
             if fiche.groupe || fiche.donjon {
                 HStack(spacing: Jetons.Espace.un) { badges(fiche) }
             }
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: Jetons.Espace.un) {
-                    niveau
-                    Spacer(minLength: Jetons.Espace.un)
-                    boutonGuide(fiche)
-                }
-                VStack(alignment: .leading, spacing: Jetons.Espace.un) {
-                    niveau
-                    boutonGuide(fiche)
-                }
+            HStack(spacing: Jetons.Espace.un) {
+                niveau
+                Spacer(minLength: Jetons.Espace.un)
+                boutonGuide(fiche)
             }
             .font(metriques.detail.police)
             .foregroundStyle(Color.jeton(\.encreSecondaire))
@@ -250,20 +243,13 @@ struct QueteVue: View {
     }
 
     private func boutonGuide(_ fiche: FicheQuete) -> some View {
-        Button {
+        BoutonEnTete(icone: "book", aide: L("quete.guide"), discret: true) {
             guideEnCours = true
             Task {
                 await DofusPourLesNoobs.ouvrir(fiche.nomFrancais)
                 guideEnCours = false
             }
-        } label: {
-            HStack(spacing: Jetons.Espace.un) {
-                if guideEnCours { ProgressView().controlSize(.mini) }
-                Text(L("quete.guide"))
-                Image(systemName: "arrow.up.right.square")
-            }
         }
-        .buttonStyle(.bouton(.tertiaire, dense: true))
         .disabled(guideEnCours)
     }
 
@@ -304,14 +290,10 @@ struct QueteVue: View {
                 titreSection(L("quete.ressources"))
                 Spacer()
                 if !restantes.isEmpty {
-                    Button {
+                    BoutonEnTete(icone: "doc.on.doc", aide: L("quete.toutCopier"), copie: copie.affiche("ressources"), discret: true) {
                         copier(restantes.map { L("quete.ressource", $0.nom, $0.quantite) }.joined(separator: ", "),
                                ligne: "ressources")
-                    } label: {
-                        Label { Text(L("quete.toutCopier")) } icon: { IconeCopie(icone: "doc.on.doc", copie: copie.affiche("ressources")) }
                     }
-                    .buttonStyle(.bouton(.tertiaire, dense: true))
-                    .font(metriques.detail.police)
                 }
             }
             ForEach(Array(ressources.enumerated()), id: \.offset) { indice, ressource in
