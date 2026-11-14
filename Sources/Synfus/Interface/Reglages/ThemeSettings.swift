@@ -10,6 +10,9 @@ struct ThemeSettings: View {
                 ChoixDeCouleur()
                 ChoixDesFonds()
             }
+            Bloc(L("theme.apercu")) {
+                ApercuTheme().rangee()
+            }
         }
     }
 }
@@ -192,5 +195,63 @@ private struct CurseurDeTeinte: View {
                 }
             }
         }
+    }
+}
+
+/// La barre et deux rangées de la palette par leurs vraies vues, sans interaction, sur le fond de nuit
+/// d'un jeu : la couleur se juge sur ce qu'on verra, pas sur la fenêtre des réglages.
+private struct ApercuTheme: View {
+    @ObservedObject private var prefs = Preferences.shared
+    @ObservedObject private var classesStore = ClassesStore.shared
+
+    /// Deux zaaps de la carte, nommés dans la langue de l'interface, comme la palette les montre.
+    private static var rangees: [EntreePalette] {
+        let langue = L10n.courante.langue
+        return Carte.integree.zaaps.prefix(2).enumerated().map { rang, zaap in
+            EntreePalette(id: "apercu.\(rang)", genre: .zaap, titre: zaap.nom(en: langue),
+                          sousTitre: zaap.zone(en: langue), detail: Coordonnees.texte(zaap.x, zaap.y),
+                          effet: .copier(""))
+        }
+    }
+
+    /// Deux classes du catalogue, nommées dans la langue de l'interface.
+    private var classes: [DofusClass.Breed] { Array(classesStore.catalogue.breeds.prefix(2)) }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Jetons.Espace.trois) {
+            barre
+            VStack(spacing: 0) {
+                ForEach(Array(Self.rangees.enumerated()), id: \.element.id) { rang, entree in
+                    LigneResultat(entree: entree, choisie: rang == 0)
+                }
+            }
+            .padding(Jetons.Espace.un)
+            .frame(maxWidth: PalettePanel.largeur)
+            .surfaceFlottante()
+        }
+        .padding(Jetons.Espace.quatre)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: Jetons.Rayon.carte, style: .continuous).fill(Color.jeton(\.nuitProfond)))
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    private var barre: some View {
+        HStack(spacing: Jetons.Espace.un) {
+            ForEach(Array(zip(["Syn-App", "Brok"], classes).enumerated()), id: \.offset) { rang, perso in
+                let devant = rang == 0
+                PastillePerso(
+                    nom: perso.0, classe: perso.1.label, libelleClasse: perso.1.nomLocalise, devant: devant,
+                    touche: BarView.toucheDuPerso(index: rang, raccourcis: prefs.hotKeys),
+                    affichage: AffichagePastille(devant: devant, reduireInactifs: prefs.reduirePersosInactifs,
+                                                 embleme: prefs.showClasses, touche: prefs.showNumbers, aUneClasse: true))
+            }
+            ForEach(BoutonBarre.affiches(sauf: prefs.boutonsMasques), id: \.self) { bouton in
+                ModeButton(icone: bouton.symbole, actif: bouton == .palette, aide: bouton.libelle) {}
+            }
+        }
+        .padding(Jetons.Espace.un)
+        .fixedSize()
+        .surfaceFlottante(verre: true)
     }
 }
