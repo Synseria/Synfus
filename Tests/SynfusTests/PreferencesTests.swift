@@ -484,7 +484,7 @@ struct PreferencesTests {
      "paletteFrequentation":{"lieu:2738":{"dernier":12,"fois":3}},"quetesEpinglees":[18,42],"quetesEtape":{"18":2},
      "quetesValides":{"18":[102,104]},"quetesMasquerObjets":true,
      "quetesCompact":false,"quetesConsigne":false,"quetesVignettes":true,
-     "quetesEnCours":{"18":104},"quetesCocherSuivi":false,"quetesDecoches":{"18":[103]},"quetesCochesLues":{"18":[104]},
+     "quetesEnCours":{"18":104},"quetesCocherSuivi":false,"quetesDecoches":{"18":[103]},"quetesCochesLues":{"18":[104]},"quetesRessourcesCochees":{"18":[1747]},
      "equipes":[{"membres":["Aeryn"]},{"membres":["Nova"]}],
      "hotKeys":[{"keyCode":18,"modifiers":256},null,{"keyCode":20,"modifiers":2048},null,null,null,null,null,null,null],
      "inviteFormat":"/w %nom go","inviteGroupee":true,
@@ -581,6 +581,7 @@ struct PreferencesTests {
         #expect(prefs.quetesCocherSuivi == false)
         #expect(prefs.quetesDecoches == ["18": [103]])
         #expect(prefs.quetesCochesLues == ["18": [104]])
+        #expect(prefs.quetesRessourcesCochees == ["18": [1747]])
         #expect(prefs.chasseHotKey == HotKey(keyCode: 5, modifiers: 2048))
         #expect(prefs.bossChoisi == .special(.kimbo))
         #expect(prefs.nomsBossChoisi == ["fr": "Bouftou Royal"])
@@ -659,6 +660,7 @@ struct PreferencesTests {
         prefs.quetesCocherSuivi = false
         prefs.quetesDecoches = ["18": [103]]
         prefs.quetesCochesLues = ["18": [104]]
+        prefs.quetesRessourcesCochees = ["18": [1747]]
         prefs.chasseHotKey = HotKey(keyCode: 5, modifiers: 2048)
         prefs.bossChoisi = .special(.kimbo)
         prefs.nomsBossChoisi = ["fr": "Bouftou Royal"]
@@ -697,7 +699,7 @@ struct PreferencesTests {
          "lieuxFavoris":[],"pnjsFavoris":[],"paletteRecents":[],"paletteTri":"auto","paletteFrequentation":{},"quetesEpinglees":[],"quetesEtape":{},
          "quetesValides":{},"quetesMasquerObjets":false,
          "quetesCompact":true,"quetesConsigne":true,"quetesVignettes":false,
-         "quetesEnCours":{},"quetesCocherSuivi":true,"quetesDecoches":{},"quetesCochesLues":{}}
+         "quetesEnCours":{},"quetesCocherSuivi":true,"quetesDecoches":{},"quetesCochesLues":{},"quetesRessourcesCochees":{}}
         """
         #expect(canonique(store.donnees(pour: Preferences.key)) == canonique(Data(attendu.utf8)))
     }
@@ -876,6 +878,19 @@ extension PreferencesTests {
         prefs.quetesCocherSuivi = false
         #expect(prefs.appliquer([lue(faits: [9])]) == 0)
         #expect(prefs.quetesValides.isEmpty)
+    }
+
+    @Test("Une ressource se coche et se décoche par quête ; la dernière décochée ne laisse pas de clé")
+    func ressourcesCochees() {
+        let (prefs, _) = neuves()
+        prefs.cocherRessource(1747, de: 18, true)
+        prefs.cocherRessource(1747, de: 18, true)
+        prefs.cocherRessource(2, de: 18, true)
+        prefs.cocherRessource(1747, de: 42, true)
+        #expect(prefs.quetesRessourcesCochees == ["18": [1747, 2], "42": [1747]])
+        prefs.cocherRessource(2, de: 18, false)
+        prefs.cocherRessource(1747, de: 42, false)
+        #expect(prefs.quetesRessourcesCochees == ["18": [1747]])
     }
 
     @Test("Décoché à la main, un objectif ne se recoche plus à la lecture, jusqu'à ce que le suivi le remontre ouvert")

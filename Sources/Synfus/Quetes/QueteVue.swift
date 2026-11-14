@@ -30,6 +30,8 @@ struct QueteVue: View {
     /// L'étape montrée et les objectifs cochés de la fiche donnée.
     var etapeImposee = 0
     var validesImposes: Set<Int> = []
+    /// Les ressources cochées de la fiche donnée.
+    var ressourcesImposees: Set<Int> = []
 
     private var fiche: FicheQuete? {
         ficheImposee ?? panneau.idMontre.flatMap { store.fiche($0) }
@@ -56,7 +58,7 @@ struct QueteVue: View {
                         VStack(alignment: .leading, spacing: metriques.ecartSections) {
                             entete(fiche).id(Self.haut)
                             let ressources = fiche.ressources.filter { !(prefs.quetesMasquerObjets && $0.objetDeQuete) }
-                            if !ressources.isEmpty { self.ressources(ressources) }
+                            if !ressources.isEmpty { self.ressources(ressources, quete: fiche.id) }
                             if !fiche.etapes.isEmpty { etape(fiche) }
                             if !fiche.suivantes.isEmpty { suivantes(fiche) }
                         }
@@ -266,40 +268,56 @@ struct QueteVue: View {
 
     // MARK: - Ressources
 
-    private func ressources(_ ressources: [FicheQuete.Ressource]) -> some View {
-        VStack(alignment: .leading, spacing: metriques.ecartLignes) {
+    private func ressources(_ ressources: [FicheQuete.Ressource], quete: Int) -> some View {
+        let cochees = ficheImposee == nil ? Set(prefs.quetesRessourcesCochees[String(quete)] ?? []) : ressourcesImposees
+        let restantes = ressources.filter { !cochees.contains($0.objet) }
+        return VStack(alignment: .leading, spacing: metriques.ecartLignes) {
             HStack {
                 titreSection(L("quete.ressources"))
                 Spacer()
-                Button {
-                    copier(ressources.map { L("quete.ressource", $0.nom, $0.quantite) }.joined(separator: ", "),
-                           ligne: "ressources")
-                } label: {
-                    Label { Text(L("quete.toutCopier")) } icon: { IconeCopie(icone: "doc.on.doc", copie: copie.affiche("ressources")) }
+                if !restantes.isEmpty {
+                    Button {
+                        copier(restantes.map { L("quete.ressource", $0.nom, $0.quantite) }.joined(separator: ", "),
+                               ligne: "ressources")
+                    } label: {
+                        Label { Text(L("quete.toutCopier")) } icon: { IconeCopie(icone: "doc.on.doc", copie: copie.affiche("ressources")) }
+                    }
+                    .buttonStyle(.bouton(.tertiaire, dense: true))
+                    .font(metriques.detail.police)
                 }
-                .buttonStyle(.bouton(.tertiaire, dense: true))
-                .font(metriques.detail.police)
             }
             ForEach(Array(ressources.enumerated()), id: \.offset) { indice, ressource in
                 let id = "ressource:\(indice)"
-                HStack(alignment: .firstTextBaseline, spacing: 0) {
+                let cochee = cochees.contains(ressource.objet)
+                HStack(alignment: .firstTextBaseline, spacing: Jetons.Espace.un) {
+                    Button { prefs.cocherRessource(ressource.objet, de: quete, !cochee) } label: {
+                        Image(systemName: cochee ? "checkmark.circle.fill" : "circle")
+                            .font(metriques.coche.police)
+                            .foregroundStyle(cochee ? Color.jeton(\.primaire) : Color.jeton(\.encreSecondaire))
+                            .frame(width: Self.colonneCoche)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(ficheImposee != nil)
+                    .accessibilityLabel(ressource.nom)
+                    .accessibilityAddTraits(cochee ? .isSelected : [])
                     ligneCopiable(id: id, aide: L("quete.copierNom"), action: { copier(ressource.nom, ligne: id) }) {
                         HStack(alignment: .firstTextBaseline, spacing: Jetons.Espace.un) {
-                            IconeCopie(icone: "shippingbox", copie: copie.affiche(id))
-                                .font(metriques.icone.police)
-                                .foregroundStyle(Color.jeton(\.encreSecondaire))
-                                .frame(width: Jetons.Taille.case)
                             // Le nom d'abord : à l'étroit, c'est la catégorie qui se tronque.
                             Text(L("quete.ressource", ressource.nom, ressource.quantite))
                                 .font(metriques.texte.police)
+                                .foregroundStyle(cochee ? Color.jeton(\.encreSecondaire) : Color.jeton(\.encre))
                                 .layoutPriority(1)
                             Spacer(minLength: Jetons.Espace.un)
+                            IconeCopie(icone: nil, copie: copie.affiche(id))
+                                .font(metriques.detail.police)
+                                .accessibilityHidden(true)
                             detail(ressource.categorie, monospace: false)
                         }
                     }
                     deplier(.objet(ressource.objet))
                 }
-                ouTrouver(.objet(ressource.objet), retrait: 14 + 6)
+                ouTrouver(.objet(ressource.objet), retrait: Self.colonneCoche + 2)
             }
         }
     }
