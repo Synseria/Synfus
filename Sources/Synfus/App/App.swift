@@ -36,9 +36,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         UsageStore.shared.start()
         IconeAppliquee.auLancement()
 
-        if !AXIsProcessTrusted() {
-            WindowManager.shared.requestAccessibility()
-            SettingsWindowController.shared.show()
+        let accordee = AXIsProcessTrusted()
+        if !accordee { WindowManager.shared.requestAccessibility() }
+        if SettingsWindowController.ouvreAuLancement(premierLancement: Preferences.shared.premierLancement,
+                                                     accessibiliteAccordee: accordee) {
+            SettingsWindowController.shared.show(section: .general)
         }
     }
 

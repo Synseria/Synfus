@@ -1113,3 +1113,13 @@ extension PreferencesTests {
         #expect(effacee.quetesHotKey == nil)
     }
 }
+
+extension PreferencesTests {
+    @Test("Les réglages s'ouvrent au premier lancement, ou tant que l'accessibilité manque")
+    func ouvertureAuLancement() {
+        #expect(SettingsWindowController.ouvreAuLancement(premierLancement: true, accessibiliteAccordee: true))
+        #expect(SettingsWindowController.ouvreAuLancement(premierLancement: false, accessibiliteAccordee: false))
+        #expect(!SettingsWindowController.ouvreAuLancement(premierLancement: false, accessibiliteAccordee: true))
+        #expect(Preferences.forTesting(store: StockageMemoire()).premierLancement)
+    }
+}
