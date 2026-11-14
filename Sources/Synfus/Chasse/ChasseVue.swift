@@ -38,7 +38,7 @@ struct ChasseVue: View {
             Text(L("chasse.titre")).font(Jetons.Typo.corpsFort.police)
                 .padding(.horizontal, Jetons.Espace.un)
                 .padding(.vertical, Jetons.Espace.un)
-            if modele.rechercheEnCours || modele.lectureEnCours { ProgressView().controlSize(.mini) }
+            if modele.rechercheEnCours || modele.lectureEnCours || modele.enAttenteDesIndices { ProgressView().controlSize(.mini) }
         } boutons: {
             BoutonEnTete(icone: "xmark", aide: L("quete.fermer.simple")) { ChassePanel.shared.fermer() }
         }
@@ -68,9 +68,9 @@ struct ChasseVue: View {
         HStack(spacing: Jetons.Espace.un) {
             Image(systemName: "flag").foregroundStyle(Color.jeton(\.encreSecondaire))
                 .help(L("chasse.depart"))
-            TextField("x", value: $modele.departX, format: .number.grouping(.never))
+            TextField("x", value: $modele.departX, format: .number.grouping(.never), prompt: Text("x"))
                 .frame(width: 52)
-            TextField("y", value: $modele.departY, format: .number.grouping(.never))
+            TextField("y", value: $modele.departY, format: .number.grouping(.never), prompt: Text("y"))
                 .frame(width: 52)
             Button { modele.reprendrePosition() } label: { Image(systemName: "location") }
                 .buttonStyle(.bouton(.tertiaire, dense: true))
@@ -115,6 +115,7 @@ struct ChasseVue: View {
                 .frame(width: Jetons.Taille.rangeePalette, height: Jetons.Taille.rangeePalette)
         }
         .buttonStyle(.etat(choisi: choisie))
+        .disabled(modele.enAttenteDesIndices)
         .aide(direction.libelle)
     }
 
@@ -133,10 +134,11 @@ struct ChasseVue: View {
 
     private var indice: some View {
         VStack(alignment: .leading, spacing: Jetons.Espace.un) {
-            // Ce que le champ attend s'écrit dans son texte d'exemple : le chargement, puis une direction,
+            // Ce que le champ attend s'écrit dans son texte d'exemple : le départ, puis une direction,
             // puis l'indice.
-            TextField(L("chasse.indice"), text: $modele.saisie, prompt: Text(attente))
+            TextField(L("chasse.indice"), text: $modele.saisie, prompt: Text(modele.attente.libelle))
                 .textFieldStyle(.roundedBorder)
+                .disabled(modele.enAttenteDesIndices)
                 .onSubmit { modele.validerSaisie() }
             ForEach(modele.suggestions, id: \.self) { cible in
                 Button { modele.choisir(cible) } label: {
@@ -148,11 +150,6 @@ struct ChasseVue: View {
                 .buttonStyle(.etat(nue: true))
             }
         }
-    }
-
-    private var attente: String {
-        if modele.indices.isEmpty { return L("chasse.indices.chargement") }
-        return modele.direction == nil ? L("chasse.direction.choisir") : L("chasse.indice")
     }
 
     // MARK: - Indices lus
@@ -172,11 +169,13 @@ struct ChasseVue: View {
                 Button { modele.choisir(cible) } label: {
                     Text(cible.nom(en: modele.langue))
                         .font(Jetons.Typo.petit.police)
-                        .lineLimit(1)
-                        .padding(.horizontal, Jetons.Espace.deux)
-                        .frame(height: Jetons.Taille.cibleMin)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, Jetons.Espace.un)
+                        .padding(.vertical, Jetons.Espace.un)
                 }
-                .buttonStyle(.etat(choisi: modele.cible == cible, rayon: Jetons.Rayon.capsule))
+                .buttonStyle(.etat(choisi: modele.cible == cible, nue: true))
             }
         }
     }
@@ -186,41 +185,55 @@ struct ChasseVue: View {
     @ViewBuilder
     private var resultat: some View {
         if let echec = modele.echec {
-            Text(L("chasse.echec", echec)).font(Jetons.Typo.petit.police).foregroundStyle(Color.jeton(\.alerte))
-        } else if let constat = modele.constat {
             HStack(spacing: Jetons.Espace.un) {
-                Image(systemName: constat.direction.symbole).foregroundStyle(Color.jeton(\.encreSecondaire))
-                VStack(alignment: .leading, spacing: Jetons.Espace.un) {
+                Text(L("chasse.echec", echec)).font(Jetons.Typo.petit.police).foregroundStyle(Color.jeton(\.alerte))
+                Spacer(minLength: 0)
+                boutonEtapePrecedente
+            }
+        } else if let constat = modele.constat {
+            VStack(alignment: .leading, spacing: Jetons.Espace.un) {
+                HStack(spacing: Jetons.Espace.un) {
+                    Image(systemName: constat.direction.symbole).foregroundStyle(Color.jeton(\.encreSecondaire))
                     Text(constat.cible.nom(en: modele.langue))
                         .font(Jetons.Typo.petit.police)
                         .foregroundStyle(Color.jeton(\.encreSecondaire))
-                    Group {
-                        switch constat.resultat {
-                        case .trouve(let x, let y, let distance):
-                            Text(L("chasse.trouve", nombre: distance, Coordonnees.texte(x, y), distance)).font(Jetons.Typo.corpsFort.police)
-                        case .introuvable:
-                            Text(L("chasse.introuvable", EtapeChasse.portee)).foregroundStyle(Color.jeton(\.alerte))
-                        case .phorreur:
-                            Text(L("chasse.phorreur.suivre", constat.direction.libelle))
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                    boutonEtapePrecedente
+                    if case .trouve = constat.resultat {
+                        Button {
+                            modele.copier()
+                            copie.signaler("trajet")
+                        } label: {
+                            IconeCopie(icone: "doc.on.doc", copie: copie.affiche("trajet"))
+                                .foregroundStyle(Color.jeton(\.encreSecondaire))
                         }
+                        .buttonStyle(.bouton(.tertiaire, dense: true))
+                        .aide(L("chasse.copier"))
                     }
-                    .fixedSize(horizontal: false, vertical: true)
                 }
-                Spacer()
-                if case .trouve = constat.resultat {
-                    Button {
-                        modele.copier()
-                        copie.signaler("trajet")
-                    } label: {
-                        IconeCopie(icone: "doc.on.doc", copie: copie.affiche("trajet"))
-                            .foregroundStyle(Color.jeton(\.encreSecondaire))
+                Group {
+                    switch constat.resultat {
+                    case .trouve(let x, let y, let distance):
+                        Text(L("chasse.trouve", nombre: distance, Coordonnees.texte(x, y), distance)).font(Jetons.Typo.corpsFort.police)
+                    case .introuvable:
+                        Text(L("chasse.introuvable", EtapeChasse.portee)).foregroundStyle(Color.jeton(\.alerte))
+                    case .phorreur:
+                        Text(L("chasse.phorreur.suivre", constat.direction.libelle))
                     }
-                    .buttonStyle(.bouton(.tertiaire, dense: true))
-                    .aide(L("chasse.copier"))
                 }
+                .fixedSize(horizontal: false, vertical: true)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(Jetons.Espace.deux)
             .carte(rayon: Jetons.Rayon.controle)
         }
+    }
+
+    private var boutonEtapePrecedente: some View {
+        Button { modele.etapePrecedente() } label: { Image(systemName: "arrow.uturn.backward") }
+            .buttonStyle(.bouton(.tertiaire, dense: true))
+            .disabled(!modele.etapePrecedenteDisponible)
+            .aide(L("chasse.etape.precedente"))
     }
 }
