@@ -49,6 +49,16 @@ struct HistoriqueSuiviTests {
         #expect(disparues(avant, lu([(3, 1), (1, 2)])).isEmpty)
     }
 
+    @Test("Les points d'une étape : quatre persos au plus, le reste compté")
+    func visibles() {
+        let date = Date(timeIntervalSince1970: 1_000_000)
+        let lus = (1...6).map { HistoriqueSuivi.EtapeLue(perso: "P\($0)", etape: 0, date: date) }
+        let (visibles, reste) = HistoriqueSuivi.visibles(lus)
+        #expect(visibles.map(\.perso) == ["P1", "P2", "P3", "P4"] && reste == 2)
+        #expect(HistoriqueSuivi.visibles(Array(lus.prefix(4))).reste == 0)
+        #expect(HistoriqueSuivi.visibles([]).visibles.isEmpty)
+    }
+
     @Test("Une lecture vide est la dernière du perso, mais la suivante se compare à celle qui voyait le suivi")
     func lectureVide() {
         var historique = HistoriqueSuivi()

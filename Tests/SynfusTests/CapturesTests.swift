@@ -83,9 +83,14 @@ struct CapturesTests {
         }
         let fiche = Self.sansCartes(try reelle ?? #require(try QuetesTests.quetes().fiche(18, en: .fr)))
         let premier = fiche.etapes.first?.objectifs.first?.id
+        equipe()
+        let maintenant = Date()
+        let lus = ["Brok", "Cid", "Syn-App", "Syn-Ops", "Zed", "Zoé"].map {
+            HistoriqueSuivi.EtapeLue(perso: $0, etape: 0, date: maintenant)
+        }
         let vue = QueteVue(ficheImposee: fiche, etapeImposee: reelle == nil ? 1 : 0,
                            validesImposes: reelle == nil ? [101] : Set(premier.map { [$0] } ?? []),
-                           ressourcesImposees: Set(fiche.ressources.prefix(1).map(\.objet)))
+                           ressourcesImposees: Set(fiche.ressources.prefix(1).map(\.objet)), lusImposes: lus)
             .frame(width: 360, height: 560)
             .padding(24)
             .background(Color(red: 0.11, green: 0.11, blue: 0.13))

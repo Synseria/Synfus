@@ -677,6 +677,7 @@
   "quete.persos.lu": "%@ — read %lld min ago",
   "quete.persos.luALInstant": "%@ — read just now",
   "quete.persos.luHeures": "%@ — read %lld h ago",
+  "quete.persos.reste": "+%lld",
   "quete.persos.un": "%lld character at this step according to their game quest tracker:\n%@",
   "quete.recompense.emote": "emote %@",
   "quete.recompense.kamas": "%@ kamas",

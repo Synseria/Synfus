@@ -677,6 +677,7 @@
   "quete.persos.lu": "%@ — leído hace %lld min",
   "quete.persos.luALInstant": "%@ — leído ahora mismo",
   "quete.persos.luHeures": "%@ — leído hace %lld h",
+  "quete.persos.reste": "+%lld",
   "quete.persos.un": "%lld personaje en esta etapa según su seguimiento del juego:\n%@",
   "quete.recompense.emote": "emote %@",
   "quete.recompense.kamas": "%@ kamas",

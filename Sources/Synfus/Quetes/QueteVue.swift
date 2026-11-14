@@ -32,6 +32,8 @@ struct QueteVue: View {
     var validesImposes: Set<Int> = []
     /// Les ressources cochées de la fiche donnée.
     var ressourcesImposees: Set<Int> = []
+    /// Les persos lus à l'étape montrée de la fiche donnée.
+    var lusImposes: [HistoriqueSuivi.EtapeLue] = []
 
     private var fiche: FicheQuete? {
         ficheImposee ?? panneau.idMontre.flatMap { store.fiche($0) }
@@ -398,7 +400,7 @@ struct QueteVue: View {
         let aFaire = Set(lu?.aFaire ?? [])
         let nonOuverts = etape.nonOuverts(valides: coches, lu: lu)
         let lus = ficheImposee == nil
-            ? lecture.historique.persos(fiche.id, etape: rang, seule: !plusieurs, maintenant: Date()) : []
+            ? lecture.historique.persos(fiche.id, etape: rang, seule: !plusieurs, maintenant: Date()) : lusImposes
         let tournee = ficheImposee == nil
             ? Self.tournee(etape, aFaire: aFaire, valides: coches, reseau: CarteStore.shared.reseau) : []
         let numeros = Dictionary(uniqueKeysWithValues: tournee.enumerated().map { ($1, $0 + 1) })
@@ -516,18 +518,25 @@ struct QueteVue: View {
         .help(L("quete.avancement.aide", nombre: faits, faits, total))
     }
 
-    /// Combien de persos leur suivi du jeu montre à cette étape ; au survol,
+    /// Un point par perso que leur suivi du jeu montre à cette étape ; au survol,
     /// lesquels et quand. Jamais tiré des coches, communes à tous les persos.
     @ViewBuilder
     private func persosLus(_ lus: [HistoriqueSuivi.EtapeLue]) -> some View {
         if !lus.isEmpty {
             let maintenant = Date()
+            let (visibles, reste) = HistoriqueSuivi.visibles(lus)
+            let clients = WindowManager.shared.clients
             HStack(spacing: Jetons.Espace.un) {
-                Image(systemName: "person.fill")
-                Text("\(lus.count)")
+                ForEach(visibles, id: \.perso) { lu in
+                    let client = clients.first { $0.name == lu.perso }
+                    PointPerso(classe: client?.characterClass, connecte: client != nil)
+                }
+                if reste > 0 {
+                    Text(L("quete.persos.reste", reste))
+                        .font(metriques.detailFort.police)
+                        .foregroundStyle(Color.jeton(\.encreSecondaire))
+                }
             }
-            .font(metriques.detailFort.police)
-            .foregroundStyle(Color.jeton(\.encreSecondaire))
             .fixedSize()
             .help(L("quete.persos", nombre: lus.count, lus.count,
                     lus.map { Self.lu($0, maintenant: maintenant) }.joined(separator: "\n")))

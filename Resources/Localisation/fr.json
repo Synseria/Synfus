@@ -677,6 +677,7 @@
   "quete.persos.lu": "%@ — lu il y a %lld min",
   "quete.persos.luALInstant": "%@ — lu à l'instant",
   "quete.persos.luHeures": "%@ — lu il y a %lld h",
+  "quete.persos.reste": "+%lld",
   "quete.persos.un": "%lld personnage à cette étape d'après son suivi du jeu :\n%@",
   "quete.recompense.emote": "émote %@",
   "quete.recompense.kamas": "%@ kamas",
