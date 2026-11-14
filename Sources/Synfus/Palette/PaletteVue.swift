@@ -13,6 +13,7 @@ struct PaletteVue: View {
     @FocusState private var champ: Champ?
     @State private var filtreSurvole: FiltrePalette?
     @State private var prefixeSurvole: String?
+    @State private var triSurvole = false
 
     private enum Champ { case recherche, etiquette }
 
@@ -123,18 +124,36 @@ struct PaletteVue: View {
             prefixe("/", L("palette.touche.commandes"))
             prefixe("%", L("palette.touche.variables"))
             Spacer(minLength: Jetons.Espace.deux)
-            Label(modele.tri.titre, systemImage: "arrow.up.arrow.down")
-                .font(Jetons.Typo.petit.police)
-                .foregroundStyle(Color.jeton(\.encreSecondaire))
-                .lineLimit(1)
-                .fixedSize()
-                .contentShape(Rectangle())
-                .onTapGesture { modele.triSuivant() }
-                .help(L("palette.tri.aide"))
-                .accessibilityAddTraits(.isButton)
+            tri
+            ToucheRaccourci("⌘T")
         }
         .padding(.horizontal, Jetons.Espace.quatre)
         .padding(.bottom, Jetons.Espace.deux)
+    }
+
+    /// Le tri courant, en capsule comme les préfixes : un clic ouvre les quatre, ⌘T passe au suivant.
+    private var tri: some View {
+        let etat = EtatVisuel(survole: triSurvole)
+        return Menu {
+            Picker(L("palette.tri.titre"), selection: Binding(get: { modele.tri }, set: { modele.choisirTri($0) })) {
+                ForEach(TriPalette.allCases, id: \.self) { Text($0.titre).tag($0) }
+            }
+            .pickerStyle(.inline)
+            .labelsHidden()
+        } label: {
+            Label(modele.tri.titre, systemImage: "arrow.up.arrow.down")
+                .font(Jetons.Typo.petit.police)
+                .foregroundStyle(etat.encreSecondaire)
+                .padding(.horizontal, Jetons.Espace.deux)
+                .frame(height: Jetons.Taille.cibleMin)
+                .fondEtat(etat, rayon: Jetons.Rayon.capsule)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .focusable(false)
+        .onHover { triSurvole = $0 }
+        .help(L("palette.tri.aide"))
     }
 
     /// Un préfixe de la recherche, dessiné comme un filtre : un clic le pose
