@@ -224,6 +224,21 @@ extension QuetePanel {
 }
 
 extension QuetePanel {
+    /// Le menu des étapes (`MenuEtapes`) : en choisir une la montre.
+    func menuEtapes(_ entrees: [MenuEtapes.Entree], choisir: @escaping @MainActor (Int) -> Void) -> NSMenu {
+        let menu = NSMenu()
+        menu.autoenablesItems = false
+        for entree in entrees {
+            let item = CibleMenu.shared.element(entree.titre) { choisir(entree.rang) }
+            item.state = entree.montree ? .on : .off
+            if entree.faite { item.image = NSImage(systemSymbolName: "checkmark.circle", accessibilityDescription: nil) }
+            menu.addItem(item)
+        }
+        return menu
+    }
+}
+
+extension QuetePanel {
     /// Ce qui commence sur la case du perso devant, d'après sa position lue.
     private static func ici() -> MenuQuetes.Ici? {
         guard let perso = LecteurEcran.shared.positionDuPersoDevant, let quetes = QuetesStore.shared.quetes else { return nil }

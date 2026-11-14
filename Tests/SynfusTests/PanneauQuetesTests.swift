@@ -41,6 +41,16 @@ struct PanneauQuetesTests {
         #expect(glisse(0, 12))
     }
 
+    @Test("Le menu des étapes : toutes, numérotées, la montrée et les faites distinguées")
+    func menuEtapes() {
+        let entrees = MenuEtapes.entrees([("Parler", true), ("Chasser", false), ("Rendre", false)], montree: 1)
+        #expect(entrees == [
+            .init(rang: 0, titre: L("quete.etapes.item", 1, "Parler"), montree: false, faite: true),
+            .init(rang: 1, titre: L("quete.etapes.item", 2, "Chasser"), montree: true, faite: false),
+            .init(rang: 2, titre: L("quete.etapes.item", 3, "Rendre"), montree: false, faite: false),
+        ])
+    }
+
     private func nom(_ id: Int) -> String { "Q\(id)" }
 
     @Test("Le menu : les épinglées, la montrée cochée, puis le suivi et ses quêtes à leur étape")

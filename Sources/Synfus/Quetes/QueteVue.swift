@@ -364,10 +364,7 @@ struct QueteVue: View {
                     Button { changerEtape(fiche, rang - 1) } label: { Image(systemName: "chevron.left") }
                         .disabled(rang == 0)
                         .aide(L("quete.etapePrecedente"))
-                    titreSection(etape.nom == fiche.nom ? L("quete.etape", rang + 1, fiche.etapes.count)
-                                                        : L("quete.etapeSur", rang + 1, fiche.etapes.count, etape.nom))
-                        .lineLimit(1)
-                        .help(etape.nom)
+                    choixEtape(fiche, rang: rang, etape: etape)
                     persosLus(lus)
                     Spacer(minLength: 0)
                     avancement(etape, valides: coches)
@@ -436,6 +433,29 @@ struct QueteVue: View {
             bouton.buttonStyle(.bouton(achevee ? .principal : .secondaire, dense: true))
         }
         .padding(.top, metriques.ecartLignes)
+    }
+
+    /// Le titre de l'étape, qui ouvre la liste des étapes de la quête.
+    private func choixEtape(_ fiche: FicheQuete, rang: Int, etape: FicheQuete.Etape) -> some View {
+        let titre = etape.nom == fiche.nom ? L("quete.etape", rang + 1, fiche.etapes.count)
+                                           : L("quete.etapeSur", rang + 1, fiche.etapes.count, etape.nom)
+        return Button {
+            let valides = valides(fiche.id)
+            let entrees = MenuEtapes.entrees(fiche.etapes.map { ($0.nom, !$0.objectifs.isEmpty && $0.faits(valides: valides) == $0.objectifs.count) },
+                                             montree: rang)
+            QuetePanel.shared.menuEtapes(entrees) { changerEtape(fiche, $0) }
+                .popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
+        } label: {
+            HStack(spacing: Jetons.Espace.un) {
+                titreSection(titre).fixedSize(horizontal: false, vertical: true)
+                Image(systemName: "chevron.down").font(Jetons.Typo.micro.police)
+            }
+            .padding(.horizontal, Jetons.Espace.un)
+            .padding(.vertical, Jetons.Espace.un)
+        }
+        .buttonStyle(.etat(nue: true))
+        .foregroundStyle(Color.jeton(\.encreSecondaire))
+        .help(ficheImposee == nil ? L("quete.etapes.aide") : "")
     }
 
     /// Les objectifs faits de l'étape sur son total, à côté de son titre ; tous faits, il passe à l'accent.
