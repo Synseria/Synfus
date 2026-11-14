@@ -39,6 +39,9 @@ final class ChasseModele: ObservableObject {
 
     private init() {}
 
+    /// La liste des indices n'est pas encore là : rien ne se choisit.
+    var enAttenteDesIndices: Bool { indices.isEmpty && echecIndices == nil }
+
     var langue: Langue { L10n.courante.langue }
 
     var suggestions: [EtapeChasse.Cible] {
@@ -127,6 +130,7 @@ final class ChasseModele: ObservableObject {
     }
 
     func choisir(_ direction: Direction) {
+        guard !enAttenteDesIndices else { return }
         self.direction = direction
         chercherSiPret()
     }

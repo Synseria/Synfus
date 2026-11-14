@@ -197,7 +197,6 @@
   "chasse.indice": "Pista",
   "chasse.indices": "Pistas de búsqueda",
   "chasse.indices.aucune": "Ninguna pista cargada",
-  "chasse.indices.chargement": "Cargando pistas…",
   "chasse.indices.date": "%lld pistas de DofusDB del %@",
   "chasse.indices.indisponibles": "Pistas no disponibles",
   "chasse.indices.maj": "Actualizar",

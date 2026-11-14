@@ -38,7 +38,7 @@ struct ChasseVue: View {
             Text(L("chasse.titre")).font(Jetons.Typo.corpsFort.police)
                 .padding(.horizontal, Jetons.Espace.un)
                 .padding(.vertical, Jetons.Espace.un)
-            if modele.rechercheEnCours || modele.lectureEnCours { ProgressView().controlSize(.mini) }
+            if modele.rechercheEnCours || modele.lectureEnCours || modele.enAttenteDesIndices { ProgressView().controlSize(.mini) }
         } boutons: {
             BoutonEnTete(icone: "xmark", aide: L("quete.fermer.simple")) { ChassePanel.shared.fermer() }
         }
@@ -115,6 +115,7 @@ struct ChasseVue: View {
                 .frame(width: Jetons.Taille.rangeePalette, height: Jetons.Taille.rangeePalette)
         }
         .buttonStyle(.etat(choisi: choisie))
+        .disabled(modele.enAttenteDesIndices)
         .aide(direction.libelle)
     }
 
@@ -133,10 +134,10 @@ struct ChasseVue: View {
 
     private var indice: some View {
         VStack(alignment: .leading, spacing: Jetons.Espace.un) {
-            // Ce que le champ attend s'écrit dans son texte d'exemple : le chargement, puis une direction,
-            // puis l'indice.
+            // Ce que le champ attend s'écrit dans son texte d'exemple : une direction, puis l'indice.
             TextField(L("chasse.indice"), text: $modele.saisie, prompt: Text(attente))
                 .textFieldStyle(.roundedBorder)
+                .disabled(modele.enAttenteDesIndices)
                 .onSubmit { modele.validerSaisie() }
             ForEach(modele.suggestions, id: \.self) { cible in
                 Button { modele.choisir(cible) } label: {
@@ -151,7 +152,6 @@ struct ChasseVue: View {
     }
 
     private var attente: String {
-        if modele.indices.isEmpty { return L("chasse.indices.chargement") }
         return modele.direction == nil ? L("chasse.direction.choisir") : L("chasse.indice")
     }
 
