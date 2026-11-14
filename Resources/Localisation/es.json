@@ -581,6 +581,7 @@
   "palette.var.xp": "Experiencia hacia el siguiente nivel",
   "palette.var.zone": "Zona",
   "palette.zaap": "Zaap · %@",
+  "panneau.fermer": "Cerrar el panel",
   "persos.acheverGeles": "Rematar los clientes congelados al cerrar",
   "persos.acheverGeles.aide": "Un cliente que se congela al cerrarse sigue vivo sin ninguna ventana. Synfus lo sondea y, mudo tres veces seguidas (~15 s), lo fuerza a salir — tanto si el cierre vino de Synfus como del juego. Los remates se anotan en Diagnóstico.",
   "persos.connecte": "conectado",

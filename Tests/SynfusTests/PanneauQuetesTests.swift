@@ -64,12 +64,14 @@ struct PanneauQuetesTests {
             .option(.compact, actif: false),
             .option(.consigne, actif: false),
             .option(.masquerObjets, actif: true),
+            .separateur,
+            .fermer,
         ])
         #expect(MenuQuetes.nouvelles(reconnues, epinglees: [18, 42]) == 1)
     }
 
-    /// Le séparateur et les options, en pied du menu.
-    private let pied = 1 + MenuQuetes.Option.affichage.count
+    /// Le séparateur, les options, puis le séparateur et « Fermer le panneau », en pied du menu.
+    private let pied = 1 + MenuQuetes.Option.affichage.count + 2
 
     @Test("Le menu dit pourquoi le suivi ne propose rien")
     func menuSansQuete() {

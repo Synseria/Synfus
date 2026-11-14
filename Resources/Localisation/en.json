@@ -581,6 +581,7 @@
   "palette.var.xp": "Experience to next level",
   "palette.var.zone": "Area",
   "palette.zaap": "Zaap · %@",
+  "panneau.fermer": "Close the panel",
   "persos.acheverGeles": "Kill clients frozen on close",
   "persos.acheverGeles.aide": "A client that freezes while closing stays alive without any window. Synfus probes it and, silent three times in a row (~15 s), force quits it — whether the close came from Synfus or from the game. Kills are logged in Diagnostics.",
   "persos.connecte": "connected",
