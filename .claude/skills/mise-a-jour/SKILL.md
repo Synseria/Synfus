@@ -13,7 +13,7 @@ user-invocable: false
   écarte brouillons et préversions. Un binaire nu (sans `CFBundleShortVersionString`) ne vérifie
   rien. GitHub muet → état `inconnu`, rien d'affiché, on réessaie au tour suivant.
 - **Proposition, jamais d'installation seule** : « Installer Synfus X.Y.Z… » en tête du menu et
-  bouton sur la ligne Version, puis une `NSAlert` (Installer et relancer · Annuler · Nouveautés).
+  bouton sur la ligne Version, puis la feuille `Confirmation` (Nouveautés, bouton qui la laisse ouverte · Annuler · Installer et relancer). Une notification système annonce une version une seule fois (`derniereVersionNotifiee`) ; au premier lancement après une mise à jour, le menu offre « Nouveautés de la X.Y.Z » sous À propos.
 - **Installation** (`InstallateurMiseAJour`, acteur sans état) : DMG `Synfus-X.Y.Z-<arch>.dmg`
   téléchargé (arch du binaire qui tourne : sous Rosetta, x86_64), empreinte comparée à
   `SHA256SUMS.txt` de la même release, `hdiutil attach -nobrowse -readonly`, app copiée par

@@ -3,19 +3,23 @@ import SwiftUI
 
 /// « À propos de Synfus » : le signe Synseria, la version et l'état de la mise à jour.
 struct AProposVue: View {
+    var version = AppIntegrity.version
     @ObservedObject private var miseAJour = MiseAJour.shared
+    @ObservedObject private var prefs = Preferences.shared
 
     var body: some View {
         VStack(spacing: Jetons.Espace.quatre) {
             SigneSynseria(hauteur: 44)
             VStack(spacing: Jetons.Espace.deux) {
                 Text(AppIntegrity.displayName).font(Jetons.Typo.corpsFort.police).foregroundStyle(Color.jeton(\.encre))
-                if let etat = miseAJour.etat.libelle {
+                if let etat = MiseAJour.resume(version: version, etat: miseAJour.etat,
+                                               verifiee: prefs.derniereVerificationMaj) {
                     Text(etat).font(Jetons.Typo.note.police).foregroundStyle(Color.jeton(\.encreSecondaire))
                         .multilineTextAlignment(.center)
+                        .textSelection(.enabled)
                 }
             }
-            ActionMiseAJour()
+            ActionMiseAJour(rechercher: L("maj.rechercherUne"))
         }
         .padding(Jetons.Espace.six)
         .frame(width: 340)

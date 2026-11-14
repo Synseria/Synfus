@@ -62,37 +62,24 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             menu.addItem(.separator())
         }
 
+        let lectureManque = AutorisationsMenu.lectureEcranManque(
+            autorisee: WindowPreviewService.shared.authorized, lirePosition: prefs.lirePosition,
+            lireCombat: prefs.lireCombat, apercus: prefs.showPreviewOnHover,
+            panneauLisant: QuetePanel.shared.ouvert || ChassePanel.shared.ouvert || BossPanel.shared.ouvert)
         if !manager.accessibilityGranted {
             add(to: menu, title: L("autorisation.accessibilite"), action: #selector(requestAccess), icone: "lock.open")
-            menu.addItem(.separator())
-        } else if manager.clients.isEmpty {
-            let empty = NSMenuItem(title: L("barre.aucunPerso"), action: nil, keyEquivalent: "")
-            empty.isEnabled = false
-            menu.addItem(empty)
-            menu.addItem(.separator())
-        } else {
-            // L'effectif : les numéros sont ceux de la barre, et `focus(slot:)`
-            // compte de la même façon.
-            for (index, client) in manager.effectif.enumerated() {
-                let item = add(to: menu, title: client.name, action: #selector(focusClient(_:)),
-                               raccourci: index < prefs.hotKeys.count ? prefs.hotKeys[index] : nil)
-                item.tag = index
-                item.image = ClassesStore.shared.menuIcon(for: client.characterClass)
-                if manager.isFrontmost(client) { item.state = .on }
-            }
-            if manager.effectif.isEmpty {
-                let empty = NSMenuItem(title: L("menu.aucunPersoEquipe"), action: nil, keyEquivalent: "")
-                empty.isEnabled = false
-                menu.addItem(empty)
-            }
-            if !prefs.equipes.isEmpty { menu.addItem(teamSubmenu()) }
-            menu.addItem(.separator())
         }
+        if lectureManque {
+            add(to: menu, title: L("autorisation.lectureEcran"), action: #selector(requestScreenAccess), icone: "lock.open")
+        }
+        if !manager.accessibilityGranted || lectureManque { menu.addItem(.separator()) }
+        if manager.accessibilityGranted { ajouterPersonnages(a: menu) }
 
         // La palette, geste le plus fréquent, puis les panneaux de jeu ; les
         // fenêtres et la barre ; Synfus lui-même ; enfin ce qui détruit, à part.
         add(to: menu, title: L("menu.palette"), action: #selector(openPalette), raccourci: prefs.paletteHotKey,
             icone: BoutonBarre.palette.symbole)
+        if let favoris = zaapsFavorisSubmenu() { menu.addItem(favoris) }
         add(to: menu, title: L("menu.quetes"), action: #selector(openQuests), raccourci: prefs.quetesHotKey,
             icone: BoutonBarre.quetes.symbole).state = QuetePanel.shared.ouvert ? .on : .off
         add(to: menu, title: L("menu.chasse"), action: #selector(openHunt), raccourci: prefs.chasseHotKey,
@@ -107,12 +94,18 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             add(to: menu, title: L("menu.lancerSession"), action: #selector(launchSession), raccourci: prefs.sessionHotKey,
                 icone: "play")
         }
+        add(to: menu, title: BoutonBarre.passageAuto.libelle, action: #selector(toggleAutoFocus),
+            raccourci: prefs.toggleAutoFocus, icone: BoutonBarre.passageAuto.symbole).state = prefs.passageAuto ? .on : .off
         add(to: menu, title: prefs.barVisible ? L("menu.masquerBarre") : L("menu.afficherBarre"), action: #selector(toggleBar),
             raccourci: prefs.toggleBar, icone: prefs.barVisible ? "eye.slash" : "eye")
         add(to: menu, title: L("menu.recentrer"), action: #selector(recenterBar), icone: "dot.viewfinder")
         menu.addItem(.separator())
 
         add(to: menu, title: L("menu.apropos"), action: #selector(openAbout), icone: "info.circle")
+        if let nouveautes = MiseAJour.shared.nouveautesInstallee {
+            add(to: menu, title: L("maj.menu.nouveautes", nouveautes.numero), action: #selector(openNouveautes),
+                icone: "sparkles").representedObject = nouveautes.page
+        }
         add(to: menu, title: L("menu.reglages"), action: #selector(openSettings), icone: "gearshape")
         menu.addItem(.separator())
         // Reconstruit à chaque ouverture : l'item n'apparaît que s'il y a
@@ -122,6 +115,40 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             menu.addItem(.separator())
         }
         add(to: menu, title: L("menu.quitter"), action: #selector(quit), icone: "power")
+    }
+
+    /// L'effectif, ou ce qui manque pour en avoir un ; les numéros sont ceux de la barre.
+    private func ajouterPersonnages(a menu: NSMenu) {
+        let manager = WindowManager.shared
+        let prefs = Preferences.shared
+        if manager.clients.isEmpty {
+            let empty = NSMenuItem(title: L("barre.aucunPerso"), action: nil, keyEquivalent: "")
+            empty.isEnabled = false
+            menu.addItem(empty)
+            menu.addItem(.separator())
+        } else {
+            // L'effectif : les numéros sont ceux de la barre, et `focus(slot:)`
+            // compte de la même façon.
+            for (index, client) in manager.effectif.enumerated() {
+                let item = add(to: menu, title: client.name, action: #selector(focusClient(_:)),
+                               raccourci: index < prefs.hotKeys.count ? prefs.hotKeys[index] : nil)
+                item.tag = index
+                item.image = ClassesStore.shared.menuIcon(for: client.characterClass)
+                if manager.isFrontmost(client) { item.state = .on }
+                let combat = prefs.lireCombat ? LecteurEcran.shared.combats[client.name] : nil
+                let appelle = AttentionWatcher.shared.alerting.contains(client.slotKey)
+                if let etat = EtatPersoMenu.de(combat: combat, appelle: appelle, dormant: client.dormant) {
+                    item.badge = NSMenuItemBadge(string: etat.libelle)
+                }
+            }
+            if manager.effectif.isEmpty {
+                let empty = NSMenuItem(title: L("menu.aucunPersoEquipe"), action: nil, keyEquivalent: "")
+                empty.isEnabled = false
+                menu.addItem(empty)
+            }
+            if !prefs.equipes.isEmpty { menu.addItem(teamSubmenu()) }
+            menu.addItem(.separator())
+        }
     }
 
     /// Sous-menu « Ranger les fenêtres » : une entrée par disposition. Le
@@ -140,11 +167,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             item.tag = index
             item.image = NSImage(systemSymbolName: disposition.symbolName,
                                  accessibilityDescription: disposition.label)
-            if let hotKey = prefs.arrangeHotKey,
-               disposition == prefs.lastArrangement {
-                item.attributedTitle = attributed(name: disposition.label,
-                                                  shortcut: hotKey.displayString)
-            }
+            if disposition == prefs.lastArrangement { item.afficher(prefs.arrangeHotKey) }
             submenu.addItem(item)
         }
         submenu.addItem(.separator())
@@ -160,6 +183,22 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         return parent
     }
 
+    /// Les mêmes lignes que le clic droit du bouton Palette ; sans favori, pas d'entrée.
+    private func zaapsFavorisSubmenu() -> NSMenuItem? {
+        let lignes = CatalogueZaaps.lignesFavoris(Preferences.shared.zaapsFavorisConnus,
+                                                  depuis: LecteurEcran.shared.positionDuPersoDevant,
+                                                  langue: L10n.courante.langue)
+        guard !lignes.isEmpty else { return nil }
+        let parent = NSMenuItem(title: L("menu.zaapsFavoris"), action: nil, keyEquivalent: "")
+        parent.image = NSImage(systemSymbolName: "star", accessibilityDescription: nil)
+        let submenu = NSMenu()
+        for ligne in lignes {
+            submenu.addItem(CibleMenu.shared.element(ligne.titre) { ZaapClipboard.shared.copierZaap(ligne.zaap) })
+        }
+        parent.submenu = submenu
+        return parent
+    }
+
     /// Sous-menu « Équipe » : « Tous » puis chaque équipe avec ses membres.
     /// Le tag vaut l'index + 1, 0 pour « Tous ».
     private func teamSubmenu() -> NSMenuItem {
@@ -167,10 +206,12 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         let prefs = Preferences.shared
         let parent = NSMenuItem(title: L("equipes.equipe"), action: nil, keyEquivalent: "")
         parent.image = NSImage(systemSymbolName: "person.2", accessibilityDescription: nil)
-        if let hotKey = prefs.equipeSuivanteHotKey {
-            parent.attributedTitle = attributed(name: L("equipes.equipe"), shortcut: hotKey.displayString)
-        }
         let submenu = NSMenu()
+        let suivante = NSMenuItem(title: L("raccourcis.equipeSuivante"), action: #selector(nextTeam), keyEquivalent: "")
+        suivante.target = self
+        suivante.afficher(prefs.equipeSuivanteHotKey)
+        submenu.addItem(suivante)
+        submenu.addItem(.separator())
         let tous = NSMenuItem(title: L("equipes.tous"), action: #selector(selectTeam(_:)), keyEquivalent: "")
         tous.target = self
         tous.tag = 0
@@ -188,32 +229,16 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         return parent
     }
 
-    /// Le raccourci, global (Carbon), est montré à titre indicatif : un key
-    /// equivalent de menu ne marcherait que Synfus au premier plan.
+    /// Le raccourci est montré au bout de la ligne (`NSMenuItem.afficher`).
     @discardableResult
     private func add(to menu: NSMenu, title: String, action: Selector, raccourci: HotKey? = nil,
                      icone: String? = nil) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
         item.target = self
         item.image = icone.flatMap { NSImage(systemSymbolName: $0, accessibilityDescription: nil) }
-        if let raccourci { item.attributedTitle = attributed(name: title, shortcut: raccourci.displayString) }
+        item.afficher(raccourci)
         menu.addItem(item)
         return item
-    }
-
-    private func attributed(name: String, shortcut: String) -> NSAttributedString {
-        let result = NSMutableAttributedString(
-            string: name,
-            attributes: [.font: NSFont.menuFont(ofSize: 0)]
-        )
-        result.append(NSAttributedString(
-            string: "   \(shortcut)",
-            attributes: [
-                .font: NSFont.monospacedDigitSystemFont(ofSize: NSFont.smallSystemFontSize, weight: .regular),
-                .foregroundColor: NSColor.secondaryLabelColor,
-            ]
-        ))
-        return result
     }
 
     // MARK: - Actions
@@ -225,6 +250,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
     @objc private func selectTeam(_ sender: NSMenuItem) {
         WindowManager.shared.activerEquipe(sender.tag == 0 ? nil : sender.tag - 1)
+    }
+
+    @objc private func nextTeam() {
+        WindowManager.shared.equipeSuivante()
     }
 
     @objc private func arrange(_ sender: NSMenuItem) {
@@ -245,6 +274,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
     @objc private func launchSession() {
         WindowManager.shared.lancerSession()
+    }
+
+    @objc private func toggleAutoFocus() {
+        Preferences.shared.basculerPassageAuto()
     }
 
     @objc private func toggleBar() {
@@ -279,6 +312,11 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         AProposController.shared.afficher()
     }
 
+    @objc private func openNouveautes(_ sender: NSMenuItem) {
+        guard let page = sender.representedObject as? URL else { return }
+        MiseAJour.shared.ouvrirNouveautes(page)
+    }
+
     @objc private func openSettings() {
         SettingsWindowController.shared.show()
     }
@@ -290,6 +328,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
     @objc private func requestAccess() {
         WindowManager.shared.requestAccessibility()
+    }
+
+    @objc private func requestScreenAccess() {
+        WindowPreviewService.shared.requestAuthorization()
     }
 
     @objc private func quit() {

@@ -32,6 +32,18 @@ struct MiseAJourTests {
                 == L("maj.quand.le", maintenant.addingTimeInterval(-5 * 86_400).formatted(.dateTime.day().month(.abbreviated))))
     }
 
+    @Test("Une version n'est annoncée par notification qu'une fois")
+    func annonceUnique() {
+        #expect(NotificationMiseAJour.aAnnoncer("1.5.0", derniere: nil))
+        #expect(NotificationMiseAJour.aAnnoncer("1.5.0", derniere: "1.4.0"))
+        #expect(!NotificationMiseAJour.aAnnoncer("1.5.0", derniere: "1.5.0"))
+    }
+
+    @Test("La page des nouveautés de la version installée se déduit de son numéro")
+    func pageDeLaVersionInstallee() {
+        #expect(VersionPubliee.page(de: "1.4.2").absoluteString == "https://github.com/Synseria/Synfus/releases/tag/v1.4.2")
+    }
+
     @Test("La release se lit avec le DMG de l'architecture et les empreintes")
     func lecture() throws {
         let version = try #require(VersionPubliee.lire(Data(Self.reponse.utf8), architecture: "x86_64"))

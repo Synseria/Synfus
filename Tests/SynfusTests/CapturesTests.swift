@@ -308,6 +308,27 @@ struct CapturesTests {
         try ecrire(vue, vers: dossier.appending(path: "reglages-quetes-indisponibles.png"))
     }
 
+    @Test("Capture de la fenêtre À propos", .enabled(if: dossier != nil))
+    func aPropos() throws {
+        let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
+        try FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)
+        let vue = AProposVue(version: "1.4.2")
+            .environment(\.colorScheme, Self.schema)
+        try ecrire(vue, vers: dossier.appending(path: "a-propos.png"))
+    }
+
+    @Test("Capture de la feuille d'installation d'une mise à jour", .enabled(if: dossier != nil))
+    func installationMiseAJour() throws {
+        let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
+        try FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)
+        let demande = DemandeConfirmation(
+            titre: L("maj.alerte.titre", "1.5.0"), detail: L("maj.alerte.detail"), verbe: L("maj.alerte.installer"),
+            rang: .principal, lien: LienConfirmation(titre: L("maj.nouveautes"), url: URL(fileURLWithPath: "/")))
+        let vue = FeuilleConfirmation(demande: demande) { _ in }
+            .environment(\.colorScheme, Self.schema)
+        try ecrire(vue, vers: dossier.appending(path: "maj-installation.png"))
+    }
+
     /// Par une fenêtre hors écran : `ImageRenderer` ne dessine ni champ de
     /// texte ni défilement, qui sont des vues AppKit.
     private func ecrire(_ vue: some View, vers url: URL) throws {

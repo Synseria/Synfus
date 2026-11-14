@@ -3,15 +3,24 @@
 import AppKit
 import SwiftUI
 
+/// Un bouton de plus, à gauche : il ouvre une page et laisse la feuille en place.
+struct LienConfirmation: Equatable {
+    let titre: String
+    let url: URL
+}
+
 /// Ce que dit la feuille : le titre nomme le verbe et l'objet (« Supprimer ce zaap ? »), une ligne de
-/// détail dit au besoin le nombre ou ce qui sera perdu, le bouton reprend le verbe seul.
+/// détail dit au besoin le nombre ou ce qui sera perdu, le bouton reprend le verbe seul. `rang` : celui du
+/// bouton du verbe, destructif sauf quand le geste n'en est pas un.
 struct DemandeConfirmation: Equatable {
     let titre: String
     var detail: String?
     let verbe: String
+    var rang: RangBouton = .destructif
+    var lien: LienConfirmation?
 }
 
-/// « Annuler » à gauche, le verbe destructif à droite. Entrée ne détruit jamais : aucun bouton n'est
+/// « Annuler » puis le verbe à droite, le lien d'information s'il y en a un à l'autre bout. Entrée ne détruit jamais : aucun bouton n'est
 /// celui du défaut, il faut cliquer ou tabuler ; ⎋ annule.
 struct FeuilleConfirmation: View {
     let demande: DemandeConfirmation
@@ -31,16 +40,22 @@ struct FeuilleConfirmation: View {
             }
             .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: Jetons.Espace.deux) {
+                if let lien = demande.lien {
+                    Button(lien.titre) { NSWorkspace.shared.open(lien.url) }
+                        .buttonStyle(.bouton(.tertiaire))
+                }
                 Spacer(minLength: 0)
                 Button(L("commun.annuler")) { repondre(false) }
                     .buttonStyle(.bouton(.tertiaire))
                     .keyboardShortcut(.cancelAction)
                 Button(demande.verbe) { repondre(true) }
-                    .buttonStyle(.bouton(.destructif))
+                    .lineLimit(1)
+                    .buttonStyle(.bouton(demande.rang))
             }
         }
         .padding(Jetons.Espace.six)
-        .frame(width: 360, alignment: .leading)
+        // Trois boutons à une ligne chacun demandent plus que deux.
+        .frame(width: demande.lien == nil ? 360 : 460, alignment: .leading)
         .background(Color.jeton(\.fenetre))
     }
 }
