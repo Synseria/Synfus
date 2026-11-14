@@ -44,6 +44,18 @@ struct ClientOrderTests {
         #expect(trie.map(\.pid) == [1, 2, 3])
     }
 
+    @Test("Le voisin d'un perso : celui de l'effectif montré, rien au bord ni sans rang")
+    func voisinDansLEffectif() {
+        let effectif = [client(pid: 1, nom: "Aeryn"), client(pid: 2, nom: "Brok"), client(pid: 3, nom: "Cid")]
+        let ordre = ["Aeryn", "Brok", "Cid"]
+        #expect(ClientMemory.voisin(de: "Brok", dans: effectif, decalage: -1, order: ordre) == "Aeryn")
+        #expect(ClientMemory.voisin(de: "Brok", dans: effectif, decalage: 1, order: ordre) == "Cid")
+        #expect(ClientMemory.voisin(de: "Aeryn", dans: effectif, decalage: -1, order: ordre) == nil)
+        #expect(ClientMemory.voisin(de: "Cid", dans: effectif, decalage: 1, order: ordre) == nil)
+        #expect(ClientMemory.voisin(de: "Brok", dans: effectif, decalage: 1, order: ["Aeryn", "Brok"]) == nil)
+        #expect(ClientMemory.voisin(de: "Zoé", dans: effectif, decalage: 1, order: ordre) == nil)
+    }
+
     @Test("Deux homonymes dans la liste : c'est le premier rang qui compte")
     func doublonDansLaListePremierRang() {
         let trie = ClientMemory.sorted(

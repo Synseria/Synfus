@@ -396,6 +396,8 @@ struct BarView: View {
                         ZaapClipboard.shared.copierTrajet(vers: cible, sousZone: nil, dansLesDouze: true)
                     }
                 }
+                menuPlace(de: client)
+                Divider()
                 Button(L("barre.fermer", client.name)) { ConfirmationFermeture.fermer(client) }
             }
         }
@@ -411,6 +413,44 @@ struct BarView: View {
             survolChip = inside ? client.slotKey : (survolChip == client.slotKey ? nil : survolChip)
             hover(client, inside: inside)
         }
+    }
+
+    /// L'équipe et le rang du perso, avec les mêmes écritures que le glisser. Un nom que les
+    /// équipes ne retiennent pas (client au login, homonyme suffixé) n'en a pas.
+    @ViewBuilder
+    private func menuPlace(de client: DofusClient) -> some View {
+        let nom = client.name
+        if WindowTitle.isPersistableName(nom) {
+            let nombre = prefs.equipes.count
+            Menu(L("equipes.equipe")) {
+                Picker(L("equipes.equipe"), selection: Binding(
+                    get: { (Equipes.indexEquipe(de: nom, dans: prefs.equipes) ?? -1) + 1 },
+                    set: { prefs.affecter(nom, aEquipe: $0 == 0 ? nil : $0 - 1) }
+                )) {
+                    Text(L("barre.equipe.aucune")).tag(0)
+                    ForEach(0..<nombre, id: \.self) { Text(L("persos.equipeN", $0 + 1)).tag($0 + 1) }
+                }
+                .pickerStyle(.inline)
+                .labelsHidden()
+                if nombre < Equipes.maximum {
+                    Divider()
+                    Button(L("barre.equipe.nouvelle")) { prefs.affecter(nom, aEquipe: nombre) }
+                }
+            }
+        }
+        deplacer(client, decalage: -1, titre: L("barre.deplacerGauche"))
+        deplacer(client, decalage: 1, titre: L("barre.deplacerDroite"))
+    }
+
+    private func deplacer(_ client: DofusClient, decalage: Int, titre: String) -> some View {
+        let voisin = ClientMemory.voisin(de: client.name, dans: manager.effectif, decalage: decalage,
+                                         order: prefs.characterOrder)
+        return Button(titre) {
+            guard let voisin else { return }
+            prefs.swapOrder(client.name, voisin)
+            manager.resort()
+        }
+        .disabled(voisin == nil)
     }
 
     /// Ouvre l'aperçu après un court délai : sans lui, le simple fait de
