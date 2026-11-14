@@ -111,7 +111,7 @@ struct CapturesTests {
         }
         let quetes = try JSONDecoder().decode(Quetes.self, from: JSONSerialization.data(withJSONObject: json))
         QuetesStore.shared.poserPourCaptures(quetes)
-        LectureSuivi.shared.poserPourCaptures(reconnues: noms.indices.map { SuiviQuetes.Reconnue(id: 9000 + $0, etape: nil) })
+        LectureSuivi.shared.poserPourCaptures(reconnues: noms.indices.map { SuiviQuetes.Reconnue(id: 9000 + $0, etape: $0 % 3 == 0 ? nil : $0) })
         let vue = QueteVue()
             .frame(width: 360, height: 480)
             .padding(24)

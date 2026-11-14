@@ -104,10 +104,22 @@ struct QueteVue: View {
                             Text(L("quete.vide.suivi")).font(Jetons.Typo.raccourci.police).foregroundStyle(Color.jeton(\.encreSecondaire))
                             ForEach(lues, id: \.0.id) { reconnue, nom in
                                 Button { lecture.choisir(reconnue) } label: {
-                                    Label { Text(nom).multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true) }
-                                        icon: { Image(systemName: "pin") }
+                                    HStack(alignment: .firstTextBaseline, spacing: Jetons.Espace.un) {
+                                        Image(systemName: "pin").foregroundStyle(Color.jeton(\.encreSecondaire))
+                                        Text(nom).multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
+                                        Spacer(minLength: Jetons.Espace.un)
+                                        if let etape = reconnue.etape {
+                                            Text(L("quete.vide.etape", etape + 1))
+                                                .font(Jetons.Typo.petit.police)
+                                                .foregroundStyle(Color.jeton(\.encreSecondaire))
+                                                .lineLimit(1)
+                                        }
+                                    }
+                                    .padding(.horizontal, Jetons.Espace.deux)
+                                    .padding(.vertical, Jetons.Espace.un)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                                 }
-                                .buttonStyle(.bouton(.tertiaire, dense: true))
+                                .buttonStyle(.etat(nue: true))
                             }
                         }
                     }
