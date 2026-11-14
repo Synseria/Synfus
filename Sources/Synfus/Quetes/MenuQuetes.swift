@@ -104,3 +104,21 @@ enum MenuQuetes {
         }
     }
 }
+
+/// Le menu des étapes d'une quête : toutes, l'étape montrée cochée, celles dont
+/// tous les objectifs sont faits marquées.
+enum MenuEtapes {
+    struct Entree: Equatable {
+        let rang: Int
+        let titre: String
+        let montree: Bool
+        let faite: Bool
+    }
+
+    /// `etapes` : le nom de chaque étape et si tous ses objectifs sont cochés.
+    static func entrees(_ etapes: [(nom: String, faite: Bool)], montree: Int) -> [Entree] {
+        etapes.enumerated().map { rang, etape in
+            Entree(rang: rang, titre: L("quete.etapes.item", rang + 1, etape.nom), montree: rang == montree, faite: etape.faite)
+        }
+    }
+}

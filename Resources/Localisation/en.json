@@ -638,6 +638,8 @@
   "quete.etapePrecedente": "Previous step",
   "quete.etapeSuivante": "Next step",
   "quete.etapeSur": "Step %lld / %lld · %@",
+  "quete.etapes.aide": "Choose a step",
+  "quete.etapes.item": "%lld · %@",
   "quete.exigence.alignement": "%@, alignment %lld",
   "quete.exigence.alignementSeul": "alignment %lld",
   "quete.exigence.metier": "%@ level %lld",
