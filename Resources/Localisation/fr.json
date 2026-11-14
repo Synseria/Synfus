@@ -629,6 +629,8 @@
   "persos.oublierHorsLigne.confirmation": "Retirer %lld personnages hors ligne ?",
   "persos.oublierHorsLigne.confirmation.un": "Retirer %lld personnage hors ligne ?",
   "persos.oublierHorsLigne.detail": "Les raccourcis des personnages suivants se décalent.",
+  "persos.raccourci": "Raccourci",
+  "persos.raccourciDuPerso": "Raccourci du personnage",
   "persos.retirer": "Retirer de la liste",
   "persos.retirer.confirmation": "Retirer %@ de la liste ?",
   "persos.retirer.detail": "Les raccourcis des personnages suivants se décalent.",
