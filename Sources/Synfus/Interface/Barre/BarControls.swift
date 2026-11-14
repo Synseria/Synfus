@@ -338,13 +338,12 @@ struct CombatBadge: View {
     var body: some View {
         switch etat {
         case .monTour(let fin):
-            ZStack(alignment: .topTrailing) {
-                RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous)
-                    .strokeBorder(Self.rose, lineWidth: Jetons.Trait.focus)
-                TimelineView(.periodic(from: .now, by: 1)) { contexte in
-                    pastille(fin.map { "\(max(0, Int($0.timeIntervalSince(contexte.date).rounded())))" })
-                        .help(L("barre.combat.monTour",
-                                fin.map { max(0, Int($0.timeIntervalSince(contexte.date).rounded())) } ?? 0))
+            TimelineView(.periodic(from: .now, by: 1)) { contexte in
+                let reste = fin.map { max(0, Int($0.timeIntervalSince(contexte.date).rounded())) }
+                ZStack(alignment: .topTrailing) {
+                    contourDuTour(critique: reste.map(Self.estCritique) ?? false)
+                    pastille(reste.map(String.init))
+                        .help(L("barre.combat.monTour", reste ?? 0))
                 }
             }
             .allowsHitTesting(false)
@@ -359,6 +358,23 @@ struct CombatBadge: View {
             .allowsHitTesting(false)
         case .horsCombat:
             EmptyView()
+        }
+    }
+
+    /// En deçà, un tour qui expire se remarque sans lire le chiffre : le contour bat.
+    static let secondesCritiques = 5
+
+    static func estCritique(_ reste: Int) -> Bool { reste <= secondesCritiques }
+
+    /// Le battement ne vit que dans les dernières secondes : hors de là, rien ne s'anime.
+    @ViewBuilder
+    private func contourDuTour(critique: Bool) -> some View {
+        let contour = RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous)
+            .strokeBorder(Self.rose, lineWidth: Jetons.Trait.focus)
+        if critique {
+            contour.modifier(Battement(bas: 0.3, demiPeriode: Jetons.Duree.menu))
+        } else {
+            contour
         }
     }
 
