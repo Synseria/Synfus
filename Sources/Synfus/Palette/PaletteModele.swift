@@ -36,6 +36,15 @@ final class PaletteModele: ObservableObject {
     /// La famille montrée, que Tab fait défiler.
     @Published private(set) var filtre: FiltrePalette = .tout
     @Published private(set) var tri: TriPalette = .auto
+    /// Ce que « Tout » répondrait à la même recherche, demandé seulement quand la liste d'un filtre
+    /// est vide et redemandé à chaque rendu : la clé dit tout ce dont il dépend.
+    private var ailleursGarde = DernierCalcul<CleAilleurs, Int>()
+
+    private struct CleAilleurs: Equatable {
+        let requete: String
+        let tri: TriPalette
+        let index: ObjectIdentifier
+    }
     @Published var selection = 0
     /// L'entrée dont on écrit l'étiquette, et le texte en cours.
     @Published private(set) var edition: EntreePalette?
@@ -130,11 +139,15 @@ final class PaletteModele: ObservableObject {
     /// Pourquoi la liste est vide ; `nil` quand elle ne l'est pas.
     var vide: VidePalette? {
         guard entrees.isEmpty else { return nil }
+        let ailleurs = filtre != .tout && !requete.trimmingCharacters(in: .whitespaces).isEmpty
+            ? ailleursGarde.valeur(pour: CleAilleurs(requete: requete, tri: tri, index: ObjectIdentifier(index))) {
+                RecherchePalette.entrees(requete, index, filtre: .tout, tri: tri).count
+            } : 0
         return VidePalette.de(
             carte: contexteImpose == nil ? CarteStore.shared.etat : .prete,
             requeteVide: requete.trimmingCharacters(in: .whitespaces).isEmpty, filtre: filtre,
             positionConnue: positionConnue, lectureAllumee: Preferences.shared.lirePosition,
-            quetesEnChargement: QuetesStore.shared.chargement && QuetesStore.shared.quetes == nil)
+            quetesEnChargement: QuetesStore.shared.chargement && QuetesStore.shared.quetes == nil, ailleurs: ailleurs)
     }
 
     /// Sans elle, le filtre « Ici » n'a rien à montrer.
@@ -217,6 +230,7 @@ final class PaletteModele: ObservableObject {
     private func validerVide() {
         switch vide?.entree {
         case .reessayer: CarteStore.shared.reessayer()
+        case .toutVoir: choisir(.tout)
         case nil: NSSound.beep()
         }
     }

@@ -7,9 +7,10 @@ import Testing
 struct VidePaletteTests {
 
     private func vide(carte: EtatCarte = .prete, requeteVide: Bool = false, filtre: FiltrePalette = .tout,
-                      positionConnue: Bool = true, lectureAllumee: Bool = true, quetes: Bool = false) -> VidePalette {
+                      positionConnue: Bool = true, lectureAllumee: Bool = true, quetes: Bool = false,
+                      ailleurs: Int = 0) -> VidePalette {
         VidePalette.de(carte: carte, requeteVide: requeteVide, filtre: filtre, positionConnue: positionConnue,
-                       lectureAllumee: lectureAllumee, quetesEnChargement: quetes)
+                       lectureAllumee: lectureAllumee, quetesEnChargement: quetes, ailleurs: ailleurs)
     }
 
     @Test("Sans carte, rien tapé : chargement, ou carte indisponible après un échec — ↵ réessaie")
@@ -36,8 +37,34 @@ struct VidePaletteTests {
         #expect(vide(filtre: .ici, positionConnue: true) == .aucun)
     }
 
+    @Test("Vide sous un filtre alors que « Tout » répond : la rangée y mène, ↵ aussi")
+    func ailleurs() {
+        let attendu = VidePalette.rienDansLeFiltre(.lieux, ailleurs: 12)
+        #expect(vide(filtre: .lieux, ailleurs: 12) == attendu)
+        #expect(attendu.entree == .toutVoir)
+        #expect(vide(filtre: .lieux, ailleurs: 0) == .aucun)
+        #expect(vide(filtre: .tout, ailleurs: 12) == .aucun)
+    }
+
     @Test("Le chargement des quêtes passe avant le reste")
     func quetes() {
-        #expect(vide(filtre: .quetes, quetes: true) == .quetesEnChargement)
+        #expect(vide(filtre: .quetes, quetes: true, ailleurs: 3) == .quetesEnChargement)
+    }
+
+    @Test("Le modèle compte les réponses de « Tout » quand le filtre est vide, et ↵ y passe")
+    func modele() {
+        var contexte = ContextePalette()
+        contexte.zaaps = ZaapsSitues(CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [], choix: [:]),
+                                     reseau: ReseauSousZones(Carte.integree))
+        contexte.lieux = Carte.integree.lieux
+        let modele = PaletteModele(contexte: contexte, requete: "lancer la session", filtre: .lieux)
+        #expect(modele.entrees.isEmpty)
+        guard case .rienDansLeFiltre(.lieux, let ailleurs)? = modele.vide else {
+            Issue.record("pas de rangée « Tout »")
+            return
+        }
+        #expect(ailleurs > 0)
+        modele.valider()
+        #expect(modele.filtre == .tout && !modele.entrees.isEmpty && modele.vide == nil)
     }
 }
