@@ -8,15 +8,19 @@ struct HarebourgVue: View {
     @ObservedObject private var lecteur = LecteurEcran.shared
     @ObservedObject private var previews = WindowPreviewService.shared
     @State private var regleDepliee = false
+    private static let hauteurSchema: CGFloat = 48
 
+    /// Les contrôles gardent leur place d'un tour à l'autre : la réponse au-dessus a
+    /// toujours la hauteur de la grille, les lignes passagères viennent dessous.
     var body: some View {
-        if let estimation = aide.estimation {
-            visee(estimation)
-            details(estimation)
-        } else if previews.authorized {
-            attente
+        // Sans lecture possible, rien à réserver : pas de blanc au-dessus des contrôles.
+        if previews.authorized || aide.estimation != nil {
+            reponse.frame(minHeight: Self.hauteurSchema, alignment: .leading)
         }
+        coups
         aLaMain
+        if let estimation = aide.estimation { details(estimation) }
+        if aide.estimation == nil, previews.authorized { attenteLecture }
         if let tour = aide.tour { regleDuTour(impair: ToursCombat.estImpair(tour)) }
     }
 
@@ -50,7 +54,7 @@ struct HarebourgVue: View {
     private func visee(_ estimation: SuiviConfusion.Estimation) -> some View {
         HStack(spacing: Jetons.Espace.deux) {
             SchemaVisee(confusion: estimation.confusion)
-                .frame(width: 96, height: 48)
+                .frame(width: 96, height: Self.hauteurSchema)
             VStack(alignment: .leading, spacing: Jetons.Espace.un) {
                 Text(Self.titre(estimation.confusion.visee))
                     .font(Jetons.Typo.titre.police)
@@ -75,16 +79,24 @@ struct HarebourgVue: View {
                 .foregroundStyle(Color.jeton(\.safranTexte))
                 .fixedSize(horizontal: false, vertical: true)
         }
-        if estimation.enTour, estimation.compteLesCoups {
-            HStack(spacing: Jetons.Espace.un) {
-                Text(L("boss.coups", nombre: estimation.coups, estimation.coups))
-                    .font(Jetons.Typo.petit.police)
-                    .help(L("boss.coups.aide"))
-                Spacer()
-                PetitBouton(icone: "minus", aide: L("boss.coups.moins")) { aide.coup(-1) }
-                    .disabled(estimation.coups == 0)
-                PetitBouton(icone: "plus", aide: L("boss.coups.plus")) { aide.coup(1) }
-            }
+    }
+
+    /// Toujours là, grisé quand les coups ne se comptent pas (hors du tour, ou
+    /// déjà annoncés au canal combat).
+    private var coups: some View {
+        let estimation = aide.estimation
+        let actif = estimation.map { $0.enTour && $0.compteLesCoups } ?? false
+        let nombre = estimation?.coups ?? 0
+        return HStack(spacing: Jetons.Espace.un) {
+            Text(L("boss.coups", nombre: nombre, nombre))
+                .font(Jetons.Typo.petit.police)
+                .foregroundStyle(actif ? Color.jeton(\.encre) : Color.jeton(\.encreTertiaire))
+                .help(L("boss.coups.aide"))
+            Spacer()
+            PetitBouton(icone: "minus", aide: L("boss.coups.moins")) { aide.coup(-1) }
+                .disabled(!actif || nombre == 0)
+            PetitBouton(icone: "plus", aide: L("boss.coups.plus")) { aide.coup(1) }
+                .disabled(!actif)
         }
     }
 
@@ -108,22 +120,32 @@ struct HarebourgVue: View {
 
     // MARK: - Sans estimation
 
+    /// Ce que la grille dit : où viser, ou pourquoi elle ne le dit pas encore.
     @ViewBuilder
-    private var attente: some View {
-        let enCombat = lecteur.persoDevant.flatMap { lecteur.combats[$0] }?.enCombat == true
-        Group {
-            if !enCombat {
-                Text(L("boss.attente.combat"))
-            } else if case .points(let actuels, nil)? = aide.vieLue {
-                Text(L("boss.vie.sansMax", actuels))
-            } else {
-                Text(L("boss.rienLu"))
+    private var reponse: some View {
+        if let estimation = aide.estimation {
+            visee(estimation)
+        } else if previews.authorized {
+            let enCombat = lecteur.persoDevant.flatMap { lecteur.combats[$0] }?.enCombat == true
+            Group {
+                if !enCombat {
+                    Text(L("boss.attente.combat"))
+                } else if case .points(let actuels, nil)? = aide.vieLue {
+                    Text(L("boss.vie.sansMax", actuels))
+                } else {
+                    Text(L("boss.rienLu"))
+                }
             }
+            .font(Jetons.Typo.petit.police)
+            .foregroundStyle(Color.jeton(\.encreSecondaire))
+            .fixedSize(horizontal: false, vertical: true)
         }
-        .font(Jetons.Typo.petit.police)
-        .foregroundStyle(Color.jeton(\.encreSecondaire))
-        .fixedSize(horizontal: false, vertical: true)
-        if enCombat, aide.vieLue == nil {
+    }
+
+    /// Sous les contrôles : l'accès au calibrage, quand le combat n'a rien rendu.
+    @ViewBuilder
+    private var attenteLecture: some View {
+        if lecteur.persoDevant.flatMap({ lecteur.combats[$0] })?.enCombat == true, aide.vieLue == nil {
             Button(L("lecture.ouvrir")) { SettingsWindowController.shared.show(section: .lecture) }
                 .buttonStyle(.bouton(.secondaire, dense: true))
         }

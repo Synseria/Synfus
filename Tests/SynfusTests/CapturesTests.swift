@@ -163,6 +163,35 @@ struct CapturesTests {
         try ecrire(vue, vers: dossier.appending(path: "boss.png"))
     }
 
+    /// Les vues de chaque boss, posées sur la carte du panneau, avec ce que l'aide
+    /// aurait noté à la main : le tour et les lectures ne se forcent pas hors du jeu.
+    @Test("Captures des vues de boss", .enabled(if: dossier != nil))
+    func vuesBoss() throws {
+        let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
+        func panneau(_ nom: String, @ViewBuilder _ vue: () -> some View) throws {
+            let carte = VStack(alignment: .leading, spacing: Jetons.Espace.deux) { vue() }
+                .padding(Jetons.Espace.trois)
+                .frame(width: BossVue.largeur, alignment: .leading)
+                .font(Jetons.Typo.note.police)
+                .surfaceFlottante()
+                .padding(24)
+                .environment(\.colorScheme, Self.schema)
+            try ecrire(carte, vers: dossier.appending(path: "boss-\(nom).png"))
+        }
+        let aide = AideBoss.shared
+        try panneau("harebourg") { HarebourgVue() }
+        try panneau("kimbo-attente") { KimboVue() }
+        aide.noter { session, _ in session.kimbo = .impair }
+        try panneau("kimbo") { KimboVue() }
+        try panneau("toxoliath") { ToxoliathVue() }
+        try panneau("ilyzaelle") { IlyzaelleVue() }
+        aide.noter { session, _ in session.ilyzaelle75 = 1 }
+        try panneau("ilyzaelle-75") { IlyzaelleVue() }
+        aide.noter { session, _ in session.glyphesTalKasha = 2 }
+        try panneau("talkasha") { TalKashaVue() }
+        aide.noter { session, _ in session = SessionBoss() }
+    }
+
     @Test("Capture de la fiche d'un boss", .enabled(if: dossier != nil))
     func ficheBoss() throws {
         let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
