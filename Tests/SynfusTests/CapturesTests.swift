@@ -105,6 +105,37 @@ struct CapturesTests {
         }
     }
 
+    /// Les états de la palette que la doc ne montre pas : coordonnées, perso, variables, listes vides.
+    @Test("Captures des états de la palette", .enabled(if: dossier != nil && ProcessInfo.processInfo.environment["SYNFUS_CAPTURES_ETATS"] != nil))
+    func etatsDeLaPalette() throws {
+        let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
+        try FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)
+        var avecPersos = contexte()
+        avecPersos.perso = "Syn-App"
+        avecPersos.persos = [
+            PersoPalette(slotKey: "1#0", nom: "Syn-App", classe: "Feca", position: avecPersos.position, touche: "⌘1"),
+            PersoPalette(slotKey: "2#0", nom: "Brok", classe: "Iop", position: PositionCarte(x: -31, y: -56, zone: nil), touche: "⌘3"),
+        ]
+        var sansPosition = contexte()
+        sansPosition.position = nil
+        let cas: [(String, ContextePalette, String, FiltrePalette, EtatCarte)] = [
+            ("palette-coordonnees", avecPersos, "-31,-56", .tout, .prete),
+            ("palette-perso", avecPersos, "brok", .tout, .prete),
+            ("palette-variables", avecPersos, "%", .tout, .prete),
+            ("palette-rien", avecPersos, "lancer la session", .lieux, .prete),
+            ("palette-carte-chargement", ContextePalette(), "", .tout, .chargement),
+            ("palette-carte-indisponible", ContextePalette(), "", .tout, .indisponible),
+            ("palette-position-inconnue", sansPosition, "", .tout, .prete),
+        ]
+        for (nom, contexte, requete, filtre, carte) in cas {
+            let vue = PaletteVue(modele: PaletteModele(contexte: contexte, requete: requete, filtre: filtre, carte: carte))
+                .padding(24)
+                .background(Color(red: 0.11, green: 0.11, blue: 0.13))
+                .environment(\.colorScheme, Self.schema)
+            try ecrire(vue, vers: dossier.appending(path: nom + ".png"))
+        }
+    }
+
     @Test("Capture d'une quête ouverte", .enabled(if: dossier != nil))
     func quete() throws {
         let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)

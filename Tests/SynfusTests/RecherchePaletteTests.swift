@@ -182,6 +182,37 @@ struct RecherchePaletteTests {
                 == .copier("/zaap 5,7 ; /travel 6,8"))
     }
 
+    @Test("Des coordonnées tapées seules : une ligne « Aller en », le trajet, sans préfixe")
+    func coordonneesSeules() throws {
+        let depuis = contexte(position: PositionCarte(x: -30, y: -40, zone: nil))
+        for texte in ["6,8", "[6,8]", "6 8", " 6, 8 "] {
+            let entrees = RecherchePalette.entrees(texte, depuis)
+            #expect(entrees.map(\.titre) == [L("palette.allerEn", Coordonnees.texte(6, 8))], "\(texte)")
+            #expect(RecherchePalette.texte(de: try #require(entrees.first).effet, depuis) == "/zaap 5,7 ; /travel 6,8")
+        }
+        #expect(premiere("6,8", contexte(position: nil))?.effet == .trajet(x: 6, y: 8, sousZone: nil))
+        #expect(FrequentationPalette.cle(de: try #require(RecherchePalette.entrees("6,8", depuis).first)) == nil)
+        #expect(RecherchePalette.entrees("6,8", depuis, filtre: .quetes).isEmpty)
+        #expect(!RecherchePalette.entrees("6", depuis).contains { $0.id.hasPrefix("case:") })
+    }
+
+    @Test("Le nom d'un perso : une ligne qui le met devant, sa touche au bout ; l'invitation reste à /invite")
+    func persos() throws {
+        var avecPersos = contexte()
+        avecPersos.persos = [
+            PersoPalette(slotKey: "1#0", nom: "Brok", classe: "Iop", position: PositionCarte(x: -2, y: 0, zone: nil), touche: "⌘1"),
+            PersoPalette(slotKey: "2#0", nom: "Cid", classe: nil, position: nil, touche: "⌘2"),
+        ]
+        let brok = try #require(premiere("brok", avecPersos))
+        #expect(brok.effet == .basculer("1#0") && brok.touche == "⌘1" && brok.classe == "Iop")
+        #expect(brok.sousTitre == "Iop · \(Coordonnees.texte(-2, 0))")
+        #expect(RecherchePalette.entrees("cid", avecPersos).first?.sousTitre == nil)
+        #expect(RecherchePalette.texte(de: brok.effet, avecPersos) == nil)
+        #expect(RecherchePalette.entrees("/invite brok", avecPersos).map(\.effet) == [.copier("/invite Brok")])
+        // Sans perso connecté, rien ne se propose.
+        #expect(!RecherchePalette.entrees("brok", contexte()).contains { $0.effet == .basculer("1#0") })
+    }
+
     @Test("/ liste les commandes ; une commande à argument se complète")
     func commandes() {
         let entrees = RecherchePalette.entrees("/", contexte())
@@ -195,6 +226,23 @@ struct RecherchePaletteTests {
     func variables() {
         #expect(RecherchePalette.entrees("%", contexte()).count == VariableJeu.allCases.count)
         #expect(RecherchePalette.entrees("%vie", contexte()).map(\.titre) == ["%vie%", "%viemax%", "%viep%"])
+    }
+
+    @Test("% montre à droite ce que le jeu écrirait, pour ce que Synfus lit ; ↵ copie toujours la variable")
+    func valeursDesVariables() throws {
+        var lu = contexte(position: PositionCarte(x: -2, y: 0, zone: "Amakna (Pâturages)"))
+        lu.perso = "Syn-App"
+        let valeurs = Dictionary(uniqueKeysWithValues: RecherchePalette.entrees("%", lu).map { ($0.titre, $0.detail) })
+        #expect(valeurs["%pos%"] == "[-2,0]" && valeurs["%zone%"] == "Amakna" && valeurs["%souszone%"] == "Pâturages")
+        #expect(valeurs["%nom%"] == "Syn-App")
+        #expect(valeurs["%vie%"] == .some(nil) && valeurs["%guilde%"] == .some(nil))
+        let pos = try #require(RecherchePalette.entrees("%pos", lu).first)
+        #expect(pos.effet == .copier("%pos%"))
+        // Une zone lue sans parenthèse : la zone seule, pas de sous-zone.
+        let tronquee = contexte(position: PositionCarte(x: 1, y: 1, zone: "Amakn"))
+        #expect(RecherchePalette.entrees("%souszone", tronquee).first?.detail == nil)
+        #expect(RecherchePalette.entrees("%zone%", tronquee).first?.detail == "Amakn")
+        #expect(RecherchePalette.entrees("%pos", contexte(position: nil)).first?.detail == nil)
     }
 
     @Test("/invite : toute l'équipe d'abord, puis chacun")
@@ -223,7 +271,7 @@ struct RecherchePaletteTests {
         #expect(recents.count == RecherchePalette.nombreDeRecents)
         var avecRecents = contexte()
         avecRecents.recents = ["/travel 12,34"]
-        #expect(premiere("12,34", avecRecents)?.effet == .copier("/travel 12,34"))
+        #expect(premiere("travel", avecRecents)?.effet == .copier("/travel 12,34"))
     }
 
     // MARK: - Filtres et tris

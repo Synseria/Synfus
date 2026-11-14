@@ -36,6 +36,15 @@ final class PaletteModele: ObservableObject {
     /// La famille montrée, que Tab fait défiler.
     @Published private(set) var filtre: FiltrePalette = .tout
     @Published private(set) var tri: TriPalette = .auto
+    /// Ce que « Tout » répondrait à la même recherche, demandé seulement quand la liste d'un filtre
+    /// est vide et redemandé à chaque rendu : la clé dit tout ce dont il dépend.
+    private var ailleursGarde = DernierCalcul<CleAilleurs, Int>()
+
+    private struct CleAilleurs: Equatable {
+        let requete: String
+        let tri: TriPalette
+        let index: ObjectIdentifier
+    }
     @Published var selection = 0
     /// L'entrée dont on écrit l'étiquette, et le texte en cours.
     @Published private(set) var edition: EntreePalette?
@@ -56,12 +65,15 @@ final class PaletteModele: ObservableObject {
     /// Le contexte imposé (tests, captures de la documentation) ; `nil` : celui
     /// du moment, relu à chaque ouverture.
     private let contexteImpose: ContextePalette?
+    /// L'état de la carte imposé avec le contexte ; `nil` : celui de `CarteStore`.
+    private let carteImposee: EtatCarte?
 
     /// La carte et les quêtes arrivent après le lancement, lues ou
     /// téléchargées en tâche de fond : la recherche en cours les reçoit dès
     /// qu'elles sont là, et leurs textes se normalisent d'avance.
     private init() {
         contexteImpose = nil
+        carteImposee = nil
         QuetesStore.shared.$quetes
             .dropFirst()
             .sink { quetes in
@@ -114,8 +126,9 @@ final class PaletteModele: ObservableObject {
     }
 
     /// Une palette hors de l'app, sur un contexte donné.
-    init(contexte: ContextePalette, requete: String = "", filtre: FiltrePalette = .tout) {
+    init(contexte: ContextePalette, requete: String = "", filtre: FiltrePalette = .tout, carte: EtatCarte = .prete) {
         contexteImpose = contexte
+        carteImposee = carte
         self.contexte = contexte
         index = IndexPalette(contexte)
         self.requete = requete
@@ -127,8 +140,36 @@ final class PaletteModele: ObservableObject {
         requete.trimmingCharacters(in: .whitespaces).isEmpty && filtre == .tout
     }
 
+    /// Pourquoi la liste est vide ; `nil` quand elle ne l'est pas.
+    var vide: VidePalette? {
+        guard entrees.isEmpty else { return nil }
+        let ailleurs = filtre != .tout && !requete.trimmingCharacters(in: .whitespaces).isEmpty
+            ? ailleursGarde.valeur(pour: CleAilleurs(requete: requete, tri: tri, index: ObjectIdentifier(index))) {
+                RecherchePalette.entrees(requete, index, filtre: .tout, tri: tri).count
+            } : 0
+        return VidePalette.de(
+            carte: carteImposee ?? CarteStore.shared.etat,
+            requeteVide: requete.trimmingCharacters(in: .whitespaces).isEmpty, filtre: filtre,
+            positionConnue: positionConnue, lectureAllumee: Preferences.shared.lirePosition,
+            quetesEnChargement: QuetesStore.shared.chargement && QuetesStore.shared.quetes == nil, ailleurs: ailleurs)
+    }
+
     /// Sans elle, le filtre « Ici » n'a rien à montrer.
     var positionConnue: Bool { contexte.position != nil }
+
+    /// Pourquoi la position manque, s'il lui manque quelque chose.
+    var causeOrigine: OriginePalette {
+        .de(positionConnue: positionConnue, lectureAllumee: Preferences.shared.lirePosition,
+            autorise: WindowPreviewService.shared.authorized)
+    }
+
+    /// La position du perso devant, lue tout de suite ; les distances suivent.
+    func lirePosition() {
+        Task {
+            await LecteurEcran.shared.lirePositionDevant()
+            rafraichir()
+        }
+    }
 
     /// D'où partent distances et trajets : le dernier perso lu devant, à
     /// l'ouverture de la palette.
@@ -198,9 +239,18 @@ final class PaletteModele: ObservableObject {
     /// arrive sur sa première carte, l'entrée d'un donjon) ou la replie.
     func valider() {
         if edition != nil { return validerEtiquette() }
-        guard entrees.indices.contains(selection) else { return NSSound.beep() }
+        guard entrees.indices.contains(selection) else { return validerVide() }
         if surLaFiche, let action = cartes.valide(carte) { return agir(action) }
         executer(entrees[selection])
+    }
+
+    /// ↵ sur une liste vide : le geste que la cause propose, sinon rien.
+    private func validerVide() {
+        switch vide?.entree {
+        case .reessayer: CarteStore.shared.reessayer()
+        case .toutVoir: choisir(.tout)
+        case nil: NSSound.beep()
+        }
     }
 
     /// Tab : compléter une commande, sinon passer au filtre suivant (⇧Tab :
@@ -222,8 +272,11 @@ final class PaletteModele: ObservableObject {
     }
 
     /// ⌘T : auto, proximité, ordre alphabétique, type — et le choix est gardé.
-    func triSuivant() {
-        tri = tri.suivant
+    func triSuivant() { choisirTri(tri.suivant) }
+
+    /// Un tri, par le menu du bouton ou par ⌘T.
+    func choisirTri(_ nouveau: TriPalette) {
+        tri = nouveau
         if contexteImpose == nil { Preferences.shared.paletteTri = tri }
         selection = 0
         recalculer()
@@ -258,6 +311,12 @@ final class PaletteModele: ObservableObject {
     /// Ce qu'Entrée copiera pour cette entrée, trajet calculé depuis le perso devant.
     func texteACopier(_ entree: EntreePalette) -> String? {
         RecherchePalette.texte(de: entree.effet, contexte)
+    }
+
+    /// Le texte que ↵ copiera pour la sélection, à lire avant de coller ; `nil` quand ↵ fait autre chose.
+    var texteDeLaSelection: String? {
+        guard entrees.indices.contains(selection), entrees[selection].id != deplie else { return nil }
+        return texteACopier(entrees[selection])
     }
 
     /// Un clic : la ligne choisie, puis son effet. Ce qui mène au jeu compte
@@ -295,6 +354,10 @@ final class PaletteModele: ObservableObject {
         case .action(let action):
             PalettePanel.shared.fermer()
             faire(action)
+        case .basculer(let slotKey):
+            PalettePanel.shared.fermer()
+            guard let client = WindowManager.shared.effectif.first(where: { $0.slotKey == slotKey }) else { return }
+            WindowManager.shared.focus(client)
         }
     }
 
@@ -433,6 +496,11 @@ final class PaletteModele: ObservableObject {
         contexte.zaapDuJeu = prefs.zaapDuJeu
         contexte.intercalees = prefs.commandesIntercalees
         contexte.invitationEquipe = InvitationComposer.groupee(format: prefs.inviteFormat, noms: candidats)
+        contexte.persos = manager.effectif.enumerated().map { rang, client in
+            PersoPalette(slotKey: client.slotKey, nom: client.name, classe: client.characterClass,
+                         position: LecteurEcran.shared.positions[client.name],
+                         touche: BarView.toucheDuPerso(index: rang, raccourcis: prefs.hotKeys))
+        }
         contexte.invitations = candidats.map { ($0, InvitationComposer.commande(format: prefs.inviteFormat, nom: $0)) }
         return contexte
     }

@@ -23,6 +23,17 @@ struct ItineraireZaapTests {
         }
     }
 
+    @Test("Une case tapée seule : les mêmes formes, sans commande, sur une ligne")
+    func caseTapee() {
+        for texte in ["-2,0", "-2, 0", "-2 0", "[-2,0]", "  -2,0\n"] {
+            let cible = ItineraireZaap.caseTapee(texte)
+            #expect(cible?.x == -2 && cible?.y == 0, "\(texte)")
+        }
+        for texte in ["", "-2", "-2,0 merci", "-2,0\n3,4", "999,0", "/travel -2,0", "1,2,3"] {
+            #expect(ItineraireZaap.caseTapee(texte) == nil, "\(texte)")
+        }
+    }
+
     @Test("Tout autre texte est ignoré")
     func autresTextes() {
         for texte in ["", "-2,0", "/invite Brok", "/zaap -2,0 ; /travel 5,7", "/Travel -2,0",

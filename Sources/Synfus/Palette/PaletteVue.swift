@@ -7,11 +7,13 @@ struct PaletteVue: View {
     @ObservedObject var modele = PaletteModele.shared
     @ObservedObject private var quetes = QuetesStore.shared
     @ObservedObject private var almanax = AlmanaxStore.shared
+    @ObservedObject private var carte = CarteStore.shared
     /// Le détail d'un donjon arrive après l'ouverture : ↵ et les cartes de sa fiche changent.
     @ObservedObject private var donjons = DonjonsStore.shared
     @FocusState private var champ: Champ?
     @State private var filtreSurvole: FiltrePalette?
     @State private var prefixeSurvole: String?
+    @State private var triSurvole = false
 
     private enum Champ { case recherche, etiquette }
 
@@ -43,14 +45,7 @@ struct PaletteVue: View {
                 .font(Jetons.Typo.titre.police)
                 .focused($champ, equals: .recherche)
                 .help(L("raccourcis.palette.aide"))
-            // D'où partent distances et trajets : le dernier perso lu devant,
-            // pas forcément celui qu'on croit quand on joue plusieurs comptes.
-            Label(modele.origine, systemImage: "location")
-                .font(Jetons.Typo.petit.police)
-                .foregroundStyle(Color.jeton(\.encreSecondaire))
-                .lineLimit(1)
-                .fixedSize()
-                .help(L("palette.depuis.aide"))
+            origine
             if let mode {
                 Text(mode)
                     .font(Jetons.Typo.raccourci.police)
@@ -62,6 +57,43 @@ struct PaletteVue: View {
         }
         .padding(.horizontal, Jetons.Espace.quatre)
         .frame(height: Jetons.Taille.rangeePalette + Jetons.Espace.quatre)
+    }
+
+    /// D'où partent distances et trajets : le dernier perso lu devant, pas forcément celui qu'on
+    /// croit quand on joue plusieurs comptes. Position inconnue : le geste qui la rend.
+    @ViewBuilder
+    private var origine: some View {
+        switch modele.causeOrigine {
+        case .connue:
+            Label(modele.origine, systemImage: "location")
+                .font(Jetons.Typo.petit.police)
+                .foregroundStyle(Color.jeton(\.encreSecondaire))
+                .lineLimit(1)
+                .fixedSize()
+                .help(L("palette.depuis.aide"))
+        case .lectureEteinte:
+            boutonOrigine(L("palette.origine.lire"), aide: L("palette.origine.lire.aide")) {
+                SettingsWindowController.shared.show(section: .lecture)
+            }
+        case .sansAutorisation:
+            boutonOrigine(L("palette.origine.autoriser"), aide: L("palette.origine.autoriser.aide")) {
+                WindowPreviewService.shared.requestAuthorization()
+            }
+        case .inconnue:
+            boutonOrigine(L("palette.depuis.inconnue"), aide: L("palette.origine.inconnue.aide")) { modele.lirePosition() }
+        }
+    }
+
+    private func boutonOrigine(_ titre: String, aide: String, _ geste: @escaping () -> Void) -> some View {
+        Button(action: geste) {
+            Label(titre, systemImage: "location")
+                .font(Jetons.Typo.petit.police)
+                .lineLimit(1)
+                .fixedSize()
+        }
+        .buttonStyle(.bouton(.tertiaire, dense: true))
+        .focusable(false)
+        .help(aide)
     }
 
     /// Les familles que Tab fait défiler, les préfixes des commandes et des
@@ -92,18 +124,36 @@ struct PaletteVue: View {
             prefixe("/", L("palette.touche.commandes"))
             prefixe("%", L("palette.touche.variables"))
             Spacer(minLength: Jetons.Espace.deux)
-            Label(modele.tri.titre, systemImage: "arrow.up.arrow.down")
-                .font(Jetons.Typo.petit.police)
-                .foregroundStyle(Color.jeton(\.encreSecondaire))
-                .lineLimit(1)
-                .fixedSize()
-                .contentShape(Rectangle())
-                .onTapGesture { modele.triSuivant() }
-                .help(L("palette.tri.aide"))
-                .accessibilityAddTraits(.isButton)
+            tri
+            ToucheRaccourci("⌘T")
         }
         .padding(.horizontal, Jetons.Espace.quatre)
         .padding(.bottom, Jetons.Espace.deux)
+    }
+
+    /// Le tri courant, en capsule comme les préfixes : un clic ouvre les quatre, ⌘T passe au suivant.
+    private var tri: some View {
+        let etat = EtatVisuel(survole: triSurvole)
+        return Menu {
+            Picker(L("palette.tri.titre"), selection: Binding(get: { modele.tri }, set: { modele.choisirTri($0) })) {
+                ForEach(TriPalette.allCases, id: \.self) { Text($0.titre).tag($0) }
+            }
+            .pickerStyle(.inline)
+            .labelsHidden()
+        } label: {
+            Label(modele.tri.titre, systemImage: "arrow.up.arrow.down")
+                .font(Jetons.Typo.petit.police)
+                .foregroundStyle(etat.encreSecondaire)
+                .padding(.horizontal, Jetons.Espace.deux)
+                .frame(height: Jetons.Taille.cibleMin)
+                .fondEtat(etat, rayon: Jetons.Rayon.capsule)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .focusable(false)
+        .onHover { triSurvole = $0 }
+        .help(L("palette.tri.aide"))
     }
 
     /// Un préfixe de la recherche, dessiné comme un filtre : un clic le pose
@@ -145,22 +195,8 @@ struct PaletteVue: View {
 
     @ViewBuilder
     private var resultats: some View {
-        if modele.entrees.isEmpty {
-            let sansLecture = modele.filtre == .ici && !modele.positionConnue && !Preferences.shared.lirePosition
-            VStack(spacing: Jetons.Espace.deux) {
-                Text(quetes.chargement && quetes.quetes == nil ? L("palette.quetes.chargement")
-                     : modele.filtre == .ici && !modele.positionConnue
-                        ? (sansLecture ? L("palette.ici.sansPosition") : L("palette.ici.pasEncore"))
-                        : L("palette.aucun"))
-                    .font(Jetons.Typo.corps.police)
-                    .foregroundStyle(Color.jeton(\.encreSecondaire))
-                    .multilineTextAlignment(.center)
-                if sansLecture {
-                    Button(L("lecture.ouvrir")) { SettingsWindowController.shared.show(section: .lecture) }
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 120)
+        if let vide = modele.vide {
+            videVue(vide)
         } else {
             ScrollViewReader { defilement in
                 ScrollView {
@@ -186,6 +222,49 @@ struct PaletteVue: View {
                 }
             }
         }
+    }
+
+    /// La liste vide dit pourquoi, et propose ce qui répare.
+    private func videVue(_ vide: VidePalette) -> some View {
+        VStack(spacing: Jetons.Espace.deux) {
+            switch vide {
+            case .carteEnChargement:
+                ProgressView().controlSize(.small)
+                texteVide(L("palette.carte.chargement"))
+            case .carteIndisponible:
+                texteVide(L("palette.carte.indisponible"))
+                Button(L("palette.carte.reessayer")) { carte.reessayer() }
+                    .buttonStyle(.bouton(.secondaire))
+            case .quetesEnChargement:
+                texteVide(L("palette.quetes.chargement"))
+            case .iciSansLecture:
+                texteVide(L("palette.ici.sansPosition"))
+            case .iciPasEncoreLu:
+                texteVide(L("palette.ici.pasEncore"))
+            case .rienDansLeFiltre(let filtre, let ailleurs):
+                texteVide(L("palette.vide.filtre", filtre.titre))
+                Button { modele.choisir(.tout) } label: {
+                    Text(L("palette.vide.ailleurs", nombre: ailleurs, ailleurs, FiltrePalette.tout.titre))
+                        .font(Jetons.Typo.corps.police)
+                        .foregroundStyle(EtatVisuel.choisi.encre)
+                        .padding(.horizontal, Jetons.Espace.trois)
+                        .frame(height: Jetons.Taille.rangee)
+                        .fondEtat(.choisi)
+                }
+                .buttonStyle(.plain)
+            case .aucun:
+                texteVide(L("palette.aucun"))
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 120)
+    }
+
+    private func texteVide(_ texte: String) -> some View {
+        Text(texte)
+            .font(Jetons.Typo.corps.police)
+            .foregroundStyle(Color.jeton(\.encreSecondaire))
+            .multilineTextAlignment(.center)
     }
 
     /// Les dernières copies, en pastilles : un clic recopie.
@@ -286,13 +365,30 @@ struct PaletteVue: View {
             .frame(height: Jetons.Taille.rangeePalette + Jetons.Espace.un)
         } else {
             HStack(spacing: Jetons.Espace.trois) {
-                aide("↵", entree)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                aide("⌘E", L("palette.touche.etiquette"))
-                aide("⌘D", L("palette.touche.favori"))
-                Spacer()
+                if let vide = modele.vide {
+                    switch vide.entree {
+                    case .reessayer: aide("↵", L("palette.carte.reessayer"))
+                    case .toutVoir: aide("↵", FiltrePalette.tout.titre)
+                    case nil: EmptyView()
+                    }
+                } else {
+                    aide("↵", entree)
+                        .layoutPriority(1)
+                    if let texte = modele.texteDeLaSelection {
+                        Text(texte)
+                            .font(Jetons.Typo.codeInterface.police)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                            .help(texte)
+                    }
+                    aide("⌘E", L("palette.touche.etiquette"))
+                        .layoutPriority(1)
+                    aide("⌘D", L("palette.touche.favori"))
+                        .layoutPriority(1)
+                }
+                Spacer(minLength: 0)
                 aide("esc", L("palette.touche.fermer"))
+                    .layoutPriority(1)
             }
             .font(Jetons.Typo.petit.police)
             .foregroundStyle(Color.jeton(\.encreSecondaire))
@@ -312,6 +408,7 @@ struct PaletteVue: View {
         case .copier, .trajet: return L("palette.touche.copier")
         case .completer: return L("palette.touche.completer")
         case .action: return L("palette.touche.faire")
+        case .basculer: return L("palette.touche.basculer")
         case .ouvrirQuete: return L("palette.touche.ouvrir")
         case .ouTrouver: return L("palette.touche.ouTrouver")
         case .donjon: return L("palette.touche.deplier")
@@ -395,10 +492,16 @@ private struct LigneResultat: View {
 
     var body: some View {
         HStack(spacing: Jetons.Espace.trois) {
-            PictogrammeLieu(gfx: entree.pictogramme) {
-                Image(systemName: icone)
-                    .font(Jetons.Typo.corps.police)
-                    .foregroundStyle(choisie ? Color.jeton(\.primaireEncre) : Color.jeton(\.encreSecondaire))
+            Group {
+                if case .basculer = entree.effet {
+                    EmblemeClasse(classe: entree.classe, contour: Color.jeton(\.filet))
+                } else {
+                    PictogrammeLieu(gfx: entree.pictogramme) {
+                        Image(systemName: icone)
+                            .font(Jetons.Typo.corps.police)
+                            .foregroundStyle(choisie ? Color.jeton(\.primaireEncre) : Color.jeton(\.encreSecondaire))
+                    }
+                }
             }
             .frame(width: Jetons.Taille.cibleMin, height: Jetons.Taille.cibleMin)
             .frame(width: Jetons.Taille.rangee, height: Jetons.Taille.rangee)
@@ -434,6 +537,7 @@ private struct LigneResultat: View {
                     .foregroundStyle(etat.encreSecondaire)
                     .lineLimit(1)
             }
+            if let touche = entree.touche { ToucheRaccourci(touche) }
             if let carte = entree.carte { MiniatureCarte(carte: carte, taille: Self.vignette) }
             if entree.effet.sePlie {
                 Image(systemName: deplie ? "chevron.down" : "chevron.right")
