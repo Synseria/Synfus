@@ -80,6 +80,18 @@ struct PanneauQuetesTests {
         #expect(MenuQuetes.nouvelles(reconnues, epinglees: [18, 42]) == 1)
     }
 
+    @Test("« Tout épingler » : en tête du suivi dès deux quêtes à épingler, jamais pour une seule")
+    func menuToutEpingler() {
+        let reconnues = [SuiviQuetes.Reconnue(id: 7, etape: 2), SuiviQuetes.Reconnue(id: 9, etape: nil),
+                         SuiviQuetes.Reconnue(id: 18, etape: nil)]
+        #expect(MenuQuetes.aEpingler(reconnues, epinglees: [9]).map(\.id) == [7, 18])
+        let deux = MenuQuetes.elements(epinglees: [9], montree: 9, reconnues: reconnues, etat: .lu, coches: 0, actives: [], nom: nom)
+        let tete = deux.drop { $0 != .titre(L("quete.menu.suivi")) }.dropFirst().first
+        #expect(tete == .toutEpingler)
+        let une = MenuQuetes.elements(epinglees: [9, 18], montree: 9, reconnues: reconnues, etat: .lu, coches: 0, actives: [], nom: nom)
+        #expect(!une.contains(.toutEpingler))
+    }
+
     /// Le séparateur, les options, puis le séparateur et « Fermer le panneau », en pied du menu.
     private let pied = 1 + MenuQuetes.Option.affichage.count + 2
 

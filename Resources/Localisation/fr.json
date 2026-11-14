@@ -698,6 +698,7 @@
   "quete.tournee": "Copier le trajet du n° 1",
   "quete.tournee.aide": "Ces objectifs sont ouverts ensemble dans le suivi du jeu, à faire dans n'importe quel ordre : numérotés dans l'ordre le plus court depuis le personnage, zaaps compris.",
   "quete.toutCopier": "Tout copier",
+  "quete.toutEpingler": "Tout épingler",
   "quete.vide.etape": "étape %lld",
   "quete.vide.suivi": "Dans ton suivi du jeu",
   "quetes.aide": "Une quête s'ouvre dans un panneau transparent au-dessus du jeu : ressources et trajets d'un clic.",

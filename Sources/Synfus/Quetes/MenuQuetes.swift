@@ -16,6 +16,8 @@ enum MenuQuetes {
         case toutDesepingler
         /// Une quête qui commence sur la case du perso : la choisir l'épingle.
         case ici(id: Int, titre: String, epinglee: Bool)
+        /// Épingler d'un coup les quêtes du suivi que le panneau n'a pas.
+        case toutEpingler
         case lireSuivi(enCours: Bool)
         /// Une quête du suivi : la choisir l'épingle et la montre à l'étape lue.
         case reconnue(SuiviQuetes.Reconnue, titre: String, epinglee: Bool)
@@ -78,8 +80,9 @@ enum MenuQuetes {
             }
             if !ici.pnjs.isEmpty { elements.append(.message(L("quete.menu.iciPNJ", ici.pnjs.joined(separator: ", ")))) }
         }
-        elements += [.separateur, .titre(L("quete.menu.suivi")), .lireSuivi(enCours: etat == .enCours),
-                     .option(.cocherSuivi, actif: actives.contains(.cocherSuivi))]
+        elements += [.separateur, .titre(L("quete.menu.suivi"))]
+        if aEpingler(reconnues, epinglees: epinglees).count > 1 { elements.append(.toutEpingler) }
+        elements += [.lireSuivi(enCours: etat == .enCours), .option(.cocherSuivi, actif: actives.contains(.cocherSuivi))]
         elements += reconnues.map { reconnue in
             let titre = reconnue.etape.map { L("quete.menu.reconnueEtape", nom(reconnue.id), $0 + 1) } ?? nom(reconnue.id)
             return .reconnue(reconnue, titre: titre, epinglee: epinglees.contains(reconnue.id))
@@ -92,7 +95,12 @@ enum MenuQuetes {
     /// Les quêtes que le suivi montre et que le panneau n'a pas encore : ce
     /// que l'en-tête signale sur le menu.
     static func nouvelles(_ reconnues: [SuiviQuetes.Reconnue], epinglees: [Int]) -> Int {
-        reconnues.count { !epinglees.contains($0.id) }
+        aEpingler(reconnues, epinglees: epinglees).count
+    }
+
+    /// Les quêtes du suivi que le panneau n'a pas encore, dans l'ordre du suivi.
+    static func aEpingler(_ reconnues: [SuiviQuetes.Reconnue], epinglees: [Int]) -> [SuiviQuetes.Reconnue] {
+        reconnues.filter { !epinglees.contains($0.id) }
     }
 
     private static func message(_ etat: LectureSuivi.Etat, reconnues: [SuiviQuetes.Reconnue]) -> String? {
