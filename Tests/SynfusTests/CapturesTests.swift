@@ -163,6 +163,23 @@ struct CapturesTests {
         try ecrire(vue, vers: dossier.appending(path: "boss.png"))
     }
 
+    @Test("Capture de la fiche d'un boss", .enabled(if: dossier != nil))
+    func ficheBoss() throws {
+        let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
+        let json = """
+        {"grades":[{"grade":5,"level":200,"lifePoints":12000,"actionPoints":12,"movementPoints":6,
+         "reductionNeutral":20,"reductionEarth":35,"reductionFire":-10,"reductionWater":-5,"reductionAir":40}]}
+        """
+        let fiche = try #require(FicheCombat(try JSONDecoder().decode(FicheCombat.MonstreAPI.self, from: Data(json.utf8))))
+        let vue = FicheCombatVue(fiche: fiche)
+            .padding(Jetons.Espace.trois)
+            .frame(width: BossVue.largeur)
+            .surfaceFlottante()
+            .padding(24)
+            .environment(\.colorScheme, Self.schema)
+        try ecrire(vue, vers: dossier.appending(path: "boss-fiche.png"))
+    }
+
     @Test("Captures des réglages", .enabled(if: dossier != nil))
     func reglages() throws {
         let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
