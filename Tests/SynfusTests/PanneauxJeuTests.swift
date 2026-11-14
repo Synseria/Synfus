@@ -25,9 +25,16 @@ struct PanneauxJeuTests {
         #expect(!PanneauxJeu.surUnEcran(CGPoint(x: -41, y: 450), ecrans: [principal]))
     }
 
-    @Test("Un panneau se tient par son coin haut gauche")
-    func poignee() {
-        let cadre = CGRect(x: 100, y: 200, width: 300, height: 400)
-        #expect(PanneauxJeu.poignee(de: cadre) == CGPoint(x: 100, y: 600))
+    @Test("Un panneau poussé à moitié hors de l'écran par la gauche, l'écran branché, ne bouge pas")
+    func moitieHorsEcran() {
+        let cadre = CGRect(x: -180, y: 300, width: 360, height: 400)
+        #expect(PanneauxJeu.bandeauAtteignable(de: cadre, ecrans: [principal]))
+    }
+
+    @Test("Un panneau resté sur un écran débranché est rattrapé, un panneau à peine accroché non")
+    func bandeauPerdu() {
+        #expect(!PanneauxJeu.bandeauAtteignable(de: CGRect(x: 2000, y: 300, width: 360, height: 400), ecrans: [principal]))
+        #expect(!PanneauxJeu.bandeauAtteignable(de: CGRect(x: -350, y: 300, width: 360, height: 400), ecrans: [principal]))
+        #expect(PanneauxJeu.bandeauAtteignable(de: CGRect(x: 1300, y: 300, width: 360, height: 400), ecrans: [principal, second]))
     }
 }

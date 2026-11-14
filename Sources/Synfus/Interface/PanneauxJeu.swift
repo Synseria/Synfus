@@ -29,12 +29,12 @@ enum PanneauxJeu {
     /// gauche de son cadre, sur la zone visible de l'écran principal et pour sa taille.
     typealias PlaceParDefaut = (_ zoneVisible: NSRect, _ taille: NSSize) -> NSPoint
 
-    /// La marge dont un point peut déborder d'un écran et compter encore dessus : la poignée d'un
-    /// panneau tenu au bord reste saisissable.
+    /// La marge dont un point peut déborder d'un écran et compter encore dessus, et la taille du
+    /// bandeau d'un panneau qui doit rester sur un écran pour rester saisissable.
     nonisolated private static let margeEcran: CGFloat = 40
 
-    /// Un point est-il sur l'un des écrans ? La règle de la barre — qui évite de restaurer sa position
-    /// sur un écran débranché depuis — et celle de ses panneaux.
+    /// Un point est-il sur l'un des écrans ? La règle de la barre, qui évite de restaurer sa position
+    /// sur un écran débranché depuis.
     nonisolated static func surUnEcran(_ point: CGPoint, ecrans: [CGRect]) -> Bool {
         ecrans.contains { $0.insetBy(dx: -margeEcran, dy: -margeEcran).contains(point) }
     }
@@ -43,8 +43,15 @@ enum PanneauxJeu {
         surUnEcran(point, ecrans: NSScreen.screens.map(\.frame))
     }
 
-    /// Le coin par lequel se tient un panneau : le haut gauche, où est son en-tête.
-    nonisolated static func poignee(de cadre: NSRect) -> CGPoint { CGPoint(x: cadre.minX, y: cadre.maxY) }
+    /// Un panneau se tient par son bandeau, en haut : il est atteignable tant qu'une part de ce
+    /// bandeau — au moins la marge de large — reste sur un écran, même poussé à moitié hors de l'autre.
+    nonisolated static func bandeauAtteignable(de cadre: NSRect, ecrans: [CGRect]) -> Bool {
+        let bandeau = CGRect(x: cadre.minX, y: cadre.maxY - margeEcran, width: cadre.width, height: margeEcran)
+        return ecrans.contains {
+            let commun = $0.intersection(bandeau)
+            return !commun.isNull && commun.width >= margeEcran && commun.height >= margeEcran / 2
+        }
+    }
 
     /// Pose le panneau à sa place d'origine.
     static func placer(_ panel: NSPanel, parDefaut: PlaceParDefaut) {
@@ -52,10 +59,12 @@ enum PanneauxJeu {
         panel.setFrameTopLeftPoint(parDefaut(zone, panel.frame.size))
     }
 
-    /// Un panneau qui montre sa poignée sur aucun écran — l'écran où il était est débranché — reprend
+    /// Un panneau dont le bandeau n'est sur aucun écran — l'écran où il était est débranché — reprend
     /// sa place d'origine ; un autre reste où il est.
     static func rattraper(_ panel: NSPanel, parDefaut: PlaceParDefaut) {
-        if !surUnEcran(poignee(de: panel.frame)) { placer(panel, parDefaut: parDefaut) }
+        if !bandeauAtteignable(de: panel.frame, ecrans: NSScreen.screens.map(\.frame)) {
+            placer(panel, parDefaut: parDefaut)
+        }
     }
 
     /// Montre ou cache un panneau voulu `ouvert` : devant Dofus (`visible`),
