@@ -306,6 +306,8 @@ struct PreferencesTests {
         #expect(prefs.cycleNext == HotKey.defaultCycleNext)
         #expect(prefs.toggleBar == nil)
         #expect(prefs.inviteHotKey == HotKey.defaultInvite)
+        #expect(prefs.quetesHotKey == HotKey.defaultQuetes && prefs.chasseHotKey == HotKey.defaultChasse
+                && prefs.bossHotKey == HotKey.defaultBoss)
     }
 
     @Test("Les équipes et l'invitation se relisent après un redémarrage")
@@ -478,7 +480,7 @@ struct PreferencesTests {
      "boutonsMasques":["quetes","boss","chasse","palette"],"characterOrder":["Aeryn","Nova"],
      "chasseHotKey":{"keyCode":5,"modifiers":2048},
      "cycleNext":{"keyCode":122,"modifiers":0},"cyclePrevious":{"keyCode":120,"modifiers":0},
-     "defaultsVersion":8,"equipeSuivanteHotKey":{"keyCode":17,"modifiers":256},
+     "defaultsVersion":9,"equipeSuivanteHotKey":{"keyCode":17,"modifiers":256},
      "etiquettes":{"1:-78,-41":"Fri 1"},"lieuxFavoris":["lieu:2738"],"pnjsFavoris":["pnj:6309"],
      "paletteHotKey":{"keyCode":47,"modifiers":256},"paletteRecents":["/zaap 5,7"],"paletteTri":"type",
      "paletteFrequentation":{"lieu:2738":{"dernier":12,"fois":3}},"quetesEpinglees":[18,42],"quetesEtape":{"18":2},
@@ -665,6 +667,8 @@ struct PreferencesTests {
         prefs.quetesCochesLues = ["18": [104]]
         prefs.quetesRessourcesCochees = ["18": [1747]]
         prefs.chasseHotKey = HotKey(keyCode: 5, modifiers: 2048)
+        prefs.quetesHotKey = nil
+        prefs.bossHotKey = nil
         prefs.bossChoisi = .special(.kimbo)
         prefs.nomsBossChoisi = ["fr": "Bouftou Royal"]
         prefs.boutonsMasques = [.palette, .chasse, .boss, .quetes]
@@ -684,7 +688,7 @@ struct PreferencesTests {
         for chemin: ReferenceWritableKeyPath<Preferences, HotKey?> in [
             \.cycleNext, \.cyclePrevious, \.toggleAutoFocus, \.toggleBar, \.previewHotKey,
             \.arrangeHotKey, \.sessionHotKey, \.equipeSuivanteHotKey, \.inviteHotKey, \.zaapHotKey, \.paletteHotKey,
-            \.chasseHotKey, \.bossHotKey,
+            \.chasseHotKey, \.bossHotKey, \.quetesHotKey,
         ] {
             prefs[keyPath: chemin] = nil
         }
@@ -694,7 +698,7 @@ struct PreferencesTests {
         {"advanceModifier":"fn","advanceOnClick":false,"attentionAction":"highlight",
          "autoCenterBar":true,"barOnlyWithDofus":false,"panneauxSeulementDofus":true,"barVisible":true,"bossChoisi":"harebourg",
          "boutonsMasques":[],"characterOrder":[],
-         "defaultsVersion":8,"equipes":[],"etiquettes":{},"hotKeys":[null],"inviteFormat":"/invite %nom","inviteGroupee":false,
+         "defaultsVersion":9,"equipes":[],"etiquettes":{},"hotKeys":[null],"inviteFormat":"/invite %nom","inviteGroupee":false,
          "killFrozenClients":true,"lireCombat":false,"lireCombatDerriere":false,"lirePosition":false,"menuBarIcon":"logo","iconeApp":{"motif":"oeuf","fond":"transparent"},"apparence":"auto","couleurDeLApp":"jade",
          "reduirePersosInactifs":false,"showClasses":true,"showNumbers":true,"showPreviewOnHover":false,
          "signalerBascule":true,"zaapAuto":false,
@@ -1077,5 +1081,35 @@ extension PreferencesTests {
         let prefs = Preferences.forTesting(store: StockageMemoire([Preferences.key: Data(sauvegarde.utf8)]))
         #expect(prefs.boutonsMasques == [.chasse])
         #expect(prefs.characterOrder == ["Aeryn"])
+    }
+}
+
+/// Les trois panneaux reçoivent ⌥⌘Q, ⌥⌘C et ⌥⌘B en génération 9.
+extension PreferencesTests {
+    private func relue(_ json: String) -> Preferences {
+        Preferences.forTesting(store: StockageMemoire([Preferences.key: Data(json.utf8)]))
+    }
+
+    private static let base = #"{"characterOrder":[],"hotKeys":[],"barVisible":true,"showNumbers":true,"defaultsVersion":8"#
+
+    @Test("Génération 9 : ⌥⌘Q, ⌥⌘C et ⌥⌘B à qui n'avait rien réglé")
+    func generationPanneaux() {
+        let prefs = relue(Self.base + "}")
+        #expect(prefs.quetesHotKey == HotKey.defaultQuetes)
+        #expect(prefs.chasseHotKey == HotKey.defaultChasse)
+        #expect(prefs.bossHotKey == HotKey.defaultBoss)
+        #expect(HotKey.defaultQuetes.modifiers == UInt32(cmdKey) | UInt32(optionKey))
+    }
+
+    @Test("Génération 9 : un choix reste, une combinaison déjà prise laisse le raccourci vide")
+    func generationPanneauxRespecte() {
+        let choisi = relue(Self.base + #","quetesHotKey":{"keyCode":34,"modifiers":256}}"#)
+        #expect(choisi.quetesHotKey == HotKey(keyCode: 34, modifiers: 256))
+        let prise = HotKey.defaultChasse
+        let pris = relue(Self.base + #","arrangeHotKey":{"keyCode":\#(prise.keyCode),"modifiers":\#(prise.modifiers)}}"#)
+        #expect(pris.chasseHotKey == nil)
+        #expect(pris.bossHotKey == HotKey.defaultBoss)
+        let effacee = relue(Self.base.replacingOccurrences(of: "8", with: "9") + "}")
+        #expect(effacee.quetesHotKey == nil)
     }
 }
