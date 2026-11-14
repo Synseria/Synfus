@@ -229,7 +229,7 @@ struct CapturesTests {
         let toutes = ProcessInfo.processInfo.environment["SYNFUS_CAPTURES_TOUT"] != nil
         // `SYNFUS_CAPTURES_HAUTEUR` : la fenêtre plus haute, pour voir une page longue en entier.
         let hauteur = ProcessInfo.processInfo.environment["SYNFUS_CAPTURES_HAUTEUR"].flatMap(Double.init) ?? 680
-        let sections: [SettingsSection] = toutes ? SettingsSection.allCases : [.carte, .raccourcis, .lecture]
+        let sections: [SettingsSection] = toutes ? SettingsSection.allCases : [.barre, .carte, .raccourcis, .lecture]
         for (nom, section) in sections.map({ ("reglages-" + $0.rawValue, $0) }) {
             let vue = SettingsView(onglet: OngletReglages(section), hauteur: CGFloat(hauteur))
                 .background(Color(nsColor: .windowBackgroundColor))
