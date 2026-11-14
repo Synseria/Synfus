@@ -204,6 +204,23 @@ struct HotKey: Codable, Equatable, Hashable {
     static var defaultPalette: HotKey {
         HotKey(keyCode: 47, modifiers: UInt32(cmdKey))
     }
+    /// La touche qui tape cette lettre sur la disposition active, à défaut sa position sur un clavier ANSI :
+    /// une lettre mnémonique (Q comme quêtes) suit la lettre, pas la position, sur un AZERTY.
+    static func keyCode(typing lettre: String, ansi: UInt32) -> UInt32 {
+        (UInt32(0)...127).first { layoutCharacter($0) == lettre } ?? ansi
+    }
+    /// ⌥⌘Q — le panneau des quêtes.
+    static var defaultQuetes: HotKey {
+        HotKey(keyCode: keyCode(typing: "Q", ansi: 12), modifiers: UInt32(cmdKey) | UInt32(optionKey))
+    }
+    /// ⌥⌘C — le panneau de chasse.
+    static var defaultChasse: HotKey {
+        HotKey(keyCode: keyCode(typing: "C", ansi: 8), modifiers: UInt32(cmdKey) | UInt32(optionKey))
+    }
+    /// ⌥⌘B — le panneau d'aide aux boss.
+    static var defaultBoss: HotKey {
+        HotKey(keyCode: keyCode(typing: "B", ansi: 11), modifiers: UInt32(cmdKey) | UInt32(optionKey))
+    }
     /// ⇧⌘: — copier l'invitation suivante, à côté de la palette qui l'offre aussi.
     static var defaultInvite: HotKey {
         HotKey(keyCode: 47, modifiers: UInt32(cmdKey) | UInt32(shiftKey))

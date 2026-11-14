@@ -16,6 +16,11 @@ final class SettingsWindowController: NSObject {
 
     private override init() { super.init() }
 
+    /// Le premier lancement et tant que l'accessibilité manque : les autorisations sont le premier bloc de Général.
+    nonisolated static func ouvreAuLancement(premierLancement: Bool, accessibiliteAccordee: Bool) -> Bool {
+        premierLancement || !accessibiliteAccordee
+    }
+
     /// Sur cet onglet, s'il est donné.
     func show(section: SettingsSection? = nil) {
         UsageStore.shared.compter(.reglages)

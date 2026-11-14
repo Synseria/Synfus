@@ -79,6 +79,8 @@ final class Preferences: ObservableObject {
     @Published var verifierMisesAJour: Bool = true { didSet { save() } }
     /// La version du lancement précédent (`MiseAJour.apresMiseAJour`).
     @Published var derniereVersionLancee: String? { didSet { save() } }
+    /// Quand GitHub a répondu pour la dernière fois ; la ligne « Version installée » le dit.
+    @Published var derniereVerificationMaj: Date? { didSet { save() } }
     /// Aucune sauvegarde à la lecture : rien n'a encore été réglé.
     private(set) var premierLancement = false
     /// Envoyer chaque jour les statistiques d'utilisation (`UsageStore`).
@@ -115,6 +117,8 @@ final class Preferences: ObservableObject {
     /// à la charge de l'appelant comme `menuBarIcon`.
     @Published var iconeApp: IconeApp = .parDefaut { didSet { save() } }
 
+    /// Clair ou sombre pour toute l'app, ou celui de macOS (`ThemeCourant.Apparence`).
+    @Published var apparence: ThemeCourant.Apparence = .auto { didSet { save() } }
     /// La couleur de l'app et la teinte de ses fonds (Réglages ▸ Thème) : tout le reste
     /// des couleurs vient des jetons, par `ThemeCourant`.
     @Published var couleurDeLApp: Jetons.Couleur = Jetons.couleurParDefaut { didSet { save() } }
@@ -261,13 +265,13 @@ final class Preferences: ObservableObject {
     /// Raccourci de la palette. ⌘: par défaut (génération 7).
     @Published var paletteHotKey: HotKey? { didSet { save() } }
 
-    /// Raccourci du panneau de chasse au trésor. Sans défaut.
+    /// Raccourci du panneau de chasse au trésor. ⌥⌘C par défaut (génération 9).
     @Published var chasseHotKey: HotKey? { didSet { save() } }
 
-    /// Raccourci du panneau des quêtes. Sans défaut.
+    /// Raccourci du panneau des quêtes. ⌥⌘Q par défaut (génération 9).
     @Published var quetesHotKey: HotKey? { didSet { save() } }
 
-    /// Raccourci du panneau d'aide aux boss. Sans défaut.
+    /// Raccourci du panneau d'aide aux boss. ⌥⌘B par défaut (génération 9).
     @Published var bossHotKey: HotKey? { didSet { save() } }
 
     /// Le boss que montre le panneau d'aide.
@@ -385,7 +389,7 @@ final class Preferences: ObservableObject {
     /// reprise correspondante dans `adoptDefaults` — chaque fois que les défauts
     /// changent, sans quoi les installations existantes resteraient sur les
     /// anciens à jamais.
-    static let defaultsVersion = 8
+    static let defaultsVersion = 9
 
     /// Les défauts de la génération 1, ceux qu'une installation existante peut
     /// encore porter sans que l'utilisateur les ait choisis. Seules ces
@@ -457,6 +461,16 @@ final class Preferences: ObservableObject {
         // La génération 8 range la palette par « Auto » ; une sauvegarde écrivait
         // toujours son tri, l'ancien défaut ne se distingue pas d'un choix.
         if from < 8, paletteTri == Self.legacyPaletteTri { paletteTri = .auto }
+
+        // La génération 9 donne aux trois panneaux ⌥⌘Q, ⌥⌘C et ⌥⌘B. Seulement à qui n'avait rien réglé,
+        // et jamais une combinaison qu'un autre geste tient déjà : elle reste vide.
+        if from < 9 {
+            for (chemin, defaut) in [(\Preferences.quetesHotKey, HotKey.defaultQuetes),
+                                     (\.chasseHotKey, .defaultChasse), (\.bossHotKey, .defaultBoss)]
+            where self[keyPath: chemin] == nil && !raccourcisGlobaux.contains(defaut) {
+                self[keyPath: chemin] = defaut
+            }
+        }
         return true
     }
 
@@ -485,9 +499,9 @@ final class Preferences: ObservableObject {
         sessionHotKey = nil
         equipeSuivanteHotKey = nil
         zaapHotKey = nil
-        chasseHotKey = nil
-        quetesHotKey = nil
-        bossHotKey = nil
+        chasseHotKey = .defaultChasse
+        quetesHotKey = .defaultQuetes
+        bossHotKey = .defaultBoss
     }
 
     /// Reporte sur la touche sous Échap les raccourcis restés sur le keycode 50.
@@ -534,6 +548,7 @@ final class Preferences: ObservableObject {
         .facultatif("menuBarIcon", \.menuBarIcon),
         .facultatif("iconeApp", \.iconeApp),
         .enTexte("couleurDeLApp", \.couleurDeLApp, ecrit: \.ecrit, lu: Jetons.Couleur.init(ecrit:)),
+        .enTexte("apparence", \.apparence, ecrit: \.rawValue, lu: ThemeCourant.Apparence.init(rawValue:)),
         .enTexteOptionnel("fondsDeLApp", \.fondsDeLApp, ecrit: \.ecrit, lu: Jetons.Fonds.init(ecrit:)),
         .facultatif("showPreviewOnHover", \.showPreviewOnHover),
         .optionnel("previewHotKey", \.previewHotKey),
@@ -565,6 +580,7 @@ final class Preferences: ObservableObject {
         .facultatif("zaapIntercalees", \.zaapIntercalees),
         .facultatif("verifierMisesAJour", \.verifierMisesAJour),
         .optionnel("derniereVersionLancee", \.derniereVersionLancee),
+        .optionnel("derniereVerificationMaj", \.derniereVerificationMaj),
         .facultatif("partagerStatistiques", \.partagerStatistiques),
         .facultatif("zaapsAjoutes", \.zaapsAjoutes),
         .facultatif("zaapsChoix", \.zaapsChoix),
@@ -647,6 +663,9 @@ final class Preferences: ObservableObject {
             previewHotKey = .defaultPreview
             inviteHotKey = .defaultInvite
             paletteHotKey = .defaultPalette
+            quetesHotKey = .defaultQuetes
+            chasseHotKey = .defaultChasse
+            bossHotKey = .defaultBoss
             loading = false
             completerHotKeys()
             return

@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Onglet Général : ce qui conditionne tout le reste — les deux autorisations système —, puis le
-/// système (démarrage, langue, version), les icônes et les statistiques.
+/// système (démarrage, langue), les mises à jour, les icônes et les statistiques.
 struct GeneralSettings: View {
     @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var manager = WindowManager.shared
@@ -22,7 +22,7 @@ struct GeneralSettings: View {
                 ) { manager.requestAccessibility() }
 
                 PermissionRow(
-                    name: L("general.enregistrementEcran"),
+                    name: L("autorisation.lecture"),
                     granted: previews.authorized,
                     help: aideAutorisation(L("general.enregistrementEcran.aide")),
                     etat: aRedonner(previews.authorized)
@@ -37,11 +37,13 @@ struct GeneralSettings: View {
                 Interrupteur(titre: L("general.demarrerAvecSession"), isOn: $launchAtLogin)
                     .onChange(of: launchAtLogin) { _, value in LaunchAtLogin.set(value) }
                 languageRow
-                Ligne(titre: L("general.version"), etat: miseAJour.etat.libelle) {
-                    HStack(spacing: Jetons.Espace.deux) {
-                        Text(AppIntegrity.displayName).foregroundStyle(Color.jeton(\.encreSecondaire)).textSelection(.enabled)
-                        ActionMiseAJour()
-                    }
+            }
+
+            Bloc(L("maj.titre")) {
+                Ligne(titre: L("maj.versionInstallee"),
+                      etat: MiseAJour.resume(version: AppIntegrity.version, etat: miseAJour.etat,
+                                             verifiee: prefs.derniereVerificationMaj)) {
+                    ActionMiseAJour()
                 }
                 Interrupteur(titre: L("maj.verifier"), aide: L("maj.verifier.aide"), isOn: $prefs.verifierMisesAJour)
             }
