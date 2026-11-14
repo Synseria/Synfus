@@ -341,6 +341,10 @@ final class PaletteModele: ObservableObject {
         case .action(let action):
             PalettePanel.shared.fermer()
             faire(action)
+        case .basculer(let slotKey):
+            PalettePanel.shared.fermer()
+            guard let client = WindowManager.shared.effectif.first(where: { $0.slotKey == slotKey }) else { return }
+            WindowManager.shared.focus(client)
         }
     }
 
@@ -479,6 +483,11 @@ final class PaletteModele: ObservableObject {
         contexte.zaapDuJeu = prefs.zaapDuJeu
         contexte.intercalees = prefs.commandesIntercalees
         contexte.invitationEquipe = InvitationComposer.groupee(format: prefs.inviteFormat, noms: candidats)
+        contexte.persos = manager.effectif.enumerated().map { rang, client in
+            PersoPalette(slotKey: client.slotKey, nom: client.name, classe: client.characterClass,
+                         position: LecteurEcran.shared.positions[client.name],
+                         touche: BarView.toucheDuPerso(index: rang, raccourcis: prefs.hotKeys))
+        }
         contexte.invitations = candidats.map { ($0, InvitationComposer.commande(format: prefs.inviteFormat, nom: $0)) }
         return contexte
     }

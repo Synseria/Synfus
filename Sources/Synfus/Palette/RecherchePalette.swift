@@ -108,12 +108,14 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
         /// calculé seulement pour l'entrée choisie (`texte(de:)`).
         case trajet(x: Int, y: Int, sousZone: Int?)
         case action(ActionPalette)
+        /// Met ce perso devant (`DofusClient.slotKey`), comme un clic sur sa pastille.
+        case basculer(String)
 
         /// Entrée déplie quelque chose sous la ligne plutôt que de copier.
         var sePlie: Bool {
             switch self {
             case .ouTrouver, .donjon: return true
-            case .copier, .completer, .ouvrirQuete, .trajet, .action: return false
+            case .copier, .completer, .ouvrirQuete, .trajet, .action, .basculer: return false
             }
         }
     }
@@ -150,6 +152,10 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
     var interieur = false
     /// Le symbole propre à l'entrée (une commande, une variable) ; `nil` : celui de son genre.
     var symbole: String?
+    /// La classe d'un perso à basculer : son emblème tient la place du pictogramme.
+    var classe: String?
+    /// Le raccourci du geste de la ligne, dit au bout de la ligne.
+    var touche: String?
     let effet: Effet
 
     /// La fiche d'un boss de donjon (`RecherchePalette.boss`) ou l'aide à son combat.
@@ -163,6 +169,16 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
 
     /// Après le reste : les monstres et objets par milliers, sauf les boss, qu'on cherche exprès.
     var enDernier: Bool { genre.enDernier && !estBoss }
+}
+
+/// Un perso de l'équipe active, tel que la palette le propose : le geste « passer sur lui ».
+struct PersoPalette: Equatable, Sendable {
+    let slotKey: String
+    let nom: String
+    let classe: String?
+    let position: PositionCarte?
+    /// Son raccourci d'accès direct, ou son numéro dans la barre.
+    let touche: String
 }
 
 /// Ce que la recherche doit savoir du monde, figé à l'ouverture.
@@ -187,6 +203,8 @@ struct ContextePalette: Sendable {
     /// `/invite A; /invite B` pour l'équipe active, déjà composé.
     var invitationEquipe: String?
     var invitations: [(nom: String, commande: String)] = []
+    /// Les persos de l'équipe active, dans l'ordre de la barre.
+    var persos: [PersoPalette] = []
     /// `nil` tant qu'elles ne sont pas téléchargées.
     var quetes: Quetes?
     /// `nil` tant qu'ils ne sont pas téléchargés.
@@ -249,7 +267,7 @@ enum RecherchePalette {
         switch effet {
         case .copier(let texte): return texte
         case .trajet(let x, let y, let sousZone): return trajet(vers: (x, y), sousZone: sousZone, contexte)
-        case .completer, .action, .ouvrirQuete, .ouTrouver, .donjon: return nil
+        case .completer, .action, .ouvrirQuete, .ouTrouver, .donjon, .basculer: return nil
         }
     }
 
@@ -335,6 +353,17 @@ enum RecherchePalette {
                                  effet: .donjon(donjon.id))
         }
         .alphabetiques()
+    }
+
+    /// Un perso par ligne : ↵ le met devant, sa touche au bout.
+    static func persos(_ contexte: ContextePalette) -> [EntreePalette] {
+        contexte.persos.map { perso in
+            let lieu = perso.position.map { Coordonnees.texte($0.x, $0.y) }
+            let dit = [perso.classe, lieu].compactMap(\.self)
+            return EntreePalette(id: "perso:" + perso.slotKey, genre: .perso, titre: perso.nom,
+                                 sousTitre: dit.isEmpty ? nil : dit.joined(separator: " · "),
+                                 classe: perso.classe, touche: perso.touche, effet: .basculer(perso.slotKey))
+        }
     }
 
     private static func invitations(_ contexte: ContextePalette) -> [EntreePalette] {
@@ -873,9 +902,10 @@ final class IndexPalette {
                                                             lieux: lieux.map(\.entree))
     private(set) lazy var monstres = fiches(RecherchePalette.boss(contexte) + RecherchePalette.monstres(contexte))
     private(set) lazy var objets = fiches(RecherchePalette.objets(contexte))
-    /// Sans préfixe : zaaps, lieux, quêtes, PNJ, gestes, dernières copies,
+    private(set) lazy var persos = fiches(RecherchePalette.persos(contexte))
+    /// Sans préfixe : persos, zaaps, lieux, quêtes, PNJ, gestes, dernières copies,
     /// monstres et objets.
-    private(set) lazy var tout = zaaps + lieux + quetes + pnjs + fiches(RecherchePalette.divers(contexte)) + monstres + objets
+    private(set) lazy var tout = persos + zaaps + lieux + quetes + pnjs + fiches(RecherchePalette.divers(contexte)) + monstres + objets
 
     /// Les champs de toutes les fiches, à garder pour l'index suivant.
     static func champs(de contexte: ContextePalette, connus: [String: RecherchePalette.Champs] = [:])

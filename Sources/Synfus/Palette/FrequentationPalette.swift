@@ -35,7 +35,7 @@ struct FrequentationPalette: Codable, Equatable, Sendable {
         case .ouvrirQuete, .ouTrouver, .donjon: return entree.cle ?? entree.id
         // Une case tapée n'a pas de `cle` : elle ne devient pas une habitude, comme un `/travel x,y`.
         case .trajet, .copier: return entree.cle
-        case .completer, .action: return nil
+        case .completer, .action, .basculer: return nil
         }
     }
 

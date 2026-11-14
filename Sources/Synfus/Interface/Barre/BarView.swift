@@ -4,7 +4,6 @@ struct BarView: View {
     @ObservedObject private var manager = WindowManager.shared
     @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var watcher = AttentionWatcher.shared
-    @ObservedObject private var icons = ClassesStore.shared
     @ObservedObject private var lecteur = LecteurEcran.shared
     @ObservedObject private var invitations = InvitationClipboard.shared
     @ObservedObject private var zaaps = ZaapClipboard.shared
@@ -286,31 +285,6 @@ struct BarView: View {
         bouton.infobulle(touche: bouton.raccourci(prefs)?.displayString, nom: nom)
     }
 
-    /// Repère de classe : l'icône choisie dans les réglages, à défaut une
-    /// pastille teintée. L'icône du Dock ne servirait à rien ici — tous les
-    /// clients partagent le même bundle, donc la même image.
-    @ViewBuilder
-    private func classBadge(for className: String?, active: Bool) -> some View {
-        ZStack {
-            if let custom = icons.icon(for: className) {
-                Image(nsImage: custom)
-                    .resizable()
-                    .interpolation(.high)
-                    .scaledToFill()
-                    .clipShape(Circle())
-            } else {
-                Circle().fill(icons.catalogue.color(for: className))
-                Text(icons.catalogue.abbreviation(for: className))
-                    .font(Jetons.Typo.micro.police)
-                    .foregroundStyle(Color.texteSurClasse)
-            }
-        }
-        .frame(width: Jetons.Taille.touche + Jetons.Trait.focus, height: Jetons.Taille.touche + Jetons.Trait.focus)
-        .overlay(
-            Circle().strokeBorder(active ? Color.jeton(\.encreSurPrimaire) : Color.jeton(\.filet), lineWidth: Jetons.Trait.filet)
-        )
-    }
-
     private func chip(index: Int, client: DofusClient) -> some View {
         let active = manager.isFrontmost(client)
         let alerting = watcher.alerting.contains(client.slotKey)
@@ -333,7 +307,8 @@ struct BarView: View {
                         .controlSize(.small)
                         .frame(width: Jetons.Taille.touche + Jetons.Trait.focus, height: Jetons.Taille.touche + Jetons.Trait.focus)
                 } else if affichage.embleme {
-                    classBadge(for: client.characterClass, active: active)
+                    EmblemeClasse(classe: client.characterClass,
+                                  contour: active ? Color.jeton(\.encreSurPrimaire) : Color.jeton(\.filet))
                 }
 
                 if affichage.nom {

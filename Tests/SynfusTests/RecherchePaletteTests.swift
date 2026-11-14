@@ -196,6 +196,23 @@ struct RecherchePaletteTests {
         #expect(!RecherchePalette.entrees("6", depuis).contains { $0.id.hasPrefix("case:") })
     }
 
+    @Test("Le nom d'un perso : une ligne qui le met devant, sa touche au bout ; l'invitation reste à /invite")
+    func persos() throws {
+        var avecPersos = contexte()
+        avecPersos.persos = [
+            PersoPalette(slotKey: "1#0", nom: "Bram", classe: "Iop", position: PositionCarte(x: -2, y: 0, zone: nil), touche: "⌘1"),
+            PersoPalette(slotKey: "2#0", nom: "Cob", classe: nil, position: nil, touche: "⌘2"),
+        ]
+        let bram = try #require(premiere("bram", avecPersos))
+        #expect(bram.effet == .basculer("1#0") && bram.touche == "⌘1" && bram.classe == "Iop")
+        #expect(bram.sousTitre == "Iop · \(Coordonnees.texte(-2, 0))")
+        #expect(RecherchePalette.entrees("cid", avecPersos).first?.sousTitre == nil)
+        #expect(RecherchePalette.texte(de: bram.effet, avecPersos) == nil)
+        #expect(RecherchePalette.entrees("/invite bram", avecPersos).map(\.effet) == [.copier("/invite Bram")])
+        // Sans perso connecté, rien ne se propose.
+        #expect(!RecherchePalette.entrees("bram", contexte()).contains { $0.effet == .basculer("1#0") })
+    }
+
     @Test("/ liste les commandes ; une commande à argument se complète")
     func commandes() {
         let entrees = RecherchePalette.entrees("/", contexte())

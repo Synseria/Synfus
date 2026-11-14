@@ -380,6 +380,7 @@ struct PaletteVue: View {
         case .copier, .trajet: return L("palette.touche.copier")
         case .completer: return L("palette.touche.completer")
         case .action: return L("palette.touche.faire")
+        case .basculer: return L("palette.touche.basculer")
         case .ouvrirQuete: return L("palette.touche.ouvrir")
         case .ouTrouver: return L("palette.touche.ouTrouver")
         case .donjon: return L("palette.touche.deplier")
@@ -463,10 +464,16 @@ private struct LigneResultat: View {
 
     var body: some View {
         HStack(spacing: Jetons.Espace.trois) {
-            PictogrammeLieu(gfx: entree.pictogramme) {
-                Image(systemName: icone)
-                    .font(Jetons.Typo.corps.police)
-                    .foregroundStyle(choisie ? Color.jeton(\.primaireEncre) : Color.jeton(\.encreSecondaire))
+            Group {
+                if case .basculer = entree.effet {
+                    EmblemeClasse(classe: entree.classe, contour: Color.jeton(\.filet))
+                } else {
+                    PictogrammeLieu(gfx: entree.pictogramme) {
+                        Image(systemName: icone)
+                            .font(Jetons.Typo.corps.police)
+                            .foregroundStyle(choisie ? Color.jeton(\.primaireEncre) : Color.jeton(\.encreSecondaire))
+                    }
+                }
             }
             .frame(width: Jetons.Taille.cibleMin, height: Jetons.Taille.cibleMin)
             .frame(width: Jetons.Taille.rangee, height: Jetons.Taille.rangee)
@@ -502,6 +509,7 @@ private struct LigneResultat: View {
                     .foregroundStyle(etat.encreSecondaire)
                     .lineLimit(1)
             }
+            if let touche = entree.touche { ToucheRaccourci(touche) }
             if let carte = entree.carte { MiniatureCarte(carte: carte, taille: Self.vignette) }
             if entree.effet.sePlie {
                 Image(systemName: deplie ? "chevron.down" : "chevron.right")

@@ -564,6 +564,7 @@
   "palette.reglages.tri": "Sort",
   "palette.reglages.tri.aide": "Auto sorts by match, favorites, habits, then distance. ⌘T changes it in the palette.",
   "palette.reglages.vue": "Show",
+  "palette.touche.basculer": "Switch",
   "palette.touche.commandes": "Commands",
   "palette.touche.completer": "Complete",
   "palette.touche.copier": "Copy",
