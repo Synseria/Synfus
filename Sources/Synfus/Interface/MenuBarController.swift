@@ -98,6 +98,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         // fenêtres et la barre ; Synfus lui-même ; enfin ce qui détruit, à part.
         add(to: menu, title: L("menu.palette"), action: #selector(openPalette), raccourci: prefs.paletteHotKey,
             icone: BoutonBarre.palette.symbole)
+        if let favoris = zaapsFavorisSubmenu() { menu.addItem(favoris) }
         add(to: menu, title: L("menu.quetes"), action: #selector(openQuests), raccourci: prefs.quetesHotKey,
             icone: BoutonBarre.quetes.symbole).state = QuetePanel.shared.ouvert ? .on : .off
         add(to: menu, title: L("menu.chasse"), action: #selector(openHunt), raccourci: prefs.chasseHotKey,
@@ -160,6 +161,22 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         }
         parent.submenu = submenu
         parent.isEnabled = enabled
+        return parent
+    }
+
+    /// Les mêmes lignes que le clic droit du bouton Palette ; sans favori, pas d'entrée.
+    private func zaapsFavorisSubmenu() -> NSMenuItem? {
+        let lignes = CatalogueZaaps.lignesFavoris(Preferences.shared.zaapsFavorisConnus,
+                                                  depuis: LecteurEcran.shared.positionDuPersoDevant,
+                                                  langue: L10n.courante.langue)
+        guard !lignes.isEmpty else { return nil }
+        let parent = NSMenuItem(title: L("menu.zaapsFavoris"), action: nil, keyEquivalent: "")
+        parent.image = NSImage(systemSymbolName: "star", accessibilityDescription: nil)
+        let submenu = NSMenu()
+        for ligne in lignes {
+            submenu.addItem(CibleMenu.shared.element(ligne.titre) { ZaapClipboard.shared.copierZaap(ligne.zaap) })
+        }
+        parent.submenu = submenu
         return parent
     }
 
