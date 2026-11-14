@@ -50,6 +50,7 @@ final class MiseAJour: ObservableObject {
     private init() {}
 
     func start() {
+        NotificationMiseAJour.shared.demarrer()
         let prefs = Preferences.shared
         apresMiseAJour = Self.apresMiseAJour(derniere: prefs.derniereVersionLancee, courante: AppIntegrity.version,
                                              premierLancement: prefs.premierLancement)
@@ -91,6 +92,7 @@ final class MiseAJour: ObservableObject {
             if derniere != nil { Preferences.shared.derniereVerificationMaj = Date() }
             if let derniere, derniere.plusRecente(que: installee) {
                 etat = .disponible(derniere)
+                NotificationMiseAJour.shared.annoncerSiNouvelle(derniere)
             } else {
                 // GitHub muet : rien à proposer, on réessaiera au prochain tour.
                 etat = derniere == nil ? .inconnu : .aJour
