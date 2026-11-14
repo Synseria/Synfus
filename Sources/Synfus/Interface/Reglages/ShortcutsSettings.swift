@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Onglet Raccourcis : une combinaison par ligne, puis l'enchaînement au clic et la réaction à l'attention.
+/// Onglet Raccourcis : toute combinaison globale s'y règle, une ligne par geste, puis l'enchaînement au clic et la réaction à l'attention.
 struct ShortcutsSettings: View {
     @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var manager = WindowManager.shared
@@ -44,6 +44,23 @@ struct ShortcutsSettings: View {
                 }
                 Interrupteur(titre: L("raccourcis.signalerBascule"), aide: L("raccourcis.signalerBascule.aide"),
                              isOn: $prefs.signalerBascule)
+            }
+
+            Bloc(L("raccourcis.panneaux")) {
+                RaccourciReglable(label: L("raccourcis.palette"), help: L("raccourcis.palette.aide"),
+                                  chemin: \.paletteHotKey)
+                RaccourciReglable(label: L("quetes.raccourci"), chemin: \.quetesHotKey)
+                    .help(L("quetes.aide"))
+                RaccourciReglable(label: L("chasse.raccourci"), chemin: \.chasseHotKey)
+                    .help(L("chasse.aide"))
+                RaccourciReglable(label: L("boss.raccourci"), chemin: \.bossHotKey)
+                    .help(L("boss.aide"))
+                RaccourciReglable(label: L("zaap.raccourci"), help: L("zaap.raccourci.aide"), chemin: \.zaapHotKey)
+                    .help(L("zaap.reecriture.aide", ItineraireZaap.ecartZaapDuJeu))
+                RaccourciReglable(
+                    label: prefs.inviteGroupee ? L("raccourcis.invitation.toutes") : L("raccourcis.invitation"),
+                    help: prefs.inviteGroupee ? L("raccourcis.invitation.toutes.aide") : L("raccourcis.invitation.aide"),
+                    chemin: \.inviteHotKey)
             }
 
             Bloc(L("raccourcis.fenetres")) {

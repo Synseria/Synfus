@@ -778,6 +778,7 @@
   "raccourcis.naviguer": "Naviguer",
   "raccourcis.palette": "Ouvrir la palette",
   "raccourcis.palette.aide": "Zaaps, lieux (banque, hôtel de vente, forgemagie…), quêtes, PNJ, monstres, objets, commandes du jeu, variables, personnages : tape, Entrée copie, ⌘V colle dans le tchat. / pour les commandes, % pour les variables, Tab pour filtrer, ⌘T pour trier, ⌘E pour étiqueter, ⌘D pour un favori, Échap pour effacer.",
+  "raccourcis.panneaux": "Panneaux",
   "raccourcis.perso": "Personnage %lld",
   "raccourcis.persoPrecedent": "Personnage précédent",
   "raccourcis.persoSuivant": "Personnage suivant",

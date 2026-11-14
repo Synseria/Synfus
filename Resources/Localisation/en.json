@@ -778,6 +778,7 @@
   "raccourcis.naviguer": "Navigate",
   "raccourcis.palette": "Open the palette",
   "raccourcis.palette.aide": "Zaaps, places (bank, market, smithmagic…), quests, NPCs, monsters, items, game commands, variables, characters: type, Return copies, ⌘V pastes in the chat. / for commands, % for variables, Tab to filter, ⌘T to sort, ⌘E to label, ⌘D for a favorite, Esc to clear.",
+  "raccourcis.panneaux": "Panels",
   "raccourcis.perso": "Character %lld",
   "raccourcis.persoPrecedent": "Previous character",
   "raccourcis.persoSuivant": "Next character",

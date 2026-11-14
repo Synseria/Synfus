@@ -778,6 +778,7 @@
   "raccourcis.naviguer": "Navegar",
   "raccourcis.palette": "Abrir la paleta",
   "raccourcis.palette.aide": "Zaaps, lugares (banco, mercadillo, forjamagia…), misiones, PNJ, monstruos, objetos, comandos del juego, variables, personajes: escribe, Intro copia, ⌘V pega en el chat. / para los comandos, % para las variables, Tab para filtrar, ⌘T para ordenar, ⌘E para etiquetar, ⌘D para un favorito, Esc para borrar.",
+  "raccourcis.panneaux": "Paneles",
   "raccourcis.perso": "Personaje %lld",
   "raccourcis.persoPrecedent": "Personaje anterior",
   "raccourcis.persoSuivant": "Personaje siguiente",
