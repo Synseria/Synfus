@@ -203,7 +203,7 @@ struct BarView: View {
         ModeButton(
             icone: BoutonBarre.palette.symbole,
             actif: zaaps.reecritRecemment || palette.ouvert,
-            aide: L("barre.paletteAide", prefs.paletteHotKey?.displayString ?? L("barre.aucunRaccourci"))
+            aide: infobulle(.palette)
         ) {
             PalettePanel.shared.basculer()
         }
@@ -220,7 +220,7 @@ struct BarView: View {
         ModeButton(
             icone: BoutonBarre.chasse.symbole,
             actif: chasse.ouvert,
-            aide: L("barre.chasseAide", prefs.chasseHotKey?.displayString ?? L("barre.aucunRaccourci"))
+            aide: infobulle(.chasse)
         ) {
             ChassePanel.shared.basculer()
         }
@@ -229,7 +229,7 @@ struct BarView: View {
     /// Le panneau des quêtes épinglées ; vide, il invite à en chercher une
     /// dans la palette.
     private var quetesButton: some View {
-        ModeButton(icone: BoutonBarre.quetes.symbole, actif: quetes.ouvert, aide: L("barre.quetesAide")) {
+        ModeButton(icone: BoutonBarre.quetes.symbole, actif: quetes.ouvert, aide: infobulle(.quetes)) {
             QuetePanel.shared.basculer()
         }
     }
@@ -239,7 +239,7 @@ struct BarView: View {
         ModeButton(
             icone: BoutonBarre.boss.symbole,
             actif: boss.ouvert,
-            aide: L("barre.bossAide", prefs.bossHotKey?.displayString ?? L("barre.aucunRaccourci"))
+            aide: infobulle(.boss)
         ) {
             BossPanel.shared.basculer()
         }
@@ -275,17 +275,15 @@ struct BarView: View {
         return ModeButton(
             icone: on ? BoutonBarre.passageAuto.symbole : "bolt.slash",
             actif: on,
-            aide: on
-                ? L("barre.passageAuto.actif", toggleShortcut)
-                : L("barre.passageAuto.inactif", toggleShortcut)
+            aide: infobulle(.passageAuto, nom: on ? L("barre.passageAuto.actif") : L("barre.passageAuto.inactif"))
         ) {
             let prefs = Preferences.shared
             prefs.attentionAction = prefs.attentionAction == .focus ? .highlight : .focus
         }
     }
 
-    private var toggleShortcut: String {
-        prefs.toggleAutoFocus?.displayString ?? L("barre.aucunRaccourci")
+    private func infobulle(_ bouton: BoutonBarre, nom: String? = nil) -> String {
+        bouton.infobulle(touche: bouton.raccourci(prefs)?.displayString, nom: nom)
     }
 
     /// Repère de classe : l'icône choisie dans les réglages, à défaut une

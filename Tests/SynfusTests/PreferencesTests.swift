@@ -1002,6 +1002,13 @@ extension PreferencesTests {
         #expect(!symboles.contains("map"))
     }
 
+    @Test("L'infobulle d'un bouton : son nom, puis sa touche au bout quand elle existe")
+    func infobulleDuBouton() {
+        #expect(BoutonBarre.quetes.infobulle(touche: "⌥Q") == "\(BoutonBarre.quetes.libelle)  ⌥Q")
+        #expect(BoutonBarre.boss.infobulle(touche: nil) == BoutonBarre.boss.libelle)
+        #expect(BoutonBarre.passageAuto.infobulle(touche: "⌘²", nom: "Passage : activé") == "Passage : activé  ⌘²")
+    }
+
     @Test("Masquer puis remontrer un bouton")
     func montrerBouton() {
         let (prefs, _) = neuves()

@@ -185,6 +185,7 @@ struct ArrangementMenuItems: View {
 /// Le menu de rangement des fenêtres, au gabarit des bascules de mode. Un menu
 /// et non une bascule : il propose des gestes, il ne porte pas d'état.
 struct ArrangeMenuButton: View {
+    @ObservedObject private var prefs = Preferences.shared
     @State private var survole = false
 
     var body: some View {
@@ -207,7 +208,8 @@ struct ArrangeMenuButton: View {
         .menuIndicator(.hidden)
         .fixedSize()
         .onHover { survole = $0 }
-        .aide(L("barre.rangerAide"))
+        .aide(BoutonBarre.rangement.infobulle(
+            touche: BoutonBarre.rangement.raccourci(prefs)?.displayString))
     }
 }
 
