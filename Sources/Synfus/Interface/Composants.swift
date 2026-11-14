@@ -216,6 +216,28 @@ extension View {
     func aide(_ texte: String) -> some View { help(texte).accessibilityLabel(texte) }
 }
 
+// MARK: - Autorisation manquante
+
+/// L'enregistrement de l'écran, qu'un panneau qui lit le jeu n'a pas : la même ligne partout, et le
+/// même geste pour y remédier ; l'explication est son infobulle.
+struct LigneAutorisation: View {
+    var body: some View {
+        HStack(spacing: Jetons.Espace.un) {
+            Image(systemName: "lock").foregroundStyle(Color.jeton(\.encreSecondaire))
+            Text(L("autorisation.lecture"))
+                .font(Jetons.Typo.petit.police)
+                .foregroundStyle(Color.jeton(\.encreSecondaire))
+                // Dans un panneau étroit, le libellé passe sur deux lignes avant que le geste ne se coupe.
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+            Button(L("autorisation.autoriser")) { WindowPreviewService.shared.requestAuthorization() }
+                .buttonStyle(.bouton(.secondaire, dense: true))
+                .fixedSize()
+        }
+        .help(L("autorisation.aide"))
+    }
+}
+
 // MARK: - Segments
 
 /// Le choix d'une valeur parmi quelques-unes, côte à côte : piste `creux` bordée d'un `filet`, le cran

@@ -22,7 +22,7 @@ struct AidesSettings: View {
                 }
                 if !previews.authorized {
                     Ligne(titre: L("boss.lecture"), aide: L("boss.lecture.aide")) {
-                        Button(L("boss.lecture.autoriser")) { previews.requestAuthorization() }
+                        Button(L("autorisation.autoriser")) { previews.requestAuthorization() }
                     }
                 }
             }

@@ -19,6 +19,7 @@ struct ChasseVue: View {
                 VStack(alignment: .leading, spacing: Jetons.Espace.deux) {
                     depart
                     boussole.frame(maxWidth: .infinity)
+                    if !previews.authorized { LigneAutorisation() }
                     indice
                     lus
                     resultat
@@ -84,7 +85,7 @@ struct ChasseVue: View {
     // MARK: - Boussole
 
     /// Nord en haut, ouest à gauche… et « Lire » au centre : l'indice lu à
-    /// l'écran, ou l'autorisation à donner pour qu'il le soit.
+    /// l'écran, grisé tant que l'autorisation manque.
     private var boussole: some View {
         Grid(horizontalSpacing: Jetons.Espace.un, verticalSpacing: Jetons.Espace.un) {
             GridRow {
@@ -116,25 +117,15 @@ struct ChasseVue: View {
         .aide(direction.libelle)
     }
 
-    @ViewBuilder
     private var centre: some View {
-        if previews.authorized {
-            Button { modele.lire() } label: {
-                Image(systemName: "text.viewfinder")
-                    .font(Jetons.Typo.titre.police)
-                    .frame(width: Jetons.Taille.rangeePalette, height: Jetons.Taille.rangeePalette)
-            }
-            .buttonStyle(.etat(courant: true))
-            .disabled(modele.lectureEnCours || modele.indices.isEmpty)
-            .aide(L("chasse.lire.aide"))
-        } else {
-            Button { previews.requestAuthorization() } label: {
-                Image(systemName: "lock")
-                    .frame(width: Jetons.Taille.rangeePalette, height: Jetons.Taille.rangeePalette)
-            }
-            .buttonStyle(.etat())
-            .aide(L("chasse.autoriser.aide"))
+        Button { modele.lire() } label: {
+            Image(systemName: "text.viewfinder")
+                .font(Jetons.Typo.titre.police)
+                .frame(width: Jetons.Taille.rangeePalette, height: Jetons.Taille.rangeePalette)
         }
+        .buttonStyle(.etat(courant: true))
+        .disabled(!previews.authorized || modele.lectureEnCours || modele.indices.isEmpty)
+        .aide(L("chasse.lire.aide"))
     }
 
     // MARK: - Indice

@@ -15,6 +15,7 @@ struct QueteVue: View {
     @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var lecture = LectureSuivi.shared
     @ObservedObject private var lecteur = LecteurEcran.shared
+    @ObservedObject private var previews = WindowPreviewService.shared
     /// Les cartes intérieures, venues après la carte.
     @ObservedObject private var cartes = CarteStore.shared
     /// La ligne qui vient d'être copiée, le temps de le dire.
@@ -85,6 +86,7 @@ struct QueteVue: View {
         VStack(spacing: 0) {
             ScrollView {
                 VStack(alignment: .leading, spacing: Jetons.Espace.deux) {
+                    if !previews.authorized { LigneAutorisation() }
                     if store.quetes == nil, !store.chargement, store.echec != nil {
                         Text(L("quete.indisponible"))
                             .font(Jetons.Typo.note.police)
