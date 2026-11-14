@@ -5,7 +5,7 @@ import SwiftUI
 /// (consigne, objectifs, récompenses) et les quêtes qui s'ouvrent ensuite. Un
 /// clic sur une ressource copie son nom (pour l'hôtel de vente), sur un
 /// objectif son trajet, zaap compris — et le met en cours ; seule la coche le
-/// valide. Un objectif fait reste à sa place, grisé, sur une ligne ; au
+/// valide. Un objectif fait reste à sa place, grisé, sans sa position ; au
 /// survol d'un objectif, la vue de sa carte en grand. Une ressource, un
 /// monstre ou un objet cité se déplient sur où les trouver (`OuTrouverVue`).
 /// Tailles : `MetriquesQuete`.
@@ -615,7 +615,7 @@ struct QueteVue: View {
     /// La coche, puis le texte, et dessous sa position quand elle diffère de celle de l'objectif
     /// d'avant (`CoordonneesObjectifs`). Un clic sur la ligne copie toujours le trajet et met
     /// l'objectif en cours ; seule la coche valide ou dévalide. Fait, il reste
-    /// à sa place — l'ordre de la quête ne bouge pas — sur une ligne grisée,
+    /// à sa place — l'ordre de la quête ne bouge pas — grisé,
     /// sans sa position, une fois le signal de copie passé. La vue de la carte paraît
     /// en grand au survol de la ligne, en vignette avec `quetesVignettes`.
     private func ligneObjectif(_ objectif: FicheQuete.Objectif, quete: Int, coordonnee: Bool, etat: EtatObjectif) -> some View {
@@ -698,15 +698,14 @@ struct QueteVue: View {
         }
     }
 
-    /// Le texte d'un objectif : sur une ligne grisée une fois fait, appuyé quand il est en cours.
+    /// Le texte d'un objectif : grisé une fois fait, appuyé quand il est en cours.
     @ViewBuilder
     private func texteObjectif(_ objectif: FicheQuete.Objectif, etat: EtatObjectif, replie: Bool) -> some View {
         if replie {
             Text(objectif.texte)
                 .font(metriques.texte.police)
                 .foregroundStyle(Color.jeton(\.encreSecondaire))
-                .lineLimit(1)
-                .truncationMode(.tail)
+                .fixedSize(horizontal: false, vertical: true)
         } else {
             Text(objectif.texte)
                 .font((etat.enCours && !etat.valide ? metriques.texteFort : metriques.texte).police)
