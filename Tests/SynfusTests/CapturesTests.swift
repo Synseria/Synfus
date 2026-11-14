@@ -111,6 +111,10 @@ struct CapturesTests {
         }
         let quetes = try JSONDecoder().decode(Quetes.self, from: JSONSerialization.data(withJSONObject: json))
         QuetesStore.shared.poserPourCaptures(quetes)
+        // Le perso devant d'abord : en changer ramène le suivi lu à celui qu'il a (vide).
+        // Chaque quête commence sur sa case : le signe de l'en-tête.
+        LecteurEcran.shared.poserPourCaptures(persoDevant: "Aeryn", position: PositionCarte(x: -1, y: -39, zone: nil))
+        defer { LecteurEcran.shared.poserPourCaptures(persoDevant: nil, position: nil) }
         LectureSuivi.shared.poserPourCaptures(reconnues: noms.indices.map { SuiviQuetes.Reconnue(id: 9000 + $0, etape: $0 % 3 == 0 ? nil : $0) })
         let vue = QueteVue()
             .frame(width: 360, height: 480)

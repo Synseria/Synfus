@@ -59,6 +59,9 @@ enum MenuQuetes {
         let coordonnees: String
         let quetes: [QueteIci]
         let pnjs: [String]
+
+        /// Les quêtes qui commencent ici et que le panneau n'a pas encore.
+        func aEpingler(_ epinglees: [Int]) -> [QueteIci] { quetes.filter { !epinglees.contains($0.id) } }
     }
 
     /// `coches` : les objectifs que la dernière lecture du suivi a cochés ;
@@ -67,18 +70,18 @@ enum MenuQuetes {
     static func elements(epinglees: [Int], montree: Int?, reconnues: [SuiviQuetes.Reconnue],
                          etat: LectureSuivi.Etat, coches: Int, actives: Set<Option>, ici: Ici? = nil,
                          nom: (Int) -> String) -> [Element] {
-        var elements: [Element] = [.titre(L("quete.menu.epinglees"))]
+        // Une quête qui commence ici et que le panneau n'a pas : la section passe en tête.
+        let iciEnTete = ici?.aEpingler(epinglees).isEmpty == false
+        var elements: [Element] = []
+        if iciEnTete, let ici { elements += section(ici, epinglees: epinglees) + [.separateur] }
+        elements.append(.titre(L("quete.menu.epinglees")))
         elements += epinglees.isEmpty
             ? [.message(L("quete.menu.aucune"))]
             : epinglees.map { .epinglee(id: $0, nom: nom($0), montree: $0 == montree) }
         if let montree, epinglees.contains(montree) { elements.append(.desepingler(id: montree, nom: nom(montree))) }
         if epinglees.count > 1 { elements.append(.toutDesepingler) }
-        if let ici, !ici.quetes.isEmpty || !ici.pnjs.isEmpty {
-            elements += [.separateur, .titre(L("quete.menu.ici", ici.coordonnees))]
-            elements += ici.quetes.map {
-                .ici(id: $0.id, titre: L("quete.menu.iciQuete", $0.nom, $0.niveau), epinglee: epinglees.contains($0.id))
-            }
-            if !ici.pnjs.isEmpty { elements.append(.message(L("quete.menu.iciPNJ", ici.pnjs.joined(separator: ", ")))) }
+        if !iciEnTete, let ici, !ici.quetes.isEmpty || !ici.pnjs.isEmpty {
+            elements += [.separateur] + section(ici, epinglees: epinglees)
         }
         elements += [.separateur, .titre(L("quete.menu.suivi"))]
         if aEpingler(reconnues, epinglees: epinglees).count > 1 { elements.append(.toutEpingler) }
@@ -90,6 +93,17 @@ enum MenuQuetes {
         if let message = message(etat, reconnues: reconnues) { elements.append(.message(message)) }
         if etat == .lu, coches > 0 { elements.append(.message(L("quete.suivi.coches", nombre: coches, coches))) }
         return elements + [.separateur] + Option.affichage.map { .option($0, actif: actives.contains($0)) } + [.separateur, .fermer]
+    }
+
+    /// « Ici, en [x,y] » : les quêtes qui commencent sur la case et les PNJ qui s'y tiennent ; vide sans l'un ni l'autre.
+    private static func section(_ ici: Ici, epinglees: [Int]) -> [Element] {
+        guard !ici.quetes.isEmpty || !ici.pnjs.isEmpty else { return [] }
+        var elements: [Element] = [.titre(L("quete.menu.ici", ici.coordonnees))]
+        elements += ici.quetes.map {
+            .ici(id: $0.id, titre: L("quete.menu.iciQuete", $0.nom, $0.niveau), epinglee: epinglees.contains($0.id))
+        }
+        if !ici.pnjs.isEmpty { elements.append(.message(L("quete.menu.iciPNJ", ici.pnjs.joined(separator: ", ")))) }
+        return elements
     }
 
     /// Les quêtes que le suivi montre et que le panneau n'a pas encore : ce
