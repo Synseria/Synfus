@@ -185,41 +185,55 @@ struct ChasseVue: View {
     @ViewBuilder
     private var resultat: some View {
         if let echec = modele.echec {
-            Text(L("chasse.echec", echec)).font(Jetons.Typo.petit.police).foregroundStyle(Color.jeton(\.alerte))
-        } else if let constat = modele.constat {
             HStack(spacing: Jetons.Espace.un) {
-                Image(systemName: constat.direction.symbole).foregroundStyle(Color.jeton(\.encreSecondaire))
-                VStack(alignment: .leading, spacing: Jetons.Espace.un) {
+                Text(L("chasse.echec", echec)).font(Jetons.Typo.petit.police).foregroundStyle(Color.jeton(\.alerte))
+                Spacer(minLength: 0)
+                boutonEtapePrecedente
+            }
+        } else if let constat = modele.constat {
+            VStack(alignment: .leading, spacing: Jetons.Espace.un) {
+                HStack(spacing: Jetons.Espace.un) {
+                    Image(systemName: constat.direction.symbole).foregroundStyle(Color.jeton(\.encreSecondaire))
                     Text(constat.cible.nom(en: modele.langue))
                         .font(Jetons.Typo.petit.police)
                         .foregroundStyle(Color.jeton(\.encreSecondaire))
-                    Group {
-                        switch constat.resultat {
-                        case .trouve(let x, let y, let distance):
-                            Text(L("chasse.trouve", nombre: distance, Coordonnees.texte(x, y), distance)).font(Jetons.Typo.corpsFort.police)
-                        case .introuvable:
-                            Text(L("chasse.introuvable", EtapeChasse.portee)).foregroundStyle(Color.jeton(\.alerte))
-                        case .phorreur:
-                            Text(L("chasse.phorreur.suivre", constat.direction.libelle))
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                    boutonEtapePrecedente
+                    if case .trouve = constat.resultat {
+                        Button {
+                            modele.copier()
+                            copie.signaler("trajet")
+                        } label: {
+                            IconeCopie(icone: "doc.on.doc", copie: copie.affiche("trajet"))
+                                .foregroundStyle(Color.jeton(\.encreSecondaire))
                         }
+                        .buttonStyle(.bouton(.tertiaire, dense: true))
+                        .aide(L("chasse.copier"))
                     }
-                    .fixedSize(horizontal: false, vertical: true)
                 }
-                Spacer()
-                if case .trouve = constat.resultat {
-                    Button {
-                        modele.copier()
-                        copie.signaler("trajet")
-                    } label: {
-                        IconeCopie(icone: "doc.on.doc", copie: copie.affiche("trajet"))
-                            .foregroundStyle(Color.jeton(\.encreSecondaire))
+                Group {
+                    switch constat.resultat {
+                    case .trouve(let x, let y, let distance):
+                        Text(L("chasse.trouve", nombre: distance, Coordonnees.texte(x, y), distance)).font(Jetons.Typo.corpsFort.police)
+                    case .introuvable:
+                        Text(L("chasse.introuvable", EtapeChasse.portee)).foregroundStyle(Color.jeton(\.alerte))
+                    case .phorreur:
+                        Text(L("chasse.phorreur.suivre", constat.direction.libelle))
                     }
-                    .buttonStyle(.bouton(.tertiaire, dense: true))
-                    .aide(L("chasse.copier"))
                 }
+                .fixedSize(horizontal: false, vertical: true)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(Jetons.Espace.deux)
             .carte(rayon: Jetons.Rayon.controle)
         }
+    }
+
+    private var boutonEtapePrecedente: some View {
+        Button { modele.etapePrecedente() } label: { Image(systemName: "arrow.uturn.backward") }
+            .buttonStyle(.bouton(.tertiaire, dense: true))
+            .disabled(!modele.etapePrecedenteDisponible)
+            .aide(L("chasse.etape.precedente"))
     }
 }

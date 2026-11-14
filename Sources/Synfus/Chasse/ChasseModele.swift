@@ -38,17 +38,20 @@ final class ChasseModele: ObservableObject {
     @Published private(set) var echecIndices: String?
 
     private var recherche: Task<Void, Never>?
+    private var historique = HistoriqueChasse()
 
     private init() {}
+
+    var departConnu: Bool { departX != nil && departY != nil }
 
     /// La liste des indices n'est pas encore là : rien ne se choisit.
     var enAttenteDesIndices: Bool { indices.isEmpty && echecIndices == nil }
 
-    var departConnu: Bool { departX != nil && departY != nil }
-
     var attente: AttenteChasse {
         AttenteChasse(departConnu: departConnu, directionChoisie: direction != nil)
     }
+
+    var etapePrecedenteDisponible: Bool { !historique.vide }
 
     var langue: Langue { L10n.courante.langue }
 
@@ -59,6 +62,14 @@ final class ChasseModele: ObservableObject {
     }
 
     #if DEBUG
+    /// Un résultat et deux indices lus, pour la capture de la documentation (`CapturesTests`).
+    func poserResultatPourCaptures(cible: EtapeChasse.Cible, lues: [EtapeChasse.Cible]) {
+        historique.noter(.init(departX: -2, departY: 0, direction: .est, cible: cible))
+        constat = Constat(cible: cible, direction: .est, resultat: .trouve(x: -3, y: 0, distance: 1))
+        self.lues = lues
+        self.cible = lues.first
+    }
+
     func viderPourCaptures() {
         departX = nil
         departY = nil
@@ -164,10 +175,12 @@ final class ChasseModele: ObservableObject {
         recherche?.cancel()
         echec = nil
         guard case .indice(let indice) = cible else {
-            conclure(Constat(cible: cible, direction: direction, resultat: .phorreur))
+            let reprise = HistoriqueChasse.Reprise(departX: departX, departY: departY, direction: direction, cible: cible)
+            conclure(Constat(cible: cible, direction: direction, resultat: .phorreur), reprise: reprise)
             return
         }
         guard let x = departX, let y = departY else { return }
+        let reprise = HistoriqueChasse.Reprise(departX: x, departY: y, direction: direction, cible: cible)
         rechercheEnCours = true
         recherche = Task {
             defer { rechercheEnCours = false }
@@ -175,7 +188,7 @@ final class ChasseModele: ObservableObject {
                 let cartes = try await ChasseDofusDB.cartes(depuis: x, y, direction: direction)
                 guard !Task.isCancelled else { return }
                 conclure(Constat(cible: cible, direction: direction,
-                                 resultat: EtapeChasse.resultat(indice: indice.id, cartes: cartes)))
+                                 resultat: EtapeChasse.resultat(indice: indice.id, cartes: cartes)), reprise: reprise)
             } catch {
                 guard !Task.isCancelled else { return }
                 echec = error.localizedDescription
@@ -185,7 +198,10 @@ final class ChasseModele: ObservableObject {
 
     /// Une étape trouvée devient le départ de la suivante, et son trajet est
     /// copié par le seul foyer des trajets — zaap compris s'il fait gagner.
-    private func conclure(_ constat: Constat) {
+    private func conclure(_ constat: Constat, reprise: HistoriqueChasse.Reprise) {
+        var reprise = reprise
+        reprise.rangLu = lues.firstIndex(of: constat.cible)
+        historique.noter(reprise)
         self.constat = constat
         direction = nil
         cible = nil
@@ -196,6 +212,22 @@ final class ChasseModele: ObservableObject {
             departY = y
             copier()
         }
+    }
+
+    /// Rouvre l'étape du résultat affiché : départ, direction et indice
+    /// remis tels qu'ils étaient avant la recherche, résultat retiré.
+    func etapePrecedente() {
+        guard let reprise = historique.reprendre() else { return }
+        recherche?.cancel()
+        let rouverture = reprise.rouverture(departX: departX, departY: departY, lues: lues)
+        departX = rouverture.departX
+        departY = rouverture.departY
+        lues = rouverture.lues
+        direction = reprise.direction
+        cible = reprise.cible
+        saisie = reprise.cible.nom(en: langue)
+        constat = nil
+        echec = nil
     }
 
     func copier() {
