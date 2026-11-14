@@ -202,15 +202,24 @@ extension Ligne where Icone == EmptyView {
 struct Interrupteur: View {
     let titre: String
     var aide: String?
+    /// Le dessin de la chose réglée, dans une colonne fixe devant le libellé.
+    var symbole: String?
     let isOn: Binding<Bool>
 
     var body: some View {
-        Ligne(titre: titre, aide: aide) {
+        Ligne(titre: titre, aide: aide, icone: {
+            if let symbole {
+                Image(systemName: symbole)
+                    .foregroundStyle(Color.jeton(\.encreSecondaire))
+                    .frame(width: Jetons.Taille.cibleMin)
+                    .accessibilityHidden(true)
+            }
+        }, controle: {
             Toggle(titre, isOn: isOn)
                 .labelsHidden()
                 .toggleStyle(.switch)
                 .controlSize(.small)
-        }
+        })
     }
 }
 

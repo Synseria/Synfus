@@ -54,7 +54,7 @@ struct BossVue: View {
 
 
     private var entete: some View {
-        EnTetePanneau(icone: "scope", teinte: Color.jeton(\.safran), menu: Self.menu) {
+        EnTetePanneau(icone: BoutonBarre.boss.symbole, teinte: Color.jeton(\.safran), menu: Self.menu) {
             Text(Self.nom(prefs.bossChoisi, donjons: donjons.donjons, garde: prefs.nomsBossChoisi))
                 .font(Jetons.Typo.corpsFort.police)
                 .padding(.leading, Jetons.Espace.un)

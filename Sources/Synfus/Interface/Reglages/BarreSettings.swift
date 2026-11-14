@@ -21,6 +21,10 @@ struct BarreSettings: View {
                     ))
                     Interrupteur(titre: L("general.barre.numeros"), isOn: $prefs.showNumbers)
                     Interrupteur(titre: L("general.barre.classes"), isOn: $prefs.showClasses)
+                    if prefs.showNumbers || prefs.showClasses {
+                        Interrupteur(titre: L("general.barre.reduire"), aide: L("general.barre.reduire.aide"),
+                                     isOn: $prefs.reduirePersosInactifs)
+                    }
                     Ligne(titre: L("general.barre.position")) {
                         Button(L("general.barre.recentrer")) { FloatingBarController.shared.recenter() }
                     }
@@ -34,7 +38,7 @@ struct BarreSettings: View {
             if prefs.barVisible {
                 Bloc(L("barre.boutons")) {
                     ForEach(BoutonBarre.allCases, id: \.self) { bouton in
-                        Interrupteur(titre: bouton.libelle, isOn: Binding(
+                        Interrupteur(titre: bouton.libelle, symbole: bouton.symbole, isOn: Binding(
                             get: { !prefs.boutonsMasques.contains(bouton) },
                             set: { prefs.montrer(bouton, $0) }
                         ))

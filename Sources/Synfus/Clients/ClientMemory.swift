@@ -21,6 +21,17 @@ enum ClientMemory {
         }
     }
 
+    /// Le perso avec qui `nom` échange sa place pour avancer (`decalage` -1) ou reculer (+1) dans
+    /// l'effectif montré. `nil` au bord, ou si l'un des deux n'a pas de rang dans `order`
+    /// (client au login, homonyme suffixé) : l'échange n'aurait aucun effet.
+    static func voisin(de nom: String, dans effectif: [DofusClient], decalage: Int, order: [String]) -> String? {
+        guard let index = effectif.firstIndex(where: { $0.name == nom }) else { return nil }
+        let cible = index + decalage
+        guard effectif.indices.contains(cible) else { return nil }
+        let voisin = effectif[cible].name
+        return order.contains(nom) && order.contains(voisin) ? voisin : nil
+    }
+
     /// Complète les persos trouvés de ceux dont le processus vit encore mais ne
     /// rend plus aucune fenêtre — `silentPIDs`. Isolée et pure : c'est la règle
     /// qui décide ce que la barre affiche, elle mérite d'être testée.
