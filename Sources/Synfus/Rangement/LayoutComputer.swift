@@ -62,6 +62,12 @@ enum LayoutComputer {
         return (colonnes, lignes)
     }
 
+    /// Le rang du grand de `.principale` parmi les fenêtres rangées (`cles`) :
+    /// celle qu'on veut, sinon celle de devant, sinon la première.
+    static func indexPrincipal(parmi cles: [String], voulu: String?, devant: String?) -> Int {
+        voulu.flatMap(cles.firstIndex(of:)) ?? devant.flatMap(cles.firstIndex(of:)) ?? 0
+    }
+
     /// Les cadres de la disposition dans `zone`, exprimés dans le même repère
     /// qu'elle — en pratique le repère AX, y vers le bas. `cadres[i]` revient à
     /// la i-ème fenêtre, dans l'ordre de la barre. `indexPrincipal` ne joue que

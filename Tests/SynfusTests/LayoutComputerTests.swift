@@ -175,4 +175,13 @@ struct LayoutComputerTests {
             #expect(Disposition.enCours(derniere: disposition) == disposition)
         }
     }
+
+    @Test("Le grand : celui qu'on veut s'il est rangé, sinon celui de devant, sinon le premier")
+    func indexPrincipal() {
+        let cles = ["1#0", "2#0", "3#0"]
+        #expect(LayoutComputer.indexPrincipal(parmi: cles, voulu: "1#0", devant: "3#0") == 0)
+        #expect(LayoutComputer.indexPrincipal(parmi: cles, voulu: "9#0", devant: "3#0") == 2)
+        #expect(LayoutComputer.indexPrincipal(parmi: cles, voulu: nil, devant: "2#0") == 1)
+        #expect(LayoutComputer.indexPrincipal(parmi: cles, voulu: nil, devant: nil) == 0)
+    }
 }
