@@ -55,8 +55,12 @@ struct BossVue: View {
 
     private var entete: some View {
         EnTetePanneau(icone: "scope", teinte: Color.jeton(\.safran), menu: Self.menu) {
-            Text(Self.nom(prefs.bossChoisi, donjons: donjons.donjons)).font(Jetons.Typo.corpsFort.police)
+            Text(Self.nom(prefs.bossChoisi, donjons: donjons.donjons, garde: prefs.nomsBossChoisi))
+                .font(Jetons.Typo.corpsFort.police)
                 .padding(.leading, Jetons.Espace.un)
+            if donjons.enCours, prefs.bossChoisi.special == nil, prefs.nomsBossChoisi == nil {
+                ProgressView().controlSize(.mini).padding(.leading, Jetons.Espace.un)
+            }
             Image(systemName: "chevron.down").font(Jetons.Typo.micro.police).foregroundStyle(Color.jeton(\.encreSecondaire))
                 .padding(.leading, Jetons.Espace.un)
             if let perso = lecteur.persoDevant {
@@ -81,7 +85,7 @@ struct BossVue: View {
         var cibles = Boss.allCases.map(CibleBoss.special)
         if choisi.special == nil { cibles.append(choisi) }
         for cible in cibles {
-            let item = CibleMenu.shared.element(nom(cible, donjons: DonjonsStore.shared.donjons)) {
+            let item = CibleMenu.shared.element(nom(cible, donjons: DonjonsStore.shared.donjons, garde: Preferences.shared.nomsBossChoisi)) {
                 AideBoss.shared.choisir(cible)
             }
             item.state = cible == choisi ? .on : .off
@@ -198,13 +202,14 @@ struct BossVue: View {
 
     // MARK: - Libellés
 
-    /// Le nom d'un boss de donjon vient de DofusDB ; « ? » tant que la liste
-    /// n'est pas là.
-    static func nom(_ cible: CibleBoss, donjons: Donjons?) -> String {
+    /// Le nom d'un boss de donjon vient de DofusDB : en attendant la liste, celui
+    /// qu'on en gardait, à défaut un titre générique.
+    static func nom(_ cible: CibleBoss, donjons: Donjons?, garde: [String: String]?) -> String {
         switch cible {
         case .special(let boss): return nom(boss)
-        case .donjon(let monstre, _):
-            return donjons?.nomsBoss[monstre].flatMap { Lieu.traduit($0, L10n.courante.langue) } ?? "?"
+        case .donjon:
+            let langue = L10n.courante.langue
+            return cible.nomDonjon(dans: donjons, langue) ?? garde.flatMap { Lieu.traduit($0, langue) } ?? L("boss.donjon")
         }
     }
 
