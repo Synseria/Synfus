@@ -62,37 +62,18 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             menu.addItem(.separator())
         }
 
+        let lectureManque = AutorisationsMenu.lectureEcranManque(
+            autorisee: WindowPreviewService.shared.authorized, lirePosition: prefs.lirePosition,
+            lireCombat: prefs.lireCombat, apercus: prefs.showPreviewOnHover,
+            panneauLisant: QuetePanel.shared.ouvert || ChassePanel.shared.ouvert || BossPanel.shared.ouvert)
         if !manager.accessibilityGranted {
             add(to: menu, title: L("autorisation.accessibilite"), action: #selector(requestAccess), icone: "lock.open")
-            menu.addItem(.separator())
-        } else if manager.clients.isEmpty {
-            let empty = NSMenuItem(title: L("barre.aucunPerso"), action: nil, keyEquivalent: "")
-            empty.isEnabled = false
-            menu.addItem(empty)
-            menu.addItem(.separator())
-        } else {
-            // L'effectif : les numéros sont ceux de la barre, et `focus(slot:)`
-            // compte de la même façon.
-            for (index, client) in manager.effectif.enumerated() {
-                let item = add(to: menu, title: client.name, action: #selector(focusClient(_:)),
-                               raccourci: index < prefs.hotKeys.count ? prefs.hotKeys[index] : nil)
-                item.tag = index
-                item.image = ClassesStore.shared.menuIcon(for: client.characterClass)
-                if manager.isFrontmost(client) { item.state = .on }
-                let combat = prefs.lireCombat ? LecteurEcran.shared.combats[client.name] : nil
-                let appelle = AttentionWatcher.shared.alerting.contains(client.slotKey)
-                if let etat = EtatPersoMenu.de(combat: combat, appelle: appelle, dormant: client.dormant) {
-                    item.badge = NSMenuItemBadge(string: etat.libelle)
-                }
-            }
-            if manager.effectif.isEmpty {
-                let empty = NSMenuItem(title: L("menu.aucunPersoEquipe"), action: nil, keyEquivalent: "")
-                empty.isEnabled = false
-                menu.addItem(empty)
-            }
-            if !prefs.equipes.isEmpty { menu.addItem(teamSubmenu()) }
-            menu.addItem(.separator())
         }
+        if lectureManque {
+            add(to: menu, title: L("autorisation.lectureEcran"), action: #selector(requestScreenAccess), icone: "lock.open")
+        }
+        if !manager.accessibilityGranted || lectureManque { menu.addItem(.separator()) }
+        if manager.accessibilityGranted { ajouterPersonnages(a: menu) }
 
         // La palette, geste le plus fréquent, puis les panneaux de jeu ; les
         // fenêtres et la barre ; Synfus lui-même ; enfin ce qui détruit, à part.
@@ -130,6 +111,40 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             menu.addItem(.separator())
         }
         add(to: menu, title: L("menu.quitter"), action: #selector(quit), icone: "power")
+    }
+
+    /// L'effectif, ou ce qui manque pour en avoir un ; les numéros sont ceux de la barre.
+    private func ajouterPersonnages(a menu: NSMenu) {
+        let manager = WindowManager.shared
+        let prefs = Preferences.shared
+        if manager.clients.isEmpty {
+            let empty = NSMenuItem(title: L("barre.aucunPerso"), action: nil, keyEquivalent: "")
+            empty.isEnabled = false
+            menu.addItem(empty)
+            menu.addItem(.separator())
+        } else {
+            // L'effectif : les numéros sont ceux de la barre, et `focus(slot:)`
+            // compte de la même façon.
+            for (index, client) in manager.effectif.enumerated() {
+                let item = add(to: menu, title: client.name, action: #selector(focusClient(_:)),
+                               raccourci: index < prefs.hotKeys.count ? prefs.hotKeys[index] : nil)
+                item.tag = index
+                item.image = ClassesStore.shared.menuIcon(for: client.characterClass)
+                if manager.isFrontmost(client) { item.state = .on }
+                let combat = prefs.lireCombat ? LecteurEcran.shared.combats[client.name] : nil
+                let appelle = AttentionWatcher.shared.alerting.contains(client.slotKey)
+                if let etat = EtatPersoMenu.de(combat: combat, appelle: appelle, dormant: client.dormant) {
+                    item.badge = NSMenuItemBadge(string: etat.libelle)
+                }
+            }
+            if manager.effectif.isEmpty {
+                let empty = NSMenuItem(title: L("menu.aucunPersoEquipe"), action: nil, keyEquivalent: "")
+                empty.isEnabled = false
+                menu.addItem(empty)
+            }
+            if !prefs.equipes.isEmpty { menu.addItem(teamSubmenu()) }
+            menu.addItem(.separator())
+        }
     }
 
     /// Sous-menu « Ranger les fenêtres » : une entrée par disposition. Le
@@ -304,6 +319,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
     @objc private func requestAccess() {
         WindowManager.shared.requestAccessibility()
+    }
+
+    @objc private func requestScreenAccess() {
+        WindowPreviewService.shared.requestAuthorization()
     }
 
     @objc private func quit() {
