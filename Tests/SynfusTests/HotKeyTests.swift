@@ -117,4 +117,29 @@ struct HotKeyTests {
         let data = try JSONEncoder().encode(touche)
         #expect(try JSONDecoder().decode(HotKey.self, from: data) == touche)
     }
+
+    @Test("Le menu montre la touche au bout de la ligne : chiffre, fonction, flèche, modificateurs")
+    func equivalentDeMenu() {
+        let cmd = UInt32(cmdKey), alt = UInt32(optionKey)
+        #expect(HotKey(keyCode: 18, modifiers: cmd).equivalentMenu == EquivalentMenu(touche: "1", modificateurs: [.command]))
+        #expect(HotKey(keyCode: 29, modifiers: cmd | alt).equivalentMenu == EquivalentMenu(touche: "0", modificateurs: [.command, .option]))
+        #expect(HotKey(keyCode: 96, modifiers: 0).equivalentMenu?.touche == String(UnicodeScalar(UInt32(NSF5FunctionKey))!))
+        #expect(HotKey(keyCode: 124, modifiers: cmd).equivalentMenu?.touche == String(UnicodeScalar(UInt32(NSRightArrowFunctionKey))!))
+        #expect(HotKey(keyCode: 49, modifiers: cmd).equivalentMenu?.touche == " ")
+    }
+
+    @Test("Une touche du pavé numérique n'a pas d'équivalent de menu : la ligne n'en montre aucun")
+    func pasDEquivalentPourLePave() {
+        for code: UInt32 in [65, 67, 69, 75, 76, 78, 81, 83, 92] {
+            #expect(HotKey(keyCode: code, modifiers: UInt32(cmdKey)).equivalentMenu == nil)
+        }
+        #expect(HotKey(keyCode: 117, modifiers: UInt32(cmdKey)).equivalentMenu?.touche == String(UnicodeScalar(UInt32(NSDeleteFunctionKey))!))
+        let item = NSMenuItem(title: "x", action: nil, keyEquivalent: "")
+        item.afficher(HotKey(keyCode: 83, modifiers: UInt32(cmdKey)))
+        #expect(item.keyEquivalent.isEmpty)
+        item.afficher(HotKey(keyCode: 18, modifiers: UInt32(cmdKey)))
+        #expect(item.keyEquivalent == "1" && item.keyEquivalentModifierMask == [.command])
+        item.afficher(nil)
+        #expect(item.keyEquivalent.isEmpty)
+    }
 }

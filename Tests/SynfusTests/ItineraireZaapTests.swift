@@ -180,6 +180,14 @@ struct ItineraireZaapTests {
         #expect(CatalogueZaaps.parDistance(zaaps, depuis: position(4, 6, zone: "Incarnam")) == zaaps)
     }
 
+    @Test("La ligne d'un favori : ses cartes quand elles ont un sens, sinon seulement le nom et la case")
+    func lignesFavoris() {
+        let lignes = CatalogueZaaps.lignesFavoris([incarnam, bouftous], depuis: position(4, 6), langue: .fr)
+        #expect(lignes.map(\.zaap) == [bouftous, incarnam])
+        #expect(lignes[0].titre.contains("2"))
+        #expect(lignes[1].titre == L("barre.zaap.favoriSansDistance", incarnam.nom(en: .fr), Coordonnees.texte(incarnam.x, incarnam.y)))
+    }
+
     // MARK: - Sous-zones
 
     @Test("Le zaap de la sous-zone visée, pas le plus proche à vol d'oiseau derrière la montagne")

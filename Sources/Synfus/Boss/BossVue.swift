@@ -98,7 +98,7 @@ struct BossVue: View {
         menu.addItem(nouveau)
         menu.addItem(CibleMenu.shared.element(L("boss.autre")) { PalettePanel.shared.ouvrir(requete: L("boss.autre.recherche")) })
         menu.addItem(.separator())
-        menu.addItem(CibleMenu.shared.element(L("panneau.fermer")) { BossPanel.shared.fermer() })
+        menu.addItem(CibleMenu.shared.element(L("panneau.fermer"), raccourci: Preferences.shared.bossHotKey) { BossPanel.shared.fermer() })
         return menu
     }
 

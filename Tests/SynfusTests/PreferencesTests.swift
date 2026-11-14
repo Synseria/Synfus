@@ -497,7 +497,7 @@ struct PreferencesTests {
      "sessionHotKey":{"keyCode":1,"modifiers":256},"reduirePersosInactifs":false,"showClasses":false,
      "showNumbers":false,"showPreviewOnHover":true,"signalerBascule":false,
      "toggleAutoFocus":{"keyCode":99,"modifiers":0},
-     "zaapAuto":true,"zaapGainMinimal":8,"zaapDuJeu":false,"zaapIntercalees":"/a ; /b","verifierMisesAJour":false,"derniereVersionLancee":"0.11.0","derniereVerificationMaj":800000000,"partagerStatistiques":false,
+     "zaapAuto":true,"zaapGainMinimal":8,"zaapDuJeu":false,"zaapIntercalees":"/a ; /b","verifierMisesAJour":false,"derniereVersionLancee":"0.11.0","derniereVersionNotifiee":"0.12.0","derniereVerificationMaj":800000000,"partagerStatistiques":false,
      "zaapHotKey":{"keyCode":17,"modifiers":2048},
      "zaapsAjoutes":[{"monde":1,"noms":{"fr":"Mon zaap"},"x":50,"y":-50,"zone":{}}],
      "zaapsChoix":{"1:-2,0":false},
@@ -563,6 +563,7 @@ struct PreferencesTests {
         #expect(prefs.verifierMisesAJour == false)
         #expect(prefs.partagerStatistiques == false)
         #expect(prefs.derniereVersionLancee == "0.11.0")
+        #expect(prefs.derniereVersionNotifiee == "0.12.0")
         #expect(prefs.zaapsAjoutes == [Zaap(50, -50, noms: ["fr": "Mon zaap"])])
         #expect(prefs.zaapsChoix == ["1:-2,0": false])
         #expect(prefs.zaapsFavoris == ["1:5,-18", "1:-2,0"])
@@ -643,6 +644,7 @@ struct PreferencesTests {
         prefs.verifierMisesAJour = false
         prefs.partagerStatistiques = false
         prefs.derniereVersionLancee = "0.11.0"
+        prefs.derniereVersionNotifiee = "0.12.0"
         prefs.derniereVerificationMaj = Date(timeIntervalSinceReferenceDate: 800_000_000)
         prefs.zaapsAjoutes = [Zaap(50, -50, noms: ["fr": "Mon zaap"])]
         prefs.zaapsChoix = ["1:-2,0": false]
@@ -1014,6 +1016,19 @@ extension PreferencesTests {
         #expect(BoutonBarre.quetes.infobulle(touche: "⌥Q") == "\(BoutonBarre.quetes.libelle)  ⌥Q")
         #expect(BoutonBarre.boss.infobulle(touche: nil) == BoutonBarre.boss.libelle)
         #expect(BoutonBarre.passageAuto.infobulle(touche: "⌘²", nom: "Passage : activé") == "Passage : activé  ⌘²")
+    }
+
+    @Test("Le passage automatique se bascule entre « passer au perso » et « le signaler »")
+    func basculePassageAuto() {
+        let (prefs, _) = neuves()
+        prefs.attentionAction = .highlight
+        prefs.basculerPassageAuto()
+        #expect(prefs.passageAuto && prefs.attentionAction == .focus)
+        prefs.basculerPassageAuto()
+        #expect(!prefs.passageAuto && prefs.attentionAction == .highlight)
+        prefs.attentionAction = .ignore
+        prefs.basculerPassageAuto()
+        #expect(prefs.attentionAction == .focus)
     }
 
     @Test("Réduire les inactifs : désactivé par défaut, et la sauvegarde l'écrit")
