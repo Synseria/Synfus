@@ -196,7 +196,7 @@ struct ArrangeMenuButton: View {
             Divider()
             MasquerBouton(bouton: .rangement)
         } label: {
-            Image(systemName: "rectangle.3.group")
+            Image(systemName: BoutonBarre.rangement.symbole)
                 .font(Jetons.Typo.note.police)
                 .foregroundStyle(Color.jeton(\.encre))
                 .frame(width: Jetons.Taille.cibleMin, height: Jetons.Taille.cibleMin)

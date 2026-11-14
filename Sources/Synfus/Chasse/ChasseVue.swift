@@ -34,7 +34,7 @@ struct ChasseVue: View {
     }
 
     private var entete: some View {
-        EnTetePanneau(icone: "map", teinte: Color.jeton(\.safran)) {
+        EnTetePanneau(icone: BoutonBarre.chasse.symbole, teinte: Color.jeton(\.safran)) {
             Text(L("chasse.titre")).font(Jetons.Typo.corpsFort.police)
                 .padding(.horizontal, Jetons.Espace.un)
                 .padding(.vertical, Jetons.Espace.un)

@@ -995,6 +995,13 @@ extension PreferencesTests {
                 == [.boss, .chasse, .rangement, .passageAuto])
     }
 
+    @Test("Chaque bouton a son dessin, et « map » reste à la page Carte")
+    func symbolesDesBoutons() {
+        let symboles = BoutonBarre.allCases.map(\.symbole)
+        #expect(Set(symboles).count == symboles.count)
+        #expect(!symboles.contains("map"))
+    }
+
     @Test("Masquer puis remontrer un bouton")
     func montrerBouton() {
         let (prefs, _) = neuves()

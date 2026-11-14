@@ -165,7 +165,7 @@ struct QueteVue: View {
     /// le panneau ; un clic sur le titre ouvre le menu (`EnTetePanneau`).
     private var enTete: some View {
         let montree = ficheImposee?.id ?? panneau.idMontre
-        return EnTetePanneau(icone: "scroll", teinte: Color.jeton(\.primaire),
+        return EnTetePanneau(icone: BoutonBarre.quetes.symbole, teinte: Color.jeton(\.primaire),
                              menu: ficheImposee == nil ? { @MainActor in QuetePanel.shared.menu() } : nil) {
             menuQuetes(titre: ficheImposee?.nom ?? montree.flatMap { store.nom($0) } ?? L("quete.menu.titre"))
             if lecture.etat == .enCours { ProgressView().controlSize(.mini).padding(.leading, Jetons.Espace.un) }
@@ -228,7 +228,7 @@ struct QueteVue: View {
             // finie, sans doute, mais seul le joueur le sait.
             if ficheImposee == nil, lecture.terminees.contains(fiche.id) {
                 Button { QuetePanel.shared.desepingler(fiche.id) } label: {
-                    Label(L("quete.terminee"), systemImage: "flag.checkered")
+                    Label(L("quete.terminee"), systemImage: "checkmark.circle")
                 }
                 .buttonStyle(.bouton(.secondaire, dense: true))
                 .help(L("quete.terminee.aide"))

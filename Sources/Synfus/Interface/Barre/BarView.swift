@@ -201,7 +201,7 @@ struct BarView: View {
     /// activer l'app, comme celui du rangement.
     private var zaapButton: some View {
         ModeButton(
-            icone: "point.3.connected.trianglepath.dotted",
+            icone: BoutonBarre.palette.symbole,
             actif: zaaps.reecritRecemment || palette.ouvert,
             aide: L("barre.paletteAide", prefs.paletteHotKey?.displayString ?? L("barre.aucunRaccourci"))
         ) {
@@ -218,7 +218,7 @@ struct BarView: View {
     /// Synfus, le jeu reste l'app active.
     private var chasseButton: some View {
         ModeButton(
-            icone: "map",
+            icone: BoutonBarre.chasse.symbole,
             actif: chasse.ouvert,
             aide: L("barre.chasseAide", prefs.chasseHotKey?.displayString ?? L("barre.aucunRaccourci"))
         ) {
@@ -229,7 +229,7 @@ struct BarView: View {
     /// Le panneau des quêtes épinglées ; vide, il invite à en chercher une
     /// dans la palette.
     private var quetesButton: some View {
-        ModeButton(icone: "scroll", actif: quetes.ouvert, aide: L("barre.quetesAide")) {
+        ModeButton(icone: BoutonBarre.quetes.symbole, actif: quetes.ouvert, aide: L("barre.quetesAide")) {
             QuetePanel.shared.basculer()
         }
     }
@@ -237,7 +237,7 @@ struct BarView: View {
     /// Le panneau d'aide aux boss, posé sur le jeu.
     private var bossButton: some View {
         ModeButton(
-            icone: "scope",
+            icone: BoutonBarre.boss.symbole,
             actif: boss.ouvert,
             aide: L("barre.bossAide", prefs.bossHotKey?.displayString ?? L("barre.aucunRaccourci"))
         ) {
@@ -273,7 +273,7 @@ struct BarView: View {
     private var autoFocusToggle: some View {
         let on = prefs.attentionAction == .focus
         return ModeButton(
-            icone: on ? "bolt.fill" : "bolt.slash",
+            icone: on ? BoutonBarre.passageAuto.symbole : "bolt.slash",
             actif: on,
             aide: on
                 ? L("barre.passageAuto.actif", toggleShortcut)
