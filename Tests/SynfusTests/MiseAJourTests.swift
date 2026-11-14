@@ -12,6 +12,26 @@ struct MiseAJourTests {
       {"name":"Synfus-0.11.0-x86_64.dmg","browser_download_url":"https://github.com/Synseria/Synfus/releases/download/v0.11.0/Synfus-0.11.0-x86_64.dmg"}]}
     """
 
+    @Test("La ligne de version dit de quand date la réponse de GitHub, ou seulement l'état")
+    func resume() {
+        var calendrier = Calendar(identifier: .gregorian)
+        calendrier.timeZone = TimeZone(identifier: "UTC") ?? .gmt
+        let maintenant = Date(timeIntervalSinceReferenceDate: 800_000_000)
+        let hier = maintenant.addingTimeInterval(-86_400)
+        func texte(_ etat: MiseAJour.Etat, _ date: Date?) -> String? {
+            MiseAJour.resume(version: "1.4.2", etat: etat, verifiee: date, maintenant: maintenant, calendrier: calendrier)
+        }
+        #expect(texte(.aJour, maintenant) == "v1.4.2 · " + L("maj.etat.aJourVerifiee", L("maj.quand.aujourdhui")))
+        #expect(texte(.aJour, hier) == "v1.4.2 · " + L("maj.etat.aJourVerifiee", L("maj.quand.hier")))
+        #expect(texte(.aJour, nil) == "v1.4.2 · " + L("maj.aJour"))
+        #expect(texte(.inconnu, maintenant) == "v1.4.2 · " + L("maj.etat.verifiee", L("maj.quand.aujourdhui")))
+        #expect(texte(.inconnu, nil) == "v1.4.2")
+        #expect(texte(.verification, maintenant) == L("maj.verification"))
+        #expect(MiseAJour.resume(version: nil, etat: .inconnu, verifiee: nil) == nil)
+        #expect(MiseAJour.quand(maintenant.addingTimeInterval(-5 * 86_400), maintenant, calendrier)
+                == L("maj.quand.le", maintenant.addingTimeInterval(-5 * 86_400).formatted(.dateTime.day().month(.abbreviated))))
+    }
+
     @Test("La release se lit avec le DMG de l'architecture et les empreintes")
     func lecture() throws {
         let version = try #require(VersionPubliee.lire(Data(Self.reponse.utf8), architecture: "x86_64"))

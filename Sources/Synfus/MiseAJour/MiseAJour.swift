@@ -75,6 +75,7 @@ final class MiseAJour: ObservableObject {
         Task {
             let derniere = await installateur.derniere()
             guard case .verification = etat else { return }
+            if derniere != nil { Preferences.shared.derniereVerificationMaj = Date() }
             if let derniere, derniere.plusRecente(que: installee) {
                 etat = .disponible(derniere)
             } else {
