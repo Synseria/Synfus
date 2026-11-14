@@ -23,11 +23,64 @@ enum MenuQuetes {
         case reconnue(SuiviQuetes.Reconnue, titre: String, epinglee: Bool)
         /// Ce que la dernière lecture a donné, faute de quête.
         case message(String)
+        /// Le geste qui lève la cause d'un suivi illisible.
+        case geste(Geste)
         /// Un interrupteur de l'affichage, coché quand il est actif.
         case option(Option, actif: Bool)
         /// Cache le panneau ; les quêtes restent épinglées.
         case fermer
         case separateur
+    }
+
+    /// Ce que le joueur fait pour que le suivi se lise.
+    enum Geste: Equatable {
+        case autoriser, calibrer, reessayer, relire
+
+        var titre: String {
+            switch self {
+            case .autoriser: L("quete.suivi.autoriser")
+            case .calibrer: L("quete.suivi.calibrer")
+            case .reessayer, .relire: L("commun.reessayer")
+            }
+        }
+    }
+
+    /// Pourquoi le suivi ne s'est pas lu : la cause que la lecture a portée, et son geste, s'il y en a un.
+    enum Probleme: Equatable {
+        case sansAutorisation, sansPerso, captureImpossible, zone, indisponible
+
+        var titre: String {
+            switch self {
+            case .sansAutorisation: L("quete.suivi.sansAutorisation")
+            case .sansPerso: L("quete.suivi.sansPerso")
+            case .captureImpossible: L("quete.suivi.captureImpossible")
+            case .zone: L("quete.suivi.zone")
+            case .indisponible: L("quete.indisponible")
+            }
+        }
+
+        var geste: Geste? {
+            switch self {
+            case .sansAutorisation: .autoriser
+            case .sansPerso: nil
+            case .captureImpossible: .relire
+            case .zone: .calibrer
+            case .indisponible: .reessayer
+            }
+        }
+
+        /// `autorise` : l'enregistrement de l'écran est permis maintenant — une autorisation donnée depuis
+        /// l'échec ne s'affiche plus comme manquante.
+        static func de(_ etat: LectureSuivi.Etat, autorise: Bool) -> Probleme? {
+            switch etat {
+            case .jamaisLu, .enCours, .lu: nil
+            case .sansQuetes: .indisponible
+            case .illisible(.sansAutorisation): autorise ? nil : .sansAutorisation
+            case .illisible(.sansPerso): .sansPerso
+            case .illisible(.captureImpossible): .captureImpossible
+            case .illisible(.texteIllisible): .zone
+            }
+        }
     }
 
     /// Les interrupteurs repris de l'onglet Quêtes : celui du suivi dans sa
@@ -69,7 +122,7 @@ enum MenuQuetes {
     /// sur la case, ou qu'elle est inconnue.
     static func elements(epinglees: [Int], montree: Int?, reconnues: [SuiviQuetes.Reconnue],
                          etat: LectureSuivi.Etat, coches: Int, actives: Set<Option>, ici: Ici? = nil,
-                         nom: (Int) -> String) -> [Element] {
+                         autorise: Bool = true, nom: (Int) -> String) -> [Element] {
         // Une quête qui commence ici et que le panneau n'a pas : la section passe en tête.
         let iciEnTete = ici?.aEpingler(epinglees).isEmpty == false
         var elements: [Element] = []
@@ -90,7 +143,12 @@ enum MenuQuetes {
             let titre = reconnue.etape.map { L("quete.menu.reconnueEtape", nom(reconnue.id), $0 + 1) } ?? nom(reconnue.id)
             return .reconnue(reconnue, titre: titre, epinglee: epinglees.contains(reconnue.id))
         }
-        if let message = message(etat, reconnues: reconnues) { elements.append(.message(message)) }
+        if let probleme = Probleme.de(etat, autorise: autorise) {
+            elements.append(.message(probleme.titre))
+            if let geste = probleme.geste { elements.append(.geste(geste)) }
+        } else if etat == .lu, reconnues.isEmpty {
+            elements.append(.message(L("quete.suivi.rien")))
+        }
         if etat == .lu, coches > 0 { elements.append(.message(L("quete.suivi.coches", nombre: coches, coches))) }
         return elements + [.separateur] + Option.affichage.map { .option($0, actif: actives.contains($0)) } + [.separateur, .fermer]
     }
@@ -115,15 +173,6 @@ enum MenuQuetes {
     /// Les quêtes du suivi que le panneau n'a pas encore, dans l'ordre du suivi.
     static func aEpingler(_ reconnues: [SuiviQuetes.Reconnue], epinglees: [Int]) -> [SuiviQuetes.Reconnue] {
         reconnues.filter { !epinglees.contains($0.id) }
-    }
-
-    private static func message(_ etat: LectureSuivi.Etat, reconnues: [SuiviQuetes.Reconnue]) -> String? {
-        switch etat {
-        case .jamaisLu, .enCours: return nil
-        case .illisible: return L("quete.suivi.illisible")
-        case .sansQuetes: return L("quete.suivi.sansQuetes")
-        case .lu: return reconnues.isEmpty ? L("quete.suivi.rien") : nil
-        }
     }
 }
 

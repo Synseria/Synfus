@@ -80,6 +80,22 @@ struct PanneauQuetesTests {
         #expect(MenuQuetes.nouvelles(reconnues, epinglees: [18, 42]) == 1)
     }
 
+    @Test("Un suivi illisible dit la cause que la lecture a portée, avec son geste")
+    func problemesDuSuivi() {
+        typealias P = MenuQuetes.Probleme
+        #expect(P.de(.illisible(.sansAutorisation), autorise: false) == .sansAutorisation)
+        // Autorisé depuis l'échec : plus de cause à montrer.
+        #expect(P.de(.illisible(.sansAutorisation), autorise: true) == nil)
+        #expect(P.de(.illisible(.sansPerso), autorise: true) == .sansPerso)
+        // Une capture qui échoue n'est pas une zone à calibrer.
+        #expect(P.de(.illisible(.captureImpossible), autorise: true) == .captureImpossible)
+        #expect(P.de(.illisible(.texteIllisible), autorise: true) == .zone)
+        #expect(P.de(.sansQuetes, autorise: true) == .indisponible)
+        #expect(P.de(.lu, autorise: false) == nil)
+        #expect(P.sansPerso.geste == nil)
+        #expect([P.sansAutorisation, .captureImpossible, .zone, .indisponible].map(\.geste) == [.autoriser, .relire, .calibrer, .reessayer])
+    }
+
     @Test("« Tout épingler » : en tête du suivi dès deux quêtes à épingler, jamais pour une seule")
     func menuToutEpingler() {
         let reconnues = [SuiviQuetes.Reconnue(id: 7, etape: 2), SuiviQuetes.Reconnue(id: 9, etape: nil),
@@ -130,8 +146,9 @@ struct PanneauQuetesTests {
         #expect(Array(enCours.dropLast(pied).suffix(2)) == [.lireSuivi(enCours: true), .option(.cocherSuivi, actif: false)])
         // Une seule quête : la retirer, c'est tout retirer.
         #expect(enCours.contains(.desepingler(id: 1, nom: "Q1")) && !enCours.contains(.toutDesepingler))
-        let illisible = MenuQuetes.elements(epinglees: [1], montree: 1, reconnues: [], etat: .illisible, coches: 2, actives: [], nom: nom)
-        #expect(illisible.dropLast(pied).last == .message(L("quete.suivi.illisible")))
+        let sansEcran = MenuQuetes.elements(epinglees: [1], montree: 1, reconnues: [], etat: .illisible(.sansAutorisation), coches: 2,
+                                            actives: [], autorise: false, nom: nom)
+        #expect(Array(sansEcran.dropLast(pied).suffix(2)) == [.message(L("quete.suivi.sansAutorisation")), .geste(.autoriser)])
     }
 
     @Test("Le menu dit ce qui commence sur la case du perso, en tête tant qu'une quête n'est pas épinglée")
