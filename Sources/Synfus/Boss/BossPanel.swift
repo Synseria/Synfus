@@ -59,7 +59,8 @@ final class BossPanel: NSObject, ObservableObject {
     func revoirLectures() { appliquer(force: false) }
 
     private func appliquer(force: Bool) {
-        let montre = PanneauxJeu.appliquer(&panel, ouvert: ouvert, impose: impose, force: force, construire: construire)
+        let montre = PanneauxJeu.appliquer(&panel, ouvert: ouvert, impose: impose, force: force,
+                                           parDefaut: Self.placeParDefaut, construire: construire)
         LecteurEcran.shared.suivreBoss(montre && WindowPreviewService.shared.authorized ? AideBoss.shared.boss.lectures : nil)
     }
 
@@ -81,9 +82,19 @@ final class BossPanel: NSObject, ObservableObject {
         panel.isOpaque = false
         panel.hasShadow = true
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        if !panel.setFrameAutosaveName("BossPanel") || panel.frame.origin == .zero, let ecran = NSScreen.main?.visibleFrame {
-            panel.setFrameTopLeftPoint(NSPoint(x: ecran.midX + 220, y: ecran.maxY - 80))
+        if !panel.setFrameAutosaveName("BossPanel") || panel.frame.origin == .zero {
+            PanneauxJeu.placer(panel, parDefaut: Self.placeParDefaut)
         }
         return panel
+    }
+
+    /// En haut, à droite du centre de l'écran.
+    private static let placeParDefaut: PanneauxJeu.PlaceParDefaut = { zone, _ in
+        NSPoint(x: zone.midX + 220, y: zone.maxY - 80)
+    }
+
+    /// Le panneau ouvert reprend sa place d'origine.
+    func recentrer() {
+        if ouvert, let panel { PanneauxJeu.placer(panel, parDefaut: Self.placeParDefaut) }
     }
 }

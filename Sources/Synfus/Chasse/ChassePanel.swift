@@ -42,6 +42,7 @@ final class ChassePanel: NSObject, ObservableObject, NSWindowDelegate {
 
     func ouvrir() {
         let panel = panel ?? construire()
+        PanneauxJeu.rattraper(panel, parDefaut: Self.placeParDefaut)
         panel.makeKeyAndOrderFront(nil)
         if !ouvert { UsageStore.shared.compter(.chasse) }
         ouvert = true
@@ -58,7 +59,10 @@ final class ChassePanel: NSObject, ObservableObject, NSWindowDelegate {
     func revoirVisibilite(force: Bool) {
         guard let panel, ouvert else { return }
         if PanneauxJeu.visible(ouvert: true) {
-            if force || !panel.isVisible { panel.orderFrontRegardless() }
+            if force || !panel.isVisible {
+                PanneauxJeu.rattraper(panel, parDefaut: Self.placeParDefaut)
+                panel.orderFrontRegardless()
+            }
         } else if panel.isVisible {
             panel.orderOut(nil)
         }
@@ -88,8 +92,20 @@ final class ChassePanel: NSObject, ObservableObject, NSWindowDelegate {
         panel.hasShadow = true
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.delegate = self
-        if !panel.setFrameAutosaveName("ChassePanel") || panel.frame.origin == .zero { panel.center() }
+        if !panel.setFrameAutosaveName("ChassePanel") || panel.frame.origin == .zero {
+            PanneauxJeu.placer(panel, parDefaut: Self.placeParDefaut)
+        }
         self.panel = panel
         return panel
+    }
+
+    /// Au centre de l'écran.
+    private static let placeParDefaut: PanneauxJeu.PlaceParDefaut = { zone, taille in
+        NSPoint(x: zone.midX - taille.width / 2, y: zone.midY + taille.height / 2)
+    }
+
+    /// Le panneau ouvert reprend sa place d'origine.
+    func recentrer() {
+        if ouvert, let panel { PanneauxJeu.placer(panel, parDefaut: Self.placeParDefaut) }
     }
 }

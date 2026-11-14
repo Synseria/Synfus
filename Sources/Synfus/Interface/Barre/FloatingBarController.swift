@@ -166,7 +166,7 @@ final class FloatingBarController: NSObject {
     private func restorePosition() {
         if Preferences.shared.autoCenterBar {
             centerAtTop()
-        } else if let origin = Preferences.shared.barOrigin, isOnScreen(origin) {
+        } else if let origin = Preferences.shared.barOrigin, PanneauxJeu.surUnEcran(origin) {
             reposition(to: origin)
         } else {
             centerAtTop()
@@ -215,11 +215,6 @@ final class FloatingBarController: NSObject {
         // `didMove` peut arriver au tour de boucle suivant : on ne relâche le
         // drapeau qu'une fois la notification passée.
         DispatchQueue.main.async { self.repositioning = false }
-    }
-
-    /// Évite de restaurer la barre sur un écran débranché depuis.
-    private func isOnScreen(_ origin: CGPoint) -> Bool {
-        NSScreen.screens.contains { $0.frame.insetBy(dx: -40, dy: -40).contains(origin) }
     }
 
     @objc private func panelMoved() {
