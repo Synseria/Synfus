@@ -474,7 +474,7 @@ struct PreferencesTests {
     {"advanceModifier":"option","advanceOnClick":true,
      "arrangeHotKey":{"keyCode":40,"modifiers":256},"attentionAction":"focus",
      "autoCenterBar":false,"barOnlyWithDofus":true,"panneauxSeulementDofus":false,"barOriginX":120.5,"barOriginY":640,
-     "barVisible":false,"bossChoisi":"kimbo",
+     "barVisible":false,"bossChoisi":"kimbo","nomsBossChoisi":{"fr":"Bouftou Royal"},
      "boutonsMasques":["quetes","boss","chasse","palette"],"characterOrder":["Aeryn","Nova"],
      "chasseHotKey":{"keyCode":5,"modifiers":2048},
      "cycleNext":{"keyCode":122,"modifiers":0},"cyclePrevious":{"keyCode":120,"modifiers":0},
@@ -583,6 +583,7 @@ struct PreferencesTests {
         #expect(prefs.quetesCochesLues == ["18": [104]])
         #expect(prefs.chasseHotKey == HotKey(keyCode: 5, modifiers: 2048))
         #expect(prefs.bossChoisi == .special(.kimbo))
+        #expect(prefs.nomsBossChoisi == ["fr": "Bouftou Royal"])
         #expect(prefs.boutonsMasques == [.quetes, .boss, .chasse, .palette])
         #expect(prefs.lireCombatDerriere == true)
         #expect(prefs.vuesCartes == false)
@@ -660,6 +661,7 @@ struct PreferencesTests {
         prefs.quetesCochesLues = ["18": [104]]
         prefs.chasseHotKey = HotKey(keyCode: 5, modifiers: 2048)
         prefs.bossChoisi = .special(.kimbo)
+        prefs.nomsBossChoisi = ["fr": "Bouftou Royal"]
         prefs.boutonsMasques = [.palette, .chasse, .boss, .quetes]
         prefs.lireCombatDerriere = true
         prefs.vuesCartes = false

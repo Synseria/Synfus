@@ -266,6 +266,10 @@ final class Preferences: ObservableObject {
 
     /// Le boss que montre le panneau d'aide.
     @Published var bossChoisi: CibleBoss = .special(.harebourg) { didSet { save() } }
+    /// Le nom du boss de donjon choisi en toutes langues, tel que DofusDB l'a rendu : il
+    /// titre le panneau, dans la langue du moment, tant que la liste des donjons n'est
+    /// pas là. `nil` : jamais connu.
+    @Published var nomsBossChoisi: [String: String]? { didSet { save() } }
 
     private var loading = false
     /// Dans `enUneEcriture` : les `save()` attendent sa fin, et n'en font qu'un.
@@ -562,6 +566,7 @@ final class Preferences: ObservableObject {
         .optionnel("bossHotKey", \.bossHotKey),
         .optionnel("quetesHotKey", \.quetesHotKey),
         .facultatif("bossChoisi", \.bossChoisi),
+        .optionnel("nomsBossChoisi", \.nomsBossChoisi),
         .facultatif("lieuxFavoris", \.lieuxFavoris),
         .facultatif("pnjsFavoris", \.pnjsFavoris),
         .facultatif("etiquettes", \.etiquettes),
