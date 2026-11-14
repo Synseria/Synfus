@@ -140,11 +140,7 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             item.tag = index
             item.image = NSImage(systemSymbolName: disposition.symbolName,
                                  accessibilityDescription: disposition.label)
-            if let hotKey = prefs.arrangeHotKey,
-               disposition == prefs.lastArrangement {
-                item.attributedTitle = attributed(name: disposition.label,
-                                                  shortcut: hotKey.displayString)
-            }
+            if disposition == prefs.lastArrangement { item.afficher(prefs.arrangeHotKey) }
             submenu.addItem(item)
         }
         submenu.addItem(.separator())
@@ -167,10 +163,12 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         let prefs = Preferences.shared
         let parent = NSMenuItem(title: L("equipes.equipe"), action: nil, keyEquivalent: "")
         parent.image = NSImage(systemSymbolName: "person.2", accessibilityDescription: nil)
-        if let hotKey = prefs.equipeSuivanteHotKey {
-            parent.attributedTitle = attributed(name: L("equipes.equipe"), shortcut: hotKey.displayString)
-        }
         let submenu = NSMenu()
+        let suivante = NSMenuItem(title: L("raccourcis.equipeSuivante"), action: #selector(nextTeam), keyEquivalent: "")
+        suivante.target = self
+        suivante.afficher(prefs.equipeSuivanteHotKey)
+        submenu.addItem(suivante)
+        submenu.addItem(.separator())
         let tous = NSMenuItem(title: L("equipes.tous"), action: #selector(selectTeam(_:)), keyEquivalent: "")
         tous.target = self
         tous.tag = 0
@@ -188,32 +186,16 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         return parent
     }
 
-    /// Le raccourci, global (Carbon), est montré à titre indicatif : un key
-    /// equivalent de menu ne marcherait que Synfus au premier plan.
+    /// Le raccourci est montré au bout de la ligne (`NSMenuItem.afficher`).
     @discardableResult
     private func add(to menu: NSMenu, title: String, action: Selector, raccourci: HotKey? = nil,
                      icone: String? = nil) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
         item.target = self
         item.image = icone.flatMap { NSImage(systemSymbolName: $0, accessibilityDescription: nil) }
-        if let raccourci { item.attributedTitle = attributed(name: title, shortcut: raccourci.displayString) }
+        item.afficher(raccourci)
         menu.addItem(item)
         return item
-    }
-
-    private func attributed(name: String, shortcut: String) -> NSAttributedString {
-        let result = NSMutableAttributedString(
-            string: name,
-            attributes: [.font: NSFont.menuFont(ofSize: 0)]
-        )
-        result.append(NSAttributedString(
-            string: "   \(shortcut)",
-            attributes: [
-                .font: NSFont.monospacedDigitSystemFont(ofSize: NSFont.smallSystemFontSize, weight: .regular),
-                .foregroundColor: NSColor.secondaryLabelColor,
-            ]
-        ))
-        return result
     }
 
     // MARK: - Actions
@@ -225,6 +207,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
     @objc private func selectTeam(_ sender: NSMenuItem) {
         WindowManager.shared.activerEquipe(sender.tag == 0 ? nil : sender.tag - 1)
+    }
+
+    @objc private func nextTeam() {
+        WindowManager.shared.equipeSuivante()
     }
 
     @objc private func arrange(_ sender: NSMenuItem) {

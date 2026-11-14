@@ -180,9 +180,10 @@ final class CibleMenu: NSObject {
         init(_ agir: @escaping @MainActor () -> Void) { self.agir = agir }
     }
 
-    func element(_ titre: String, agir: @escaping @MainActor () -> Void) -> NSMenuItem {
+    func element(_ titre: String, raccourci: HotKey? = nil, agir: @escaping @MainActor () -> Void) -> NSMenuItem {
         let item = NSMenuItem(title: titre, action: #selector(declencher(_:)), keyEquivalent: "")
         item.target = self
+        item.afficher(raccourci)
         item.representedObject = Action(agir)
         return item
     }
