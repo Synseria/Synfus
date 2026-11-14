@@ -629,6 +629,8 @@
   "persos.oublierHorsLigne.confirmation": "¿Quitar %lld personajes sin conexión?",
   "persos.oublierHorsLigne.confirmation.un": "¿Quitar %lld personaje sin conexión?",
   "persos.oublierHorsLigne.detail": "Los atajos de los personajes siguientes se desplazan.",
+  "persos.raccourci": "Atajo",
+  "persos.raccourciDuPerso": "Atajo del personaje",
   "persos.retirer": "Quitar de la lista",
   "persos.retirer.confirmation": "¿Quitar a %@ de la lista?",
   "persos.retirer.detail": "Los atajos de los personajes siguientes se desplazan.",

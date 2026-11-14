@@ -629,6 +629,8 @@
   "persos.oublierHorsLigne.confirmation": "Remove %lld offline characters?",
   "persos.oublierHorsLigne.confirmation.un": "Remove %lld offline character?",
   "persos.oublierHorsLigne.detail": "The shortcuts of the characters after them shift.",
+  "persos.raccourci": "Shortcut",
+  "persos.raccourciDuPerso": "Character shortcut",
   "persos.retirer": "Remove from the list",
   "persos.retirer.confirmation": "Remove %@ from the list?",
   "persos.retirer.detail": "The shortcuts of the characters after it shift.",
