@@ -237,7 +237,7 @@
   "combat.fiche": "Lvl %lld · %@ HP · %lld AP · %lld MP",
   "combat.fiche.aide": "The highest grade, from DofusDB.",
   "combat.fiche.elements": "Hit with: %@ · avoid: %@",
-  "combat.fiche.resistances": "Resistances: neutral %lld%% · earth %lld%% · fire %lld%% · water %lld%% · air %lld%%",
+  "combat.fiche.pourcentage": "%lld%%",
   "combat.horsCombat": "out of combat",
   "combat.monTour": "their turn",
   "combat.monTourSecondes": "their turn — %lld s",

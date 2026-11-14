@@ -237,7 +237,7 @@
   "combat.fiche": "Niv. %lld · %@ PV · %lld PA · %lld PM",
   "combat.fiche.aide": "Le plus haut grade, d'après DofusDB.",
   "combat.fiche.elements": "Frapper : %@ · éviter : %@",
-  "combat.fiche.resistances": "Résistances : neutre %lld %% · terre %lld %% · feu %lld %% · eau %lld %% · air %lld %%",
+  "combat.fiche.pourcentage": "%lld %%",
   "combat.horsCombat": "hors combat",
   "combat.monTour": "à son tour",
   "combat.monTourSecondes": "à son tour — %lld s",

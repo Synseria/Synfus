@@ -81,6 +81,7 @@ struct BossTests {
         let fiche = try #require(FicheCombat(try JSONDecoder().decode(FicheCombat.MonstreAPI.self, from: Data(json.utf8))))
         #expect([fiche.niveau, fiche.vie, fiche.pa, fiche.pm] as [Int] == [160, 10000, 12, 7])
         #expect(fiche.resistances[.terre] == 400 && fiche.resistances[.feu] == -20 && fiche.resistances[.air] == 0)
+        #expect(fiche.role(.feu) == .frapper && fiche.role(.terre) == .eviter && fiche.role(.air) == .neutre)
         #expect(FicheCombat(FicheCombat.MonstreAPI(id: nil, name: nil, grades: [])) == nil)
     }
 }
