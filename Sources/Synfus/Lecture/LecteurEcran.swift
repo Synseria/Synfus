@@ -493,12 +493,29 @@ final class LecteurEcran: ObservableObject {
         case sansAutorisation, sansPerso, captureImpossible, texteIllisible
     }
 
+    private var clientAuPremierPlan: DofusClient? {
+        let manager = WindowManager.shared
+        return manager.clients.first(where: { manager.isFrontmost($0) })
+    }
+
+    /// Le perso devant : celui au premier plan, sinon le dernier lu devant.
+    private var clientDevant: DofusClient? {
+        clientAuPremierPlan ?? WindowManager.shared.clients.first(where: { $0.name == persoDevant })
+    }
+
+    /// La position du perso devant, lue maintenant sans attendre le prochain tour.
+    func lirePositionDevant() async {
+        guard Preferences.shared.lirePosition, WindowPreviewService.shared.authorized, let client = clientDevant,
+              let image = await capturer(client, [.position])[.position] else { return }
+        if clientAuPremierPlan != nil, persoDevant != client.name { persoDevant = client.name }
+        await lire(image, .position, nom: client.name)
+    }
+
     /// `lireUneFois`, avec la cause de l'échec.
     func essayerLireUneFois(_ genre: GenreLecture) async -> Result<(perso: String, lignes: [String], coupe: Bool), EchecLecture> {
-        let manager = WindowManager.shared
-        let devant = manager.clients.first(where: { manager.isFrontmost($0) })
+        let devant = clientAuPremierPlan
         guard WindowPreviewService.shared.authorized else { return .failure(.sansAutorisation) }
-        guard let client = devant ?? manager.clients.first(where: { $0.name == persoDevant }) else { return .failure(.sansPerso) }
+        guard let client = clientDevant else { return .failure(.sansPerso) }
         guard let image = await capturer(client, [genre])[genre] else { return .failure(.captureImpossible) }
         guard case .lue(let signature, let lignes, _, _) = await moteur.lire(image: image, precedente: nil, mesure: genre.mesure)
         else { return .failure(.texteIllisible) }

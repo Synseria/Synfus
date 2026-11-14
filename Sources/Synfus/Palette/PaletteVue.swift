@@ -44,14 +44,7 @@ struct PaletteVue: View {
                 .font(Jetons.Typo.titre.police)
                 .focused($champ, equals: .recherche)
                 .help(L("raccourcis.palette.aide"))
-            // D'où partent distances et trajets : le dernier perso lu devant,
-            // pas forcément celui qu'on croit quand on joue plusieurs comptes.
-            Label(modele.origine, systemImage: "location")
-                .font(Jetons.Typo.petit.police)
-                .foregroundStyle(Color.jeton(\.encreSecondaire))
-                .lineLimit(1)
-                .fixedSize()
-                .help(L("palette.depuis.aide"))
+            origine
             if let mode {
                 Text(mode)
                     .font(Jetons.Typo.raccourci.police)
@@ -63,6 +56,43 @@ struct PaletteVue: View {
         }
         .padding(.horizontal, Jetons.Espace.quatre)
         .frame(height: Jetons.Taille.rangeePalette + Jetons.Espace.quatre)
+    }
+
+    /// D'où partent distances et trajets : le dernier perso lu devant, pas forcément celui qu'on
+    /// croit quand on joue plusieurs comptes. Position inconnue : le geste qui la rend.
+    @ViewBuilder
+    private var origine: some View {
+        switch modele.causeOrigine {
+        case .connue:
+            Label(modele.origine, systemImage: "location")
+                .font(Jetons.Typo.petit.police)
+                .foregroundStyle(Color.jeton(\.encreSecondaire))
+                .lineLimit(1)
+                .fixedSize()
+                .help(L("palette.depuis.aide"))
+        case .lectureEteinte:
+            boutonOrigine(L("palette.origine.lire"), aide: L("palette.origine.lire.aide")) {
+                SettingsWindowController.shared.show(section: .lecture)
+            }
+        case .sansAutorisation:
+            boutonOrigine(L("palette.origine.autoriser"), aide: L("palette.origine.autoriser.aide")) {
+                WindowPreviewService.shared.requestAuthorization()
+            }
+        case .inconnue:
+            boutonOrigine(L("palette.depuis.inconnue"), aide: L("palette.origine.inconnue.aide")) { modele.lirePosition() }
+        }
+    }
+
+    private func boutonOrigine(_ titre: String, aide: String, _ geste: @escaping () -> Void) -> some View {
+        Button(action: geste) {
+            Label(titre, systemImage: "location")
+                .font(Jetons.Typo.petit.police)
+                .lineLimit(1)
+                .fixedSize()
+        }
+        .buttonStyle(.bouton(.tertiaire, dense: true))
+        .focusable(false)
+        .help(aide)
     }
 
     /// Les familles que Tab fait défiler, les préfixes des commandes et des
@@ -190,7 +220,6 @@ struct PaletteVue: View {
                 texteVide(L("palette.quetes.chargement"))
             case .iciSansLecture:
                 texteVide(L("palette.ici.sansPosition"))
-                Button(L("lecture.ouvrir")) { SettingsWindowController.shared.show(section: .lecture) }
             case .iciPasEncoreLu:
                 texteVide(L("palette.ici.pasEncore"))
             case .rienDansLeFiltre(let filtre, let ailleurs):
