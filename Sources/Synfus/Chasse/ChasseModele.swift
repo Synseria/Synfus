@@ -15,8 +15,10 @@ final class ChasseModele: ObservableObject {
         let resultat: EtapeChasse.Resultat
     }
 
-    @Published var departX = 0
-    @Published var departY = 0
+    /// Vides tant qu'aucune position n'a été lue ni tapée : un départ inventé
+    /// donnerait une étape fausse sans qu'on le voie.
+    @Published var departX: Int?
+    @Published var departY: Int?
     @Published private(set) var direction: Direction?
     @Published private(set) var cible: EtapeChasse.Cible?
     /// Le champ de l'indice ; il ne propose rien tant qu'il nomme la cible.
@@ -42,6 +44,12 @@ final class ChasseModele: ObservableObject {
     /// La liste des indices n'est pas encore là : rien ne se choisit.
     var enAttenteDesIndices: Bool { indices.isEmpty && echecIndices == nil }
 
+    var departConnu: Bool { departX != nil && departY != nil }
+
+    var attente: AttenteChasse {
+        AttenteChasse(departConnu: departConnu, directionChoisie: direction != nil)
+    }
+
     var langue: Langue { L10n.courante.langue }
 
     var suggestions: [EtapeChasse.Cible] {
@@ -51,6 +59,14 @@ final class ChasseModele: ObservableObject {
     }
 
     #if DEBUG
+    func viderPourCaptures() {
+        departX = nil
+        departY = nil
+        constat = nil
+        lues = []
+        cible = nil
+    }
+
     /// Les indices indisponibles, pour la capture de la documentation (`CapturesTests`).
     func poserEchecPourCaptures() {
         indices = []
@@ -142,6 +158,7 @@ final class ChasseModele: ObservableObject {
         if let premiere = suggestions.first { choisir(premiere) } else { chercherSiPret() }
     }
 
+    /// Une étape se cherche quand elle est complète ; le Phorreur n'a pas besoin de départ.
     private func chercherSiPret() {
         guard let cible, let direction, cible.nom(en: langue) == saisie else { return }
         recherche?.cancel()
@@ -150,7 +167,7 @@ final class ChasseModele: ObservableObject {
             conclure(Constat(cible: cible, direction: direction, resultat: .phorreur))
             return
         }
-        let (x, y) = (departX, departY)
+        guard let x = departX, let y = departY else { return }
         rechercheEnCours = true
         recherche = Task {
             defer { rechercheEnCours = false }

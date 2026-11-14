@@ -68,9 +68,9 @@ struct ChasseVue: View {
         HStack(spacing: Jetons.Espace.un) {
             Image(systemName: "flag").foregroundStyle(Color.jeton(\.encreSecondaire))
                 .help(L("chasse.depart"))
-            TextField("x", value: $modele.departX, format: .number.grouping(.never))
+            TextField("x", value: $modele.departX, format: .number.grouping(.never), prompt: Text("x"))
                 .frame(width: 52)
-            TextField("y", value: $modele.departY, format: .number.grouping(.never))
+            TextField("y", value: $modele.departY, format: .number.grouping(.never), prompt: Text("y"))
                 .frame(width: 52)
             Button { modele.reprendrePosition() } label: { Image(systemName: "location") }
                 .buttonStyle(.bouton(.tertiaire, dense: true))
@@ -134,8 +134,9 @@ struct ChasseVue: View {
 
     private var indice: some View {
         VStack(alignment: .leading, spacing: Jetons.Espace.un) {
-            // Ce que le champ attend s'écrit dans son texte d'exemple : une direction, puis l'indice.
-            TextField(L("chasse.indice"), text: $modele.saisie, prompt: Text(attente))
+            // Ce que le champ attend s'écrit dans son texte d'exemple : le départ, puis une direction,
+            // puis l'indice.
+            TextField(L("chasse.indice"), text: $modele.saisie, prompt: Text(modele.attente.libelle))
                 .textFieldStyle(.roundedBorder)
                 .disabled(modele.enAttenteDesIndices)
                 .onSubmit { modele.validerSaisie() }
@@ -149,10 +150,6 @@ struct ChasseVue: View {
                 .buttonStyle(.etat(nue: true))
             }
         }
-    }
-
-    private var attente: String {
-        return modele.direction == nil ? L("chasse.direction.choisir") : L("chasse.indice")
     }
 
     // MARK: - Indices lus

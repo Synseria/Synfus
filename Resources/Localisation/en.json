@@ -188,6 +188,7 @@
   "chasse.copier": "Copy the route again",
   "chasse.depart": "Start",
   "chasse.depart.reprendre": "Use the front character's position",
+  "chasse.depart.saisir": "Enter a start",
   "chasse.direction.choisir": "Choose a direction",
   "chasse.direction.est": "East",
   "chasse.direction.nord": "North",
