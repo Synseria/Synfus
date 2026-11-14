@@ -66,14 +66,16 @@ struct PanneauQuetesTests {
             .separateur,
             .titre(L("quete.menu.suivi")),
             .lireSuivi(enCours: false),
-            .option(.cocherSuivi, actif: false),
             .reconnue(reconnues[0], titre: L("quete.menu.reconnueEtape", "Q7", 3), epinglee: false),
             .reconnue(reconnues[1], titre: "Q18", epinglee: true),
             .message(L("quete.suivi.coches", nombre: 3, 3)),
             .separateur,
-            .option(.compact, actif: false),
-            .option(.consigne, actif: false),
-            .option(.masquerObjets, actif: true),
+            .affichage([
+                .option(.cocherSuivi, actif: false),
+                .option(.compact, actif: false),
+                .option(.consigne, actif: false),
+                .option(.masquerObjets, actif: true),
+            ]),
             .separateur,
             .fermer,
         ])
@@ -132,8 +134,8 @@ struct PanneauQuetesTests {
         #expect(cle != QuetePanel.CleIci(position: cle.position, quetes: date, langue: .fr, reseauLu: false))
     }
 
-    /// Le séparateur, les options, puis le séparateur et « Fermer le panneau », en pied du menu.
-    private let pied = 1 + MenuQuetes.Option.affichage.count + 2
+    /// Le séparateur, le sous-menu « Affichage », puis le séparateur et « Fermer le panneau », en pied du menu.
+    private let pied = 4
 
     @Test("Le menu dit pourquoi le suivi ne propose rien")
     func menuSansQuete() {
@@ -143,7 +145,7 @@ struct PanneauQuetesTests {
         #expect(vide.dropLast(pied).last == .message(L("quete.suivi.rien")))
         let enCours = MenuQuetes.elements(epinglees: [1], montree: 1, reconnues: [], etat: .enCours, coches: 2, actives: [], nom: nom)
         // Pendant la lecture, rien n'est dit de la précédente.
-        #expect(Array(enCours.dropLast(pied).suffix(2)) == [.lireSuivi(enCours: true), .option(.cocherSuivi, actif: false)])
+        #expect(Array(enCours.dropLast(pied).suffix(2)) == [.titre(L("quete.menu.suivi")), .lireSuivi(enCours: true)])
         // Une seule quête : la retirer, c'est tout retirer.
         #expect(enCours.contains(.desepingler(id: 1, nom: "Q1")) && !enCours.contains(.toutDesepingler))
         let sansEcran = MenuQuetes.elements(epinglees: [1], montree: 1, reconnues: [], etat: .illisible(.sansAutorisation), coches: 2,

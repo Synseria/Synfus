@@ -186,57 +186,70 @@ extension QuetePanel {
             epinglees: prefs.quetesEpinglees, montree: idMontre, reconnues: lecture.reconnues,
             etat: lecture.etat, coches: lecture.cochesLues, actives: Set(MenuQuetes.Option.allCases.filter { prefs[keyPath: Self.reglage($0)] }),
             ici: ici(), autorise: WindowPreviewService.shared.authorized, nom: { store.nom($0) ?? "…" }) {
-            switch element {
-            case .titre(let titre):
-                menu.addItem(.sectionHeader(title: titre))
-            case .epinglee(let id, let nom, let montree):
-                let item = CibleMenu.shared.element(nom) { QuetePanel.shared.montrer(id) }
-                item.state = montree ? .on : .off
-                menu.addItem(item)
-            case .desepingler(let id, let nom):
-                let item = CibleMenu.shared.element(L("quete.menu.desepingler", nom)) { QuetePanel.shared.desepingler(id) }
-                item.image = NSImage(systemSymbolName: "pin.slash", accessibilityDescription: nil)
-                menu.addItem(item)
-            case .ici(let id, let titre, let epinglee):
-                let item = CibleMenu.shared.element(titre) { QuetePanel.shared.ouvrir(id) }
-                item.image = NSImage(systemSymbolName: epinglee ? "pin.fill" : "exclamationmark.bubble",
-                                     accessibilityDescription: nil)
-                menu.addItem(item)
-            case .toutDesepingler:
-                menu.addItem(CibleMenu.shared.element(L("quete.menu.toutDesepingler")) { QuetePanel.shared.confirmerToutDesepingler() })
-            case .toutEpingler:
-                let item = CibleMenu.shared.element(L("quete.toutEpingler")) { lecture.toutEpingler() }
-                item.image = NSImage(systemSymbolName: "pin", accessibilityDescription: nil)
-                menu.addItem(item)
-            case .lireSuivi(let enCours):
-                let item = CibleMenu.shared.element(enCours ? L("quete.suivi.enCours") : L("quete.suivi.lire")) { lecture.lire() }
-                item.image = NSImage(systemSymbolName: "text.viewfinder", accessibilityDescription: nil)
-                item.isEnabled = !enCours
-                menu.addItem(item)
-            case .reconnue(let reconnue, let titre, let epinglee):
-                let item = CibleMenu.shared.element(titre) { lecture.choisir(reconnue) }
-                item.image = epinglee ? NSImage(systemSymbolName: "pin.fill", accessibilityDescription: nil) : nil
-                item.indentationLevel = 1
-                menu.addItem(item)
-            case .message(let texte):
-                let item = NSMenuItem(title: texte, action: nil, keyEquivalent: "")
-                item.isEnabled = false
-                menu.addItem(item)
-            case .geste(let geste):
-                let item = CibleMenu.shared.element(geste.titre) { Self.faire(geste) }
-                item.indentationLevel = 1
-                menu.addItem(item)
-            case .option(let option, let actif):
-                let item = CibleMenu.shared.element(option.titre) { prefs[keyPath: Self.reglage(option)] = !actif }
-                item.state = actif ? .on : .off
-                menu.addItem(item)
-            case .fermer:
-                menu.addItem(CibleMenu.shared.element(L("panneau.fermer")) { QuetePanel.shared.fermer() })
-            case .separateur:
-                menu.addItem(.separator())
-            }
+            Self.ajouter(element, a: menu)
         }
         return menu
+    }
+
+    private static func ajouter(_ element: MenuQuetes.Element, a menu: NSMenu) {
+        let lecture = LectureSuivi.shared
+        let prefs = Preferences.shared
+        switch element {
+        case .titre(let titre):
+            menu.addItem(.sectionHeader(title: titre))
+        case .epinglee(let id, let nom, let montree):
+            let item = CibleMenu.shared.element(nom) { QuetePanel.shared.montrer(id) }
+            item.state = montree ? .on : .off
+            menu.addItem(item)
+        case .desepingler(let id, let nom):
+            let item = CibleMenu.shared.element(L("quete.menu.desepingler", nom)) { QuetePanel.shared.desepingler(id) }
+            item.image = NSImage(systemSymbolName: "pin.slash", accessibilityDescription: nil)
+            menu.addItem(item)
+        case .ici(let id, let titre, let epinglee):
+            let item = CibleMenu.shared.element(titre) { QuetePanel.shared.ouvrir(id) }
+            item.image = NSImage(systemSymbolName: epinglee ? "pin.fill" : "exclamationmark.bubble",
+                                 accessibilityDescription: nil)
+            menu.addItem(item)
+        case .toutDesepingler:
+            menu.addItem(CibleMenu.shared.element(L("quete.menu.toutDesepingler")) { QuetePanel.shared.confirmerToutDesepingler() })
+        case .toutEpingler:
+            let item = CibleMenu.shared.element(L("quete.toutEpingler")) { lecture.toutEpingler() }
+            item.image = NSImage(systemSymbolName: "pin", accessibilityDescription: nil)
+            menu.addItem(item)
+        case .lireSuivi(let enCours):
+            let item = CibleMenu.shared.element(enCours ? L("quete.suivi.enCours") : L("quete.suivi.lire")) { lecture.lire() }
+            item.image = NSImage(systemSymbolName: "text.viewfinder", accessibilityDescription: nil)
+            item.isEnabled = !enCours
+            menu.addItem(item)
+        case .reconnue(let reconnue, let titre, let epinglee):
+            let item = CibleMenu.shared.element(titre) { lecture.choisir(reconnue) }
+            item.image = epinglee ? NSImage(systemSymbolName: "pin.fill", accessibilityDescription: nil) : nil
+            item.indentationLevel = 1
+            menu.addItem(item)
+        case .message(let texte):
+            let item = NSMenuItem(title: texte, action: nil, keyEquivalent: "")
+            item.isEnabled = false
+            menu.addItem(item)
+        case .geste(let geste):
+            let item = CibleMenu.shared.element(geste.titre) { Self.faire(geste) }
+            item.indentationLevel = 1
+            menu.addItem(item)
+        case .affichage(let options):
+            let sousMenu = NSMenu()
+            sousMenu.autoenablesItems = false
+            for option in options { ajouter(option, a: sousMenu) }
+            let item = NSMenuItem(title: L("quete.menu.affichage"), action: nil, keyEquivalent: "")
+            item.submenu = sousMenu
+            menu.addItem(item)
+        case .option(let option, let actif):
+            let item = CibleMenu.shared.element(option.titre) { prefs[keyPath: Self.reglage(option)] = !actif }
+            item.state = actif ? .on : .off
+            menu.addItem(item)
+        case .fermer:
+            menu.addItem(CibleMenu.shared.element(L("panneau.fermer")) { QuetePanel.shared.fermer() })
+        case .separateur:
+            menu.addItem(.separator())
+        }
     }
 }
 
