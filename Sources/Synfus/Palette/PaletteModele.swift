@@ -65,12 +65,15 @@ final class PaletteModele: ObservableObject {
     /// Le contexte imposé (tests, captures de la documentation) ; `nil` : celui
     /// du moment, relu à chaque ouverture.
     private let contexteImpose: ContextePalette?
+    /// L'état de la carte imposé avec le contexte ; `nil` : celui de `CarteStore`.
+    private let carteImposee: EtatCarte?
 
     /// La carte et les quêtes arrivent après le lancement, lues ou
     /// téléchargées en tâche de fond : la recherche en cours les reçoit dès
     /// qu'elles sont là, et leurs textes se normalisent d'avance.
     private init() {
         contexteImpose = nil
+        carteImposee = nil
         QuetesStore.shared.$quetes
             .dropFirst()
             .sink { quetes in
@@ -123,8 +126,9 @@ final class PaletteModele: ObservableObject {
     }
 
     /// Une palette hors de l'app, sur un contexte donné.
-    init(contexte: ContextePalette, requete: String = "", filtre: FiltrePalette = .tout) {
+    init(contexte: ContextePalette, requete: String = "", filtre: FiltrePalette = .tout, carte: EtatCarte = .prete) {
         contexteImpose = contexte
+        carteImposee = carte
         self.contexte = contexte
         index = IndexPalette(contexte)
         self.requete = requete
@@ -144,7 +148,7 @@ final class PaletteModele: ObservableObject {
                 RecherchePalette.entrees(requete, index, filtre: .tout, tri: tri).count
             } : 0
         return VidePalette.de(
-            carte: contexteImpose == nil ? CarteStore.shared.etat : .prete,
+            carte: carteImposee ?? CarteStore.shared.etat,
             requeteVide: requete.trimmingCharacters(in: .whitespaces).isEmpty, filtre: filtre,
             positionConnue: positionConnue, lectureAllumee: Preferences.shared.lirePosition,
             quetesEnChargement: QuetesStore.shared.chargement && QuetesStore.shared.quetes == nil, ailleurs: ailleurs)
