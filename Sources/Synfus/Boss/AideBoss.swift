@@ -40,7 +40,10 @@ final class AideBoss: ObservableObject {
             }
         }
         abonnementDonjons = DonjonsStore.shared.$donjons.dropFirst().sink { [weak self] _ in
-            Task { @MainActor in self?.lire(zone: self?.zone) }
+            Task { @MainActor in
+                self?.memoriserNom()
+                self?.lire(zone: self?.zone)
+            }
         }
     }
 
@@ -88,8 +91,19 @@ final class AideBoss: ObservableObject {
     }
 
     func choisir(_ boss: CibleBoss) {
-        Preferences.shared.bossChoisi = boss
+        Preferences.shared.enUneEcriture {
+            Preferences.shared.bossChoisi = boss
+            Preferences.shared.nomsBossChoisi = boss.nomsDonjon(dans: DonjonsStore.shared.donjons)
+        }
         BossPanel.shared.revoirLectures()
+    }
+
+    /// La liste des donjons arrivée, le nom du boss de donjon suivi est gardé
+    /// pour titrer le panneau à la prochaine ouverture, hors ligne.
+    private func memoriserNom() {
+        guard let noms = boss.nomsDonjon(dans: DonjonsStore.shared.donjons),
+              noms != Preferences.shared.nomsBossChoisi else { return }
+        Preferences.shared.nomsBossChoisi = noms
     }
 
     /// La confusion du perso devant, celui que le joueur joue.
@@ -150,6 +164,15 @@ final class AideBoss: ObservableObject {
     func choisir(_ confusion: Harebourg.Confusion?) { pourLePersoDevant { suivi.choisir(confusion, perso: $0) } }
 
     func corrigerTour(_ pas: Int) { pourLePersoDevant { tours.corriger(pas, perso: $0) } }
+
+    /// Ce que le combat en cours a laissé : un tour compté, ou une note.
+    var aDuNote: Bool { tour != nil || session != SessionBoss() }
+
+    /// Repartir d'un panneau propre quand Synfus n'a pas lu le placement.
+    func nouveauCombat() {
+        session = SessionBoss()
+        pourLePersoDevant { tours.recommencer(perso: $0) }
+    }
 
     /// Un geste qui note quelque chose du combat en cours.
     func noter(_ modifier: (inout SessionBoss, Int?) -> Void) {

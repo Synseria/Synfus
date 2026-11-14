@@ -15,6 +15,8 @@ final class DonjonsStore: ObservableObject {
     @Published private(set) var echecs: Set<Int> = []
     /// Par donjon ; vide quand sa page n'a pas de conseils tactiques.
     @Published private(set) var conseils: [Int: [ConseilCombat]] = [:]
+    /// La liste est en route : l'en-tête du panneau des boss le montre.
+    @Published private(set) var enCours = false
     private var chargement: Task<Void, Never>?
     /// Après un échec, la liste attend avant de se redemander : chaque
     /// position lue l'appelle, sans réseau on rechargerait à chaque lecture.
@@ -29,8 +31,12 @@ final class DonjonsStore: ObservableObject {
     func charger(maintenant: Date = Date()) {
         guard donjons == nil, chargement == nil else { return }
         if let dernierEchec, maintenant.timeIntervalSince(dernierEchec) < Self.attenteApresEchec { return }
+        enCours = true
         chargement = Task {
-            defer { chargement = nil }
+            defer {
+                chargement = nil
+                enCours = false
+            }
             guard let liste = try? await Self.telecharger() else {
                 dernierEchec = Date()
                 return

@@ -26,6 +26,18 @@ enum CibleBoss: Hashable, Sendable {
         }
     }
 
+    /// Le nom d'un boss de donjon chez DofusDB, dans la langue ; `nil` pour un
+    /// boss à mécanique (ses libellés le nomment) ou tant que la liste manque.
+    func nomDonjon(dans donjons: Donjons?, _ langue: Langue) -> String? {
+        nomsDonjon(dans: donjons).flatMap { Lieu.traduit($0, langue) }
+    }
+
+    /// Ses noms en toutes langues : ce qu'on garde pour titrer le panneau hors ligne.
+    func nomsDonjon(dans donjons: Donjons?) -> [String: String]? {
+        guard case .donjon(let monstre, _) = self else { return nil }
+        return donjons?.nomsBoss[monstre]
+    }
+
     /// Ce que l'aide lit en combat en plus du bouton de combat.
     var lectures: [GenreLecture] { special?.lectures ?? [] }
 }

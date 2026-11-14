@@ -71,6 +71,22 @@ struct BossTests {
         #expect(throws: DecodingError.self) { try relu(#""donjon:x""#) }
     }
 
+    @Test("Le nom d'un boss de donjon : celui de DofusDB dans la langue, rien tant que la liste manque")
+    @MainActor func nomDonjon() {
+        let donjons = Donjons([], nomsBoss: [147: ["fr": "Bouftou Royal", "en": "Royal Bouftou"]])
+        let cible = CibleBoss.donjon(monstre: 147, donjon: 1)
+        #expect(cible.nomDonjon(dans: donjons, .en) == "Royal Bouftou")
+        #expect(cible.nomDonjon(dans: donjons, .es) == "Bouftou Royal")
+        #expect(cible.nomDonjon(dans: nil, .fr) == nil)
+        #expect(CibleBoss.donjon(monstre: 9, donjon: 1).nomDonjon(dans: donjons, .fr) == nil)
+        #expect(CibleBoss.special(.kimbo).nomDonjon(dans: donjons, .fr) == nil)
+        #expect(cible.nomsDonjon(dans: donjons)?.count == 2)
+        // Hors ligne, le nom gardé suit la langue du moment.
+        let gardes = ["fr": "Bouftou Royal", "en": "Royal Bouftou"]
+        #expect(BossVue.nom(cible, donjons: nil, garde: gardes) == Lieu.traduit(gardes, L10n.courante.langue))
+        #expect(BossVue.nom(cible, donjons: nil, garde: nil) == L("boss.donjon"))
+    }
+
     @Test("La fiche DofusDB : le plus haut grade, résistances absentes à zéro")
     func fiche() throws {
         let json = """
@@ -81,6 +97,7 @@ struct BossTests {
         let fiche = try #require(FicheCombat(try JSONDecoder().decode(FicheCombat.MonstreAPI.self, from: Data(json.utf8))))
         #expect([fiche.niveau, fiche.vie, fiche.pa, fiche.pm] as [Int] == [160, 10000, 12, 7])
         #expect(fiche.resistances[.terre] == 400 && fiche.resistances[.feu] == -20 && fiche.resistances[.air] == 0)
+        #expect(fiche.role(.feu) == .frapper && fiche.role(.terre) == .eviter && fiche.role(.air) == .neutre)
         #expect(FicheCombat(FicheCombat.MonstreAPI(id: nil, name: nil, grades: [])) == nil)
     }
 }
