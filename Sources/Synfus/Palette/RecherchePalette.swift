@@ -221,6 +221,9 @@ enum RecherchePalette {
             return classer(index.tout.filter { filtre.garde($0.entree) }, [])
         }
         if texte.hasPrefix("%") { return variables(texte) }
+        if let cible = ItineraireZaap.caseTapee(texte) {
+            return [versUneCase(cible, index.contexte)].filter(filtre.garde)
+        }
         guard texte.hasPrefix("/") else {
             return classer(index.tout.filter { filtre.garde($0.entree) }, mots(texte))
         }
@@ -491,6 +494,14 @@ enum RecherchePalette {
     static func trajetVers(_ cible: (x: Int, y: Int), sousZone: Int?, _ contexte: ContextePalette) -> ItineraireZaap.Trajet? {
         ItineraireZaap.trajet(vers: cible, sousZone: sousZone, depuis: contexte.position,
                               gainMinimal: contexte.gainMinimal, zaaps: contexte.zaaps, zaapDuJeu: contexte.zaapDuJeu)
+    }
+
+    /// « Aller en [x,y] » : la case tapée seule, trajet compris.
+    private static func versUneCase(_ cible: (x: Int, y: Int), _ contexte: ContextePalette) -> EntreePalette {
+        let vers = versCase(cible, sousZone: nil, dansLesDouze: true, contexte)
+        return EntreePalette(id: "case:\(cible.x),\(cible.y)", genre: .lieu,
+                             titre: L("palette.allerEn", Coordonnees.texte(cible.x, cible.y)),
+                             distance: vers.distance, itineraire: itineraire(vers.trajet, contexte.langue), effet: vers.effet)
     }
 
     /// Ce qu'une entrée vers ce lieu montre et fait : sa ligne, et l'entrée
