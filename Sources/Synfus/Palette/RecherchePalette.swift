@@ -238,7 +238,7 @@ enum RecherchePalette {
             if filtre == .tout { return index.accueil }
             return classer(index.tout.filter { filtre.garde($0.entree) }, [])
         }
-        if texte.hasPrefix("%") { return variables(texte) }
+        if texte.hasPrefix("%") { return variables(texte, index.contexte) }
         if let cible = ItineraireZaap.caseTapee(texte) {
             return [versUneCase(cible, index.contexte)].filter(filtre.garde)
         }
@@ -393,12 +393,14 @@ enum RecherchePalette {
             }
     }
 
-    private static func variables(_ texte: String) -> [EntreePalette] {
+    private static func variables(_ texte: String, _ contexte: ContextePalette) -> [EntreePalette] {
         let tape = normaliser(texte).trimmingCharacters(in: CharacterSet(charactersIn: "%"))
         return VariableJeu.allCases
             .filter { tape.isEmpty || $0.rawValue.hasPrefix(tape) }
             .map { EntreePalette(id: "var:" + $0.rawValue, genre: .variable, titre: $0.texte,
-                                 sousTitre: $0.description, symbole: $0.symbole, effet: .copier($0.texte)) }
+                                 sousTitre: $0.description,
+                                 detail: $0.valeur(perso: contexte.perso, position: contexte.position),
+                                 symbole: $0.symbole, effet: .copier($0.texte)) }
     }
 
     /// Les gestes et les dernières copies : ce que `tout` ajoute aux zaaps,

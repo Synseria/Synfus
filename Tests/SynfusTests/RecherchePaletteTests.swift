@@ -228,6 +228,23 @@ struct RecherchePaletteTests {
         #expect(RecherchePalette.entrees("%vie", contexte()).map(\.titre) == ["%vie%", "%viemax%", "%viep%"])
     }
 
+    @Test("% montre à droite ce que le jeu écrirait, pour ce que Synfus lit ; ↵ copie toujours la variable")
+    func valeursDesVariables() throws {
+        var lu = contexte(position: PositionCarte(x: -2, y: 0, zone: "Amakna (Pâturages)"))
+        lu.perso = "Syn-App"
+        let valeurs = Dictionary(uniqueKeysWithValues: RecherchePalette.entrees("%", lu).map { ($0.titre, $0.detail) })
+        #expect(valeurs["%pos%"] == "[-2,0]" && valeurs["%zone%"] == "Amakna" && valeurs["%souszone%"] == "Pâturages")
+        #expect(valeurs["%nom%"] == "Syn-App")
+        #expect(valeurs["%vie%"] == .some(nil) && valeurs["%guilde%"] == .some(nil))
+        let pos = try #require(RecherchePalette.entrees("%pos", lu).first)
+        #expect(pos.effet == .copier("%pos%"))
+        // Une zone lue sans parenthèse : la zone seule, pas de sous-zone.
+        let tronquee = contexte(position: PositionCarte(x: 1, y: 1, zone: "Amakn"))
+        #expect(RecherchePalette.entrees("%souszone", tronquee).first?.detail == nil)
+        #expect(RecherchePalette.entrees("%zone%", tronquee).first?.detail == "Amakn")
+        #expect(RecherchePalette.entrees("%pos", contexte(position: nil)).first?.detail == nil)
+    }
+
     @Test("/invite : toute l'équipe d'abord, puis chacun")
     func invitations() {
         let entrees = RecherchePalette.entrees("/invite", contexte())
