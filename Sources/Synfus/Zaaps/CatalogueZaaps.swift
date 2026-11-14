@@ -56,4 +56,21 @@ enum CatalogueZaaps {
             }
             .map(\.zaap)
     }
+
+    /// Un favori et la ligne qui le dit : la même au clic droit de la palette et dans le menu.
+    struct LigneFavori: Equatable {
+        let zaap: Zaap
+        let titre: String
+    }
+
+    /// Du plus proche au plus loin, chaque ligne avec ses cartes quand elles ont un sens.
+    static func lignesFavoris(_ zaaps: [Zaap], depuis position: PositionCarte?, langue: Langue) -> [LigneFavori] {
+        parDistance(zaaps, depuis: position).map { zaap in
+            let coordonnees = Coordonnees.texte(zaap.x, zaap.y)
+            let titre = distance(de: zaap, depuis: position).map {
+                L("barre.zaap.favori", nombre: $0, zaap.nom(en: langue), coordonnees, $0)
+            } ?? L("barre.zaap.favoriSansDistance", zaap.nom(en: langue), coordonnees)
+            return LigneFavori(zaap: zaap, titre: titre)
+        }
+    }
 }

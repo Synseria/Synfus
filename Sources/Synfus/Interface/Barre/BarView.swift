@@ -247,23 +247,13 @@ struct BarView: View {
     /// Du plus proche au plus loin du perso devant.
     @ViewBuilder
     private var zaapsFavoris: some View {
-        let position = lecteur.positionDuPersoDevant
-        let favoris = CatalogueZaaps.parDistance(prefs.zaapsFavorisConnus, depuis: position)
+        let favoris = CatalogueZaaps.lignesFavoris(prefs.zaapsFavorisConnus, depuis: lecteur.positionDuPersoDevant,
+                                                   langue: L10n.courante.langue)
         if favoris.isEmpty {
             Button(L("barre.zaap.aucunFavori")) {}.disabled(true)
         }
-        let langue = L10n.courante.langue
-        ForEach(favoris, id: \.cle) { zaap in
-            let coordonnees = Coordonnees.texte(zaap.x, zaap.y)
-            Button {
-                ZaapClipboard.shared.copierZaap(zaap)
-            } label: {
-                if let cartes = CatalogueZaaps.distance(de: zaap, depuis: position) {
-                    Text(L("barre.zaap.favori", nombre: cartes, zaap.nom(en: langue), coordonnees, cartes))
-                } else {
-                    Text(L("barre.zaap.favoriSansDistance", zaap.nom(en: langue), coordonnees))
-                }
-            }
+        ForEach(favoris, id: \.zaap.cle) { ligne in
+            Button(ligne.titre) { ZaapClipboard.shared.copierZaap(ligne.zaap) }
         }
     }
 
