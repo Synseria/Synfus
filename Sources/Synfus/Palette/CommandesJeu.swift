@@ -135,6 +135,18 @@ enum VariableJeu: String, CaseIterable, Sendable {
         }
     }
 
+    /// Ce que le jeu écrirait maintenant, pour ce que Synfus lit ; `nil` pour le reste (niveau, vie, guilde…).
+    /// Une zone lue sans parenthèse se montre telle quelle.
+    func valeur(perso: String?, position: PositionCarte?) -> String? {
+        switch self {
+        case .pos: return position?.coordonnees
+        case .zone: return position?.nomsDeZone?.region ?? position?.zone
+        case .souszone: return position?.nomsDeZone?.sousZone
+        case .nom: return perso
+        case .lvl, .xp, .vie, .viemax, .viep, .guilde, .stats: return nil
+        }
+    }
+
     var description: String {
         switch self {
         case .pos: return L("palette.var.pos")

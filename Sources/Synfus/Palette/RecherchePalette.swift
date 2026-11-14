@@ -108,12 +108,14 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
         /// calculé seulement pour l'entrée choisie (`texte(de:)`).
         case trajet(x: Int, y: Int, sousZone: Int?)
         case action(ActionPalette)
+        /// Met ce perso devant (`DofusClient.slotKey`), comme un clic sur sa pastille.
+        case basculer(String)
 
         /// Entrée déplie quelque chose sous la ligne plutôt que de copier.
         var sePlie: Bool {
             switch self {
             case .ouTrouver, .donjon: return true
-            case .copier, .completer, .ouvrirQuete, .trajet, .action: return false
+            case .copier, .completer, .ouvrirQuete, .trajet, .action, .basculer: return false
             }
         }
     }
@@ -150,6 +152,10 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
     var interieur = false
     /// Le symbole propre à l'entrée (une commande, une variable) ; `nil` : celui de son genre.
     var symbole: String?
+    /// La classe d'un perso à basculer : son emblème tient la place du pictogramme.
+    var classe: String?
+    /// Le raccourci du geste de la ligne, dit au bout de la ligne.
+    var touche: String?
     let effet: Effet
 
     /// La fiche d'un boss de donjon (`RecherchePalette.boss`) ou l'aide à son combat.
@@ -163,6 +169,16 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
 
     /// Après le reste : les monstres et objets par milliers, sauf les boss, qu'on cherche exprès.
     var enDernier: Bool { genre.enDernier && !estBoss }
+}
+
+/// Un perso de l'équipe active, tel que la palette le propose : le geste « passer sur lui ».
+struct PersoPalette: Equatable, Sendable {
+    let slotKey: String
+    let nom: String
+    let classe: String?
+    let position: PositionCarte?
+    /// Son raccourci d'accès direct, ou son numéro dans la barre.
+    let touche: String
 }
 
 /// Ce que la recherche doit savoir du monde, figé à l'ouverture.
@@ -187,6 +203,8 @@ struct ContextePalette: Sendable {
     /// `/invite A; /invite B` pour l'équipe active, déjà composé.
     var invitationEquipe: String?
     var invitations: [(nom: String, commande: String)] = []
+    /// Les persos de l'équipe active, dans l'ordre de la barre.
+    var persos: [PersoPalette] = []
     /// `nil` tant qu'elles ne sont pas téléchargées.
     var quetes: Quetes?
     /// `nil` tant qu'ils ne sont pas téléchargés.
@@ -220,7 +238,10 @@ enum RecherchePalette {
             if filtre == .tout { return index.accueil }
             return classer(index.tout.filter { filtre.garde($0.entree) }, [])
         }
-        if texte.hasPrefix("%") { return variables(texte) }
+        if texte.hasPrefix("%") { return variables(texte, index.contexte) }
+        if let cible = ItineraireZaap.caseTapee(texte) {
+            return [versUneCase(cible, index.contexte)].filter(filtre.garde)
+        }
         guard texte.hasPrefix("/") else {
             return classer(index.tout.filter { filtre.garde($0.entree) }, mots(texte))
         }
@@ -246,7 +267,7 @@ enum RecherchePalette {
         switch effet {
         case .copier(let texte): return texte
         case .trajet(let x, let y, let sousZone): return trajet(vers: (x, y), sousZone: sousZone, contexte)
-        case .completer, .action, .ouvrirQuete, .ouTrouver, .donjon: return nil
+        case .completer, .action, .ouvrirQuete, .ouTrouver, .donjon, .basculer: return nil
         }
     }
 
@@ -334,6 +355,17 @@ enum RecherchePalette {
         .alphabetiques()
     }
 
+    /// Un perso par ligne : ↵ le met devant, sa touche au bout.
+    static func persos(_ contexte: ContextePalette) -> [EntreePalette] {
+        contexte.persos.map { perso in
+            let lieu = perso.position.map { Coordonnees.texte($0.x, $0.y) }
+            let dit = [perso.classe, lieu].compactMap(\.self)
+            return EntreePalette(id: "perso:" + perso.slotKey, genre: .perso, titre: perso.nom,
+                                 sousTitre: dit.isEmpty ? nil : dit.joined(separator: " · "),
+                                 classe: perso.classe, touche: perso.touche, effet: .basculer(perso.slotKey))
+        }
+    }
+
     private static func invitations(_ contexte: ContextePalette) -> [EntreePalette] {
         var entrees: [EntreePalette] = []
         if let equipe = contexte.invitationEquipe {
@@ -361,12 +393,14 @@ enum RecherchePalette {
             }
     }
 
-    private static func variables(_ texte: String) -> [EntreePalette] {
+    private static func variables(_ texte: String, _ contexte: ContextePalette) -> [EntreePalette] {
         let tape = normaliser(texte).trimmingCharacters(in: CharacterSet(charactersIn: "%"))
         return VariableJeu.allCases
             .filter { tape.isEmpty || $0.rawValue.hasPrefix(tape) }
             .map { EntreePalette(id: "var:" + $0.rawValue, genre: .variable, titre: $0.texte,
-                                 sousTitre: $0.description, symbole: $0.symbole, effet: .copier($0.texte)) }
+                                 sousTitre: $0.description,
+                                 detail: $0.valeur(perso: contexte.perso, position: contexte.position),
+                                 symbole: $0.symbole, effet: .copier($0.texte)) }
     }
 
     /// Les gestes et les dernières copies : ce que `tout` ajoute aux zaaps,
@@ -491,6 +525,14 @@ enum RecherchePalette {
     static func trajetVers(_ cible: (x: Int, y: Int), sousZone: Int?, _ contexte: ContextePalette) -> ItineraireZaap.Trajet? {
         ItineraireZaap.trajet(vers: cible, sousZone: sousZone, depuis: contexte.position,
                               gainMinimal: contexte.gainMinimal, zaaps: contexte.zaaps, zaapDuJeu: contexte.zaapDuJeu)
+    }
+
+    /// « Aller en [x,y] » : la case tapée seule, trajet compris.
+    private static func versUneCase(_ cible: (x: Int, y: Int), _ contexte: ContextePalette) -> EntreePalette {
+        let vers = versCase(cible, sousZone: nil, dansLesDouze: true, contexte)
+        return EntreePalette(id: "case:\(cible.x),\(cible.y)", genre: .lieu,
+                             titre: L("palette.allerEn", Coordonnees.texte(cible.x, cible.y)),
+                             distance: vers.distance, itineraire: itineraire(vers.trajet, contexte.langue), effet: vers.effet)
     }
 
     /// Ce qu'une entrée vers ce lieu montre et fait : sa ligne, et l'entrée
@@ -862,9 +904,10 @@ final class IndexPalette {
                                                             lieux: lieux.map(\.entree))
     private(set) lazy var monstres = fiches(RecherchePalette.boss(contexte) + RecherchePalette.monstres(contexte))
     private(set) lazy var objets = fiches(RecherchePalette.objets(contexte))
-    /// Sans préfixe : zaaps, lieux, quêtes, PNJ, gestes, dernières copies,
+    private(set) lazy var persos = fiches(RecherchePalette.persos(contexte))
+    /// Sans préfixe : persos, zaaps, lieux, quêtes, PNJ, gestes, dernières copies,
     /// monstres et objets.
-    private(set) lazy var tout = zaaps + lieux + quetes + pnjs + fiches(RecherchePalette.divers(contexte)) + monstres + objets
+    private(set) lazy var tout = persos + zaaps + lieux + quetes + pnjs + fiches(RecherchePalette.divers(contexte)) + monstres + objets
 
     /// Les champs de toutes les fiches, à garder pour l'index suivant.
     static func champs(de contexte: ContextePalette, connus: [String: RecherchePalette.Champs] = [:])
