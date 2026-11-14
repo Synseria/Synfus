@@ -1,7 +1,7 @@
 import Foundation
 
-/// Les coches, les décoches, l'objectif en cours et l'étape d'une quête,
-/// gardés par quête dans les préférences : le seul chemin qui les écrit, à la
+/// Les coches, les décoches, l'objectif en cours et l'étape d'une quête, et les
+/// ressources déjà réunies, gardés par quête dans les préférences : le seul chemin qui les écrit, à la
 /// main comme à la lecture du suivi. Un geste touche plusieurs de ces
 /// réglages : il ne les écrit qu'une fois (`enUneEcriture`).
 extension Preferences {
@@ -24,6 +24,13 @@ extension Preferences {
             quetesValides[cle] = Self.sans([objectif], quetesValides[cle])
             if !(quetesDecoches[cle] ?? []).contains(objectif) { quetesDecoches[cle, default: []].append(objectif) }
         }
+    }
+
+    /// Coche ou décoche une ressource à réunir ; la liste se vide de sa clé avec la dernière.
+    func cocherRessource(_ objet: Int, de quete: Int, _ cochee: Bool) {
+        let cle = String(quete)
+        let reste = Self.sans([objet], quetesRessourcesCochees[cle])
+        quetesRessourcesCochees[cle] = cochee ? (reste ?? []) + [objet] : reste
     }
 
     /// Ce qu'une lecture du suivi dit des quêtes qu'il montre, écrit d'un

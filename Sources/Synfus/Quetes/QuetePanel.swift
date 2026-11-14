@@ -40,6 +40,15 @@ final class QuetePanel: NSObject, ObservableObject {
     /// apparaître du tout.
     private var impose = false
     private var panel: NSPanel?
+    /// Ce dont dépend `ici()`.
+    struct CleIci: Equatable {
+        let position: PositionCarte?
+        let quetes: Date?
+        let langue: Langue
+        let reseauLu: Bool
+    }
+
+    private var iciGarde = DernierCalcul<CleIci, MenuQuetes.Ici?>()
 
     private override init() { super.init() }
 
@@ -176,64 +185,116 @@ extension QuetePanel {
         for element in MenuQuetes.elements(
             epinglees: prefs.quetesEpinglees, montree: idMontre, reconnues: lecture.reconnues,
             etat: lecture.etat, coches: lecture.cochesLues, actives: Set(MenuQuetes.Option.allCases.filter { prefs[keyPath: Self.reglage($0)] }),
-            ici: Self.ici(), nom: { store.nom($0) ?? "…" }) {
-            switch element {
-            case .titre(let titre):
-                menu.addItem(.sectionHeader(title: titre))
-            case .epinglee(let id, let nom, let montree):
-                let item = CibleMenu.shared.element(nom) { QuetePanel.shared.montrer(id) }
-                item.state = montree ? .on : .off
-                menu.addItem(item)
-            case .desepingler(let id, let nom):
-                let item = CibleMenu.shared.element(L("quete.menu.desepingler", nom)) { QuetePanel.shared.desepingler(id) }
-                item.image = NSImage(systemSymbolName: "pin.slash", accessibilityDescription: nil)
-                menu.addItem(item)
-            case .ici(let id, let titre, let epinglee):
-                let item = CibleMenu.shared.element(titre) { QuetePanel.shared.ouvrir(id) }
-                item.image = NSImage(systemSymbolName: epinglee ? "pin.fill" : "exclamationmark.bubble",
-                                     accessibilityDescription: nil)
-                menu.addItem(item)
-            case .toutDesepingler:
-                menu.addItem(CibleMenu.shared.element(L("quete.menu.toutDesepingler")) { QuetePanel.shared.confirmerToutDesepingler() })
-            case .lireSuivi(let enCours):
-                let item = CibleMenu.shared.element(enCours ? L("quete.suivi.enCours") : L("quete.suivi.lire")) { lecture.lire() }
-                item.image = NSImage(systemSymbolName: "text.viewfinder", accessibilityDescription: nil)
-                item.isEnabled = !enCours
-                menu.addItem(item)
-            case .reconnue(let reconnue, let titre, let epinglee):
-                let item = CibleMenu.shared.element(titre) { lecture.choisir(reconnue) }
-                item.image = epinglee ? NSImage(systemSymbolName: "pin.fill", accessibilityDescription: nil) : nil
-                item.indentationLevel = 1
-                menu.addItem(item)
-            case .message(let texte):
-                let item = NSMenuItem(title: texte, action: nil, keyEquivalent: "")
-                item.isEnabled = false
-                menu.addItem(item)
-            case .option(let option, let actif):
-                let item = CibleMenu.shared.element(option.titre) { prefs[keyPath: Self.reglage(option)] = !actif }
-                item.state = actif ? .on : .off
-                menu.addItem(item)
-            case .fermer:
-                menu.addItem(CibleMenu.shared.element(L("panneau.fermer")) { QuetePanel.shared.fermer() })
-            case .separateur:
-                menu.addItem(.separator())
-            }
+            ici: ici(), autorise: WindowPreviewService.shared.authorized, nom: { store.nom($0) ?? "…" }) {
+            Self.ajouter(element, a: menu)
+        }
+        return menu
+    }
+
+    private static func ajouter(_ element: MenuQuetes.Element, a menu: NSMenu) {
+        let lecture = LectureSuivi.shared
+        let prefs = Preferences.shared
+        switch element {
+        case .titre(let titre):
+            menu.addItem(.sectionHeader(title: titre))
+        case .epinglee(let id, let nom, let montree):
+            let item = CibleMenu.shared.element(nom) { QuetePanel.shared.montrer(id) }
+            item.state = montree ? .on : .off
+            menu.addItem(item)
+        case .desepingler(let id, let nom):
+            let item = CibleMenu.shared.element(L("quete.menu.desepingler", nom)) { QuetePanel.shared.desepingler(id) }
+            item.image = NSImage(systemSymbolName: "pin.slash", accessibilityDescription: nil)
+            menu.addItem(item)
+        case .ici(let id, let titre, let epinglee):
+            let item = CibleMenu.shared.element(titre) { QuetePanel.shared.ouvrir(id) }
+            item.image = NSImage(systemSymbolName: epinglee ? "pin.fill" : "exclamationmark.bubble",
+                                 accessibilityDescription: nil)
+            menu.addItem(item)
+        case .toutDesepingler:
+            menu.addItem(CibleMenu.shared.element(L("quete.menu.toutDesepingler")) { QuetePanel.shared.confirmerToutDesepingler() })
+        case .toutEpingler:
+            let item = CibleMenu.shared.element(L("quete.toutEpingler")) { lecture.toutEpingler() }
+            item.image = NSImage(systemSymbolName: "pin", accessibilityDescription: nil)
+            menu.addItem(item)
+        case .lireSuivi(let enCours):
+            let item = CibleMenu.shared.element(enCours ? L("quete.suivi.enCours") : L("quete.suivi.lire")) { lecture.lire() }
+            item.image = NSImage(systemSymbolName: "text.viewfinder", accessibilityDescription: nil)
+            item.isEnabled = !enCours
+            menu.addItem(item)
+        case .reconnue(let reconnue, let titre, let epinglee):
+            let item = CibleMenu.shared.element(titre) { lecture.choisir(reconnue) }
+            item.image = epinglee ? NSImage(systemSymbolName: "pin.fill", accessibilityDescription: nil) : nil
+            item.indentationLevel = 1
+            menu.addItem(item)
+        case .message(let texte):
+            let item = NSMenuItem(title: texte, action: nil, keyEquivalent: "")
+            item.isEnabled = false
+            menu.addItem(item)
+        case .geste(let geste):
+            let item = CibleMenu.shared.element(geste.titre) { Self.faire(geste) }
+            item.indentationLevel = 1
+            menu.addItem(item)
+        case .affichage(let options):
+            let sousMenu = NSMenu()
+            sousMenu.autoenablesItems = false
+            for option in options { ajouter(option, a: sousMenu) }
+            let item = NSMenuItem(title: L("quete.menu.affichage"), action: nil, keyEquivalent: "")
+            item.submenu = sousMenu
+            menu.addItem(item)
+        case .option(let option, let actif):
+            let item = CibleMenu.shared.element(option.titre) { prefs[keyPath: Self.reglage(option)] = !actif }
+            item.state = actif ? .on : .off
+            menu.addItem(item)
+        case .fermer:
+            menu.addItem(CibleMenu.shared.element(L("panneau.fermer")) { QuetePanel.shared.fermer() })
+        case .separateur:
+            menu.addItem(.separator())
+        }
+    }
+}
+
+extension QuetePanel {
+    /// Le geste qui lève la cause d'un suivi illisible.
+    private static func faire(_ geste: MenuQuetes.Geste) {
+        switch geste {
+        case .autoriser: WindowPreviewService.shared.requestAuthorization()
+        case .calibrer: SettingsWindowController.shared.show(section: .lecture)
+        case .reessayer: Task { try? await QuetesStore.shared.mettreAJour() }
+        case .relire: LectureSuivi.shared.lire()
+        }
+    }
+
+    /// Le menu des étapes (`MenuEtapes`) : en choisir une la montre.
+    func menuEtapes(_ entrees: [MenuEtapes.Entree], choisir: @escaping @MainActor (Int) -> Void) -> NSMenu {
+        let menu = NSMenu()
+        menu.autoenablesItems = false
+        for entree in entrees {
+            let item = CibleMenu.shared.element(entree.titre) { choisir(entree.rang) }
+            item.state = entree.montree ? .on : .off
+            if entree.faite { item.image = NSImage(systemSymbolName: "checkmark.circle", accessibilityDescription: nil) }
+            menu.addItem(item)
         }
         return menu
     }
 }
 
 extension QuetePanel {
-    /// Ce qui commence sur la case du perso devant, d'après sa position lue.
-    private static func ici() -> MenuQuetes.Ici? {
-        guard let perso = LecteurEcran.shared.positionDuPersoDevant, let quetes = QuetesStore.shared.quetes else { return nil }
+    /// Ce qui commence sur la case du perso devant, d'après sa position lue. L'en-tête le redemande à
+    /// chaque rendu : le balayage des quêtes ne se refait que si la case, les quêtes, la langue ou la
+    /// carte ont changé.
+    func ici() -> MenuQuetes.Ici? {
+        let position = LecteurEcran.shared.positionDuPersoDevant
         let reseau = CarteStore.shared.reseau, langue = L10n.courante.langue
-        return MenuQuetes.Ici(
-            coordonnees: perso.coordonnees,
-            quetes: QuetesIci.quetes(quetes, perso: perso, reseau: reseau).map {
-                .init(id: $0.id, nom: Lieu.traduit($0.noms, langue) ?? "?", niveau: $0.niveau)
-            },
-            pnjs: QuetesIci.pnjs(quetes, perso: perso, reseau: reseau).compactMap { Lieu.traduit($0.noms, langue) })
+        let cle = CleIci(position: position, quetes: QuetesStore.shared.quetes?.date, langue: langue, reseauLu: reseau.estLu)
+        return iciGarde.valeur(pour: cle) {
+            guard let perso = position, let quetes = QuetesStore.shared.quetes else { return nil }
+            return MenuQuetes.Ici(
+                coordonnees: perso.coordonnees,
+                quetes: QuetesIci.quetes(quetes, perso: perso, reseau: reseau).map {
+                    .init(id: $0.id, nom: Lieu.traduit($0.noms, langue) ?? "?", niveau: $0.niveau)
+                },
+                pnjs: QuetesIci.pnjs(quetes, perso: perso, reseau: reseau).compactMap { Lieu.traduit($0.noms, langue) })
+        }
     }
 
     /// Le réglage derrière une option du menu.

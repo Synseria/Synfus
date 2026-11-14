@@ -61,6 +61,11 @@ struct HistoriqueSuivi: Equatable, Sendable {
             .sorted { $0.perso < $1.perso }
     }
 
+    /// Les `maximum` premiers persos d'une étape, de quoi montrer un point chacun, et combien en restent.
+    static func visibles(_ lus: [EtapeLue], maximum: Int = 4) -> (visibles: [EtapeLue], reste: Int) {
+        (Array(lus.prefix(maximum)), max(lus.count - maximum, 0))
+    }
+
     /// Les quêtes de `avant` que `apres` ne montre plus, quand rien d'autre ne
     /// l'explique. Une quête manque aussi quand elle est sortie de la zone lue
     /// ou que son titre s'est mal lu : il faut que la lecture voie le suivi

@@ -103,20 +103,26 @@ enum PanneauxJeu {
     }
 }
 
-/// Un bouton d'en-tête de panneau : une cible de 24 pt, quelle que soit
-/// l'icône, au même dessin partout.
+/// Un bouton d'icône d'un panneau : une cible de 24 pt, quelle que soit l'icône, au même dessin partout.
+/// `copie` : l'icône devient la coche de copie le temps du signal (`IconeCopie`) ; `discret` : encre
+/// secondaire au repos, pleine au survol.
 struct BoutonEnTete: View {
     let icone: String
     let aide: String
+    var copie = false
+    var discret = false
     let action: () -> Void
+    @State private var survole = false
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: icone)
+            IconeCopie(icone: icone, copie: copie)
                 .font(Jetons.Typo.raccourci.police)
                 .frame(width: Jetons.Taille.cibleMin, height: Jetons.Taille.cibleMin)
+                .foregroundStyle(discret && !survole ? Color.jeton(\.encreSecondaire) : Color.jeton(\.encre))
         }
         .buttonStyle(.etat(nue: true))
+        .onHover { survole = $0 }
         .aide(aide)
     }
 }
