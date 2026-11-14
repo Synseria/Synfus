@@ -16,8 +16,12 @@ struct LectureSettings: View {
         PageReglages(titre: L("reglages.lecture")) {
             // Chasse et suivi de quêtes se lisent à la demande, depuis leur panneau : leurs zones se
             // calibrent même lecture éteinte. La position et le combat se lisent en continu, d'où leur
-            // interrupteur ; l'allumer est la demande d'autorisation, le seul endroit où la lecture la fait.
+            // interrupteur ; l'allumer demande l'autorisation, que la première ligne du bloc redonne tant qu'elle manque.
             Bloc(L("lecture.zones"), aide: L("lecture.zones.aide")) {
+                if !previews.authorized {
+                    PermissionRow(name: L("autorisation.lecture"), granted: false,
+                                  help: L("general.enregistrementEcran.aide")) { previews.requestAuthorization() }
+                }
                 if let resultat {
                     Text(resultat).foregroundStyle(Color.jeton(\.encreSecondaire)).rangee()
                 }

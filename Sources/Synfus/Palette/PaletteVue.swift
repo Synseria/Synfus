@@ -76,7 +76,7 @@ struct PaletteVue: View {
                 SettingsWindowController.shared.show(section: .lecture)
             }
         case .sansAutorisation:
-            boutonOrigine(L("palette.origine.autoriser"), aide: L("palette.origine.autoriser.aide")) {
+            boutonOrigine(L("autorisation.lectureEcran"), aide: L("palette.origine.autoriser.aide")) {
                 WindowPreviewService.shared.requestAuthorization()
             }
         case .inconnue:
@@ -484,7 +484,7 @@ private struct CarteZaap: View {
 
 /// Une ligne de résultat : genre (ou pictogramme du lieu), titre, étiquette,
 /// sous-titre, détail, vue de la carte.
-private struct LigneResultat: View {
+struct LigneResultat: View {
     let entree: EntreePalette
     let choisie: Bool
     var deplie = false

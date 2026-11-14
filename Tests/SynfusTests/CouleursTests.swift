@@ -57,6 +57,25 @@ struct CouleursTests {
         #expect(encore.couleurDeLApp == .prereglage(.corail) && encore.fondsDeLApp == .neutre)
     }
 
+    @Test("L'apparence suit macOS par défaut, se relit, et une valeur illisible laisse Auto")
+    func apparence() {
+        let store = MemoireDeTest()
+        let prefs = Preferences.forTesting(store: store)
+        #expect(prefs.apparence == .auto)
+        prefs.apparence = .clair
+        #expect(Preferences.forTesting(store: store).apparence == .clair)
+        store.enregistrer(Data(#"{"characterOrder":["A"],"hotKeys":[],"barVisible":true,"showNumbers":true,"apparence":"crepuscule"}"#.utf8),
+                          pour: Preferences.key)
+        #expect(Preferences.forTesting(store: store).apparence == .auto)
+    }
+
+    @Test("Seul Auto laisse macOS décider ; Clair et Sombre imposent leur apparence")
+    func apparenceImposee() {
+        #expect(ThemeCourant.Apparence.auto.nsAppearance == nil)
+        #expect(ThemeCourant.Apparence.clair.nsAppearance?.name == .aqua)
+        #expect(ThemeCourant.Apparence.sombre.nsAppearance?.name == .darkAqua)
+    }
+
     @Test("Le défaut est le jade, et les fonds sont en Auto : primaire en clair, nuit en sombre")
     func defauts() {
         let prefs = Preferences.forTesting(store: MemoireDeTest())

@@ -306,6 +306,8 @@ struct PreferencesTests {
         #expect(prefs.cycleNext == HotKey.defaultCycleNext)
         #expect(prefs.toggleBar == nil)
         #expect(prefs.inviteHotKey == HotKey.defaultInvite)
+        #expect(prefs.quetesHotKey == HotKey.defaultQuetes && prefs.chasseHotKey == HotKey.defaultChasse
+                && prefs.bossHotKey == HotKey.defaultBoss)
     }
 
     @Test("Les équipes et l'invitation se relisent après un redémarrage")
@@ -478,7 +480,7 @@ struct PreferencesTests {
      "boutonsMasques":["quetes","boss","chasse","palette"],"characterOrder":["Aeryn","Nova"],
      "chasseHotKey":{"keyCode":5,"modifiers":2048},
      "cycleNext":{"keyCode":122,"modifiers":0},"cyclePrevious":{"keyCode":120,"modifiers":0},
-     "defaultsVersion":8,"equipeSuivanteHotKey":{"keyCode":17,"modifiers":256},
+     "defaultsVersion":9,"equipeSuivanteHotKey":{"keyCode":17,"modifiers":256},
      "etiquettes":{"1:-78,-41":"Fri 1"},"lieuxFavoris":["lieu:2738"],"pnjsFavoris":["pnj:6309"],
      "paletteHotKey":{"keyCode":47,"modifiers":256},"paletteRecents":["/zaap 5,7"],"paletteTri":"type",
      "paletteFrequentation":{"lieu:2738":{"dernier":12,"fois":3}},"quetesEpinglees":[18,42],"quetesEtape":{"18":2},
@@ -490,12 +492,12 @@ struct PreferencesTests {
      "inviteFormat":"/w %nom go","inviteGroupee":true,
      "inviteHotKey":{"keyCode":34,"modifiers":256},
      "killFrozenClients":false,"lastArrangement":"principale","lireCombat":true,"lireCombatDerriere":true,
-     "lirePosition":true,"menuBarIcon":"symbole","iconeApp":{"motif":"couvee","fond":"aube"},"couleurDeLApp":"teinte:210","fondsDeLApp":"nuit",
+     "lirePosition":true,"menuBarIcon":"symbole","iconeApp":{"motif":"couvee","fond":"aube"},"apparence":"sombre","couleurDeLApp":"teinte:210","fondsDeLApp":"nuit",
      "previewHotKey":{"keyCode":49,"modifiers":2048},
      "sessionHotKey":{"keyCode":1,"modifiers":256},"reduirePersosInactifs":false,"showClasses":false,
      "showNumbers":false,"showPreviewOnHover":true,"signalerBascule":false,
      "toggleAutoFocus":{"keyCode":99,"modifiers":0},
-     "zaapAuto":true,"zaapGainMinimal":8,"zaapDuJeu":false,"zaapIntercalees":"/a ; /b","verifierMisesAJour":false,"derniereVersionLancee":"0.11.0","partagerStatistiques":false,
+     "zaapAuto":true,"zaapGainMinimal":8,"zaapDuJeu":false,"zaapIntercalees":"/a ; /b","verifierMisesAJour":false,"derniereVersionLancee":"0.11.0","derniereVerificationMaj":800000000,"partagerStatistiques":false,
      "zaapHotKey":{"keyCode":17,"modifiers":2048},
      "zaapsAjoutes":[{"monde":1,"noms":{"fr":"Mon zaap"},"x":50,"y":-50,"zone":{}}],
      "zaapsChoix":{"1:-2,0":false},
@@ -531,6 +533,7 @@ struct PreferencesTests {
         #expect(prefs.autoCenterBar == false)
         #expect(prefs.menuBarIcon == .symbole)
         #expect(prefs.iconeApp == IconeApp(motif: .couvee, fond: .aube))
+        #expect(prefs.apparence == .sombre)
         #expect(prefs.couleurDeLApp == .teinte(210) && prefs.fondsDeLApp == .nuit)
         #expect(prefs.showPreviewOnHover == true)
         #expect(prefs.previewHotKey == HotKey(keyCode: 49, modifiers: 2048))
@@ -609,6 +612,7 @@ struct PreferencesTests {
         prefs.autoCenterBar = false
         prefs.menuBarIcon = .symbole
         prefs.iconeApp = IconeApp(motif: .couvee, fond: .aube)
+        prefs.apparence = .sombre
         prefs.couleurDeLApp = .teinte(210)
         prefs.fondsDeLApp = .nuit
         prefs.showPreviewOnHover = true
@@ -639,6 +643,7 @@ struct PreferencesTests {
         prefs.verifierMisesAJour = false
         prefs.partagerStatistiques = false
         prefs.derniereVersionLancee = "0.11.0"
+        prefs.derniereVerificationMaj = Date(timeIntervalSinceReferenceDate: 800_000_000)
         prefs.zaapsAjoutes = [Zaap(50, -50, noms: ["fr": "Mon zaap"])]
         prefs.zaapsChoix = ["1:-2,0": false]
         prefs.zaapsFavoris = ["1:5,-18", "1:-2,0"]
@@ -662,6 +667,8 @@ struct PreferencesTests {
         prefs.quetesCochesLues = ["18": [104]]
         prefs.quetesRessourcesCochees = ["18": [1747]]
         prefs.chasseHotKey = HotKey(keyCode: 5, modifiers: 2048)
+        prefs.quetesHotKey = nil
+        prefs.bossHotKey = nil
         prefs.bossChoisi = .special(.kimbo)
         prefs.nomsBossChoisi = ["fr": "Bouftou Royal"]
         prefs.boutonsMasques = [.palette, .chasse, .boss, .quetes]
@@ -681,7 +688,7 @@ struct PreferencesTests {
         for chemin: ReferenceWritableKeyPath<Preferences, HotKey?> in [
             \.cycleNext, \.cyclePrevious, \.toggleAutoFocus, \.toggleBar, \.previewHotKey,
             \.arrangeHotKey, \.sessionHotKey, \.equipeSuivanteHotKey, \.inviteHotKey, \.zaapHotKey, \.paletteHotKey,
-            \.chasseHotKey, \.bossHotKey,
+            \.chasseHotKey, \.bossHotKey, \.quetesHotKey,
         ] {
             prefs[keyPath: chemin] = nil
         }
@@ -691,8 +698,8 @@ struct PreferencesTests {
         {"advanceModifier":"fn","advanceOnClick":false,"attentionAction":"highlight",
          "autoCenterBar":true,"barOnlyWithDofus":false,"panneauxSeulementDofus":true,"barVisible":true,"bossChoisi":"harebourg",
          "boutonsMasques":[],"characterOrder":[],
-         "defaultsVersion":8,"equipes":[],"etiquettes":{},"hotKeys":[null],"inviteFormat":"/invite %nom","inviteGroupee":false,
-         "killFrozenClients":true,"lireCombat":false,"lireCombatDerriere":false,"lirePosition":false,"menuBarIcon":"logo","iconeApp":{"motif":"oeuf","fond":"transparent"},"couleurDeLApp":"jade",
+         "defaultsVersion":9,"equipes":[],"etiquettes":{},"hotKeys":[null],"inviteFormat":"/invite %nom","inviteGroupee":false,
+         "killFrozenClients":true,"lireCombat":false,"lireCombatDerriere":false,"lirePosition":false,"menuBarIcon":"logo","iconeApp":{"motif":"oeuf","fond":"transparent"},"apparence":"auto","couleurDeLApp":"jade",
          "reduirePersosInactifs":false,"showClasses":true,"showNumbers":true,"showPreviewOnHover":false,
          "signalerBascule":true,"zaapAuto":false,
          "zaapGainMinimal":5,"zaapDuJeu":true,"zaapIntercalees":"/a","verifierMisesAJour":true,"partagerStatistiques":true,"zaapsAjoutes":[],"zaapsChoix":{},"zaapsFavoris":[],"zaapsVueCarte":true,
@@ -1074,5 +1081,45 @@ extension PreferencesTests {
         let prefs = Preferences.forTesting(store: StockageMemoire([Preferences.key: Data(sauvegarde.utf8)]))
         #expect(prefs.boutonsMasques == [.chasse])
         #expect(prefs.characterOrder == ["Aeryn"])
+    }
+}
+
+/// Les trois panneaux reçoivent ⌥⌘Q, ⌥⌘C et ⌥⌘B en génération 9.
+extension PreferencesTests {
+    private func relue(_ json: String) -> Preferences {
+        Preferences.forTesting(store: StockageMemoire([Preferences.key: Data(json.utf8)]))
+    }
+
+    private static let base = #"{"characterOrder":[],"hotKeys":[],"barVisible":true,"showNumbers":true,"defaultsVersion":8"#
+
+    @Test("Génération 9 : ⌥⌘Q, ⌥⌘C et ⌥⌘B à qui n'avait rien réglé")
+    func generationPanneaux() {
+        let prefs = relue(Self.base + "}")
+        #expect(prefs.quetesHotKey == HotKey.defaultQuetes)
+        #expect(prefs.chasseHotKey == HotKey.defaultChasse)
+        #expect(prefs.bossHotKey == HotKey.defaultBoss)
+        #expect(HotKey.defaultQuetes.modifiers == UInt32(cmdKey) | UInt32(optionKey))
+    }
+
+    @Test("Génération 9 : un choix reste, une combinaison déjà prise laisse le raccourci vide")
+    func generationPanneauxRespecte() {
+        let choisi = relue(Self.base + #","quetesHotKey":{"keyCode":34,"modifiers":256}}"#)
+        #expect(choisi.quetesHotKey == HotKey(keyCode: 34, modifiers: 256))
+        let prise = HotKey.defaultChasse
+        let pris = relue(Self.base + #","arrangeHotKey":{"keyCode":\#(prise.keyCode),"modifiers":\#(prise.modifiers)}}"#)
+        #expect(pris.chasseHotKey == nil)
+        #expect(pris.bossHotKey == HotKey.defaultBoss)
+        let effacee = relue(Self.base.replacingOccurrences(of: "8", with: "9") + "}")
+        #expect(effacee.quetesHotKey == nil)
+    }
+}
+
+extension PreferencesTests {
+    @Test("Les réglages s'ouvrent au premier lancement, ou tant que l'accessibilité manque")
+    func ouvertureAuLancement() {
+        #expect(SettingsWindowController.ouvreAuLancement(premierLancement: true, accessibiliteAccordee: true))
+        #expect(SettingsWindowController.ouvreAuLancement(premierLancement: false, accessibiliteAccordee: false))
+        #expect(!SettingsWindowController.ouvreAuLancement(premierLancement: false, accessibiliteAccordee: true))
+        #expect(Preferences.forTesting(store: StockageMemoire()).premierLancement)
     }
 }

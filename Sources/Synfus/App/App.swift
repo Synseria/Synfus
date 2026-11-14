@@ -7,6 +7,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Accessory : pas d'icône dans le Dock, Synfus vit dans la barre de menus.
         NSApp.setActivationPolicy(.accessory)
 
+        ThemeCourant.demarrer()
         buildApplicationMenu()
 
         // Le modèle signale quand la barre et les panneaux du jeu doivent se
@@ -35,9 +36,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         UsageStore.shared.start()
         IconeAppliquee.auLancement()
 
-        if !AXIsProcessTrusted() {
-            WindowManager.shared.requestAccessibility()
-            SettingsWindowController.shared.show()
+        let accordee = AXIsProcessTrusted()
+        if !accordee { WindowManager.shared.requestAccessibility() }
+        if SettingsWindowController.ouvreAuLancement(premierLancement: Preferences.shared.premierLancement,
+                                                     accessibiliteAccordee: accordee) {
+            SettingsWindowController.shared.show(section: .general)
         }
     }
 

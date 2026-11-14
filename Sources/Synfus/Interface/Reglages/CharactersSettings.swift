@@ -37,6 +37,7 @@ struct CharactersSettings: View {
     var body: some View {
         PageReglages(titre: L("reglages.personnages")) {
             Bloc(L("persos.ordre"), aide: L("persos.ordre.aide") + "\n\n" + L("persos.equipes.aide")) {
+                if !prefs.characterOrder.isEmpty { enTetes }
                 ForEach(Array(prefs.characterOrder.enumerated()), id: \.element) { index, name in
                     characterRow(index: index, name: name)
                 }
@@ -60,6 +61,23 @@ struct CharactersSettings: View {
         }
     }
 
+    private static let largeurEquipe: CGFloat = 112
+    private static let largeurTouche: CGFloat = 88
+    private static let largeurFleches = Jetons.Taille.cibleMin * 2 + Jetons.Espace.un
+
+    /// Les colonnes de la liste, nommées : le menu est l'équipe, la touche mène au personnage.
+    private var enTetes: some View {
+        HStack(spacing: Jetons.Espace.deux) {
+            Spacer()
+            Text(L("persos.equipe")).frame(width: Self.largeurEquipe, alignment: .leading)
+            Text(L("persos.raccourci")).lineLimit(1).frame(width: Self.largeurTouche, alignment: .leading)
+            Color.clear.frame(width: Self.largeurFleches, height: 0)
+        }
+        .font(Jetons.Typo.petit.police)
+        .foregroundStyle(Color.jeton(\.encreSecondaire))
+        .rangee()
+    }
+
     /// Une ligne de la liste. Un glisser sur une autre ligne y place le personnage ; les flèches offrent le
     /// même déplacement au clic.
     private func characterRow(index: Int, name: String) -> some View {
@@ -72,18 +90,23 @@ struct CharactersSettings: View {
                 .frame(width: Jetons.Espace.deux, height: Jetons.Espace.deux)
                 .accessibilityLabel(isOnline(name) ? L("persos.connecte") : L("persos.horsLigne"))
             Text(name)
-            Spacer()
-            teamPicker(for: name)
-            Text(slotOf(name).map { "\($0 + 1)" } ?? "")
-                .font(Jetons.Typo.raccourci.police)
-                .foregroundStyle(Color.jeton(\.encreSecondaire))
-                .frame(width: Jetons.Espace.quatre, alignment: .trailing)
             // Seul l'écart au normal s'écrit : un personnage connecté n'a pas besoin de le dire.
             if !isOnline(name) {
                 Text(L("persos.horsLigne"))
                     .font(Jetons.Typo.petit.police)
                     .foregroundStyle(Color.jeton(\.encreTertiaire))
             }
+            Spacer()
+            teamPicker(for: name)
+            // La touche réelle, celle de la barre ; un personnage hors ligne n'a pas d'emplacement.
+            HStack {
+                if let rang = slotOf(name) {
+                    ToucheRaccourci(BarView.toucheDuPerso(index: rang, raccourcis: prefs.hotKeys))
+                        .aide(L("persos.raccourciDuPerso"))
+                }
+                Spacer(minLength: 0)
+            }
+            .frame(width: Self.largeurTouche)
 
             HStack(spacing: Jetons.Espace.un) {
                 Button { moveCharacter(at: index, by: -1) } label: {
@@ -100,6 +123,7 @@ struct CharactersSettings: View {
             }
             .buttonStyle(.bouton(.tertiaire, dense: true))
             .font(Jetons.Typo.raccourci.police)
+            .frame(width: Self.largeurFleches)
         }
         .rangee()
         .draggable(name)
@@ -114,7 +138,7 @@ struct CharactersSettings: View {
         }
     }
 
-    /// « — » ou le numéro de l'équipe ; une entrée de plus tant qu'une équipe
+    /// « Aucune » ou le numéro de l'équipe ; une entrée de plus tant qu'une équipe
     /// peut encore être créée. Tag 0 = aucune, n = équipe n.
     private func teamPicker(for name: String) -> some View {
         let count = prefs.equipes.count
@@ -123,11 +147,11 @@ struct CharactersSettings: View {
             get: { (Equipes.indexEquipe(de: name, dans: prefs.equipes) ?? -1) + 1 },
             set: { prefs.affecter(name, aEquipe: $0 == 0 ? nil : $0 - 1) }
         )) {
-            Text("—").tag(0)
+            Text(L("barre.equipe.aucune")).tag(0)
             ForEach(1...max(choix, 1), id: \.self) { Text(L("persos.equipeN", $0)).tag($0) }
         }
         .labelsHidden()
-        .frame(width: 112)
+        .frame(width: Self.largeurEquipe)
         .font(Jetons.Typo.petit.police)
         .help(L("persos.equipeDuPerso"))
     }

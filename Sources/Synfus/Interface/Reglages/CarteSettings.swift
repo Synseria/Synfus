@@ -22,8 +22,6 @@ private struct BlocTrajets: View {
 
     var body: some View {
         Bloc(L("reglages.trajets")) {
-            RaccourciReglable(label: L("zaap.raccourci"), help: L("zaap.raccourci.aide"), chemin: \.zaapHotKey)
-                .help(L("zaap.reecriture.aide", ItineraireZaap.ecartZaapDuJeu))
             Ligne(titre: L("zaap.gain"), aide: L("zaap.gain.aide")) {
                 Stepper(L("zaap.gain.valeur", nombre: prefs.zaapGainMinimal, prefs.zaapGainMinimal),
                         value: $prefs.zaapGainMinimal, in: ItineraireZaap.gainsPossibles)
@@ -41,7 +39,7 @@ private struct BlocTrajets: View {
             } else {
                 // La réécriture a besoin de la position : l'état se dit dans sa ligne, avec le geste qui le lève.
                 Ligne(titre: L("zaap.auto"), etat: L("zaap.sansPosition"), aide: L("zaap.auto.aide")) {
-                    Button(L("zaap.lirePosition")) {
+                    Button(WindowPreviewService.shared.authorized ? L("zaap.lirePosition") : L("autorisation.lectureEcran")) {
                         prefs.lirePosition = true
                         if !WindowPreviewService.shared.authorized { WindowPreviewService.shared.requestAuthorization() }
                     }
