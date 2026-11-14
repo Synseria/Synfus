@@ -177,6 +177,14 @@ struct QuetesTests {
         #expect(fiche.etapes[0].recompenses.vides)
     }
 
+    @Test("L'avancement d'une étape ne compte que ses propres objectifs cochés")
+    func avancementEtape() throws {
+        let sang = try #require(try Self.quetes().fiche(18, en: .en)).etapes[1]
+        #expect(sang.faits(valides: []) == 0)
+        #expect(sang.faits(valides: [101, 7]) == 1)
+        #expect(sang.faits(valides: [101, 102]) == sang.objectifs.count)
+    }
+
     @Test("Expérience et kamas d'une étape, au niveau optimal ; une étape répétable prend la tranche de ce niveau")
     func recompenses() throws {
         #expect(RecompensesEtape.experience(niveau: 177, duree: 2, ratio: 1.2) == 4_377_903)

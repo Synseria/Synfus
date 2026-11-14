@@ -345,6 +345,14 @@ final class LecteurEcran: ObservableObject {
         persoDevant.flatMap { positions[$0] }
     }
 
+    #if DEBUG
+    /// Un perso devant à une position d'exemple pour les captures (`CapturesTests`) : aucun écran n'est lu.
+    func poserPourCaptures(persoDevant perso: String?, position: PositionCarte?) {
+        persoDevant = perso
+        positions = perso.flatMap { nom in position.map { [nom: $0] } } ?? [:]
+    }
+    #endif
+
     /// Le perso devant vient de finir un combat sur la carte où il se tient.
     var combatFiniDevant: Bool {
         persoDevant.map { finsDeCombat.fini($0, en: positions[$0]) } ?? false
@@ -477,19 +485,28 @@ final class LecteurEcran: ObservableObject {
     /// moteur est un acteur : une lecture du tour en cours passe avant, sans
     /// se mélanger.
     func lireUneFois(_ genre: GenreLecture) async -> (perso: String, lignes: [String], coupe: Bool)? {
+        try? await essayerLireUneFois(genre).get()
+    }
+
+    /// Pourquoi une lecture à la demande n'a rien rendu, dans l'ordre où la chaîne casse.
+    enum EchecLecture: Error, Equatable, Sendable {
+        case sansAutorisation, sansPerso, captureImpossible, texteIllisible
+    }
+
+    /// `lireUneFois`, avec la cause de l'échec.
+    func essayerLireUneFois(_ genre: GenreLecture) async -> Result<(perso: String, lignes: [String], coupe: Bool), EchecLecture> {
         let manager = WindowManager.shared
         let devant = manager.clients.first(where: { manager.isFrontmost($0) })
-        guard WindowPreviewService.shared.authorized,
-              let client = devant ?? manager.clients.first(where: { $0.name == persoDevant }),
-              let image = await capturer(client, [genre])[genre],
-              case .lue(let signature, let lignes, _, _) = await moteur.lire(image: image, precedente: nil,
-                                                                             mesure: genre.mesure)
-        else { return nil }
+        guard WindowPreviewService.shared.authorized else { return .failure(.sansAutorisation) }
+        guard let client = devant ?? manager.clients.first(where: { $0.name == persoDevant }) else { return .failure(.sansPerso) }
+        guard let image = await capturer(client, [genre])[genre] else { return .failure(.captureImpossible) }
+        guard case .lue(let signature, let lignes, _, _) = await moteur.lire(image: image, precedente: nil, mesure: genre.mesure)
+        else { return .failure(.texteIllisible) }
         if devant != nil, persoDevant != client.name { persoDevant = client.name }
         signatures[cle(genre, client.name)] = signature
         vuLe[cle(genre, client.name)] = Date()
         diagnostic.lignes[genre] = lignes
-        return (client.name, lignes, signature.auBord)
+        return .success((client.name, lignes, signature.auBord))
     }
 
     /// Chaque texte du contenu entier et son cadre — la détection des zones

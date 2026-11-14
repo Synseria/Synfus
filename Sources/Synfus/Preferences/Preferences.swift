@@ -234,6 +234,10 @@ final class Preferences: ObservableObject {
     /// n'y est pas.
     @Published var quetesCochesLues: [String: [Int]] = [:] { didSet { save() } }
 
+    /// Les ressources déjà réunies de chaque quête (identifiants d'objet), par
+    /// identifiant de quête : « Tout copier » ne redonne que le reste.
+    @Published var quetesRessourcesCochees: [String: [Int]] = [:] { didSet { save() } }
+
     /// Les objectifs que le suivi du jeu montre faits se cochent à sa lecture.
     @Published var quetesCocherSuivi: Bool = true { didSet { save() } }
 
@@ -585,6 +589,7 @@ final class Preferences: ObservableObject {
         .facultatif("quetesCocherSuivi", \.quetesCocherSuivi),
         .facultatif("quetesDecoches", \.quetesDecoches),
         .facultatif("quetesCochesLues", \.quetesCochesLues),
+        .facultatif("quetesRessourcesCochees", \.quetesRessourcesCochees),
         .facultatif("zaapsVueCarte", \.vuesCartes),
         .boutonsMasques("boutonsMasques"),
     ]
