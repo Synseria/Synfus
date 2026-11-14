@@ -122,7 +122,7 @@ final class QuetePanel: NSObject, ObservableObject {
     /// Montré, il fait lire le suivi du jeu au tour, si l'enregistrement de
     /// l'écran est déjà permis ; caché, plus rien n'est lu pour lui.
     private func appliquer(force: Bool) {
-        let montre = PanneauxJeu.appliquer(&panel, ouvert: ouvert, impose: impose, force: force,
+        let montre = PanneauxJeu.appliquer(&panel, ouvert: ouvert, impose: impose, force: force, parDefaut: Self.placeParDefaut,
                                            construire: construire, cache: { ApercuCarte.shared.cacher() })
         LecteurEcran.shared.suivreQuetes(montre && WindowPreviewService.shared.authorized)
     }
@@ -146,11 +146,20 @@ final class QuetePanel: NSObject, ObservableObject {
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         // Sans `.resizable`, AppKit ne relit le cadre sauvé que de force : sa
         // taille vient de nos poignées.
-        if !panel.setFrameAutosaveName(Self.nomDuCadre) || !panel.setFrameUsingName(Self.nomDuCadre, force: true),
-           let ecran = NSScreen.main?.visibleFrame {
-            panel.setFrameTopLeftPoint(NSPoint(x: ecran.maxX - 384, y: ecran.maxY - 80))
+        if !panel.setFrameAutosaveName(Self.nomDuCadre) || !panel.setFrameUsingName(Self.nomDuCadre, force: true) {
+            PanneauxJeu.placer(panel, parDefaut: Self.placeParDefaut)
         }
         return panel
+    }
+
+    /// En haut à droite de l'écran.
+    private static let placeParDefaut: PanneauxJeu.PlaceParDefaut = { zone, _ in
+        NSPoint(x: zone.maxX - 384, y: zone.maxY - 80)
+    }
+
+    /// Le panneau ouvert reprend sa place d'origine.
+    func recentrer() {
+        if ouvert, let panel { PanneauxJeu.placer(panel, parDefaut: Self.placeParDefaut) }
     }
 }
 
