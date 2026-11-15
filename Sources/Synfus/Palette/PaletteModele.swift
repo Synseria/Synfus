@@ -186,8 +186,8 @@ final class PaletteModele: ObservableObject {
     var vide: VidePalette? {
         guard entrees.isEmpty, !surAlmanax else { return nil }
         let ailleurs = filtre != .tout && !requete.trimmingCharacters(in: .whitespaces).isEmpty
-            ? ailleursGarde.valeur(pour: CleAilleurs(requete: requete, tri: tri, index: ObjectIdentifier(index))) {
-                RecherchePalette.entrees(requete, index, filtre: .tout, tri: tri).count
+            ? ailleursGarde.valeur(pour: CleAilleurs(requete: requete, tri: triAffiche, index: ObjectIdentifier(index))) {
+                RecherchePalette.entrees(requete, index, filtre: .tout, tri: triAffiche).count
             } : 0
         return VidePalette.de(
             carte: carteImposee ?? CarteStore.shared.etat,
@@ -340,8 +340,21 @@ final class PaletteModele: ObservableObject {
         recalculer()
     }
 
-    /// ⌘T : auto, proximité, ordre alphabétique, type — et le choix est gardé.
-    func triSuivant() { choisirTri(tri.suivant) }
+    /// Le tri qui range ce qui est montré : le choix gardé, sauf s'il n'a pas de sens ici.
+    var triAffiche: TriPalette { tris.contains(tri) ? tri : .auto }
+
+    /// Les tris proposés par le menu du bouton et par ⌘T.
+    var tris: [TriPalette] { filtre.tris(enRecherche: enRecherche) }
+
+    /// Le bouton de tri se montre là où le tri range quelque chose.
+    var triAgit: Bool { filtre.triAgit(enRecherche: enRecherche) }
+
+    /// ⌘T : auto, proximité, ordre alphabétique, type — et le choix est gardé. Sans effet là où
+    /// le tri ne range rien.
+    func triSuivant() {
+        guard triAgit else { return }
+        choisirTri(triAffiche.suivant(dans: tris))
+    }
 
     /// Un tri, par le menu du bouton ou par ⌘T.
     func choisirTri(_ nouveau: TriPalette) {
@@ -541,7 +554,7 @@ final class PaletteModele: ObservableObject {
     }
 
     private func recalculer() {
-        entrees = RecherchePalette.entrees(requete, index, filtre: filtre, tri: tri)
+        entrees = RecherchePalette.entrees(requete, index, filtre: filtre, tri: triAffiche)
         if !surAlmanax, selection >= entrees.count { selection = max(entrees.count - 1, 0) }
     }
 

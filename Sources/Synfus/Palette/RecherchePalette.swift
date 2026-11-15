@@ -67,6 +67,16 @@ enum FiltrePalette: Sendable {
         }
     }
 
+    /// Le tri ne range rien sur l'Accueil ni sur l'almanax, au repos : ni les montrer, ni ⌘T.
+    func triAgit(enRecherche: Bool) -> Bool {
+        enRecherche || (self != .tout && self != .almanax)
+    }
+
+    /// Les tris qui ont un sens ici : parmi les seuls zaaps, « Type » ne départage rien.
+    func tris(enRecherche: Bool) -> [TriPalette] {
+        self == .zaaps && !enRecherche ? [.auto, .proximite, .alphabetique] : TriPalette.allCases
+    }
+
     /// Ce que la rangée montre : au repos, les vues où aller sans taper ; dès qu'on tape, les
     /// portées qui restreignent la réponse. « Ici » sert aux deux.
     static func jeu(enRecherche: Bool) -> [FiltrePalette] {
@@ -94,9 +104,10 @@ enum TriPalette: String, CaseIterable, Sendable {
         }
     }
 
-    var suivant: TriPalette {
-        let tous = Self.allCases
-        return tous[(tous.firstIndex(of: self)! + 1) % tous.count]
+    /// Le suivant de `choix` (⌘T), en boucle ; le premier si `self` n'y est pas.
+    func suivant(dans choix: [TriPalette]) -> TriPalette {
+        guard let rang = choix.firstIndex(of: self) else { return choix[0] }
+        return choix[(rang + 1) % choix.count]
     }
 }
 

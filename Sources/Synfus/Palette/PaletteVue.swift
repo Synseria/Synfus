@@ -125,24 +125,26 @@ struct PaletteVue: View {
                 .padding(.leading, Jetons.Espace.un)
                 .help(L("palette.touche.filtre"))
             Spacer(minLength: Jetons.Espace.deux)
-            tri
-            ToucheRaccourci("⌘T")
+            if modele.triAgit {
+                tri
+                ToucheRaccourci("⌘T")
+            }
         }
         .padding(.horizontal, Jetons.Espace.quatre)
         .padding(.bottom, Jetons.Espace.deux)
     }
 
-    /// Le tri courant, en capsule comme les préfixes : un clic ouvre les quatre, ⌘T passe au suivant.
+    /// Le tri courant, en capsule : un clic ouvre les choix, ⌘T passe au suivant.
     private var tri: some View {
         let etat = EtatVisuel(survole: triSurvole)
         return Menu {
-            Picker(L("palette.tri.titre"), selection: Binding(get: { modele.tri }, set: { modele.choisirTri($0) })) {
-                ForEach(TriPalette.allCases, id: \.self) { Text($0.titre).tag($0) }
+            Picker(L("palette.tri.titre"), selection: Binding(get: { modele.triAffiche }, set: { modele.choisirTri($0) })) {
+                ForEach(modele.tris, id: \.self) { Text($0.titre).tag($0) }
             }
             .pickerStyle(.inline)
             .labelsHidden()
         } label: {
-            Label(modele.tri.titre, systemImage: "arrow.up.arrow.down")
+            Label(modele.triAffiche.titre, systemImage: "arrow.up.arrow.down")
                 .font(Jetons.Typo.petit.police)
                 .foregroundStyle(etat.encreSecondaire)
                 .padding(.horizontal, Jetons.Espace.deux)
