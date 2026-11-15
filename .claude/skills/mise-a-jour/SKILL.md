@@ -77,5 +77,5 @@ gardé par le collecteur tant qu'il suit `usage.[a-z0-9_]+` (de même `reglage.*
 Carte, cartes intérieures, quêtes et classes : lues au lancement par leurs stores, puis
 `DonneesDuJeu` les revoit chaque jour ; chacune ne se retélécharge que passée
 `DofusDB.peremption` (30 jours). Indices de chasse et fiches « Où trouver » : à la demande,
-30 jours ; almanax : le jour. Une nouvelle source DofusDB gardée sur disque s'ajoute à
+30 jours ; almanax : les sept jours d'une semaine, à l'entrée de sa vue. Une nouvelle source DofusDB gardée sur disque s'ajoute à
 `DonneesDuJeu.rafraichir`.
