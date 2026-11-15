@@ -8,7 +8,7 @@
 enum BoutonBarre: String, CaseIterable, Sendable {
     // Les panneaux de jeu d'abord, du plus servi au plus rare, puis les
     // fenêtres ; le même ordre que le menu de la barre de menus.
-    case quetes, boss, chasse, rangement, palette, passageAuto
+    case quetes, boss, chasse, almanax, rangement, palette, passageAuto
 
     /// Les boutons montrés, dans l'ordre de la barre.
     static func affiches(sauf masques: Set<BoutonBarre>) -> [BoutonBarre] {
@@ -23,6 +23,7 @@ enum BoutonBarre: String, CaseIterable, Sendable {
         case .quetes: "scroll"
         case .boss: "scope"
         case .chasse: "flag.checkered"
+        case .almanax: "calendar"
         case .rangement: "rectangle.3.group"
         case .palette: "command"
         case .passageAuto: "bolt.fill"
@@ -36,13 +37,14 @@ enum BoutonBarre: String, CaseIterable, Sendable {
         case .quetes: prefs.quetesHotKey
         case .boss: prefs.bossHotKey
         case .chasse: prefs.chasseHotKey
+        case .almanax: prefs.almanaxHotKey
         case .rangement: prefs.arrangeHotKey
         case .palette: prefs.paletteHotKey
         case .passageAuto: prefs.toggleAutoFocus
         }
     }
 
-    /// Une forme pour les six infobulles : le nom, puis la touche au bout quand elle existe.
+    /// Une forme pour les infobulles : le nom, puis la touche au bout quand elle existe.
     /// `nom` remplace le libellé quand l'outil dit son état (passage automatique).
     func infobulle(touche: String?, nom: String? = nil) -> String {
         let titre = nom ?? libelle
@@ -54,6 +56,7 @@ enum BoutonBarre: String, CaseIterable, Sendable {
         case .quetes: L("barre.bouton.quetes")
         case .boss: L("barre.bouton.boss")
         case .chasse: L("barre.bouton.chasse")
+        case .almanax: L("barre.bouton.almanax")
         case .rangement: L("barre.bouton.rangement")
         case .palette: L("barre.bouton.palette")
         case .passageAuto: L("barre.bouton.passageAuto")

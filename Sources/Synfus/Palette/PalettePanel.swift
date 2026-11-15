@@ -58,6 +58,11 @@ final class PalettePanel: NSObject, ObservableObject, NSWindowDelegate {
         ouvert ? fermer() : ouvrir()
     }
 
+    /// L'outil « Almanax » de la barre et du menu : la palette sur sa vue, ou fermée si elle y est.
+    func basculerAlmanax() {
+        if ouvert, PaletteModele.shared.surAlmanax { fermer() } else { ouvrir(vue: .almanax) }
+    }
+
     /// `requete` : posée d'office, le curseur au bout pour la compléter ; `vue` : la vue d'arrivée,
     /// l'Accueil sinon.
     func ouvrir(requete: String? = nil, vue: FiltrePalette = .tout) {

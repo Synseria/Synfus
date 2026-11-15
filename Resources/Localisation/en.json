@@ -1,4 +1,5 @@
 {
+  "almanax.raccourci": "Open the almanax",
   "apercu.autorisationRequise": "Screen reading not allowed",
   "apercu.captureEnCours": "Capturing…",
   "apropos.titre": "About Synfus",
@@ -21,6 +22,7 @@
   "barre.aucunPerso": "No character connected",
   "barre.aucunPersoEquipe": "No character from this team",
   "barre.autreBureau": "On another desktop — click to switch to it",
+  "barre.bouton.almanax": "Almanax",
   "barre.bouton.boss": "Boss help",
   "barre.bouton.chasse": "Treasure hunt",
   "barre.bouton.palette": "Palette",

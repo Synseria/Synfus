@@ -184,6 +184,7 @@ struct BarView: View {
         case .quetes: quetesButton.contextMenu { MasquerBouton(bouton: bouton) }
         case .boss: bossButton.contextMenu { MasquerBouton(bouton: bouton) }
         case .chasse: chasseButton.contextMenu { MasquerBouton(bouton: bouton) }
+        case .almanax: almanaxButton.contextMenu { MasquerBouton(bouton: bouton) }
         case .rangement: ArrangeMenuButton()
         case .palette: zaapButton
         case .passageAuto: autoFocusToggle.contextMenu { MasquerBouton(bouton: bouton) }
@@ -222,6 +223,13 @@ struct BarView: View {
             aide: infobulle(.chasse)
         ) {
             ChassePanel.shared.basculer()
+        }
+    }
+
+    /// L'almanax : la palette ouverte sur sa vue, pas un panneau de plus.
+    private var almanaxButton: some View {
+        ModeButton(icone: BoutonBarre.almanax.symbole, actif: false, aide: infobulle(.almanax)) {
+            PalettePanel.shared.basculerAlmanax()
         }
     }
 
