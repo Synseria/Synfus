@@ -107,6 +107,37 @@ struct CapturesTests {
         }
     }
 
+    /// Les vues de la palette : l'Accueil, « Zaaps », « Almanax » (sept jours d'exemple, sans visuel du jeu), une recherche.
+    @Test("Captures des vues de la palette", .enabled(if: dossier != nil))
+    func vuesDeLaPalette() throws {
+        let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
+        try FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)
+        let offrandes = [("Leurnettes", 1, "Quête répétable"), ("Poils de Pétartifoux", 4, "Challenge supplémentaire"),
+                         ("Gelée Bleue", 3, "Bonus d'expérience"), ("Plume de Piou Rouge", 8, "Récolte favorisée"),
+                         ("Cuir de Bouftou", 2, "Butin amélioré"), ("Fil de Tisserand", 5, "Quête répétable"),
+                         ("Peau de Larve", 6, "Challenge supplémentaire")]
+        let jours = try zip(Almanax.semaine(depuis: Date()), offrandes).map { jour, offrande in
+            let json = #"{"name":{"fr":"\#(offrande.2)"},"desc":{"fr":"Un bonus spécial est disponible aujourd'hui près de la vieille chapelle d'Astrub, pour les joueurs de niveau 20 et plus."},"itemIds":[1],"quantities":[\#(offrande.1)],"items":[{"id":1,"name":{"fr":"\#(offrande.0)"}}]}"#
+            return Almanax(try JSONDecoder().decode(Almanax.API.self, from: Data(json.utf8)), jour: jour)
+        }
+        AlmanaxStore.shared.poserPourCaptures(Array(jours.prefix(6)))
+        // Le Sanctuaire vient de la carte : sans elle, la carte du jour n'a pas son bouton.
+        CarteStore.shared.poserPourCaptures(Carte.integree)
+        for (nom, requete, filtre, deplie) in [("palette-accueil", "", FiltrePalette.tout, false),
+                                               ("palette-vue-zaaps", "", .zaaps, false),
+                                               ("palette-vue-almanax", "", .almanax, false),
+                                               ("palette-vue-almanax-deplie", "", .almanax, true),
+                                               ("palette-recherche", "bonta", .tout, false)] {
+            let modele = PaletteModele(contexte: contexte(), requete: requete, filtre: filtre)
+            if deplie { modele.deplacer(colonne: 1) }
+            let vue = PaletteVue(modele: modele)
+                .padding(24)
+                .background(Self.fondCapture)
+                .environment(\.colorScheme, Self.schema)
+            try ecrire(vue, vers: dossier.appending(path: nom + ".png"))
+        }
+    }
+
     /// Les états de la palette que la doc ne montre pas : coordonnées, perso, variables, listes vides.
     @Test("Captures des états de la palette", .enabled(if: dossier != nil && ProcessInfo.processInfo.environment["SYNFUS_CAPTURES_ETATS"] != nil))
     func etatsDeLaPalette() throws {
