@@ -13,8 +13,7 @@ struct CapturesTests {
     /// `SYNFUS_CAPTURES_APPARENCE=clair` pour les captures en clair ; sombre sinon, celui de la doc.
     nonisolated private static let clair = ProcessInfo.processInfo.environment["SYNFUS_CAPTURES_APPARENCE"] == "clair"
     nonisolated private static let schema: ColorScheme = clair ? .light : .dark
-    /// Le fond commun des captures : une couleur de test, volontairement hors des jetons de l'app.
-    // swiftlint:disable:next couleur_en_dur
+    // swiftlint:disable:next couleur_en_dur - le fond commun des captures, volontairement hors des jetons de l'app
     private static let fondCapture = Color(red: 0.11, green: 0.11, blue: 0.13)
     nonisolated private static let apparence: NSAppearance.Name = clair ? .aqua : .darkAqua
 
