@@ -38,15 +38,53 @@ struct AlmanaxTests {
         #expect(Almanax.jour(de: try #require(iso.date(from: "2026-12-31T23:30:00Z"))) == "2027-01-01")
     }
 
-    @Test("Le jour gardé se relit ; une autre forme, non")
+    private func almanax(_ jour: String) throws -> Almanax {
+        Almanax(try JSONDecoder().decode(Almanax.API.self, from: Data(Self.reponse.utf8)), jour: jour)
+    }
+
+    @Test("Les jours gardés se relisent ; ceux d'une autre forme, ou un fichier d'avant, non")
     func disque() throws {
-        let almanax = Almanax(try JSONDecoder().decode(Almanax.API.self, from: Data(Self.reponse.utf8)), jour: "2026-10-09")
-        let donnees = try JSONEncoder().encode(almanax)
-        #expect(Almanax.relire(donnees) == almanax)
-        var ancien = almanax
+        let jours = [try almanax("2026-10-09"), try almanax("2026-10-10")]
+        #expect(Almanax.relire(try JSONEncoder().encode(jours)) == jours)
+        var ancien = jours[1]
         ancien.format = 0
-        #expect(Almanax.relire(try JSONEncoder().encode(ancien)) == nil)
-        #expect(Almanax.relire(nil) == nil)
+        #expect(Almanax.relire(try JSONEncoder().encode([jours[0], ancien])) == [jours[0]])
+        // Le fichier d'avant portait un seul jour, sans tableau.
+        #expect(Almanax.relire(try JSONEncoder().encode(jours[0])).isEmpty)
+        #expect(Almanax.relire(nil).isEmpty)
+    }
+
+    @Test("La semaine : aujourd'hui et six jours, au calendrier de Paris, mois et année compris")
+    func semaine() throws {
+        let iso = ISO8601DateFormatter()
+        let semaine = Almanax.semaine(depuis: try #require(iso.date(from: "2026-12-28T23:30:00Z")))
+        #expect(semaine == ["2026-12-29", "2026-12-30", "2026-12-31", "2027-01-01", "2027-01-02", "2027-01-03", "2027-01-04"])
+        #expect(semaine.count == Almanax.joursMontres)
+    }
+
+    @MainActor
+    @Test("Un jour se lit « lun. 16 nov. » : midi de Paris, jamais la veille")
+    func libelle() throws {
+        #expect(Almanax.libelle(du: "2026-11-16", .fr) == "lun. 16 nov.")
+        #expect(Almanax.libelle(du: "2026-11-16", .fr) == "lun. 16 nov.")
+        #expect(Almanax.libelle(du: "2026-11-16", .en).contains("Mon"))
+        #expect(Almanax.libelle(du: "n'importe quoi", .fr) == "n'importe quoi")
+        #expect(Almanax.jour(de: try #require(Almanax.date(de: "2026-11-16"))) == "2026-11-16")
+        #expect(try almanax("2026-11-16").nomOffrande(.fr) == "Poils de Pétartifoux")
+    }
+
+    @Test("Les flèches : la carte du jour seule, puis deux lignes de trois ; un bord n'emmène nulle part")
+    func navigation() {
+        func cible(_ index: Int, _ colonne: Int, _ ligne: Int) -> Int {
+            NavigationAlmanax.cible(depuis: index, colonne: colonne, ligne: ligne)
+        }
+        #expect(cible(0, 1, 0) == 0 && cible(0, 0, -1) == 0)
+        #expect(cible(0, 0, 1) == 1)
+        #expect(cible(1, 0, -1) == 0 && cible(3, 0, -1) == 0)
+        #expect(cible(2, 0, 1) == 5 && cible(5, 0, -1) == 2)
+        #expect(cible(6, 0, 1) == 6)
+        #expect(cible(1, 1, 0) == 2 && cible(3, 1, 0) == 3 && cible(4, -1, 0) == 4)
+        #expect(NavigationAlmanax.ligne(de: 5) == 4...6 && NavigationAlmanax.ligne(de: 0) == 0...0)
     }
 
     @Test("Le Sanctuaire de l'Almanax est sur la carte intégrée, en Plaine des Porkass")

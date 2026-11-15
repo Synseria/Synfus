@@ -28,7 +28,7 @@ private final class PanneauPalette: NSPanel {
             case 126 where !enEdition: return modele.deplacer(ligne: -1)
             case 123 where !enEdition, 124 where !enEdition:
                 let pas = event.keyCode == 123 ? -1 : 1
-                if modele.enGrille { return modele.deplacer(colonne: pas) }
+                if modele.enCartes { return modele.deplacer(colonne: pas) }
                 if modele.lateral(pas) { return }
             case 36, 76: return modele.valider()
             case 48 where !enEdition: return modele.tabulation(arriere: event.modifierFlags.contains(.shift))

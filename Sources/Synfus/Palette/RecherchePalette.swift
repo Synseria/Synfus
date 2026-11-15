@@ -31,12 +31,13 @@ enum ActionPalette: Equatable, Sendable {
 /// des lieux, PNJ, monstres et boss des créatures —, ou ce qui est sur la case
 /// du perso (`ici`) : quêtes qui y commencent, PNJ, lieux.
 enum FiltrePalette: CaseIterable, Sendable {
-    case tout, zaaps, lieux, quetes, creatures, objets, ici
+    case tout, zaaps, almanax, lieux, quetes, creatures, objets, ici
 
     var titre: String {
         switch self {
         case .tout: return L("palette.filtre.tout")
         case .zaaps: return L("palette.filtre.zaaps")
+        case .almanax: return L("palette.filtre.almanax")
         case .lieux: return L("palette.filtre.lieux")
         case .quetes: return L("palette.filtre.quetes")
         case .creatures: return L("palette.filtre.creatures")
@@ -52,6 +53,7 @@ enum FiltrePalette: CaseIterable, Sendable {
         switch self {
         case .tout: return true
         case .zaaps: return entree.genre == .zaap
+        case .almanax: return false
         case .lieux: return entree.genre == .zaap || entree.genre == .lieu
         case .quetes: return entree.genre == .quete
         case .creatures: return entree.genre == .pnj || entree.genre == .monstre

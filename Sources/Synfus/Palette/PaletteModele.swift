@@ -34,7 +34,15 @@ final class PaletteModele: ObservableObject {
     @Published private(set) var ouvertes: Set<ActionFiche> = []
     @Published private(set) var entrees: [EntreePalette] = []
     /// La famille montrée, que Tab fait défiler.
-    @Published private(set) var filtre: FiltrePalette = .tout
+    @Published private(set) var filtre: FiltrePalette = .tout {
+        didSet {
+            guard filtre != oldValue else { return }
+            almanaxDeplie = nil
+            if filtre == .almanax, contexteImpose == nil { AlmanaxStore.shared.preparer() }
+        }
+    }
+    /// La carte de l'almanax dont « Localiser » est déplié.
+    @Published private(set) var almanaxDeplie: Int?
     @Published private(set) var tri: TriPalette = .auto
     /// Ce que « Tout » répondrait à la même recherche, demandé seulement quand la liste d'un filtre
     /// est vide et redemandé à chaque rendu : la clé dit tout ce dont il dépend.
@@ -147,9 +155,15 @@ final class PaletteModele: ObservableObject {
     /// Ce qui ne se montre que sur l'Accueil, au-dessus des cartes.
     var surAccueil: Bool { enGrille && filtre == .tout }
 
+    /// La vue « Almanax » : ses sept cartes, pas des entrées.
+    var surAlmanax: Bool { requete.trimmingCharacters(in: .whitespaces).isEmpty && filtre == .almanax }
+
+    /// Les flèches vont de carte en carte : la grille, ou la semaine de l'almanax.
+    var enCartes: Bool { enGrille || surAlmanax }
+
     /// Pourquoi la liste est vide ; `nil` quand elle ne l'est pas.
     var vide: VidePalette? {
-        guard entrees.isEmpty else { return nil }
+        guard entrees.isEmpty, !surAlmanax else { return nil }
         let ailleurs = filtre != .tout && !requete.trimmingCharacters(in: .whitespaces).isEmpty
             ? ailleursGarde.valeur(pour: CleAilleurs(requete: requete, tri: tri, index: ObjectIdentifier(index))) {
                 RecherchePalette.entrees(requete, index, filtre: .tout, tri: tri).count
@@ -216,6 +230,7 @@ final class PaletteModele: ObservableObject {
     /// Flèches : de carte en carte dans la grille, de ligne en ligne sinon —
     /// en passant par la rangée de cartes de la fiche dépliée.
     func deplacer(colonne: Int = 0, ligne: Int = 0) {
+        if surAlmanax { return deplacerAlmanax(colonne: colonne, ligne: ligne) }
         guard !entrees.isEmpty else { return }
         if !enGrille, surLaFiche {
             if ligne > 0, carte == nil, let premiere = cartes.premiere { carte = premiere; return }
@@ -227,6 +242,32 @@ final class PaletteModele: ObservableObject {
         selection = min(max(selection + pas, 0), entrees.count - 1)
         // En remontant sur une fiche dépliée, on arrive par ses cartes.
         if ligne < 0, selection != avant, surLaFiche { carte = cartes.premiere }
+    }
+
+    /// Une flèche dans la semaine de l'almanax. → au bout d'une ligne déplie « Localiser » ; ← le replie.
+    private func deplacerAlmanax(colonne: Int, ligne: Int) {
+        if colonne < 0, almanaxDeplie != nil { return deplierAlmanax(nil) }
+        let cible = NavigationAlmanax.cible(depuis: selection, colonne: colonne, ligne: ligne)
+        if cible != selection {
+            selection = cible
+            almanaxDeplie = nil
+        } else if colonne > 0, AlmanaxStore.shared.semaine()[selection].almanax != nil {
+            deplierAlmanax(selection)
+        }
+    }
+
+    /// « Localiser » sous une carte de l'almanax ; `nil` ou la carte déjà dépliée : replié.
+    func deplierAlmanax(_ index: Int?) {
+        almanaxDeplie = index == almanaxDeplie ? nil : index
+    }
+
+    /// Le nom de l'offrande d'un jour, copié pour l'hôtel de vente.
+    func copierOffrande(_ index: Int) {
+        let semaine = AlmanaxStore.shared.semaine()
+        guard semaine.indices.contains(index), let nom = semaine[index].almanax?.nomOffrande(L10n.courante.langue)
+        else { return NSSound.beep() }
+        selection = index
+        copier(nom)
     }
 
     /// ← et → hors de la grille : de carte en carte dans la fiche ; ← sur
@@ -246,6 +287,7 @@ final class PaletteModele: ObservableObject {
     /// arrive sur sa première carte, l'entrée d'un donjon) ou la replie.
     func valider() {
         if edition != nil { return validerEtiquette() }
+        if surAlmanax { return copierOffrande(selection) }
         guard entrees.indices.contains(selection) else { return validerVide() }
         if surLaFiche, let action = cartes.valide(carte) { return agir(action) }
         executer(entrees[selection])
@@ -322,6 +364,10 @@ final class PaletteModele: ObservableObject {
 
     /// Le texte que ↵ copiera pour la sélection, à lire avant de coller ; `nil` quand ↵ fait autre chose.
     var texteDeLaSelection: String? {
+        if surAlmanax {
+            let semaine = AlmanaxStore.shared.semaine()
+            return semaine.indices.contains(selection) ? semaine[selection].almanax?.nomOffrande(L10n.courante.langue) : nil
+        }
         guard entrees.indices.contains(selection), entrees[selection].id != deplie else { return nil }
         return texteACopier(entrees[selection])
     }
@@ -468,16 +514,18 @@ final class PaletteModele: ObservableObject {
 
     /// Après un favori, une étiquette, à la réouverture : même recherche,
     /// même sélection, contexte relu.
-    private func rafraichir() {
+    func rafraichir() {
         let gardee = entrees.indices.contains(selection) ? entrees[selection].id : nil
         contexte = contexteImpose ?? Self.contexteCourant()
         recalculer()
+        // La carte choisie de l'almanax ne dépend pas des entrées de la recherche, qui sont vides.
+        guard !surAlmanax else { return }
         selection = gardee.flatMap { id in entrees.firstIndex { $0.id == id } } ?? 0
     }
 
     private func recalculer() {
         entrees = RecherchePalette.entrees(requete, index, filtre: filtre, tri: tri)
-        if selection >= entrees.count { selection = max(entrees.count - 1, 0) }
+        if !surAlmanax, selection >= entrees.count { selection = max(entrees.count - 1, 0) }
     }
 
     // MARK: - Contexte
