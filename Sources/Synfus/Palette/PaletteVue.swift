@@ -11,10 +11,13 @@ struct PaletteVue: View {
     @ObservedObject private var donjons = DonjonsStore.shared
     @FocusState private var champ: Champ?
     @State private var filtreSurvole: FiltrePalette?
-    @State private var prefixeSurvole: String?
     @State private var triSurvole = false
 
     private enum Champ { case recherche, etiquette }
+
+    /// Mesure de mise en page : trois rangées de cartes entières (deux lignes de sous-titre
+    /// réservées, étiquette sur sa ligne) avec leurs interstices.
+    private static let hauteurCartes: CGFloat = 352
 
     var body: some View {
         VStack(spacing: 0) {
@@ -95,17 +98,16 @@ struct PaletteVue: View {
         .help(aide)
     }
 
-    /// Les familles que Tab fait défiler, les préfixes des commandes et des
-    /// variables, et le tri (⌘T).
+    /// Les familles que Tab fait défiler, et le tri (⌘T).
     private var filtres: some View {
         HStack(spacing: Jetons.Espace.un) {
-            ForEach(FiltrePalette.allCases, id: \.self) { filtre in
+            ForEach(modele.jeu, id: \.self) { filtre in
                 let choisi = modele.filtre == filtre
                 // Le filtre est le niveau au-dessus des résultats, que les flèches parcourent : son choix est gris.
                 let etat: EtatVisuel = choisi ? .inactif : EtatVisuel(survole: filtreSurvole == filtre)
                 // Tab et ⇧Tab parcourent les filtres (le panneau) : aucun d'eux ne prend le focus.
                 Button { modele.choisir(filtre) } label: {
-                    Text(filtre.titre)
+                    Text(filtre.titre(enRecherche: modele.enRecherche))
                         .font((choisi ? Jetons.Typo.raccourci : Jetons.Typo.petit).police)
                         .foregroundStyle(choisi ? etat.encre : etat.encreSecondaire)
                         .padding(.horizontal, Jetons.Espace.deux)
@@ -116,31 +118,33 @@ struct PaletteVue: View {
                 .elementDeGroupe()
                 .onHover { filtreSurvole = $0 ? filtre : nil }
                 .accessibilityAddTraits(choisi ? .isSelected : [])
+                // « Ici » est à part, discret : une vue de plus, pas l'une des principales.
+                .padding(.leading, filtre == .ici ? Jetons.Espace.deux : 0)
             }
             ToucheRaccourci("⇥")
                 .padding(.leading, Jetons.Espace.un)
                 .help(L("palette.touche.filtre"))
-            prefixe("/", L("palette.touche.commandes"))
-            prefixe("%", L("palette.touche.variables"))
             Spacer(minLength: Jetons.Espace.deux)
-            tri
-            ToucheRaccourci("⌘T")
+            if modele.triAgit {
+                tri
+                ToucheRaccourci("⌘T")
+            }
         }
         .padding(.horizontal, Jetons.Espace.quatre)
         .padding(.bottom, Jetons.Espace.deux)
     }
 
-    /// Le tri courant, en capsule comme les préfixes : un clic ouvre les quatre, ⌘T passe au suivant.
+    /// Le tri courant, en capsule : un clic ouvre les choix, ⌘T passe au suivant.
     private var tri: some View {
         let etat = EtatVisuel(survole: triSurvole)
         return Menu {
-            Picker(L("palette.tri.titre"), selection: Binding(get: { modele.tri }, set: { modele.choisirTri($0) })) {
-                ForEach(TriPalette.allCases, id: \.self) { Text($0.titre).tag($0) }
+            Picker(L("palette.tri.titre"), selection: Binding(get: { modele.triAffiche }, set: { modele.choisirTri($0) })) {
+                ForEach(modele.tris, id: \.self) { Text($0.titre).tag($0) }
             }
             .pickerStyle(.inline)
             .labelsHidden()
         } label: {
-            Label(modele.tri.titre, systemImage: "arrow.up.arrow.down")
+            Label(modele.triAffiche.titre, systemImage: "arrow.up.arrow.down")
                 .font(Jetons.Typo.petit.police)
                 .foregroundStyle(etat.encreSecondaire)
                 .padding(.horizontal, Jetons.Espace.deux)
@@ -153,28 +157,6 @@ struct PaletteVue: View {
         .focusable(false)
         .onHover { triSurvole = $0 }
         .help(L("palette.tri.aide"))
-    }
-
-    /// Un préfixe de la recherche, dessiné comme un filtre : un clic le pose
-    /// dans le champ, qui garde le clavier.
-    private func prefixe(_ texte: String, _ aide: String) -> some View {
-        let etat = EtatVisuel(survole: prefixeSurvole == texte)
-        return Button {
-            modele.requete = texte
-            champ = .recherche
-        } label: {
-            Text(texte)
-                .font(Jetons.Typo.petit.police)
-                .foregroundStyle(etat.encreSecondaire)
-                .padding(.horizontal, Jetons.Espace.deux)
-                .frame(height: Jetons.Taille.cibleMin)
-                .fondEtat(etat, rayon: Jetons.Rayon.capsule)
-        }
-        .buttonStyle(.plain)
-        .focusable(false)
-        .onHover { prefixeSurvole = $0 ? texte : nil }
-        .help(aide)
-        .accessibilityLabel(aide)
     }
 
     /// Le mode d'une commande tapée ; rien quand on cherche partout, que les filtres disent déjà.
@@ -200,18 +182,16 @@ struct PaletteVue: View {
             ScrollViewReader { defilement in
                 ScrollView {
                     VStack(alignment: .leading, spacing: Jetons.Espace.deux) {
-                        if modele.enGrille, let jour = almanax.almanax {
-                            AlmanaxVue(almanax: jour, copier: { modele.copier($0) },
-                                       allerAuSanctuaire: modele.sanctuaire.map { lieu in { modele.copierTrajet(vers: lieu) } })
-                        }
-                        if modele.enGrille, !modele.recents.isEmpty { recents }
-                        if modele.enGrille { grille } else { liste }
+                        if modele.surAlmanax { semaineAlmanax }
+                        if modele.surAccueil, !modele.recents.isEmpty { recents }
+                        if modele.enGrille { grille } else if !modele.surAlmanax { liste }
                     }
                     .padding(Jetons.Espace.deux)
                 }
-                .frame(height: modele.enGrille ? 300
+                .frame(height: modele.enCartes ? Self.hauteurCartes
                        : modele.deplie != nil ? 380 : min(CGFloat(modele.entrees.count) * 44 + 20, 380))
                 .onChange(of: modele.selection) { _, index in
+                    if modele.surAlmanax { return defilement.scrollTo(AlmanaxSemaineVue.ancre(index)) }
                     guard modele.entrees.indices.contains(index) else { return }
                     defilement.scrollTo(modele.entrees[index].id)
                 }
@@ -221,6 +201,12 @@ struct PaletteVue: View {
                 }
             }
         }
+    }
+
+    private var semaineAlmanax: some View {
+        AlmanaxSemaineVue(semaine: almanax.semaine(), selection: modele.selection, deplie: modele.almanaxDeplie,
+                          copier: { modele.copierOffrande($0) }, deplier: { modele.deplierAlmanax($0) },
+                          allerAuSanctuaire: modele.sanctuaire.map { lieu in { modele.copierTrajet(vers: lieu) } })
     }
 
     /// La liste vide dit pourquoi, et propose ce qui répare.
@@ -380,10 +366,12 @@ struct PaletteVue: View {
                             .truncationMode(.middle)
                             .help(texte)
                     }
-                    aide("⌘E", L("palette.touche.etiquette"))
-                        .layoutPriority(1)
-                    aide("⌘D", L("palette.touche.favori"))
-                        .layoutPriority(1)
+                    if !modele.surAlmanax {
+                        aide("⌘E", L("palette.touche.etiquette"))
+                            .layoutPriority(1)
+                        aide("⌘D", L("palette.touche.favori"))
+                            .layoutPriority(1)
+                    }
                 }
                 Spacer(minLength: 0)
                 aide("esc", L("palette.touche.fermer"))
@@ -451,21 +439,15 @@ private struct CarteZaap: View {
                     .foregroundStyle(encre)
                     .lineLimit(1)
                     .padding(.trailing, entree.favori ? Jetons.Espace.quatre : 0)
+                // Sur l'image, le sous-titre prend l'encre du titre : le voile couvre ses deux lignes.
+                // Deux lignes réservées : les cartes d'une même rangée ont la même hauteur.
                 Text(entree.itineraire ?? entree.sousTitre ?? "")
                     .font(Jetons.Typo.petit.police)
-                    .foregroundStyle(encreSecondaire)
-                    .lineLimit(1)
+                    .foregroundStyle(surImage ? encre : encreSecondaire)
+                    .lineLimit(2, reservesSpace: true)
             }
             Spacer(minLength: Jetons.Espace.quatre)
-            HStack(spacing: Jetons.Espace.un) {
-                if let etiquette = entree.etiquette { PastilleEtiquette(texte: etiquette) }
-                Spacer(minLength: 0)
-                Text(entree.detail ?? "")
-                    .font(Jetons.Typo.codeInterface.police)
-                    .foregroundStyle(encreSecondaire)
-                    .lineLimit(1)
-            }
-            .frame(minHeight: Jetons.Espace.quatre)
+            pied
         }
         .padding(Jetons.Espace.deux)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -478,6 +460,29 @@ private struct CarteZaap: View {
         }
         .background { FondCarte(carte: entree.carte, choisie: choisie) }
         .contentShape(Rectangle())
+    }
+
+    /// L'étiquette partage la ligne des coordonnées quand elle y entre, sinon elle a la sienne : jamais coupée.
+    private var pied: some View {
+        let coordonnees = Text(entree.detail ?? "")
+            .font(Jetons.Typo.codeInterface.police)
+            .foregroundStyle(encreSecondaire)
+            .lineLimit(1)
+        return ViewThatFits(in: .horizontal) {
+            HStack(spacing: Jetons.Espace.un) {
+                if let etiquette = entree.etiquette { PastilleEtiquette(texte: etiquette) }
+                Spacer(minLength: 0)
+                coordonnees
+            }
+            VStack(alignment: .leading, spacing: Jetons.Espace.un) {
+                if let etiquette = entree.etiquette { PastilleEtiquette(texte: etiquette) }
+                HStack(spacing: 0) {
+                    Spacer(minLength: 0)
+                    coordonnees
+                }
+            }
+        }
+        .frame(minHeight: Jetons.Espace.quatre)
     }
 }
 

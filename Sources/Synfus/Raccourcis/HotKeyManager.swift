@@ -74,6 +74,7 @@ final class HotKeyManager: ObservableObject {
             (prefs.chasseHotKey, { ChassePanel.shared.basculer() }),
             (prefs.quetesHotKey, { QuetePanel.shared.basculer() }),
             (prefs.bossHotKey, { BossPanel.shared.basculer() }),
+            (prefs.almanaxHotKey, { PalettePanel.shared.basculerAlmanax() }),
         ]
         for (hotKey, geste) in gestes {
             if let hotKey { register(hotKey, action: geste) }

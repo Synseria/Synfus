@@ -16,6 +16,7 @@ final class PaletteModele: ObservableObject {
             guard requete != oldValue else { return }
             selection = 0
             deplie = nil
+            changerDeJeu(avant: oldValue)
             recalculer()
         }
     }
@@ -33,8 +34,18 @@ final class PaletteModele: ObservableObject {
     /// Les cartes de la fiche dépliée ouvertes (clef, monstres, succès).
     @Published private(set) var ouvertes: Set<ActionFiche> = []
     @Published private(set) var entrees: [EntreePalette] = []
+    /// La vue qu'on a quittée en tapant : le champ vidé y ramène.
+    private var vueQuittee: FiltrePalette = .tout
     /// La famille montrée, que Tab fait défiler.
-    @Published private(set) var filtre: FiltrePalette = .tout
+    @Published private(set) var filtre: FiltrePalette = .tout {
+        didSet {
+            guard filtre != oldValue else { return }
+            almanaxDeplie = nil
+            if filtre == .almanax, contexteImpose == nil { AlmanaxStore.shared.preparer() }
+        }
+    }
+    /// La carte de l'almanax dont « Localiser » est déplié.
+    @Published private(set) var almanaxDeplie: Int?
     @Published private(set) var tri: TriPalette = .auto
     /// Ce que « Tout » répondrait à la même recherche, demandé seulement quand la liste d'un filtre
     /// est vide et redemandé à chaque rendu : la clé dit tout ce dont il dépend.
@@ -139,16 +150,44 @@ final class PaletteModele: ObservableObject {
         recalculer()
     }
 
-    var enGrille: Bool {
-        requete.trimmingCharacters(in: .whitespaces).isEmpty && filtre == .tout
+    /// Une recherche est en cours : la rangée montre des portées, sinon des vues.
+    var enRecherche: Bool { !requete.trimmingCharacters(in: .whitespaces).isEmpty }
+
+    /// Les capsules de la rangée, que Tab et ⇧Tab parcourent.
+    var jeu: [FiltrePalette] { FiltrePalette.jeu(enRecherche: enRecherche) }
+
+    /// À la première lettre la rangée passe des vues aux portées, « Tout » d'office (« Ici » reste) ;
+    /// le champ vidé revient à la vue quittée.
+    private func changerDeJeu(avant ancienne: String) {
+        let etaitVide = ancienne.trimmingCharacters(in: .whitespaces).isEmpty
+        if etaitVide, enRecherche {
+            vueQuittee = filtre
+            if !FiltrePalette.jeu(enRecherche: true).contains(filtre) { filtre = .tout }
+        } else if !etaitVide, !enRecherche {
+            filtre = vueQuittee
+        }
     }
+
+    /// Rien de tapé : l'Accueil et « Zaaps » se montrent en cartes.
+    var enGrille: Bool {
+        requete.trimmingCharacters(in: .whitespaces).isEmpty && filtre.enCartes
+    }
+
+    /// Ce qui ne se montre que sur l'Accueil, au-dessus des cartes.
+    var surAccueil: Bool { enGrille && filtre == .tout }
+
+    /// La vue « Almanax » : ses sept cartes, pas des entrées.
+    var surAlmanax: Bool { requete.trimmingCharacters(in: .whitespaces).isEmpty && filtre == .almanax }
+
+    /// Les flèches vont de carte en carte : la grille, ou la semaine de l'almanax.
+    var enCartes: Bool { enGrille || surAlmanax }
 
     /// Pourquoi la liste est vide ; `nil` quand elle ne l'est pas.
     var vide: VidePalette? {
-        guard entrees.isEmpty else { return nil }
+        guard entrees.isEmpty, !surAlmanax else { return nil }
         let ailleurs = filtre != .tout && !requete.trimmingCharacters(in: .whitespaces).isEmpty
-            ? ailleursGarde.valeur(pour: CleAilleurs(requete: requete, tri: tri, index: ObjectIdentifier(index))) {
-                RecherchePalette.entrees(requete, index, filtre: .tout, tri: tri).count
+            ? ailleursGarde.valeur(pour: CleAilleurs(requete: requete, tri: triAffiche, index: ObjectIdentifier(index))) {
+                RecherchePalette.entrees(requete, index, filtre: .tout, tri: triAffiche).count
             } : 0
         return VidePalette.de(
             carte: carteImposee ?? CarteStore.shared.etat,
@@ -184,26 +223,25 @@ final class PaletteModele: ObservableObject {
     /// Les dernières copies, montrées au-dessus des cartes.
     var recents: [EntreePalette] { RecherchePalette.recents(contexte) }
 
-    /// La palette reprend où on l'a laissée : recherche (que le panneau
-    /// sélectionne, une lettre la remplace), filtre, ligne et fiche dépliée,
-    /// distances refaites depuis la position du moment. Échap vide avant de
-    /// fermer : rouvrir est alors vierge.
-    /// `requete` : une recherche posée d'office (« Aide au combat »), à compléter.
-    func ouvrir(requete posee: String? = nil) {
-        if let posee {
-            requete = posee
-            filtre = .tout
-        }
+    /// La palette s'ouvre toujours sur l'Accueil, champ vide, première carte choisie ; distances
+    /// refaites depuis la position du moment. Deux exceptions, celles qui disent où elles vont :
+    /// `vue` (l'outil « Almanax » de la barre) et `requete`, une recherche posée d'office
+    /// (« Aide au combat »), à compléter.
+    func ouvrir(requete posee: String? = nil, vue: FiltrePalette = .tout) {
+        requete = posee ?? ""
+        filtre = posee == nil ? vue : .tout
+        vueQuittee = .tout
+        deplie = nil
+        almanaxDeplie = nil
+        edition = nil
         if contexteImpose == nil {
             QuetesStore.shared.preparer()
-            AlmanaxStore.shared.preparer()
             DonjonsStore.shared.charger()
+            AlmanaxStore.shared.preparer()
         }
         tri = contexteImpose == nil ? Preferences.shared.paletteTri : tri
-        edition = nil
         rafraichir()
-        if let deplie, !entrees.contains(where: { $0.id == deplie }) { self.deplie = nil }
-        carte = cartes.valide(carte)
+        selection = 0
         ouverture += 1
     }
 
@@ -212,6 +250,7 @@ final class PaletteModele: ObservableObject {
     /// Flèches : de carte en carte dans la grille, de ligne en ligne sinon —
     /// en passant par la rangée de cartes de la fiche dépliée.
     func deplacer(colonne: Int = 0, ligne: Int = 0) {
+        if surAlmanax { return deplacerAlmanax(colonne: colonne, ligne: ligne) }
         guard !entrees.isEmpty else { return }
         if !enGrille, surLaFiche {
             if ligne > 0, carte == nil, let premiere = cartes.premiere { carte = premiere; return }
@@ -223,6 +262,32 @@ final class PaletteModele: ObservableObject {
         selection = min(max(selection + pas, 0), entrees.count - 1)
         // En remontant sur une fiche dépliée, on arrive par ses cartes.
         if ligne < 0, selection != avant, surLaFiche { carte = cartes.premiere }
+    }
+
+    /// Une flèche dans la semaine de l'almanax. → au bout d'une ligne déplie « Localiser » ; ← le replie.
+    private func deplacerAlmanax(colonne: Int, ligne: Int) {
+        if colonne < 0, almanaxDeplie != nil { return deplierAlmanax(nil) }
+        let cible = NavigationAlmanax.cible(depuis: selection, colonne: colonne, ligne: ligne)
+        if cible != selection {
+            selection = cible
+            almanaxDeplie = nil
+        } else if colonne > 0, AlmanaxStore.shared.semaine()[selection].almanax != nil {
+            deplierAlmanax(selection)
+        }
+    }
+
+    /// « Localiser » sous une carte de l'almanax ; `nil` ou la carte déjà dépliée : replié.
+    func deplierAlmanax(_ index: Int?) {
+        almanaxDeplie = index == almanaxDeplie ? nil : index
+    }
+
+    /// Le nom de l'offrande d'un jour, copié pour l'hôtel de vente.
+    func copierOffrande(_ index: Int) {
+        let semaine = AlmanaxStore.shared.semaine()
+        guard semaine.indices.contains(index), let nom = semaine[index].almanax?.nomOffrande(L10n.courante.langue)
+        else { return NSSound.beep() }
+        selection = index
+        copier(nom)
     }
 
     /// ← et → hors de la grille : de carte en carte dans la fiche ; ← sur
@@ -242,6 +307,7 @@ final class PaletteModele: ObservableObject {
     /// arrive sur sa première carte, l'entrée d'un donjon) ou la replie.
     func valider() {
         if edition != nil { return validerEtiquette() }
+        if surAlmanax { return copierOffrande(selection) }
         guard entrees.indices.contains(selection) else { return validerVide() }
         if surLaFiche, let action = cartes.valide(carte) { return agir(action) }
         executer(entrees[selection])
@@ -263,7 +329,7 @@ final class PaletteModele: ObservableObject {
             requete = texte
             return
         }
-        choisir(filtre.suivant(arriere ? -1 : 1))
+        choisir(filtre.suivant(arriere ? -1 : 1, dans: jeu))
     }
 
     /// Un filtre : Tab, ou un clic sur sa capsule.
@@ -274,8 +340,21 @@ final class PaletteModele: ObservableObject {
         recalculer()
     }
 
-    /// ⌘T : auto, proximité, ordre alphabétique, type — et le choix est gardé.
-    func triSuivant() { choisirTri(tri.suivant) }
+    /// Le tri qui range ce qui est montré : le choix gardé, sauf s'il n'a pas de sens ici.
+    var triAffiche: TriPalette { tris.contains(tri) ? tri : .auto }
+
+    /// Les tris proposés par le menu du bouton et par ⌘T.
+    var tris: [TriPalette] { filtre.tris(enRecherche: enRecherche) }
+
+    /// Le bouton de tri se montre là où le tri range quelque chose.
+    var triAgit: Bool { filtre.triAgit(enRecherche: enRecherche) }
+
+    /// ⌘T : auto, proximité, ordre alphabétique, type — et le choix est gardé. Sans effet là où
+    /// le tri ne range rien.
+    func triSuivant() {
+        guard triAgit else { return }
+        choisirTri(triAffiche.suivant(dans: tris))
+    }
 
     /// Un tri, par le menu du bouton ou par ⌘T.
     func choisirTri(_ nouveau: TriPalette) {
@@ -297,15 +376,12 @@ final class PaletteModele: ObservableObject {
         basculerFavori(entrees[selection])
     }
 
-    /// Échap : quitte l'étiquette ; efface la recherche et le filtre — une
-    /// faute de frappe ne fait pas tout reprendre ; sinon ferme.
+    /// Échap : quitte l'étiquette ; efface la recherche (la vue d'avant revient), puis la vue
+    /// pour l'Accueil — une faute de frappe ne fait pas tout reprendre ; sinon ferme.
     func echap() {
         if edition != nil { edition = nil; return }
-        guard requete.isEmpty, filtre == .tout else {
-            requete = ""
-            choisir(.tout)
-            return
-        }
+        if !requete.isEmpty { requete = ""; return }
+        if filtre != .tout { return choisir(.tout) }
         PalettePanel.shared.fermer()
     }
 
@@ -318,6 +394,10 @@ final class PaletteModele: ObservableObject {
 
     /// Le texte que ↵ copiera pour la sélection, à lire avant de coller ; `nil` quand ↵ fait autre chose.
     var texteDeLaSelection: String? {
+        if surAlmanax {
+            let semaine = AlmanaxStore.shared.semaine()
+            return semaine.indices.contains(selection) ? semaine[selection].almanax?.nomOffrande(L10n.courante.langue) : nil
+        }
         guard entrees.indices.contains(selection), entrees[selection].id != deplie else { return nil }
         return texteACopier(entrees[selection])
     }
@@ -464,16 +544,18 @@ final class PaletteModele: ObservableObject {
 
     /// Après un favori, une étiquette, à la réouverture : même recherche,
     /// même sélection, contexte relu.
-    private func rafraichir() {
+    func rafraichir() {
         let gardee = entrees.indices.contains(selection) ? entrees[selection].id : nil
         contexte = contexteImpose ?? Self.contexteCourant()
         recalculer()
+        // La carte choisie de l'almanax ne dépend pas des entrées de la recherche, qui sont vides.
+        guard !surAlmanax else { return }
         selection = gardee.flatMap { id in entrees.firstIndex { $0.id == id } } ?? 0
     }
 
     private func recalculer() {
-        entrees = RecherchePalette.entrees(requete, index, filtre: filtre, tri: tri)
-        if selection >= entrees.count { selection = max(entrees.count - 1, 0) }
+        entrees = RecherchePalette.entrees(requete, index, filtre: filtre, tri: triAffiche)
+        if !surAlmanax, selection >= entrees.count { selection = max(entrees.count - 1, 0) }
     }
 
     // MARK: - Contexte
