@@ -30,12 +30,14 @@ enum ActionPalette: Equatable, Sendable {
 /// Ce que Tab fait défiler : la famille de résultats montrée — les zaaps sont
 /// des lieux, PNJ, monstres et boss des créatures —, ou ce qui est sur la case
 /// du perso (`ici`) : quêtes qui y commencent, PNJ, lieux.
-enum FiltrePalette: CaseIterable, Sendable {
-    case tout, lieux, quetes, creatures, objets, ici
+enum FiltrePalette: Sendable {
+    case tout, zaaps, almanax, lieux, quetes, creatures, objets, ici
 
     var titre: String {
         switch self {
         case .tout: return L("palette.filtre.tout")
+        case .zaaps: return L("palette.filtre.zaaps")
+        case .almanax: return L("palette.filtre.almanax")
         case .lieux: return L("palette.filtre.lieux")
         case .quetes: return L("palette.filtre.quetes")
         case .creatures: return L("palette.filtre.creatures")
@@ -44,9 +46,19 @@ enum FiltrePalette: CaseIterable, Sendable {
         }
     }
 
+    /// Le nom de la capsule : « Accueil » au repos, où « Tout » ne dirait pas vrai.
+    func titre(enRecherche: Bool) -> String {
+        self == .tout && !enRecherche ? L("palette.filtre.accueil") : titre
+    }
+
+    /// Rien de tapé, ces filtres-là se montrent en cartes.
+    var enCartes: Bool { self == .tout || self == .zaaps }
+
     func garde(_ entree: EntreePalette) -> Bool {
         switch self {
         case .tout: return true
+        case .zaaps: return entree.genre == .zaap
+        case .almanax: return false
         case .lieux: return entree.genre == .zaap || entree.genre == .lieu
         case .quetes: return entree.genre == .quete
         case .creatures: return entree.genre == .pnj || entree.genre == .monstre
@@ -55,10 +67,26 @@ enum FiltrePalette: CaseIterable, Sendable {
         }
     }
 
-    /// Le suivant (Tab) ou le précédent (⇧Tab), en boucle.
-    func suivant(_ pas: Int) -> FiltrePalette {
-        let tous = Self.allCases
-        return tous[(tous.firstIndex(of: self)! + pas + tous.count) % tous.count]
+    /// Le tri ne range rien sur l'Accueil ni sur l'almanax, au repos : ni les montrer, ni ⌘T.
+    func triAgit(enRecherche: Bool) -> Bool {
+        enRecherche || (self != .tout && self != .almanax)
+    }
+
+    /// Les tris qui ont un sens ici : parmi les seuls zaaps, « Type » ne départage rien.
+    func tris(enRecherche: Bool) -> [TriPalette] {
+        self == .zaaps && !enRecherche ? [.auto, .proximite, .alphabetique] : TriPalette.allCases
+    }
+
+    /// Ce que la rangée montre : au repos, les vues où aller sans taper ; dès qu'on tape, les
+    /// portées qui restreignent la réponse. « Ici » sert aux deux.
+    static func jeu(enRecherche: Bool) -> [FiltrePalette] {
+        enRecherche ? [.tout, .lieux, .quetes, .creatures, .objets, .ici] : [.tout, .zaaps, .almanax, .ici]
+    }
+
+    /// Le suivant (Tab) ou le précédent (⇧Tab) du jeu affiché, en boucle ; le premier si `self` n'y est pas.
+    func suivant(_ pas: Int, dans jeu: [FiltrePalette]) -> FiltrePalette {
+        guard let rang = jeu.firstIndex(of: self) else { return jeu[0] }
+        return jeu[(rang + pas + jeu.count) % jeu.count]
     }
 }
 
@@ -76,9 +104,10 @@ enum TriPalette: String, CaseIterable, Sendable {
         }
     }
 
-    var suivant: TriPalette {
-        let tous = Self.allCases
-        return tous[(tous.firstIndex(of: self)! + 1) % tous.count]
+    /// Le suivant de `choix` (⌘T), en boucle ; le premier si `self` n'y est pas.
+    func suivant(dans choix: [TriPalette]) -> TriPalette {
+        guard let rang = choix.firstIndex(of: self) else { return choix[0] }
+        return choix[(rang + 1) % choix.count]
     }
 }
 

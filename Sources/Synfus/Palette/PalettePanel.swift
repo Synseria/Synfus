@@ -28,7 +28,7 @@ private final class PanneauPalette: NSPanel {
             case 126 where !enEdition: return modele.deplacer(ligne: -1)
             case 123 where !enEdition, 124 where !enEdition:
                 let pas = event.keyCode == 123 ? -1 : 1
-                if modele.enGrille { return modele.deplacer(colonne: pas) }
+                if modele.enCartes { return modele.deplacer(colonne: pas) }
                 if modele.lateral(pas) { return }
             case 36, 76: return modele.valider()
             case 48 where !enEdition: return modele.tabulation(arriere: event.modifierFlags.contains(.shift))
@@ -58,19 +58,21 @@ final class PalettePanel: NSObject, ObservableObject, NSWindowDelegate {
         ouvert ? fermer() : ouvrir()
     }
 
-    /// `requete` : posée d'office, le curseur au bout pour la compléter ;
-    /// sinon la recherche d'avant revient, toute sélectionnée.
-    func ouvrir(requete: String? = nil) {
+    /// L'outil « Almanax » de la barre et du menu : la palette sur sa vue, ou fermée si elle y est.
+    func basculerAlmanax() {
+        if ouvert, PaletteModele.shared.surAlmanax { fermer() } else { ouvrir(vue: .almanax) }
+    }
+
+    /// `requete` : posée d'office, le curseur au bout pour la compléter ; `vue` : la vue d'arrivée,
+    /// l'Accueil sinon.
+    func ouvrir(requete: String? = nil, vue: FiltrePalette = .tout) {
         let panel = panel ?? construire()
-        PaletteModele.shared.ouvrir(requete: requete)
+        PaletteModele.shared.ouvrir(requete: requete, vue: vue)
         UsageStore.shared.compter(.palette)
         placer(panel)
         panel.makeKeyAndOrderFront(nil)
         ouvert = true
-        // La recherche d'avant revient toute sélectionnée : une lettre ou ⌫ la
-        // remplace. Le champ a gardé le clavier depuis la fermeture.
-        let champ = panel.firstResponder as? NSTextView
-        requete == nil ? champ?.selectAll(nil) : champ?.moveToEndOfDocument(nil)
+        if requete != nil { (panel.firstResponder as? NSTextView)?.moveToEndOfDocument(nil) }
     }
 
     func fermer() {

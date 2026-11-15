@@ -273,6 +273,9 @@ final class Preferences: ObservableObject {
     /// Raccourci du panneau des quêtes. ⌥⌘Q par défaut (génération 9).
     @Published var quetesHotKey: HotKey? { didSet { save() } }
 
+    /// Raccourci de l'outil « Almanax » (la palette sur sa vue). Sans défaut, comme `toggleBar`.
+    @Published var almanaxHotKey: HotKey? { didSet { save() } }
+
     /// Raccourci du panneau d'aide aux boss. ⌥⌘B par défaut (génération 9).
     @Published var bossHotKey: HotKey? { didSet { save() } }
 
@@ -490,7 +493,7 @@ final class Preferences: ObservableObject {
         hotKeys + [
             cycleNext, cyclePrevious, toggleBar, previewHotKey, arrangeHotKey, sessionHotKey,
             equipeSuivanteHotKey, inviteHotKey, zaapHotKey, chasseHotKey, quetesHotKey, bossHotKey, paletteHotKey,
-            toggleAutoFocus,
+            almanaxHotKey, toggleAutoFocus,
         ]
     }
 
@@ -509,6 +512,7 @@ final class Preferences: ObservableObject {
         sessionHotKey = nil
         equipeSuivanteHotKey = nil
         zaapHotKey = nil
+        almanaxHotKey = nil
         chasseHotKey = .defaultChasse
         quetesHotKey = .defaultQuetes
         bossHotKey = .defaultBoss
@@ -599,6 +603,7 @@ final class Preferences: ObservableObject {
         .optionnel("chasseHotKey", \.chasseHotKey),
         .optionnel("bossHotKey", \.bossHotKey),
         .optionnel("quetesHotKey", \.quetesHotKey),
+        .optionnel("almanaxHotKey", \.almanaxHotKey),
         .facultatif("bossChoisi", \.bossChoisi),
         .optionnel("nomsBossChoisi", \.nomsBossChoisi),
         .facultatif("lieuxFavoris", \.lieuxFavoris),

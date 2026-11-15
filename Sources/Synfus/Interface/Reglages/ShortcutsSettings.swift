@@ -54,6 +54,7 @@ struct ShortcutsSettings: View {
                     .help(L("quetes.aide"))
                 RaccourciReglable(label: L("chasse.raccourci"), chemin: \.chasseHotKey)
                     .help(L("chasse.aide"))
+                RaccourciReglable(label: L("almanax.raccourci"), chemin: \.almanaxHotKey)
                 RaccourciReglable(label: L("boss.raccourci"), chemin: \.bossHotKey)
                     .help(L("boss.aide"))
                 RaccourciReglable(label: L("zaap.raccourci"), help: L("zaap.raccourci.aide"), chemin: \.zaapHotKey)
