@@ -25,7 +25,7 @@ struct CapturesTests {
         contexte.lieux = Carte.integree.lieux
         contexte.etiquettes = ["1:-78,-41": "Fri 1", "1:-77,-73": "Fri 2", "1:39,-82": "Fri 3",
                                "1:-2,0": "Village", "1:-16,1": "Koalak", "1:5,7": "Bouftou",
-                               "1:-31,-56": "Bonta", "1:-26,37": "Brâk"]
+                               "1:-31,-56": "Portails Dimensionnels", "1:-26,37": "Brâk"]
         contexte.favoris = ["1:-31,-56", "1:-26,37", "1:-78,-41"]
         contexte.recents = ["/zaap -31,-56 ; /travel -31,-57", "/invite Brok; /invite Cid", "%pos%"]
         contexte.invitationEquipe = "/invite Brok; /invite Cid"

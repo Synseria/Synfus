@@ -161,8 +161,8 @@ struct FondCarte: View {
     /// réglages : 3), que l'image remplit.
     private static let cote: CGFloat = 200
     private static let voileTexte = 0.8
-    private static let bandeHaute = 0.4
-    private static let bandeBasse = 0.6
+    private static let bandeHaute = 0.55
+    private static let bandeBasse = 0.7
 
     /// Le texte de la case se pose sur une image : il s'écrit en clair, quel que soit le thème.
     @MainActor static func surImage(_ carte: Int?) -> Bool {

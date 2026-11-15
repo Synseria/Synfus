@@ -451,21 +451,15 @@ private struct CarteZaap: View {
                     .foregroundStyle(encre)
                     .lineLimit(1)
                     .padding(.trailing, entree.favori ? Jetons.Espace.quatre : 0)
+                // Sur l'image, le sous-titre prend l'encre du titre : le voile couvre ses deux lignes.
+                // Deux lignes réservées : les cartes d'une même rangée ont la même hauteur.
                 Text(entree.itineraire ?? entree.sousTitre ?? "")
                     .font(Jetons.Typo.petit.police)
-                    .foregroundStyle(encreSecondaire)
-                    .lineLimit(1)
+                    .foregroundStyle(surImage ? encre : encreSecondaire)
+                    .lineLimit(2, reservesSpace: true)
             }
             Spacer(minLength: Jetons.Espace.quatre)
-            HStack(spacing: Jetons.Espace.un) {
-                if let etiquette = entree.etiquette { PastilleEtiquette(texte: etiquette) }
-                Spacer(minLength: 0)
-                Text(entree.detail ?? "")
-                    .font(Jetons.Typo.codeInterface.police)
-                    .foregroundStyle(encreSecondaire)
-                    .lineLimit(1)
-            }
-            .frame(minHeight: Jetons.Espace.quatre)
+            pied
         }
         .padding(Jetons.Espace.deux)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -478,6 +472,29 @@ private struct CarteZaap: View {
         }
         .background { FondCarte(carte: entree.carte, choisie: choisie) }
         .contentShape(Rectangle())
+    }
+
+    /// L'étiquette partage la ligne des coordonnées quand elle y entre, sinon elle a la sienne : jamais coupée.
+    private var pied: some View {
+        let coordonnees = Text(entree.detail ?? "")
+            .font(Jetons.Typo.codeInterface.police)
+            .foregroundStyle(encreSecondaire)
+            .lineLimit(1)
+        return ViewThatFits(in: .horizontal) {
+            HStack(spacing: Jetons.Espace.un) {
+                if let etiquette = entree.etiquette { PastilleEtiquette(texte: etiquette) }
+                Spacer(minLength: 0)
+                coordonnees
+            }
+            VStack(alignment: .leading, spacing: Jetons.Espace.un) {
+                if let etiquette = entree.etiquette { PastilleEtiquette(texte: etiquette) }
+                HStack(spacing: 0) {
+                    Spacer(minLength: 0)
+                    coordonnees
+                }
+            }
+        }
+        .frame(minHeight: Jetons.Espace.quatre)
     }
 }
 
