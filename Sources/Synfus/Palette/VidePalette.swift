@@ -26,7 +26,7 @@ enum VidePalette: Equatable, Sendable {
     /// `ailleurs` : le nombre de réponses sous « Tout » pour la même recherche.
     static func de(carte: EtatCarte, requeteVide: Bool, filtre: FiltrePalette, positionConnue: Bool,
                    lectureAllumee: Bool, quetesEnChargement: Bool, ailleurs: Int) -> VidePalette {
-        if carte != .prete, requeteVide, filtre == .tout {
+        if carte != .prete, requeteVide, filtre.enCartes {
             return carte == .indisponible ? .carteIndisponible : .carteEnChargement
         }
         if quetesEnChargement { return .quetesEnChargement }

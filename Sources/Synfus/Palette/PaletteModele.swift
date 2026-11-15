@@ -139,9 +139,13 @@ final class PaletteModele: ObservableObject {
         recalculer()
     }
 
+    /// Rien de tapé : l'Accueil et « Zaaps » se montrent en cartes.
     var enGrille: Bool {
-        requete.trimmingCharacters(in: .whitespaces).isEmpty && filtre == .tout
+        requete.trimmingCharacters(in: .whitespaces).isEmpty && filtre.enCartes
     }
+
+    /// Ce qui ne se montre que sur l'Accueil, au-dessus des cartes.
+    var surAccueil: Bool { enGrille && filtre == .tout }
 
     /// Pourquoi la liste est vide ; `nil` quand elle ne l'est pas.
     var vide: VidePalette? {
