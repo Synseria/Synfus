@@ -84,6 +84,8 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             icone: BoutonBarre.quetes.symbole).state = QuetePanel.shared.ouvert ? .on : .off
         add(to: menu, title: L("menu.chasse"), action: #selector(openHunt), raccourci: prefs.chasseHotKey,
             icone: BoutonBarre.chasse.symbole).state = ChassePanel.shared.ouvert ? .on : .off
+        add(to: menu, title: BoutonBarre.almanax.libelle, action: #selector(openAlmanax), raccourci: prefs.almanaxHotKey,
+            icone: BoutonBarre.almanax.symbole)
         add(to: menu, title: L("menu.boss"), action: #selector(openBoss), raccourci: prefs.bossHotKey,
             icone: BoutonBarre.boss.symbole).state = BossPanel.shared.ouvert ? .on : .off
         menu.addItem(.separator())
@@ -298,6 +300,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
     @objc private func openHunt() {
         ChassePanel.shared.basculer()
+    }
+
+    @objc private func openAlmanax() {
+        PalettePanel.shared.basculerAlmanax()
     }
 
     @objc private func openBoss() {

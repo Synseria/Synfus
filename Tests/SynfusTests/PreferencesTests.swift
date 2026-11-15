@@ -275,6 +275,7 @@ struct PreferencesTests {
         // Le rangement des fenêtres : pas de raccourci confisqué, et rien à
         // rejouer tant qu'aucune disposition n'a été choisie.
         #expect(prefs.arrangeHotKey == nil)
+        #expect(prefs.almanaxHotKey == nil)
         #expect(prefs.lastArrangement == nil)
         // Les équipes et les invitations : vides, sans raccourci d'équipe,
         // format standard — et ⌘: posé à la reprise, comme l'aperçu.
@@ -354,6 +355,18 @@ struct PreferencesTests {
         let relues = Preferences.forTesting(store: store)
         #expect(relues.lastArrangement == .principale)
         #expect(relues.arrangeHotKey == HotKey(keyCode: 40, modifiers: UInt32(cmdKey)))
+    }
+
+    @Test("Le raccourci de l'almanax se relit, se compte parmi les globaux et s'efface à la remise à zéro")
+    func almanaxRaccourci() {
+        let (prefs, store) = neuves()
+        let touche = HotKey(keyCode: 0, modifiers: UInt32(cmdKey))
+        prefs.almanaxHotKey = touche
+        #expect(Preferences.forTesting(store: store).almanaxHotKey == touche)
+        #expect(prefs.raccourcisGlobaux.contains(touche))
+        #expect(BoutonBarre.almanax.raccourci(prefs) == touche)
+        prefs.resetShortcuts()
+        #expect(prefs.almanaxHotKey == nil)
     }
 
     @Test("Les zaaps favoris se relisent dans leur ordre, les clés inconnues sautées")
@@ -1001,7 +1014,11 @@ extension PreferencesTests {
     func boutonsAffiches() {
         #expect(BoutonBarre.affiches(sauf: []) == BoutonBarre.allCases)
         #expect(BoutonBarre.affiches(sauf: [.palette, .quetes])
-                == [.boss, .chasse, .rangement, .passageAuto])
+                == [.boss, .chasse, .almanax, .rangement, .passageAuto])
+        // L'almanax suit la chasse et se montre d'office, même sur une sauvegarde d'avant lui.
+        let ordre = BoutonBarre.affiches(sauf: [])
+        #expect(ordre.firstIndex(of: .almanax) == ordre.firstIndex(of: .chasse)! + 1)
+        #expect(BoutonBarre.affiches(sauf: [.almanax]) == BoutonBarre.allCases.filter { $0 != .almanax })
     }
 
     @Test("Chaque bouton a son dessin, et « map » reste à la page Carte")
