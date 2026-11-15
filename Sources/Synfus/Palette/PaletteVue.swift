@@ -178,18 +178,20 @@ struct PaletteVue: View {
             ScrollViewReader { defilement in
                 ScrollView {
                     VStack(alignment: .leading, spacing: Jetons.Espace.deux) {
-                        if modele.surAccueil, let jour = almanax.almanax {
+                        if modele.surAlmanax { semaineAlmanax }
+                        if modele.surAccueil, let jour = almanax.jours[Almanax.jour(de: Date())] {
                             AlmanaxVue(almanax: jour, copier: { modele.copier($0) },
                                        allerAuSanctuaire: modele.sanctuaire.map { lieu in { modele.copierTrajet(vers: lieu) } })
                         }
                         if modele.surAccueil, !modele.recents.isEmpty { recents }
-                        if modele.enGrille { grille } else { liste }
+                        if modele.enGrille { grille } else if !modele.surAlmanax { liste }
                     }
                     .padding(Jetons.Espace.deux)
                 }
-                .frame(height: modele.enGrille ? Self.hauteurCartes
+                .frame(height: modele.enCartes ? Self.hauteurCartes
                        : modele.deplie != nil ? 380 : min(CGFloat(modele.entrees.count) * 44 + 20, 380))
                 .onChange(of: modele.selection) { _, index in
+                    if modele.surAlmanax { return defilement.scrollTo(AlmanaxSemaineVue.ancre(index)) }
                     guard modele.entrees.indices.contains(index) else { return }
                     defilement.scrollTo(modele.entrees[index].id)
                 }
@@ -199,6 +201,12 @@ struct PaletteVue: View {
                 }
             }
         }
+    }
+
+    private var semaineAlmanax: some View {
+        AlmanaxSemaineVue(semaine: almanax.semaine(), selection: modele.selection, deplie: modele.almanaxDeplie,
+                          copier: { modele.copierOffrande($0) }, deplier: { modele.deplierAlmanax($0) },
+                          allerAuSanctuaire: modele.sanctuaire.map { lieu in { modele.copierTrajet(vers: lieu) } })
     }
 
     /// La liste vide dit pourquoi, et propose ce qui répare.
@@ -358,10 +366,12 @@ struct PaletteVue: View {
                             .truncationMode(.middle)
                             .help(texte)
                     }
-                    aide("⌘E", L("palette.touche.etiquette"))
-                        .layoutPriority(1)
-                    aide("⌘D", L("palette.touche.favori"))
-                        .layoutPriority(1)
+                    if !modele.surAlmanax {
+                        aide("⌘E", L("palette.touche.etiquette"))
+                            .layoutPriority(1)
+                        aide("⌘D", L("palette.touche.favori"))
+                            .layoutPriority(1)
+                    }
                 }
                 Spacer(minLength: 0)
                 aide("esc", L("palette.touche.fermer"))

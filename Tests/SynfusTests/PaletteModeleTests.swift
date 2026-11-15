@@ -29,4 +29,14 @@ struct PaletteModeleTests {
         #expect(geste.texteDeLaSelection == nil)
         #expect(PaletteModele(contexte: contexte, requete: "zzzzzz").texteDeLaSelection == nil)
     }
+
+    @Test("La carte choisie de l'almanax survit aux rechargements du contexte")
+    func selectionDeLAlmanax() {
+        let modele = PaletteModele(contexte: ContextePalette(), filtre: .almanax)
+        modele.deplacer(ligne: 1)
+        modele.deplacer(colonne: 1)
+        #expect(modele.selection == 2)
+        modele.rafraichir()
+        #expect(modele.selection == 2)
+    }
 }
