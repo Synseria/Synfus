@@ -6,7 +6,7 @@ import Testing
 struct PaletteModeleTests {
     @Test("Le tri se choisit dans le menu ou passe au suivant (⌘T), en boucle")
     func tri() {
-        let modele = PaletteModele(contexte: ContextePalette())
+        let modele = PaletteModele(contexte: ContextePalette(), requete: "a")
         #expect(modele.tri == .auto)
         modele.choisirTri(.alphabetique)
         #expect(modele.tri == .alphabetique)
@@ -112,5 +112,34 @@ struct PaletteModeleTests {
         #expect(modele.requete.isEmpty && modele.filtre == .zaaps)
         modele.echap()
         #expect(modele.filtre == .tout)
+    }
+
+    @Test("Le tri ne se montre que là où il range : ni l'Accueil ni l'almanax, au repos")
+    func triSeulementOuIlRange() {
+        for (filtre, agit) in [(FiltrePalette.tout, false), (.almanax, false), (.zaaps, true), (.ici, true)] {
+            #expect(filtre.triAgit(enRecherche: false) == agit)
+            #expect(filtre.triAgit(enRecherche: true))
+        }
+        let modele = PaletteModele(contexte: ContextePalette())
+        #expect(!modele.triAgit)
+        modele.triSuivant()
+        #expect(modele.tri == .auto)
+        modele.requete = "a"
+        #expect(modele.triAgit)
+    }
+
+    @Test("Sur « Zaaps », trois tris ; « Type », gardé d'avant, y passe pour « Auto »")
+    func trisDesZaaps() {
+        #expect(FiltrePalette.zaaps.tris(enRecherche: false) == [.auto, .proximite, .alphabetique])
+        #expect(FiltrePalette.zaaps.tris(enRecherche: true) == TriPalette.allCases)
+        let modele = PaletteModele(contexte: ContextePalette())
+        modele.choisir(.zaaps)
+        modele.choisirTri(.alphabetique)
+        modele.triSuivant()
+        #expect(modele.tri == .auto)
+        modele.choisirTri(.type)
+        #expect(modele.triAffiche == .auto)
+        modele.requete = "a"
+        #expect(modele.triAffiche == .type)
     }
 }
