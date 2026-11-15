@@ -62,6 +62,14 @@ struct AlmanaxTests {
         #expect(semaine.count == Almanax.joursMontres)
     }
 
+    @Test("Ce qui se redemande : le jour qui manque ou qui a échoué, pas ceux déjà lus")
+    func manquants() {
+        let semaine = ["2026-11-15", "2026-11-16", "2026-11-17"]
+        #expect(Almanax.manquants(semaine, connus: []) == semaine)
+        #expect(Almanax.manquants(semaine, connus: ["2026-11-15", "2026-11-17", "2026-11-01"]) == ["2026-11-16"])
+        #expect(Almanax.manquants(semaine, connus: Set(semaine)).isEmpty)
+    }
+
     @MainActor
     @Test("Un jour se lit « lun. 16 nov. » : midi de Paris, jamais la veille")
     func libelle() throws {

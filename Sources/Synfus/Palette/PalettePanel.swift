@@ -58,19 +58,16 @@ final class PalettePanel: NSObject, ObservableObject, NSWindowDelegate {
         ouvert ? fermer() : ouvrir()
     }
 
-    /// `requete` : posée d'office, le curseur au bout pour la compléter ;
-    /// sinon la recherche d'avant revient, toute sélectionnée.
-    func ouvrir(requete: String? = nil) {
+    /// `requete` : posée d'office, le curseur au bout pour la compléter ; `vue` : la vue d'arrivée,
+    /// l'Accueil sinon.
+    func ouvrir(requete: String? = nil, vue: FiltrePalette = .tout) {
         let panel = panel ?? construire()
-        PaletteModele.shared.ouvrir(requete: requete)
+        PaletteModele.shared.ouvrir(requete: requete, vue: vue)
         UsageStore.shared.compter(.palette)
         placer(panel)
         panel.makeKeyAndOrderFront(nil)
         ouvert = true
-        // La recherche d'avant revient toute sélectionnée : une lettre ou ⌫ la
-        // remplace. Le champ a gardé le clavier depuis la fermeture.
-        let champ = panel.firstResponder as? NSTextView
-        requete == nil ? champ?.selectAll(nil) : champ?.moveToEndOfDocument(nil)
+        if requete != nil { (panel.firstResponder as? NSTextView)?.moveToEndOfDocument(nil) }
     }
 
     func fermer() {

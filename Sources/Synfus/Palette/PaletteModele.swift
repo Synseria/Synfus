@@ -223,25 +223,25 @@ final class PaletteModele: ObservableObject {
     /// Les dernières copies, montrées au-dessus des cartes.
     var recents: [EntreePalette] { RecherchePalette.recents(contexte) }
 
-    /// La palette reprend où on l'a laissée : recherche (que le panneau
-    /// sélectionne, une lettre la remplace), filtre, ligne et fiche dépliée,
-    /// distances refaites depuis la position du moment. Échap vide avant de
-    /// fermer : rouvrir est alors vierge.
-    /// `requete` : une recherche posée d'office (« Aide au combat »), à compléter.
-    func ouvrir(requete posee: String? = nil) {
-        if let posee {
-            requete = posee
-            filtre = .tout
-        }
+    /// La palette s'ouvre toujours sur l'Accueil, champ vide, première carte choisie ; distances
+    /// refaites depuis la position du moment. Deux exceptions, celles qui disent où elles vont :
+    /// `vue` (l'outil « Almanax » de la barre) et `requete`, une recherche posée d'office
+    /// (« Aide au combat »), à compléter.
+    func ouvrir(requete posee: String? = nil, vue: FiltrePalette = .tout) {
+        requete = posee ?? ""
+        filtre = posee == nil ? vue : .tout
+        vueQuittee = .tout
+        deplie = nil
+        almanaxDeplie = nil
+        edition = nil
         if contexteImpose == nil {
             QuetesStore.shared.preparer()
             DonjonsStore.shared.charger()
+            AlmanaxStore.shared.preparer()
         }
         tri = contexteImpose == nil ? Preferences.shared.paletteTri : tri
-        edition = nil
         rafraichir()
-        if let deplie, !entrees.contains(where: { $0.id == deplie }) { self.deplie = nil }
-        carte = cartes.valide(carte)
+        selection = 0
         ouverture += 1
     }
 
