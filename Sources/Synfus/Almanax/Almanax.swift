@@ -45,6 +45,12 @@ struct Almanax: Codable, Equatable, Sendable {
         (0..<joursMontres).compactMap { calendrier.date(byAdding: .day, value: $0, to: date) }.map(jour(de:))
     }
 
+    /// Les jours attendus que l'on n'a pas encore : ce que l'ouverture de la palette ou l'entrée de
+    /// la vue redemande, le septième jour du lendemain comme un jour qui a échoué.
+    static func manquants(_ attendus: [String], connus: Set<String>) -> [String] {
+        attendus.filter { !connus.contains($0) }
+    }
+
     /// Midi, heure de Paris, d'un jour `AAAA-MM-JJ` : une date que l'affichage ne ramène pas à la veille.
     static func date(de jour: String) -> Date? {
         let parties = jour.split(separator: "-").compactMap { Int($0) }

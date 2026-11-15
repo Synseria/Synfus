@@ -25,14 +25,14 @@ final class AlmanaxStore: ObservableObject {
 
     func preparer() {
         let attendus = Almanax.semaine(depuis: Date())
-        guard demande == nil, attendus.contains(where: { jours[$0] == nil }) else { return }
+        guard demande == nil, !Almanax.manquants(attendus, connus: Set(jours.keys)).isEmpty else { return }
         demande = Task {
             let gardes = await Task.detached(priority: .utility) { Almanax.gardes() }.value
             var semaine = jours.filter { attendus.contains($0.key) }
             for almanax in gardes where attendus.contains(almanax.jour) { semaine[almanax.jour] = almanax }
             jours = semaine
             var nouveaux = false
-            for jour in attendus where jours[jour] == nil {
+            for jour in Almanax.manquants(attendus, connus: Set(jours.keys)) {
                 guard let almanax = try? await Almanax.telecharger(jour) else { continue }
                 jours[jour] = almanax
                 nouveaux = true
