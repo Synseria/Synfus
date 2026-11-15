@@ -39,4 +39,71 @@ struct PaletteModeleTests {
         modele.rafraichir()
         #expect(modele.selection == 2)
     }
+
+    @Test("La rangée suit l'état : trois vues et « Ici » au repos, cinq portées et « Ici » en recherche")
+    func jeu() {
+        #expect(FiltrePalette.jeu(enRecherche: false) == [.tout, .zaaps, .almanax, .ici])
+        #expect(FiltrePalette.jeu(enRecherche: true) == [.tout, .lieux, .quetes, .creatures, .objets, .ici])
+        let modele = PaletteModele(contexte: ContextePalette())
+        #expect(modele.jeu == FiltrePalette.jeu(enRecherche: false))
+        modele.requete = "a"
+        #expect(modele.jeu == FiltrePalette.jeu(enRecherche: true))
+        modele.requete = "  "
+        #expect(modele.jeu == FiltrePalette.jeu(enRecherche: false))
+    }
+
+    @Test("La première lettre choisit « Tout » ; le champ vidé ramène à la vue quittée, même après une portée")
+    func vueQuittee() {
+        let modele = PaletteModele(contexte: ContextePalette())
+        modele.choisir(.zaaps)
+        modele.requete = "b"
+        #expect(modele.filtre == .tout)
+        modele.choisir(.lieux)
+        modele.requete = ""
+        #expect(modele.filtre == .zaaps)
+        modele.choisir(.almanax)
+        modele.requete = "b"
+        #expect(modele.filtre == .tout && !modele.surAlmanax)
+        modele.requete = ""
+        #expect(modele.filtre == .almanax && modele.surAlmanax)
+    }
+
+    @Test("« Ici » reste choisi quand on tape : c'est un filtre, pas une vue qu'on quitte")
+    func iciResteChoisi() {
+        let modele = PaletteModele(contexte: ContextePalette())
+        modele.choisir(.ici)
+        modele.requete = "b"
+        #expect(modele.filtre == .ici)
+        modele.requete = ""
+        #expect(modele.filtre == .ici)
+    }
+
+    @Test("Tab et ⇧Tab parcourent le jeu affiché, en boucle")
+    func tabulation() {
+        let modele = PaletteModele(contexte: ContextePalette())
+        modele.tabulation()
+        #expect(modele.filtre == .zaaps)
+        modele.tabulation()
+        modele.tabulation()
+        #expect(modele.filtre == .ici)
+        modele.tabulation()
+        #expect(modele.filtre == .tout)
+        modele.tabulation(arriere: true)
+        #expect(modele.filtre == .ici)
+        modele.requete = "b"
+        modele.choisir(.tout)
+        modele.tabulation()
+        #expect(modele.filtre == .lieux)
+    }
+
+    @Test("Échap : efface la recherche (la vue revient), puis rend l'Accueil")
+    func echap() {
+        let modele = PaletteModele(contexte: ContextePalette())
+        modele.choisir(.zaaps)
+        modele.requete = "b"
+        modele.echap()
+        #expect(modele.requete.isEmpty && modele.filtre == .zaaps)
+        modele.echap()
+        #expect(modele.filtre == .tout)
+    }
 }

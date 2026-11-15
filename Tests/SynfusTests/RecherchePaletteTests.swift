@@ -289,7 +289,6 @@ struct RecherchePaletteTests {
         let lieux = RecherchePalette.entrees("amakna", contexte(), filtre: .lieux)
         #expect(lieux.contains { $0.genre == .zaap } && lieux.allSatisfy { $0.genre == .zaap || $0.genre == .lieu })
         #expect(RecherchePalette.entrees("", contexte(), filtre: .quetes).isEmpty)
-        #expect(FiltrePalette.tout.suivant(-1) == FiltrePalette.allCases.last)
     }
 
     @Test("La vue Zaaps : tous les zaaps, favoris d'abord puis du plus proche ; le tri y agit")

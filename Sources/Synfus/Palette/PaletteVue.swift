@@ -101,7 +101,7 @@ struct PaletteVue: View {
     /// Les familles que Tab fait défiler, et le tri (⌘T).
     private var filtres: some View {
         HStack(spacing: Jetons.Espace.un) {
-            ForEach(FiltrePalette.allCases, id: \.self) { filtre in
+            ForEach(modele.jeu, id: \.self) { filtre in
                 let choisi = modele.filtre == filtre
                 // Le filtre est le niveau au-dessus des résultats, que les flèches parcourent : son choix est gris.
                 let etat: EtatVisuel = choisi ? .inactif : EtatVisuel(survole: filtreSurvole == filtre)
@@ -118,6 +118,8 @@ struct PaletteVue: View {
                 .elementDeGroupe()
                 .onHover { filtreSurvole = $0 ? filtre : nil }
                 .accessibilityAddTraits(choisi ? .isSelected : [])
+                // « Ici » est à part, discret : une vue de plus, pas l'une des principales.
+                .padding(.leading, filtre == .ici ? Jetons.Espace.deux : 0)
             }
             ToucheRaccourci("⇥")
                 .padding(.leading, Jetons.Espace.un)

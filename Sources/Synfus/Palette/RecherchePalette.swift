@@ -30,7 +30,7 @@ enum ActionPalette: Equatable, Sendable {
 /// Ce que Tab fait défiler : la famille de résultats montrée — les zaaps sont
 /// des lieux, PNJ, monstres et boss des créatures —, ou ce qui est sur la case
 /// du perso (`ici`) : quêtes qui y commencent, PNJ, lieux.
-enum FiltrePalette: CaseIterable, Sendable {
+enum FiltrePalette: Sendable {
     case tout, zaaps, almanax, lieux, quetes, creatures, objets, ici
 
     var titre: String {
@@ -62,10 +62,16 @@ enum FiltrePalette: CaseIterable, Sendable {
         }
     }
 
-    /// Le suivant (Tab) ou le précédent (⇧Tab), en boucle.
-    func suivant(_ pas: Int) -> FiltrePalette {
-        let tous = Self.allCases
-        return tous[(tous.firstIndex(of: self)! + pas + tous.count) % tous.count]
+    /// Ce que la rangée montre : au repos, les vues où aller sans taper ; dès qu'on tape, les
+    /// portées qui restreignent la réponse. « Ici » sert aux deux.
+    static func jeu(enRecherche: Bool) -> [FiltrePalette] {
+        enRecherche ? [.tout, .lieux, .quetes, .creatures, .objets, .ici] : [.tout, .zaaps, .almanax, .ici]
+    }
+
+    /// Le suivant (Tab) ou le précédent (⇧Tab) du jeu affiché, en boucle ; le premier si `self` n'y est pas.
+    func suivant(_ pas: Int, dans jeu: [FiltrePalette]) -> FiltrePalette {
+        guard let rang = jeu.firstIndex(of: self) else { return jeu[0] }
+        return jeu[(rang + pas + jeu.count) % jeu.count]
     }
 }
 

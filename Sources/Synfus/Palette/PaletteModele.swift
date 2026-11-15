@@ -16,6 +16,7 @@ final class PaletteModele: ObservableObject {
             guard requete != oldValue else { return }
             selection = 0
             deplie = nil
+            changerDeJeu(avant: oldValue)
             recalculer()
         }
     }
@@ -33,6 +34,8 @@ final class PaletteModele: ObservableObject {
     /// Les cartes de la fiche dépliée ouvertes (clef, monstres, succès).
     @Published private(set) var ouvertes: Set<ActionFiche> = []
     @Published private(set) var entrees: [EntreePalette] = []
+    /// La vue qu'on a quittée en tapant : le champ vidé y ramène.
+    private var vueQuittee: FiltrePalette = .tout
     /// La famille montrée, que Tab fait défiler.
     @Published private(set) var filtre: FiltrePalette = .tout {
         didSet {
@@ -145,6 +148,24 @@ final class PaletteModele: ObservableObject {
         self.requete = requete
         self.filtre = filtre
         recalculer()
+    }
+
+    /// Une recherche est en cours : la rangée montre des portées, sinon des vues.
+    var enRecherche: Bool { !requete.trimmingCharacters(in: .whitespaces).isEmpty }
+
+    /// Les capsules de la rangée, que Tab et ⇧Tab parcourent.
+    var jeu: [FiltrePalette] { FiltrePalette.jeu(enRecherche: enRecherche) }
+
+    /// À la première lettre la rangée passe des vues aux portées, « Tout » d'office (« Ici » reste) ;
+    /// le champ vidé revient à la vue quittée.
+    private func changerDeJeu(avant ancienne: String) {
+        let etaitVide = ancienne.trimmingCharacters(in: .whitespaces).isEmpty
+        if etaitVide, enRecherche {
+            vueQuittee = filtre
+            if !FiltrePalette.jeu(enRecherche: true).contains(filtre) { filtre = .tout }
+        } else if !etaitVide, !enRecherche {
+            filtre = vueQuittee
+        }
     }
 
     /// Rien de tapé : l'Accueil et « Zaaps » se montrent en cartes.
@@ -309,7 +330,7 @@ final class PaletteModele: ObservableObject {
             requete = texte
             return
         }
-        choisir(filtre.suivant(arriere ? -1 : 1))
+        choisir(filtre.suivant(arriere ? -1 : 1, dans: jeu))
     }
 
     /// Un filtre : Tab, ou un clic sur sa capsule.
@@ -343,15 +364,12 @@ final class PaletteModele: ObservableObject {
         basculerFavori(entrees[selection])
     }
 
-    /// Échap : quitte l'étiquette ; efface la recherche et le filtre — une
-    /// faute de frappe ne fait pas tout reprendre ; sinon ferme.
+    /// Échap : quitte l'étiquette ; efface la recherche (la vue d'avant revient), puis la vue
+    /// pour l'Accueil — une faute de frappe ne fait pas tout reprendre ; sinon ferme.
     func echap() {
         if edition != nil { edition = nil; return }
-        guard requete.isEmpty, filtre == .tout else {
-            requete = ""
-            choisir(.tout)
-            return
-        }
+        if !requete.isEmpty { requete = ""; return }
+        if filtre != .tout { return choisir(.tout) }
         PalettePanel.shared.fermer()
     }
 
