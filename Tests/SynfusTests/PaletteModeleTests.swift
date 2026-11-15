@@ -52,6 +52,13 @@ struct PaletteModeleTests {
         #expect(modele.jeu == FiltrePalette.jeu(enRecherche: false))
     }
 
+    @Test("La première capsule s'appelle « Accueil » au repos, « Tout » en recherche")
+    func titreDeLaPremiere() {
+        #expect(FiltrePalette.tout.titre(enRecherche: false) == L("palette.filtre.accueil"))
+        #expect(FiltrePalette.tout.titre(enRecherche: true) == L("palette.filtre.tout"))
+        #expect(FiltrePalette.zaaps.titre(enRecherche: false) == FiltrePalette.zaaps.titre(enRecherche: true))
+    }
+
     @Test("La première lettre choisit « Tout » ; le champ vidé ramène à la vue quittée, même après une portée")
     func vueQuittee() {
         let modele = PaletteModele(contexte: ContextePalette())

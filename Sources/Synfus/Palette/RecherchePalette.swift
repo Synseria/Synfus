@@ -46,6 +46,11 @@ enum FiltrePalette: Sendable {
         }
     }
 
+    /// Le nom de la capsule : « Accueil » au repos, où « Tout » ne dirait pas vrai.
+    func titre(enRecherche: Bool) -> String {
+        self == .tout && !enRecherche ? L("palette.filtre.accueil") : titre
+    }
+
     /// Rien de tapé, ces filtres-là se montrent en cartes.
     var enCartes: Bool { self == .tout || self == .zaaps }
 

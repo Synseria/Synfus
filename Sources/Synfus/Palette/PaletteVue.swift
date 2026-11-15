@@ -107,7 +107,7 @@ struct PaletteVue: View {
                 let etat: EtatVisuel = choisi ? .inactif : EtatVisuel(survole: filtreSurvole == filtre)
                 // Tab et ⇧Tab parcourent les filtres (le panneau) : aucun d'eux ne prend le focus.
                 Button { modele.choisir(filtre) } label: {
-                    Text(filtre.titre)
+                    Text(filtre.titre(enRecherche: modele.enRecherche))
                         .font((choisi ? Jetons.Typo.raccourci : Jetons.Typo.petit).police)
                         .foregroundStyle(choisi ? etat.encre : etat.encreSecondaire)
                         .padding(.horizontal, Jetons.Espace.deux)
