@@ -5,7 +5,6 @@ import SwiftUI
 /// (`PanneauPalette`) ; la vue ne fait que montrer la sélection.
 struct PaletteVue: View {
     @ObservedObject var modele = PaletteModele.shared
-    @ObservedObject private var quetes = QuetesStore.shared
     @ObservedObject private var almanax = AlmanaxStore.shared
     @ObservedObject private var carte = CarteStore.shared
     /// Le détail d'un donjon arrive après l'ouverture : ↵ et les cartes de sa fiche changent.

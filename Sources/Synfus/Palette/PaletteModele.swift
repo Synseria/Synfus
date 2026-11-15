@@ -41,8 +41,11 @@ final class PaletteModele: ObservableObject {
     private var ailleursGarde = DernierCalcul<CleAilleurs, Int>()
 
     private struct CleAilleurs: Equatable {
+        // periphery:ignore - lu par l'Equatable synthétisé, que Periphery ne voit pas
         let requete: String
+        // periphery:ignore - lu par l'Equatable synthétisé
         let tri: TriPalette
+        // periphery:ignore - lu par l'Equatable synthétisé
         let index: ObjectIdentifier
     }
     @Published var selection = 0
