@@ -235,7 +235,6 @@ final class PaletteModele: ObservableObject {
         }
         if contexteImpose == nil {
             QuetesStore.shared.preparer()
-            AlmanaxStore.shared.preparer()
             DonjonsStore.shared.charger()
         }
         tri = contexteImpose == nil ? Preferences.shared.paletteTri : tri

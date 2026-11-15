@@ -181,10 +181,6 @@ struct PaletteVue: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: Jetons.Espace.deux) {
                         if modele.surAlmanax { semaineAlmanax }
-                        if modele.surAccueil, let jour = almanax.jours[Almanax.jour(de: Date())] {
-                            AlmanaxVue(almanax: jour, copier: { modele.copier($0) },
-                                       allerAuSanctuaire: modele.sanctuaire.map { lieu in { modele.copierTrajet(vers: lieu) } })
-                        }
                         if modele.surAccueil, !modele.recents.isEmpty { recents }
                         if modele.enGrille { grille } else if !modele.surAlmanax { liste }
                     }
