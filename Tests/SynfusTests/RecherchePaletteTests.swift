@@ -292,6 +292,19 @@ struct RecherchePaletteTests {
         #expect(FiltrePalette.tout.suivant(-1) == FiltrePalette.allCases.last)
     }
 
+    @Test("La vue Zaaps : tous les zaaps, favoris d'abord puis du plus proche ; le tri y agit")
+    func vueZaaps() {
+        let bonta = "1:-31,-56"
+        let entrees = RecherchePalette.entrees("", contexte(favoris: [bonta]), filtre: .zaaps)
+        #expect(entrees.count == RecherchePalette.entrees("", contexte()).count)
+        #expect(entrees.allSatisfy { $0.genre == .zaap })
+        #expect(entrees.first?.cle == bonta)
+        let reste = entrees.dropFirst().compactMap(\.distance)
+        #expect(reste == reste.sorted())
+        let alphabetique = RecherchePalette.entrees("", contexte(), filtre: .zaaps, tri: .alphabetique).map(\.titre)
+        #expect(alphabetique == alphabetique.sorted { $0.localizedStandardCompare($1) == .orderedAscending })
+    }
+
     @Test("Les tris explicites : proximité, alphabétique, type")
     func tris() {
         let proches = RecherchePalette.entrees("/travel banque", contexte(), tri: .proximite).compactMap(\.distance)

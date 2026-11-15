@@ -538,6 +538,7 @@
   "palette.filtre.objets": "Objets",
   "palette.filtre.quetes": "Quêtes",
   "palette.filtre.tout": "Tout",
+  "palette.filtre.zaaps": "Zaaps",
   "palette.ici.pasEncore": "Position pas encore lue : revenir au jeu un instant, le personnage devant est lu chaque seconde.",
   "palette.ici.sansPosition": "Position du personnage inconnue : allumer la lecture de la position (Réglages › Lecture de l'écran).",
   "palette.invite": "Rechercher, / commande, % variable",

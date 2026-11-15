@@ -538,6 +538,7 @@
   "palette.filtre.objets": "Items",
   "palette.filtre.quetes": "Quests",
   "palette.filtre.tout": "All",
+  "palette.filtre.zaaps": "Zaaps",
   "palette.ici.pasEncore": "Position not read yet: go back to the game for a moment, the front character is read every second.",
   "palette.ici.sansPosition": "Character position unknown: turn on position reading (Settings › Screen reading).",
   "palette.invite": "Search, / command, % variable",

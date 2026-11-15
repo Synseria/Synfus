@@ -15,6 +15,10 @@ struct PaletteVue: View {
 
     private enum Champ { case recherche, etiquette }
 
+    /// Mesure de mise en page : trois rangées de cartes entières (deux lignes de sous-titre
+    /// réservées, étiquette sur sa ligne) avec leurs interstices.
+    private static let hauteurCartes: CGFloat = 352
+
     var body: some View {
         VStack(spacing: 0) {
             recherche
@@ -174,16 +178,16 @@ struct PaletteVue: View {
             ScrollViewReader { defilement in
                 ScrollView {
                     VStack(alignment: .leading, spacing: Jetons.Espace.deux) {
-                        if modele.enGrille, let jour = almanax.almanax {
+                        if modele.surAccueil, let jour = almanax.almanax {
                             AlmanaxVue(almanax: jour, copier: { modele.copier($0) },
                                        allerAuSanctuaire: modele.sanctuaire.map { lieu in { modele.copierTrajet(vers: lieu) } })
                         }
-                        if modele.enGrille, !modele.recents.isEmpty { recents }
+                        if modele.surAccueil, !modele.recents.isEmpty { recents }
                         if modele.enGrille { grille } else { liste }
                     }
                     .padding(Jetons.Espace.deux)
                 }
-                .frame(height: modele.enGrille ? 300
+                .frame(height: modele.enGrille ? Self.hauteurCartes
                        : modele.deplie != nil ? 380 : min(CGFloat(modele.entrees.count) * 44 + 20, 380))
                 .onChange(of: modele.selection) { _, index in
                     guard modele.entrees.indices.contains(index) else { return }
