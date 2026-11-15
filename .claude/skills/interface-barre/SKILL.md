@@ -93,8 +93,13 @@ sa bascule). Toute nouvelle option suit la règle.
   réglages, quêtes) appelle `ApercuCarte.shared.cacher()`, sans compter sur `onDisappear`.
 - Pictogramme d'un lieu : `PictogrammeLieu` (`Lieu.gfx`), le symbole en repli.
 - Palette : un trajet affiche `itineraire` (`ItineraireZaap.trajet`, « via X · N cartes »), le tri
-  garde la distance à pied ; `EtiquetteInterieur` (cartes `CarteStore.interieurs`) ; almanax en
-  tête de la grille sans saisie (`AlmanaxVue`).
+  garde la distance à pied ; `EtiquetteInterieur` (cartes `CarteStore.interieurs`).
+- Palette, la rangée suit l'état (`FiltrePalette.jeu(enRecherche:)`) : au repos les vues
+  Accueil · Zaaps · Almanax (+ « Ici »), dès la première lettre les portées Tout · Lieux · Quêtes ·
+  Créatures · Objets (+ « Ici ») ; le champ vidé revient à la vue quittée (`vueQuittee`), Tab parcourt
+  le jeu affiché, la palette s'ouvre toujours sur l'Accueil (`ouvrir(requete:vue:)`). L'almanax
+  (`AlmanaxSemaineVue`, sept jours) n'est que sa vue, par Tab ou par l'outil « Almanax » de la barre
+  (`PalettePanel.basculerAlmanax`) ; le tri ne se montre que là où il range (`triAgit`).
 
 ## Réglages et menu
 
