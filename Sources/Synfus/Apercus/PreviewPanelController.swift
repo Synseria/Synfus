@@ -224,6 +224,8 @@ private struct PreviewPanelView: View {
     @ObservedObject private var controller = PreviewPanelController.shared
     @ObservedObject private var service = WindowPreviewService.shared
     @ObservedObject private var lecteur = LecteurEcran.shared
+    @ObservedObject private var manager = WindowManager.shared
+    @ObservedObject private var prefs = Preferences.shared
 
     /// Encombrement d'une vignette à l'écran.
     ///
@@ -260,13 +262,13 @@ private struct PreviewPanelView: View {
             spacing: Jetons.Espace.deux
         ) {
             ForEach(Array(clients.enumerated()), id: \.element.id) { index, client in
-                thumbnail(for: client, number: index + 1)
+                thumbnail(for: client, touche: BarView.toucheDuPerso(index: index, raccourcis: prefs.hotKeys))
             }
         }
     }
 
     @ViewBuilder
-    private func thumbnail(for client: DofusClient, number: Int? = nil) -> some View {
+    private func thumbnail(for client: DofusClient, touche: String? = nil) -> some View {
         VStack(alignment: .leading, spacing: Jetons.Espace.un) {
             ZStack {
                 Color.jeton(\.creux)
@@ -283,13 +285,8 @@ private struct PreviewPanelView: View {
             .clipShape(RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous))
 
             HStack(spacing: Jetons.Espace.un) {
-                if let number {
-                    Text("\(number)")
-                        .font(Jetons.Typo.micro.police)
-                        .foregroundStyle(Color.jeton(\.encreSecondaire))
-                }
                 Text(client.name)
-                    .font(Jetons.Typo.raccourci.police)
+                    .font((manager.isFrontmost(client) ? Jetons.Typo.corpsFort : Jetons.Typo.raccourci).police)
                     .lineLimit(1)
                 Spacer(minLength: 0)
                 if let position = lecteur.positions[client.name] {
@@ -298,6 +295,7 @@ private struct PreviewPanelView: View {
                         .foregroundStyle(Color.jeton(\.encreSecondaire))
                         .help(position.zone ?? "")
                 }
+                if let touche { ToucheRaccourci(touche) }
             }
             .frame(width: Self.thumbnailWidth, alignment: .leading)
         }
