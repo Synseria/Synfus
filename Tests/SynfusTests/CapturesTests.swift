@@ -13,6 +13,9 @@ struct CapturesTests {
     /// `SYNFUS_CAPTURES_APPARENCE=clair` pour les captures en clair ; sombre sinon, celui de la doc.
     nonisolated private static let clair = ProcessInfo.processInfo.environment["SYNFUS_CAPTURES_APPARENCE"] == "clair"
     nonisolated private static let schema: ColorScheme = clair ? .light : .dark
+    /// Le fond commun des captures : une couleur de test, volontairement hors des jetons de l'app.
+    // swiftlint:disable:next couleur_en_dur
+    private static let fondCapture = Color(red: 0.11, green: 0.11, blue: 0.13)
     nonisolated private static let apparence: NSAppearance.Name = clair ? .aqua : .darkAqua
 
     private func contexte() -> ContextePalette {
@@ -53,7 +56,7 @@ struct CapturesTests {
         equipe()
         let vue = BarView()
             .padding(24)
-            .background(Color(red: 0.11, green: 0.11, blue: 0.13))
+            .background(Self.fondCapture)
             .environment(\.colorScheme, Self.schema)
         try ecrire(vue, vers: dossier.appending(path: "barre.png"))
     }
@@ -69,7 +72,7 @@ struct CapturesTests {
             prefs.reduirePersosInactifs = reduite
             let vue = BarView()
                 .padding(24)
-                .background(Color(red: 0.11, green: 0.11, blue: 0.13))
+                .background(Self.fondCapture)
                 .environment(\.colorScheme, Self.schema)
             try ecrire(vue, vers: dossier.appending(path: nom + ".png"))
         }
@@ -85,7 +88,7 @@ struct CapturesTests {
             }
         }
         .padding(32)
-        .background(Color(red: 0.11, green: 0.11, blue: 0.13))
+        .background(Self.fondCapture)
         .environment(\.colorScheme, Self.schema)
         try ecrire(vue, vers: dossier.appending(path: "combat-decompte.png"))
     }
@@ -99,7 +102,7 @@ struct CapturesTests {
             let modele = PaletteModele(contexte: contexte(), requete: requete)
             let vue = PaletteVue(modele: modele)
                 .padding(24)
-                .background(Color(red: 0.11, green: 0.11, blue: 0.13))
+                .background(Self.fondCapture)
                 .environment(\.colorScheme, Self.schema)
             try ecrire(vue, vers: dossier.appending(path: nom + ".png"))
         }
@@ -130,7 +133,7 @@ struct CapturesTests {
         for (nom, contexte, requete, filtre, carte) in cas {
             let vue = PaletteVue(modele: PaletteModele(contexte: contexte, requete: requete, filtre: filtre, carte: carte))
                 .padding(24)
-                .background(Color(red: 0.11, green: 0.11, blue: 0.13))
+                .background(Self.fondCapture)
                 .environment(\.colorScheme, Self.schema)
             try ecrire(vue, vers: dossier.appending(path: nom + ".png"))
         }
@@ -157,7 +160,7 @@ struct CapturesTests {
                            ressourcesImposees: Set(fiche.ressources.prefix(1).map(\.objet)), lusImposes: lus)
             .frame(width: 360, height: 560)
             .padding(24)
-            .background(Color(red: 0.11, green: 0.11, blue: 0.13))
+            .background(Self.fondCapture)
             .environment(\.colorScheme, Self.schema)
         try ecrire(vue, vers: dossier.appending(path: "quete.png"))
     }
@@ -188,7 +191,7 @@ struct CapturesTests {
         let vue = QueteVue()
             .frame(width: 360, height: 480)
             .padding(24)
-            .background(Color(red: 0.11, green: 0.11, blue: 0.13))
+            .background(Self.fondCapture)
             .environment(\.colorScheme, Self.schema)
         try ecrire(vue, vers: dossier.appending(path: "quete-vide.png"))
     }
@@ -214,7 +217,7 @@ struct CapturesTests {
         ChasseModele.shared.departY = 0
         let vue = ChasseVue()
             .padding(24)
-            .background(Color(red: 0.11, green: 0.11, blue: 0.13))
+            .background(Self.fondCapture)
             .environment(\.colorScheme, Self.schema)
         try ecrire(vue, vers: dossier.appending(path: "chasse.png"))
         let indice = Indice(id: 993, noms: ["fr": "Poupée koalak"])
@@ -232,7 +235,7 @@ struct CapturesTests {
         let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
         let vue = BossVue()
             .padding(24)
-            .background(Color(red: 0.11, green: 0.11, blue: 0.13))
+            .background(Self.fondCapture)
             .environment(\.colorScheme, Self.schema)
         try ecrire(vue, vers: dossier.appending(path: "boss.png"))
     }

@@ -43,8 +43,11 @@ final class QuetePanel: NSObject, ObservableObject {
     /// Ce dont dépend `ici()`.
     struct CleIci: Equatable {
         let position: PositionCarte?
+        // periphery:ignore - lu par l'Equatable synthétisé, que Periphery ne voit pas
         let quetes: Date?
+        // periphery:ignore - lu par l'Equatable synthétisé
         let langue: Langue
+        // periphery:ignore - lu par l'Equatable synthétisé
         let reseauLu: Bool
     }
 
