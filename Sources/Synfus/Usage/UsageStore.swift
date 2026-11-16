@@ -14,20 +14,23 @@ final class UsageStore: ObservableObject {
 
     @Published private(set) var historique: HistoriqueUsage
 
-    /// Où et avec quoi envoyer, inscrits dans l'Info.plist par la publication
-    /// (`SynfusTelemetrieURL`, `SynfusTelemetrieJeton`). Un build local n'en a
-    /// pas : il compte, n'envoie rien.
+    /// Où, avec quoi et pour quel genre de build envoyer, inscrits dans
+    /// l'Info.plist par `build.sh` (`SynfusTelemetrieURL`,
+    /// `SynfusTelemetrieJeton`, `SynfusDistribution`). Il manque une clé — build
+    /// de développement — : l'app compte, n'envoie rien.
     struct Configuration: Sendable {
         let url: URL
         let jeton: String
+        let distribution: DistributionUsage
     }
 
     static let configuration: Configuration? = {
         let info = Bundle.main.infoDictionary ?? [:]
         guard let texte = info["SynfusTelemetrieURL"] as? String, let url = URL(string: texte), url.scheme == "https",
-              let jeton = info["SynfusTelemetrieJeton"] as? String, !jeton.isEmpty
+              let jeton = info["SynfusTelemetrieJeton"] as? String, !jeton.isEmpty,
+              let distribution = (info["SynfusDistribution"] as? String).flatMap(DistributionUsage.init(rawValue:))
         else { return nil }
-        return Configuration(url: url, jeton: jeton)
+        return Configuration(url: url, jeton: jeton, distribution: distribution)
     }()
 
     private let fichier: URL?
@@ -130,7 +133,8 @@ final class UsageStore: ObservableObject {
         guard let version = AppIntegrity.version else { return nil }
         return ContexteUsage(installation: installation, version: version,
                              systeme: ContexteUsage.systeme(ProcessInfo.processInfo.operatingSystemVersion),
-                             architecture: ContexteUsage.architectureCourante)
+                             architecture: ContexteUsage.architectureCourante,
+                             distribution: Self.configuration?.distribution)
     }
 
     private func envoyer(maintenant: Date) {

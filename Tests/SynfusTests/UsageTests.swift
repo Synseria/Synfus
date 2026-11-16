@@ -153,6 +153,22 @@ struct UsageTests {
         #expect(valeurs["jour"]?["stringValue"] as? String == "2026-11-09")
     }
 
+    @Test("Le rapport dit le genre de build qui l'envoie (deployment.environment)", arguments: [
+        (DistributionUsage.release, "release"), (.local, "local"),
+    ])
+    func distribution(_ distribution: DistributionUsage, _ attendu: String) throws {
+        var contexte = contexte
+        contexte.distribution = distribution
+        var historique = HistoriqueUsage()
+        historique.compter(.palette, le: "2026-11-09")
+        let data = RapportUsage.corps(historique.aEnvoyer(aujourdhui: "2026-11-10"), contexte: contexte, envoi: Date())
+        let racine = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let ressource = try #require((racine["resourceLogs"] as? [[String: Any]])?.first)
+        let attributs = try #require((ressource["resource"] as? [String: Any])?["attributes"] as? [[String: Any]])
+        let environnement = attributs.first { $0["key"] as? String == "deployment.environment" }
+        #expect((environnement?["value"] as? [String: Any])?["stringValue"] as? String == attendu)
+    }
+
     /// Un rapport au format de MetricKit : une pile par fil, `remplissage`
     /// octets de cadres dans chacune.
     private func rapportMetricKit(enFaute: Int, autre: Int, guillemets: Bool = false) throws -> Data {
