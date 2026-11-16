@@ -9,7 +9,7 @@ struct ScorePaletteTests {
     private func contexte(_ noms: [String], frequentation: [String: FrequentationPalette.Compte] = [:]) -> ContextePalette {
         let pnjs = noms.enumerated().map { rang, nom in
             PNJ(id: rang + 1, noms: ["fr": nom],
-                passages: [PNJ.Passage(position: .init(x: rang, y: 0), carte: nil, sousZone: nil, quetes: 1)])
+                passages: [PNJ.Passage(position: .init(x: rang, y: 0), carte: nil, sousZone: nil, quetes: [1])])
         }
         var contexte = ContextePalette()
         contexte.quetes = Quetes(

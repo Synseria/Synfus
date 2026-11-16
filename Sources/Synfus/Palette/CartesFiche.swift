@@ -12,11 +12,13 @@ enum ActionFiche: Hashable, Sendable {
     case conseils
     case monstres
     case succes
+    /// Copie le trajet jusqu'à cette position du PNJ.
+    case position(PNJ.Position)
 
     /// Déplie quelque chose sous la rangée plutôt que d'agir.
     var sePlie: Bool {
         switch self {
-        case .entree, .guide: return false
+        case .entree, .guide, .position: return false
         case .clef, .conseils, .monstres, .succes: return true
         }
     }
@@ -26,6 +28,8 @@ enum ActionFiche: Hashable, Sendable {
 /// et en sortent.
 struct CartesFiche: Equatable, Sendable {
     let actions: [ActionFiche]
+    /// Les flèches ↑ et ← sur la première carte replient la fiche au lieu de rendre la ligne.
+    var repliable = false
 
     static let vide = CartesFiche(actions: [])
 
@@ -41,6 +45,27 @@ struct CartesFiche: Equatable, Sendable {
         }
         return CartesFiche(actions: actions)
     }
+
+    /// Les positions d'un PNJ, la mieux placée d'abord : la rangée se replie d'une flèche.
+    static func positions(_ positions: [PNJ.Position]) -> CartesFiche {
+        CartesFiche(actions: positions.map(ActionFiche.position), repliable: true)
+    }
+
+    /// Où va le clavier en quittant une carte.
+    enum Sortie: Equatable, Sendable {
+        case carte(ActionFiche)
+        case ligne
+        case replier
+    }
+
+    /// ←/→ depuis `carte` ; sur la première, ← replie une fiche repliable.
+    func lateral(depuis carte: ActionFiche, _ pas: Int) -> Sortie {
+        let cible = laterale(carte, pas)
+        return repliable && pas < 0 && cible == carte ? .replier : .carte(cible)
+    }
+
+    /// ↑ depuis une carte.
+    var versLeHaut: Sortie { repliable ? .replier : .ligne }
 
     /// La première carte, où arrivent ↓ depuis la ligne, ↑ depuis la ligne
     /// d'après et le dépliage ; `nil` : aucune.

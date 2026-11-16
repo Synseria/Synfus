@@ -51,6 +51,15 @@ final class PaletteModele: ObservableObject {
     /// est vide et redemandé à chaque rendu : la clé dit tout ce dont il dépend.
     private var ailleursGarde = DernierCalcul<CleAilleurs, Int>()
 
+    private var positionsGardees = DernierCalcul<ClePositions, [PositionPNJ]>()
+
+    private struct ClePositions: Equatable {
+        // periphery:ignore - lu par l'Equatable synthétisé
+        let pnj: Int
+        // periphery:ignore - lu par l'Equatable synthétisé
+        let index: ObjectIdentifier
+    }
+
     private struct CleAilleurs: Equatable {
         // periphery:ignore - lu par l'Equatable synthétisé, que Periphery ne voit pas
         let requete: String
@@ -245,7 +254,7 @@ final class PaletteModele: ObservableObject {
         guard !entrees.isEmpty else { return }
         if !enGrille, surLaFiche {
             if ligne > 0, carte == nil, let premiere = cartes.premiere { carte = premiere; return }
-            if ligne < 0, carte != nil { carte = nil; return }
+            if ligne < 0, carte != nil { return sortir(cartes.versLeHaut) }
         }
         let pas = colonne + ligne * (enGrille ? Self.colonnes : 1)
         let avant = selection
@@ -282,16 +291,29 @@ final class PaletteModele: ObservableObject {
     }
 
     /// ← et → hors de la grille : de carte en carte dans la fiche ; ← sur
-    /// une ligne dépliée la replie. `false` : la flèche reste au champ.
+    /// une ligne dépliée la replie, → sur celle d'un PNJ la déplie. `false` : la flèche reste au champ.
     func lateral(_ pas: Int) -> Bool {
-        guard !enGrille, edition == nil, surLaFiche else { return false }
+        guard !enGrille, edition == nil, entrees.indices.contains(selection) else { return false }
+        guard surLaFiche else {
+            guard pas > 0, entrees[selection].pnj != nil else { return false }
+            deplier(entrees[selection])
+            return true
+        }
         if let carte {
-            self.carte = cartes.laterale(carte, pas)
+            sortir(cartes.lateral(depuis: carte, pas))
             return true
         }
         guard pas < 0 else { return false }
         deplie = nil
         return true
+    }
+
+    private func sortir(_ sortie: CartesFiche.Sortie) {
+        switch sortie {
+        case .carte(let action): carte = action
+        case .ligne: carte = nil
+        case .replier: deplie = nil
+        }
     }
 
     /// ↵ : la carte choisie de la fiche ; sur la ligne, la déplie (le clavier
@@ -390,7 +412,11 @@ final class PaletteModele: ObservableObject {
             let semaine = AlmanaxStore.shared.semaine()
             return semaine.indices.contains(selection) ? semaine[selection].almanax?.nomOffrande(L10n.courante.langue) : nil
         }
-        guard entrees.indices.contains(selection), entrees[selection].id != deplie else { return nil }
+        guard entrees.indices.contains(selection) else { return nil }
+        if entrees[selection].id == deplie {
+            guard case .position(let position)? = cartes.valide(carte) else { return nil }
+            return positionsDeplie.first { $0.position == position }.flatMap { RecherchePalette.texte(de: $0.entree.effet, contexte) }
+        }
         return texteACopier(entrees[selection])
     }
 
@@ -419,8 +445,7 @@ final class PaletteModele: ObservableObject {
             guard let texte = texteACopier(entree) else { return }
             copier(texte)
         case .ouTrouver, .donjon, .positions:
-            deplie = deplie == entree.id ? nil : entree.id
-            carte = cartes.premiere
+            deplier(entree)
         case .completer(let texte):
             requete = texte
         case .ouvrirQuete(let id):
@@ -438,6 +463,13 @@ final class PaletteModele: ObservableObject {
 
     // MARK: - Fiche dépliée
 
+    /// Déplie la fiche de la ligne, le clavier sur sa première carte, ou la replie.
+    func deplier(_ entree: EntreePalette) {
+        if let index = entrees.firstIndex(where: { $0.id == entree.id }) { selection = index }
+        deplie = deplie == entree.id ? nil : entree.id
+        carte = cartes.premiere
+    }
+
     /// La sélection est sur la ligne dépliée ou dans sa fiche.
     private var surLaFiche: Bool {
         entrees.indices.contains(selection) && entrees[selection].id == deplie
@@ -446,11 +478,20 @@ final class PaletteModele: ObservableObject {
     /// Les cartes de la fiche dépliée, refaites à chaque lecture : le détail
     /// du donjon arrive après l'ouverture.
     var cartes: CartesFiche {
-        guard let deplie, let entree = entrees.first(where: { $0.id == deplie }),
-              case .donjon(let id) = entree.effet, let donjon = DonjonsStore.shared.donjons?.donjon(id: id)
+        guard let deplie, let entree = entrees.first(where: { $0.id == deplie }) else { return .vide }
+        if entree.pnj != nil { return .positions(positionsDeplie.map(\.position)) }
+        guard case .donjon(let id) = entree.effet, let donjon = DonjonsStore.shared.donjons?.donjon(id: id)
         else { return .vide }
         return .donjon(entree: Self.entree(de: donjon), guide: donjon.nomFrancais,
                        detail: DonjonsStore.shared.details[id], conseils: !(DonjonsStore.shared.conseils[id] ?? []).isEmpty)
+    }
+
+    /// Les positions du PNJ de la ligne dépliée ; refaites quand le contexte change (habitudes, position du perso).
+    var positionsDeplie: [PositionPNJ] {
+        guard let deplie, let pnj = entrees.first(where: { $0.id == deplie })?.pnj else { return [] }
+        return positionsGardees.valeur(pour: ClePositions(pnj: pnj, index: ObjectIdentifier(index))) {
+            RecherchePalette.positions(de: pnj, contexte)
+        }
     }
 
     /// Le repère de l'entrée d'un donjon sur la carte : par sa carte, sinon par son nom.
@@ -472,12 +513,30 @@ final class PaletteModele: ObservableObject {
         case .guide(let nom): Task { await DofusPourLesNoobs.ouvrir(nom) }
         case .clef, .conseils, .monstres, .succes:
             if ouvertes.remove(action) == nil { ouvertes.insert(action) }
+        case .position(let position): copier(positionDe: position)
         }
     }
 
     /// Le texte du trajet jusqu'à un lieu, la décision de sa ligne.
     func trajet(vers lieu: Lieu) -> String? {
         RecherchePalette.texte(de: RecherchePalette.versLieu(lieu, contexte).effet, contexte)
+    }
+
+    /// Copie le trajet vers une position du PNJ déplié ; elle et le PNJ comptent dans les habitudes.
+    private func copier(positionDe position: PNJ.Position) {
+        guard let ligne = entrees.first(where: { $0.id == deplie }), let pnj = ligne.pnj, let cle = ligne.cle,
+              let cible = positionsDeplie.first(where: { $0.position == position }),
+              let texte = RecherchePalette.texte(de: cible.entree.effet, contexte)
+        else { return NSSound.beep() }
+        UsageStore.shared.compter(.palette(.pnj))
+        if contexteImpose == nil {
+            let prefs = Preferences.shared
+            prefs.enUneEcriture {
+                prefs.paletteFrequentation.noter(cle)
+                prefs.paletteFrequentation.noter(PNJ.cle(pnj, en: position))
+            }
+        }
+        copier(texte)
     }
 
     /// Le Sanctuaire de l'Almanax, s'il est sur la carte.

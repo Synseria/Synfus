@@ -142,6 +142,59 @@ struct CapturesTests {
         }
     }
 
+    /// Des PNJ à une, deux, trois et cinq positions, dont un à cent cinquante quêtes : les cartes de leurs positions.
+    private func contexteDePNJ() -> ContextePalette {
+        var contexte = contexte()
+        let passage = { (x: Int, y: Int, quetes: [Int], sousZone: Int) in
+            PNJ.Passage(position: .init(x: x, y: y), carte: nil, sousZone: sousZone, quetes: quetes)
+        }
+        let lieux = [(10, "Village d'Amakna", "Amakna"), (11, "Champs de Cania", "Cania"), (12, "Plaine des Porcos", "Cania"),
+                     (13, "Forêt maléfique", "Amakna"), (14, "Mine de Kanabo", "Amakna")]
+        let noms = ["Chasse au Bouftou", "Le sang du wabbit", "Poils de Pétartifoux", "Les Tofus de la plaine", "Livraison urgente",
+                    "Le retour de Wogew", "Une herbe rare", "Les gelées d'Astrub", "Le crâne de Larve", "Gants de cuir"]
+        let quetes = (1...150).map { id in
+            Quete(id: id, noms: ["fr": "\(noms[id % noms.count]) \(id)"], niveau: 1, groupe: false, donjon: false,
+                  prerequis: [], critere: nil, etapes: [])
+        }
+        contexte.quetes = Quetes(
+            format: Quetes.formatActuel, date: .now, quetes: quetes,
+            pnjs: [PNJ(id: 1, noms: ["fr": "Brokkeitri"], passages: [passage(-2, 0, [1, 2, 3, 4], 10), passage(-32, -57, [5, 6], 11),
+                                                                    passage(14, 9, [7], 12)]),
+                   PNJ(id: 2, noms: ["fr": "Amayiro"], passages: [passage(-32, -57, Array(1...150), 11), passage(3, 4, [2], 10),
+                                                                  passage(8, -6, [3, 4], 12), passage(-14, 22, [5], 13),
+                                                                  passage(20, 20, [6], 14)]),
+                   PNJ(id: 3, noms: ["fr": "Brokar"], passages: [passage(5, 7, [8, 9, 10], 10)]),
+                   PNJ(id: 4, noms: ["fr": "Tiluk"], passages: [passage(-1, -1, [1, 2], 10), passage(30, -4, [3], 13)])],
+            objets: [:], monstres: [:], nomsPNJ: [:],
+            sousZones: Dictionary(uniqueKeysWithValues: lieux.map { (String($0.0), SousZoneNommee(noms: ["fr": $0.1], zone: ["fr": $0.2])) }),
+            famillesObjets: [:], familles: [:], emotes: [:], titres: [:], metiers: [:], camps: [:])
+        contexte.favoris = ["pnj:4"]
+        contexte.etiquettes = ["pnj:3": "Banque"]
+        return contexte
+    }
+
+    @Test("Captures des positions d'un PNJ", .enabled(if: dossier != nil))
+    func positionsDePNJ() throws {
+        let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
+        try FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)
+        for (nom, requete, filtre, deplie) in [("palette-pnj-3-positions", "brokkeitri", FiltrePalette.tout, true),
+                                               ("palette-pnj-5-positions", "amayiro", .tout, true),
+                                               ("palette-pnj-2-positions", "tiluk", .tout, true),
+                                               ("palette-pnj-1-position", "brokar", .tout, true),
+                                               ("palette-pnj-recherche", "bro", .tout, false),
+                                               ("palette-pnj-vue", "", .pnj, false)] {
+            let modele = PaletteModele(contexte: contexteDePNJ(), requete: requete, filtre: filtre)
+            if deplie { _ = modele.lateral(1) }
+            // La carte d'à côté : la rangée suit la sélection.
+            if nom.hasSuffix("5-positions") { _ = modele.lateral(1); _ = modele.lateral(1); _ = modele.lateral(1) }
+            let vue = PaletteVue(modele: modele)
+                .padding(24)
+                .background(Self.fondCapture)
+                .environment(\.colorScheme, Self.schema)
+            try ecrire(vue, vers: dossier.appending(path: nom + ".png"))
+        }
+    }
+
     /// Les états de la palette que la doc ne montre pas : coordonnées, perso, variables, listes vides.
     @Test("Captures des états de la palette", .enabled(if: dossier != nil && ProcessInfo.processInfo.environment["SYNFUS_CAPTURES_ETATS"] != nil))
     func etatsDeLaPalette() throws {
