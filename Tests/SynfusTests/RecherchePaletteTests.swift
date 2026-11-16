@@ -84,6 +84,25 @@ struct RecherchePaletteTests {
         #expect(RecherchePalette.entrees("voyageur", avecQuetes).filter { $0.genre == .pnj }.count == 1)
     }
 
+    @Test("La vue PNJ au repos : une carte par PNJ, favoris puis habitudes puis proximité, ↵ déplie ceux à plusieurs positions")
+    func vuePNJ() throws {
+        var avecQuetes = contexte(favoris: ["pnj:1"])
+        let passage = { (x: Int, y: Int) in PNJ.Passage(position: .init(x: x, y: y), carte: nil, sousZone: nil, quetes: [1]) }
+        let pnj = { (id: Int, nom: String, passages: [PNJ.Passage]) in PNJ(id: id, noms: ["fr": nom], passages: passages) }
+        avecQuetes.quetes = Quetes(
+            format: Quetes.formatActuel, date: .now, quetes: [],
+            pnjs: [pnj(4, "Loin", [passage(30, 30)]), pnj(3, "Proche", [passage(-2, 1)]), pnj(2, "Habitue", [passage(25, 25), passage(26, 26)]),
+                   pnj(1, "Favori", [passage(40, 40)]), pnj(5, "Milieu", [passage(-2, 9), passage(-2, 10)])],
+            objets: [:], monstres: [:], nomsPNJ: [:], sousZones: [:], famillesObjets: [:], familles: [:], emotes: [:],
+            titres: [:], metiers: [:], camps: [:])
+        avecQuetes.frequentation = FrequentationPalette(["pnj:2": .init(fois: 3, dernier: 1)])
+        let vue = RecherchePalette.entrees("", avecQuetes, filtre: .pnj)
+        #expect(vue.map(\.titre) == ["Favori", "Habitue", "Proche", "Milieu", "Loin"])
+        // Une seule carte par PNJ ; seuls ceux à plusieurs positions se déplient d'Entrée.
+        #expect(vue.count == 5 && Set(vue.map(\.id)).count == 5)
+        #expect(vue.filter(\.effet.sePlie).map(\.titre) == ["Habitue", "Milieu"])
+    }
+
     @Test("Monstres et objets du catalogue des quêtes : leur filtre, Entrée déplie où les trouver, après le reste dans « Tout »")
     func monstresEtObjets() throws {
         var avecQuetes = contexte()
