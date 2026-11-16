@@ -650,8 +650,9 @@ struct QueteVue: View {
                     // objectif doublait la hauteur de la fiche.
                     let position = coordonnee || objectif.position == nil || suggere
                         || cartes.interieurs.contient(objectif.carte)
+                    // Jamais pour le seul signal de copie : la fiche sauterait d'une ligne à chaque clic.
                     let detaille = !replie && (position || (etat.numero != nil && !valide) || (etat.nonOuvert && !valide)
-                        || copie.affiche(id) || (prefs.quetesVignettes && objectif.carte != nil))
+                        || (prefs.quetesVignettes && objectif.carte != nil))
                     VStack(alignment: .leading, spacing: metriques.ecartDetail) {
                         texteObjectif(objectif, etat: etat, replie: replie)
                         if detaille {

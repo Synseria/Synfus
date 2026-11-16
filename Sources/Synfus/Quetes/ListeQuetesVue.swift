@@ -29,7 +29,8 @@ struct ListeQuetesVue: View {
                 } else {
                     let elements = panneau.liste()
                     ForEach(Array(elements.enumerated()), id: \.offset) { _, element in
-                        ligne(element, toutEpingler: elements.contains(.toutEpingler))
+                        ligne(element, toutEpingler: elements.contains(.toutEpingler),
+                              lecture: elements.contains { if case .lireSuivi = $0 { true } else { false } })
                     }
                 }
             }
@@ -40,7 +41,7 @@ struct ListeQuetesVue: View {
     }
 
     @ViewBuilder
-    private func ligne(_ element: MenuQuetes.Element, toutEpingler: Bool) -> some View {
+    private func ligne(_ element: MenuQuetes.Element, toutEpingler: Bool, lecture lisible: Bool) -> some View {
         switch element {
         case .titre(let titre):
             Text(titre)
@@ -70,8 +71,13 @@ struct ListeQuetesVue: View {
             note(texte)
         case .geste(let geste):
             self.geste(geste)
-        // `toutEpingler` est sur la ligne de « Lire le suivi » ; le reste est du menu « ⋯ ».
-        case .toutEpingler, .toutDesepingler, .option, .affichage, .fermer, .separateur:
+        // Sur la ligne de « Lire le suivi » quand elle est là.
+        case .toutEpingler:
+            if !lisible {
+                Button(L("quete.toutEpingler")) { lecture.toutEpingler() }.buttonStyle(.bouton(.tertiaire, dense: true))
+            }
+        // Le menu « ⋯ ».
+        case .toutDesepingler, .option, .affichage, .fermer, .separateur:
             EmptyView()
         }
     }
