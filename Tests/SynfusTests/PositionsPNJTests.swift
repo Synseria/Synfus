@@ -99,7 +99,7 @@ struct PositionsPNJTests {
         // Après l'habituelle, la moins chère (-2,1 : une carte du perso).
         let premiere = cartes[1]
         #expect(premiere.position == PNJ.Position(x: -2, y: 1) && premiere.quetes == ["Cane"])
-        #expect(premiere.itineraire == L("palette.trajet.cartes", nombre: 1, 1))
+        #expect(premiere.entree.itineraire == L("palette.trajet.cartes", nombre: 1, 1))
         // Sur place : « Ici », pas « 0 carte ».
         #expect(RecherchePalette.itineraire(ItineraireZaap.Trajet(zaap: nil, cartes: 0), .fr) == L("palette.trajet.ici"))
         #expect(premiere.entree.titre == Coordonnees.texte(-2, 1) && premiere.entree.etiquette == nil)
