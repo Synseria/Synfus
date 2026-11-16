@@ -418,7 +418,7 @@ final class PaletteModele: ObservableObject {
         case .copier, .trajet:
             guard let texte = texteACopier(entree) else { return }
             copier(texte)
-        case .ouTrouver, .donjon:
+        case .ouTrouver, .donjon, .positions:
             deplie = deplie == entree.id ? nil : entree.id
             carte = cartes.premiere
         case .completer(let texte):

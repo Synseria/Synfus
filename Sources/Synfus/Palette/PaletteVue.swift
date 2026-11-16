@@ -375,7 +375,7 @@ struct PaletteVue: View {
         case .basculer: return L("palette.touche.basculer")
         case .ouvrirQuete: return L("palette.touche.ouvrir")
         case .ouTrouver: return L("palette.touche.ouTrouver")
-        case .donjon: return L("palette.touche.deplier")
+        case .donjon, .positions: return L("palette.touche.deplier")
         }
     }
 
