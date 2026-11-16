@@ -7,8 +7,6 @@ struct PositionPNJ: Equatable, Identifiable, Sendable {
     let entree: EntreePalette
     /// Les noms des quêtes qui le placent ici, par ordre alphabétique.
     let quetes: [String]
-    /// Le trajet copié, dit en clair (« 3 cartes via Village d'Amakna ») ; `nil` : position du perso inconnue.
-    let itineraire: String?
 
     var id: PNJ.Position { position }
 }
@@ -125,12 +123,12 @@ extension RecherchePalette {
                 titre: lieu.flatMap { Lieu.traduit($0.noms, contexte.langue) } ?? coordonnees,
                 sousTitre: lieu.flatMap { Lieu.traduit($0.zone, contexte.langue) },
                 etiquette: candidat.rang == habituelle ? L("palette.pnj.habituelle") : nil,
-                detail: coordonnees, carte: passage.carte, interieur: contexte.interieurs.contient(passage.carte),
+                detail: coordonnees, itineraire: itineraire(trajets[candidat.rang].trajet, contexte.langue),
+                carte: passage.carte, interieur: contexte.interieurs.contient(passage.carte),
                 effet: trajets[candidat.rang].effet)
             return PositionPNJ(position: position, entree: entree,
                                quetes: passage.quetes.compactMap { noms[$0] }
-                                   .sorted { $0.localizedStandardCompare($1) == .orderedAscending },
-                               itineraire: itineraire(trajets[candidat.rang].trajet, contexte.langue))
+                                   .sorted { $0.localizedStandardCompare($1) == .orderedAscending })
         }
     }
 }

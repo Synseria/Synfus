@@ -468,25 +468,27 @@ struct CarteZaap<Corps: View>: View {
         .contentShape(Rectangle())
     }
 
-    /// L'étiquette partage la ligne des coordonnées quand elle y entre, sinon elle a la sienne : jamais coupée.
+    /// L'étiquette à gauche, « intérieur » au-dessus des coordonnées à droite : les deux pastilles ne se
+    /// touchent jamais. L'étiquette prend sa propre ligne quand elle n'entre pas : jamais coupée.
     private var pied: some View {
-        let coordonnees = Text(entree.detail ?? "")
-            .font(Jetons.Typo.codeInterface.police)
-            .foregroundStyle(encreSecondaire)
-            .lineLimit(1)
+        let droite = VStack(alignment: .trailing, spacing: Jetons.Espace.un) {
+            if entree.interieur { EtiquetteInterieur(taille: .micro) }
+            Text(entree.detail ?? "")
+                .font(Jetons.Typo.codeInterface.police)
+                .foregroundStyle(encreSecondaire)
+                .lineLimit(1)
+        }
         return ViewThatFits(in: .horizontal) {
-            HStack(spacing: Jetons.Espace.un) {
+            HStack(alignment: .bottom, spacing: Jetons.Espace.un) {
                 if let etiquette = entree.etiquette { PastilleEtiquette(texte: etiquette) }
-                if entree.interieur { EtiquetteInterieur(taille: .micro) }
                 Spacer(minLength: 0)
-                coordonnees
+                droite
             }
             VStack(alignment: .leading, spacing: Jetons.Espace.un) {
                 if let etiquette = entree.etiquette { PastilleEtiquette(texte: etiquette) }
-                if entree.interieur { EtiquetteInterieur(taille: .micro) }
                 HStack(spacing: 0) {
                     Spacer(minLength: 0)
-                    coordonnees
+                    droite
                 }
             }
         }
