@@ -17,7 +17,7 @@ struct PaletteVue: View {
 
     /// Mesure de mise en page : trois rangées de cartes entières (deux lignes de titre et deux de sous-titre
     /// réservées, étiquette sur sa ligne) avec leurs interstices.
-    private static let hauteurCartes: CGFloat = 404
+    static let hauteurCartes: CGFloat = 404
 
     var body: some View {
         VStack(spacing: 0) {
@@ -201,6 +201,11 @@ struct PaletteVue: View {
                     guard let carte else { return }
                     defilement.scrollTo(FicheDonjonVue.ancre(carte))
                 }
+                // Une rangée de positions défile d'elle-même : la liste n'a qu'à montrer la ligne et la rangée.
+                .onChange(of: modele.position) { _, position in
+                    guard position != nil, let deplie = modele.deplie else { return }
+                    defilement.scrollTo(deplie, anchor: .top)
+                }
             }
         }
     }
@@ -270,7 +275,8 @@ struct PaletteVue: View {
             ForEach(Array(modele.entrees.enumerated()), id: \.element.id) { index, entree in
                 let deplie = modele.deplie == entree.id
                 // Le clavier dans la fiche : la ligne ne se dit plus choisie, la carte l'est.
-                LigneResultat(entree: entree, choisie: index == modele.selection && modele.carte == nil, deplie: deplie)
+                LigneResultat(entree: entree, choisie: index == modele.selection && modele.carte == nil && modele.position == nil, deplie: deplie,
+                              deplier: entree.pnj == nil ? nil : { modele.deplier(entree) })
                     .id(entree.id)
                     .onTapGesture { modele.executer(entree) }
                     .help(entree.complet)
@@ -282,7 +288,7 @@ struct PaletteVue: View {
                         switch entree.effet {
                         case .ouTrouver(let sujet): OuTrouverVue(sujet: sujet, metriques: .confort)
                         case .donjon(let id): FicheDonjonVue(id: id, modele: modele)
-                        default: EmptyView()
+                        default: if entree.pnj != nil { PositionsPNJVue(modele: modele) }
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -366,6 +372,7 @@ struct PaletteVue: View {
         guard modele.entrees.indices.contains(modele.selection) else { return L("palette.touche.copier") }
         let entree = modele.entrees[modele.selection]
         if entree.id == modele.deplie {
+            if modele.cartesPositions.valide(modele.position) != nil { return L("palette.touche.copier") }
             return modele.cartes.valide(modele.carte).map(aide) ?? L("palette.touche.replier")
         }
         switch entree.effet {
@@ -375,13 +382,13 @@ struct PaletteVue: View {
         case .basculer: return L("palette.touche.basculer")
         case .ouvrirQuete: return L("palette.touche.ouvrir")
         case .ouTrouver: return L("palette.touche.ouTrouver")
-        case .donjon: return L("palette.touche.deplier")
+        case .donjon, .positions: return L("palette.touche.deplier")
         }
     }
 
     private func aide(_ action: ActionFiche) -> String {
         switch action {
-        case .entree(let lieu): return L("palette.touche.copier")
+        case .entree: return L("palette.touche.copier")
         case .guide: return L("palette.touche.ouvrir")
         case .clef, .conseils, .monstres, .succes:
             return modele.ouvertes.contains(action) ? L("palette.touche.replier") : L("palette.touche.deplier")
@@ -396,16 +403,33 @@ struct PaletteVue: View {
     }
 }
 
+/// Les encres d'une carte, sur l'image de la carte du jeu (écrites en clair) ou sur le fond du thème.
+struct EncresCarte {
+    let encre: Color
+    /// Le trajet, en rose.
+    let accent: Color
+    let surImage: Bool
+}
+
 /// Une carte de zaap : nom et zone en haut, étiquette et coordonnées en bas. Sur l'image de la
 /// carte, le texte est clair ; sans image, il prend les encres du thème.
-private struct CarteZaap: View {
+struct CarteZaap<Corps: View>: View {
     let entree: EntreePalette
     let choisie: Bool
+    /// Ce qui prend la place entre l'en-tête et le pied : la liste des quêtes d'une position, écrite des
+    /// encres de la carte.
+    private let corps: ((EncresCarte) -> Corps)?
+    // periphery:ignore - observé pour redessiner la carte quand `vuesCartes` change
     @ObservedObject private var prefs = Preferences.shared
+
+    init(entree: EntreePalette, choisie: Bool, @ViewBuilder corps: @escaping (EncresCarte) -> Corps) {
+        (self.entree, self.choisie, self.corps) = (entree, choisie, corps)
+    }
 
     private var etat: EtatVisuel { choisie ? .choisi : .repos }
     private var surImage: Bool { FondCarte.surImage(entree.carte) }
     private var encre: Color { surImage ? Color.jeton(\.encre, en: .sombre) : etat.encre }
+    private var accent: Color { surImage ? Color.jeton(\.primaireEncre, en: .sombre) : Color.jeton(\.primaireEncre) }
     private var encreSecondaire: Color { surImage ? Color.jeton(\.encreSecondaire, en: .sombre) : etat.encreSecondaire }
     var body: some View {
         VStack(alignment: .leading, spacing: Jetons.Espace.un) {
@@ -423,7 +447,12 @@ private struct CarteZaap: View {
                     .foregroundStyle(surImage ? encre : encreSecondaire)
                     .lineLimit(2, reservesSpace: true)
             }
-            Spacer(minLength: Jetons.Espace.quatre)
+            if let corps {
+                corps(EncresCarte(encre: encre, accent: accent, surImage: surImage))
+                    .frame(maxHeight: .infinity, alignment: .top)
+            } else {
+                Spacer(minLength: Jetons.Espace.quatre)
+            }
             pied
         }
         .padding(Jetons.Espace.deux)
@@ -448,11 +477,13 @@ private struct CarteZaap: View {
         return ViewThatFits(in: .horizontal) {
             HStack(spacing: Jetons.Espace.un) {
                 if let etiquette = entree.etiquette { PastilleEtiquette(texte: etiquette) }
+                if entree.interieur { EtiquetteInterieur(taille: .micro) }
                 Spacer(minLength: 0)
                 coordonnees
             }
             VStack(alignment: .leading, spacing: Jetons.Espace.un) {
                 if let etiquette = entree.etiquette { PastilleEtiquette(texte: etiquette) }
+                if entree.interieur { EtiquetteInterieur(taille: .micro) }
                 HStack(spacing: 0) {
                     Spacer(minLength: 0)
                     coordonnees
@@ -463,12 +494,20 @@ private struct CarteZaap: View {
     }
 }
 
+extension CarteZaap where Corps == Never {
+    init(entree: EntreePalette, choisie: Bool) {
+        (self.entree, self.choisie, self.corps) = (entree, choisie, nil)
+    }
+}
+
 /// Une ligne de résultat : genre (ou pictogramme du lieu), titre, étiquette,
 /// sous-titre, détail, vue de la carte.
 struct LigneResultat: View {
     let entree: EntreePalette
     let choisie: Bool
     var deplie = false
+    /// Le clic sur le chevron d'une ligne qui ne se déplie pas d'Entrée (un PNJ à une position).
+    var deplier: (() -> Void)?
     @State private var survole = false
 
     var body: some View {
@@ -520,11 +559,18 @@ struct LigneResultat: View {
             }
             if let touche = entree.touche { ToucheRaccourci(touche) }
             if let carte = entree.carte { MiniatureCarte(carte: carte, taille: Self.vignette) }
-            if entree.effet.sePlie {
-                Image(systemName: deplie ? "chevron.down" : "chevron.right")
+            if entree.effet.sePlie || deplier != nil {
+                let chevron = Image(systemName: deplie ? "chevron.down" : "chevron.right")
                     .font(Jetons.Typo.raccourci.police)
                     .foregroundStyle(Color.jeton(\.encreSecondaire))
                     .frame(width: Jetons.Taille.case)
+                if let deplier {
+                    Button(action: deplier) { chevron.contentShape(Rectangle()) }
+                        .buttonStyle(.plain)
+                        .focusable(false)
+                } else {
+                    chevron
+                }
             }
         }
         .padding(.horizontal, Jetons.Espace.deux)

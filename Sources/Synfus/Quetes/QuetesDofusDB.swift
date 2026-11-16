@@ -303,9 +303,9 @@ enum QuetesDofusDB {
                 .map { rang, position in
                     (rang, PNJ.Passage(position: position, carte: releves[position]?.carte,
                                        sousZone: releves[position]?.sousZone,
-                                       quetes: releves[position]?.quetes.count ?? 0))
+                                       quetes: releves[position]?.quetes.sorted() ?? []))
                 }
-                .sorted { $0.1.quetes != $1.1.quetes ? $0.1.quetes > $1.1.quetes : $0.0 < $1.0 }
+                .sorted { $0.1.quetes.count != $1.1.quetes.count ? $0.1.quetes.count > $1.1.quetes.count : $0.0 < $1.0 }
                 .map(\.1)
             return PNJ(id: pnj.id, noms: pnj.name.parLangue, passages: passages)
         }

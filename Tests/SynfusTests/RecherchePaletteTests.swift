@@ -36,7 +36,7 @@ struct RecherchePaletteTests {
     func grilleDesFavoris() throws {
         let banque = try #require(Carte.integree.lieux.first { $0.nom(en: .fr) == "Banque" && $0.zone(en: .fr) == "Bonta" })
         var avecQuetes = contexte(etiquettes: ["pnj:6309": "Ama"], favoris: ["1:-31,-56", banque.cle, "pnj:6309"])
-        let passage = { (x: Int, y: Int, quetes: Int) in PNJ.Passage(position: .init(x: x, y: y), carte: nil, sousZone: nil, quetes: quetes) }
+        let passage = { (x: Int, y: Int, quetes: Int) in PNJ.Passage(position: .init(x: x, y: y), carte: nil, sousZone: nil, quetes: Array(0..<quetes)) }
         avecQuetes.quetes = Quetes(
             format: Quetes.formatActuel, date: .now, quetes: [],
             pnjs: [PNJ(id: 6309, noms: ["fr": "Amayiro"], passages: [passage(-32, -57, 101), passage(0, 0, 1)])],
@@ -46,12 +46,78 @@ struct RecherchePaletteTests {
         let favoris = entrees.prefix { $0.favori }
         #expect(Set(favoris.compactMap(\.cle)) == ["1:-31,-56", banque.cle, "pnj:6309"])
         #expect(favoris.compactMap(\.distance) == favoris.compactMap(\.distance).sorted())
-        // Le PNJ n'y paraît qu'une fois, à sa case habituelle, avec son étiquette.
+        // Le PNJ n'y paraît qu'une fois, avec son étiquette et le nombre de ses positions.
         let amayiro = try #require(favoris.first { $0.genre == .pnj })
-        #expect(amayiro.detail == Coordonnees.texte(-32, -57) && amayiro.etiquette == "Ama")
+        #expect(amayiro.detail == L("palette.pnj.positions", nombre: 2, 2) && amayiro.etiquette == "Ama")
         #expect(entrees.dropFirst(favoris.count).allSatisfy { $0.genre == .zaap && !$0.favori })
-        // Ses deux cases se cherchent, étoilées l'une et l'autre.
-        #expect(RecherchePalette.entrees("amayiro", avecQuetes).filter(\.favori).count == 2)
+        // Chercher son nom le trouve une fois, étoilé.
+        #expect(RecherchePalette.entrees("amayiro", avecQuetes).filter(\.favori).count == 1)
+    }
+
+    @Test("Une ligne par PNJ : sa position habituelle dite, le nombre de positions, le rang de la plus proche")
+    func unePnjParLigne() throws {
+        var avecQuetes = contexte()
+        let passage = { (x: Int, y: Int, quetes: Int) in
+            PNJ.Passage(position: .init(x: x, y: y), carte: 7, sousZone: nil, quetes: Array(0..<quetes))
+        }
+        avecQuetes.quetes = Quetes(
+            format: Quetes.formatActuel, date: .now, quetes: [],
+            pnjs: [PNJ(id: 1, noms: ["fr": "Voyageur"], passages: [passage(-32, -57, 5), passage(-2, 1, 1), passage(40, 40, 1)]),
+                   PNJ(id: 2, noms: ["fr": "Sédentaire"], passages: [passage(-2, 6, 3)])],
+            objets: [:], monstres: [:], nomsPNJ: [:], sousZones: [:], famillesObjets: [:], familles: [:], emotes: [:],
+            titres: [:], metiers: [:], camps: [:])
+        let pnjs = RecherchePalette.pnjs(avecQuetes)
+        #expect(pnjs.map(\.titre) == ["Voyageur", "Sédentaire"] && pnjs.map(\.cle) == ["pnj:1", "pnj:2"])
+        let (voyageur, sedentaire) = (pnjs[0], pnjs[1])
+        // Plusieurs positions : ni coordonnées, ni trajet, ni vignette — aucun ne vaudrait pour toutes.
+        #expect(voyageur.detail == L("palette.pnj.positions", nombre: 3, 3) && voyageur.pnj == 1)
+        #expect(voyageur.itineraire == nil && voyageur.carte == nil && voyageur.effet == .positions(1))
+        // Une seule : la ligne d'avant, qui copie.
+        #expect(sedentaire.detail == Coordonnees.texte(-2, 6) && sedentaire.carte == 7)
+        #expect(sedentaire.effet != .positions(2) && sedentaire.pnj == 2)
+        // Le rang suit la position la plus proche (-2,1), pas l'habituelle, lointaine.
+        let proche = try #require(voyageur.distance)
+        let loin = try #require(sedentaire.distance)
+        #expect(proche < loin)
+        let classes = RecherchePalette.entrees("", avecQuetes, filtre: .pnj)
+        #expect(classes.map(\.titre) == ["Voyageur", "Sédentaire"])
+        #expect(RecherchePalette.entrees("voyageur", avecQuetes).filter { $0.genre == .pnj }.count == 1)
+    }
+
+    @Test("Un PNJ se cherche par le lieu de chacune de ses positions, sans que sa ligne les dise")
+    func chercheParTousSesLieux() {
+        var avecQuetes = contexte()
+        let passage = { (x: Int, sousZone: Int) in PNJ.Passage(position: .init(x: x, y: 0), carte: nil, sousZone: sousZone, quetes: [1]) }
+        avecQuetes.quetes = Quetes(
+            format: Quetes.formatActuel, date: .now, quetes: [],
+            pnjs: [PNJ(id: 1, noms: ["fr": "Voyageur"], passages: [passage(1, 10), passage(2, 11)])],
+            objets: [:], monstres: [:], nomsPNJ: [:],
+            sousZones: ["10": SousZoneNommee(noms: ["fr": "Village d'Amakna"], zone: ["fr": "Amakna"]),
+                        "11": SousZoneNommee(noms: ["fr": "Cimetière des héros"], zone: ["fr": "Brâkmar"])],
+            famillesObjets: [:], familles: [:], emotes: [:], titres: [:], metiers: [:], camps: [:])
+        let trouves = RecherchePalette.entrees("voyageur cimetiere", avecQuetes).filter { $0.genre == .pnj }
+        #expect(trouves.count == 1 && trouves[0].sousTitre == "Village d'Amakna · Amakna")
+        #expect(RecherchePalette.entrees("voyageur amakna", avecQuetes).contains { $0.genre == .pnj })
+        #expect(!RecherchePalette.entrees("voyageur ailleurs", avecQuetes).contains { $0.genre == .pnj })
+    }
+
+    @Test("La vue PNJ au repos : une carte par PNJ, favoris puis habitudes puis proximité, ↵ déplie ceux à plusieurs positions")
+    func vuePNJ() throws {
+        var avecQuetes = contexte(favoris: ["pnj:1"])
+        let passage = { (x: Int, y: Int) in PNJ.Passage(position: .init(x: x, y: y), carte: nil, sousZone: nil, quetes: [1]) }
+        let pnj = { (id: Int, nom: String, passages: [PNJ.Passage]) in PNJ(id: id, noms: ["fr": nom], passages: passages) }
+        avecQuetes.quetes = Quetes(
+            format: Quetes.formatActuel, date: .now, quetes: [],
+            pnjs: [pnj(4, "Loin", [passage(30, 30)]), pnj(3, "Proche", [passage(-2, 1)]), pnj(2, "Habitue", [passage(25, 25), passage(26, 26)]),
+                   pnj(1, "Favori", [passage(40, 40)]), pnj(5, "Milieu", [passage(-2, 9), passage(-2, 10)])],
+            objets: [:], monstres: [:], nomsPNJ: [:], sousZones: [:], famillesObjets: [:], familles: [:], emotes: [:],
+            titres: [:], metiers: [:], camps: [:])
+        avecQuetes.frequentation = FrequentationPalette(["pnj:2": .init(fois: 3, dernier: 1)])
+        let vue = RecherchePalette.entrees("", avecQuetes, filtre: .pnj)
+        #expect(vue.map(\.titre) == ["Favori", "Habitue", "Proche", "Milieu", "Loin"])
+        // Une seule carte par PNJ ; seuls ceux à plusieurs positions se déplient d'Entrée.
+        #expect(vue.count == 5 && Set(vue.map(\.id)).count == 5)
+        #expect(vue.filter(\.effet.sePlie).map(\.titre) == ["Habitue", "Milieu"])
     }
 
     @Test("Monstres et objets du catalogue des quêtes : leur filtre, Entrée déplie où les trouver, après le reste dans « Tout »")
@@ -77,7 +143,7 @@ struct RecherchePaletteTests {
     @Test("Un PNJ sur une carte intérieure est dit « intérieur » : /travel mène devant")
     func interieur() throws {
         var avecQuetes = contexte()
-        let passage = { (carte: Int) in PNJ.Passage(position: .init(x: -32, y: -57), carte: carte, sousZone: nil, quetes: 1) }
+        let passage = { (carte: Int) in PNJ.Passage(position: .init(x: -32, y: -57), carte: carte, sousZone: nil, quetes: [1]) }
         avecQuetes.quetes = Quetes(
             format: Quetes.formatActuel, date: .now, quetes: [],
             pnjs: [PNJ(id: 6309, noms: ["fr": "Amayiro"], passages: [passage(217318404)]),
@@ -100,7 +166,7 @@ struct RecherchePaletteTests {
         #expect(avecQuetes.reseau.horsDesDouze(ailleurs))
         // La carte pas encore lue ne dit rien du monde : la case est supposée des Douze.
         #expect(!ReseauSousZones.vide.horsDesDouze(ailleurs))
-        let passage = { (sousZone: Int) in PNJ.Passage(position: .init(x: 4, y: -3), carte: nil, sousZone: sousZone, quetes: 1) }
+        let passage = { (sousZone: Int) in PNJ.Passage(position: .init(x: 4, y: -3), carte: nil, sousZone: sousZone, quetes: [1]) }
         avecQuetes.quetes = Quetes(
             format: Quetes.formatActuel, date: .now, quetes: [],
             pnjs: [PNJ(id: 1, noms: ["fr": "Incarnam"], passages: [passage(ailleurs)]),
@@ -153,11 +219,11 @@ struct RecherchePaletteTests {
         let texte = try #require(RecherchePalette.texte(de: bonta.effet, contexte()))
         #expect(texte.hasPrefix("/zaap -31,-56 ; "))
         let cartes = ItineraireZaap.distance((-31, -56), try #require(ItineraireZaap.cible(dans: String(texte.dropFirst(16)))))
-        #expect(bonta.itineraire == L("palette.trajet.via", nombre: cartes, "Cœur immaculé", cartes))
+        #expect(bonta.itineraire == L("palette.trajet.via", nombre: cartes, cartes, "Cœur immaculé"))
         let amakna = try #require(RecherchePalette.lieux(contexte()).first {
             $0.titre == "Banque" && $0.detail == Coordonnees.texte(2, -2)
         })
-        #expect(amakna.distance == 6 && amakna.itineraire == L("palette.trajet.aPied", nombre: 6, 6))
+        #expect(amakna.distance == 6 && amakna.itineraire == L("palette.trajet.cartes", nombre: 6, 6))
         #expect(RecherchePalette.texte(de: amakna.effet, contexte()) == "/travel 2,-2")
         // Sans position, ni cartes ni zaap : rien à dire.
         #expect(premiere("/travel banque bonta", contexte(position: nil))?.itineraire == nil)

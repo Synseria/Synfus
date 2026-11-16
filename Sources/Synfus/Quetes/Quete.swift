@@ -6,7 +6,7 @@ struct Quetes: Codable, Equatable, Sendable {
     /// La forme du fichier gardé sur le disque : une autre (ancienne) n'est
     /// pas relue, les quêtes se retéléchargent — sans quoi un cache d'avant
     /// un nouveau champ le laisserait vide trente jours.
-    static let formatActuel = 8
+    static let formatActuel = 9
     let format: Int
     let date: Date
     let quetes: [Quete]
@@ -227,8 +227,8 @@ struct PNJ: Codable, Equatable, Sendable {
         /// la première que DofusDB connaît, quand plusieurs partagent la case.
         let carte: Int?
         let sousZone: Int?
-        /// Combien de quêtes le placent ici.
-        let quetes: Int
+        /// Les quêtes (identifiants, ordre croissant) qui le placent ici.
+        let quetes: [Int]
 
         /// Dans le Monde des Douze, sauf si sa sous-zone dit le contraire.
         /// Ailleurs (Incarnam…), ni zaap ni distance d'Amakna.

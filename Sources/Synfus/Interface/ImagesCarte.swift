@@ -160,7 +160,7 @@ struct FondCarte: View {
     /// Plus large qu'une case de la grille (palette : 4 au rang sur 660 pt ;
     /// réglages : 3), que l'image remplit.
     private static let cote: CGFloat = 200
-    private static let voileTexte = 0.8
+    static let voileTexte = 0.8
     private static let bandeHaute = 0.55
     private static let bandeBasse = 0.7
 

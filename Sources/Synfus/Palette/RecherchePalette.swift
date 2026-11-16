@@ -152,6 +152,8 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
         /// Déplie sous la ligne la fiche du donjon (`FicheDonjonVue`) : un
         /// donjon de la carte ou l'un de ses boss.
         case donjon(Int)
+        /// Déplie sous la ligne les cartes des positions du PNJ (`PositionsPNJVue`) : il en a plusieurs.
+        case positions(Int)
         /// Copie le trajet vers la case, zaap compris s'il vaut le coup —
         /// calculé seulement pour l'entrée choisie (`texte(de:)`).
         case trajet(x: Int, y: Int, sousZone: Int?)
@@ -162,7 +164,7 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
         /// Entrée déplie quelque chose sous la ligne plutôt que de copier.
         var sePlie: Bool {
             switch self {
-            case .ouTrouver, .donjon: return true
+            case .ouTrouver, .donjon, .positions: return true
             case .copier, .completer, .ouvrirQuete, .trajet, .action, .basculer: return false
             }
         }
@@ -172,6 +174,8 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
     let genre: Genre
     let titre: String
     var sousTitre: String?
+    /// Les lieux des autres positions d'un PNJ : cherchés, jamais montrés.
+    var autresLieux: String?
     /// Nom, lieu et trajet en entier : l'infobulle d'une entrée coupée.
     var complet: String { [titre, sousTitre, itineraire].compactMap(\.self).joined(separator: " · ") }
     var etiquette: String?
@@ -183,7 +187,7 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
     /// trajet : tout ce qui jouxte un zaap y paraîtrait à une carte.
     var distance: Int?
     /// Le trajet copié, dit en clair : « via Coin des Bouftous · 6 cartes »,
-    /// « 6 cartes à pied ». Jamais cherché.
+    /// « 6 cartes ». Jamais cherché.
     var itineraire: String?
     /// La catégorie DofusDB d'un lieu (`CategorieLieu`) : le tri par type.
     var categorie: Int?
@@ -198,6 +202,8 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
     var suivie = false
     /// Sa carte n'est pas en extérieur : le trajet mène devant le bâtiment.
     var interieur = false
+    /// Le PNJ dont l'entrée est la ligne : ses positions se déplient en cartes.
+    var pnj: Int?
     /// Le symbole propre à l'entrée (une commande, une variable) ; `nil` : celui de son genre.
     var symbole: String?
     /// La classe d'un perso à basculer : son emblème tient la place du pictogramme.
@@ -324,7 +330,7 @@ enum RecherchePalette {
         switch effet {
         case .copier(let texte): return texte
         case .trajet(let x, let y, let sousZone): return trajet(vers: (x, y), sousZone: sousZone, contexte)
-        case .completer, .action, .ouvrirQuete, .ouTrouver, .donjon, .basculer: return nil
+        case .completer, .action, .ouvrirQuete, .ouTrouver, .donjon, .positions, .basculer: return nil
         }
     }
 
@@ -362,8 +368,7 @@ enum RecherchePalette {
     }
 
     /// Sans rien taper : les favoris, les plus choisis puis les plus proches
-    /// (`ScorePalette`), puis les autres zaaps. Un PNJ n'y paraît qu'à sa
-    /// position habituelle.
+    /// (`ScorePalette`), puis les autres zaaps.
     static func accueil(_ contexte: ContextePalette, zaaps: [EntreePalette], lieux: [EntreePalette]) -> [EntreePalette] {
         let favorisPNJ = pnjs(contexte, seulement: contexte.favoris.filter { $0.hasPrefix(PNJ.prefixeCle) })
         let favoris = (zaaps + lieux + favorisPNJ).filter(\.favori)
@@ -513,38 +518,52 @@ enum RecherchePalette {
         .alphabetiques()
     }
 
-    /// Un PNJ par position connue, avec sa zone : celle que le plus de quêtes
-    /// citent est dite habituelle, les autres « aussi ici ». `seulement` : ces
-    /// PNJ (`PNJ.cle`), à leur position habituelle.
+    /// Un PNJ par ligne, quel que soit le nombre de cases où les quêtes le placent. Sa ligne dit sa
+    /// position habituelle (celle que le plus de quêtes citent), stable quand le perso bouge ; le
+    /// rang suit la plus proche de ses positions. Plusieurs positions : ↵ les déplie en cartes
+    /// (`positions(de:)`). `seulement` : ces PNJ (`PNJ.cle`).
     static func pnjs(_ contexte: ContextePalette, seulement: Set<String>? = nil) -> [EntreePalette] {
         guard let quetes = contexte.quetes else { return [] }
-        let inconnu = L("palette.pnj")
         let choisis = seulement.map { cles in quetes.pnjs.filter { cles.contains($0.cle) } } ?? quetes.pnjs
-        return choisis.flatMap { pnj in
-            pnj.passages.prefix(seulement == nil ? .max : 1).enumerated().map { rang, passage in
-                let position = passage.position
-                let sousZone = passage.sousZone.flatMap { quetes.sousZones[String($0)] }
-                let lieu = sousZone.map {
-                    [Lieu.traduit($0.noms, contexte.langue), Lieu.traduit($0.zone, contexte.langue)]
-                        .compactMap { $0 }.joined(separator: " · ")
-                } ?? inconnu
-                let nombre = passage.quetes
-                let sousTitre = rang == 0 && pnj.passages.count > 1
-                    ? L("palette.pnj.habituel", nombre: nombre, lieu, nombre)
-                    : rang == 0 ? L("palette.pnj.cite", nombre: nombre, lieu, nombre) : L("palette.pnj.aussi", nombre: nombre, lieu, nombre)
-                let vers = versCase((position.x, position.y), sousZone: passage.sousZone,
-                                    dansLesDouze: passage.dansLesDouze(contexte.reseau), contexte)
-                return EntreePalette(id: "pnj:\(pnj.id):\(position.x),\(position.y)", genre: .pnj,
-                                     titre: Lieu.traduit(pnj.noms, contexte.langue) ?? "?", sousTitre: sousTitre,
+        return choisis.compactMap { pnj in
+            guard let habituel = pnj.passages.first else { return nil }
+            let titre = Lieu.traduit(pnj.noms, contexte.langue) ?? "?"
+            let lieu = lieuDit(habituel, quetes, contexte) ?? L("palette.pnj")
+            let trajets = pnj.passages.map { versCase($0, contexte) }
+            if pnj.passages.count > 1 {
+                return EntreePalette(id: pnj.cle, genre: .pnj, titre: titre, sousTitre: lieu,
+                                     autresLieux: pnj.passages.dropFirst().compactMap { lieuDit($0, quetes, contexte) }
+                                         .joined(separator: " "),
                                      etiquette: contexte.etiquettes[pnj.cle],
-                                     detail: Coordonnees.texte(position.x, position.y),
-                                     favori: contexte.favoris.contains(pnj.cle),
-                                     distance: vers.distance,
-                                     itineraire: itineraire(vers.trajet, contexte.langue), cle: pnj.cle, carte: passage.carte,
-                                     interieur: contexte.interieurs.contient(passage.carte),
-                                     effet: vers.effet)
+                                     detail: L("palette.pnj.positions", nombre: pnj.passages.count, pnj.passages.count),
+                                     favori: contexte.favoris.contains(pnj.cle), distance: trajets.compactMap(\.distance).min(),
+                                     cle: pnj.cle, pnj: pnj.id, effet: .positions(pnj.id))
             }
+            let vers = trajets[0]
+            let nombre = habituel.quetes.count
+            return EntreePalette(id: pnj.cle, genre: .pnj, titre: titre,
+                                 sousTitre: L("palette.pnj.cite", nombre: nombre, lieu, nombre),
+                                 etiquette: contexte.etiquettes[pnj.cle],
+                                 detail: Coordonnees.texte(habituel.position.x, habituel.position.y),
+                                 favori: contexte.favoris.contains(pnj.cle), distance: vers.distance,
+                                 itineraire: itineraire(vers.trajet, contexte.langue), cle: pnj.cle, carte: habituel.carte,
+                                 interieur: contexte.interieurs.contient(habituel.carte), pnj: pnj.id, effet: vers.effet)
         }
+    }
+
+    /// « Sous-zone · zone » d'un passage de PNJ ; `nil` quand sa sous-zone est inconnue.
+    static func lieuDit(_ passage: PNJ.Passage, _ quetes: Quetes, _ contexte: ContextePalette) -> String? {
+        passage.sousZone.flatMap { quetes.sousZones[String($0)] }.map {
+            [Lieu.traduit($0.noms, contexte.langue), Lieu.traduit($0.zone, contexte.langue)]
+                .compactMap { $0 }.joined(separator: " · ")
+        }
+    }
+
+    /// Ce qu'une entrée qui mène à ce passage de PNJ montre et fait.
+    static func versCase(_ passage: PNJ.Passage, _ contexte: ContextePalette)
+        -> (trajet: ItineraireZaap.Trajet?, distance: Int?, effet: EntreePalette.Effet) {
+        versCase((passage.position.x, passage.position.y), sousZone: passage.sousZone,
+                 dansLesDouze: passage.dansLesDouze(contexte.reseau), contexte)
     }
 
     /// Les dernières copies : cherchées comme le reste, jamais montrées au repos.
@@ -608,9 +627,11 @@ enum RecherchePalette {
 
     static func itineraire(_ trajet: ItineraireZaap.Trajet?, _ langue: Langue) -> String? {
         guard let trajet else { return nil }
-        guard let zaap = trajet.zaap else { return L("palette.trajet.aPied", nombre: trajet.cartes, trajet.cartes) }
+        guard let zaap = trajet.zaap else {
+            return trajet.cartes == 0 ? L("palette.trajet.ici") : L("palette.trajet.cartes", nombre: trajet.cartes, trajet.cartes)
+        }
         if trajet.cartes == 0 { return L("palette.trajet.zaapSeul", zaap.nom(en: langue)) }
-        return L("palette.trajet.via", nombre: trajet.cartes, zaap.nom(en: langue), trajet.cartes)
+        return L("palette.trajet.via", nombre: trajet.cartes, trajet.cartes, zaap.nom(en: langue))
     }
 
     // MARK: - Correspondance
@@ -812,12 +833,13 @@ enum RecherchePalette {
 
         /// Tout ce dont les champs dépendent : une entrée qui garde sa clé garde ses champs.
         static func cle(_ entree: EntreePalette) -> String {
-            [entree.id, entree.titre, entree.etiquette ?? "", entree.sousTitre ?? "",
+            [entree.id, entree.titre, entree.etiquette ?? "", entree.sousTitre ?? "", entree.autresLieux ?? "",
              entree.categorie.map(String.init) ?? ""].joined(separator: "\u{1F}")
         }
 
         init(_ entree: EntreePalette) {
-            self.init(titre: entree.titre, etiquette: entree.etiquette, lieu: entree.sousTitre,
+            self.init(titre: entree.titre, etiquette: entree.etiquette,
+                      lieu: [entree.sousTitre, entree.autresLieux].compactMap(\.self).joined(separator: " "),
                       categorie: entree.categorie)
         }
 

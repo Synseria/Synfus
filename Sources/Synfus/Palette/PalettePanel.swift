@@ -1,14 +1,30 @@
 import AppKit
 import SwiftUI
 
+/// Où est le caret du champ de recherche. Pur.
+enum CaretPalette {
+    /// Sans sélection, après le dernier caractère.
+    static func auBout(longueur: Int, selection: NSRange) -> Bool {
+        selection.length == 0 && selection.location >= longueur
+    }
+}
+
 /// Un panneau sans cadre qui prend le clavier sans activer Synfus : Dofus
 /// reste l'app active, et le texte copié se colle dès la palette fermée.
 /// Flèches, Entrée, Tab (filtre), Échap, ⌘E (étiquette), ⌘D (favori) et ⌘T
-/// (tri) vont au modèle, le reste au champ — ← et → aussi, hors de la grille
-/// et d'une fiche dépliée.
+/// (tri) vont au modèle, le reste au champ — ← et → aussi, hors de la grille ;
+/// → ne va au modèle que le caret au bout du texte, sans sélection ni ⇧ : sinon il
+/// déplace le caret ou étend la sélection.
 private final class PanneauPalette: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
+
+    /// → n'a plus rien à faire dans le champ : il ne ferait rien d'autre qu'aller à droite.
+    private func caretAuBout(_ event: NSEvent) -> Bool {
+        guard !event.modifierFlags.contains(.shift) else { return false }
+        guard let champ = firstResponder as? NSTextView else { return true }
+        return CaretPalette.auBout(longueur: (champ.string as NSString).length, selection: champ.selectedRange())
+    }
 
     override func sendEvent(_ event: NSEvent) {
         let modificateurs = event.modifierFlags.intersection([.command, .option, .control, .shift])
@@ -29,7 +45,7 @@ private final class PanneauPalette: NSPanel {
             case 123 where !enEdition, 124 where !enEdition:
                 let pas = event.keyCode == 123 ? -1 : 1
                 if modele.enCartes { return modele.deplacer(colonne: pas) }
-                if modele.lateral(pas) { return }
+                if pas < 0 || caretAuBout(event), modele.lateral(pas) { return }
             case 36, 76: return modele.valider()
             case 48 where !enEdition: return modele.tabulation(arriere: event.modifierFlags.contains(.shift))
             case 53: return modele.echap()
