@@ -3,6 +3,72 @@
 Une section par version, `## X.Y.Z — AAAA-MM-JJ` : la release GitHub de `vX.Y.Z` en reprend le
 contenu (`Tools/notes-de-version.sh`), et `sh build.sh --publish` refuse une version absente d'ici.
 
+## 0.14.0 — 2026-11-17
+
+### Nouveautés
+
+- **Nouvelle apparence** : barre, palette, panneaux et réglages partagent un même dessin — une
+  couleur de l'app, une teinte des fonds, des états qui se lisent pareil partout. Réglages → Thème
+  les choisit sur un aperçu de la barre et de la palette, et « Apparence » fixe clair ou sombre
+  sans suivre macOS.
+- **Palette en vues** : au repos, une rangée Accueil, Zaaps, Almanax, Donjons, Quêtes, PNJ ; dès
+  qu'on tape, les mêmes deviennent des filtres de la recherche (« Tout » en tête).
+  - **Zaaps** : la grille entière ; **Almanax** : aujourd'hui et les six jours suivants en cartes,
+    aussi en bouton dans la barre.
+  - **PNJ** : une carte par PNJ, favoris et habitudes d'abord, puis les plus proches ; ↵ ou →
+    déplie ses positions en cartes, et un PNJ se trouve par le lieu de chacune.
+  - **Fautes de frappe tolérées**, tri « Auto » par pertinence et par tes habitudes (gardées sur
+    le Mac) ; ⌘T change de tri là où il range.
+  - Des **coordonnées tapées seules** donnent « Aller en [x,y] » avec leur trajet ; le **nom d'un
+    perso** le met devant.
+  - Les variables (`%`) montrent leur valeur du moment, le pied le texte exact que ↵ va copier.
+- **Quêtes** : la liste prend la place de la fiche, une quête choisie remplace celle montrée.
+  Avancement de l'étape à côté de son titre, un clic sur « Étape n / N » ouvre la liste des étapes,
+  ressources cochables (« Tout copier » ne prend que le reste), « Tout épingler », un signe dans
+  l'en-tête quand une quête commence sur ta case.
+- **Menu de la barre de menus** : chaque personnage dit son état (à son tour, t'appelle, en
+  combat, autre bureau), « Passage automatique » s'y coche, « Zaaps favoris » en sous-menu, la
+  disposition en cours cochée, le raccourci de chaque geste au bout de sa ligne.
+- **Mises à jour** : une notification le jour où une version est trouvée, une feuille « Nouveautés
+  · Installer et relancer », « Nouveautés de la X.Y.Z » dans le menu au premier lancement qui suit,
+  et une fenêtre « À propos de Synfus » avec « Rechercher une mise à jour ».
+- **Raccourcis d'origine pour les panneaux** : ⌥⌘Q quêtes, ⌥⌘C chasse, ⌥⌘B boss. Ceux des
+  panneaux, du zaap et de l'invitation se règlent sur la page Raccourcis.
+
+### Améliorations
+
+- **Réglages** : dix pages sous quatre titres dans une barre latérale. Au premier lancement ils
+  s'ouvrent sur Général, autorisations en tête ; Général gagne un bloc « Mises à jour » (version
+  installée, dernière vérification).
+- **Barre** : clic droit sur une pastille pour l'équipe et « Déplacer à gauche / à droite »,
+  « Réduire les personnages inactifs » (emblème et touche seuls), le contour bat dans les cinq
+  dernières secondes d'un tour, un symbole par outil, infobulles avec la touche.
+- **Rangement** : le grand emplacement suit le perso que Synfus amène devant.
+- **Aide aux boss** : « Tour — » tant que le tour est inconnu, « Nouveau combat » dans le menu du
+  titre, résistances en cinq colonnes, hauteur stable d'un tour à l'autre, la mécanique à la main
+  reste là sans autorisation ; le Comte dit la règle du tour en deux mots.
+- **Chasse au trésor** : revenir à l'étape précédente, indices lus jamais tronqués, chargement dit
+  dans l'en-tête.
+- **Panneaux** : « Recentrer la barre et les panneaux » ramène un panneau perdu hors de l'écran,
+  chacun se ferme de son en-tête ou de son menu, « Copié » se signale partout par la même coche.
+- **Autorisations** : deux libellés partout, « Autoriser l'accessibilité » et « Autoriser la
+  lecture de l'écran » ; une lecture manquante se dit au même endroit dans la chasse, les boss, les
+  quêtes et le menu.
+- La palette dit pourquoi elle est vide (carte en chargement, indisponible, « N résultats dans
+  Tout ») et « position inconnue » devient un geste selon sa cause.
+
+### Changements
+
+- La palette s'ouvre toujours sur l'Accueil, sans l'almanax ni les dernières copies : l'almanax a
+  sa vue, les copies se retrouvent en tapant. « / » et « % » ne sont plus des filtres, l'invite du
+  champ les rappelle.
+
+### Corrections
+
+- « +400 % » d'Ilyzaelle s'affichait « +400 0e ».
+- Un panneau poussé à moitié hors de l'écran ne saute plus.
+- Quêtes : un objectif fait n'est plus tronqué, plus de saut au clic sur un objectif.
+
 ## 0.13.0 — 2026-11-11
 
 ### Nouveautés
