@@ -7,10 +7,9 @@ import Testing
 struct VidePaletteTests {
 
     private func vide(carte: EtatCarte = .prete, requeteVide: Bool = false, filtre: FiltrePalette = .tout,
-                      positionConnue: Bool = true, lectureAllumee: Bool = true, quetes: Bool = false,
-                      ailleurs: Int = 0) -> VidePalette {
-        VidePalette.de(carte: carte, requeteVide: requeteVide, filtre: filtre, positionConnue: positionConnue,
-                       lectureAllumee: lectureAllumee, quetesEnChargement: quetes, ailleurs: ailleurs)
+                      quetes: Bool = false, ailleurs: Int = 0) -> VidePalette {
+        VidePalette.de(carte: carte, requeteVide: requeteVide, filtre: filtre,
+                       quetesEnChargement: quetes, ailleurs: ailleurs)
     }
 
     @Test("Sans carte, rien tapé : chargement, ou carte indisponible après un échec — ↵ réessaie")
@@ -28,13 +27,6 @@ struct VidePaletteTests {
         #expect(EtatCarte.de(vide: true, echec: false) == .chargement)
         #expect(EtatCarte.de(vide: true, echec: true) == .indisponible)
         #expect(EtatCarte.de(vide: false, echec: true) == .prete)
-    }
-
-    @Test("Sous « Ici » sans position : la cause dit si la lecture est éteinte ou pas encore faite")
-    func ici() {
-        #expect(vide(filtre: .ici, positionConnue: false, lectureAllumee: false) == .iciSansLecture)
-        #expect(vide(filtre: .ici, positionConnue: false, lectureAllumee: true) == .iciPasEncoreLu)
-        #expect(vide(filtre: .ici, positionConnue: true) == .aucun)
     }
 
     @Test("Vide sous un filtre alors que « Tout » répond : la rangée y mène, ↵ aussi")

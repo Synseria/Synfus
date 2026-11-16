@@ -40,10 +40,10 @@ struct PaletteModeleTests {
         #expect(modele.selection == 2)
     }
 
-    @Test("La rangée suit l'état : trois vues et « Ici » au repos, cinq portées et « Ici » en recherche")
+    @Test("La rangée suit l'état : trois vues au repos, cinq portées en recherche")
     func jeu() {
-        #expect(FiltrePalette.jeu(enRecherche: false) == [.tout, .zaaps, .almanax, .ici])
-        #expect(FiltrePalette.jeu(enRecherche: true) == [.tout, .lieux, .quetes, .creatures, .objets, .ici])
+        #expect(FiltrePalette.jeu(enRecherche: false) == [.tout, .zaaps, .almanax])
+        #expect(FiltrePalette.jeu(enRecherche: true) == [.tout, .lieux, .quetes, .creatures, .objets])
         let modele = PaletteModele(contexte: ContextePalette())
         #expect(modele.jeu == FiltrePalette.jeu(enRecherche: false))
         modele.requete = "a"
@@ -75,28 +75,17 @@ struct PaletteModeleTests {
         #expect(modele.filtre == .almanax && modele.surAlmanax)
     }
 
-    @Test("« Ici » reste choisi quand on tape : c'est un filtre, pas une vue qu'on quitte")
-    func iciResteChoisi() {
-        let modele = PaletteModele(contexte: ContextePalette())
-        modele.choisir(.ici)
-        modele.requete = "b"
-        #expect(modele.filtre == .ici)
-        modele.requete = ""
-        #expect(modele.filtre == .ici)
-    }
-
     @Test("Tab et ⇧Tab parcourent le jeu affiché, en boucle")
     func tabulation() {
         let modele = PaletteModele(contexte: ContextePalette())
         modele.tabulation()
         #expect(modele.filtre == .zaaps)
         modele.tabulation()
-        modele.tabulation()
-        #expect(modele.filtre == .ici)
+        #expect(modele.filtre == .almanax)
         modele.tabulation()
         #expect(modele.filtre == .tout)
         modele.tabulation(arriere: true)
-        #expect(modele.filtre == .ici)
+        #expect(modele.filtre == .almanax)
         modele.requete = "b"
         modele.choisir(.tout)
         modele.tabulation()
@@ -116,7 +105,7 @@ struct PaletteModeleTests {
 
     @Test("Le tri ne se montre que là où il range : ni l'Accueil ni l'almanax, au repos")
     func triSeulementOuIlRange() {
-        for (filtre, agit) in [(FiltrePalette.tout, false), (.almanax, false), (.zaaps, true), (.ici, true)] {
+        for (filtre, agit) in [(FiltrePalette.tout, false), (.almanax, false), (.zaaps, true)] {
             #expect(filtre.triAgit(enRecherche: false) == agit)
             #expect(filtre.triAgit(enRecherche: true))
         }
