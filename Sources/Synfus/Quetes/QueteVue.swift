@@ -1,8 +1,10 @@
 import SwiftUI
 
-/// Les quêtes épinglées : un en-tête d'une ligne (le menu des quêtes et du
-/// suivi lu à l'écran), puis les ressources à réunir, l'étape en cours
-/// (consigne, objectifs, récompenses) et les quêtes qui s'ouvrent ensuite. Un
+/// Le panneau des quêtes : un en-tête d'une ligne (le nom de la quête montrée,
+/// la recherche, « ⋯ »), puis sa fiche — étape en cours sur une ligne,
+/// ressources à réunir, consigne, objectifs, récompenses, quêtes qui s'ouvrent
+/// ensuite. Un clic sur le nom met la liste des quêtes à la place de la fiche
+/// (`ListeQuetesVue`) : en choisir une y revient. Un
 /// clic sur une ressource copie son nom (pour l'hôtel de vente), sur un
 /// objectif son trajet, zaap compris — et le met en cours ; seule la coche le
 /// valide. Un objectif fait reste à sa place, grisé, sans sa position ; au
@@ -35,8 +37,9 @@ struct QueteVue: View {
     /// Les persos lus à l'étape montrée de la fiche donnée.
     var lusImposes: [HistoriqueSuivi.EtapeLue] = []
 
+    /// `nil` : la liste des quêtes — demandée au titre, ou faute de quête à montrer.
     private var fiche: FicheQuete? {
-        ficheImposee ?? panneau.idMontre.flatMap { store.fiche($0) }
+        ficheImposee ?? (panneau.enListe ? nil : panneau.idMontre.flatMap { store.fiche($0) })
     }
 
     private var metriques: MetriquesQuete { .pour(compact: prefs.quetesCompact) }
@@ -58,7 +61,7 @@ struct QueteVue: View {
                 ScrollViewReader { defilement in
                     ScrollView {
                         VStack(alignment: .leading, spacing: metriques.ecartSections) {
-                            entete(fiche).id(Self.haut)
+                            if aUnEntete(fiche) { entete(fiche) }
                             let ressources = fiche.ressources.filter { !(prefs.quetesMasquerObjets && $0.objetDeQuete) }
                             if !ressources.isEmpty { self.ressources(ressources, quete: fiche.id) }
                             if !fiche.etapes.isEmpty { etape(fiche) }
@@ -66,15 +69,13 @@ struct QueteVue: View {
                         }
                         .padding(metriques.marge)
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .id(Self.haut)
                     }
-                    // Une bande réservée à la poignée de redimensionnement : aucune ligne ne passe
-                    // dessous, même en défilant (une marge dans le contenu ne protège que la dernière).
-                    .padding(.bottom, Jetons.Taille.touche + 2 * Jetons.Espace.un)
                     .onChange(of: fiche.id) { defilement.scrollTo(Self.haut, anchor: .top) }
                     .onChange(of: remontees) { defilement.scrollTo(Self.haut, anchor: .top) }
                 }
             } else {
-                vide
+                ListeQuetesVue(metriques: metriques)
             }
         }
         .frame(minWidth: QuetePanel.tailleMinimale.width, maxWidth: .infinity,
@@ -83,112 +84,62 @@ struct QueteVue: View {
         .bordsRedimensionnables(coin: poignee)
     }
 
-    /// Sans quête épinglée : celles que le suivi du jeu montre, à épingler
-    /// d'un clic, et où en chercher une autre. Quêtes indisponibles : le nom,
-    /// et de quoi réessayer.
-    private var vide: some View {
-        VStack(spacing: 0) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: Jetons.Espace.deux) {
-                    if !previews.authorized { LigneAutorisation() }
-                    if store.quetes == nil, !store.chargement, store.echec != nil {
-                        Text(L("quete.indisponible"))
-                            .font(Jetons.Typo.note.police)
-                            .foregroundStyle(Color.jeton(\.alerte))
-                        Button(L("commun.reessayer")) { Task { try? await store.mettreAJour() } }
-                    } else {
-                        Text(store.chargement ? L("palette.quetes.chargement") : L("quete.aucune"))
-                            .font(Jetons.Typo.note.police)
-                            .foregroundStyle(Color.jeton(\.encreSecondaire))
-                            .help(L("quete.aucune.aide"))
-                        let lues = lecture.reconnues.compactMap { reconnue in store.nom(reconnue.id).map { (reconnue, $0) } }
-                        if !lues.isEmpty {
-                            HStack {
-                                Text(L("quete.vide.suivi")).font(Jetons.Typo.raccourci.police).foregroundStyle(Color.jeton(\.encreSecondaire))
-                                Spacer(minLength: Jetons.Espace.un)
-                                if lues.count > 1 {
-                                    Button(L("quete.toutEpingler")) { lecture.toutEpingler() }
-                                        .buttonStyle(.bouton(.tertiaire, dense: true))
-                                }
-                            }
-                            ForEach(lues, id: \.0.id) { reconnue, nom in
-                                Button { lecture.choisir(reconnue) } label: {
-                                    HStack(alignment: .firstTextBaseline, spacing: Jetons.Espace.un) {
-                                        Image(systemName: "pin").foregroundStyle(Color.jeton(\.encreSecondaire))
-                                        Text(nom).multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
-                                        Spacer(minLength: Jetons.Espace.un)
-                                        if let etape = reconnue.etape {
-                                            Text(L("quete.vide.etape", etape + 1))
-                                                .font(Jetons.Typo.petit.police)
-                                                .foregroundStyle(Color.jeton(\.encreSecondaire))
-                                                .lineLimit(1)
-                                        }
-                                    }
-                                    .padding(.horizontal, Jetons.Espace.deux)
-                                    .padding(.vertical, Jetons.Espace.un)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                }
-                                .buttonStyle(.etat(nue: true))
-                            }
-                        }
-                    }
-                }
-                .padding(Jetons.Espace.quatre)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            Button(L("quete.chercher")) {
-                PalettePanel.shared.ouvrir()
-                PaletteModele.shared.requete = "/quete "
-            }
-            .buttonStyle(.bouton(.principal, dense: true))
-            .padding(.horizontal, Jetons.Espace.quatre)
-            // Au-dessus de la bande de la poignée de redimensionnement.
-            .padding(.bottom, Jetons.Taille.touche + 2 * Jetons.Espace.un)
-            .padding(.top, Jetons.Espace.un)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    /// Le coin bas droit, à saisir pour agrandir le panneau.
+    /// La marque du coin bas droit, à saisir pour agrandir le panneau.
     private var poignee: some View {
         Image(systemName: "arrow.down.right")
             .font(Jetons.Typo.micro.police)
             .foregroundStyle(Color.jeton(\.encreTertiaire))
-            .frame(width: Jetons.Taille.touche, height: Jetons.Taille.touche)
-            .padding(Jetons.Espace.un)
     }
 
     // MARK: - En-tête du panneau
 
-    /// Le menu des quêtes au nom de la montrée, seul endroit où il paraît : on y désépingle,
-    /// et le panneau se ferme par le menu de la barre de menus. Tout l'en-tête déplace
-    /// le panneau ; un clic sur le titre ouvre le menu (`EnTetePanneau`).
+    /// Le nom de la quête montrée : un clic met la liste des quêtes à la place de la fiche, un
+    /// second y revient. Tout l'en-tête déplace le panneau (`EnTetePanneau`) ; il se ferme par « ⋯ ».
     private var enTete: some View {
-        let montree = ficheImposee?.id ?? panneau.idMontre
-        return EnTetePanneau(icone: BoutonBarre.quetes.symbole, teinte: Color.jeton(\.primaire),
-                             menu: ficheImposee == nil ? { @MainActor in QuetePanel.shared.menu() } : nil) {
-            menuQuetes(titre: ficheImposee?.nom ?? montree.flatMap { store.nom($0) } ?? L("quete.menu.titre"))
+        let enFiche = fiche != nil
+        let titre = enFiche ? (ficheImposee?.nom ?? panneau.idMontre.flatMap { store.nom($0) } ?? L("quete.menu.titre"))
+                            : L("quete.menu.titre")
+        let basculer: (@MainActor () -> Void)? = ficheImposee == nil && panneau.idMontre != nil
+            ? { @MainActor in QuetePanel.shared.enListe.toggle() } : nil
+        return EnTetePanneau(icone: BoutonBarre.quetes.symbole, teinte: Color.jeton(\.primaire), clic: basculer) {
+            titreQuetes(titre, enFiche: enFiche, bascule: basculer != nil || ficheImposee != nil)
             if lecture.etat == .enCours { ProgressView().controlSize(.mini).padding(.leading, Jetons.Espace.un) }
-        } boutons: {}
+        } boutons: {
+            BoutonEnTete(icone: "magnifyingglass", aide: L("quete.chercher"), discret: true) {
+                PalettePanel.shared.ouvrir()
+                PaletteModele.shared.requete = "/quete "
+            }
+            BoutonEnTete(icone: "ellipsis", aide: L("quete.menu.affichage"), discret: true) {
+                QuetePanel.shared.menu().popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
+            }
+        }
     }
 
-    /// Le nom de la quête montrée, ▾ : le menu (`QuetePanel.menu`, ouvert par
-    /// `EnTetePanneau`). Une pastille y compte les quêtes du suivi que le
+    /// Le titre et ce qu'il annonce : la liste derrière lui, les quêtes d'ici et du suivi que le
     /// panneau n'a pas encore.
-    private func menuQuetes(titre: String) -> some View {
+    private func titreQuetes(_ titre: String, enFiche: Bool, bascule: Bool) -> some View {
         let nouvelles = MenuQuetes.nouvelles(lecture.reconnues, epinglees: prefs.quetesEpinglees)
         return HStack(spacing: Jetons.Espace.un) {
+            if bascule, !enFiche {
+                Image(systemName: "chevron.left")
+                    .font(Jetons.Typo.micro.police).foregroundStyle(Color.jeton(\.encreSecondaire))
+                    .help(L("quete.liste.retour"))
+            }
             Text(titre).font(metriques.titreFort.police).lineLimit(2).fixedSize(horizontal: false, vertical: true)
                 .help(titre)
-            Image(systemName: "chevron.down").font(Jetons.Typo.micro.police).foregroundStyle(Color.jeton(\.encreSecondaire))
-            let ici = ficheImposee == nil ? (QuetePanel.shared.ici()?.aEpingler(prefs.quetesEpinglees).count ?? 0) : 0
+            if bascule, enFiche {
+                Image(systemName: "list.bullet")
+                    .font(Jetons.Typo.micro.police).foregroundStyle(Color.jeton(\.encreSecondaire))
+                    .help(L("quete.liste.aide"))
+            }
+            let ici = ficheImposee == nil && enFiche ? (QuetePanel.shared.ici()?.aEpingler(prefs.quetesEpinglees).count ?? 0) : 0
             if ici > 0 {
                 Image(systemName: "exclamationmark.bubble")
                     .font(Jetons.Typo.petit.police)
                     .foregroundStyle(Color.jeton(\.safranTexte))
                     .help(L("quete.ici.aide", nombre: ici, ici))
             }
-            if nouvelles > 0, ficheImposee == nil {
+            if nouvelles > 0, ficheImposee == nil, enFiche {
                 Text("\(nouvelles)")
                     .font(Jetons.Typo.micro.police)
                     .foregroundStyle(Color.jeton(\.encreSurPrimaire))
@@ -199,47 +150,68 @@ struct QueteVue: View {
         }
         .padding(.horizontal, Jetons.Espace.un)
         .padding(.vertical, Jetons.Espace.un)
-        .background(RoundedRectangle(cornerRadius: Jetons.Rayon.controle).fill(Color.jeton(\.creux)))
     }
 
     // MARK: - En-tête
+    // MARK: - En-tête
 
-    /// Le niveau et le guide, sous les étiquettes. Le nom est au titre du panneau.
+    /// Ce que la quête exige, et le geste qui la retire une fois finie ; rien le plus souvent.
+    /// Niveau, étape, avancement et guide tiennent sur la ligne de l'étape (`ligneEtape`).
     private func entete(_ fiche: FicheQuete) -> some View {
-        let niveau = Text(L("quete.niveau", nombre: fiche.etapes.count, fiche.niveau, fiche.etapes.count))
+        let exigences = Self.exigences(fiche.exigences, classes: ClassesStore.shared.catalogue)
         return VStack(alignment: .leading, spacing: metriques.ecartLignes) {
-            if fiche.groupe || fiche.donjon {
-                HStack(spacing: Jetons.Espace.un) { badges(fiche) }
-            }
-            HStack(spacing: Jetons.Espace.un) {
-                niveau
-                Spacer(minLength: Jetons.Espace.un)
-                boutonGuide(fiche)
-            }
-            .font(metriques.detail.police)
-            .foregroundStyle(Color.jeton(\.encreSecondaire))
-            if let exigences = Self.exigences(fiche.exigences, classes: ClassesStore.shared.catalogue) {
+            if let exigences {
                 Label(L("quete.exigences", exigences), systemImage: "lock")
                     .font(metriques.detail.police)
                     .foregroundStyle(Color.jeton(\.safranTexte))
                     .fixedSize(horizontal: false, vertical: true)
             }
-            // Sortie du suivi du jeu entre deux lectures (`HistoriqueSuivi`) :
-            // finie, sans doute, mais seul le joueur le sait.
-            if ficheImposee == nil, lecture.terminees.contains(fiche.id) {
+            if terminee(fiche) {
                 Button { QuetePanel.shared.desepingler(fiche.id) } label: {
                     Label(L("quete.terminee"), systemImage: "checkmark.circle")
                 }
                 .buttonStyle(.bouton(.secondaire, dense: true))
                 .help(L("quete.terminee.aide"))
             }
+            if fiche.etapes.isEmpty { ligneQuete(fiche) }
         }
     }
 
+    /// Sortie du suivi du jeu entre deux lectures (`HistoriqueSuivi`) : finie, sans doute, mais
+    /// seul le joueur le sait.
+    private func terminee(_ fiche: FicheQuete) -> Bool {
+        ficheImposee == nil && lecture.terminees.contains(fiche.id)
+    }
+
+    /// Sans rien à dire, pas d'en-tête : vide, il prendrait encore l'écart d'une section.
+    private func aUnEntete(_ fiche: FicheQuete) -> Bool {
+        !fiche.exigences.isEmpty || terminee(fiche) || fiche.etapes.isEmpty
+    }
+
+    /// Niveau, « en groupe », « donjon » : ce qui ne change pas d'une étape à l'autre, en tête de sa ligne.
     @ViewBuilder
-    private func badges(_ fiche: FicheQuete) -> some View {
-        if fiche.groupe { badge(L("quete.groupe"), icone: "person.3") }
-        if fiche.donjon { badge(L("quete.donjon"), icone: "building.columns") }
+    private func reperes(_ fiche: FicheQuete) -> some View {
+        Text(L("quete.niveauCourt", fiche.niveau))
+            .font(metriques.detail.police).foregroundStyle(Color.jeton(\.encreSecondaire)).fixedSize()
+        if fiche.groupe { repere("person.3", L("quete.groupe")) }
+        if fiche.donjon { repere("building.columns", L("quete.donjon")) }
+    }
+
+    private func repere(_ icone: String, _ aide: String) -> some View {
+        Image(systemName: icone)
+            .font(metriques.detail.police)
+            .foregroundStyle(Color.jeton(\.safranTexte))
+            .help(aide)
+            .accessibilityLabel(aide)
+    }
+
+    /// Une quête sans étape connue : ses repères et son guide.
+    private func ligneQuete(_ fiche: FicheQuete) -> some View {
+        HStack(spacing: Jetons.Espace.un) {
+            reperes(fiche)
+            Spacer(minLength: 0)
+            boutonGuide(fiche)
+        }
     }
 
     private func boutonGuide(_ fiche: FicheQuete) -> some View {
@@ -267,17 +239,6 @@ struct QueteVue: View {
             }
         }
         return parties.isEmpty ? nil : parties.joined(separator: " · ")
-    }
-
-    private func badge(_ texte: String, icone: String) -> some View {
-        Label(texte, systemImage: icone)
-            .font(metriques.detail.police)
-            .lineLimit(1)
-            .fixedSize()
-            .padding(.horizontal, Jetons.Espace.un)
-            .padding(.vertical, Jetons.Espace.un)
-            .background(Capsule().fill(Color.jeton(\.safranFond)))
-            .foregroundStyle(Color.jeton(\.safranTexte))
     }
 
     // MARK: - Ressources
@@ -387,35 +348,12 @@ struct QueteVue: View {
             ? Self.tournee(etape, aFaire: aFaire, valides: coches, reseau: CarteStore.shared.reseau) : []
         let numeros = Dictionary(uniqueKeysWithValues: tournee.enumerated().map { ($1, $0 + 1) })
         return VStack(alignment: .leading, spacing: metriques.ecartLignes) {
-            if plusieurs {
-                HStack(spacing: Jetons.Espace.un) {
-                    Button { changerEtape(fiche, rang - 1) } label: { Image(systemName: "chevron.left") }
-                        .disabled(rang == 0)
-                        .aide(L("quete.etapePrecedente"))
-                    choixEtape(fiche, rang: rang, etape: etape)
-                    persosLus(lus)
-                    Spacer(minLength: 0)
-                    avancement(etape, valides: coches)
-                    Button { changerEtape(fiche, rang + 1) } label: { Image(systemName: "chevron.right") }
-                        .disabled(rang >= fiche.etapes.count - 1)
-                        .aide(L("quete.etapeSuivante"))
-                }
-                .buttonStyle(.bouton(.tertiaire, dense: true))
-                .tint(Color.jeton(\.encreSecondaire))
-            } else {
-                HStack(spacing: Jetons.Espace.un) {
-                    titreSection(L("quete.objectifs"))
-                    persosLus(lus)
-                    Spacer(minLength: 0)
-                    avancement(etape, valides: coches)
-                }
-            }
+            ligneEtape(fiche, rang: rang, lus: lus, valides: coches)
             if prefs.quetesConsigne, let description = etape.description {
                 Text(description)
                     .font(metriques.consigne.police)
                     .foregroundStyle(Color.jeton(\.encreSecondaire))
                     .fixedSize(horizontal: false, vertical: true)
-                    .padding(.bottom, Jetons.Espace.un)
             }
             let repliees = Set(etape.objectifs.filter { coches.contains($0.id) && !copie.affiche(Self.idLigne($0)) }.map(\.id))
             let coordonnees = CoordonneesObjectifs.affichees(etape.objectifs, repliees: repliees)
@@ -445,6 +383,79 @@ struct QueteVue: View {
         }
     }
 
+    /// La ligne de l'étape, la seule d'en-tête de la fiche : niveau, ‹ étape ›, nom de l'étape,
+    /// persos lus, avancement, guide. Sur une ligne quand tout y tient entier ; sinon le nom passe
+    /// dessous, puis, panneau étroit, niveau et persos avec lui. Rien ne se tronque ni ne déborde.
+    private func ligneEtape(_ fiche: FicheQuete, rang: Int, lus: [HistoriqueSuivi.EtapeLue], valides: Set<Int>) -> some View {
+        let plusieurs = fiche.etapes.count > 1
+        let etape = fiche.etapes[rang]
+        let nom = plusieurs && etape.nom != fiche.nom ? etape.nom : nil
+        let navigation = HStack(spacing: Jetons.Espace.un) {
+            if plusieurs {
+                Group {
+                    Button { changerEtape(fiche, rang - 1) } label: { Image(systemName: "chevron.left") }
+                        .disabled(rang == 0)
+                        .aide(L("quete.etapePrecedente"))
+                    choixEtape(fiche, rang: rang)
+                    Button { changerEtape(fiche, rang + 1) } label: { Image(systemName: "chevron.right") }
+                        .disabled(rang >= fiche.etapes.count - 1)
+                        .aide(L("quete.etapeSuivante"))
+                }
+                .buttonStyle(.bouton(.tertiaire, dense: true))
+                .tint(Color.jeton(\.encreSecondaire))
+            } else {
+                titreSection(L("quete.objectifs")).fixedSize()
+            }
+        }
+        let fin = HStack(spacing: Jetons.Espace.un) {
+            avancement(etape, valides: valides)
+            boutonGuide(fiche)
+        }
+        return ViewThatFits(in: .horizontal) {
+            HStack(spacing: Jetons.Espace.un) {
+                reperes(fiche)
+                navigation
+                if let nom { titreSection(nom).lineLimit(1) }
+                persosLus(lus)
+                Spacer(minLength: 0)
+                fin
+            }
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(spacing: Jetons.Espace.un) {
+                    reperes(fiche)
+                    navigation
+                    persosLus(lus)
+                    Spacer(minLength: 0)
+                    fin
+                }
+                if let nom { titreSection(nom).fixedSize(horizontal: false, vertical: true) }
+            }
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(spacing: Jetons.Espace.un) {
+                    navigation
+                    Spacer(minLength: 0)
+                    fin
+                }
+                HStack(alignment: .firstTextBaseline, spacing: Jetons.Espace.un) {
+                    reperes(fiche)
+                    persosLus(lus)
+                    if let nom { titreSection(nom).fixedSize(horizontal: false, vertical: true) }
+                }
+            }
+            // À la largeur minimale du panneau : la navigation seule sur sa ligne.
+            VStack(alignment: .leading, spacing: 0) {
+                navigation
+                HStack(spacing: Jetons.Espace.un) {
+                    reperes(fiche)
+                    persosLus(lus)
+                    Spacer(minLength: 0)
+                    fin
+                }
+                if let nom { titreSection(nom).fixedSize(horizontal: false, vertical: true) }
+            }
+        }
+    }
+
     /// « Étape suivante », en pied ; en avant quand tous les objectifs de
     /// l'étape sont cochés.
     @ViewBuilder
@@ -463,11 +474,9 @@ struct QueteVue: View {
         .padding(.top, metriques.ecartLignes)
     }
 
-    /// Le titre de l'étape, qui ouvre la liste des étapes de la quête.
-    private func choixEtape(_ fiche: FicheQuete, rang: Int, etape: FicheQuete.Etape) -> some View {
-        let titre = etape.nom == fiche.nom ? L("quete.etape", rang + 1, fiche.etapes.count)
-                                           : L("quete.etapeSur", rang + 1, fiche.etapes.count, etape.nom)
-        return Button {
+    /// « Étape 3 / 19 », qui ouvre la liste des étapes de la quête.
+    private func choixEtape(_ fiche: FicheQuete, rang: Int) -> some View {
+        Button {
             let valides = valides(fiche.id)
             let entrees = MenuEtapes.entrees(fiche.etapes.map { ($0.nom, !$0.objectifs.isEmpty && $0.faits(valides: valides) == $0.objectifs.count) },
                                              montree: rang)
@@ -475,11 +484,9 @@ struct QueteVue: View {
                 .popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
         } label: {
             HStack(spacing: Jetons.Espace.un) {
-                titreSection(titre).fixedSize(horizontal: false, vertical: true)
+                titreSection(L("quete.etape", rang + 1, fiche.etapes.count)).fixedSize()
                 Image(systemName: "chevron.down").font(Jetons.Typo.micro.police)
             }
-            .padding(.horizontal, Jetons.Espace.un)
-            .padding(.vertical, Jetons.Espace.un)
         }
         .buttonStyle(.etat(nue: true))
         .foregroundStyle(Color.jeton(\.encreSecondaire))
@@ -640,9 +647,15 @@ struct QueteVue: View {
                 // Fait et sans trajet, la ligne n'a plus rien à faire.
                 let action: (() -> Void)? = valide && objectif.position == nil ? nil : { copierTrajet(objectif, quete: quete) }
                 ligneCopiable(id: id, aide: Self.aide(objectif), action: action) {
-                    VStack(alignment: .leading, spacing: Jetons.Espace.un) {
+                    // Le détail seulement s'il dit quelque chose : une ligne vide sous chaque
+                    // objectif doublait la hauteur de la fiche.
+                    let position = coordonnee || objectif.position == nil || suggere
+                        || cartes.interieurs.contient(objectif.carte)
+                    let detaille = !replie && (position || (etat.numero != nil && !valide) || (etat.nonOuvert && !valide)
+                        || copie.affiche(id) || (prefs.quetesVignettes && objectif.carte != nil))
+                    VStack(alignment: .leading, spacing: metriques.ecartDetail) {
                         texteObjectif(objectif, etat: etat, replie: replie)
-                        if !replie {
+                        if detaille {
                             HStack(spacing: Jetons.Espace.un) {
                                 if let numero = etat.numero, !valide {
                                     Text(L("quete.ordre", numero))
@@ -729,12 +742,12 @@ struct QueteVue: View {
 
     // MARK: - Suivantes
 
-    /// Les quêtes que celle-ci ouvre : un clic l'épingle et la montre.
+    /// Les quêtes que celle-ci ouvre : un clic la montre à sa place.
     private func suivantes(_ fiche: FicheQuete) -> some View {
         VStack(alignment: .leading, spacing: metriques.ecartLignes) {
             titreSection(L("quete.suivantes"))
             ForEach(fiche.suivantes, id: \.id) { suivante in
-                ligneCopiable(id: "suivante:\(suivante.id)", aide: nil, action: { QuetePanel.shared.ouvrir(suivante.id) }) {
+                ligneCopiable(id: "suivante:\(suivante.id)", aide: nil, action: { QuetePanel.shared.ouvrirALaPlace(suivante.id) }) {
                     HStack(alignment: .firstTextBaseline, spacing: Jetons.Espace.un) {
                         Image(systemName: "arrow.turn.down.right")
                             .font(metriques.icone.police)
