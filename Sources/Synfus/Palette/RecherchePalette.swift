@@ -174,6 +174,8 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
     let genre: Genre
     let titre: String
     var sousTitre: String?
+    /// Les lieux des autres positions d'un PNJ : cherchés, jamais montrés.
+    var autresLieux: String?
     /// Nom, lieu et trajet en entier : l'infobulle d'une entrée coupée.
     var complet: String { [titre, sousTitre, itineraire].compactMap(\.self).joined(separator: " · ") }
     var etiquette: String?
@@ -185,7 +187,7 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
     /// trajet : tout ce qui jouxte un zaap y paraîtrait à une carte.
     var distance: Int?
     /// Le trajet copié, dit en clair : « via Coin des Bouftous · 6 cartes »,
-    /// « 6 cartes à pied ». Jamais cherché.
+    /// « 6 cartes ». Jamais cherché.
     var itineraire: String?
     /// La catégorie DofusDB d'un lieu (`CategorieLieu`) : le tri par type.
     var categorie: Int?
@@ -530,6 +532,8 @@ enum RecherchePalette {
             let trajets = pnj.passages.map { versCase($0, contexte) }
             if pnj.passages.count > 1 {
                 return EntreePalette(id: pnj.cle, genre: .pnj, titre: titre, sousTitre: lieu,
+                                     autresLieux: pnj.passages.dropFirst().compactMap { lieuDit($0, quetes, contexte) }
+                                         .joined(separator: " "),
                                      etiquette: contexte.etiquettes[pnj.cle],
                                      detail: L("palette.pnj.positions", nombre: pnj.passages.count, pnj.passages.count),
                                      favori: contexte.favoris.contains(pnj.cle), distance: trajets.compactMap(\.distance).min(),
@@ -829,12 +833,13 @@ enum RecherchePalette {
 
         /// Tout ce dont les champs dépendent : une entrée qui garde sa clé garde ses champs.
         static func cle(_ entree: EntreePalette) -> String {
-            [entree.id, entree.titre, entree.etiquette ?? "", entree.sousTitre ?? "",
+            [entree.id, entree.titre, entree.etiquette ?? "", entree.sousTitre ?? "", entree.autresLieux ?? "",
              entree.categorie.map(String.init) ?? ""].joined(separator: "\u{1F}")
         }
 
         init(_ entree: EntreePalette) {
-            self.init(titre: entree.titre, etiquette: entree.etiquette, lieu: entree.sousTitre,
+            self.init(titre: entree.titre, etiquette: entree.etiquette,
+                      lieu: [entree.sousTitre, entree.autresLieux].compactMap(\.self).joined(separator: " "),
                       categorie: entree.categorie)
         }
 

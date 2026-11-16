@@ -84,6 +84,23 @@ struct RecherchePaletteTests {
         #expect(RecherchePalette.entrees("voyageur", avecQuetes).filter { $0.genre == .pnj }.count == 1)
     }
 
+    @Test("Un PNJ se cherche par le lieu de chacune de ses positions, sans que sa ligne les dise")
+    func chercheParTousSesLieux() {
+        var avecQuetes = contexte()
+        let passage = { (x: Int, sousZone: Int) in PNJ.Passage(position: .init(x: x, y: 0), carte: nil, sousZone: sousZone, quetes: [1]) }
+        avecQuetes.quetes = Quetes(
+            format: Quetes.formatActuel, date: .now, quetes: [],
+            pnjs: [PNJ(id: 1, noms: ["fr": "Voyageur"], passages: [passage(1, 10), passage(2, 11)])],
+            objets: [:], monstres: [:], nomsPNJ: [:],
+            sousZones: ["10": SousZoneNommee(noms: ["fr": "Village d'Amakna"], zone: ["fr": "Amakna"]),
+                        "11": SousZoneNommee(noms: ["fr": "Cimetière des héros"], zone: ["fr": "Brâkmar"])],
+            famillesObjets: [:], familles: [:], emotes: [:], titres: [:], metiers: [:], camps: [:])
+        let trouves = RecherchePalette.entrees("voyageur cimetiere", avecQuetes).filter { $0.genre == .pnj }
+        #expect(trouves.count == 1 && trouves[0].sousTitre == "Village d'Amakna · Amakna")
+        #expect(RecherchePalette.entrees("voyageur amakna", avecQuetes).contains { $0.genre == .pnj })
+        #expect(!RecherchePalette.entrees("voyageur ailleurs", avecQuetes).contains { $0.genre == .pnj })
+    }
+
     @Test("La vue PNJ au repos : une carte par PNJ, favoris puis habitudes puis proximité, ↵ déplie ceux à plusieurs positions")
     func vuePNJ() throws {
         var avecQuetes = contexte(favoris: ["pnj:1"])
