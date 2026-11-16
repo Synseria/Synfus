@@ -31,6 +31,7 @@ struct CapturesTests {
         contexte.invitationEquipe = "/invite Brok; /invite Cid"
         contexte.invitations = [(nom: "Brok", commande: "/invite Brok"), (nom: "Cid", commande: "/invite Cid")]
         contexte.quetes = QuetesDofusDB.gardees()
+        contexte.quetesSuivies = Set(contexte.quetes?.quetes.prefix(2).map(\.id) ?? [])
         return contexte
     }
 
@@ -107,7 +108,7 @@ struct CapturesTests {
         }
     }
 
-    /// Les vues de la palette : l'Accueil, « Zaaps », « Almanax » (sept jours d'exemple, sans visuel du jeu), une recherche.
+    /// Les vues de la palette : l'Accueil, « Zaaps », « Donjons », « PNJ », « Quêtes », « Almanax » (sept jours d'exemple, sans visuel du jeu), une recherche.
     @Test("Captures des vues de la palette", .enabled(if: dossier != nil))
     func vuesDeLaPalette() throws {
         let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
@@ -125,7 +126,10 @@ struct CapturesTests {
         CarteStore.shared.poserPourCaptures(Carte.integree)
         for (nom, requete, filtre, deplie) in [("palette-accueil", "", FiltrePalette.tout, false),
                                                ("palette-vue-zaaps", "", .zaaps, false),
-                                               ("palette-vue-almanax", "", .almanax, false),
+                                               ("palette-vue-donjons", "", .donjons, false),
+                               ("palette-vue-pnj", "", .pnj, false),
+                               ("palette-vue-quetes", "", .quetes, false),
+                               ("palette-vue-almanax", "", .almanax, false),
                                                ("palette-vue-almanax-deplie", "", .almanax, true),
                                                ("palette-recherche", "bonta", .tout, false)] {
             let modele = PaletteModele(contexte: contexte(), requete: requete, filtre: filtre)

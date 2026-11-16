@@ -1,10 +1,11 @@
 /// La pertinence d'un résultat de la palette, le tri « Auto ». Pur. Avec une requête, la
 /// correspondance d'abord, puis le genre (zaap, boss et perso, PNJ, le reste à égalité) ; puis, avec ou
-/// sans requête : favori, habitudes, proximité.
+/// sans requête : quête suivie, favori, habitudes, proximité.
 struct ScorePalette: Equatable, Sendable {
     /// Les points de `Champs.points` ; `nil` sans requête, où ni eux ni le genre ne départagent.
     let correspondance: Int?
     let genre: Int
+    let suivie: Bool
     let favori: Bool
     /// Les choix écrasés en paliers (`palier`) : une entrée choisie cent fois ne noie pas une
     /// correspondance meilleure, et la récence départage deux habitudes du même palier.
@@ -16,6 +17,7 @@ struct ScorePalette: Equatable, Sendable {
     init(_ entree: EntreePalette, correspondance: Int?, compte: FrequentationPalette.Compte?) {
         self.correspondance = correspondance
         genre = correspondance == nil ? 0 : Self.rangDeGenre(entree)
+        suivie = entree.suivie
         favori = entree.favori
         habitude = Self.palier(compte?.fois ?? 0)
         recence = compte?.dernier ?? 0
@@ -39,6 +41,7 @@ struct ScorePalette: Equatable, Sendable {
     static func avant(_ a: ScorePalette, _ b: ScorePalette) -> Bool? {
         if a.correspondance != b.correspondance { return (a.correspondance ?? .min) > (b.correspondance ?? .min) }
         if a.genre != b.genre { return a.genre > b.genre }
+        if a.suivie != b.suivie { return a.suivie }
         if a.favori != b.favori { return a.favori }
         if a.habitude != b.habitude { return a.habitude > b.habitude }
         if a.recence != b.recence { return a.recence > b.recence }

@@ -27,16 +27,19 @@ enum ActionPalette: Equatable, Sendable {
     }
 }
 
-/// Ce que Tab fait défiler : la famille de résultats montrée — les zaaps sont
-/// des lieux, PNJ, monstres et boss des créatures.
+/// Ce que Tab fait défiler : une vue au repos (Accueil, Zaaps, Donjons, PNJ, Quêtes, Almanax), une
+/// portée en recherche (Tout, Lieux, Quêtes, PNJ, Donjons, Créatures, Objets). Les zaaps sont des
+/// lieux ; un boss est dans les donjons, pas parmi les créatures.
 enum FiltrePalette: Sendable {
-    case tout, zaaps, almanax, lieux, quetes, creatures, objets
+    case tout, zaaps, almanax, donjons, pnj, lieux, quetes, creatures, objets
 
     var titre: String {
         switch self {
         case .tout: return L("palette.filtre.tout")
         case .zaaps: return L("palette.filtre.zaaps")
         case .almanax: return L("palette.filtre.almanax")
+        case .donjons: return L("palette.filtre.donjons")
+        case .pnj: return L("palette.filtre.pnj")
         case .lieux: return L("palette.filtre.lieux")
         case .quetes: return L("palette.filtre.quetes")
         case .creatures: return L("palette.filtre.creatures")
@@ -49,17 +52,29 @@ enum FiltrePalette: Sendable {
         self == .tout && !enRecherche ? L("palette.filtre.accueil") : titre
     }
 
-    /// Rien de tapé, ces filtres-là se montrent en cartes.
-    var enCartes: Bool { self == .tout || self == .zaaps }
+    /// Rien de tapé, ces vues-là se montrent en cartes.
+    var enCartes: Bool {
+        switch self {
+        case .tout, .zaaps, .donjons, .pnj, .quetes: return true
+        case .almanax, .lieux, .creatures, .objets: return false
+        }
+    }
 
-    func garde(_ entree: EntreePalette) -> Bool {
+    /// Les zaaps et les donjons viennent de la carte : tant qu'elle manque, une liste vide le dit.
+    var dependDeLaCarte: Bool { self == .tout || self == .zaaps || self == .donjons }
+
+    /// Au repos, les boss n'ont pas de carte : seuls les donjons se montrent ; en recherche, leurs boss
+    /// ouvrent la même fiche.
+    func garde(_ entree: EntreePalette, enRecherche: Bool) -> Bool {
         switch self {
         case .tout: return true
         case .zaaps: return entree.genre == .zaap
         case .almanax: return false
+        case .donjons: return entree.estDonjon && (enRecherche || !entree.estBoss)
+        case .pnj: return entree.genre == .pnj
         case .lieux: return entree.genre == .zaap || entree.genre == .lieu
         case .quetes: return entree.genre == .quete
-        case .creatures: return entree.genre == .pnj || entree.genre == .monstre
+        case .creatures: return entree.genre == .monstre && !entree.estBoss
         case .objets: return entree.genre == .objet
         }
     }
@@ -69,15 +84,22 @@ enum FiltrePalette: Sendable {
         enRecherche || (self != .tout && self != .almanax)
     }
 
-    /// Les tris qui ont un sens ici : parmi les seuls zaaps, « Type » ne départage rien.
+    /// Les tris qui ont un sens ici : au repos, « Type » ne départage rien parmi une seule famille, et
+    /// une quête n'a pas de position à comparer.
     func tris(enRecherche: Bool) -> [TriPalette] {
-        self == .zaaps && !enRecherche ? [.auto, .proximite, .alphabetique] : TriPalette.allCases
+        guard !enRecherche else { return TriPalette.allCases }
+        switch self {
+        case .zaaps, .donjons, .pnj: return [.auto, .proximite, .alphabetique]
+        case .quetes: return [.auto, .alphabetique]
+        default: return TriPalette.allCases
+        }
     }
 
     /// Ce que la rangée montre : au repos, les vues où aller sans taper ; dès qu'on tape, les
     /// portées qui restreignent la réponse.
     static func jeu(enRecherche: Bool) -> [FiltrePalette] {
-        enRecherche ? [.tout, .lieux, .quetes, .creatures, .objets] : [.tout, .zaaps, .almanax]
+        enRecherche ? [.tout, .lieux, .quetes, .pnj, .donjons, .creatures, .objets]
+            : [.tout, .zaaps, .donjons, .pnj, .quetes, .almanax]
     }
 
     /// Le suivant (Tab) ou le précédent (⇧Tab) du jeu affiché, en boucle ; le premier si `self` n'y est pas.
@@ -172,6 +194,8 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
     var carte: Int?
     /// Le pictogramme d'un lieu (`Lieu.gfx`), à la place du symbole.
     var pictogramme: Int?
+    /// Une quête du suivi lu ou épinglée : elle passe devant les autres (`ScorePalette`).
+    var suivie = false
     /// Sa carte n'est pas en extérieur : le trajet mène devant le bâtiment.
     var interieur = false
     /// Le symbole propre à l'entrée (une commande, une variable) ; `nil` : celui de son genre.
@@ -181,6 +205,13 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
     /// Le raccourci du geste de la ligne, dit au bout de la ligne.
     var touche: String?
     let effet: Effet
+
+    /// Un donjon de la carte, ou l'un de ses boss : la fiche qu'ils ouvrent est la même.
+    var estDonjon: Bool {
+        if categorie == CategorieLieu.donjon.rawValue { return true }
+        if case .donjon = effet { return true }
+        return false
+    }
 
     /// La fiche d'un boss de donjon (`RecherchePalette.boss`) ou l'aide à son combat.
     var estBoss: Bool {
@@ -233,6 +264,8 @@ struct ContextePalette: Sendable {
     var quetes: Quetes?
     /// `nil` tant qu'ils ne sont pas téléchargés.
     var donjons: Donjons?
+    /// Les quêtes du suivi lu et les épinglées : en tête de la vue « Quêtes ».
+    var quetesSuivies: Set<Int> = []
     /// Les habitudes, que le tri « Auto » fait remonter.
     var frequentation = FrequentationPalette()
 }
@@ -260,14 +293,14 @@ enum RecherchePalette {
             // les autres zaaps du plus proche ; sauf filtre sur une famille,
             // montrée entière.
             if filtre == .tout { return index.accueil }
-            return classer(index.tout.filter { filtre.garde($0.entree) }, [])
+            return classer(index.tout.filter { filtre.garde($0.entree, enRecherche: false) }, [])
         }
         if texte.hasPrefix("%") { return variables(texte, index.contexte) }
         if let cible = ItineraireZaap.caseTapee(texte) {
-            return [versUneCase(cible, index.contexte)].filter(filtre.garde)
+            return [versUneCase(cible, index.contexte)].filter { filtre.garde($0, enRecherche: true) }
         }
         guard texte.hasPrefix("/") else {
-            return classer(index.tout.filter { filtre.garde($0.entree) }, mots(texte))
+            return classer(index.tout.filter { filtre.garde($0.entree, enRecherche: true) }, mots(texte))
         }
         let (commande, reste) = separer(texte)
         switch commande {
@@ -452,7 +485,7 @@ enum RecherchePalette {
         (contexte.quetes?.quetes ?? []).map { quete in
             EntreePalette(id: "quete:\(quete.id)", genre: .quete, titre: Lieu.traduit(quete.noms, contexte.langue) ?? "?",
                           sousTitre: L("palette.quete.resume", nombre: quete.etapes.count, quete.niveau, quete.etapes.count),
-                          effet: .ouvrirQuete(quete.id))
+                          suivie: contexte.quetesSuivies.contains(quete.id), effet: .ouvrirQuete(quete.id))
         }
     }
 
