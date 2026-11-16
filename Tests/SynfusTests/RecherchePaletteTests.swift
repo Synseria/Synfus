@@ -74,7 +74,7 @@ struct RecherchePaletteTests {
         #expect(voyageur.itineraire == nil && voyageur.carte == nil && voyageur.effet == .positions(1))
         // Une seule : la ligne d'avant, qui copie.
         #expect(sedentaire.detail == Coordonnees.texte(-2, 6) && sedentaire.carte == 7)
-        #expect(sedentaire.effet != .positions(2))
+        #expect(sedentaire.effet != .positions(2) && sedentaire.pnj == 2)
         // Le rang suit la position la plus proche (-2,1), pas l'habituelle, lointaine.
         let proche = try #require(voyageur.distance)
         let loin = try #require(sedentaire.distance)

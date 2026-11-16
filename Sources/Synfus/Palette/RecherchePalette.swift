@@ -543,7 +543,7 @@ enum RecherchePalette {
                                  detail: Coordonnees.texte(habituel.position.x, habituel.position.y),
                                  favori: contexte.favoris.contains(pnj.cle), distance: vers.distance,
                                  itineraire: itineraire(vers.trajet, contexte.langue), cle: pnj.cle, carte: habituel.carte,
-                                 interieur: contexte.interieurs.contient(habituel.carte), effet: vers.effet)
+                                 interieur: contexte.interieurs.contient(habituel.carte), pnj: pnj.id, effet: vers.effet)
         }
     }
 

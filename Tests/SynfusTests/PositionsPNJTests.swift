@@ -133,4 +133,13 @@ struct PositionsPNJTests {
         modele.deplacer(ligne: -1)
         #expect(modele.deplie == nil && modele.carte == nil)
     }
+
+    @MainActor
+    @Test("Un PNJ à une position : Entrée copie, → le déplie en une grande carte")
+    func unePosition() throws {
+        let modele = PaletteModele(contexte: contexte(), requete: "sedentaire")
+        let ligne = try #require(modele.entrees.first)
+        #expect(ligne.effet != .positions(2) && ligne.pnj == 2 && modele.texteDeLaSelection?.contains("/travel") == true)
+        #expect(modele.lateral(1) && modele.deplie == ligne.id && modele.positionsDeplie.count == 1)
+    }
 }
