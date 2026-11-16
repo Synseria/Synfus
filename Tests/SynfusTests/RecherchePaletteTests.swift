@@ -36,7 +36,7 @@ struct RecherchePaletteTests {
     func grilleDesFavoris() throws {
         let banque = try #require(Carte.integree.lieux.first { $0.nom(en: .fr) == "Banque" && $0.zone(en: .fr) == "Bonta" })
         var avecQuetes = contexte(etiquettes: ["pnj:6309": "Ama"], favoris: ["1:-31,-56", banque.cle, "pnj:6309"])
-        let passage = { (x: Int, y: Int, quetes: Int) in PNJ.Passage(position: .init(x: x, y: y), carte: nil, sousZone: nil, quetes: quetes) }
+        let passage = { (x: Int, y: Int, quetes: Int) in PNJ.Passage(position: .init(x: x, y: y), carte: nil, sousZone: nil, quetes: Array(0..<quetes)) }
         avecQuetes.quetes = Quetes(
             format: Quetes.formatActuel, date: .now, quetes: [],
             pnjs: [PNJ(id: 6309, noms: ["fr": "Amayiro"], passages: [passage(-32, -57, 101), passage(0, 0, 1)])],
@@ -58,7 +58,7 @@ struct RecherchePaletteTests {
     func unePnjParLigne() throws {
         var avecQuetes = contexte()
         let passage = { (x: Int, y: Int, quetes: Int) in
-            PNJ.Passage(position: .init(x: x, y: y), carte: 7, sousZone: nil, quetes: quetes)
+            PNJ.Passage(position: .init(x: x, y: y), carte: 7, sousZone: nil, quetes: Array(0..<quetes))
         }
         avecQuetes.quetes = Quetes(
             format: Quetes.formatActuel, date: .now, quetes: [],
@@ -74,7 +74,7 @@ struct RecherchePaletteTests {
         #expect(voyageur.itineraire == nil && voyageur.carte == nil && voyageur.effet == .positions(1))
         // Une seule : la ligne d'avant, qui copie.
         #expect(sedentaire.detail == Coordonnees.texte(-2, 6) && sedentaire.carte == 7)
-        #expect(sedentaire.effet != .positions(2) && sedentaire.pnj == 2)
+        #expect(sedentaire.effet != .positions(2))
         // Le rang suit la position la plus proche (-2,1), pas l'habituelle, lointaine.
         let proche = try #require(voyageur.distance)
         let loin = try #require(sedentaire.distance)
@@ -107,7 +107,7 @@ struct RecherchePaletteTests {
     @Test("Un PNJ sur une carte intérieure est dit « intérieur » : /travel mène devant")
     func interieur() throws {
         var avecQuetes = contexte()
-        let passage = { (carte: Int) in PNJ.Passage(position: .init(x: -32, y: -57), carte: carte, sousZone: nil, quetes: 1) }
+        let passage = { (carte: Int) in PNJ.Passage(position: .init(x: -32, y: -57), carte: carte, sousZone: nil, quetes: [1]) }
         avecQuetes.quetes = Quetes(
             format: Quetes.formatActuel, date: .now, quetes: [],
             pnjs: [PNJ(id: 6309, noms: ["fr": "Amayiro"], passages: [passage(217318404)]),
@@ -130,7 +130,7 @@ struct RecherchePaletteTests {
         #expect(avecQuetes.reseau.horsDesDouze(ailleurs))
         // La carte pas encore lue ne dit rien du monde : la case est supposée des Douze.
         #expect(!ReseauSousZones.vide.horsDesDouze(ailleurs))
-        let passage = { (sousZone: Int) in PNJ.Passage(position: .init(x: 4, y: -3), carte: nil, sousZone: sousZone, quetes: 1) }
+        let passage = { (sousZone: Int) in PNJ.Passage(position: .init(x: 4, y: -3), carte: nil, sousZone: sousZone, quetes: [1]) }
         avecQuetes.quetes = Quetes(
             format: Quetes.formatActuel, date: .now, quetes: [],
             pnjs: [PNJ(id: 1, noms: ["fr": "Incarnam"], passages: [passage(ailleurs)]),
@@ -183,11 +183,11 @@ struct RecherchePaletteTests {
         let texte = try #require(RecherchePalette.texte(de: bonta.effet, contexte()))
         #expect(texte.hasPrefix("/zaap -31,-56 ; "))
         let cartes = ItineraireZaap.distance((-31, -56), try #require(ItineraireZaap.cible(dans: String(texte.dropFirst(16)))))
-        #expect(bonta.itineraire == L("palette.trajet.via", nombre: cartes, "Cœur immaculé", cartes))
+        #expect(bonta.itineraire == L("palette.trajet.via", nombre: cartes, cartes, "Cœur immaculé"))
         let amakna = try #require(RecherchePalette.lieux(contexte()).first {
             $0.titre == "Banque" && $0.detail == Coordonnees.texte(2, -2)
         })
-        #expect(amakna.distance == 6 && amakna.itineraire == L("palette.trajet.aPied", nombre: 6, 6))
+        #expect(amakna.distance == 6 && amakna.itineraire == L("palette.trajet.cartes", nombre: 6, 6))
         #expect(RecherchePalette.texte(de: amakna.effet, contexte()) == "/travel 2,-2")
         // Sans position, ni cartes ni zaap : rien à dire.
         #expect(premiere("/travel banque bonta", contexte(position: nil))?.itineraire == nil)

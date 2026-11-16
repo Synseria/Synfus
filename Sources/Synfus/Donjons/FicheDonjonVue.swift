@@ -79,7 +79,7 @@ struct FicheDonjonVue: View {
 
     private func icone(_ action: ActionFiche) -> String {
         switch action {
-        case .entree: return "arrow.triangle.turn.up.right.diamond"
+        case .entree, .position: return "arrow.triangle.turn.up.right.diamond"
         case .guide: return "book"
         case .clef: return "key"
         case .conseils: return "lightbulb"
@@ -90,7 +90,7 @@ struct FicheDonjonVue: View {
 
     private func titre(_ action: ActionFiche, _ detail: DetailDonjon?) -> String {
         switch action {
-        case .entree: return L("donjon.entree")
+        case .entree, .position: return L("donjon.entree")
         case .guide: return L("donjon.guide")
         case .clef: return L("donjon.clef")
         case .conseils:
@@ -115,7 +115,7 @@ struct FicheDonjonVue: View {
             let clef = detail?.clefs.first { $0.objet == objet }
             return L("donjon.clef.aide", clef?.quantite ?? 1, clef.flatMap { Lieu.traduit($0.noms, langue) } ?? "?")
         case .conseils: return L("donjon.conseils.aide")
-        case .monstres, .succes: return nil
+        case .monstres, .succes, .position: return nil
         }
     }
 
@@ -132,7 +132,7 @@ struct FicheDonjonVue: View {
                     .font(Jetons.Typo.petit.police)
                     .help(Lieu.traduit(succes.description, langue) ?? "")
             }
-        case .entree, .guide: EmptyView()
+        case .entree, .guide, .position: EmptyView()
         }
     }
 

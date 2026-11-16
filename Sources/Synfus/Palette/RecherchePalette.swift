@@ -536,14 +536,14 @@ enum RecherchePalette {
                                      cle: pnj.cle, pnj: pnj.id, effet: .positions(pnj.id))
             }
             let vers = trajets[0]
-            let nombre = habituel.quetes
+            let nombre = habituel.quetes.count
             return EntreePalette(id: pnj.cle, genre: .pnj, titre: titre,
                                  sousTitre: L("palette.pnj.cite", nombre: nombre, lieu, nombre),
                                  etiquette: contexte.etiquettes[pnj.cle],
                                  detail: Coordonnees.texte(habituel.position.x, habituel.position.y),
                                  favori: contexte.favoris.contains(pnj.cle), distance: vers.distance,
                                  itineraire: itineraire(vers.trajet, contexte.langue), cle: pnj.cle, carte: habituel.carte,
-                                 interieur: contexte.interieurs.contient(habituel.carte), pnj: pnj.id, effet: vers.effet)
+                                 interieur: contexte.interieurs.contient(habituel.carte), effet: vers.effet)
         }
     }
 
@@ -623,9 +623,11 @@ enum RecherchePalette {
 
     static func itineraire(_ trajet: ItineraireZaap.Trajet?, _ langue: Langue) -> String? {
         guard let trajet else { return nil }
-        guard let zaap = trajet.zaap else { return L("palette.trajet.aPied", nombre: trajet.cartes, trajet.cartes) }
+        guard let zaap = trajet.zaap else {
+            return trajet.cartes == 0 ? L("palette.trajet.ici") : L("palette.trajet.cartes", nombre: trajet.cartes, trajet.cartes)
+        }
         if trajet.cartes == 0 { return L("palette.trajet.zaapSeul", zaap.nom(en: langue)) }
-        return L("palette.trajet.via", nombre: trajet.cartes, zaap.nom(en: langue), trajet.cartes)
+        return L("palette.trajet.via", nombre: trajet.cartes, trajet.cartes, zaap.nom(en: langue))
     }
 
     // MARK: - Correspondance

@@ -127,7 +127,7 @@ private struct ListePNJ: View {
             ForEach(Array(pnj.passages.enumerated()), id: \.offset) { rang, passage in
                 HStack(spacing: Jetons.Espace.deux) {
                     Text(lieu(passage, langue)).foregroundStyle(rang == 0 ? Color.jeton(\.encre) : Color.jeton(\.encreSecondaire))
-                    Text(L("pnj.quetes", nombre: passage.quetes, passage.quetes)).font(Jetons.Typo.petit.police).foregroundStyle(Color.jeton(\.encreSecondaire))
+                    Text(L("pnj.quetes", nombre: passage.quetes.count, passage.quetes.count)).font(Jetons.Typo.petit.police).foregroundStyle(Color.jeton(\.encreSecondaire))
                     Spacer()
                     BoutonTrajet(x: passage.position.x, y: passage.position.y, sousZone: passage.sousZone)
                     if let carte = passage.carte { MiniatureCarte(carte: carte) }

@@ -199,6 +199,8 @@ struct PaletteVue: View {
                 }
                 .onChange(of: modele.carte) { _, carte in
                     guard let carte else { return }
+                    // Une rangée de positions défile d'elle-même : la liste n'a qu'à montrer la ligne et la rangée.
+                    if case .position = carte, let deplie = modele.deplie { return defilement.scrollTo(deplie, anchor: .top) }
                     defilement.scrollTo(FicheDonjonVue.ancre(carte))
                 }
             }
@@ -270,7 +272,8 @@ struct PaletteVue: View {
             ForEach(Array(modele.entrees.enumerated()), id: \.element.id) { index, entree in
                 let deplie = modele.deplie == entree.id
                 // Le clavier dans la fiche : la ligne ne se dit plus choisie, la carte l'est.
-                LigneResultat(entree: entree, choisie: index == modele.selection && modele.carte == nil, deplie: deplie)
+                LigneResultat(entree: entree, choisie: index == modele.selection && modele.carte == nil, deplie: deplie,
+                              deplier: entree.pnj == nil ? nil : { modele.deplier(entree) })
                     .id(entree.id)
                     .onTapGesture { modele.executer(entree) }
                     .help(entree.complet)
@@ -282,7 +285,7 @@ struct PaletteVue: View {
                         switch entree.effet {
                         case .ouTrouver(let sujet): OuTrouverVue(sujet: sujet, metriques: .confort)
                         case .donjon(let id): FicheDonjonVue(id: id, modele: modele)
-                        default: EmptyView()
+                        default: if entree.pnj != nil { PositionsPNJVue(modele: modele) }
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -381,8 +384,9 @@ struct PaletteVue: View {
 
     private func aide(_ action: ActionFiche) -> String {
         switch action {
-        case .entree(let lieu): return L("palette.touche.copier")
+        case .entree: return L("palette.touche.copier")
         case .guide: return L("palette.touche.ouvrir")
+        case .position: return L("palette.touche.copier")
         case .clef, .conseils, .monstres, .succes:
             return modele.ouvertes.contains(action) ? L("palette.touche.replier") : L("palette.touche.deplier")
         }
@@ -398,10 +402,16 @@ struct PaletteVue: View {
 
 /// Une carte de zaap : nom et zone en haut, étiquette et coordonnées en bas. Sur l'image de la
 /// carte, le texte est clair ; sans image, il prend les encres du thème.
-private struct CarteZaap: View {
+struct CarteZaap<Corps: View>: View {
     let entree: EntreePalette
     let choisie: Bool
+    /// Ce qui prend la place entre l'en-tête et le pied : la liste des quêtes d'une position.
+    private let corps: Corps?
     @ObservedObject private var prefs = Preferences.shared
+
+    init(entree: EntreePalette, choisie: Bool, @ViewBuilder corps: () -> Corps) {
+        (self.entree, self.choisie, self.corps) = (entree, choisie, corps())
+    }
 
     private var etat: EtatVisuel { choisie ? .choisi : .repos }
     private var surImage: Bool { FondCarte.surImage(entree.carte) }
@@ -423,7 +433,11 @@ private struct CarteZaap: View {
                     .foregroundStyle(surImage ? encre : encreSecondaire)
                     .lineLimit(2, reservesSpace: true)
             }
-            Spacer(minLength: Jetons.Espace.quatre)
+            if let corps {
+                corps.frame(maxHeight: .infinity, alignment: .top)
+            } else {
+                Spacer(minLength: Jetons.Espace.quatre)
+            }
             pied
         }
         .padding(Jetons.Espace.deux)
@@ -463,12 +477,20 @@ private struct CarteZaap: View {
     }
 }
 
+extension CarteZaap where Corps == Never {
+    init(entree: EntreePalette, choisie: Bool) {
+        (self.entree, self.choisie, self.corps) = (entree, choisie, nil)
+    }
+}
+
 /// Une ligne de résultat : genre (ou pictogramme du lieu), titre, étiquette,
 /// sous-titre, détail, vue de la carte.
 struct LigneResultat: View {
     let entree: EntreePalette
     let choisie: Bool
     var deplie = false
+    /// Le clic sur le chevron d'une ligne qui ne se déplie pas d'Entrée (un PNJ à une position).
+    var deplier: (() -> Void)?
     @State private var survole = false
 
     var body: some View {
@@ -520,11 +542,18 @@ struct LigneResultat: View {
             }
             if let touche = entree.touche { ToucheRaccourci(touche) }
             if let carte = entree.carte { MiniatureCarte(carte: carte, taille: Self.vignette) }
-            if entree.effet.sePlie {
-                Image(systemName: deplie ? "chevron.down" : "chevron.right")
+            if entree.effet.sePlie || deplier != nil {
+                let chevron = Image(systemName: deplie ? "chevron.down" : "chevron.right")
                     .font(Jetons.Typo.raccourci.police)
                     .foregroundStyle(Color.jeton(\.encreSecondaire))
                     .frame(width: Jetons.Taille.case)
+                if let deplier {
+                    Button(action: deplier) { chevron.contentShape(Rectangle()) }
+                        .buttonStyle(.plain)
+                        .focusable(false)
+                } else {
+                    chevron
+                }
             }
         }
         .padding(.horizontal, Jetons.Espace.deux)

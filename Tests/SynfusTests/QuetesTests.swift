@@ -91,7 +91,7 @@ struct QuetesTests {
         let api = try JSONDecoder().decode(DofusDB.Page<QuetesDofusDB.QueteAPI>.self, from: Data(page.utf8)).data
         let wogew = try JSONDecoder().decode(QuetesDofusDB.Nomme.self, from: Data(#"{"id":196,"name":{"fr":"Wogew"}}"#.utf8))
         let quetes = QuetesDofusDB.assembler(quetes: api, cites: QuetesDofusDB.Cites(pnjs: [wogew]), date: .now)
-        #expect(quetes.pnjs.first?.passages.map(\.quetes) == [2, 1])
+        #expect(quetes.pnjs.first?.passages.map(\.quetes) == [[2, 3], [1]])
         #expect(quetes.pnjs.first?.passages.first?.position == PNJ.Position(x: -2, y: -4))
         #expect(try Self.quetes().sousZones["10"]
                 == SousZoneNommee(noms: ["fr": "Village d'Amakna"], zone: ["fr": "Amakna"]))
@@ -102,9 +102,9 @@ struct QuetesTests {
         let pnjs = try Self.quetes().pnjs
         // L'objectif 103 mène aussi à Wogew, mais sans case : il ne le situe pas.
         #expect(pnjs.first { $0.id == 196 }?.passages == [PNJ.Passage(position: PNJ.Position(x: -1, y: -39),
-                                                                      carte: 160695296, sousZone: 56, quetes: 1)])
+                                                                      carte: 160695296, sousZone: 56, quetes: [18])])
         #expect(pnjs.first { $0.id == 119 }?.passages == [PNJ.Passage(position: PNJ.Position(x: -2, y: -4),
-                                                                      carte: 185862149, sousZone: 10, quetes: 1)])
+                                                                      carte: 185862149, sousZone: 10, quetes: [18])])
     }
 
     private func contexte() throws -> ContextePalette {
@@ -241,6 +241,14 @@ struct QuetesTests {
         objet["format"] = Quetes.formatActuel - 1
         #expect(QuetesDofusDB.relire(try JSONSerialization.data(withJSONObject: objet)) == nil)
         objet["format"] = nil
+        #expect(QuetesDofusDB.relire(try JSONSerialization.data(withJSONObject: objet)) == nil)
+        // Un compte de quêtes là où les passages portent leurs identifiants ne se décode pas.
+        objet["format"] = Quetes.formatActuel
+        var pnjs = try #require(objet["pnjs"] as? [[String: Any]])
+        var passages = try #require(pnjs[0]["passages"] as? [[String: Any]])
+        passages[0]["quetes"] = 1
+        pnjs[0]["passages"] = passages
+        objet["pnjs"] = pnjs
         #expect(QuetesDofusDB.relire(try JSONSerialization.data(withJSONObject: objet)) == nil)
     }
 
