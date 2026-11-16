@@ -389,7 +389,7 @@ struct PaletteVue: View {
     private func aide(_ action: ActionFiche) -> String {
         switch action {
         case .entree: return L("palette.touche.copier")
-        case .guide: return L("palette.touche.ouvrir")
+        case .guide, .aide: return L("palette.touche.ouvrir")
         case .clef, .conseils, .monstres, .succes:
             return modele.ouvertes.contains(action) ? L("palette.touche.replier") : L("palette.touche.deplier")
         }
