@@ -10,8 +10,9 @@ struct ListeQuetesVue: View {
     @ObservedObject private var store = QuetesStore.shared
     @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var lecture = LectureSuivi.shared
-    /// La case du perso devant, dont dépend « Ici ».
+    // periphery:ignore - observé : la case du perso devant, dont dépend « Ici » (`QuetePanel.liste`)
     @ObservedObject private var lecteur = LecteurEcran.shared
+    // periphery:ignore - observé : l'autorisation d'écran, dont dépend le suivi (`QuetePanel.liste`)
     @ObservedObject private var previews = WindowPreviewService.shared
 
     /// La colonne des marques, à gauche des noms.
