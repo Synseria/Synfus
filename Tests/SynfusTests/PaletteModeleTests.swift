@@ -158,7 +158,7 @@ struct PaletteModeleTests {
         #expect(modele.triAffiche == .type)
     }
 
-    @Test("La palette s'ouvre sur l'Accueil, champ vide, première carte choisie ; deux exceptions disent où elles vont")
+    @Test("La palette s'ouvre sur l'Accueil, champ vide, première carte choisie ; une vue demandée fait exception")
     func ouvertureSurLAccueil() {
         let modele = PaletteModele(contexte: ContextePalette(), requete: "amakna", filtre: .lieux)
         modele.selection = 3
@@ -169,9 +169,7 @@ struct PaletteModeleTests {
         #expect(modele.filtre == .tout)
         modele.ouvrir(vue: .almanax)
         #expect(modele.surAlmanax)
-        modele.ouvrir(requete: "/combat")
-        #expect(modele.requete == "/combat" && modele.filtre == .tout)
-        modele.requete = ""
-        #expect(modele.filtre == .tout)
+        modele.ouvrir(vue: .donjons)
+        #expect(modele.requete.isEmpty && modele.filtre == .donjons)
     }
 }

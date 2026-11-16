@@ -6,6 +6,8 @@ enum ActionFiche: Hashable, Sendable {
     case entree(Lieu)
     /// Ouvre la page du donjon sur Dofus pour les noobs, par son nom français.
     case guide(String)
+    /// Ouvre l'aide au combat contre ce boss du donjon.
+    case aide(CibleBoss)
     /// Déplie où trouver la clef.
     case clef(objet: Int)
     /// Déplie les conseils tactiques de Dofus pour les noobs.
@@ -16,7 +18,7 @@ enum ActionFiche: Hashable, Sendable {
     /// Déplie quelque chose sous la rangée plutôt que d'agir.
     var sePlie: Bool {
         switch self {
-        case .entree, .guide: return false
+        case .entree, .guide, .aide: return false
         case .clef, .conseils, .monstres, .succes: return true
         }
     }
@@ -29,10 +31,12 @@ struct CartesFiche: Equatable, Sendable {
 
     static let vide = CartesFiche(actions: [])
 
-    /// La fiche d'un donjon : l'entrée en tête, où arrive le clavier, le
-    /// guide et ses conseils, ce qu'on croise dedans, la clef pour finir.
-    static func donjon(entree: Lieu?, guide: String?, detail: DetailDonjon?, conseils: Bool) -> CartesFiche {
-        var actions = [entree.map(ActionFiche.entree), guide.map(ActionFiche.guide)].compactMap(\.self)
+    /// La fiche d'un donjon : l'entrée en tête, où arrive le clavier, l'aide
+    /// au combat de chaque boss, le guide et ses conseils, ce qu'on croise
+    /// dedans, la clef pour finir.
+    static func donjon(entree: Lieu?, boss: [CibleBoss], guide: String?, detail: DetailDonjon?, conseils: Bool) -> CartesFiche {
+        var actions = [entree.map(ActionFiche.entree)].compactMap(\.self) + boss.map(ActionFiche.aide)
+            + [guide.map(ActionFiche.guide)].compactMap(\.self)
         if conseils { actions.append(.conseils) }
         if let detail {
             if detail.monstres.contains(where: { !$0.boss }) { actions.append(.monstres) }

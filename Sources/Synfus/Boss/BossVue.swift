@@ -2,8 +2,8 @@ import AppKit
 import SwiftUI
 
 /// Le panneau d'aide aux boss, au style des panneaux de quêtes et de chasse :
-/// le boss choisi au titre (un clic en change), le tour du combat, sa
-/// mécanique, ses rappels.
+/// le boss choisi au titre (un clic en change), sa fiche, sa mécanique, puis
+/// rappels et conseils, qui défilent chez eux (`SectionBoss`).
 struct BossVue: View {
     static let largeur: CGFloat = 252
 
@@ -14,7 +14,8 @@ struct BossVue: View {
     /// La liste des donjons (nom d'un boss, guide) et leurs conseils arrivent après.
     @ObservedObject private var donjons = DonjonsStore.shared
     @State private var rappels = false
-    @State private var conseils = false
+    /// `nil` : dépliés d'office pour un boss sans mécanique, dont ils sont tout le panneau.
+    @State private var conseils: Bool?
     /// Le rappel tout juste copié (ou tous : `""`), coché le temps du signal.
     @StateObject private var copie = SignalCopie()
 
@@ -24,7 +25,6 @@ struct BossVue: View {
             Divider()
             VStack(alignment: .leading, spacing: Jetons.Espace.deux) {
                 if let fiche = aide.fiches[prefs.bossChoisi.monstre] { FicheCombatVue(fiche: fiche) }
-                ligneTour
                 switch prefs.bossChoisi.special {
                 case .harebourg: HarebourgVue()
                 case .kimbo: KimboVue()
@@ -96,72 +96,41 @@ struct BossVue: View {
         nouveau.image = NSImage(systemSymbolName: "arrow.counterclockwise", accessibilityDescription: nil)
         nouveau.isEnabled = AideBoss.shared.aDuNote
         menu.addItem(nouveau)
-        menu.addItem(CibleMenu.shared.element(L("boss.autre")) { PalettePanel.shared.ouvrir(requete: L("boss.autre.recherche")) })
+        menu.addItem(CibleMenu.shared.element(L("boss.autre")) { PalettePanel.shared.ouvrir(vue: .donjons) })
         menu.addItem(.separator())
         menu.addItem(CibleMenu.shared.element(L("panneau.fermer"), raccourci: Preferences.shared.bossHotKey) { BossPanel.shared.fermer() })
         return menu
-    }
-
-    /// Le tour du combat compté chez le perso devant, à corriger d'un clic.
-    private var ligneTour: some View {
-        HStack(spacing: Jetons.Espace.un) {
-            Image(systemName: "clock").foregroundStyle(Color.jeton(\.encreSecondaire))
-            if let tour = aide.tour {
-                Text(L("boss.tour", tour)).font(Jetons.Typo.raccourci.police)
-                Text(ToursCombat.estImpair(tour) ? L("boss.tour.impair") : L("boss.tour.pair"))
-                    .font(Jetons.Typo.petit.police).foregroundStyle(Color.jeton(\.encreSecondaire))
-            } else {
-                Text(L("boss.tour.attente")).font(Jetons.Typo.petit.police).foregroundStyle(Color.jeton(\.encreSecondaire))
-            }
-            Spacer()
-            PetitBouton(icone: "minus", aide: L("boss.tour.moins")) { aide.corrigerTour(-1) }
-                .disabled((aide.tour ?? 1) <= 1)
-            PetitBouton(icone: "plus", aide: L("boss.tour.plus")) { aide.corrigerTour(1) }
-        }
-        .help(L("boss.tour.aide"))
-        .disabled(lecteur.persoDevant == nil)
     }
 
     /// Chaque rappel se copie d'un clic, pour le coller dans le tchat du
     /// groupe ; l'icône du titre les copie tous, à la suite.
     private func rappelsVue(_ boss: Boss) -> some View {
         let liste = Self.rappels(boss)
-        return VStack(alignment: .leading, spacing: Jetons.Espace.un) {
-            HStack(spacing: Jetons.Espace.un) {
-                Button { rappels.toggle() } label: {
-                    Label(L("boss.rappels"), systemImage: rappels ? "chevron.down" : "chevron.right")
-                        .font(Jetons.Typo.raccourci.police)
-                        .foregroundStyle(Color.jeton(\.encreSecondaire))
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                Spacer(minLength: 0)
-                if rappels {
-                    Button { copier(liste.joined(separator: " "), signal: "") } label: {
-                        IconeCopie(icone: "doc.on.doc", copie: copie.affiche(""))
-                            .font(Jetons.Typo.petit.police)
-                            .foregroundStyle(Color.jeton(\.encreSecondaire))
-                    }
-                    .buttonStyle(.bouton(.tertiaire, dense: true))
-                    .aide(L("boss.rappels.copier"))
-                }
-            }
+        return SectionBoss(titre: L("boss.rappels"), depliee: $rappels) {
             if rappels {
-                ForEach(liste, id: \.self) { rappel in
-                    Button { copier(rappel, signal: rappel) } label: {
-                        HStack(alignment: .firstTextBaseline, spacing: Jetons.Espace.un) {
-                            Text("• " + rappel)
-                                .fixedSize(horizontal: false, vertical: true)
-                            Spacer(minLength: 0)
-                            IconeCopie(icone: nil, copie: copie.affiche(rappel))
-                        }
+                Button { copier(liste.joined(separator: " "), signal: "") } label: {
+                    IconeCopie(icone: "doc.on.doc", copie: copie.affiche(""))
                         .font(Jetons.Typo.petit.police)
                         .foregroundStyle(Color.jeton(\.encreSecondaire))
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .aide(L("boss.rappel.copier"))
                 }
+                .buttonStyle(.bouton(.tertiaire, dense: true))
+                .aide(L("boss.rappels.copier"))
+            }
+        } contenu: {
+            ForEach(liste, id: \.self) { rappel in
+                Button { copier(rappel, signal: rappel) } label: {
+                    HStack(alignment: .firstTextBaseline, spacing: Jetons.Espace.un) {
+                        Text("• " + rappel)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 0)
+                        IconeCopie(icone: nil, copie: copie.affiche(rappel))
+                    }
+                    .font(Jetons.Typo.petit.police)
+                    .foregroundStyle(Color.jeton(\.encreSecondaire))
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .aide(L("boss.rappel.copier"))
             }
         }
     }
@@ -171,31 +140,14 @@ struct BossVue: View {
         copie.signaler(signal)
     }
 
-    /// Les conseils de Dofus pour les noobs pour ce combat, dépliés d'un
-    /// clic ; l'explication de chacun en infobulle.
+    /// Les conseils de Dofus pour les noobs pour ce combat.
     @ViewBuilder
     private var conseilsVue: some View {
         if let liste = aide.donjon.flatMap({ donjons.conseils[$0.id] }), !liste.isEmpty {
-            VStack(alignment: .leading, spacing: Jetons.Espace.un) {
-                Button { conseils.toggle() } label: {
-                    Label(L("donjon.conseils", nombre: liste.count, liste.count),
-                          systemImage: conseils ? "chevron.down" : "chevron.right")
-                        .font(Jetons.Typo.raccourci.police)
-                        .foregroundStyle(Color.jeton(\.encreSecondaire))
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .aide(L("donjon.conseils.aide"))
-                if conseils {
-                    ForEach(Array(liste.enumerated()), id: \.offset) { _, conseil in
-                        Text("• " + conseil.titre)
-                            .font(Jetons.Typo.petit.police)
-                            .foregroundStyle(Color.jeton(\.encreSecondaire))
-                            .fixedSize(horizontal: false, vertical: true)
-                            .help(conseil.detail)
-                    }
-                    Text(L("donjon.conseils.source")).font(Jetons.Typo.petit.police).foregroundStyle(Color.jeton(\.encreTertiaire))
-                }
+            let depliee = Binding { conseils ?? (prefs.bossChoisi.special == nil) } set: { conseils = $0 }
+            SectionBoss(titre: L("donjon.conseils", nombre: liste.count, liste.count), aide: L("donjon.conseils.aide"),
+                        depliee: depliee) {} contenu: {
+                ConseilsVue(conseils: liste).foregroundStyle(Color.jeton(\.encreSecondaire))
             }
         }
     }

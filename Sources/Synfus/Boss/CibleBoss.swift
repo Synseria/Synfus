@@ -38,8 +38,9 @@ enum CibleBoss: Hashable, Sendable {
         return donjons?.nomsBoss[monstre]
     }
 
-    /// Ce que l'aide lit en combat en plus du bouton de combat.
-    var lectures: [GenreLecture] { special?.lectures ?? [] }
+    /// Ce que l'aide lit en combat : le bouton de combat (tours, placement), et
+    /// les genres de sa mécanique. `nil` : un boss sans mécanique, rien à lire.
+    var lectures: [GenreLecture]? { special?.lectures }
 }
 
 /// Une chaîne, pour relire telle quelle la sauvegarde d'avant, qui ne

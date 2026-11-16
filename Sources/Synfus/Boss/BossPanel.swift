@@ -38,7 +38,7 @@ final class BossPanel: NSObject, ObservableObject {
         let aide = AideBoss.shared
         if let boss, boss != aide.boss { aide.choisir(boss) }
         // Les compteurs sont une liste fermée, partagée avec le collecteur :
-        // les boss de donjon passent par l'action de la palette.
+        // seuls les boss à mécanique en ont un.
         if !ouvert, let special = aide.boss.special { UsageStore.shared.compter(.boss(special)) }
         ouvert = true
         impose = true

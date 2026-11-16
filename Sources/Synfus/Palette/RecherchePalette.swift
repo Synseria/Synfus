@@ -3,15 +3,8 @@ import Foundation
 /// Les gestes de Synfus que la palette sait faire, tapés en toutes lettres.
 enum ActionPalette: Equatable, Sendable {
     case rangerFenetres, lancerSession, equipeSuivante, inviterEquipe, quetes, chasse, reglages
-    /// L'aide au combat contre ce boss : le nom du boss se tape aussi.
-    case boss(CibleBoss, nom: String)
 
-    /// Les gestes de toujours ; l'aide aux boss de donjon s'y ajoute avec
-    /// leur liste (`RecherchePalette.divers`).
-    static var toutes: [ActionPalette] {
-        [.rangerFenetres, .lancerSession, .equipeSuivante, .inviterEquipe, .quetes, .chasse]
-            + Boss.allCases.map { .boss(.special($0), nom: BossVue.nom($0)) } + [.reglages]
-    }
+    static let toutes: [ActionPalette] = [.rangerFenetres, .lancerSession, .equipeSuivante, .inviterEquipe, .quetes, .chasse, .reglages]
 
     var titre: String {
         switch self {
@@ -21,7 +14,6 @@ enum ActionPalette: Equatable, Sendable {
         case .inviterEquipe: return L("palette.action.inviter")
         case .quetes: return L("palette.action.quetes")
         case .chasse: return L("palette.action.chasse")
-        case .boss(_, let nom): return L("palette.action.boss", nom)
         case .reglages: return L("palette.action.reglages")
         }
     }
@@ -219,13 +211,10 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
         return false
     }
 
-    /// La fiche d'un boss de donjon (`RecherchePalette.boss`) ou l'aide à son combat.
+    /// La fiche d'un boss de donjon (`RecherchePalette.boss`), d'où s'ouvre l'aide à son combat.
     var estBoss: Bool {
-        switch effet {
-        case .donjon: return genre == .monstre
-        case .action(.boss): return true
-        default: return false
-        }
+        if case .donjon = effet { return genre == .monstre }
+        return false
     }
 
     /// Après le reste : les monstres et objets par milliers, sauf les boss, qu'on cherche exprès.
@@ -466,22 +455,10 @@ enum RecherchePalette {
     /// Les gestes et les dernières copies : ce que `tout` ajoute aux zaaps,
     /// lieux, quêtes et PNJ.
     static func divers(_ contexte: ContextePalette) -> [EntreePalette] {
-        let actions = (ActionPalette.toutes + aideAuxBoss(contexte)).map {
+        let actions = ActionPalette.toutes.map {
             EntreePalette(id: "action:\($0)", genre: .action, titre: $0.titre, effet: .action($0))
         }
         return actions + recents(contexte)
-    }
-
-    /// L'aide au combat de chaque boss de donjon dont l'aide ne connaît pas
-    /// la mécanique — les autres sont déjà dans `ActionPalette.toutes`.
-    static func aideAuxBoss(_ contexte: ContextePalette) -> [ActionPalette] {
-        guard let donjons = contexte.donjons else { return [] }
-        return donjons.nomsBoss.compactMap { id, noms -> ActionPalette? in
-            guard let donjon = donjons.donjon(boss: id), let nom = Lieu.traduit(noms, contexte.langue) else { return nil }
-            let cible = CibleBoss.boss(id, donjon: donjon.id)
-            return cible.special == nil ? .boss(cible, nom: nom) : nil
-        }
-        .sorted { $0.titre.localizedStandardCompare($1.titre) == .orderedAscending }
     }
 
     // MARK: - Quêtes et PNJ

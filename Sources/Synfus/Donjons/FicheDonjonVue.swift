@@ -2,7 +2,7 @@ import SwiftUI
 
 /// La fiche d'un donjon, dépliée sous lui ou sous l'un de ses boss dans la
 /// palette : niveau, une rangée de cartes que le clavier parcourt
-/// (`CartesFiche`) — position, guide, conseils, monstres, succès, clef —, ce
+/// (`CartesFiche`) — position, aide au combat, guide, conseils, monstres, succès, clef —, ce
 /// qu'elles déplient, puis les boss à leur plus haut grade. Le détail et les
 /// conseils se téléchargent à l'ouverture ; entrée et guide n'attendent pas.
 struct FicheDonjonVue: View {
@@ -80,6 +80,7 @@ struct FicheDonjonVue: View {
     private func icone(_ action: ActionFiche) -> String {
         switch action {
         case .entree: return "arrow.triangle.turn.up.right.diamond"
+        case .aide: return BoutonBarre.boss.symbole
         case .guide: return "book"
         case .clef: return "key"
         case .conseils: return "lightbulb"
@@ -91,6 +92,11 @@ struct FicheDonjonVue: View {
     private func titre(_ action: ActionFiche, _ detail: DetailDonjon?) -> String {
         switch action {
         case .entree: return L("donjon.entree")
+        case .aide(let boss):
+            // Plusieurs boss : chacun la sienne, à son nom.
+            let donjons = store.donjons
+            guard (donjons?.donjon(id: id)?.boss.count ?? 1) > 1 else { return L("donjon.aide") }
+            return L("donjon.aide.boss", BossVue.nom(boss, donjons: donjons, garde: nil))
         case .guide: return L("donjon.guide")
         case .clef: return L("donjon.clef")
         case .conseils:
@@ -115,6 +121,7 @@ struct FicheDonjonVue: View {
             let clef = detail?.clefs.first { $0.objet == objet }
             return L("donjon.clef.aide", clef?.quantite ?? 1, clef.flatMap { Lieu.traduit($0.noms, langue) } ?? "?")
         case .conseils: return L("donjon.conseils.aide")
+        case .aide: return L("donjon.aide.aide")
         case .monstres, .succes: return nil
         }
     }
@@ -123,7 +130,8 @@ struct FicheDonjonVue: View {
     private func ouverte(_ action: ActionFiche, _ detail: DetailDonjon?) -> some View {
         switch action {
         case .clef(let objet): OuTrouverVue(sujet: .objet(objet), metriques: .compact)
-        case .conseils: conseils
+        case .conseils:
+            VStack(alignment: .leading, spacing: Jetons.Espace.un) { ConseilsVue(conseils: store.conseils[id] ?? []) }
         case .monstres:
             ForEach(detail?.monstres.filter { !$0.boss } ?? [], id: \.id) { monstre in ligne(monstre) }
         case .succes:
@@ -132,22 +140,7 @@ struct FicheDonjonVue: View {
                     .font(Jetons.Typo.petit.police)
                     .help(Lieu.traduit(succes.description, langue) ?? "")
             }
-        case .entree, .guide: EmptyView()
-        }
-    }
-
-    /// Une phrase par conseil ; l'explication du site en infobulle.
-    private var conseils: some View {
-        VStack(alignment: .leading, spacing: Jetons.Espace.un) {
-            ForEach(Array((store.conseils[id] ?? []).enumerated()), id: \.offset) { _, conseil in
-                Text("• " + conseil.titre)
-                    .font(Jetons.Typo.petit.police)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .help(conseil.detail)
-            }
-            Text(L("donjon.conseils.source"))
-                .font(Jetons.Typo.petit.police)
-                .foregroundStyle(Color.jeton(\.encreTertiaire))
+        case .entree, .guide, .aide: EmptyView()
         }
     }
 

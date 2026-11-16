@@ -227,12 +227,11 @@ final class PaletteModele: ObservableObject {
     }
 
     /// La palette s'ouvre toujours sur l'Accueil, champ vide, première carte choisie ; distances
-    /// refaites depuis la position du moment. Deux exceptions, celles qui disent où elles vont :
-    /// `vue` (l'outil « Almanax » de la barre) et `requete`, une recherche posée d'office
-    /// (« Aide au combat »), à compléter.
-    func ouvrir(requete posee: String? = nil, vue: FiltrePalette = .tout) {
-        requete = posee ?? ""
-        filtre = posee == nil ? vue : .tout
+    /// refaites depuis la position du moment. Une exception, qui dit où elle va : `vue` (l'outil
+    /// « Almanax » de la barre, « Autre boss… » du panneau d'aide).
+    func ouvrir(vue: FiltrePalette = .tout) {
+        requete = ""
+        filtre = vue
         vueQuittee = .tout
         deplie = nil
         almanaxDeplie = nil
@@ -496,7 +495,8 @@ final class PaletteModele: ObservableObject {
         guard let deplie, let entree = entrees.first(where: { $0.id == deplie }),
               case .donjon(let id) = entree.effet, let donjon = DonjonsStore.shared.donjons?.donjon(id: id)
         else { return .vide }
-        return .donjon(entree: Self.entree(de: donjon), guide: donjon.nomFrancais,
+        return .donjon(entree: Self.entree(de: donjon), boss: donjon.boss.map { CibleBoss.boss($0, donjon: donjon.id) },
+                       guide: donjon.nomFrancais,
                        detail: DonjonsStore.shared.details[id], conseils: !(DonjonsStore.shared.conseils[id] ?? []).isEmpty)
     }
 
@@ -535,6 +535,9 @@ final class PaletteModele: ObservableObject {
         switch action {
         case .entree(let lieu): copierTrajet(vers: lieu)
         case .guide(let nom): Task { await DofusPourLesNoobs.ouvrir(nom) }
+        case .aide(let boss):
+            BossPanel.shared.ouvrir(boss)
+            PalettePanel.shared.fermer()
         case .clef, .conseils, .monstres, .succes:
             if ouvertes.remove(action) == nil { ouvertes.insert(action) }
         }
@@ -589,7 +592,6 @@ final class PaletteModele: ObservableObject {
         case .inviterEquipe: InvitationClipboard.shared.copierEquipe()
         case .chasse: ChassePanel.shared.ouvrir()
         case .quetes: QuetePanel.shared.ouvrir()
-        case .boss(let boss, _): BossPanel.shared.ouvrir(boss)
         case .reglages: SettingsWindowController.shared.show()
         }
     }

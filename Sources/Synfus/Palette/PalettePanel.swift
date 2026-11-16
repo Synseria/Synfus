@@ -81,14 +81,13 @@ final class PalettePanel: NSObject, ObservableObject, NSWindowDelegate {
 
     /// `requete` : posée d'office, le curseur au bout pour la compléter ; `vue` : la vue d'arrivée,
     /// l'Accueil sinon.
-    func ouvrir(requete: String? = nil, vue: FiltrePalette = .tout) {
+    func ouvrir(vue: FiltrePalette = .tout) {
         let panel = panel ?? construire()
-        PaletteModele.shared.ouvrir(requete: requete, vue: vue)
+        PaletteModele.shared.ouvrir(vue: vue)
         UsageStore.shared.compter(.palette)
         placer(panel)
         panel.makeKeyAndOrderFront(nil)
         ouvert = true
-        if requete != nil { (panel.firstResponder as? NSTextView)?.moveToEndOfDocument(nil) }
     }
 
     func fermer() {
