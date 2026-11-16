@@ -115,6 +115,16 @@ struct QuetesTests {
         return contexte
     }
 
+    @Test("Vue Quêtes au repos : la quête suivie ou épinglée en tête, puis les habitudes, sans changer la recherche")
+    func queteSuivie() throws {
+        var contexte = try contexte()
+        #expect(RecherchePalette.entrees("", contexte, filtre: .quetes).first?.suivie == false)
+        contexte.quetesSuivies = [18]
+        let repos = RecherchePalette.entrees("", contexte, filtre: .quetes)
+        #expect(repos.first?.effet == .ouvrirQuete(18) && repos.first?.suivie == true)
+        #expect(repos.allSatisfy { $0.genre == .quete })
+    }
+
     @Test("/quete trouve la quête, qui s'ouvre dans son panneau")
     func palette() throws {
         let quete = try #require(RecherchePalette.entrees("/quete wogew", try contexte()).first)
@@ -248,13 +258,16 @@ struct QuetesTests {
         #expect(DofusPourLesNoobs.page("pense-bete").absoluteString == "https://www.dofuspourlesnoobs.com/pense-bete.html")
     }
 
-    @Test("/pnj et le filtre Créatures : le trajet vers sa position")
+    @Test("/pnj et les portées PNJ et Créatures : le trajet vers sa position, les monstres seuls parmi les créatures")
     func paletteePNJ() throws {
         let contexte = try contexte()
         #expect(RecherchePalette.entrees("/pnj wogew", contexte).first?.detail == "[-1,-39]")
         #expect(RecherchePalette.entrees("/pnj otomai", contexte).first?.sousTitre?.hasPrefix("Village d'Amakna · Amakna") == true)
+        let pnjs = RecherchePalette.entrees("", contexte, filtre: .pnj)
+        #expect(!pnjs.isEmpty && pnjs.allSatisfy { $0.genre == .pnj })
         let creatures = RecherchePalette.entrees("", contexte, filtre: .creatures)
-        #expect(creatures.contains { $0.genre == .pnj } && creatures.allSatisfy { $0.genre == .pnj || $0.genre == .monstre })
+        #expect(!creatures.isEmpty && creatures.allSatisfy { $0.genre == .monstre })
+        #expect(RecherchePalette.entrees("wogew", contexte, filtre: .pnj).map(\.genre) == [.pnj])
         #expect(RecherchePalette.entrees("wogew", contexte, filtre: .quetes).map(\.genre) == [.quete])
     }
 
@@ -281,16 +294,5 @@ struct QuetesTests {
         let incarnam = PositionCarte(x: -1, y: -39, zone: "Incarnam (Pâturages)")
         #expect(QuetesIci.quetes(quetes, perso: incarnam, reseau: reseau).isEmpty)
         #expect(QuetesIci.quetes(quetes, perso: PositionCarte(x: 0, y: -39, zone: nil), reseau: reseau).isEmpty)
-    }
-
-    @Test("Le filtre « Ici » de la palette : la quête qui commence sur la case, le PNJ qui s'y tient")
-    func paletteIci() throws {
-        var contexte = try contexte()
-        contexte.zaaps = ZaapsSitues(contexte.zaaps.liste, reseau: reseau)
-        contexte.position = PositionCarte(x: -1, y: -39, zone: nil)
-        let ici = RecherchePalette.entrees("", contexte, filtre: .ici)
-        #expect(ici.map(\.id).sorted() == ["pnj:196:-1,-39", "quete:18"])
-        contexte.position = nil
-        #expect(RecherchePalette.entrees("", contexte, filtre: .ici).isEmpty)
     }
 }
