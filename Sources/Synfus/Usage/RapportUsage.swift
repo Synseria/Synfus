@@ -11,6 +11,8 @@ struct ContexteUsage: Equatable, Sendable {
     var version: String
     var systeme: String
     var architecture: String
+    /// Le genre de build, `nil` s'il n'envoie rien (build de développement).
+    var distribution: DistributionUsage?
 
     /// La version de macOS sans le correctif (`26.1`).
     static func systeme(_ version: OperatingSystemVersion) -> String {
@@ -24,6 +26,16 @@ struct ContexteUsage: Equatable, Sendable {
         "x86_64"
         #endif
     }
+}
+
+/// Le genre de build qui envoie, inscrit par `build.sh` (`SynfusDistribution`)
+/// et rapporté en `deployment.environment` : les chiffres des builds du
+/// propriétaire se séparent de ceux des utilisateurs.
+enum DistributionUsage: String, Sendable {
+    /// Une release publiée (`Tools/publier-release.sh`).
+    case release
+    /// Un build installé par `sh run.sh --install`.
+    case local
 }
 
 /// Le corps d'un envoi au collecteur : un enregistrement `rapport` par jour,
@@ -85,12 +97,15 @@ enum RapportUsage {
         }
         let enregistrements = jours.map { enregistrement("rapport", attributs($0, installation: contexte.installation)) }
             + diagnostics.map { enregistrement("diagnostic", attributs($0, installation: contexte.installation)) }
-        let ressource: [(String, Valeur)] = [
+        var ressource: [(String, Valeur)] = [
             ("service.name", .texte(service)),
             ("service.version", .texte(contexte.version)),
             ("os.version", .texte(contexte.systeme)),
             ("host.arch", .texte(contexte.architecture)),
         ]
+        if let distribution = contexte.distribution {
+            ressource.append(("deployment.environment", .texte(distribution.rawValue)))
+        }
         let racine: [String: Any] = [
             "resourceLogs": [[
                 "resource": ["attributes": ressource.map(attribut)],

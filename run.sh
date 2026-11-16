@@ -49,9 +49,27 @@ else
     MODE_BUILD="Debug"
 fi
 
+# L'app installée envoie ses statistiques comme une release (genre « local ») :
+# adresse et jeton viennent du coffre (Touch ID). Le build Debug n'envoie rien.
+SECRET=()
+if [ "$INSTALL" = "1" ]; then
+    if command -v secret >/dev/null; then
+        SECRET=(secret run TELEMETRIE_URL=domus:telemetrie/prod/URL TELEMETRIE_JETON=domus:telemetrie/prod/SYNFUS --)
+    else
+        echo "==> Commande secret absente : installée sans statistiques d'utilisation"
+    fi
+fi
+
 LOG="$(mktemp "${TMPDIR:-/tmp}/Synfus-run.XXXXXX")"
-bash ./build.sh ${ARGS[@]+"${ARGS[@]}"} >"$LOG" 2>&1
+${SECRET[@]+"${SECRET[@]}"} bash ./build.sh ${ARGS[@]+"${ARGS[@]}"} >"$LOG" 2>&1
 RC=$?
+# Coffre injoignable ou Touch ID refusé : build.sh n'a pas démarré. Installer
+# quand même, sans statistiques, plutôt que rien.
+if [ "$RC" != "0" ] && [ "${#SECRET[@]}" -gt 0 ] && ! grep -q "^==> Compilation" "$LOG"; then
+    echo "==> Coffre indisponible : installée sans statistiques d'utilisation"
+    bash ./build.sh ${ARGS[@]+"${ARGS[@]}"} >"$LOG" 2>&1
+    RC=$?
+fi
 # Le détail utile seulement : erreurs, avertissements du code, étapes.
 grep -E "error:|warning: |^==> |^\[signature\]" "$LOG" | grep -v "unhandled; explicitly declare" | awk '!vu[$0]++' | head -80
 if [ "$RC" = "0" ]; then

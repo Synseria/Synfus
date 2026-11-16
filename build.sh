@@ -12,6 +12,7 @@
 #   ARCH=x86_64     architecture cible (défaut : celle de la machine)
 #   DISTRIBUTION=1  build à publier : signé ad hoc
 #   TELEMETRIE_URL, TELEMETRIE_JETON  envoi des statistiques d'utilisation
+#                   (genre de build rapporté : release si DISTRIBUTION=1, sinon local)
 [ -n "${BASH_VERSION:-}" ] || exec /bin/bash "$0" "$@"
 case ":${SHELLOPTS:-}:" in *:posix:*) exec /bin/bash "$0" "$@" ;; esac
 set -euo pipefail
@@ -99,13 +100,18 @@ BINARY="$BIN_PATH/$NAME"
 source ./signature.sh
 
 # Statistiques d'utilisation : l'adresse du collecteur et le jeton de Synfus,
-# fournis à la publication par le coffre (Tools/publier-release.sh). Sans eux,
-# l'app compte mais n'envoie rien : un build local ne pollue pas les chiffres.
+# fournis par le coffre à la publication (Tools/publier-release.sh) et à
+# l'installation locale (run.sh --install). Sans eux — build de développement —,
+# l'app compte mais n'envoie rien. Le genre de build accompagne chaque rapport
+# (deployment.environment) : les builds du propriétaire ne se mêlent pas aux
+# chiffres des utilisateurs.
 # Écrits par le heredoc, jamais en argument d'une commande (visible par ps).
 TELEMETRIE_PLIST=""
 if [ -n "${TELEMETRIE_URL:-}" ] && [ -n "${TELEMETRIE_JETON:-}" ]; then
+    if [ "${DISTRIBUTION:-0}" = "1" ]; then GENRE_BUILD="release"; else GENRE_BUILD="local"; fi
     TELEMETRIE_PLIST="<key>SynfusTelemetrieURL</key><string>$TELEMETRIE_URL</string>
-    <key>SynfusTelemetrieJeton</key><string>$TELEMETRIE_JETON</string>"
+    <key>SynfusTelemetrieJeton</key><string>$TELEMETRIE_JETON</string>
+    <key>SynfusDistribution</key><string>$GENRE_BUILD</string>"
 fi
 
 echo "==> Assemblage du bundle"
