@@ -40,10 +40,10 @@ struct PaletteModeleTests {
         #expect(modele.selection == 2)
     }
 
-    @Test("La rangée suit l'état : trois vues au repos, cinq portées en recherche")
+    @Test("La rangée suit l'état : six vues au repos, sept portées en recherche")
     func jeu() {
-        #expect(FiltrePalette.jeu(enRecherche: false) == [.tout, .zaaps, .almanax])
-        #expect(FiltrePalette.jeu(enRecherche: true) == [.tout, .lieux, .quetes, .creatures, .objets])
+        #expect(FiltrePalette.jeu(enRecherche: false) == [.tout, .zaaps, .donjons, .pnj, .quetes, .almanax])
+        #expect(FiltrePalette.jeu(enRecherche: true) == [.tout, .lieux, .quetes, .pnj, .donjons, .creatures, .objets])
         let modele = PaletteModele(contexte: ContextePalette())
         #expect(modele.jeu == FiltrePalette.jeu(enRecherche: false))
         modele.requete = "a"
@@ -75,17 +75,32 @@ struct PaletteModeleTests {
         #expect(modele.filtre == .almanax && modele.surAlmanax)
     }
 
+    @Test("La première lettre choisit « Tout » même depuis une vue qui est aussi une portée, et le champ vidé la rend")
+    func vueQuitteeDeDonjons() {
+        let modele = PaletteModele(contexte: ContextePalette())
+        for vue in [FiltrePalette.donjons, .pnj, .quetes] {
+            modele.choisir(vue)
+            modele.requete = "b"
+            #expect(modele.filtre == .tout)
+            modele.requete = ""
+            #expect(modele.filtre == vue)
+        }
+    }
+
     @Test("Tab et ⇧Tab parcourent le jeu affiché, en boucle")
     func tabulation() {
         let modele = PaletteModele(contexte: ContextePalette())
         modele.tabulation()
         #expect(modele.filtre == .zaaps)
         modele.tabulation()
-        #expect(modele.filtre == .almanax)
-        modele.tabulation()
+        #expect(modele.filtre == .donjons)
+        modele.tabulation(arriere: true)
+        modele.tabulation(arriere: true)
         #expect(modele.filtre == .tout)
         modele.tabulation(arriere: true)
         #expect(modele.filtre == .almanax)
+        modele.tabulation()
+        #expect(modele.filtre == .tout)
         modele.requete = "b"
         modele.choisir(.tout)
         modele.tabulation()
@@ -105,7 +120,8 @@ struct PaletteModeleTests {
 
     @Test("Le tri ne se montre que là où il range : ni l'Accueil ni l'almanax, au repos")
     func triSeulementOuIlRange() {
-        for (filtre, agit) in [(FiltrePalette.tout, false), (.almanax, false), (.zaaps, true)] {
+        for (filtre, agit) in [(FiltrePalette.tout, false), (.almanax, false), (.zaaps, true), (.donjons, true),
+                               (.pnj, true), (.quetes, true)] {
             #expect(filtre.triAgit(enRecherche: false) == agit)
             #expect(filtre.triAgit(enRecherche: true))
         }
@@ -115,6 +131,16 @@ struct PaletteModeleTests {
         #expect(modele.tri == .auto)
         modele.requete = "a"
         #expect(modele.triAgit)
+    }
+
+    @Test("Au repos : Donjons et PNJ rangent par Auto, proximité et A → Z ; Quêtes, sans position, par Auto et A → Z")
+    func trisDesVues() {
+        for vue in [FiltrePalette.donjons, .pnj] {
+            #expect(vue.tris(enRecherche: false) == [.auto, .proximite, .alphabetique])
+            #expect(vue.tris(enRecherche: true) == TriPalette.allCases)
+        }
+        #expect(FiltrePalette.quetes.tris(enRecherche: false) == [.auto, .alphabetique])
+        #expect(FiltrePalette.quetes.tris(enRecherche: true) == TriPalette.allCases)
     }
 
     @Test("Sur « Zaaps », trois tris ; « Type », gardé d'avant, y passe pour « Auto »")

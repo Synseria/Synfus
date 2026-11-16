@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// La palette : un champ, puis les cartes de zaaps (rien de tapé) ou la liste
+/// La palette : un champ, puis les cartes de la vue (rien de tapé) ou la liste
 /// des résultats, et la ligne des touches. Le clavier est géré par le panneau
 /// (`PanneauPalette`) ; la vue ne fait que montrer la sélection.
 struct PaletteVue: View {
@@ -15,9 +15,9 @@ struct PaletteVue: View {
 
     private enum Champ { case recherche, etiquette }
 
-    /// Mesure de mise en page : trois rangées de cartes entières (deux lignes de sous-titre
+    /// Mesure de mise en page : trois rangées de cartes entières (deux lignes de titre et deux de sous-titre
     /// réservées, étiquette sur sa ligne) avec leurs interstices.
-    private static let hauteurCartes: CGFloat = 352
+    private static let hauteurCartes: CGFloat = 404
 
     var body: some View {
         VStack(spacing: 0) {
@@ -191,6 +191,11 @@ struct PaletteVue: View {
                     if modele.surAlmanax { return defilement.scrollTo(AlmanaxSemaineVue.ancre(index)) }
                     guard modele.entrees.indices.contains(index) else { return }
                     defilement.scrollTo(modele.entrees[index].id)
+                }
+                // Cartes et liste n'ont pas la même hauteur : la sélection reste à l'écran quand la fiche s'ouvre ou se ferme.
+                .onChange(of: modele.deplie) { _, _ in
+                    guard modele.entrees.indices.contains(modele.selection) else { return }
+                    defilement.scrollTo(modele.entrees[modele.selection].id)
                 }
                 .onChange(of: modele.carte) { _, carte in
                     guard let carte else { return }
@@ -402,17 +407,17 @@ private struct CarteZaap: View {
     private var surImage: Bool { FondCarte.surImage(entree.carte) }
     private var encre: Color { surImage ? Color.jeton(\.encre, en: .sombre) : etat.encre }
     private var encreSecondaire: Color { surImage ? Color.jeton(\.encreSecondaire, en: .sombre) : etat.encreSecondaire }
-
     var body: some View {
         VStack(alignment: .leading, spacing: Jetons.Espace.un) {
             VStack(alignment: .leading, spacing: 0) {
                 Text(entree.titre)
                     .font(Jetons.Typo.corpsFort.police)
                     .foregroundStyle(encre)
-                    .lineLimit(1)
+                    .lineLimit(2, reservesSpace: true)
                     .padding(.trailing, entree.favori ? Jetons.Espace.quatre : 0)
                 // Sur l'image, le sous-titre prend l'encre du titre : le voile couvre ses deux lignes.
-                // Deux lignes réservées : les cartes d'une même rangée ont la même hauteur.
+                // Deux lignes de titre et deux de sous-titre, réservées : rien de tronqué, et les cartes
+                // d'une même rangée ont la même hauteur.
                 Text(entree.itineraire ?? entree.sousTitre ?? "")
                     .font(Jetons.Typo.petit.police)
                     .foregroundStyle(surImage ? encre : encreSecondaire)

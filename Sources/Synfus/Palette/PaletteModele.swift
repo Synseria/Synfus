@@ -156,21 +156,22 @@ final class PaletteModele: ObservableObject {
     /// Les capsules de la rangée, que Tab et ⇧Tab parcourent.
     var jeu: [FiltrePalette] { FiltrePalette.jeu(enRecherche: enRecherche) }
 
-    /// À la première lettre la rangée passe des vues aux portées, « Tout » d'office ;
-    /// le champ vidé revient à la vue quittée.
+    /// À la première lettre la rangée passe des vues aux portées, « Tout » d'office, même depuis une
+    /// vue qui porte aussi un nom de portée ; le champ vidé revient à la vue quittée.
     private func changerDeJeu(avant ancienne: String) {
         let etaitVide = ancienne.trimmingCharacters(in: .whitespaces).isEmpty
         if etaitVide, enRecherche {
             vueQuittee = filtre
-            if !FiltrePalette.jeu(enRecherche: true).contains(filtre) { filtre = .tout }
+            filtre = .tout
         } else if !etaitVide, !enRecherche {
             filtre = vueQuittee
         }
     }
 
-    /// Rien de tapé : l'Accueil et « Zaaps » se montrent en cartes.
+    /// Rien de tapé : l'Accueil, « Zaaps », « Donjons », « PNJ » et « Quêtes » se montrent en cartes — jusqu'à
+    /// ce qu'une fiche se déplie, qui n'a de place que sous une ligne.
     var enGrille: Bool {
-        requete.trimmingCharacters(in: .whitespaces).isEmpty && filtre.enCartes
+        requete.trimmingCharacters(in: .whitespaces).isEmpty && filtre.enCartes && deplie == nil
     }
 
     /// La vue « Almanax » : ses sept cartes, pas des entrées.
@@ -370,6 +371,7 @@ final class PaletteModele: ObservableObject {
     /// pour l'Accueil — une faute de frappe ne fait pas tout reprendre ; sinon ferme.
     func echap() {
         if edition != nil { edition = nil; return }
+        if deplie != nil { deplie = nil; return }
         if !requete.isEmpty { requete = ""; return }
         if filtre != .tout { return choisir(.tout) }
         PalettePanel.shared.fermer()
@@ -566,6 +568,7 @@ final class PaletteModele: ObservableObject {
         contexte.recents = prefs.paletteRecents
         contexte.frequentation = prefs.paletteFrequentation
         contexte.quetes = QuetesStore.shared.quetes
+        contexte.quetesSuivies = Set(prefs.quetesEpinglees).union(LectureSuivi.shared.reconnues.map(\.id))
         contexte.donjons = DonjonsStore.shared.donjons
         contexte.gainMinimal = prefs.zaapGainMinimal
         contexte.zaapDuJeu = prefs.zaapDuJeu

@@ -73,6 +73,16 @@ struct ScorePaletteTests {
         #expect(ids(recent) == ["pnj:2", "pnj:1"])
     }
 
+    @Test("Une quête suivie passe devant les habitudes d'une autre, mais pas devant une meilleure correspondance")
+    func suivie() {
+        func score(_ suivie: Bool, correspondance: Int?, fois: Int = 0) -> ScorePalette {
+            let entree = EntreePalette(id: "quete:1", genre: .quete, titre: "Q", suivie: suivie, effet: .ouvrirQuete(1))
+            return ScorePalette(entree, correspondance: correspondance, compte: fois > 0 ? .init(fois: fois, dernier: 1) : nil)
+        }
+        #expect(ScorePalette.avant(score(true, correspondance: nil), score(false, correspondance: nil, fois: 50)) == true)
+        #expect(ScorePalette.avant(score(true, correspondance: 40), score(false, correspondance: 60)) == false)
+    }
+
     @Test("Les habitudes s'écrasent en paliers : un de plus à chaque doublement")
     func paliers() {
         #expect([0, 1, 2, 3, 4, 7, 8, 100].map(ScorePalette.palier) == [0, 1, 2, 2, 3, 3, 4, 7])
