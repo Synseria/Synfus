@@ -25,10 +25,12 @@ enum OrdrePositions {
         let dernier: Int
     }
 
-    /// Les positions les plus fréquentées d'abord, puis du moins au plus coûteux ; à égalité, la plus citée.
-    /// Il n'y a pas de favori par position : un favori est celui du PNJ.
+    /// L'habituelle d'abord, puis les autres positions choisies, puis du moins au plus coûteux ; à égalité,
+    /// la plus citée. Il n'y a pas de favori par position : un favori est celui du PNJ.
     static func trier(_ candidats: [Candidat]) -> [Candidat] {
-        candidats.sorted { a, b in
+        let habituelle = habituelle(candidats)
+        return candidats.sorted { a, b in
+            if (a.rang == habituelle) != (b.rang == habituelle) { return a.rang == habituelle }
             if a.fois != b.fois { return a.fois > b.fois }
             if a.fois > 0, a.dernier != b.dernier { return a.dernier > b.dernier }
             if let ordre = ScorePalette.plusProche(a.cout, b.cout) { return ordre }
@@ -69,6 +71,30 @@ enum DispositionPositions {
     static func defile(_ nombre: Int) -> Bool { nombre > 3 }
 }
 
+/// Les cartes de la rangée des positions et le clavier qui les parcourt : ←/→ passent de l'une à l'autre,
+/// ← sur la première et ↑ replient la rangée. Pur.
+struct CartesPositions: Equatable, Sendable {
+    let positions: [PNJ.Position]
+
+    enum Sortie: Equatable, Sendable {
+        case carte(PNJ.Position)
+        case replier
+    }
+
+    var premiere: PNJ.Position? { positions.first }
+
+    func lateral(depuis position: PNJ.Position, _ pas: Int) -> Sortie {
+        guard let index = positions.firstIndex(of: position) else { return .replier }
+        let cible = index + pas
+        return positions.indices.contains(cible) ? .carte(positions[cible]) : pas < 0 ? .replier : .carte(position)
+    }
+
+    /// La position si elle est encore là ; `nil` : retour à la ligne.
+    func valide(_ position: PNJ.Position?) -> PNJ.Position? {
+        position.flatMap { positions.contains($0) ? $0 : nil }
+    }
+}
+
 extension PNJ {
     /// Ce qu'une position retenue dans les habitudes s'appelle : sa case, sous le PNJ.
     static func cle(_ id: Int, en position: Position) -> String { prefixeCle + "\(id):\(position.x),\(position.y)" }
@@ -99,7 +125,8 @@ extension RecherchePalette {
                 titre: lieu.flatMap { Lieu.traduit($0.noms, contexte.langue) } ?? coordonnees,
                 sousTitre: lieu.flatMap { Lieu.traduit($0.zone, contexte.langue) },
                 etiquette: candidat.rang == habituelle ? L("palette.pnj.habituelle") : nil,
-                detail: coordonnees, carte: passage.carte, effet: trajets[candidat.rang].effet)
+                detail: coordonnees, carte: passage.carte, interieur: contexte.interieurs.contient(passage.carte),
+                effet: trajets[candidat.rang].effet)
             return PositionPNJ(position: position, entree: entree,
                                quetes: passage.quetes.compactMap { noms[$0] }
                                    .sorted { $0.localizedStandardCompare($1) == .orderedAscending },
