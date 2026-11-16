@@ -249,7 +249,21 @@ struct CapturesTests {
             .padding(24)
             .background(Self.fondCapture)
             .environment(\.colorScheme, Self.schema)
-        try ecrire(vue, vers: dossier.appending(path: "quete.png"))
+        let prefs = Preferences.shared
+        let avant = prefs.quetesCompact
+        defer { prefs.quetesCompact = avant }
+        for (nom, compact) in [("quete", true), ("quete-confort", false)] {
+            prefs.quetesCompact = compact
+            try ecrire(vue, vers: dossier.appending(path: nom + ".png"))
+        }
+        // À sa taille minimale : rien ne déborde, l'en-tête de l'étape passe sur deux lignes.
+        prefs.quetesCompact = true
+        let etroite = QueteVue(ficheImposee: fiche, etapeImposee: reelle == nil ? 1 : 0, lusImposes: lus)
+            .frame(width: QuetePanel.tailleMinimale.width, height: 300)
+            .padding(24)
+            .background(Self.fondCapture)
+            .environment(\.colorScheme, Self.schema)
+        try ecrire(etroite, vers: dossier.appending(path: "quete-etroite.png"))
     }
 
     @Test("Capture du panneau de quête sans quête épinglée, au suivi long", .enabled(if: dossier != nil))
@@ -281,6 +295,14 @@ struct CapturesTests {
             .background(Self.fondCapture)
             .environment(\.colorScheme, Self.schema)
         try ecrire(vue, vers: dossier.appending(path: "quete-vide.png"))
+        // La liste avec des quêtes au panneau : le suivi ne propose plus que les autres.
+        let prefs = Preferences.shared
+        let avant = prefs.quetesEpinglees
+        defer { prefs.quetesEpinglees = avant }
+        prefs.quetesEpinglees = [9001, 9003, 9004]
+        QuetePanel.shared.enListe = true
+        defer { QuetePanel.shared.enListe = false }
+        try ecrire(vue, vers: dossier.appending(path: "quete-liste.png"))
     }
 
     /// Sans la vue des cartes : elle viendrait de DofusDB, et une capture du
