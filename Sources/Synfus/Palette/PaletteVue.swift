@@ -17,7 +17,7 @@ struct PaletteVue: View {
 
     /// Mesure de mise en page : trois rangées de cartes entières (deux lignes de titre et deux de sous-titre
     /// réservées, étiquette sur sa ligne) avec leurs interstices.
-    private static let hauteurCartes: CGFloat = 404
+    static let hauteurCartes: CGFloat = 404
 
     var body: some View {
         VStack(spacing: 0) {
@@ -199,9 +199,12 @@ struct PaletteVue: View {
                 }
                 .onChange(of: modele.carte) { _, carte in
                     guard let carte else { return }
-                    // Une rangée de positions défile d'elle-même : la liste n'a qu'à montrer la ligne et la rangée.
-                    if case .position = carte, let deplie = modele.deplie { return defilement.scrollTo(deplie, anchor: .top) }
                     defilement.scrollTo(FicheDonjonVue.ancre(carte))
+                }
+                // Une rangée de positions défile d'elle-même : la liste n'a qu'à montrer la ligne et la rangée.
+                .onChange(of: modele.position) { _, position in
+                    guard position != nil, let deplie = modele.deplie else { return }
+                    defilement.scrollTo(deplie, anchor: .top)
                 }
             }
         }
@@ -272,7 +275,7 @@ struct PaletteVue: View {
             ForEach(Array(modele.entrees.enumerated()), id: \.element.id) { index, entree in
                 let deplie = modele.deplie == entree.id
                 // Le clavier dans la fiche : la ligne ne se dit plus choisie, la carte l'est.
-                LigneResultat(entree: entree, choisie: index == modele.selection && modele.carte == nil, deplie: deplie,
+                LigneResultat(entree: entree, choisie: index == modele.selection && modele.carte == nil && modele.position == nil, deplie: deplie,
                               deplier: entree.pnj == nil ? nil : { modele.deplier(entree) })
                     .id(entree.id)
                     .onTapGesture { modele.executer(entree) }
@@ -369,6 +372,7 @@ struct PaletteVue: View {
         guard modele.entrees.indices.contains(modele.selection) else { return L("palette.touche.copier") }
         let entree = modele.entrees[modele.selection]
         if entree.id == modele.deplie {
+            if modele.cartesPositions.valide(modele.position) != nil { return L("palette.touche.copier") }
             return modele.cartes.valide(modele.carte).map(aide) ?? L("palette.touche.replier")
         }
         switch entree.effet {
@@ -386,7 +390,6 @@ struct PaletteVue: View {
         switch action {
         case .entree: return L("palette.touche.copier")
         case .guide: return L("palette.touche.ouvrir")
-        case .position: return L("palette.touche.copier")
         case .clef, .conseils, .monstres, .succes:
             return modele.ouvertes.contains(action) ? L("palette.touche.replier") : L("palette.touche.deplier")
         }
@@ -400,23 +403,33 @@ struct PaletteVue: View {
     }
 }
 
+/// Les encres d'une carte, sur l'image de la carte du jeu (écrites en clair) ou sur le fond du thème.
+struct EncresCarte {
+    let encre: Color
+    /// Le trajet, en rose.
+    let accent: Color
+    let surImage: Bool
+}
+
 /// Une carte de zaap : nom et zone en haut, étiquette et coordonnées en bas. Sur l'image de la
 /// carte, le texte est clair ; sans image, il prend les encres du thème.
 struct CarteZaap<Corps: View>: View {
     let entree: EntreePalette
     let choisie: Bool
-    /// Ce qui prend la place entre l'en-tête et le pied : la liste des quêtes d'une position.
-    private let corps: Corps?
+    /// Ce qui prend la place entre l'en-tête et le pied : la liste des quêtes d'une position, écrite des
+    /// encres de la carte.
+    private let corps: ((EncresCarte) -> Corps)?
     // periphery:ignore - observé pour redessiner la carte quand `vuesCartes` change
     @ObservedObject private var prefs = Preferences.shared
 
-    init(entree: EntreePalette, choisie: Bool, @ViewBuilder corps: () -> Corps) {
-        (self.entree, self.choisie, self.corps) = (entree, choisie, corps())
+    init(entree: EntreePalette, choisie: Bool, @ViewBuilder corps: @escaping (EncresCarte) -> Corps) {
+        (self.entree, self.choisie, self.corps) = (entree, choisie, corps)
     }
 
     private var etat: EtatVisuel { choisie ? .choisi : .repos }
     private var surImage: Bool { FondCarte.surImage(entree.carte) }
     private var encre: Color { surImage ? Color.jeton(\.encre, en: .sombre) : etat.encre }
+    private var accent: Color { surImage ? Color.jeton(\.primaireEncre, en: .sombre) : Color.jeton(\.primaireEncre) }
     private var encreSecondaire: Color { surImage ? Color.jeton(\.encreSecondaire, en: .sombre) : etat.encreSecondaire }
     var body: some View {
         VStack(alignment: .leading, spacing: Jetons.Espace.un) {
@@ -435,7 +448,8 @@ struct CarteZaap<Corps: View>: View {
                     .lineLimit(2, reservesSpace: true)
             }
             if let corps {
-                corps.frame(maxHeight: .infinity, alignment: .top)
+                corps(EncresCarte(encre: encre, accent: accent, surImage: surImage))
+                    .frame(maxHeight: .infinity, alignment: .top)
             } else {
                 Spacer(minLength: Jetons.Espace.quatre)
             }
@@ -463,11 +477,13 @@ struct CarteZaap<Corps: View>: View {
         return ViewThatFits(in: .horizontal) {
             HStack(spacing: Jetons.Espace.un) {
                 if let etiquette = entree.etiquette { PastilleEtiquette(texte: etiquette) }
+                if entree.interieur { EtiquetteInterieur(taille: .micro) }
                 Spacer(minLength: 0)
                 coordonnees
             }
             VStack(alignment: .leading, spacing: Jetons.Espace.un) {
                 if let etiquette = entree.etiquette { PastilleEtiquette(texte: etiquette) }
+                if entree.interieur { EtiquetteInterieur(taille: .micro) }
                 HStack(spacing: 0) {
                     Spacer(minLength: 0)
                     coordonnees

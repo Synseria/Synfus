@@ -8,7 +8,8 @@ struct PositionsPNJVue: View {
     @ObservedObject var modele: PaletteModele
     @Environment(\.accessibilityReduceMotion) private var sansMouvement
 
-    private static let hauteur: CGFloat = 240
+    /// Deux rangées de cartes de la grille : la liste des quêtes y trouve sa place et la fiche tient dans la palette.
+    private static let hauteur = (PaletteVue.hauteurCartes - 2 * Jetons.Espace.deux) / 3 * 2 + Jetons.Espace.deux
     private static let interstice = Jetons.Espace.deux
 
     private static func ancre(_ position: PNJ.Position) -> String { "position:\(position.x),\(position.y)" }
@@ -22,13 +23,12 @@ struct PositionsPNJVue: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: Self.interstice) {
                         ForEach(positions) { position in
-                            let action = ActionFiche.position(position.position)
-                            CarteZaap(entree: position.entree, choisie: modele.carte == action) {
-                                QuetesDePosition(position: position)
+                            CarteZaap(entree: position.entree, choisie: modele.position == position.position) { encres in
+                                QuetesDePosition(position: position, encres: encres)
                             }
                             .frame(width: largeur, height: Self.hauteur)
                             .id(Self.ancre(position.position))
-                            .onTapGesture { modele.cliquer(action) }
+                            .onTapGesture { modele.cliquer(position.position) }
                             .help(([position.entree.titre, position.entree.sousTitre, position.itineraire].compactMap(\.self)
                                    + position.quetes).joined(separator: "\n"))
                             .accessibilityElement(children: .combine)
@@ -37,8 +37,8 @@ struct PositionsPNJVue: View {
                     }
                 }
                 .scrollDisabled(!DispositionPositions.defile(positions.count))
-                .onChange(of: modele.carte) { _, carte in
-                    guard case .position(let position)? = carte else { return }
+                .onChange(of: modele.position) { _, position in
+                    guard let position else { return }
                     withAnimation(sansMouvement ? nil : Jetons.Duree.animation(Jetons.Duree.etat)) { defilement.scrollTo(Self.ancre(position), anchor: .center) }
                 }
             }
@@ -48,9 +48,10 @@ struct PositionsPNJVue: View {
 }
 
 /// Ce qu'il y a à faire à une position, et ce qu'il en coûte d'y aller : la liste des quêtes défile,
-/// le trajet reste. Sur la vue de la carte, un fond la garde lisible.
+/// le trajet reste. Sur la vue de la carte, un voile la garde lisible ; le texte s'aligne sur celui de la carte.
 private struct QuetesDePosition: View {
     let position: PositionPNJ
+    let encres: EncresCarte
 
     var body: some View {
         VStack(alignment: .leading, spacing: Jetons.Espace.un) {
@@ -59,7 +60,7 @@ private struct QuetesDePosition: View {
                     ForEach(Array(position.quetes.enumerated()), id: \.offset) { _, nom in
                         Text(nom)
                             .font(Jetons.Typo.petit.police)
-                            .foregroundStyle(Color.jeton(\.encre))
+                            .foregroundStyle(encres.encre)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
@@ -67,19 +68,17 @@ private struct QuetesDePosition: View {
             if let itineraire = position.itineraire {
                 Text(itineraire)
                     .font(Jetons.Typo.petit.police)
-                    .foregroundStyle(Color.jeton(\.primaireEncre))
+                    .foregroundStyle(encres.accent)
                     .lineLimit(2)
             }
         }
-        .padding(Jetons.Espace.un)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
-            if FondCarte.surImage(position.entree.carte) {
+            if encres.surImage {
                 RoundedRectangle(cornerRadius: Jetons.Rayon.pastille, style: .continuous)
-                    .fill(Color.jeton(\.surface).opacity(Self.voile))
+                    .fill(Color.jeton(\.nuitProfond).opacity(FondCarte.voileTexte))
+                    .padding(-Jetons.Espace.un)
             }
         }
     }
-
-    private static let voile = 0.9
 }
