@@ -21,31 +21,23 @@ struct HarebourgVue: View {
         aLaMain
         if let estimation = aide.estimation { details(estimation) }
         if aide.estimation == nil, previews.authorized { attenteLecture }
-        if let tour = aide.tour { regleDuTour(impair: ToursCombat.estImpair(tour)) }
+        if let tour = aide.tour {
+            regleDuTour(impair: ToursCombat.estImpair(tour))
+        } else {
+            LigneDuTour {}
+        }
     }
 
-    /// La réponse du tour en deux mots, la règle entière dépliée d'un clic.
+    /// La réponse du tour en deux mots, le tour à côté, la règle entière dépliée d'un clic.
     private func regleDuTour(impair: Bool) -> some View {
-        VStack(alignment: .leading, spacing: Jetons.Espace.un) {
-            Button { regleDepliee.toggle() } label: {
-                HStack(spacing: Jetons.Espace.un) {
-                    Label(impair ? L("boss.harebourg.impair.court") : L("boss.harebourg.pair.court"),
-                          systemImage: impair ? "shield" : "arrow.left.arrow.right")
-                        .font(Jetons.Typo.corpsFort.police)
-                    Spacer(minLength: 0)
-                    Image(systemName: regleDepliee ? "chevron.down" : "chevron.right")
-                        .font(Jetons.Typo.micro.police)
-                        .foregroundStyle(Color.jeton(\.encreSecondaire))
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            if regleDepliee {
-                Text(impair ? L("boss.harebourg.impair") : L("boss.harebourg.pair"))
-                    .font(Jetons.Typo.petit.police)
-                    .foregroundStyle(Color.jeton(\.encreSecondaire))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+        SectionBoss(titre: impair ? L("boss.harebourg.impair.court") : L("boss.harebourg.pair.court"),
+                    icone: impair ? "shield" : "arrow.left.arrow.right", forte: true, depliee: $regleDepliee) {
+            CorrectionTour()
+        } contenu: {
+            Text(impair ? L("boss.harebourg.impair") : L("boss.harebourg.pair"))
+                .font(Jetons.Typo.petit.police)
+                .foregroundStyle(Color.jeton(\.encreSecondaire))
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 

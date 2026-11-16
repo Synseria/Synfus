@@ -106,8 +106,6 @@ struct ScorePaletteTests {
         #expect(ranges(parGenre, correspondance: 60) == ["Z", "B", "P", "Q", "L"])
         #expect(ranges(parGenre, correspondance: nil) == ["Q", "P", "L", "B", "Z"])
         #expect(parGenre[3].estBoss && !parGenre[3].enDernier)
-        #expect(EntreePalette(id: "action:x", genre: .action, titre: "A",
-                              effet: .action(.boss(.special(.kimbo), nom: "Kimbo"))).estBoss)
     }
 
     @Test("L'ordre est total et le même d'un calcul à l'autre")

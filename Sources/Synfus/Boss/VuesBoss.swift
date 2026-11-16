@@ -71,26 +71,29 @@ struct ToxoliathVue: View {
             }
             .disabled(sous == nil)
         }
-        if let tour = aide.tour {
-            if tour < Toxoliath.premierPoisonVolatile {
-                let reste = Toxoliath.premierPoisonVolatile - tour
-                Consigne(texte: L("boss.toxoliath.avant", nombre: reste, reste), icone: "timer", urgente: reste <= 2, forte: true)
-            } else if Toxoliath.poisonVolatile(au: tour) {
-                Consigne(texte: L("boss.toxoliath.poison.maintenant"), icone: "exclamationmark.triangle.fill",
-                         urgente: true, forte: true)
-            } else {
-                Consigne(texte: L("boss.toxoliath.poison.prochain", Toxoliath.prochainPoisonVolatile(depuis: tour)),
-                         icone: "timer")
-            }
-            if let vague = Toxoliath.prochaineVague(apres: tour) {
-                Consigne(texte: L("boss.toxoliath.vague", vague), icone: "person.3")
-            }
-        } else {
-            Consigne(texte: L("boss.toxoliath.avantCombat"), icone: "timer")
+        LigneDuTour { poison(au: aide.tour) }
+        if let tour = aide.tour, let vague = Toxoliath.prochaineVague(apres: tour) {
+            Consigne(texte: L("boss.toxoliath.vague", vague), icone: "person.3")
         }
         if let sous {
             Consigne(texte: L("boss.toxoliath.toxmose", sous + Toxoliath.dureeToxmose - 1), icone: "drop.triangle", urgente: true)
         }
+    }
+}
+
+extension ToxoliathVue {
+    /// Où en est Poison Volatile au tour compté.
+    private func poison(au tour: Int?) -> Consigne {
+        guard let tour else { return Consigne(texte: L("boss.toxoliath.avantCombat"), icone: "timer") }
+        if tour < Toxoliath.premierPoisonVolatile {
+            let reste = Toxoliath.premierPoisonVolatile - tour
+            return Consigne(texte: L("boss.toxoliath.avant", nombre: reste, reste), icone: "timer", urgente: reste <= 2, forte: true)
+        }
+        if Toxoliath.poisonVolatile(au: tour) {
+            return Consigne(texte: L("boss.toxoliath.poison.maintenant"), icone: "exclamationmark.triangle.fill",
+                            urgente: true, forte: true)
+        }
+        return Consigne(texte: L("boss.toxoliath.poison.prochain", Toxoliath.prochainPoisonVolatile(depuis: tour)), icone: "timer")
     }
 }
 
@@ -137,11 +140,13 @@ struct IlyzaelleVue: View {
         case .gagnee:
             Consigne(texte: L("boss.ilyzaelle.gagnee"), icone: "checkmark.seal")
         }
-        if Ilyzaelle.versLesTenebres(au: tour) {
-            Consigne(texte: L("boss.ilyzaelle.tenebres.maintenant"), icone: "exclamationmark.triangle.fill", urgente: true)
-        } else {
-            Consigne(texte: L("boss.ilyzaelle.tenebres.prochain", Ilyzaelle.prochainVersLesTenebres(depuis: tour)),
-                     icone: "arrow.down.right.and.arrow.up.left")
+        LigneDuTour {
+            if Ilyzaelle.versLesTenebres(au: tour) {
+                Consigne(texte: L("boss.ilyzaelle.tenebres.maintenant"), icone: "exclamationmark.triangle.fill", urgente: true)
+            } else {
+                Consigne(texte: L("boss.ilyzaelle.tenebres.prochain", Ilyzaelle.prochainVersLesTenebres(depuis: tour)),
+                         icone: "arrow.down.right.and.arrow.up.left")
+            }
         }
     }
 }
