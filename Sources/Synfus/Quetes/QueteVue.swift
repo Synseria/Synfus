@@ -17,7 +17,6 @@ struct QueteVue: View {
     @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var lecture = LectureSuivi.shared
     @ObservedObject private var lecteur = LecteurEcran.shared
-    @ObservedObject private var previews = WindowPreviewService.shared
     /// Les cartes intérieures, venues après la carte.
     @ObservedObject private var cartes = CarteStore.shared
     /// La ligne qui vient d'être copiée, le temps de le dire.
