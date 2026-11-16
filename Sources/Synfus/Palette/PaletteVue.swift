@@ -407,6 +407,7 @@ struct CarteZaap<Corps: View>: View {
     let choisie: Bool
     /// Ce qui prend la place entre l'en-tête et le pied : la liste des quêtes d'une position.
     private let corps: Corps?
+    // periphery:ignore - observé pour redessiner la carte quand `vuesCartes` change
     @ObservedObject private var prefs = Preferences.shared
 
     init(entree: EntreePalette, choisie: Bool, @ViewBuilder corps: () -> Corps) {
