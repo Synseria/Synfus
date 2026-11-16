@@ -173,9 +173,6 @@ final class PaletteModele: ObservableObject {
         requete.trimmingCharacters(in: .whitespaces).isEmpty && filtre.enCartes
     }
 
-    /// Ce qui ne se montre que sur l'Accueil, au-dessus des cartes.
-    var surAccueil: Bool { enGrille && filtre == .tout }
-
     /// La vue « Almanax » : ses sept cartes, pas des entrées.
     var surAlmanax: Bool { requete.trimmingCharacters(in: .whitespaces).isEmpty && filtre == .almanax }
 
@@ -219,9 +216,6 @@ final class PaletteModele: ObservableObject {
         guard let perso = contexte.perso, let position = contexte.position else { return L("palette.depuis.inconnue") }
         return L("palette.depuis", perso, Coordonnees.texte(position.x, position.y))
     }
-
-    /// Les dernières copies, montrées au-dessus des cartes.
-    var recents: [EntreePalette] { RecherchePalette.recents(contexte) }
 
     /// La palette s'ouvre toujours sur l'Accueil, champ vide, première carte choisie ; distances
     /// refaites depuis la position du moment. Deux exceptions, celles qui disent où elles vont :

@@ -525,8 +525,7 @@ enum RecherchePalette {
         }
     }
 
-    /// Les dernières copies : au-dessus des zaaps quand rien n'est tapé, et
-    /// cherchées comme le reste.
+    /// Les dernières copies : cherchées comme le reste, jamais montrées au repos.
     static func recents(_ contexte: ContextePalette) -> [EntreePalette] {
         contexte.recents.enumerated().map {
             EntreePalette(id: "recent:\($0.offset)", genre: .recent, titre: $0.element,

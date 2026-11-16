@@ -262,7 +262,7 @@ struct RecherchePaletteTests {
         #expect(premiere("/zaap eleveurs", contexte())?.titre == "Village des Éleveurs")
     }
 
-    @Test("Les copies récentes : en tête, sans doublon, huit au plus")
+    @Test("Les copies récentes : en tête, sans doublon, huit au plus, trouvées en tapant seulement")
     func recents() {
         var recents: [String] = []
         for texte in ["/zaap 1,1", "/zaap 2,2", "/zaap 1,1"] { recents = RecherchePalette.noterRecent(texte, dans: recents) }
@@ -272,6 +272,10 @@ struct RecherchePaletteTests {
         var avecRecents = contexte()
         avecRecents.recents = ["/travel 12,34"]
         #expect(premiere("travel", avecRecents)?.effet == .copier("/travel 12,34"))
+        // Au repos, aucune vue ne les montre : elles ne se trouvent qu'en tapant.
+        for filtre in FiltrePalette.jeu(enRecherche: false) {
+            #expect(!RecherchePalette.entrees("", avecRecents, filtre: filtre).contains { $0.genre == .recent })
+        }
     }
 
     // MARK: - Filtres et tris

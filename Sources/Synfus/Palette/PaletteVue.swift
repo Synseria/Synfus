@@ -183,7 +183,6 @@ struct PaletteVue: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: Jetons.Espace.deux) {
                         if modele.surAlmanax { semaineAlmanax }
-                        if modele.surAccueil, !modele.recents.isEmpty { recents }
                         if modele.enGrille { grille } else if !modele.surAlmanax { liste }
                     }
                     .padding(Jetons.Espace.deux)
@@ -250,27 +249,6 @@ struct PaletteVue: View {
             .font(Jetons.Typo.corps.police)
             .foregroundStyle(Color.jeton(\.encreSecondaire))
             .multilineTextAlignment(.center)
-    }
-
-    /// Les dernières copies, en pastilles : un clic recopie.
-    private var recents: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: Jetons.Espace.un) {
-                Image(systemName: "clock.arrow.circlepath").foregroundStyle(Color.jeton(\.encreSecondaire))
-                ForEach(modele.recents) { entree in
-                    Text(entree.titre)
-                        .font(Jetons.Typo.codeInterface.police)
-                        .lineLimit(1)
-                        .padding(.horizontal, Jetons.Espace.deux)
-                        .frame(height: Jetons.Taille.cibleMin)
-                        .background(Capsule().fill(Color.jeton(\.creux)))
-                        .onTapGesture { modele.executer(entree) }
-                        .help(entree.titre)
-                        .accessibilityAddTraits(.isButton)
-                }
-            }
-        }
-        .font(Jetons.Typo.petit.police)
     }
 
     private var grille: some View {
