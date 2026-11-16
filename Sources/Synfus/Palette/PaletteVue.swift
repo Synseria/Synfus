@@ -118,8 +118,6 @@ struct PaletteVue: View {
                 .elementDeGroupe()
                 .onHover { filtreSurvole = $0 ? filtre : nil }
                 .accessibilityAddTraits(choisi ? .isSelected : [])
-                // « Ici » est à part, discret : une vue de plus, pas l'une des principales.
-                .padding(.leading, filtre == .ici ? Jetons.Espace.deux : 0)
             }
             ToucheRaccourci("⇥")
                 .padding(.leading, Jetons.Espace.un)
@@ -221,10 +219,6 @@ struct PaletteVue: View {
                     .buttonStyle(.bouton(.secondaire))
             case .quetesEnChargement:
                 texteVide(L("palette.quetes.chargement"))
-            case .iciSansLecture:
-                texteVide(L("palette.ici.sansPosition"))
-            case .iciPasEncoreLu:
-                texteVide(L("palette.ici.pasEncore"))
             case .rienDansLeFiltre(let filtre, let ailleurs):
                 texteVide(L("palette.vide.filtre", filtre.titre))
                 Button { modele.choisir(.tout) } label: {

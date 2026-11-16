@@ -156,7 +156,7 @@ final class PaletteModele: ObservableObject {
     /// Les capsules de la rangée, que Tab et ⇧Tab parcourent.
     var jeu: [FiltrePalette] { FiltrePalette.jeu(enRecherche: enRecherche) }
 
-    /// À la première lettre la rangée passe des vues aux portées, « Tout » d'office (« Ici » reste) ;
+    /// À la première lettre la rangée passe des vues aux portées, « Tout » d'office ;
     /// le champ vidé revient à la vue quittée.
     private func changerDeJeu(avant ancienne: String) {
         let etaitVide = ancienne.trimmingCharacters(in: .whitespaces).isEmpty
@@ -189,16 +189,12 @@ final class PaletteModele: ObservableObject {
         return VidePalette.de(
             carte: carteImposee ?? CarteStore.shared.etat,
             requeteVide: requete.trimmingCharacters(in: .whitespaces).isEmpty, filtre: filtre,
-            positionConnue: positionConnue, lectureAllumee: Preferences.shared.lirePosition,
             quetesEnChargement: QuetesStore.shared.chargement && QuetesStore.shared.quetes == nil, ailleurs: ailleurs)
     }
 
-    /// Sans elle, le filtre « Ici » n'a rien à montrer.
-    var positionConnue: Bool { contexte.position != nil }
-
     /// Pourquoi la position manque, s'il lui manque quelque chose.
     var causeOrigine: OriginePalette {
-        .de(positionConnue: positionConnue, lectureAllumee: Preferences.shared.lirePosition,
+        .de(positionConnue: contexte.position != nil, lectureAllumee: Preferences.shared.lirePosition,
             autorise: WindowPreviewService.shared.authorized)
     }
 

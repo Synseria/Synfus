@@ -282,15 +282,4 @@ struct QuetesTests {
         #expect(QuetesIci.quetes(quetes, perso: incarnam, reseau: reseau).isEmpty)
         #expect(QuetesIci.quetes(quetes, perso: PositionCarte(x: 0, y: -39, zone: nil), reseau: reseau).isEmpty)
     }
-
-    @Test("Le filtre « Ici » de la palette : la quête qui commence sur la case, le PNJ qui s'y tient")
-    func paletteIci() throws {
-        var contexte = try contexte()
-        contexte.zaaps = ZaapsSitues(contexte.zaaps.liste, reseau: reseau)
-        contexte.position = PositionCarte(x: -1, y: -39, zone: nil)
-        let ici = RecherchePalette.entrees("", contexte, filtre: .ici)
-        #expect(ici.map(\.id).sorted() == ["pnj:196:-1,-39", "quete:18"])
-        contexte.position = nil
-        #expect(RecherchePalette.entrees("", contexte, filtre: .ici).isEmpty)
-    }
 }

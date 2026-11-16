@@ -1,5 +1,6 @@
 /// Ce qui se passe sur la case du perso : les quêtes qui y commencent, les PNJ
-/// que les quêtes y placent. Pur : la position lue, les quêtes, la carte.
+/// que les quêtes y placent — le menu de l'en-tête du panneau des quêtes. Pur : la position lue,
+/// les quêtes, la carte.
 enum QuetesIci {
     /// Sur la case lue, et dans le même monde : depuis Incarnam, la case
     /// homonyme d'Amakna n'est pas ici. La sous-zone le dit (`ReseauSousZones`) ;
