@@ -80,6 +80,56 @@ struct DonjonsTests {
         #expect(RecherchePalette.lieux(contexte).first?.effet == .trajet(x: -67, y: -75, sousZone: 794))
     }
 
+    private static func lieu(id: Int, _ nom: String, carte: Int, categorie: CategorieLieu = .donjon) -> Lieu {
+        Lieu(id: id, x: id, y: -75, monde: 1, idCarte: carte, idSousZone: 794, categorie: categorie.rawValue,
+             gfx: nil, noms: ["fr": nom], zone: [:], sousZone: [:])
+    }
+
+    private static func contexteDonjons() throws -> ContextePalette {
+        var contexte = ContextePalette()
+        contexte.donjons = try donjons()
+        contexte.lieux = [lieu(id: 1, "Donjon du Comte Harebourg", carte: 112460048),
+                          lieu(id: 2, "Canopée du Kimbo", carte: 5),
+                          lieu(id: 3, "Atelier de Kimbo", carte: 6, categorie: .atelier)]
+        return contexte
+    }
+
+    @Test("Vue Donjons au repos : les donjons de la carte seuls ; en recherche, leurs boss aussi — et plus parmi les créatures")
+    func vuesDonjons() throws {
+        let contexte = try Self.contexteDonjons()
+        let repos = RecherchePalette.entrees("", contexte, filtre: .donjons).map(\.titre)
+        #expect(Set(repos) == ["Donjon du Comte Harebourg", "Canopée du Kimbo"])
+        let recherche = RecherchePalette.entrees("kimbo", contexte, filtre: .donjons)
+        #expect(Set(recherche.map(\.titre)) == ["Canopée du Kimbo", "Kimbo"])
+        #expect(recherche.allSatisfy { $0.effet == .donjon(28) })
+        #expect(!RecherchePalette.entrees("kimbo", contexte, filtre: .creatures).contains { $0.titre == "Kimbo" })
+    }
+
+    @Test("Sans la liste des donjons, la vue Donjons montre quand même les repères de la carte")
+    func donjonsSansListe() throws {
+        var contexte = try Self.contexteDonjons()
+        contexte.donjons = nil
+        #expect(RecherchePalette.entrees("", contexte, filtre: .donjons).count == 2)
+    }
+
+    @Test("Un donjon en cartes : ↵ déplie sa fiche sous une ligne, ← remet les cartes")
+    @MainActor
+    func ficheDepuisLesCartes() throws {
+        let modele = PaletteModele(contexte: try Self.contexteDonjons(), filtre: .donjons)
+        #expect(modele.enGrille && modele.enCartes)
+        let entree = try #require(modele.entrees.first { $0.effet == .donjon(71) })
+        modele.executer(entree)
+        #expect(modele.deplie == entree.id && !modele.enGrille)
+        #expect(modele.lateral(-1))
+        #expect(modele.deplie == nil && modele.enGrille)
+        // Échap replie la fiche avant de quitter la vue.
+        modele.executer(entree)
+        modele.echap()
+        #expect(modele.deplie == nil && modele.filtre == .donjons)
+        modele.echap()
+        #expect(modele.filtre == .tout)
+    }
+
     @Test("Fiche au clavier : position en tête, guide, conseils, dépliables, la clef pour finir")
     func cartes() throws {
         let donjon = try #require(try Self.donjons().donjon(id: 71))

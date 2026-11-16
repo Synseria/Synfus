@@ -156,25 +156,23 @@ final class PaletteModele: ObservableObject {
     /// Les capsules de la rangée, que Tab et ⇧Tab parcourent.
     var jeu: [FiltrePalette] { FiltrePalette.jeu(enRecherche: enRecherche) }
 
-    /// À la première lettre la rangée passe des vues aux portées, « Tout » d'office (« Ici » reste) ;
-    /// le champ vidé revient à la vue quittée.
+    /// À la première lettre la rangée passe des vues aux portées, « Tout » d'office, même depuis une
+    /// vue qui porte aussi un nom de portée ; le champ vidé revient à la vue quittée.
     private func changerDeJeu(avant ancienne: String) {
         let etaitVide = ancienne.trimmingCharacters(in: .whitespaces).isEmpty
         if etaitVide, enRecherche {
             vueQuittee = filtre
-            if !FiltrePalette.jeu(enRecherche: true).contains(filtre) { filtre = .tout }
+            filtre = .tout
         } else if !etaitVide, !enRecherche {
             filtre = vueQuittee
         }
     }
 
-    /// Rien de tapé : l'Accueil et « Zaaps » se montrent en cartes.
+    /// Rien de tapé : l'Accueil, « Zaaps », « Donjons », « PNJ » et « Quêtes » se montrent en cartes — jusqu'à
+    /// ce qu'une fiche se déplie, qui n'a de place que sous une ligne.
     var enGrille: Bool {
-        requete.trimmingCharacters(in: .whitespaces).isEmpty && filtre.enCartes
+        requete.trimmingCharacters(in: .whitespaces).isEmpty && filtre.enCartes && deplie == nil
     }
-
-    /// Ce qui ne se montre que sur l'Accueil, au-dessus des cartes.
-    var surAccueil: Bool { enGrille && filtre == .tout }
 
     /// La vue « Almanax » : ses sept cartes, pas des entrées.
     var surAlmanax: Bool { requete.trimmingCharacters(in: .whitespaces).isEmpty && filtre == .almanax }
@@ -192,16 +190,12 @@ final class PaletteModele: ObservableObject {
         return VidePalette.de(
             carte: carteImposee ?? CarteStore.shared.etat,
             requeteVide: requete.trimmingCharacters(in: .whitespaces).isEmpty, filtre: filtre,
-            positionConnue: positionConnue, lectureAllumee: Preferences.shared.lirePosition,
             quetesEnChargement: QuetesStore.shared.chargement && QuetesStore.shared.quetes == nil, ailleurs: ailleurs)
     }
 
-    /// Sans elle, le filtre « Ici » n'a rien à montrer.
-    var positionConnue: Bool { contexte.position != nil }
-
     /// Pourquoi la position manque, s'il lui manque quelque chose.
     var causeOrigine: OriginePalette {
-        .de(positionConnue: positionConnue, lectureAllumee: Preferences.shared.lirePosition,
+        .de(positionConnue: contexte.position != nil, lectureAllumee: Preferences.shared.lirePosition,
             autorise: WindowPreviewService.shared.authorized)
     }
 
@@ -219,9 +213,6 @@ final class PaletteModele: ObservableObject {
         guard let perso = contexte.perso, let position = contexte.position else { return L("palette.depuis.inconnue") }
         return L("palette.depuis", perso, Coordonnees.texte(position.x, position.y))
     }
-
-    /// Les dernières copies, montrées au-dessus des cartes.
-    var recents: [EntreePalette] { RecherchePalette.recents(contexte) }
 
     /// La palette s'ouvre toujours sur l'Accueil, champ vide, première carte choisie ; distances
     /// refaites depuis la position du moment. Deux exceptions, celles qui disent où elles vont :
@@ -380,6 +371,7 @@ final class PaletteModele: ObservableObject {
     /// pour l'Accueil — une faute de frappe ne fait pas tout reprendre ; sinon ferme.
     func echap() {
         if edition != nil { edition = nil; return }
+        if deplie != nil { deplie = nil; return }
         if !requete.isEmpty { requete = ""; return }
         if filtre != .tout { return choisir(.tout) }
         PalettePanel.shared.fermer()
@@ -576,6 +568,7 @@ final class PaletteModele: ObservableObject {
         contexte.recents = prefs.paletteRecents
         contexte.frequentation = prefs.paletteFrequentation
         contexte.quetes = QuetesStore.shared.quetes
+        contexte.quetesSuivies = Set(prefs.quetesEpinglees).union(LectureSuivi.shared.reconnues.map(\.id))
         contexte.donjons = DonjonsStore.shared.donjons
         contexte.gainMinimal = prefs.zaapGainMinimal
         contexte.zaapDuJeu = prefs.zaapDuJeu
