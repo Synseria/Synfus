@@ -63,9 +63,10 @@ jour de **toutes** les versions déjà installées : jamais sans garder l'ancien
 Une release envoie les statistiques (`Usage/UsageStore`) : `publier-release.sh` lit l'adresse du
 collecteur et le jeton de Synfus dans le coffre (`secret run`, `domus:telemetrie/prod/URL` et
 `…/SYNFUS`, Touch ID) ou dans l'environnement (`TELEMETRIE_URL`, `TELEMETRIE_JETON` : secrets de la
-CI), et refuse de construire sans eux ; `build.sh` les inscrit dans l'Info.plist. Un build local
-n'en a pas : il compte sans envoyer. Pour l'essayer de bout en bout :
-`secret run TELEMETRIE_URL=domus:telemetrie/prod/URL TELEMETRIE_JETON=domus:telemetrie/prod/SYNFUS -- sh run.sh --install --start`.
+CI), et refuse de construire sans eux. `sh run.sh --install` les lit aussi dans le coffre (sans
+`secret` ou coffre fermé : installée sans envoi) ; le build Debug n'en a pas, il compte sans
+envoyer. `build.sh` les inscrit dans l'Info.plist avec `SynfusDistribution` (`release` si
+`DISTRIBUTION=1`, sinon `local`), rapporté en `deployment.environment` : sans cette clé, rien ne part.
 Les plantages et blocages (MetricKit, `Usage/DiagnosticsUsage`) partent un par envoi ; chaque
 release publie aussi `Synfus-X.Y.Z-dSYM.zip` (asset ignoré par la mise à jour), dont
 `Tools/symboliser.sh <diagnostic.json>` tire les noms de fonctions. Contrat d'envoi et
