@@ -130,22 +130,26 @@ struct DonjonsTests {
         #expect(modele.filtre == .tout)
     }
 
-    @Test("Fiche au clavier : position en tête, guide, conseils, dépliables, la clef pour finir")
+    @Test("Fiche au clavier : position en tête, aide au combat de chaque boss, guide, conseils, dépliables, la clef pour finir")
     func cartes() throws {
         let donjon = try #require(try Self.donjons().donjon(id: 71))
         let entree = Self.lieu("Donjon du Comte Harebourg", carte: 112460048)
-        let attente = CartesFiche.donjon(entree: entree, guide: donjon.nomFrancais, detail: nil, conseils: false)
-        #expect(attente.actions == [.entree(entree), .guide("Donjon du Comte Harebourg")])
+        // L'aide n'attend pas le détail ; un boss à mécanique y retrouve la sienne.
+        let aides = donjon.boss.map { CibleBoss.boss($0, donjon: donjon.id) }
+        #expect(aides == [.special(.harebourg)])
+        let attente = CartesFiche.donjon(entree: entree, boss: aides, guide: donjon.nomFrancais, detail: nil, conseils: false)
+        #expect(attente.actions == [.entree(entree), .aide(.special(.harebourg)), .guide("Donjon du Comte Harebourg")])
+        #expect(!ActionFiche.aide(.special(.harebourg)).sePlie)
         #expect(attente.premiere == .entree(entree))
 
         let boss = DetailDonjon.Monstre(id: 3416, noms: [:], boss: true, fiche: Self.fiche)
         let mansot = DetailDonjon.Monstre(id: 3384, noms: [:], boss: false, fiche: Self.fiche)
         let detail = DetailDonjon(monstres: [boss, mansot], clefs: [.init(objet: 14047, noms: [:], quantite: 1)],
                                   succes: [.init(noms: [:], description: [:])])
-        let cartes = CartesFiche.donjon(entree: entree, guide: "Guide", detail: detail, conseils: true)
+        let cartes = CartesFiche.donjon(entree: entree, boss: [], guide: "Guide", detail: detail, conseils: true)
         #expect(cartes.actions == [.entree(entree), .guide("Guide"), .conseils, .monstres, .succes, .clef(objet: 14047)])
         // Seuls des boss : rien à déplier pour les monstres.
-        #expect(CartesFiche.donjon(entree: nil, guide: nil, detail: DetailDonjon(monstres: [boss], clefs: [], succes: []),
+        #expect(CartesFiche.donjon(entree: nil, boss: [], guide: nil, detail: DetailDonjon(monstres: [boss], clefs: [], succes: []),
                                    conseils: false) == .vide)
     }
 

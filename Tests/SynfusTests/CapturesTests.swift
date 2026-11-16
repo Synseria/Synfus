@@ -354,6 +354,16 @@ struct CapturesTests {
         aide.noter { session, _ in session.glyphesTalKasha = 2 }
         try panneau("talkasha") { TalKashaVue() }
         aide.noter { session, _ in session = SessionBoss() }
+        // Une section courte garde sa hauteur, une longue défile sous son plafond.
+        let conseils = (1...14).map { ConseilCombat(titre: "Conseil \($0) : tuer les Bouftons avant qu'ils ne soignent", detail: "") }
+        try panneau("sections") {
+            SectionBoss(titre: L("boss.rappels"), depliee: .constant(true)) {} contenu: {
+                ConseilsVue(conseils: Array(conseils.prefix(2)))
+            }
+            SectionBoss(titre: L("donjon.conseils", nombre: conseils.count, conseils.count), depliee: .constant(true)) {} contenu: {
+                ConseilsVue(conseils: conseils)
+            }
+        }
     }
 
     @Test("Capture de la fiche d'un boss", .enabled(if: dossier != nil))

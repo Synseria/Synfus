@@ -29,7 +29,7 @@ struct ScorePalette: Equatable, Sendable {
         fois > 0 ? Int.bitWidth - fois.leadingZeroBitCount : 0
     }
 
-    /// Zaap, puis boss (sa fiche ou l'aide au combat) ou perso, puis PNJ ; le reste à égalité.
+    /// Zaap, puis boss (sa fiche) ou perso, puis PNJ ; le reste à égalité.
     static func rangDeGenre(_ entree: EntreePalette) -> Int {
         if entree.genre == .zaap { return 3 }
         if entree.estBoss || entree.genre == .perso { return 2 }

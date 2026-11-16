@@ -47,21 +47,14 @@ struct BossTests {
         #expect(Boss.harebourg.lectures == [.vie, .tchat])
         #expect(Boss.kimbo.lectures == [.tchat])
         #expect(Boss.toxoliath.lectures.isEmpty)
-        #expect(ActionPalette.toutes.filter { if case .boss = $0 { true } else { false } }.count == Boss.allCases.count)
-        var contexte = ContextePalette()
-        let api = try JSONDecoder().decode([Donjon.API].self, from: Data("""
-        [{"id":28,"name":{"fr":"Canopée du Kimbo"},"bosses":[1045]},{"id":2,"name":{"fr":"Donjon des Bouftous"},"bosses":[147]}]
-        """.utf8))
-        contexte.donjons = Donjons(api.map(Donjon.init), nomsBoss: [1045: ["fr": "Kimbo"], 147: ["fr": "Bouftou Royal"]])
-        // Kimbo est déjà parmi les boss à mécanique : seul le Bouftou Royal s'ajoute.
-        #expect(RecherchePalette.aideAuxBoss(contexte) == [.boss(.donjon(monstre: 147, donjon: 2), nom: "Bouftou Royal")])
     }
 
     @Test("Un boss de donjon retrouve sa mécanique quand l'aide la connaît ; la sauvegarde d'avant se relit")
     func cible() throws {
         #expect(CibleBoss.boss(1045, donjon: 28) == .special(.kimbo))
         #expect(CibleBoss.boss(232, donjon: 2) == .donjon(monstre: 232, donjon: 2))
-        #expect(CibleBoss.donjon(monstre: 232, donjon: 2).lectures.isEmpty)
+        // Sans mécanique : rien à lire, pas même le combat.
+        #expect(CibleBoss.donjon(monstre: 232, donjon: 2).lectures == nil)
         #expect(CibleBoss.special(.harebourg).lectures == [.vie, .tchat])
         func relu(_ json: String) throws -> CibleBoss { try JSONDecoder().decode(CibleBoss.self, from: Data(json.utf8)) }
         #expect(try relu(#""talKasha""#) == .special(.talKasha))
