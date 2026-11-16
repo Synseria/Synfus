@@ -31,23 +31,25 @@ struct MetriquesQuete: Equatable {
     /// Autour du contenu d'une ligne cliquable.
     let ligneHorizontale: CGFloat
     let ligneVerticale: CGFloat
+    /// Entre le texte d'un objectif et son détail (position, ordre, état).
+    let ecartDetail: CGFloat
     /// Vignette de carte d'un objectif (`Preferences.quetesVignettes`).
     let vignette: CGSize
 
     static let confort = MetriquesQuete(
         texte: .corps, texteFort: .corpsFort, titre: .titre, titreFort: .corpsFort,
         consigne: .note, detail: .note, detailFort: .corpsFort, coche: .corps, icone: .note,
-        marge: Jetons.Espace.trois, ecartSections: Jetons.Espace.trois, ecartLignes: Jetons.Espace.un,
-        ligneHorizontale: Jetons.Espace.deux, ligneVerticale: Jetons.Espace.un,
+        marge: Jetons.Espace.deux, ecartSections: Jetons.Espace.deux, ecartLignes: 2,
+        ligneHorizontale: Jetons.Espace.un, ligneVerticale: 2, ecartDetail: 2,
         vignette: CGSize(width: 52, height: 36))
 
-    /// Sous la grille de 4 : le mode compact existe pour laisser voir le jeu, ses écarts de 1 et 2 pt
-    /// sont ce qui le distingue du confort.
+    /// Sous la grille de 4 : le panneau est posé sur le jeu, chaque point rendu est du jeu qu'on revoit.
+    /// Le compact colle les lignes ; le confort leur laisse 2 pt.
     static let compact = MetriquesQuete(
         texte: .petit, texteFort: .raccourci, titre: .corps, titreFort: .corpsFort,
         consigne: .petit, detail: .petit, detailFort: .raccourci, coche: .petit, icone: .petit,
-        marge: Jetons.Espace.deux, ecartSections: Jetons.Espace.deux, ecartLignes: 1,
-        ligneHorizontale: Jetons.Espace.un, ligneVerticale: 2,
+        marge: 6, ecartSections: 6, ecartLignes: 0,
+        ligneHorizontale: Jetons.Espace.un, ligneVerticale: 1, ecartDetail: 0,
         vignette: CGSize(width: 44, height: 30))
 
     static func pour(compact: Bool) -> MetriquesQuete { compact ? .compact : .confort }

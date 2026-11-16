@@ -63,7 +63,8 @@ struct BossVue: View {
             }
             Image(systemName: "chevron.down").font(Jetons.Typo.micro.police).foregroundStyle(Color.jeton(\.encreSecondaire))
                 .padding(.leading, Jetons.Espace.un)
-            if let perso = lecteur.persoDevant {
+            // Un boss sans mécanique ne fait rien lire : pas de perso suivi à nommer.
+            if prefs.bossChoisi.special != nil, let perso = lecteur.persoDevant {
                 Text(perso).font(Jetons.Typo.petit.police).foregroundStyle(Color.jeton(\.encreSecondaire))
                     .lineLimit(1)
                     .padding(.horizontal, Jetons.Espace.un)

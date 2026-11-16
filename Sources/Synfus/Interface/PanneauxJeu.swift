@@ -129,7 +129,7 @@ struct BoutonEnTete: View {
 
 /// L'en-tête d'une ligne d'un panneau posé sur le jeu : l'icône, le titre,
 /// l'espace libre, les boutons. Tout, sauf les boutons, déplace le panneau ;
-/// avec `menu`, un clic sur le titre l'ouvre et seul un glisser le déplace
+/// avec `menu` ou `clic`, un clic sur le titre agit et seul un glisser le déplace
 /// (`WindowDragArea`). La zone est posée par-dessus l'icône et le titre — une
 /// image ou un texte au-dessus d'une `NSView` lui prennent le clic — et jamais
 /// sur un bouton, qu'elle priverait du sien.
@@ -138,6 +138,8 @@ struct EnTetePanneau<Titre: View, Boutons: View>: View {
     let teinte: Color
     /// Le menu qu'ouvre un clic sur le titre.
     var menu: (@MainActor () -> NSMenu)?
+    /// Ce que fait un clic sur le titre, à la place d'un menu.
+    var clic: (@MainActor () -> Void)?
     @ViewBuilder let titre: Titre
     @ViewBuilder let boutons: Boutons
 
@@ -155,7 +157,7 @@ struct EnTetePanneau<Titre: View, Boutons: View>: View {
             // le menu s'ouvre sous son bord gauche.
             HStack(spacing: 0) { titre }
                 .frame(maxHeight: .infinity)
-                .overlay(WindowDragArea(menu: menu))
+                .overlay(WindowDragArea(menu: menu, clic: clic))
                 .layoutPriority(1)
             WindowDragArea().frame(minWidth: 4, maxWidth: .infinity, maxHeight: .infinity)
             HStack(spacing: Jetons.Espace.un) { boutons }
