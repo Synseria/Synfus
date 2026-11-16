@@ -25,6 +25,8 @@ import SwiftUI
 struct WindowDragArea: NSViewRepresentable {
     /// Le menu qu'ouvre un clic sans glisser, sous la zone.
     var menu: (@MainActor () -> NSMenu)?
+    /// Ce que fait un clic sans glisser, à la place d'un menu.
+    var clic: (@MainActor () -> Void)?
 
     /// En deçà, un appui qui tremble reste un clic : le menu s'ouvre plutôt
     /// que le panneau ne parte à la dérive.
@@ -34,14 +36,19 @@ struct WindowDragArea: NSViewRepresentable {
         hypot(point.x - depart.x, point.y - depart.y) > seuilGlisser
     }
 
-    func makeNSView(context _: Context) -> DragView { DragView(fabriqueMenu: menu) }
-    func updateNSView(_ nsView: DragView, context _: Context) { nsView.fabriqueMenu = menu }
+    func makeNSView(context _: Context) -> DragView { DragView(fabriqueMenu: menu, clic: clic) }
+    func updateNSView(_ nsView: DragView, context _: Context) {
+        nsView.fabriqueMenu = menu
+        nsView.clic = clic
+    }
 
     final class DragView: VueACurseur {
         var fabriqueMenu: (@MainActor () -> NSMenu)?
+        var clic: (@MainActor () -> Void)?
 
-        init(fabriqueMenu: (@MainActor () -> NSMenu)?) {
+        init(fabriqueMenu: (@MainActor () -> NSMenu)?, clic: (@MainActor () -> Void)?) {
             self.fabriqueMenu = fabriqueMenu
+            self.clic = clic
             super.init(frame: .zero)
         }
 
@@ -53,11 +60,12 @@ struct WindowDragArea: NSViewRepresentable {
 
         override func mouseDown(with event: NSEvent) {
             guard let window else { return }
-            guard let fabriqueMenu else { return glisser(window, appui: event) }
+            guard fabriqueMenu != nil || clic != nil else { return glisser(window, appui: event) }
             let depart = NSEvent.mouseLocation
             while let suivant = window.nextEvent(matching: [.leftMouseDragged, .leftMouseUp]) {
                 if suivant.type == .leftMouseUp {
-                    fabriqueMenu().popUp(positioning: nil, at: NSPoint(x: 0, y: isFlipped ? bounds.maxY + 2 : -2), in: self)
+                    if let clic { return clic() }
+                    fabriqueMenu?().popUp(positioning: nil, at: NSPoint(x: 0, y: isFlipped ? bounds.maxY + 2 : -2), in: self)
                     return
                 }
                 if WindowDragArea.estUnGlisser(depuis: depart, jusqua: NSEvent.mouseLocation) {

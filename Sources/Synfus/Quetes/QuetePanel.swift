@@ -33,6 +33,9 @@ final class QuetePanel: NSObject, ObservableObject {
 
     /// La quête montrée parmi les épinglées.
     @Published private(set) var montree: Int?
+    /// La liste des quêtes à la place de la fiche (`MenuQuetes.liste`) ; sans quête à montrer, elle
+    /// y est d'office.
+    @Published var enListe = false
     /// Voulu ouvert, qu'il soit à l'écran ou caché derrière une autre app.
     @Published private(set) var ouvert = false
     /// Ouvert depuis une autre app que Dofus (bouton de la barre, menu) : il
@@ -73,15 +76,31 @@ final class QuetePanel: NSObject, ObservableObject {
         appliquer(force: true)
     }
 
-    /// Épingle la quête (si elle ne l'est pas) et la montre.
+    /// Ajoute la quête au panneau (si elle n'y est pas) et la montre.
     func ouvrir(_ id: Int) {
         let prefs = Preferences.shared
         if !prefs.quetesEpinglees.contains(id) { prefs.quetesEpinglees.append(id) }
-        montree = id
+        montrer(id)
         ouvrir()
     }
 
-    func montrer(_ id: Int) { montree = id }
+    /// Montre la quête à la place de celle à l'écran (`MenuQuetes.remplacer`).
+    func ouvrirALaPlace(_ id: Int) {
+        let prefs = Preferences.shared
+        let avant = prefs.quetesEpinglees
+        let apres = MenuQuetes.remplacer(avant, montree: idMontre, par: id)
+        if apres != avant {
+            prefs.quetesEpinglees = apres
+            LectureSuivi.shared.oublier(avant.filter { !apres.contains($0) })
+        }
+        montrer(id)
+        ouvrir()
+    }
+
+    func montrer(_ id: Int) {
+        montree = id
+        enListe = false
+    }
 
     /// La quête à l'écran : la montrée si elle est encore épinglée, sinon la
     /// dernière épinglée.
@@ -90,7 +109,7 @@ final class QuetePanel: NSObject, ObservableObject {
         return montree.flatMap { epinglees.contains($0) ? $0 : nil } ?? epinglees.last
     }
 
-    /// Retire l'onglet ; le panneau se ferme avec le dernier.
+    /// Retire la quête ; le panneau se ferme avec la dernière.
     func desepingler(_ id: Int) {
         let prefs = Preferences.shared
         prefs.quetesEpinglees.removeAll { $0 == id }
@@ -178,65 +197,34 @@ final class QuetePanel: NSObject, ObservableObject {
 // MARK: - Menu de l'en-tête
 
 extension QuetePanel {
-    /// Le menu de l'en-tête (`MenuQuetes`), construit à chaque ouverture.
+    /// Le menu « ⋯ » de l'en-tête (`MenuQuetes.reglages`), construit à chaque ouverture.
     func menu() -> NSMenu {
-        let lecture = LectureSuivi.shared
-        let store = QuetesStore.shared
         let prefs = Preferences.shared
         let menu = NSMenu()
         menu.autoenablesItems = false
-        for element in MenuQuetes.elements(
-            epinglees: prefs.quetesEpinglees, montree: idMontre, reconnues: lecture.reconnues,
-            etat: lecture.etat, coches: lecture.cochesLues, actives: Set(MenuQuetes.Option.allCases.filter { prefs[keyPath: Self.reglage($0)] }),
-            ici: ici(), autorise: WindowPreviewService.shared.authorized, nom: { store.nom($0) ?? "…" }) {
+        for element in MenuQuetes.reglages(epinglees: prefs.quetesEpinglees.count,
+                                           actives: Set(MenuQuetes.Option.allCases.filter { prefs[keyPath: Self.reglage($0)] })) {
             Self.ajouter(element, a: menu)
         }
         return menu
     }
 
-    private static func ajouter(_ element: MenuQuetes.Element, a menu: NSMenu) {
+    /// La liste du panneau (`MenuQuetes.liste`), refaite à chaque rendu.
+    func liste() -> [MenuQuetes.Element] {
         let lecture = LectureSuivi.shared
+        let store = QuetesStore.shared
+        return MenuQuetes.liste(
+            epinglees: Preferences.shared.quetesEpinglees, montree: idMontre, reconnues: lecture.reconnues,
+            etat: lecture.etat, coches: lecture.cochesLues, ici: ici(),
+            autorise: WindowPreviewService.shared.authorized, nom: { store.nom($0) ?? "…" })
+    }
+
+    /// Seuls les éléments de `MenuQuetes.reglages` : la liste se dessine dans le panneau.
+    private static func ajouter(_ element: MenuQuetes.Element, a menu: NSMenu) {
         let prefs = Preferences.shared
         switch element {
-        case .titre(let titre):
-            menu.addItem(.sectionHeader(title: titre))
-        case .epinglee(let id, let nom, let montree):
-            let item = CibleMenu.shared.element(nom) { QuetePanel.shared.montrer(id) }
-            item.state = montree ? .on : .off
-            menu.addItem(item)
-        case .desepingler(let id, let nom):
-            let item = CibleMenu.shared.element(L("quete.menu.desepingler", nom)) { QuetePanel.shared.desepingler(id) }
-            item.image = NSImage(systemSymbolName: "pin.slash", accessibilityDescription: nil)
-            menu.addItem(item)
-        case .ici(let id, let titre, let epinglee):
-            let item = CibleMenu.shared.element(titre) { QuetePanel.shared.ouvrir(id) }
-            item.image = NSImage(systemSymbolName: epinglee ? "pin.fill" : "exclamationmark.bubble",
-                                 accessibilityDescription: nil)
-            menu.addItem(item)
         case .toutDesepingler:
             menu.addItem(CibleMenu.shared.element(L("quete.menu.toutDesepingler")) { QuetePanel.shared.confirmerToutDesepingler() })
-        case .toutEpingler:
-            let item = CibleMenu.shared.element(L("quete.toutEpingler")) { lecture.toutEpingler() }
-            item.image = NSImage(systemSymbolName: "pin", accessibilityDescription: nil)
-            menu.addItem(item)
-        case .lireSuivi(let enCours):
-            let item = CibleMenu.shared.element(enCours ? L("quete.suivi.enCours") : L("quete.suivi.lire")) { lecture.lire() }
-            item.image = NSImage(systemSymbolName: "text.viewfinder", accessibilityDescription: nil)
-            item.isEnabled = !enCours
-            menu.addItem(item)
-        case .reconnue(let reconnue, let titre, let epinglee):
-            let item = CibleMenu.shared.element(titre) { lecture.choisir(reconnue) }
-            item.image = epinglee ? NSImage(systemSymbolName: "pin.fill", accessibilityDescription: nil) : nil
-            item.indentationLevel = 1
-            menu.addItem(item)
-        case .message(let texte):
-            let item = NSMenuItem(title: texte, action: nil, keyEquivalent: "")
-            item.isEnabled = false
-            menu.addItem(item)
-        case .geste(let geste):
-            let item = CibleMenu.shared.element(geste.titre) { Self.faire(geste) }
-            item.indentationLevel = 1
-            menu.addItem(item)
         case .affichage(let options):
             let sousMenu = NSMenu()
             sousMenu.autoenablesItems = false
@@ -252,13 +240,15 @@ extension QuetePanel {
             menu.addItem(CibleMenu.shared.element(L("panneau.fermer"), raccourci: prefs.quetesHotKey) { QuetePanel.shared.fermer() })
         case .separateur:
             menu.addItem(.separator())
+        case .titre, .epinglee, .ici, .toutEpingler, .lireSuivi, .reconnue, .message, .geste:
+            break
         }
     }
 }
 
 extension QuetePanel {
     /// Le geste qui lève la cause d'un suivi illisible.
-    private static func faire(_ geste: MenuQuetes.Geste) {
+    static func faire(_ geste: MenuQuetes.Geste) {
         switch geste {
         case .autoriser: WindowPreviewService.shared.requestAuthorization()
         case .calibrer: SettingsWindowController.shared.show(section: .lecture)
@@ -337,16 +327,18 @@ struct BordsPanneau: OptionSet, Sendable {
 
 extension View {
     /// Les bords gauche, droit et bas et les coins du bas, à saisir pour
-    /// agrandir le panneau ; `coin` est la poignée visible du coin bas droit,
-    /// de la taille de celui de gauche. Les coins passent par-dessus les
+    /// agrandir le panneau ; `coin` est la marque du coin bas droit, de la
+    /// taille de celui de gauche — posée sur le contenu, sans bande réservée. Les coins passent par-dessus les
     /// bords : saisi près d'un coin, le panneau s'agrandit dans les deux sens.
     func bordsRedimensionnables(coin: some View) -> some View {
-        let epaisseur: CGFloat = 6, cote: CGFloat = 22
+        let epaisseur: CGFloat = 6, cote: CGFloat = 14
         return overlay(alignment: .leading) { PoigneeRedimension(bords: .gauche).frame(width: epaisseur) }
             .overlay(alignment: .trailing) { PoigneeRedimension(bords: .droite).frame(width: epaisseur) }
             .overlay(alignment: .bottom) { PoigneeRedimension(bords: .bas).frame(height: epaisseur) }
             .overlay(alignment: .bottomLeading) { PoigneeRedimension(bords: [.gauche, .bas]).frame(width: cote, height: cote) }
-            .overlay(alignment: .bottomTrailing) { coin.overlay(PoigneeRedimension(bords: [.droite, .bas])) }
+            .overlay(alignment: .bottomTrailing) {
+                coin.frame(width: cote, height: cote).overlay(PoigneeRedimension(bords: [.droite, .bas]))
+            }
     }
 }
 

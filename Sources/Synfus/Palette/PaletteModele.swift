@@ -463,7 +463,7 @@ final class PaletteModele: ObservableObject {
             requete = texte
         case .ouvrirQuete(let id):
             PalettePanel.shared.fermer()
-            QuetePanel.shared.ouvrir(id)
+            QuetePanel.shared.ouvrirALaPlace(id)
         case .action(let action):
             PalettePanel.shared.fermer()
             faire(action)
