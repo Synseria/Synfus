@@ -16,7 +16,7 @@ user-invocable: false
   bouton sur la ligne Version, puis une `NSAlert` au premier plan (Installer et relancer · Annuler ·
   Nouveautés, qui ouvre la page et laisse l'alerte en place). Une notification système annonce une version une seule fois (`derniereVersionNotifiee`) ; au premier lancement après une mise à jour, le menu offre « Nouveautés de la X.Y.Z » sous À propos.
 - **macOS minimum** : le nom du DMG le porte (`Synfus-X.Y.Z-macos26-arm64.dmg`, `MACOS_MINIMUM`
-  de build.sh, seule source avec `platforms` de Package.swift). Une release plus récente qui exige
+  de build.sh, lu dans `platforms` de Package.swift, seule source). Une release plus récente qui exige
   un macOS que ce Mac n'a pas passe à l'état `incompatible` : « Synfus X nécessite macOS N », ni
   bouton, ni notification, ni entrée de menu (`MiseAJour.etat`, pur et testé). Second filet après
   extraction : `LSMinimumSystemVersion` de l'app comparé au système (`Echec.systeme` → `incompatible`).
