@@ -2,3 +2,10 @@
 # (generate-app-icons.sh) : ce que l'app n'appelle pas sert à l'icône du bundle.
 retain_files:
   - Sources/Synfus/Marque/SynfusMark.swift
+# Jetons.swift, la trousse et la copie de SynseriaKit viennent du SDS (Synseria-Design) avec tous
+# leurs jetons, contrôles et API, même ce que l'app ne lit pas : ils ne se retouchent pas ici, leur
+# code mort ne se rapporte pas.
+report_exclude:
+  - Sources/Synfus/Interface/Jetons.swift
+  - Sources/Synfus/Interface/Trousse/*.swift
+  - SynseriaKit/**
