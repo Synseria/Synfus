@@ -158,9 +158,11 @@ if [ -f "Resources/$NAME.icns" ]; then
     /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string $NAME" "$APP/Contents/Info.plist"
 fi
 
-# Les libellés de l'interface (une table JSON par langue), la carte intégrée.
+# Les libellés de l'interface (une table JSON par langue), la carte intégrée, l'emblème Synseria
+# (copie de marque/ du SDS, que l'À propos montre).
 cp -R "Resources/Localisation" "$APP/Contents/Resources/Localisation"
 cp "Resources/Carte.json" "$APP/Contents/Resources/Carte.json"
+cp "Resources/synseria-embleme-synfus.svg" "$APP/Contents/Resources/"
 
 echo "==> Signature"
 signer "$APP" "$BUNDLE_ID"

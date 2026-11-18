@@ -17,27 +17,27 @@ struct PastillePerso: View {
     var survole = false
 
     var body: some View {
-        HStack(spacing: Jetons.Espace.un) {
+        HStack(spacing: Jetons.espace1) {
             if enFermeture {
                 ProgressView()
                     .controlSize(.small)
-                    .frame(width: Jetons.Taille.touche + Jetons.Trait.focus, height: Jetons.Taille.touche + Jetons.Trait.focus)
+                    .frame(width: Jetons.diametreRond + Jetons.epaisseurFocus, height: Jetons.diametreRond + Jetons.epaisseurFocus)
             } else if affichage.embleme {
                 EmblemeClasse(classe: classe,
-                              contour: devant ? Color.jeton(\.encreSurPrimaire) : Color.jeton(\.filet))
+                              contour: devant ? Color.jeton(\.texteSurAccent) : Color.jeton(\.filet))
             }
 
             if affichage.nom {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(nom)
-                        .font((devant ? Jetons.Typo.corpsFort : Jetons.Typo.corps).police)
+                        .font((devant ? Jetons.typoTitreCarte : Jetons.typoCorps).font)
                         .lineLimit(1)
                         .fixedSize()
                     // Nom et classe : une pastille dit les deux ; `showClasses` ne règle que l'emblème.
                     if affichage.classe, let classe = libelleClasse ?? classe {
                         Text(classe)
-                            .font(Jetons.Typo.petit.police)
-                            .foregroundStyle(devant ? Color.jeton(\.encreSurPrimaire) : Color.jeton(\.encreSecondaire))
+                            .font(Jetons.typoMeta.font)
+                            .foregroundStyle(devant ? Color.jeton(\.texteSurAccent) : Color.jeton(\.encre2))
                             .lineLimit(1)
                     }
                 }
@@ -45,13 +45,13 @@ struct PastillePerso: View {
 
             // Le numéro est la touche qui mène à ce perso : dessiné comme elle, avec le raccourci réel.
             if affichage.touche {
-                ToucheRaccourci(touche)
+                ToucheDeClavier(touche: touche, surUnPlein: devant)
             }
         }
-        .padding(.horizontal, affichage.nom ? Jetons.Espace.deux : Jetons.Espace.un)
-        .padding(.vertical, Jetons.Espace.un)
+        .padding(.horizontal, affichage.nom ? Jetons.espace2 : Jetons.espace1)
+        .padding(.vertical, Jetons.espace1)
         .fixedSize(horizontal: true, vertical: false)
         .fondEtat(devant ? .courant : enFermeture ? .desactive : EtatVisuel(survole: survole))
-        .foregroundStyle(devant ? EtatVisuel.courant.encre : dormant ? Color.jeton(\.encreSecondaire) : Color.jeton(\.encre))
+        .foregroundStyle(devant ? EtatVisuel.courant.encre : dormant ? Color.jeton(\.encre2) : Color.jeton(\.encre))
     }
 }

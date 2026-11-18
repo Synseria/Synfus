@@ -24,8 +24,10 @@ struct JetonsTests {
             .map(sansCommentaire).filter { !$0.allSatisfy(\.isWhitespace) }
     }
 
+    /// Les sources de l'app, sans la trousse (`Interface/Trousse`), engendrée par Synseria-Design et
+    /// vérifiée là-bas : elle construit ses couleurs et ses polices depuis `Jetons`.
     private func fichiers(sauf exclus: Set<String>) throws -> [URL] {
-        let tous = SourcesDuDepot.fichiers()
+        let tous = SourcesDuDepot.fichiers().filter { $0.deletingLastPathComponent().lastPathComponent != "Trousse" }
         try #require(!tous.isEmpty)
         return tous.filter { !exclus.contains($0.lastPathComponent) }
     }
@@ -39,7 +41,7 @@ struct JetonsTests {
     /// lecture d'écran, les zones de calibrage (reconnues à leur teinte), le rose du bouton « Fin de
     /// tour » du jeu, et le menu système, dont le texte secondaire s'inverse tout seul à la sélection.
     private let horsJetons: Set<String> = ["Jetons.swift", "ThemeCourant.swift", "SynfusMark.swift", "Couvee.swift",
-                                           "SigneSynseria.swift", "DofusClass.swift", "CalibrationZonesView.swift",
+                                           "DofusClass.swift", "CalibrationZonesView.swift",
                                            "BarControls.swift", "MenuBarController.swift"]
 
     @Test("Aucune couleur ne se construit hors des jetons")
@@ -64,8 +66,8 @@ struct JetonsTests {
     @Test("Toute police de vue passe par l'échelle")
     func policesParLEchelle() throws {
         let motif = /\.system\(size|weight:|\.fontWeight\(\.(?!semibold)|\.font\(\.(caption|footnote|subheadline|callout|headline|title|body)/
-        // Le menu de la barre de menus est en `NSFont`, hors de SwiftUI ; le mot du signe suit la taille de son emblème.
-        for (fichier, ligne) in try lignes(sauf: ["Jetons.swift", "SynfusMark.swift", "MenuBarController.swift", "SigneSynseria.swift"]) {
+        // Le menu de la barre de menus est en `NSFont`, hors de SwiftUI.
+        for (fichier, ligne) in try lignes(sauf: ["Jetons.swift", "SynfusMark.swift", "MenuBarController.swift"]) {
             #expect(!ligne.contains(motif), "\(fichier) : \(ligne)")
         }
     }
@@ -82,17 +84,17 @@ struct JetonsTests {
         }
     }
 
-    @Test("Un bouton prend un des quatre rangs, un segment le composant commun")
+    @Test("Un bouton prend un rang de la trousse, un segment le segmenté commun")
     func boutonsEtSegments() throws {
         // Les réglages héritent du rang secondaire posé sur leur volet (`SettingsView`) ; les barres d'icônes
         // et le menu contextuel de la palette sont hors rangs.
         let heritent: Set<String> = ["Reglages", "Barre", "PaletteVue.swift"]
         let racine = try String(contentsOf: SourcesDuDepot.dossier.appendingPathComponent("Interface/Reglages/SettingsView.swift"),
                                 encoding: .utf8)
-        #expect(racine.contains(".buttonStyle(.bouton(.secondaire))"))
-        for url in SourcesDuDepot.fichiers() {
+        #expect(racine.contains(".buttonStyle(BoutonBorde())"))
+        for url in try fichiers(sauf: []) {
             let texte = try code(url).joined(separator: "\n")
-            #expect(!texte.contains(".pickerStyle(.segmented)"), "\(url.lastPathComponent) : utiliser `Segments`")
+            #expect(!texte.contains(".pickerStyle(.segmented)"), "\(url.lastPathComponent) : utiliser `SegmenteTexte`")
             let exempt = url.pathComponents.contains { heritent.contains($0) } || heritent.contains(url.lastPathComponent)
             if !exempt, texte.contains(/(^|[^A-Za-z])Button\s*[({]/) {
                 #expect(texte.contains(".buttonStyle("), "\(url.lastPathComponent) : un bouton sans rang")

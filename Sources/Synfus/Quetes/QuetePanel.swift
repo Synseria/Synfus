@@ -121,10 +121,9 @@ final class QuetePanel: NSObject, ObservableObject {
     /// Un dernier mot avant : le panneau se vide d'un coup.
     func confirmerToutDesepingler() {
         let nombre = Preferences.shared.quetesEpinglees.count
-        Task {
-            let demande = DemandeConfirmation(titre: L("quete.menu.toutDesepingler.confirmation", nombre: nombre, nombre),
-                                              verbe: L("quete.desepingler"))
-            if await Confirmation.demander(demande) { toutDesepingler() }
+        if ConfirmationHorsVue.demander(titre: L("quete.menu.toutDesepingler.confirmation", nombre: nombre, nombre),
+                                        verbe: L("quete.desepingler")) {
+            toutDesepingler()
         }
     }
 
@@ -173,7 +172,7 @@ final class QuetePanel: NSObject, ObservableObject {
         panel.isReleasedWhenClosed = false
         panel.backgroundColor = .clear
         panel.isOpaque = false
-        panel.hasShadow = true
+        panel.hasShadow = false
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         // Sans `.resizable`, AppKit ne relit le cadre sauvé que de force : sa
         // taille vient de nos poignées.

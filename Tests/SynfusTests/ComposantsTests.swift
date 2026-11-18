@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Testing
 @testable import Synfus
@@ -7,8 +8,8 @@ import Testing
 struct ComposantsTests {
     @Test("Aucune couleur, rayon, espace ni police chiffrés dans une vue")
     func vuesSurLesJetons() throws {
-        // Hors vues : le fichier engendré, la marque dessinée en CoreGraphics, les couleurs des classes
-        // du jeu, les mesures de la lecture d'écran et le banc de mesure.
+        // Hors vues : les fichiers engendrés (jetons, trousse), la marque dessinée en CoreGraphics, les
+        // couleurs des classes du jeu, les mesures de la lecture d'écran et le banc de mesure.
         let horsVues = ["Jetons.swift", "BancCaptures.swift"]
         let interdits: [(motif: String, nom: String)] = [
             (#"cornerRadius: *[0-9]"#, "rayon chiffré"),
@@ -24,7 +25,7 @@ struct ComposantsTests {
         for fichier in SourcesDuDepot.fichiers() {
             let chemin = fichier.path
             if horsVues.contains(fichier.lastPathComponent) || chemin.contains("/Marque/")
-                || chemin.contains("/Lecture/") || chemin.contains("/Classes/") { continue }
+                || chemin.contains("/Lecture/") || chemin.contains("/Classes/") || chemin.contains("/Trousse/") { continue }
             let texte = try String(contentsOf: fichier, encoding: .utf8)
             for (numero, ligne) in texte.split(separator: "\n", omittingEmptySubsequences: false).enumerated() {
                 for interdit in interdits where ligne.range(of: interdit.motif, options: .regularExpression) != nil {
@@ -68,21 +69,19 @@ struct ComposantsTests {
         while signal.ligne != nil { await Task.yield() }
     }
 
-    @Test("Seul le teinté a un contour, seul le désactivé change d'encre")
+    @Test("Le choix s'écrit en accent, le désactivé et le plein changent d'encre")
     func voix() {
-        #expect(EtatVisuel.choisi.contour != nil)
-        for etat in [EtatVisuel.repos, .survol, .presse, .courant, .desactive] { #expect(etat.contour == nil) }
+        #expect(EtatVisuel.choisi.encre != EtatVisuel.inactif.encre)
         #expect(EtatVisuel.desactive.encre != EtatVisuel.repos.encre)
         #expect(EtatVisuel.courant.encre != EtatVisuel.repos.encre)
     }
 
-    @Test("Sans le clavier, un choix perd sa voix et son bord")
+    @Test("Sans le clavier, un choix perd sa voix")
     func choixInactif() {
         #expect(EtatVisuel.choix(auClavier: true) == .choisi)
         #expect(EtatVisuel.choix(.courant, auClavier: true) == .courant)
         #expect(EtatVisuel.choix(auClavier: false) == .inactif)
         #expect(EtatVisuel.choix(.courant, auClavier: false) == .inactif)
-        #expect(EtatVisuel.inactif.contour == nil)
     }
 
     @Test("Le décompte du tour devient critique à cinq secondes, pas avant")
@@ -90,5 +89,14 @@ struct ComposantsTests {
         #expect(!CombatBadge.estCritique(6))
         #expect(CombatBadge.estCritique(5))
         #expect(CombatBadge.estCritique(0))
+    }
+
+    /// L'À propos montre l'emblème de `marque/` du SDS, posé dans les ressources : une copie perdue
+    /// laisserait un rond plein à sa place.
+    @Test("L'emblème Synseria de l'À propos est dans les ressources et se lit")
+    func emblemeSynseria() throws {
+        let url = try #require(Ressources.url("synseria-embleme-synfus.svg"))
+        let image = try #require(NSImage(contentsOf: url))
+        #expect(image.isValid && image.size.width > 0)
     }
 }

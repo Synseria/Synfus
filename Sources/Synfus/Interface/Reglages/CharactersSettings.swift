@@ -4,6 +4,7 @@ import SwiftUI
 struct CharactersSettings: View {
     @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var manager = WindowManager.shared
+    @State private var confirmation: Confirmation?
 
     /// Les personnages connus qu'aucun client ne porte en ce moment.
     private var horsLigne: [String] {
@@ -17,20 +18,16 @@ struct CharactersSettings: View {
     /// mégarde décale tous les raccourcis.
     private func confirmerOubli() {
         let noms = horsLigne
-        Task {
-            let demande = DemandeConfirmation(
-                titre: L("persos.oublierHorsLigne.confirmation", nombre: noms.count, noms.count),
-                detail: L("persos.oublierHorsLigne.detail"), verbe: L("commun.retirer"))
-            if await Confirmation.demander(demande) { prefs.forget(names: noms) }
+        confirmation = Confirmation(titre: L("persos.oublierHorsLigne.confirmation", nombre: noms.count, noms.count),
+                                    detail: L("persos.oublierHorsLigne.detail"), verbe: L("commun.retirer")) {
+            Preferences.shared.forget(names: noms)
         }
     }
 
     private func confirmerRetrait(_ nom: String) {
-        Task {
-            let demande = DemandeConfirmation(
-                titre: L("persos.retirer.confirmation", nom), detail: L("persos.retirer.detail"),
-                verbe: L("commun.retirer"))
-            if await Confirmation.demander(demande) { prefs.forget(name: nom) }
+        confirmation = Confirmation(titre: L("persos.retirer.confirmation", nom), detail: L("persos.retirer.detail"),
+                                    verbe: L("commun.retirer")) {
+            Preferences.shared.forget(name: nom)
         }
     }
 
@@ -42,73 +39,74 @@ struct CharactersSettings: View {
                     characterRow(index: index, name: name)
                 }
                 Ligne(titre: L("persos.connectes")) {
-                    HStack(spacing: Jetons.Espace.deux) {
+                    HStack(spacing: Jetons.espace2) {
                         Text(L("persos.connectesSurConnus", connectes, prefs.characterOrder.count))
-                            .foregroundStyle(Color.jeton(\.encreSecondaire))
+                            .foregroundStyle(Color.jeton(\.encre2))
                         // Seul ce qui sert existe : sans personnage hors ligne, rien à retirer.
                         if !horsLigne.isEmpty {
                             Button(L("persos.oublierHorsLigne")) { confirmerOubli() }
-                                .buttonStyle(.bouton(.destructif))
+                                .buttonStyle(BoutonDestructif())
                         }
                     }
                 }
             }
             Bloc(L("persos.fermeture")) {
-                Interrupteur(titre: L("persos.acheverGeles"), aide: L("persos.acheverGeles.aide"),
+                LigneInterrupteur(titre: L("persos.acheverGeles"), aide: L("persos.acheverGeles.aide"),
                              isOn: $prefs.killFrozenClients)
             }
             BlocsClasses()
         }
+        .confirmation($confirmation, annuler: L("commun.annuler"))
     }
 
     private static let largeurEquipe: CGFloat = 112
     private static let largeurTouche: CGFloat = 88
-    private static let largeurFleches = Jetons.Taille.cibleMin * 2 + Jetons.Espace.un
+    private static let largeurFleches = Jetons.hauteurCase * 2 + Jetons.espace1
 
     /// Les colonnes de la liste, nommées : le menu est l'équipe, la touche mène au personnage.
     private var enTetes: some View {
-        HStack(spacing: Jetons.Espace.deux) {
+        HStack(spacing: Jetons.espace2) {
             Spacer()
             Text(L("persos.equipe")).frame(width: Self.largeurEquipe, alignment: .leading)
             Text(L("persos.raccourci")).lineLimit(1).frame(width: Self.largeurTouche, alignment: .leading)
             Color.clear.frame(width: Self.largeurFleches, height: 0)
         }
-        .font(Jetons.Typo.petit.police)
-        .foregroundStyle(Color.jeton(\.encreSecondaire))
+        .font(Jetons.typoMeta.font)
+        .foregroundStyle(Color.jeton(\.encre2))
         .rangee()
     }
 
     /// Une ligne de la liste. Un glisser sur une autre ligne y place le personnage ; les flèches offrent le
     /// même déplacement au clic.
     private func characterRow(index: Int, name: String) -> some View {
-        HStack(spacing: Jetons.Espace.deux) {
+        HStack(spacing: Jetons.espace2) {
             Image(systemName: "line.3.horizontal")
-                .font(Jetons.Typo.micro.police)
-                .foregroundStyle(Color.jeton(\.encreTertiaire))
+                .font(Jetons.typoMicro.font)
+                .foregroundStyle(Color.jeton(\.encre3))
             Circle()
-                .fill(isOnline(name) ? Color.jeton(\.succes) : Color.jeton(\.encreTertiaire))
-                .frame(width: Jetons.Espace.deux, height: Jetons.Espace.deux)
+                .fill(isOnline(name) ? Color.jeton(\.succes) : Color.jeton(\.encre3))
+                .frame(width: Jetons.espace2, height: Jetons.espace2)
                 .accessibilityLabel(isOnline(name) ? L("persos.connecte") : L("persos.horsLigne"))
             Text(name)
             // Seul l'écart au normal s'écrit : un personnage connecté n'a pas besoin de le dire.
             if !isOnline(name) {
                 Text(L("persos.horsLigne"))
-                    .font(Jetons.Typo.petit.police)
-                    .foregroundStyle(Color.jeton(\.encreTertiaire))
+                    .font(Jetons.typoMeta.font)
+                    .foregroundStyle(Color.jeton(\.encre3))
             }
             Spacer()
             teamPicker(for: name)
             // La touche réelle, celle de la barre ; un personnage hors ligne n'a pas d'emplacement.
             HStack {
                 if let rang = slotOf(name) {
-                    ToucheRaccourci(BarView.toucheDuPerso(index: rang, raccourcis: prefs.hotKeys))
+                    ToucheDeClavier(touche: BarView.toucheDuPerso(index: rang, raccourcis: prefs.hotKeys))
                         .aide(L("persos.raccourciDuPerso"))
                 }
                 Spacer(minLength: 0)
             }
             .frame(width: Self.largeurTouche)
 
-            HStack(spacing: Jetons.Espace.un) {
+            HStack(spacing: Jetons.espace1) {
                 Button { moveCharacter(at: index, by: -1) } label: {
                     Image(systemName: "chevron.up")
                 }
@@ -121,8 +119,8 @@ struct CharactersSettings: View {
                 .disabled(index == prefs.characterOrder.count - 1)
                 .aide(L("persos.descendre"))
             }
-            .buttonStyle(.bouton(.tertiaire, dense: true))
-            .font(Jetons.Typo.raccourci.police)
+            .buttonStyle(BoutonTertiaire())
+            .font(Jetons.typoMicro.font)
             .frame(width: Self.largeurFleches)
         }
         .rangee()
@@ -152,7 +150,7 @@ struct CharactersSettings: View {
         }
         .labelsHidden()
         .frame(width: Self.largeurEquipe)
-        .font(Jetons.Typo.petit.police)
+        .font(Jetons.typoMeta.font)
         .help(L("persos.equipeDuPerso"))
     }
 

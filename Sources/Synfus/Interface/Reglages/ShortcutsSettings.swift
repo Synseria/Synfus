@@ -6,6 +6,7 @@ struct ShortcutsSettings: View {
     @ObservedObject private var manager = WindowManager.shared
     @ObservedObject private var hotKeys = HotKeyManager.shared
     @ObservedObject private var clicks = ClickAdvanceWatcher.shared
+    @State private var confirmation: Confirmation?
 
     /// Les combinaisons données deux fois : le système n'en enregistre qu'une,
     /// et l'autre ligne restait affichée comme si elle marchait.
@@ -43,7 +44,7 @@ struct ShortcutsSettings: View {
                         WindowPreviewService.shared.requestAuthorization()
                     }
                 }
-                Interrupteur(titre: L("raccourcis.signalerBascule"), aide: L("raccourcis.signalerBascule.aide"),
+                LigneInterrupteur(titre: L("raccourcis.signalerBascule"), aide: L("raccourcis.signalerBascule.aide"),
                              isOn: $prefs.signalerBascule)
             }
 
@@ -76,7 +77,7 @@ struct ShortcutsSettings: View {
             Bloc(L("reglages.enchainer")) {
                 Ligne(titre: L("raccourcis.enchainer.bascule"),
                       aide: L("raccourcis.enchainer.aide") + "\n\n" + L("raccourcis.enchainer.touche.aide")) {
-                    HStack(spacing: Jetons.Espace.deux) {
+                    HStack(spacing: Jetons.espace2) {
                         if prefs.advanceOnClick {
                             Picker(L("raccourcis.enchainer.touche"), selection: $prefs.advanceModifier) {
                                 ForEach(ClickModifier.allCases) { Text($0.label).tag($0) }
@@ -89,8 +90,7 @@ struct ShortcutsSettings: View {
                             set: { prefs.advanceOnClick = $0; ClickAdvanceWatcher.shared.apply() }
                         ))
                         .labelsHidden()
-                        .toggleStyle(.switch)
-                        .controlSize(.small)
+                        .toggleStyle(.interrupteur)
                     }
                 }
                 if prefs.advanceOnClick {
@@ -99,7 +99,7 @@ struct ShortcutsSettings: View {
                           aide: clicks.seenClicks == 0 ? L("raccourcis.enchainer.clicsCaptes.aide") : nil) {
                         Text("\(clicks.seenClicks)")
                             .monospacedDigit()
-                            .foregroundStyle(clicks.seenClicks == 0 ? Color.jeton(\.alerte) : Color.jeton(\.encreSecondaire))
+                            .foregroundStyle(clicks.seenClicks == 0 ? Color.jeton(\.avertissement) : Color.jeton(\.encre2))
                     }
                 }
             }
@@ -118,8 +118,8 @@ struct ShortcutsSettings: View {
             Bloc {
                 if !hotKeys.rejected.isEmpty {
                     Ligne(titre: L("raccourcis.refusees")) {
-                        HStack(spacing: Jetons.Espace.un) {
-                            ForEach(hotKeys.rejected.map(\.displayString), id: \.self) { ToucheRaccourci($0) }
+                        HStack(spacing: Jetons.espace1) {
+                            ForEach(hotKeys.rejected.map(\.displayString), id: \.self) { ToucheDeClavier(touche: $0) }
                         }
                     }
                 }
@@ -128,15 +128,13 @@ struct ShortcutsSettings: View {
                 }
             }
         }
+        .confirmation($confirmation, annuler: L("commun.annuler"))
     }
 
     private func confirmerRetablissement() {
-        Task {
-            let demande = DemandeConfirmation(
-                titre: L("raccourcis.retablir.confirmation"), detail: L("raccourcis.retablir.detail"),
-                verbe: L("commun.retablir"))
-            guard await Confirmation.demander(demande) else { return }
-            prefs.resetShortcuts()
+        confirmation = Confirmation(titre: L("raccourcis.retablir.confirmation"), detail: L("raccourcis.retablir.detail"),
+                                    verbe: L("commun.retablir")) {
+            Preferences.shared.resetShortcuts()
             rebind()
         }
     }
