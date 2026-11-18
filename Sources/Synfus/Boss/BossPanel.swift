@@ -80,7 +80,7 @@ final class BossPanel: NSObject, ObservableObject {
         panel.isReleasedWhenClosed = false
         panel.backgroundColor = .clear
         panel.isOpaque = false
-        panel.hasShadow = true
+        panel.hasShadow = false
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         if !panel.setFrameAutosaveName("BossPanel") || panel.frame.origin == .zero {
             PanneauxJeu.placer(panel, parDefaut: Self.placeParDefaut)

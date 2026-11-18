@@ -64,17 +64,17 @@ struct ActionMiseAJour: View {
             ProgressView().controlSize(.small)
         case .disponible:
             Button(L("maj.installer")) { miseAJour.proposer() }
-                .buttonStyle(.bouton(.principal))
+                .buttonStyle(BoutonPrincipal())
         case .echec(.ecriture, let version):
             Button(L("maj.telecharger")) { NSWorkspace.shared.open(version.page) }
-                .buttonStyle(.bouton(.secondaire))
+                .buttonStyle(BoutonBorde())
         case .echec:
             Button(L("commun.reessayer")) { miseAJour.proposer() }
-                .buttonStyle(.bouton(.secondaire))
+                .buttonStyle(BoutonBorde())
         case .inconnu, .aJour:
             if prefs.verifierMisesAJour {
                 Button(rechercher) { miseAJour.verifier() }
-                    .buttonStyle(.bouton(.secondaire))
+                    .buttonStyle(BoutonBorde())
             }
         }
     }

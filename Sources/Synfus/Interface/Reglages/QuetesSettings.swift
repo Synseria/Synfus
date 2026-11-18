@@ -11,16 +11,16 @@ struct QuetesSettings: View {
                 SourceQuetes()
             }
             Bloc(L("quetes.panneau")) {
-                Interrupteur(titre: L("quetes.compact"), aide: L("quetes.compact.aide"), isOn: $prefs.quetesCompact)
-                Interrupteur(titre: L("quetes.consigne"), aide: L("quetes.consigne.aide"), isOn: $prefs.quetesConsigne)
-                Interrupteur(titre: L("quetes.masquerObjets"), aide: L("quetes.masquerObjets.aide"),
+                LigneInterrupteur(titre: L("quetes.compact"), aide: L("quetes.compact.aide"), isOn: $prefs.quetesCompact)
+                LigneInterrupteur(titre: L("quetes.consigne"), aide: L("quetes.consigne.aide"), isOn: $prefs.quetesConsigne)
+                LigneInterrupteur(titre: L("quetes.masquerObjets"), aide: L("quetes.masquerObjets.aide"),
                              isOn: $prefs.quetesMasquerObjets)
-                Interrupteur(titre: L("quetes.cocherSuivi"), aide: L("quetes.cocherSuivi.aide"),
+                LigneInterrupteur(titre: L("quetes.cocherSuivi"), aide: L("quetes.cocherSuivi.aide"),
                              isOn: $prefs.quetesCocherSuivi)
                 // Les vignettes ne servent que si les vues des cartes sont là.
                 InterrupteurVuesCartes()
                 if prefs.vuesCartes {
-                    Interrupteur(titre: L("quetes.vignettes"), aide: L("quetes.vignettes.aide"),
+                    LigneInterrupteur(titre: L("quetes.vignettes"), aide: L("quetes.vignettes.aide"),
                                  isOn: $prefs.quetesVignettes)
                 }
             }
@@ -63,14 +63,14 @@ private struct ListeQuetes: View {
                     }
                 }
                 if quetes.count > Self.limite {
-                    Text(L("lieux.affiner", quetes.count)).foregroundStyle(Color.jeton(\.encreSecondaire)).rangee()
+                    Text(L("lieux.affiner", quetes.count)).foregroundStyle(Color.jeton(\.encre2)).rangee()
                 }
             }
         } entete: {
             if store.quetes != nil {
                 Text(L("quetes.compte", quetes.count))
-                    .font(Jetons.Typo.note.police)
-                    .foregroundStyle(Color.jeton(\.encreSecondaire))
+                    .font(Jetons.typoMeta.font)
+                    .foregroundStyle(Color.jeton(\.encre2))
             }
         }
     }
@@ -104,35 +104,35 @@ private struct ListePNJ: View {
                     fiche(pnj, langue)
                 }
                 if pnjs.count > Self.limite {
-                    Text(L("lieux.affiner", pnjs.count)).foregroundStyle(Color.jeton(\.encreSecondaire)).rangee()
+                    Text(L("lieux.affiner", pnjs.count)).foregroundStyle(Color.jeton(\.encre2)).rangee()
                 }
             }
         } entete: {
             if store.quetes != nil {
                 Text(L("pnj.compte", pnjs.count))
-                    .font(Jetons.Typo.note.police)
-                    .foregroundStyle(Color.jeton(\.encreSecondaire))
+                    .font(Jetons.typoMeta.font)
+                    .foregroundStyle(Color.jeton(\.encre2))
             }
         }
     }
 
     private func fiche(_ pnj: PNJ, _ langue: Langue) -> some View {
-        VStack(alignment: .leading, spacing: Jetons.Espace.un) {
-            HStack(spacing: Jetons.Espace.deux) {
-                Text(Lieu.traduit(pnj.noms, langue) ?? "?").font(Jetons.Typo.corpsFort.police)
+        VStack(alignment: .leading, spacing: Jetons.espace1) {
+            HStack(spacing: Jetons.espace2) {
+                Text(Lieu.traduit(pnj.noms, langue) ?? "?").font(Jetons.typoTitreCarte.font)
                 Spacer()
                 BoutonEtiquette(cle: pnj.cle)
                 BoutonFavori(cle: pnj.cle)
             }
             ForEach(Array(pnj.passages.enumerated()), id: \.offset) { rang, passage in
-                HStack(spacing: Jetons.Espace.deux) {
-                    Text(lieu(passage, langue)).foregroundStyle(rang == 0 ? Color.jeton(\.encre) : Color.jeton(\.encreSecondaire))
-                    Text(L("pnj.quetes", nombre: passage.quetes.count, passage.quetes.count)).font(Jetons.Typo.petit.police).foregroundStyle(Color.jeton(\.encreSecondaire))
+                HStack(spacing: Jetons.espace2) {
+                    Text(lieu(passage, langue)).foregroundStyle(rang == 0 ? Color.jeton(\.encre) : Color.jeton(\.encre2))
+                    Text(L("pnj.quetes", nombre: passage.quetes.count, passage.quetes.count)).font(Jetons.typoMeta.font).foregroundStyle(Color.jeton(\.encre2))
                     Spacer()
                     BoutonTrajet(x: passage.position.x, y: passage.position.y, sousZone: passage.sousZone)
                     if let carte = passage.carte { MiniatureCarte(carte: carte) }
                 }
-                .font(Jetons.Typo.note.police)
+                .font(Jetons.typoMeta.font)
             }
         }
         .rangee()

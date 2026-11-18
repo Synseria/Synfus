@@ -135,7 +135,7 @@ final class FloatingBarController: NSObject {
         panel.level = .statusBar
         panel.backgroundColor = .clear
         panel.isOpaque = false
-        panel.hasShadow = true
+        panel.hasShadow = false
         panel.hidesOnDeactivate = false
         // Le déplacement est confié à `performDrag(with:)` depuis la vue, ce qui
         // donne un suivi parfaitement fluide sans capter les clics sur les persos.

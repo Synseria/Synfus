@@ -23,17 +23,17 @@ struct LectureSettings: View {
                                   help: L("general.enregistrementEcran.aide")) { previews.requestAuthorization() }
                 }
                 if let resultat {
-                    Text(resultat).foregroundStyle(Color.jeton(\.encreSecondaire)).rangee()
+                    Text(resultat).foregroundStyle(Color.jeton(\.encre2)).rangee()
                 }
                 ForEach(GenreLecture.allCases) { genre in
                     ligneZone(genre)
                     if genre == .combat, prefs.lireCombat {
-                        Interrupteur(titre: L("lecture.combatDerriere"), aide: L("lecture.combatDerriere.aide"),
+                        LigneInterrupteur(titre: L("lecture.combatDerriere"), aide: L("lecture.combatDerriere.aide"),
                                      isOn: $prefs.lireCombatDerriere)
                     }
                 }
             } entete: {
-                HStack(spacing: Jetons.Espace.deux) {
+                HStack(spacing: Jetons.espace2) {
                     if detection != nil, decompte == nil { ProgressView().controlSize(.small) }
                     Button(decompte.map { L("calibration.decompte", $0) } ?? L("lecture.detecter.bouton")) {
                         detection == nil ? detecter() : annuler()
@@ -51,7 +51,7 @@ struct LectureSettings: View {
                             .help(L("diagnostic.position.toutLire.aide"))
                             .disabled(!previews.authorized || manager.clients.isEmpty)
                     }
-                    .foregroundStyle(etatEnDefaut ? Color.jeton(\.alerte) : Color.jeton(\.encre))
+                    .foregroundStyle(etatEnDefaut ? Color.jeton(\.danger) : Color.jeton(\.encre))
                 }
                 if GenreLecture.allCases.contains(where: { lecture.captures[$0] != nil }) {
                     Bloc(L("lecture.zonesLues")) {
@@ -63,11 +63,11 @@ struct LectureSettings: View {
                     }
                 }
             }
-            Text(L("reglages.diagnostic")).font(Jetons.Typo.titre.police)
-                .padding(.horizontal, Jetons.Espace.trois)
+            Text(L("reglages.diagnostic")).font(Jetons.typoSection.font)
+                .padding(.horizontal, Jetons.espace3)
             BlocsDiagnostic()
         }
-        .sheet(item: $calibrage) { CalibrationZonesView(genre: $0) }
+        .sheet(item: $calibrage) { CalibrationZonesView(genre: $0).racineSynfus() }
     }
 
     /// Une zone : son nom, son interrupteur s'il y en a un, « Calibrer ». Seul l'écart au normal s'écrit.
@@ -75,12 +75,11 @@ struct LectureSettings: View {
         Ligne(titre: genre.libelle,
               etat: prefs[keyPath: genre.reglage] == nil ? nil : L("lecture.zone.calibree"),
               aide: genre == .position ? L("diagnostic.lecture.aide") : nil) {
-            HStack(spacing: Jetons.Espace.deux) {
+            HStack(spacing: Jetons.espace2) {
                 if let chemin = genre.activation {
                     Toggle(genre.libelle, isOn: activation(chemin))
                         .labelsHidden()
-                        .toggleStyle(.switch)
-                        .controlSize(.small)
+                        .toggleStyle(.interrupteur)
                 }
                 Button(L("lecture.calibrer")) { calibrage = genre }
             }
@@ -134,26 +133,26 @@ struct LectureSettings: View {
     /// Ce que l'OCR a reçu : si le texte n'y est pas, c'est la zone qui est en
     /// cause — à recalibrer —, pas la reconnaissance.
     private func zoneLue(_ genre: GenreLecture, _ image: NSImage) -> some View {
-        VStack(alignment: .leading, spacing: Jetons.Espace.un) {
+        VStack(alignment: .leading, spacing: Jetons.espace1) {
             Text(L("diagnostic.lecture.zoneVue", genre.libelle, lecture.dernierPerso ?? "?"))
-                .font(Jetons.Typo.petit.police)
-                .foregroundStyle(Color.jeton(\.encreTertiaire))
+                .font(Jetons.typoMeta.font)
+                .foregroundStyle(Color.jeton(\.encre3))
             Image(nsImage: image)
                 .resizable()
                 .interpolation(.medium)
                 .aspectRatio(contentMode: .fit)
                 .frame(maxWidth: 360, maxHeight: 80, alignment: .leading)
-                .clipShape(RoundedRectangle(cornerRadius: Jetons.Rayon.pastille))
+                .clipShape(RoundedRectangle(cornerRadius: Jetons.rayon0))
             if let lignes = lecture.lignes[genre] {
                 Text(L("diagnostic.position.brut", lignes.joined(separator: " ⏎ ")))
-                    .font(Jetons.Typo.codeInterface.police)
-                    .foregroundStyle(Color.jeton(\.encreTertiaire))
+                    .font(Jetons.typoCode.font)
+                    .foregroundStyle(Color.jeton(\.encre3))
                     .textSelection(.enabled)
             }
             if genre == .combat, let couleur = lecture.couleur {
                 Text(L("diagnostic.lecture.couleur", Int(couleur * 100)))
-                    .font(Jetons.Typo.codeInterface.police)
-                    .foregroundStyle(Color.jeton(\.encreTertiaire))
+                    .font(Jetons.typoCode.font)
+                    .foregroundStyle(Color.jeton(\.encre3))
             }
         }
         .rangee()

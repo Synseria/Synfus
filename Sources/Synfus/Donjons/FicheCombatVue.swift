@@ -7,10 +7,10 @@ struct FicheCombatVue: View {
     let fiche: FicheCombat
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Jetons.Espace.un) {
+        VStack(alignment: .leading, spacing: Jetons.espace1) {
             Text(L("combat.fiche", fiche.niveau, fiche.vie.formatted(), fiche.pa, fiche.pm))
-                .font(Jetons.Typo.raccourci.police)
-            HStack(spacing: Jetons.Espace.un) {
+                .font(Jetons.typoMicro.font)
+            HStack(spacing: Jetons.espace1) {
                 ForEach(FicheCombat.Element.allCases, id: \.self) { colonne($0) }
             }
         }
@@ -24,12 +24,12 @@ struct FicheCombatVue: View {
                 if role == .frapper { Image(systemName: "arrow.down") }
                 Text(Self.nom(element))
             }
-            .font(Jetons.Typo.micro.police)
-            .foregroundStyle(role == .frapper ? Color.jeton(\.primaireEncre) : Color.jeton(\.encreSecondaire))
+            .font(Jetons.typoMicro.font)
+            .foregroundStyle(role == .frapper ? Color.jeton(\.accentTexte) : Color.jeton(\.encre2))
             Text(L("combat.fiche.pourcentage", fiche.resistances[element] ?? 0))
-                .font(Jetons.Typo.chiffre.police)
-                .foregroundStyle(role == .frapper ? Color.jeton(\.primaireEncre)
-                                 : role == .eviter ? Color.jeton(\.encreTertiaire) : Color.jeton(\.encre))
+                .font(Jetons.typoTitreCarte.font.monospacedDigit())
+                .foregroundStyle(role == .frapper ? Color.jeton(\.accentTexte)
+                                 : role == .eviter ? Color.jeton(\.encre3) : Color.jeton(\.encre))
         }
         .lineLimit(1)
         .frame(maxWidth: .infinity)

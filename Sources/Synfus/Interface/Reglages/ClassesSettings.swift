@@ -10,7 +10,7 @@ struct BlocsClasses: View {
         Bloc(L("reglages.classes"), aide: L("classes.icones.aide"), paresseux: true) {
             SourceClasses()
             Ligne(titre: L("classes.dossier")) {
-                HStack(spacing: Jetons.Espace.deux) {
+                HStack(spacing: Jetons.espace2) {
                     Button(L("classes.recharger")) { icons.reloadAll() }
                     Button(L("classes.ouvrirDossier")) { NSWorkspace.shared.open(icons.directory) }
                 }
@@ -19,13 +19,13 @@ struct BlocsClasses: View {
                 classRow(breed)
             }
             Text(L("classes.mentionAnkama"))
-                .font(Jetons.Typo.petit.police)
-                .foregroundStyle(Color.jeton(\.encreSecondaire))
+                .font(Jetons.typoMeta.font)
+                .foregroundStyle(Color.jeton(\.encre2))
                 .rangee()
         } entete: {
             Text(L("classes.maj.contenu", icons.catalogue.breeds.count))
-                .font(Jetons.Typo.note.police)
-                .foregroundStyle(Color.jeton(\.encreSecondaire))
+                .font(Jetons.typoMeta.font)
+                .foregroundStyle(Color.jeton(\.encre2))
         }
     }
 
@@ -33,7 +33,7 @@ struct BlocsClasses: View {
         let custom = icons.icon(forKey: breed.key)
         let provenance = icons.provenance(forKey: breed.key)
 
-        return HStack(spacing: Jetons.Espace.deux) {
+        return HStack(spacing: Jetons.espace2) {
             ZStack {
                 if let custom {
                     Image(nsImage: custom)
@@ -44,11 +44,11 @@ struct BlocsClasses: View {
                 } else {
                     Circle().fill(breed.color)
                     Text(icons.catalogue.abbreviation(for: breed.label))
-                        .font(Jetons.Typo.raccourci.police)
+                        .font(Jetons.typoMicro.font)
                         .foregroundStyle(Color.texteSurClasse)
                 }
             }
-            .frame(width: Jetons.Taille.cibleMin, height: Jetons.Taille.cibleMin)
+            .frame(width: Jetons.hauteurCase, height: Jetons.hauteurCase)
 
             Text(breed.nomLocalise)
 
@@ -56,8 +56,8 @@ struct BlocsClasses: View {
 
             if custom != nil, let provenance {
                 Text(provenance == .tienne ? L("classes.provenance.tienne") : L("classes.provenance.dofusdb"))
-                    .font(Jetons.Typo.petit.police)
-                    .foregroundStyle(Color.jeton(\.encreSecondaire))
+                    .font(Jetons.typoMeta.font)
+                    .foregroundStyle(Color.jeton(\.encre2))
             }
             // Retirer n'existe que s'il y a une icône posée à retirer.
             if custom != nil, provenance == .tienne {

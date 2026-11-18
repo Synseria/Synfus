@@ -23,7 +23,7 @@ struct BossVue: View {
         VStack(alignment: .leading, spacing: 0) {
             entete
             Divider()
-            VStack(alignment: .leading, spacing: Jetons.Espace.deux) {
+            VStack(alignment: .leading, spacing: Jetons.espace2) {
                 if let fiche = aide.fiches[prefs.bossChoisi.monstre] { FicheCombatVue(fiche: fiche) }
                 switch prefs.bossChoisi.special {
                 case .harebourg: HarebourgVue()
@@ -37,10 +37,10 @@ struct BossVue: View {
                 if let special = prefs.bossChoisi.special { rappelsVue(special) }
                 conseilsVue
             }
-            .padding(Jetons.Espace.trois)
+            .padding(Jetons.espace3)
         }
         .frame(width: Self.largeur, alignment: .leading)
-        .font(Jetons.Typo.note.police)
+        .font(Jetons.typoMeta.font)
         .surfaceFlottante()
         // L'autorisation donnée, la lecture démarre sans attendre un
         // changement d'app.
@@ -54,20 +54,20 @@ struct BossVue: View {
 
 
     private var entete: some View {
-        EnTetePanneau(icone: BoutonBarre.boss.symbole, teinte: Color.jeton(\.safran), menu: Self.menu) {
+        EnTetePanneau(icone: BoutonBarre.boss.symbole, teinte: Color.jeton(\.accentTexte), menu: Self.menu) {
             Text(Self.nom(prefs.bossChoisi, donjons: donjons.donjons, garde: prefs.nomsBossChoisi))
-                .font(Jetons.Typo.corpsFort.police)
-                .padding(.leading, Jetons.Espace.un)
+                .font(Jetons.typoTitreCarte.font)
+                .padding(.leading, Jetons.espace1)
             if donjons.enCours, prefs.bossChoisi.special == nil, prefs.nomsBossChoisi == nil {
-                ProgressView().controlSize(.mini).padding(.leading, Jetons.Espace.un)
+                ProgressView().controlSize(.mini).padding(.leading, Jetons.espace1)
             }
-            Image(systemName: "chevron.down").font(Jetons.Typo.micro.police).foregroundStyle(Color.jeton(\.encreSecondaire))
-                .padding(.leading, Jetons.Espace.un)
+            Image(systemName: "chevron.down").font(Jetons.typoMicro.font).foregroundStyle(Color.jeton(\.encre2))
+                .padding(.leading, Jetons.espace1)
             // Un boss sans mécanique ne fait rien lire : pas de perso suivi à nommer.
             if prefs.bossChoisi.special != nil, let perso = lecteur.persoDevant {
-                Text(perso).font(Jetons.Typo.petit.police).foregroundStyle(Color.jeton(\.encreSecondaire))
+                Text(perso).font(Jetons.typoMeta.font).foregroundStyle(Color.jeton(\.encre2))
                     .lineLimit(1)
-                    .padding(.horizontal, Jetons.Espace.un)
+                    .padding(.horizontal, Jetons.espace1)
             }
         } boutons: {
             if let nom = aide.donjon?.nomFrancais {
@@ -111,23 +111,23 @@ struct BossVue: View {
             if rappels {
                 Button { copier(liste.joined(separator: " "), signal: "") } label: {
                     IconeCopie(icone: "doc.on.doc", copie: copie.affiche(""))
-                        .font(Jetons.Typo.petit.police)
-                        .foregroundStyle(Color.jeton(\.encreSecondaire))
+                        .font(Jetons.typoMeta.font)
+                        .foregroundStyle(Color.jeton(\.encre2))
                 }
-                .buttonStyle(.bouton(.tertiaire, dense: true))
+                .buttonStyle(BoutonTertiaire())
                 .aide(L("boss.rappels.copier"))
             }
         } contenu: {
             ForEach(liste, id: \.self) { rappel in
                 Button { copier(rappel, signal: rappel) } label: {
-                    HStack(alignment: .firstTextBaseline, spacing: Jetons.Espace.un) {
+                    HStack(alignment: .firstTextBaseline, spacing: Jetons.espace1) {
                         Text("• " + rappel)
                             .fixedSize(horizontal: false, vertical: true)
                         Spacer(minLength: 0)
                         IconeCopie(icone: nil, copie: copie.affiche(rappel))
                     }
-                    .font(Jetons.Typo.petit.police)
-                    .foregroundStyle(Color.jeton(\.encreSecondaire))
+                    .font(Jetons.typoMeta.font)
+                    .foregroundStyle(Color.jeton(\.encre2))
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -148,7 +148,7 @@ struct BossVue: View {
             let depliee = Binding { conseils ?? (prefs.bossChoisi.special == nil) } set: { conseils = $0 }
             SectionBoss(titre: L("donjon.conseils", nombre: liste.count, liste.count), aide: L("donjon.conseils.aide"),
                         depliee: depliee) {} contenu: {
-                ConseilsVue(conseils: liste).foregroundStyle(Color.jeton(\.encreSecondaire))
+                ConseilsVue(conseils: liste).foregroundStyle(Color.jeton(\.encre2))
             }
         }
     }
@@ -199,8 +199,8 @@ struct PetitBouton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: icone)
-                .font(Jetons.Typo.raccourci.police)
-                .frame(width: Jetons.Taille.cibleMin, height: Jetons.Taille.cibleMin)
+                .font(Jetons.typoMicro.font)
+                .frame(width: Jetons.hauteurCase, height: Jetons.hauteurCase)
         }
         .buttonStyle(.etat())
         .aide(aide)
@@ -215,13 +215,13 @@ struct ChoixBoss<Valeur: Hashable>: View {
     let choisir: (Valeur?) -> Void
 
     var body: some View {
-        HStack(spacing: Jetons.Espace.un) {
+        HStack(spacing: Jetons.espace1) {
             ForEach(choix, id: \.valeur) { option in
                 let actif = option.valeur == actuel
                 Button { choisir(actif ? nil : option.valeur) } label: {
                     Text(option.titre)
-                        .font(Jetons.Typo.raccourci.police)
-                        .frame(maxWidth: .infinity, minHeight: Jetons.Taille.cibleMin)
+                        .font(Jetons.typoMicro.font)
+                        .frame(maxWidth: .infinity, minHeight: Jetons.hauteurCase)
                 }
                 .buttonStyle(.etat(choisi: actif))
             }

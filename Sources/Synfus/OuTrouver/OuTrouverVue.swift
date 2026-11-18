@@ -23,7 +23,7 @@ struct OuTrouverVue: View {
     private var langue: Langue { L10n.courante.langue }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Jetons.Espace.un) {
+        VStack(alignment: .leading, spacing: Jetons.espace1) {
             switch sujet {
             case .monstre(let id):
                 if let fiche = store.monstre(id) { monstre(fiche) } else { attente }
@@ -31,20 +31,20 @@ struct OuTrouverVue: View {
                 if let sources = store.objet(id) { objet(sources) } else { attente }
             }
         }
-        .font(metriques.detail.police)
-        .foregroundStyle(Color.jeton(\.encreSecondaire))
+        .font(metriques.detail.font)
+        .foregroundStyle(Color.jeton(\.encre2))
         .onAppear { store.demander(sujet) }
     }
 
     @ViewBuilder
     private var attente: some View {
         if store.echecs.contains(sujet) {
-            HStack(spacing: Jetons.Espace.un) {
+            HStack(spacing: Jetons.espace1) {
                 Text(L("ouTrouver.echec"))
-                Button(L("ouTrouver.reessayer")) { store.demander(sujet) }.buttonStyle(.bouton(.tertiaire, dense: true))
+                Button(L("ouTrouver.reessayer")) { store.demander(sujet) }.buttonStyle(BoutonTertiaire())
             }
         } else {
-            HStack(spacing: Jetons.Espace.un) {
+            HStack(spacing: Jetons.espace1) {
                 ProgressView().controlSize(.mini)
                 Text(L("ouTrouver.chargement"))
             }
@@ -82,28 +82,28 @@ struct OuTrouverVue: View {
             Label(L("ouTrouver.recette", Lieu.traduit(recette.metier, langue) ?? "?", recette.niveau), systemImage: "hammer")
             Text(recette.ingredients.map { L("quete.ressource", Lieu.traduit($0.noms, langue) ?? "?", $0.quantite) }
                 .joined(separator: " · "))
-                .foregroundStyle(Color.jeton(\.encreTertiaire))
+                .foregroundStyle(Color.jeton(\.encre3))
                 .fixedSize(horizontal: false, vertical: true)
-                .padding(.leading, Jetons.Espace.quatre)
+                .padding(.leading, Jetons.espace4)
         }
-        .padding(.bottom, Jetons.Espace.un)
+        .padding(.bottom, Jetons.espace1)
     }
 
     /// Le monstre et son taux, puis ses repaires les plus proches.
     @ViewBuilder
     private func lacheur(_ lacheur: SourcesObjet.Lacheur, _ repaires: [RepaireSitue]) -> some View {
-        HStack(spacing: Jetons.Espace.un) {
-            Image(systemName: "pawprint").frame(width: Jetons.Espace.trois)
+        HStack(spacing: Jetons.espace1) {
+            Image(systemName: "pawprint").frame(width: Jetons.espace3)
             Text(Lieu.traduit(lacheur.monstre.noms, langue) ?? "?").foregroundStyle(Color.jeton(\.encre)).lineLimit(1)
             if lacheur.taux > 0 {
                 Text((lacheur.taux / 100).formatted(.percent.precision(.fractionLength(0...2))
                     .locale(Locale(identifier: langue.rawValue))))
             }
-            if repaires.isEmpty { Text(L("ouTrouver.introuvable")).foregroundStyle(Color.jeton(\.encreTertiaire)) }
+            if repaires.isEmpty { Text(L("ouTrouver.introuvable")).foregroundStyle(Color.jeton(\.encre3)) }
         }
-        .padding(.top, Jetons.Espace.un)
+        .padding(.top, Jetons.espace1)
         ForEach(Array(repaires.prefix(Self.repairesParLacheur).enumerated()), id: \.offset) { _, repaire in
-            ligne(repaire, cle: "o\(lacheur.monstre.id)").padding(.leading, Jetons.Espace.trois)
+            ligne(repaire, cle: "o\(lacheur.monstre.id)").padding(.leading, Jetons.espace3)
         }
     }
 
@@ -116,17 +116,17 @@ struct OuTrouverVue: View {
             store.copierTrajet(repaire)
             copie.signaler(id)
         } label: {
-            HStack(spacing: Jetons.Espace.un) {
+            HStack(spacing: Jetons.espace1) {
                 IconeCopie(icone: repaire.repaire.genre == .donjon ? "building.columns" : "mappin", copie: copie.affiche(id))
-                    .frame(width: Jetons.Espace.trois)
+                    .frame(width: Jetons.espace3)
                 Text(Lieu.traduit(repaire.repaire.noms, langue) ?? "?").lineLimit(1).layoutPriority(1)
-                Spacer(minLength: Jetons.Espace.un)
+                Spacer(minLength: Jetons.espace1)
                 if let cartes = repaire.cartes { Text(L("ouTrouver.cartes", nombre: cartes, cartes)).lineLimit(1) }
                 Text(Coordonnees.texte(repaire.situation.x, repaire.situation.y))
-                    .font(Jetons.Typo.codeInterface.police)
+                    .font(Jetons.typoCode.font)
                     .lineLimit(1)
             }
-            .padding(.vertical, Jetons.Espace.un)
+            .padding(.vertical, Jetons.espace1)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -138,8 +138,8 @@ struct OuTrouverVue: View {
         if !tout, nombre > Self.premiers {
             let reste = nombre - Self.premiers
             Button(L("ouTrouver.plus", nombre: reste, reste)) { tout = true }
-                .buttonStyle(.bouton(.tertiaire, dense: true))
-                .font(metriques.detail.police)
+                .buttonStyle(BoutonTertiaire())
+                .font(metriques.detail.font)
         }
     }
 }
