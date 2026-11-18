@@ -39,8 +39,8 @@ while [ $# -gt 0 ]; do
     esac
     shift
 done
-if [ -n "$VERSION_DEMANDEE" ] && [[ ! "$VERSION_DEMANDEE" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
-    echo "build.sh : version « $VERSION_DEMANDEE » mal formée — attendu X.Y.Z" >&2; exit 2
+if [ -n "$VERSION_DEMANDEE" ] && [[ ! "$VERSION_DEMANDEE" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$ ]]; then
+    echo "build.sh : version « $VERSION_DEMANDEE » mal formée — attendu X.Y.Z ou X.Y.Z-rc.N" >&2; exit 2
 fi
 
 if [ "$MODE" = "publish" ]; then
@@ -105,13 +105,16 @@ source ./signature.sh
 # l'app compte mais n'envoie rien. Le genre de build accompagne chaque rapport
 # (deployment.environment) : les builds du propriétaire ne se mêlent pas aux
 # chiffres des utilisateurs.
-# Écrits par le heredoc, jamais en argument d'une commande (visible par ps).
+# Clés lues par SynseriaKit (`ConfigurationDeTelemetrie`), échappées pour le XML
+# (un `&` dans l'adresse casserait le plist), écrites par le heredoc dans le
+# fichier : jamais en argument d'une commande, que ps montrerait.
+xml() { local v="${1//&/&amp;}"; v="${v//</&lt;}"; printf '%s' "${v//>/&gt;}"; }
 TELEMETRIE_PLIST=""
 if [ -n "${TELEMETRIE_URL:-}" ] && [ -n "${TELEMETRIE_JETON:-}" ]; then
     if [ "${DISTRIBUTION:-0}" = "1" ]; then GENRE_BUILD="release"; else GENRE_BUILD="local"; fi
-    TELEMETRIE_PLIST="<key>SynfusTelemetrieURL</key><string>$TELEMETRIE_URL</string>
-    <key>SynfusTelemetrieJeton</key><string>$TELEMETRIE_JETON</string>
-    <key>SynfusDistribution</key><string>$GENRE_BUILD</string>"
+    TELEMETRIE_PLIST="<key>SynseriaTelemetrieURL</key><string>$(xml "$TELEMETRIE_URL")</string>
+    <key>SynseriaTelemetrieJeton</key><string>$(xml "$TELEMETRIE_JETON")</string>
+    <key>SynseriaDistribution</key><string>$GENRE_BUILD</string>"
 fi
 
 echo "==> Assemblage du bundle"

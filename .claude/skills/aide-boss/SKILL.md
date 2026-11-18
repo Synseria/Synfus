@@ -62,7 +62,7 @@ même perso est souvent manqué (passage automatique ailleurs). Pour que le déc
 - **Guide et conseils** : par le donjon du boss (`AideBoss.donjon`, `Donjon.nomFrancais`,
   `DonjonsStore.conseils`).
 - **Compteurs d'usage** : seuls les boss à mécanique sont comptés (`EvenementUsage` est une liste
-  fermée partagée avec le collecteur).
+  fermée : rien d'autre ne part).
 - Ajouter un boss à mécanique : ses règles pures, `monstre`, sa vue, ses rappels, ses libellés.
 
 ## Suivi — `SuiviConfusion` (pur)

@@ -1,4 +1,5 @@
 import SwiftUI
+import Telemetrie
 
 /// Les statistiques, dans la page Général : l'interrupteur du partage, puis ce que Synfus a compté et le
 /// JSON exact de ce qui part. Compteurs montrés au seul partage : c'est ce qui donne envie de le laisser
@@ -49,7 +50,7 @@ struct BlocsStatistiques: View {
     @ViewBuilder
     private var compteurs: some View {
         let aujourdhui = UsageStore.aujourdhui()
-        let totaux = usage.historique.totaux(sur: periode.jours, aujourdhui: aujourdhui)
+        let totaux = usage.registre.historique.totaux(sur: periode.jours, aujourdhui: aujourdhui)
         Bloc {
             Ligne(titre: L("stats.periode")) {
                 HStack(spacing: Jetons.Espace.deux) {
@@ -57,17 +58,17 @@ struct BlocsStatistiques: View {
                     Segments(L("stats.periode"), selection: $periode, choix: Periode.allCases.map { ($0, $0.libelle) })
                 }
             }
-            if let moyennes = usage.historique.moyennesPersos(sur: periode.jours, aujourdhui: aujourdhui) {
+            if let moyennes = usage.persos.moyennes(sur: periode.jours, aujourdhui: aujourdhui) {
                 valeur(L("stats.persosConnectes"), personnages(moyennes.connectes))
                 valeur(L("stats.persosJoues"), personnages(moyennes.joues))
             }
         }
         ForEach(EvenementUsage.Famille.allCases, id: \.self) { famille in
-            let evenements = EvenementUsage.allCases.filter { $0.famille == famille && totaux[$0, default: 0] > 0 }
+            let evenements = EvenementUsage.allCases.filter { $0.famille == famille && totaux[$0.cle, default: 0] > 0 }
             if !evenements.isEmpty {
                 Bloc(titre(famille)) {
                     ForEach(evenements, id: \.self) { evenement in
-                        valeur(evenement.libelle, totaux[evenement, default: 0].formatted())
+                        valeur(evenement.libelle, totaux[evenement.cle, default: 0].formatted())
                     }
                 }
             }
@@ -95,13 +96,13 @@ struct BlocsStatistiques: View {
     }
 
     private var depuis: String? {
-        guard periode == .tout, let premier = usage.historique.depuis.flatMap({ JourUsage.date($0) }) else { return nil }
+        guard periode == .tout, let premier = usage.registre.historique.depuis.flatMap({ JourDeTelemetrie.date($0) }) else { return nil }
         return L("stats.depuis", premier.formatted(date: .long, time: .omitted))
     }
 
     /// Une date à droite de la ligne, ou « Jamais » : la valeur, pas un sous-texte.
     private var dernierEnvoi: String {
-        usage.historique.dernierEnvoi.map { $0.formatted(date: .abbreviated, time: .shortened) }
+        usage.registre.historique.dernierEnvoi.map { $0.formatted(date: .abbreviated, time: .shortened) }
             ?? L("stats.jamais")
     }
 }
@@ -114,7 +115,7 @@ struct DonneesEnvoyeesVue: View {
     @State private var dernier = false
 
     var body: some View {
-        let texte = dernier ? usage.historique.dernierRapport : usage.apercuProchainEnvoi()
+        let texte = dernier ? usage.registre.historique.dernierRapport : usage.registre.apercuProchainEnvoi()
         VStack(alignment: .leading, spacing: Jetons.Espace.trois) {
             Segments(L("stats.voirDonnees"), selection: $dernier,
                      choix: [(false, L("stats.prochainEnvoi")), (true, L("stats.dernierEnvoi"))])
