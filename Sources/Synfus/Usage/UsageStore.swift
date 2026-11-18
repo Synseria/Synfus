@@ -121,15 +121,22 @@ final class UsageStore: ObservableObject, SourceDeTelemetrie {
 
     var partageActif: Bool { preferences.partagerStatistiques }
 
-    /// L'effectif mené jusqu'à maintenant et `persos.json` écrit, puis ce que le jour rapporte.
+    /// L'effectif mené jusqu'à maintenant et `persos.json` écrit, puis les réglages et la langue ;
+    /// les persos partent par `mesures(jour:)`.
     func releve() -> ReleveDeLApp {
         noterEffectif(dernierEffectif?.persos ?? WindowManager.shared.clients.count)
         if persosModifies, let fichierPersos {
             persosModifies = !Self.ecrire(persos, dans: fichierPersos)
         }
         return ReleveDeLApp(reglages: Self.reglages(preferences, demarrageAuto: LaunchAtLogin.isEnabled),
-                            langue: L10n.courante.langue.rawValue,
-                            mesures: persos.jour(Self.aujourdhui(horloge()))?.mesures ?? [:])
+                            langue: L10n.courante.langue.rawValue)
+    }
+
+    /// La journée entière telle que `persos.json` la garde, demandée au moment de l'envoi : un
+    /// jour en attente part avec ses persos, et un jour terminé avec ce qui a suivi son dernier
+    /// relevé. Un jour sans perso part à 0.
+    func mesures(jour: String) -> [CleDeTelemetrie: ValeurDeTelemetrie]? {
+        (persos.jour(jour) ?? JourPersos(jour: jour)).mesures
     }
 
     // MARK: - Règles

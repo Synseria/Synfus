@@ -266,6 +266,49 @@ struct UsageTests {
                 == IdentifiantDInstallation.calculer(materiel: "UUID-1", app: "fr.synseria.Synfus"))
     }
 
+    @Test("Les jours en attente partent avec leurs persos de toute la journée, relevée ou non")
+    func persosDesJoursEnAttente() async throws {
+        let collecteur = Collecteur()
+        let horloge = Horloge(date(8, 20))
+        let prefs = Preferences.forTesting(store: StockageMemoire())
+        prefs.partagerStatistiques = true
+        let configuration = ConfigurationDeTelemetrie(url: URL(string: "https://collecteur.invalid/v1/logs")!,
+                                                      jeton: "jeton", distribution: .release)
+        let store = UsageStore(dossier: nil, configuration: configuration, version: "0.14.0", preferences: prefs,
+                               materiel: "UUID-1", envoi: { collecteur.recevoir($0) }, horloge: { horloge.date })
+        store.noterEffectif(2)
+        store.compter(.palette)
+        await store.registre.releve()?.value
+        // Après le dernier relevé du 8, puis un 9 jamais relevé.
+        horloge.date = date(8, 22)
+        store.noterEffectif(4)
+        store.noterPersoJoue("Aeryn")
+        horloge.date = date(9, 10)
+        store.compter(.chasse)
+        store.noterPersoJoue("Aeryn")
+        store.noterPersoJoue("Nova")
+        horloge.date = date(10, 9)
+        await store.registre.releve()?.value
+
+        let data = try #require(collecteur.recus.first)
+        let racine = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let enregistrements = try #require(((racine["resourceLogs"] as? [[String: Any]])?.first?["scopeLogs"]
+            as? [[String: Any]])?.first?["logRecords"] as? [[String: Any]])
+        var parJour: [String: [String: String]] = [:]
+        for enregistrement in enregistrements {
+            var valeurs: [String: String] = [:]
+            for attribut in enregistrement["attributes"] as? [[String: Any]] ?? [] {
+                let valeur = attribut["value"] as? [String: Any]
+                valeurs[attribut["key"] as? String ?? ""] = (valeur?["intValue"] ?? valeur?["stringValue"]) as? String
+            }
+            parJour[valeurs["jour"] ?? ""] = valeurs
+        }
+        #expect(parJour["2026-11-08"]?["persos.max"] == "4")
+        #expect(parJour["2026-11-08"]?["persos.joues"] == "1")
+        #expect(parJour["2026-11-09"]?["persos.joues"] == "2")
+        #expect(parJour["2026-11-09"]?["usage.chasse"] == "1")
+    }
+
     @Test("Partage coupé : le compte continue, rien ne part")
     func partageCoupe() async {
         let collecteur = Collecteur()
