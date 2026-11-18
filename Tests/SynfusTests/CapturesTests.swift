@@ -20,9 +20,9 @@ struct CapturesTests {
     private func contexte() -> ContextePalette {
         var contexte = ContextePalette()
         contexte.position = PositionCarte(x: -2, y: 0, zone: "Amakna (Village d'Amakna)")
-        contexte.zaaps = ZaapsSitues(CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [], choix: [:]),
-                                     reseau: ReseauSousZones(Carte.integree))
-        contexte.lieux = Carte.integree.lieux
+        contexte.zaaps = ZaapsSitues(CatalogueZaaps.actifs(base: CarteDuJeu.integree.zaaps, ajoutes: [], choix: [:]),
+                                     reseau: ReseauSousZones(CarteDuJeu.integree))
+        contexte.lieux = CarteDuJeu.integree.lieux
         contexte.etiquettes = ["1:-78,-41": "Fri 1", "1:-77,-73": "Fri 2", "1:39,-82": "Fri 3",
                                "1:-2,0": "Village", "1:-16,1": "Koalak", "1:5,7": "Bouftou",
                                "1:-31,-56": "Portails Dimensionnels", "1:-26,37": "Brâk"]
@@ -83,7 +83,7 @@ struct CapturesTests {
         let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
         let vue = HStack(spacing: 40) {
             ForEach([20.0, 3.0], id: \.self) { reste in
-                Text("Syl-Ami").padding(Jetons.Espace.trois)
+                Text("Syl-Ami").padding(Jetons.espace3)
                     .overlay { CombatBadge(etat: .monTour(fin: Date().addingTimeInterval(reste))) }
             }
         }
@@ -123,7 +123,7 @@ struct CapturesTests {
         }
         AlmanaxStore.shared.poserPourCaptures(Array(jours.prefix(6)))
         // Le Sanctuaire vient de la carte : sans elle, la carte du jour n'a pas son bouton.
-        CarteStore.shared.poserPourCaptures(Carte.integree)
+        CarteStore.shared.poserPourCaptures(CarteDuJeu.integree)
         for (nom, requete, filtre, deplie) in [("palette-accueil", "", FiltrePalette.tout, false),
                                                ("palette-vue-zaaps", "", .zaaps, false),
                                                ("palette-vue-donjons", "", .donjons, false),
@@ -355,10 +355,10 @@ struct CapturesTests {
     func vuesBoss() throws {
         let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
         func panneau(_ nom: String, @ViewBuilder _ vue: () -> some View) throws {
-            let carte = VStack(alignment: .leading, spacing: Jetons.Espace.deux) { vue() }
-                .padding(Jetons.Espace.trois)
+            let carte = VStack(alignment: .leading, spacing: Jetons.espace2) { vue() }
+                .padding(Jetons.espace3)
                 .frame(width: BossVue.largeur, alignment: .leading)
-                .font(Jetons.Typo.note.police)
+                .font(Jetons.typoMeta.font)
                 .surfaceFlottante()
                 .padding(24)
                 .environment(\.colorScheme, Self.schema)
@@ -397,7 +397,7 @@ struct CapturesTests {
         """
         let fiche = try #require(FicheCombat(try JSONDecoder().decode(FicheCombat.MonstreAPI.self, from: Data(json.utf8))))
         let vue = FicheCombatVue(fiche: fiche)
-            .padding(Jetons.Espace.trois)
+            .padding(Jetons.espace3)
             .frame(width: BossVue.largeur)
             .surfaceFlottante()
             .padding(24)
@@ -410,7 +410,7 @@ struct CapturesTests {
         let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
         try FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)
         equipe()
-        CarteStore.shared.poserPourCaptures(Carte.integree)
+        CarteStore.shared.poserPourCaptures(CarteDuJeu.integree)
         QuetesStore.shared.poserPourCaptures(try QuetesTests.quetes())
         let toutes = ProcessInfo.processInfo.environment["SYNFUS_CAPTURES_TOUT"] != nil
         // `SYNFUS_CAPTURES_HAUTEUR` : la fenêtre plus haute, pour voir une page longue en entier.
@@ -437,18 +437,6 @@ struct CapturesTests {
         let vue = AProposVue(version: "1.4.2")
             .environment(\.colorScheme, Self.schema)
         try ecrire(vue, vers: dossier.appending(path: "a-propos.png"))
-    }
-
-    @Test("Capture de la feuille d'installation d'une mise à jour", .enabled(if: dossier != nil))
-    func installationMiseAJour() throws {
-        let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
-        try FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)
-        let demande = DemandeConfirmation(
-            titre: L("maj.alerte.titre", "1.5.0"), detail: L("maj.alerte.detail"), verbe: L("maj.alerte.installer"),
-            rang: .principal, lien: LienConfirmation(titre: L("maj.nouveautes"), url: URL(fileURLWithPath: "/")))
-        let vue = FeuilleConfirmation(demande: demande) { _ in }
-            .environment(\.colorScheme, Self.schema)
-        try ecrire(vue, vers: dossier.appending(path: "maj-installation.png"))
     }
 
     /// Par une fenêtre hors écran : `ImageRenderer` ne dessine ni champ de

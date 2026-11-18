@@ -120,10 +120,24 @@ final class MiseAJour: ObservableObject {
     func proposer() {
         guard let version = proposee else { return }
         if case .installation = etat { return }
-        let demande = DemandeConfirmation(titre: L("maj.alerte.titre", version.numero), detail: L("maj.alerte.detail"),
-                                          verbe: L("maj.alerte.installer"), rang: .principal,
-                                          lien: LienConfirmation(titre: L("maj.nouveautes"), url: version.page))
-        Task { if await Confirmation.demander(demande) { installer(version) } }
+        if Self.confirmer(version) { installer(version) }
+    }
+
+    /// « Installer Synfus X ? » : un geste qui engage sans détruire (le verbe est le défaut, ⏎), et
+    /// « Nouveautés », qui ouvre la page de la version et laisse l'alerte en place. Au premier plan :
+    /// Synfus est une app de barre de menus, l'alerte s'ouvrirait derrière le jeu.
+    private static func confirmer(_ version: VersionPubliee) -> Bool {
+        let alerte = NSAlert()
+        alerte.messageText = L("maj.alerte.titre", version.numero)
+        alerte.informativeText = L("maj.alerte.detail")
+        alerte.addButton(withTitle: L("maj.alerte.installer"))
+        alerte.addButton(withTitle: L("commun.annuler")).keyEquivalent = "\u{1b}"
+        let nouveautes = alerte.addButton(withTitle: L("maj.nouveautes"))
+        nouveautes.target = Nouveautes.shared
+        nouveautes.action = #selector(Nouveautes.ouvrir)
+        Nouveautes.shared.page = version.page
+        NSApp.activate()
+        return alerte.runModal() == .alertFirstButtonReturn
     }
 
     private func installer(_ version: VersionPubliee) {
@@ -191,4 +205,16 @@ final class MiseAJour: ObservableObject {
         open "$3"
         rm -rf "$5"
         """
+}
+
+/// Le bouton « Nouveautés » de l'alerte d'installation : une cible qui ouvre la page sans fermer l'alerte
+/// (un bouton d'`NSAlert` sans action propre la ferme).
+@MainActor
+private final class Nouveautes: NSObject {
+    static let shared = Nouveautes()
+    var page: URL?
+
+    @objc func ouvrir() {
+        if let page { NSWorkspace.shared.open(page) }
+    }
 }
