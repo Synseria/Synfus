@@ -299,7 +299,7 @@ final class Preferences: ObservableObject {
 
     private let store: PreferencesStore
 
-    private init(store: PreferencesStore = UserDefaults.standard) {
+    private init(store: PreferencesStore) {
         self.store = store
         load()
     }
@@ -767,7 +767,7 @@ final class Preferences: ObservableObject {
         }
 
         /// Le thème et la nuance. Sans la clé du thème, une sauvegarde d'avant le nuancier : sa
-        /// couleur, ses fonds et son apparence se convertissent (`ConversionDuTheme`), relus en texte
+        /// couleur et son apparence se convertissent (`ConversionDuTheme`, les fonds sans équivalent), relues en texte
         /// pour qu'une valeur inattendue laisse le défaut au lieu de rendre la sauvegarde illisible.
         static func theme(theme cleTheme: Cle, nuance cleNuance: Cle) -> Reglage {
             Reglage(ecrire: { prefs, conteneur in
@@ -781,8 +781,7 @@ final class Preferences: ObservableObject {
                             relu = ConversionDuTheme.Relu(theme: Jetons.Theme(ecrit: ecrit) ?? Jetons.themeParDefaut,
                                                           nuance: ConversionDuTheme.nuance(ecrite: texte(cleNuance)))
                         } else {
-                            relu = ConversionDuTheme.relire(couleur: texte("couleurDeLApp"), fonds: texte("fondsDeLApp"),
-                                                            apparence: texte("apparence"))
+                            relu = ConversionDuTheme.relire(couleur: texte("couleurDeLApp"), apparence: texte("apparence"))
                         }
                         return { prefs in
                             prefs.themeDeLApp = relu.theme

@@ -1,5 +1,5 @@
 // Engendré par Synseria-Design — ne pas retoucher : changer jetons.json ou apps/Synfus.json, puis sh propager.sh.
-// jetons.json 9109fc88022f5d8a · contenu d175fda63e3068c8
+// jetons.json 9109fc88022f5d8a · contenu f7136300d799d962
 import SwiftUI
 
 /// Les valeurs de design Synseria telles que Synfus les reçoit : toute couleur, taille ou durée
@@ -255,7 +255,7 @@ extension Jetons {
         static func duSysteme(sombre: Bool) -> Nuance { sombre ? .penombre : .jour }
     }
 
-    static let themeParDefaut = Theme.coloris(.graphite)
+    static let themeParDefaut = Theme.coloris(.lagon)
     /// nil : la nuance suit le système.
     static let nuanceParDefaut: Nuance? = nil
     static let personnaliseParDefaut: UInt32 = 0x3FA9D8

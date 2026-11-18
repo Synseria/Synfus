@@ -43,18 +43,18 @@ enum ConversionDuTheme {
         ecrite == systeme ? nil : ecrite.flatMap(Jetons.Nuance.init(rawValue:)) ?? Jetons.nuanceParDefaut
     }
 
-    /// Les réglages d'avant : une couleur restée au défaut d'alors (jade, fonds Auto) prend le thème
-    /// d'aujourd'hui ; un préréglage, le coloris le plus proche ; une teinte, Personnalisé. Les fonds
+    /// Les réglages d'avant : un préréglage prend le coloris le plus proche (jade, le défaut d'alors,
+    /// devient Lagon, celui d'aujourd'hui) ; une teinte, Personnalisé. Les fonds
     /// n'ont plus de réglage (la nuance porte le fond) ; Clair et Sombre imposés deviennent Jour et
     /// Pénombre, Auto suit toujours le système.
-    static func relire(couleur: String?, fonds: String?, apparence: String?) -> Relu {
+    static func relire(couleur: String?, apparence: String?) -> Relu {
         var relu = Relu()
         switch apparence {
         case "clair": relu.nuance = .jour
         case "sombre": relu.nuance = .penombre
         default: break
         }
-        guard let couleur, couleur != "jade" || fonds != nil else { return relu }
+        guard let couleur else { return relu }
         if couleur.hasPrefix("teinte:"), let t = Int(couleur.dropFirst(7)) {
             relu.theme = .personnalise(personnalise(angleOklab: Double(((t % 360) + 360) % 360)))
         } else if let coloris = colorisDuPrereglage[couleur] {
