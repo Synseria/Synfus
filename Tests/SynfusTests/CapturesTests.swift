@@ -61,6 +61,24 @@ struct CapturesTests {
         try ecrire(vue, vers: dossier.appending(path: "barre.png"))
     }
 
+    @Test("Capture de la barre en équipe, sa pilule devant les pastilles", .enabled(if: dossier != nil))
+    func barreEnEquipe() throws {
+        let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
+        equipe()
+        let prefs = Preferences.shared
+        for (nom, rang) in [("Syn-App", 0), ("Syn-Ops", 0), ("Brok", 1)] { prefs.affecter(nom, aEquipe: rang) }
+        WindowManager.shared.activerEquipe(0)
+        defer {
+            WindowManager.shared.activerEquipe(nil)
+            for nom in ["Syn-App", "Syn-Ops", "Brok"] { prefs.affecter(nom, aEquipe: nil) }
+        }
+        let vue = BarView()
+            .padding(24)
+            .background(Self.fondCapture)
+            .environment(\.colorScheme, Self.schema)
+        try ecrire(vue, vers: dossier.appending(path: "barre-equipe.png"))
+    }
+
     @Test("Capture de la barre à huit personnages, pleine puis réduite", .enabled(if: dossier != nil))
     func barreHuitPersos() throws {
         let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
