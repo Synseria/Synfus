@@ -49,15 +49,18 @@ final class UsageStore: ObservableObject, SourceDeTelemetrie {
         if let fichier = fichierPersos {
             if let donnees = try? Data(contentsOf: fichier) {
                 persos = (try? JSONDecoder().decode(HistoriquePersos.self, from: donnees)) ?? HistoriquePersos()
-            } else if !FileManager.default.fileExists(atPath: fichier.path) {
-                // Une fois, avant que le registre ne réécrive `usage.json` sans les persos. Si
-                // `persos.json` ne s'écrit pas, rien ne s'écrit de ce lancement : l'ancien
-                // fichier reste entier pour le suivant.
-                persos = fichierUsage.flatMap { try? Data(contentsOf: $0) }.map(HistoriquePersos.reprendre) ?? persos
-                if !Self.ecrire(persos, dans: fichier) {
-                    fichierUsage = nil
-                    fichierPersos = nil
-                }
+            }
+            // À chaque lancement, avant que le registre ne réécrive `usage.json` sans eux : les
+            // persos qu'une version d'avant y a remis (retour à une ancienne version, build de
+            // dev et app installée sur le même dossier) sont repris. Si `persos.json` ne s'écrit
+            // pas, rien ne s'écrit de ce lancement : l'ancien fichier reste entier.
+            let avant = persos
+            if let ancien = fichierUsage.flatMap({ try? Data(contentsOf: $0) }) {
+                persos.fusionner(HistoriquePersos.reprendre(ancien))
+            }
+            if (persos != avant || !FileManager.default.fileExists(atPath: fichier.path)) && !Self.ecrire(persos, dans: fichier) {
+                fichierUsage = nil
+                fichierPersos = nil
             }
         }
         self.persos = persos

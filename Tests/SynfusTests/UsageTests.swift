@@ -162,6 +162,32 @@ struct UsageTests {
         #expect(relance.persos.jour("2026-11-11")?.max == 1)
     }
 
+    @Test("Des persos remis dans usage.json par une version d'avant sont repris, sans rien perdre ni doubler")
+    func repriseApresRetour() throws {
+        let dossier = try dossierTemporaire()
+        defer { try? FileManager.default.removeItem(at: dossier) }
+        var deja = HistoriquePersos()
+        deja.noterPersoJoue("Nova", le: "2026-11-10")
+        deja.noterEffectif(1, pendant: 60, le: "2026-11-10")
+        deja.noterEffectif(5, pendant: 60, le: "2026-11-12")
+        try JSONEncoder().encode(deja).write(to: dossier.appending(path: "persos.json"))
+        try Data(Self.ancienUsage.utf8).write(to: dossier.appending(path: "usage.json"))
+        let prefs = Preferences.forTesting(store: StockageMemoire())
+        let midi = date(12, 12)
+
+        let store = UsageStore(dossier: dossier, configuration: nil, version: nil, preferences: prefs,
+                               materiel: "UUID-1", envoi: { _ in nil }, horloge: { midi })
+        #expect(store.persos.jours.map(\.jour) == ["2026-11-08", "2026-11-10", "2026-11-12"])
+        let dix = try #require(store.persos.jour("2026-11-10"))
+        #expect(dix.joues == ["Nova", "Aeryn"])
+        #expect(dix.secondesAvecPersos == 300 && dix.max == 2)
+        #expect(store.persos.jour("2026-11-12")?.max == 5)
+
+        let relance = UsageStore(dossier: dossier, configuration: nil, version: nil, preferences: prefs,
+                                 materiel: "UUID-1", envoi: { _ in nil }, horloge: { midi })
+        #expect(relance.persos == store.persos)
+    }
+
     @Test("Hors de l'app signée (sous les tests), le compte vit en mémoire")
     func horsDeLApp() {
         #expect(UsageStore.shared.fichierPersos == nil)

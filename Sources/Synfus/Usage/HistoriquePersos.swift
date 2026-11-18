@@ -93,6 +93,22 @@ struct HistoriquePersos: Codable, Equatable, Sendable {
 
     // MARK: - Reprise de l'ancien `usage.json`
 
+    /// Les jours de `autre` ajoutés ; un jour déjà là garde le plus long relevé et l'union des
+    /// noms. Rien ne se retire : reprendre deux fois ne change rien.
+    mutating func fusionner(_ autre: HistoriquePersos) {
+        for jour in autre.jours {
+            modifier(jour.jour) { present in
+                let joues = present.joues + jour.joues.filter { !present.joues.contains($0) }
+                if jour.secondesAvecPersos > present.secondesAvecPersos {
+                    present.secondes = jour.secondes
+                    present.secondesAvecPersos = jour.secondesAvecPersos
+                }
+                present.max = Swift.max(present.max, jour.max)
+                present.joues = joues
+            }
+        }
+    }
+
     /// Les persos que l'`usage.json` d'avant SynseriaKit gardait dans chaque jour (`persosMax`,
     /// `persosSecondes`, `secondesAvecPersos`, `persosJoues`) : le registre commun ne les connaît
     /// pas et les efface à sa première écriture. Un fichier illisible ne rend rien.
