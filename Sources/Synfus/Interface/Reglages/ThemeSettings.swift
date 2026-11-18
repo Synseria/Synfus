@@ -202,6 +202,6 @@ private struct ApercuTheme: View {
         }
         .padding(Jetons.espace1)
         .fixedSize()
-        .surfaceFlottante(verre: true)
+        .surfaceFlottante()
     }
 }
