@@ -9,9 +9,9 @@ struct RecherchePaletteTests {
                           etiquettes: [String: String] = [:], favoris: Set<String> = []) -> ContextePalette {
         var contexte = ContextePalette()
         contexte.position = position
-        contexte.zaaps = ZaapsSitues(CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [], choix: [:]),
-                                     reseau: ReseauSousZones(Carte.integree))
-        contexte.lieux = Carte.integree.lieux
+        contexte.zaaps = ZaapsSitues(CatalogueZaaps.actifs(base: CarteDuJeu.integree.zaaps, ajoutes: [], choix: [:]),
+                                     reseau: ReseauSousZones(CarteDuJeu.integree))
+        contexte.lieux = CarteDuJeu.integree.lieux
         contexte.etiquettes = etiquettes
         contexte.favoris = favoris
         contexte.invitationEquipe = "/invite Bram; /invite Cob"
@@ -34,7 +34,7 @@ struct RecherchePaletteTests {
 
     @Test("Sans rien taper : les lieux et PNJ favoris avec les zaaps favoris, du plus proche, puis les autres zaaps")
     func grilleDesFavoris() throws {
-        let banque = try #require(Carte.integree.lieux.first { $0.nom(en: .fr) == "Banque" && $0.zone(en: .fr) == "Bonta" })
+        let banque = try #require(CarteDuJeu.integree.lieux.first { $0.nom(en: .fr) == "Banque" && $0.zone(en: .fr) == "Bonta" })
         var avecQuetes = contexte(etiquettes: ["pnj:6309": "Ama"], favoris: ["1:-31,-56", banque.cle, "pnj:6309"])
         let passage = { (x: Int, y: Int, quetes: Int) in PNJ.Passage(position: .init(x: x, y: y), carte: nil, sousZone: nil, quetes: Array(0..<quetes)) }
         avecQuetes.quetes = Quetes(
@@ -161,7 +161,7 @@ struct RecherchePaletteTests {
     @Test("Un PNJ hors du Monde des Douze : le /travel seul, sans zaap ni distance d'Amakna")
     func pnjHorsDesDouze() throws {
         var avecQuetes = contexte()
-        let douze = try #require(Carte.integree.sousZones.first { avecQuetes.reseau.estDuMondeDesDouze($0.id) }?.id)
+        let douze = try #require(CarteDuJeu.integree.sousZones.first { avecQuetes.reseau.estDuMondeDesDouze($0.id) }?.id)
         let ailleurs = 999_999
         #expect(avecQuetes.reseau.horsDesDouze(ailleurs))
         // La carte pas encore lue ne dit rien du monde : la case est supposée des Douze.
@@ -184,7 +184,7 @@ struct RecherchePaletteTests {
 
     @Test("Un lieu porte sa carte et son pictogramme, un zaap sa carte : la liste en montre la vue")
     func vuesDesCartes() throws {
-        let banque = try #require(Carte.integree.lieux.first { $0.nom(en: .fr) == "Banque" && $0.zone(en: .fr) == "Bonta" })
+        let banque = try #require(CarteDuJeu.integree.lieux.first { $0.nom(en: .fr) == "Banque" && $0.zone(en: .fr) == "Bonta" })
         let entree = try #require(RecherchePalette.lieux(contexte()).first { $0.cle == banque.cle })
         #expect(entree.carte == banque.idCarte && entree.pictogramme == banque.gfx && entree.pictogramme != nil)
         let zaap = try #require(premiere("/zaap bonta", contexte()))

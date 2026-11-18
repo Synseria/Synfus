@@ -19,10 +19,10 @@ enum EtatCarte: Equatable, Sendable {
 final class CarteStore: ObservableObject {
     static let shared = CarteStore()
 
-    @Published private(set) var carte = Carte.vide
+    @Published private(set) var carte = CarteDuJeu.vide
     /// Un téléchargement a échoué sans qu'aucune carte soit en place.
     @Published private(set) var echec = false
-    var etat: EtatCarte { .de(vide: carte.date == Carte.vide.date, echec: echec) }
+    var etat: EtatCarte { .de(vide: carte.date == CarteDuJeu.vide.date, echec: echec) }
     /// Tirés de la carte une fois, pas à chaque lecture : la palette, la
     /// réécriture du `/travel` et les réglages les relisent souvent.
     private var indexee = CarteIndexee(.vide)
@@ -71,11 +71,11 @@ final class CarteStore: ObservableObject {
     }
 
     /// La carte des captures de la documentation, sans disque ni réseau.
-    func poserPourCaptures(_ carte: Carte) { publier(CarteIndexee(carte)) }
+    func poserPourCaptures(_ carte: CarteDuJeu) { publier(CarteIndexee(carte)) }
 
     func mettreAJour() async throws {
         echec = false
-        let nouvelle: Carte
+        let nouvelle: CarteDuJeu
         do { nouvelle = try await CarteDofusDB.telecharger() } catch {
             echec = true
             throw error
@@ -103,12 +103,12 @@ final class CarteStore: ObservableObject {
 
 /// La carte et ce qu'on en tire, bâtis ensemble et publiés d'un coup.
 private struct CarteIndexee: Sendable {
-    let carte: Carte
+    let carte: CarteDuJeu
     let zaaps: [Zaap]
     let reseau: ReseauSousZones
     let reperes: ReperesCarte
 
-    init(_ carte: Carte) {
+    init(_ carte: CarteDuJeu) {
         self.carte = carte
         zaaps = carte.zaaps
         reseau = ReseauSousZones(carte)

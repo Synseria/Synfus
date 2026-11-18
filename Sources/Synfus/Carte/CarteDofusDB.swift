@@ -68,37 +68,37 @@ enum CarteDofusDB {
         Ressources.dossierUtilisateur.appending(path: "Carte.json", directoryHint: .notDirectory)
     }
 
-    static func locale() -> Carte {
-        retenue(gardee: try? Data(contentsOf: fichier), integree: Carte.integree)
+    static func locale() -> CarteDuJeu {
+        retenue(gardee: try? Data(contentsOf: fichier), integree: CarteDuJeu.integree)
     }
 
     /// La plus récente de la carte gardée et de la carte intégrée : une mise à
     /// jour de Synfus peut apporter une liste plus fraîche que le disque. Une
-    /// carte gardée d'un autre format (`Carte.formatActuel`) cède la place à
+    /// carte gardée d'un autre format (`CarteDuJeu.formatActuel`) cède la place à
     /// l'intégrée, jusqu'au prochain téléchargement qui l'écrase.
-    static func retenue(gardee donnees: Data?, integree: Carte) -> Carte {
+    static func retenue(gardee donnees: Data?, integree: CarteDuJeu) -> CarteDuJeu {
         guard let donnees,
-              let gardee = try? JSONDecoder().decode(Carte.self, from: donnees),
-              gardee.format == Carte.formatActuel, gardee.date > integree.date
+              let gardee = try? JSONDecoder().decode(CarteDuJeu.self, from: donnees),
+              gardee.format == CarteDuJeu.formatActuel, gardee.date > integree.date
         else { return integree }
         return gardee
     }
 
-    static func garder(_ carte: Carte) throws {
+    static func garder(_ carte: CarteDuJeu) throws {
         try FileManager.default.createDirectory(at: fichier.deletingLastPathComponent(), withIntermediateDirectories: true)
         try JSONEncoder().encode(carte).write(to: fichier, options: .atomic)
     }
 
     /// Les cases d'abord, en parallèle : huit mille cartes, cent soixante pages.
-    static func telecharger(maintenant: Date = Date()) async throws -> Carte {
+    static func telecharger(maintenant: Date = Date()) async throws -> CarteDuJeu {
         let reperes: [Repere] = try await DofusDB.toutes("hints", [])
         let cases: [Case] = try await DofusDB.toutesEnParallele(
             "map-positions", [URLQueryItem(name: "worldMap", value: "\(Zaap.mondeDesDouze)")] + DofusDB.selection(Case.champs))
         let sousZones: [SousZone] = try await DofusDB.toutes("subareas", DofusDB.selection(SousZone.champs))
         let zones: [Zone] = try await DofusDB.toutes("areas", DofusDB.selection(Zone.champs))
         let carte = assembler(date: maintenant, reperes: reperes, sousZones: sousZones, zones: zones, cases: cases)
-        guard carte.lieux.count >= Carte.minimumPlausible else { throw Echec.listeSuspecte(carte.lieux.count) }
-        guard carte.cases.count >= Carte.minimumCasesPlausible else { throw Echec.casesSuspectes(carte.cases.count) }
+        guard carte.lieux.count >= CarteDuJeu.minimumPlausible else { throw Echec.listeSuspecte(carte.lieux.count) }
+        guard carte.cases.count >= CarteDuJeu.minimumCasesPlausible else { throw Echec.casesSuspectes(carte.cases.count) }
         return carte
     }
 
@@ -107,7 +107,7 @@ enum CarteDofusDB {
     /// des Douze — même celles qu'aucune case ne montre (intérieurs, la
     /// Canopée au-dessus de la jungle d'Otomaï) ou qui manquent aux cases
     /// (l'Arche de Vili) : un zaap ou un PNJ peut s'y trouver.
-    static func assembler(date: Date, reperes: [Repere], sousZones: [SousZone], zones: [Zone], cases: [Case]) -> Carte {
+    static func assembler(date: Date, reperes: [Repere], sousZones: [SousZone], zones: [Zone], cases: [Case]) -> CarteDuJeu {
         let sousZone = Dictionary(sousZones.map { ($0.id, $0) }, uniquingKeysWith: { premier, _ in premier })
         let zone = Dictionary(zones.map { ($0.id, $0.name.parLangue) }, uniquingKeysWith: { premier, _ in premier })
         let lieux = reperes.map { repere in
@@ -122,14 +122,14 @@ enum CarteDofusDB {
         let retenues = Set(cases.map(\.subAreaId))
             .union(reperes.filter { $0.worldMapId == Zaap.mondeDesDouze }.map(\.subareaId))
             .union(sousZones.filter { douze.contains($0.areaId) }.map(\.id))
-        return Carte(date: date, lieux: lieux, sousZones: graphe(retenues, sousZones), cases: parCase)
+        return CarteDuJeu(date: date, lieux: lieux, sousZones: graphe(retenues, sousZones), cases: parCase)
     }
 
     /// La sous-zone que montre chaque case : celle des cartes prioritaires sur
     /// la carte du monde (à défaut, de toutes), la plus fréquente ; à égalité,
     /// celle de la plus petite carte — un choix stable d'un relevé à l'autre.
     static func sousZoneParCase(_ cases: [Case]) -> [String: Int] {
-        Dictionary(grouping: cases) { Carte.cle($0.posX, $0.posY) }.mapValues { memeCase in
+        Dictionary(grouping: cases) { CarteDuJeu.cle($0.posX, $0.posY) }.mapValues { memeCase in
             let prioritaires = memeCase.filter { $0.hasPriorityOnWorldmap == true }
             let parSousZone = Dictionary(grouping: prioritaires.isEmpty ? memeCase : prioritaires, by: \.subAreaId)
             return parSousZone.min { a, b in
@@ -167,7 +167,7 @@ enum CarteDofusDB {
                 let carte = try await telecharger()
                 let encodeur = JSONEncoder()
                 encodeur.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
-                let triee = Carte(date: carte.date, lieux: carte.lieux.sorted { $0.id < $1.id },
+                let triee = CarteDuJeu(date: carte.date, lieux: carte.lieux.sorted { $0.id < $1.id },
                                   sousZones: carte.sousZones, cases: carte.cases)
                 try encodeur.encode(triee).write(to: url, options: .atomic)
                 print("\(triee.lieux.count) lieux, dont \(triee.zaaps.count) zaaps ; \(triee.cases.count) cases, "

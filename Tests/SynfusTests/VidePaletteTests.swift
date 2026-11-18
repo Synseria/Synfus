@@ -46,9 +46,9 @@ struct VidePaletteTests {
     @Test("Le modèle compte les réponses de « Tout » quand le filtre est vide, et ↵ y passe")
     func modele() {
         var contexte = ContextePalette()
-        contexte.zaaps = ZaapsSitues(CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [], choix: [:]),
-                                     reseau: ReseauSousZones(Carte.integree))
-        contexte.lieux = Carte.integree.lieux
+        contexte.zaaps = ZaapsSitues(CatalogueZaaps.actifs(base: CarteDuJeu.integree.zaaps, ajoutes: [], choix: [:]),
+                                     reseau: ReseauSousZones(CarteDuJeu.integree))
+        contexte.lieux = CarteDuJeu.integree.lieux
         let modele = PaletteModele(contexte: contexte, requete: "lancer la session", filtre: .lieux)
         #expect(modele.entrees.isEmpty)
         guard case .rienDansLeFiltre(.lieux, let ailleurs)? = modele.vide else {

@@ -110,7 +110,7 @@ struct QuetesTests {
     private func contexte() throws -> ContextePalette {
         var contexte = ContextePalette()
         contexte.position = PositionCarte(x: -2, y: 0, zone: "Amakna")
-        contexte.zaaps = ZaapsSitues(CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [], choix: [:]), reseau: .vide)
+        contexte.zaaps = ZaapsSitues(CatalogueZaaps.actifs(base: CarteDuJeu.integree.zaaps, ajoutes: [], choix: [:]), reseau: .vide)
         contexte.quetes = try Self.quetes()
         return contexte
     }
@@ -282,7 +282,7 @@ struct QuetesTests {
     // MARK: - Ici
 
     /// Les sous-zones des départs et des PNJ du jeu d'essai, dans le Monde des Douze.
-    private let reseau = ReseauSousZones(Carte(
+    private let reseau = ReseauSousZones(CarteDuJeu(
         date: .now, lieux: [], sousZones: [SousZoneCarte(id: 56, zaap: nil, zone: nil, voisines: []),
                                            SousZoneCarte(id: 10, zaap: nil, zone: nil, voisines: [])], cases: [:]))
 

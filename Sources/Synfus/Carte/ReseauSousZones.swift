@@ -23,7 +23,7 @@ struct ReseauSousZones: Sendable {
 
     static let vide = ReseauSousZones(.vide)
 
-    init(_ carte: Carte) {
+    init(_ carte: CarteDuJeu) {
         parCase = carte.cases
         var casesDe: [Int: [(x: Int, y: Int)]] = [:]
         for (cle, sousZone) in carte.cases {
@@ -42,7 +42,7 @@ struct ReseauSousZones: Sendable {
     }
 
     /// `nil` hors du Monde des Douze relevé.
-    func sousZone(_ x: Int, _ y: Int) -> Int? { parCase[Carte.cle(x, y)] }
+    func sousZone(_ x: Int, _ y: Int) -> Int? { parCase[CarteDuJeu.cle(x, y)] }
 
     func zaapAssocie(_ sousZone: Int) -> Int? { zaapDe[sousZone] }
 

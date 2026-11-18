@@ -4,12 +4,12 @@ import Foundation
 /// téléchargée de DofusDB (`CarteDofusDB`). Les zaaps en sont tirés — une seule
 /// liste, une seule mise à jour —, et les sous-zones du Monde des Douze qui
 /// choisissent le zaap d'un `/travel` (`ReseauSousZones`).
-struct Carte: Codable, Equatable, Sendable {
+struct CarteDuJeu: Codable, Equatable, Sendable {
     /// La forme du fichier : une carte gardée d'une autre (ancienne) ne se
     /// relit pas, l'intégrée la remplace — sans quoi un cache d'avant un
     /// nouveau champ le laisserait vide jusqu'au prochain téléchargement.
     static let formatActuel = 3
-    var format = Carte.formatActuel
+    var format = CarteDuJeu.formatActuel
     let date: Date
     let lieux: [Lieu]
     /// Les sous-zones du Monde des Douze, triées par identifiant.
@@ -22,7 +22,7 @@ struct Carte: Codable, Equatable, Sendable {
     /// Le Monde des Douze en compte un peu plus de six mille.
     static let minimumCasesPlausible = 5000
 
-    static let vide = Carte(date: .distantPast, lieux: [], sousZones: [], cases: [:])
+    static let vide = CarteDuJeu(date: .distantPast, lieux: [], sousZones: [], cases: [:])
 
     static func cle(_ x: Int, _ y: Int) -> String { "\(x),\(y)" }
 
@@ -38,8 +38,8 @@ struct Carte: Codable, Equatable, Sendable {
     }
 
     /// `Resources/Carte.json`, relevée par `--exporter-carte`.
-    static let integree: Carte = {
+    static let integree: CarteDuJeu = {
         guard let url = Ressources.url("Carte.json"), let donnees = try? Data(contentsOf: url) else { return .vide }
-        return (try? JSONDecoder().decode(Carte.self, from: donnees)) ?? .vide
+        return (try? JSONDecoder().decode(CarteDuJeu.self, from: donnees)) ?? .vide
     }()
 }
