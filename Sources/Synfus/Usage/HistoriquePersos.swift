@@ -137,8 +137,9 @@ struct HistoriquePersos: Codable, Equatable, Sendable {
     }
 }
 
-// Relecture tolérante : un champ absent ou illisible prend son défaut au lieu de faire échouer
-// toute la lecture, que `UsageStore` remplacerait alors par un historique vide.
+// Relecture tolérante : un champ absent ou illisible prend son défaut, un jour illisible est
+// laissé seul, au lieu de faire échouer toute la lecture, que `UsageStore` remplacerait alors
+// par un historique vide.
 
 extension JourPersos {
     init(from decoder: Decoder) throws {
@@ -155,6 +156,11 @@ extension HistoriquePersos {
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         self.init()
-        jours = (try? c.decodeIfPresent([JourPersos].self, forKey: .jours)) ?? []
+        jours = ((try? c.decodeIfPresent([JourLisible].self, forKey: .jours)) ?? []).compactMap(\.jour)
+    }
+
+    private struct JourLisible: Decodable {
+        let jour: JourPersos?
+        init(from decoder: Decoder) throws { jour = try? JourPersos(from: decoder) }
     }
 }
