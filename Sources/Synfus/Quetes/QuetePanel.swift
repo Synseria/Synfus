@@ -365,21 +365,14 @@ struct PoigneeRedimension: NSViewRepresentable {
         required init?(coder _: NSCoder) { nil }
 
         override var curseur: NSCursor {
-            if #available(macOS 15.0, *) {
-                let position: NSCursor.FrameResizePosition = switch bords {
-                case .gauche: .left
-                case .droite: .right
-                case .bas: .bottom
-                case [.gauche, .bas]: .bottomLeft
-                default: .bottomRight
-                }
-                return .frameResize(position: position, directions: .all)
+            let position: NSCursor.FrameResizePosition = switch bords {
+            case .gauche: .left
+            case .droite: .right
+            case .bas: .bottom
+            case [.gauche, .bas]: .bottomLeft
+            default: .bottomRight
             }
-            switch bords {
-            case .gauche, .droite: return .resizeLeftRight
-            case .bas: return .resizeUpDown
-            default: return .crosshair
-            }
+            return .frameResize(position: position, directions: .all)
         }
 
         override func mouseDown(with _: NSEvent) {

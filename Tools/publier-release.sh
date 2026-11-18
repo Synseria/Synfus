@@ -47,8 +47,7 @@ cat >> "$NOTES" <<'EOF'
 | Apple Silicon (M1 → M4) | `Synfus-VERSION-arm64.dmg` |
 | Intel | `Synfus-VERSION-x86_64.dmg` |
 
-Compatible macOS 14 (Sonoma) et suivants. L'effet Liquid Glass de la barre
-n'apparaît que sur macOS 26 ; en deçà la barre utilise un matériau translucide.
+Compatible macOS 26 (Tahoe) et suivants.
 
 ### Installation
 
