@@ -46,10 +46,16 @@ final class UsageStore: ObservableObject, SourceDeTelemetrie {
         var fichierUsage = dossier?.appending(path: "usage.json")
         var fichierPersos = dossier?.appending(path: "persos.json")
         var persos = HistoriquePersos()
+        let donnees = fichierPersos.flatMap { try? Data(contentsOf: $0) }
+        let relu = donnees.flatMap { try? JSONDecoder().decode(HistoriquePersos.self, from: $0) }
+        // Un `persos.json` illisible ne s'écrase jamais : mis de côté, sinon ce lancement reste
+        // en mémoire.
+        if let fichier = fichierPersos, donnees != nil, relu == nil, !Self.mettreDeCote(fichier) {
+            fichierUsage = nil
+            fichierPersos = nil
+        }
         if let fichier = fichierPersos {
-            if let donnees = try? Data(contentsOf: fichier) {
-                persos = (try? JSONDecoder().decode(HistoriquePersos.self, from: donnees)) ?? HistoriquePersos()
-            }
+            persos = relu ?? HistoriquePersos()
             // À chaque lancement, avant que le registre ne réécrive `usage.json` sans eux : les
             // persos qu'une version d'avant y a remis (retour à une ancienne version, build de
             // dev et app installée sur le même dossier) sont repris. Si `persos.json` ne s'écrit
@@ -155,6 +161,13 @@ final class UsageStore: ObservableObject, SourceDeTelemetrie {
     }
 
     static func aujourdhui(_ date: Date = Date()) -> String { JourDeTelemetrie.cle(date) }
+
+    /// `persos.illisible.json`, à côté, remplace celui d'avant : de quoi rattraper à la main.
+    private static func mettreDeCote(_ fichier: URL) -> Bool {
+        let cote = fichier.deletingLastPathComponent().appending(path: "persos.illisible.json")
+        try? FileManager.default.removeItem(at: cote)
+        return (try? FileManager.default.moveItem(at: fichier, to: cote)) != nil
+    }
 
     private static func ecrire(_ persos: HistoriquePersos, dans fichier: URL) -> Bool {
         guard let donnees = try? JSONEncoder().encode(persos) else { return false }

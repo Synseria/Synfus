@@ -114,6 +114,26 @@ struct UsageTests {
         #expect(relu.jour("2026-11-10")?.max == 3)
         #expect(relu.jour("2026-11-10")?.joues == [])
         #expect(try JSONDecoder().decode(HistoriquePersos.self, from: Data("{}".utf8)) == HistoriquePersos())
+        // Un jour illisible n'emporte pas les autres.
+        let abime = #"{"jours": [{"max": 9}, {"jour": "2026-11-11", "max": 2}]}"#
+        #expect(try JSONDecoder().decode(HistoriquePersos.self, from: Data(abime.utf8)).jours.map(\.jour) == ["2026-11-11"])
+    }
+
+    @Test("Un persos.json illisible est mis de côté, jamais écrasé")
+    func persosIllisible() throws {
+        let dossier = try dossierTemporaire()
+        defer { try? FileManager.default.removeItem(at: dossier) }
+        let tronque = Data(#"{"jours": [{"jour": "2026-11-10", "max": 3"#.utf8)
+        try tronque.write(to: dossier.appending(path: "persos.json"))
+        let midi = date(11, 12)
+        let store = UsageStore(dossier: dossier, configuration: nil, version: nil,
+                               preferences: Preferences.forTesting(store: StockageMemoire()),
+                               materiel: "UUID-1", envoi: { _ in nil }, horloge: { midi })
+        store.noterEffectif(1)
+        store.registre.releve(envoi: false)
+        #expect(try Data(contentsOf: dossier.appending(path: "persos.illisible.json")) == tronque)
+        #expect(store.persos.jours.map(\.jour) == ["2026-11-11"])
+        #expect(FileManager.default.fileExists(atPath: dossier.appending(path: "persos.json").path))
     }
 
     // MARK: - Reprise de l'ancien usage.json
