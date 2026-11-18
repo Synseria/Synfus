@@ -75,7 +75,7 @@ struct PositionsPNJTests {
     private func contexte(frequentation: FrequentationPalette = FrequentationPalette()) -> ContextePalette {
         var contexte = ContextePalette()
         contexte.position = PositionCarte(x: -2, y: 0, zone: "Amakna")
-        contexte.zaaps = ZaapsSitues(CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [], choix: [:]), reseau: .vide)
+        contexte.zaaps = ZaapsSitues(CatalogueZaaps.actifs(base: CarteDuJeu.integree.zaaps, ajoutes: [], choix: [:]), reseau: .vide)
         contexte.frequentation = frequentation
         let passage = { (x: Int, y: Int, quetes: [Int], sousZone: Int?) in
             PNJ.Passage(position: .init(x: x, y: y), carte: 7, sousZone: sousZone, quetes: quetes)

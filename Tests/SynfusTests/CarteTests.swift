@@ -80,35 +80,35 @@ struct CarteTests {
 
     @Test("Une carte gardée d'un ancien format cède la place à l'intégrée")
     func ancienCache() throws {
-        let integree = Carte(date: Date(timeIntervalSinceReferenceDate: 1000), lieux: [], sousZones: [], cases: ["0,0": 1])
+        let integree = CarteDuJeu(date: Date(timeIntervalSinceReferenceDate: 1000), lieux: [], sousZones: [], cases: ["0,0": 1])
         let ancien = #"{"date":999999999,"lieux":[{"id":1,"x":0,"y":0,"monde":1,"categorie":4,"noms":{},"zone":{},"sousZone":{}}]}"#
         #expect(CarteDofusDB.retenue(gardee: Data(ancien.utf8), integree: integree) == integree)
         #expect(CarteDofusDB.retenue(gardee: Data("pas du JSON".utf8), integree: integree) == integree)
         #expect(CarteDofusDB.retenue(gardee: nil, integree: integree) == integree)
 
-        let recente = Carte(date: Date(timeIntervalSinceReferenceDate: 2000), lieux: [], sousZones: [], cases: [:])
+        let recente = CarteDuJeu(date: Date(timeIntervalSinceReferenceDate: 2000), lieux: [], sousZones: [], cases: [:])
         #expect(CarteDofusDB.retenue(gardee: try JSONEncoder().encode(recente), integree: integree) == recente)
-        let vieille = Carte(date: Date(timeIntervalSinceReferenceDate: 500), lieux: [], sousZones: [], cases: [:])
+        let vieille = CarteDuJeu(date: Date(timeIntervalSinceReferenceDate: 500), lieux: [], sousZones: [], cases: [:])
         #expect(CarteDofusDB.retenue(gardee: try JSONEncoder().encode(vieille), integree: integree) == integree)
         // Plus récente mais d'un format antérieur (sans pictogrammes) : l'intégrée.
-        let autreFormat = Carte(format: Carte.formatActuel - 1, date: Date(timeIntervalSinceReferenceDate: 2000),
+        let autreFormat = CarteDuJeu(format: CarteDuJeu.formatActuel - 1, date: Date(timeIntervalSinceReferenceDate: 2000),
                                 lieux: [], sousZones: [], cases: [:])
         #expect(CarteDofusDB.retenue(gardee: try JSONEncoder().encode(autreFormat), integree: integree) == integree)
     }
 
     @Test("La carte intégrée : tous les zaaps, une banque à Bonta")
     func integree() {
-        let carte = Carte.integree
-        #expect(carte.lieux.count >= Carte.minimumPlausible)
+        let carte = CarteDuJeu.integree
+        #expect(carte.lieux.count >= CarteDuJeu.minimumPlausible)
         #expect(carte.zaaps.count == 45)
         let cles = carte.zaaps.map(\.cle)
         #expect(Set(cles).count == cles.count)
         #expect(carte.lieux.contains { $0.nom(en: .fr) == "Banque" && $0.zone(en: .fr) == "Bonta" })
-        #expect(carte.format == Carte.formatActuel)
-        #expect(carte.lieux.filter { $0.gfx != nil }.count >= Carte.minimumPlausible)
+        #expect(carte.format == CarteDuJeu.formatActuel)
+        #expect(carte.lieux.filter { $0.gfx != nil }.count >= CarteDuJeu.minimumPlausible)
         #expect(carte.zaaps.contains { $0.nom(en: .fr) == "Cœur immaculé" && $0.zone(en: .fr) == "Bonta" })
         // Le Monde des Douze, case par case ; chaque zaap y a sa sous-zone.
-        #expect(carte.cases.count >= Carte.minimumCasesPlausible)
+        #expect(carte.cases.count >= CarteDuJeu.minimumCasesPlausible)
         let reseau = ReseauSousZones(carte)
         #expect(reseau.sousZone(-20, 9) == 235)
         let sousZones = Set(carte.sousZones.map(\.id))

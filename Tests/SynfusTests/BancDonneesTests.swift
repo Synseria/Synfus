@@ -28,22 +28,22 @@ struct BancDonneesTests {
     }
 
     private static let position = PositionCarte(x: 2, y: -3, zone: "Amakna (Village d'Amakna)")
-    private static let reseau = ReseauSousZones(Carte.integree)
-    private static let zaaps = ZaapsSitues(CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [], choix: [:]),
+    private static let reseau = ReseauSousZones(CarteDuJeu.integree)
+    private static let zaaps = ZaapsSitues(CatalogueZaaps.actifs(base: CarteDuJeu.integree.zaaps, ajoutes: [], choix: [:]),
                                            reseau: reseau)
 
     @Test("Lancement : ce qui se lit et s'indexe hors du fil principal", .enabled(if: chemin != nil))
     func lancement() throws {
         let (donnees, quetes) = try Self.lire()
         let carte = try Data(contentsOf: try #require(Ressources.url("Carte.json")))
-        Sortie.dire("\(quetes.quetes.count) quêtes, \(quetes.pnjs.count) PNJ ; \(Carte.integree.lieux.count) lieux")
+        Sortie.dire("\(quetes.quetes.count) quêtes, \(quetes.pnjs.count) PNJ ; \(CarteDuJeu.integree.lieux.count) lieux")
         Sortie.dire("lancement — décodage de Quetes.json : \(Self.chrono(3) { _ = QuetesDofusDB.relire(donnees) })")
         Sortie.dire("lancement — jeu en vigueur (index et tris) : \(Self.chrono { _ = QuetesEnVigueur(quetes, langue: .fr) })")
-        Sortie.dire("lancement — décodage de la carte intégrée : \(Self.chrono(3) { _ = try? JSONDecoder().decode(Carte.self, from: carte) })")
+        Sortie.dire("lancement — décodage de la carte intégrée : \(Self.chrono(3) { _ = try? JSONDecoder().decode(CarteDuJeu.self, from: carte) })")
         let index = Self.chrono {
-            _ = ReseauSousZones(Carte.integree)
-            _ = Carte.integree.zaaps
-            _ = ReperesCarte(Carte.integree.lieux)
+            _ = ReseauSousZones(CarteDuJeu.integree)
+            _ = CarteDuJeu.integree.zaaps
+            _ = ReperesCarte(CarteDuJeu.integree.lieux)
         }
         Sortie.dire("lancement — réseau, zaaps et repères de la carte : \(index)")
     }
@@ -62,7 +62,7 @@ struct BancDonneesTests {
 
     @Test("Trajets : où trouver un objet de trente lâcheurs, les zaaps par distance", .enabled(if: chemin != nil))
     func trajets() {
-        let carte = Carte.integree
+        let carte = CarteDuJeu.integree
         let sousZones = carte.sousZones.map(\.id).filter { !Self.reseau.cases($0).isEmpty }
         let donjons = carte.lieux.filter { $0.categorie == CategorieLieu.donjon.rawValue }
         let lacheurs = (0..<30).map { rang in
@@ -88,7 +88,7 @@ struct BancDonneesTests {
         var contexte = ContextePalette()
         contexte.position = Self.position
         contexte.zaaps = Self.zaaps
-        contexte.lieux = Carte.integree.lieux
+        contexte.lieux = CarteDuJeu.integree.lieux
         contexte.quetes = try Self.lire().quetes
         let champs = IndexPalette.champs(de: contexte)
         Sortie.dire("palette — index préchauffé, première frappe : \(Self.chrono(3) { _ = IndexPalette(contexte, connus: champs).tout })")
