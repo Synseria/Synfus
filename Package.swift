@@ -6,14 +6,19 @@ import PackageDescription
 let package = Package(
     name: "Synfus",
     platforms: [.macOS(.v14)],
+    dependencies: [
+        // Le socle commun des apps Synseria, épinglé par révision, jamais par branche.
+        .package(url: "git@github.com:Synseria/Synseria-Design.git", revision: "794a0d9f5dd5899ca904745b82ec6f2ca8525d89"),
+    ],
     targets: [
         .executableTarget(
             name: "Synfus",
+            dependencies: [.product(name: "Telemetrie", package: "Synseria-Design")],
             path: "Sources/Synfus"
         ),
         .testTarget(
             name: "SynfusTests",
-            dependencies: ["Synfus"],
+            dependencies: ["Synfus", .product(name: "Telemetrie", package: "Synseria-Design")],
             path: "Tests/SynfusTests"
         ),
     ]

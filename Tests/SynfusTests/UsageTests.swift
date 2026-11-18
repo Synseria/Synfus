@@ -1,9 +1,11 @@
 import Foundation
+import Telemetrie
 import Testing
 @testable import Synfus
 
-/// Les statistiques d'utilisation : le compte par jour, ce qui part, ce qui
-/// reste sur le Mac.
+/// Les statistiques d'utilisation : les persos de chaque jour, la reprise de l'ancien
+/// `usage.json`, et ce qui part au collecteur par la télémétrie commune (dont le paquet
+/// teste le reste : débit, attente, diagnostics).
 @MainActor
 struct UsageTests {
     private final class StockageMemoire: PreferencesStore {
@@ -12,133 +14,195 @@ struct UsageTests {
         func enregistrer(_ donnees: Data, pour cle: String) { contenu[cle] = donnees }
     }
 
+    /// Le transport remplacé : les corps envoyés, une réponse acceptée.
+    private final class Collecteur: @unchecked Sendable {
+        private let verrou = NSLock()
+        private var corps: [Data] = []
+        var recus: [Data] { verrou.withLock { corps } }
+        func recevoir(_ requete: URLRequest) -> Int? {
+            verrou.withLock { corps.append(requete.httpBody ?? Data()) }
+            return 200
+        }
+    }
+
     private let calendrier: Calendar = {
         var calendrier = Calendar(identifier: .gregorian)
         calendrier.timeZone = TimeZone(identifier: "Europe/Paris")!
         return calendrier
     }()
 
-    private let contexte = ContexteUsage(installation: String(repeating: "a", count: 64), version: "0.13.0",
-                                         systeme: "26.1", architecture: "arm64")
-
-    /// Les clés que le collecteur garde (liste du collecteur de bord).
+    /// Les clés que le collecteur garde (filtre de vraisemblance d'otel-edge).
     private static let clesAcceptees = #/^(installation\.id|jour|langue|persos\.(max|moyenne|joues)|reglage\.[a-z0-9_]+|usage\.[a-z0-9_]+|diagnostic\.(type|version|contenu))$/#
 
-    @Test("Les gestes se comptent par jour, et par période")
-    func compte() {
-        var historique = HistoriqueUsage()
-        historique.compter(.palette, le: "2026-11-01")
-        historique.compter(.palette, le: "2026-11-09")
-        historique.compter(.palette, le: "2026-11-10")
-        historique.compter(.basculeBarre, le: "2026-11-10")
-        #expect(historique.totaux(sur: 7, aujourdhui: "2026-11-10", calendrier: calendrier)
-                == [.palette: 2, .basculeBarre: 1])
-        #expect(historique.totaux(sur: nil, aujourdhui: "2026-11-10", calendrier: calendrier)[.palette] == 3)
-        #expect(historique.depuis == "2026-11-01")
+    /// Un `usage.json` tel que Synfus l'écrivait avant SynseriaKit.
+    private static let ancienUsage = """
+    {"depuis": "2026-11-08", "cumul": {"palette": 40}, "identifiantDeSecours": "SECOURS",
+     "dernierEnvoi": "2026-11-09T08:00:00Z", "dernierRapport": "{}",
+     "jours": [
+       {"jour": "2026-11-08", "compteurs": {"palette": 2}, "persosMax": 4, "persosSecondes": 7200,
+        "secondesAvecPersos": 2400, "persosJoues": ["Amarine", "Nelo"], "reglages": {"barre": true},
+        "langue": "fr", "envoye": true},
+       {"jour": "2026-11-09", "compteurs": {"chasse": 1}, "persosMax": 0, "persosSecondes": 0,
+        "secondesAvecPersos": 0, "persosJoues": [], "envoye": true},
+       {"jour": "2026-11-10", "compteurs": {"palette": 1}, "persosMax": 2, "persosSecondes": 600,
+        "secondesAvecPersos": 300, "persosJoues": ["Amarine"], "envoye": false}
+     ]}
+    """
+
+    private func dossierTemporaire() throws -> URL {
+        let dossier = FileManager.default.temporaryDirectory.appending(path: "SynfusUsage-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)
+        return dossier
     }
 
-    @Test("Partent les jours terminés, pas encore acceptés, sept au plus")
-    func aEnvoyer() {
-        var historique = HistoriqueUsage()
-        for jour in 1...10 { historique.compter(.palette, le: String(format: "2026-11-%02d", jour)) }
-        let enAttente = historique.aEnvoyer(aujourdhui: "2026-11-10")
-        #expect(enAttente.map(\.jour) == (3...9).map { String(format: "2026-11-%02d", $0) })
-        historique.marquerEnvoyes(["2026-11-08", "2026-11-09"])
-        #expect(historique.aEnvoyer(aujourdhui: "2026-11-10").last?.jour == "2026-11-07")
+    /// Une heure de novembre 2026, dans le fuseau du Mac : celui des clés de jour.
+    private func date(_ jour: Int, _ heure: Int, _ minute: Int = 0) -> Date {
+        JourDeTelemetrie.gregorien.date(from: DateComponents(year: 2026, month: 11, day: jour, hour: heure, minute: minute))!
     }
 
-    @Test("Au-delà de la conservation, les jours fondent dans le cumul")
-    func conservation() {
-        var historique = HistoriqueUsage()
-        var date = calendrier.date(from: DateComponents(year: 2026, month: 1, day: 1))!
-        for _ in 0..<(HistoriqueUsage.conservation + 5) {
-            historique.compter(.chasse, le: JourUsage.cle(date, calendrier: calendrier))
-            date = calendrier.date(byAdding: .day, value: 1, to: date)!
-        }
-        #expect(historique.jours.count == HistoriqueUsage.conservation)
-        #expect(historique.cumul["chasse"] == 5)
-        #expect(historique.totaux(sur: nil, aujourdhui: "2027-01-01", calendrier: calendrier)[.chasse]
-                == HistoriqueUsage.conservation + 5)
-    }
-
-    @Test("Un jour qui arrive en retard (horloge reculée) reste à sa place")
-    func ordre() {
-        var historique = HistoriqueUsage()
-        historique.compter(.palette, le: "2026-11-10")
-        historique.compter(.palette, le: "2026-11-08")
-        #expect(historique.jours.map(\.jour) == ["2026-11-08", "2026-11-10"])
-    }
+    // MARK: - Persos
 
     @Test("Effectif : maximum, moyenne pondérée par le temps, écart borné")
     func effectif() {
-        var historique = HistoriqueUsage()
+        var historique = HistoriquePersos()
         historique.noterEffectif(2, pendant: 600, le: "2026-11-10")
         historique.noterEffectif(4, pendant: 600, le: "2026-11-10")
         historique.noterEffectif(0, pendant: 600, le: "2026-11-10")
         // Une nuit de veille ne compte que pour l'écart maximal.
         historique.noterEffectif(4, pendant: 8 * 3600, le: "2026-11-10")
         let jour = historique.jour("2026-11-10")!
-        #expect(jour.persosMax == 4)
-        let attendu = (2.0 * 600 + 4 * 600 + 4 * HistoriqueUsage.ecartMaximal) / (1200 + HistoriqueUsage.ecartMaximal)
-        #expect(abs(jour.persosMoyenne! - attendu) < 0.0001)
+        #expect(jour.max == 4)
+        let attendu = (2.0 * 600 + 4 * 600 + 4 * HistoriquePersos.ecartMaximal) / (1200 + HistoriquePersos.ecartMaximal)
+        #expect(abs(jour.moyenne! - attendu) < 0.0001)
     }
 
-    @Test("Un perso joué ne compte qu'une fois par jour")
+    @Test("Un perso joué ne compte qu'une fois par jour ; les mesures n'en disent que le nombre")
     func persosJoues() {
-        var historique = HistoriqueUsage()
+        var historique = HistoriquePersos()
         for nom in ["Amarine", "Nelo", "Amarine"] { historique.noterPersoJoue(nom, le: "2026-11-10") }
         historique.noterEffectif(2, pendant: 60, le: "2026-11-10")
-        #expect(historique.jour("2026-11-10")?.persosJoues.count == 2)
-        #expect(historique.moyennesPersos(sur: 7, aujourdhui: "2026-11-10", calendrier: calendrier)?.joues == 2)
+        #expect(historique.jour("2026-11-10")?.joues.count == 2)
+        #expect(historique.moyennes(sur: 7, aujourdhui: "2026-11-10", calendrier: calendrier)?.joues == 2)
+        #expect(Self.textes(historique.jour("2026-11-10")!.mesures)
+                == ["joues": .entier(2), "max": .entier(2), "moyenne": .reel(2)])
     }
 
-    @Test("L'historique se relit tel qu'il a été écrit, clés inconnues comprises")
-    func relecture() throws {
-        var historique = HistoriqueUsage()
-        historique.compter(.rangement, le: "2026-11-10")
-        var data = try JSONEncoder().encode(historique)
-        let texte = (String(bytes: data, encoding: .utf8) ?? "").replacingOccurrences(of: "\"rangement\"", with: "\"futur\"")
-        data = Data(texte.utf8)
-        let relu = try JSONDecoder().decode(HistoriqueUsage.self, from: data)
-        #expect(relu.jour("2026-11-10")?.compteurs == ["futur": 1])
-        #expect(relu.totaux(sur: nil, aujourdhui: "2026-11-10", calendrier: calendrier).isEmpty)
+    @Test("Sans perso connecté, max et joues partent à 0, sans moyenne")
+    func mesuresAZero() {
+        var historique = HistoriquePersos()
+        historique.noterEffectif(0, pendant: 600, le: "2026-11-10")
+        #expect(Self.textes(historique.jour("2026-11-10")!.mesures) == ["joues": .entier(0), "max": .entier(0)])
     }
 
-    @Test("Un historique amputé ou d'une autre version se relit, champs absents à leur défaut")
+    @Test("90 jours gardés, dans l'ordre même si l'horloge recule")
+    func conservation() {
+        var historique = HistoriquePersos()
+        var jour = calendrier.date(from: DateComponents(year: 2026, month: 1, day: 1))!
+        for _ in 0..<(HistoriquePersos.conservation + 5) {
+            historique.noterEffectif(1, pendant: 60, le: JourDeTelemetrie.cle(jour, calendrier: calendrier))
+            jour = calendrier.date(byAdding: .day, value: 1, to: jour)!
+        }
+        #expect(historique.jours.count == HistoriquePersos.conservation)
+        historique.noterEffectif(1, pendant: 60, le: "2026-03-20")
+        #expect(historique.jours.map(\.jour) == historique.jours.map(\.jour).sorted())
+    }
+
+    @Test("persos.json se relit, champs absents à leur défaut")
     func relectureTolerante() throws {
-        let json = """
-        {"identifiantDeSecours": "ABC", "champFutur": 3,
-         "jours": [{"jour": "2026-11-10", "compteurs": {"palette": 2}}, {"jour": "2026-11-11", "envoye": "oui"}]}
-        """
-        let relu = try JSONDecoder().decode(HistoriqueUsage.self, from: Data(json.utf8))
-        #expect(relu.identifiantDeSecours == "ABC")
-        #expect(relu.jour("2026-11-10")?.nombre(.palette) == 2)
-        #expect(relu.jour("2026-11-10")?.envoye == false)
-        #expect(relu.jour("2026-11-11")?.envoye == false)
-        #expect(relu.diagnostics.isEmpty && relu.cumul.isEmpty && relu.depuis == nil)
-        #expect(try JSONDecoder().decode(HistoriqueUsage.self, from: Data("{}".utf8)) == HistoriqueUsage())
+        let json = #"{"jours": [{"jour": "2026-11-10", "max": 3, "futur": 1}], "autre": 2}"#
+        let relu = try JSONDecoder().decode(HistoriquePersos.self, from: Data(json.utf8))
+        #expect(relu.jour("2026-11-10")?.max == 3)
+        #expect(relu.jour("2026-11-10")?.joues == [])
+        #expect(try JSONDecoder().decode(HistoriquePersos.self, from: Data("{}".utf8)) == HistoriquePersos())
     }
 
-    @Test("Le rapport : OTLP JSON, seulement des clés que le collecteur garde, aucun nom de perso")
-    func rapport() throws {
-        var historique = HistoriqueUsage()
-        historique.compter(.palette, le: "2026-11-09")
-        historique.noterPersoJoue("Amarine", le: "2026-11-09")
-        historique.noterEffectif(3, pendant: 600, le: "2026-11-09")
-        historique.noterReglages(["lire_position": true], langue: "fr", le: "2026-11-09")
-        let envoi = Date(timeIntervalSince1970: 1_762_732_800)
-        let data = RapportUsage.corps(historique.aEnvoyer(aujourdhui: "2026-11-10"), contexte: contexte, envoi: envoi)
-        #expect(!(String(bytes: data, encoding: .utf8) ?? "").contains("Amarine"))
+    // MARK: - Reprise de l'ancien usage.json
 
+    @Test("Les persos de l'ancien usage.json sont repris, jours sans perso exclus")
+    func reprise() {
+        let persos = HistoriquePersos.reprendre(Data(Self.ancienUsage.utf8))
+        #expect(persos.jours.map(\.jour) == ["2026-11-08", "2026-11-10"])
+        #expect(persos.jour("2026-11-08")?.max == 4)
+        #expect(persos.jour("2026-11-08")?.moyenne == 3)
+        #expect(persos.jour("2026-11-08")?.joues == ["Amarine", "Nelo"])
+        #expect(persos.jour("2026-11-10")?.secondes == 600)
+        #expect(HistoriquePersos.reprendre(Data("pas du json".utf8)) == HistoriquePersos())
+    }
+
+    @Test("Bascule : persos repris avant tout relevé, historique et installation relus, une seule fois")
+    func bascule() throws {
+        let dossier = try dossierTemporaire()
+        defer { try? FileManager.default.removeItem(at: dossier) }
+        try Data(Self.ancienUsage.utf8).write(to: dossier.appending(path: "usage.json"))
+        let prefs = Preferences.forTesting(store: StockageMemoire())
+        let midi = date(11, 12)
+
+        let store = UsageStore(dossier: dossier, configuration: nil, version: "0.14.0", preferences: prefs,
+                               materiel: "UUID-1", envoi: { _ in nil }, horloge: { midi })
+        #expect(store.persos.jour("2026-11-08")?.joues.count == 2)
+        #expect(FileManager.default.fileExists(atPath: dossier.appending(path: "persos.json").path))
+        let historique = store.registre.historique
+        #expect(historique.depuis == "2026-11-08")
+        #expect(historique.dernierEnvoi != nil)
+        #expect(historique.identifiantDeSecours == "SECOURS")
+        #expect(historique.totaux(sur: nil, aujourdhui: "2026-11-11", calendrier: calendrier)[EvenementUsage.palette.cle] == 43)
+        #expect(historique.aEnvoyer(aujourdhui: "2026-11-11").map(\.jour) == ["2026-11-10"])
+        // La formule de l'ancien compte : SHA-256 de « bundle id:UUID matériel ».
+        #expect(store.registre.contexte?.installation
+                == IdentifiantDInstallation.calculer(materiel: "UUID-1", app: "fr.synseria.Synfus"))
+        #expect(store.registre.contexte?.service.texte == "synfus")
+
+        // Le registre réécrit usage.json sans les persos : la relance garde persos.json.
+        store.noterEffectif(1)
+        store.registre.releve(envoi: false)
+        #expect(!(try String(contentsOf: dossier.appending(path: "usage.json"), encoding: .utf8)).contains("persosMax"))
+        let relance = UsageStore(dossier: dossier, configuration: nil, version: "0.14.0", preferences: prefs,
+                                 materiel: "UUID-1", envoi: { _ in nil }, horloge: { midi })
+        #expect(relance.persos.jour("2026-11-08")?.max == 4)
+        #expect(relance.persos.jour("2026-11-11")?.max == 1)
+    }
+
+    @Test("Hors de l'app signée (sous les tests), le compte vit en mémoire")
+    func horsDeLApp() {
+        #expect(UsageStore.shared.fichierPersos == nil)
+        #expect(UsageStore.shared.registre.contexte == nil)
+    }
+
+    // MARK: - Ce qui part
+
+    @Test("Le rapport d'un jour : service synfus, persos.*, réglages et compteurs, aucun nom de perso")
+    func rapport() async throws {
+        let collecteur = Collecteur()
+        let horloge = Horloge(date(9, 20))
+        let prefs = Preferences.forTesting(store: StockageMemoire())
+        prefs.partagerStatistiques = true
+        let configuration = ConfigurationDeTelemetrie(url: URL(string: "https://collecteur.invalid/v1/logs")!,
+                                                      jeton: "jeton", distribution: .release)
+        let store = UsageStore(dossier: nil, configuration: configuration, version: "0.14.0-rc.2", preferences: prefs,
+                               materiel: "UUID-1", envoi: { collecteur.recevoir($0) }, horloge: { horloge.date })
+        store.noterEffectif(3)
+        store.noterPersoJoue("Amarine")
+        store.compter(.palette)
+        horloge.date = date(9, 20, 10)
+        await store.registre.releve()?.value
+        #expect(collecteur.recus.isEmpty)
+        horloge.date = date(10, 9)
+        await store.registre.releve()?.value
+
+        let data = try #require(collecteur.recus.first)
+        #expect(!(String(bytes: data, encoding: .utf8) ?? "").contains("Amarine"))
         let racine = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         let ressource = try #require((racine["resourceLogs"] as? [[String: Any]])?.first)
         let attributsRessource = try #require((ressource["resource"] as? [String: Any])?["attributes"] as? [[String: Any]])
-        #expect(Set(attributsRessource.compactMap { $0["key"] as? String })
-                == ["service.name", "service.version", "os.version", "host.arch"])
+        var valeursRessource: [String: String] = [:]
+        for attribut in attributsRessource {
+            valeursRessource[attribut["key"] as? String ?? ""] = (attribut["value"] as? [String: Any])?["stringValue"] as? String
+        }
+        #expect(valeursRessource["service.name"] == "synfus")
+        #expect(valeursRessource["service.version"] == "0.14.0-rc.2")
+        #expect(valeursRessource["deployment.environment"] == "release")
         let enregistrement = try #require(
             ((ressource["scopeLogs"] as? [[String: Any]])?.first?["logRecords"] as? [[String: Any]])?.first)
-        #expect(enregistrement["timeUnixNano"] as? String == "1762732800000000000")
-        #expect((enregistrement["body"] as? [String: Any])?["stringValue"] as? String == "rapport")
         let attributs = try #require(enregistrement["attributes"] as? [[String: Any]])
         var valeurs: [String: [String: Any]] = [:]
         for attribut in attributs {
@@ -146,157 +210,55 @@ struct UsageTests {
             #expect(cle.wholeMatch(of: Self.clesAcceptees) != nil, "clé refusée par le collecteur : \(cle)")
             valeurs[cle] = attribut["value"] as? [String: Any]
         }
+        #expect(valeurs["jour"]?["stringValue"] as? String == "2026-11-09")
         #expect(valeurs["usage.palette"]?["intValue"] as? String == "1")
+        #expect(valeurs["persos.max"]?["intValue"] as? String == "3")
         #expect(valeurs["persos.joues"]?["intValue"] as? String == "1")
         #expect(valeurs["persos.moyenne"]?["doubleValue"] as? Double == 3)
-        #expect(valeurs["reglage.lire_position"]?["boolValue"] as? Bool == true)
-        #expect(valeurs["jour"]?["stringValue"] as? String == "2026-11-09")
+        #expect(valeurs["reglage.barre"]?["boolValue"] as? Bool == prefs.barVisible)
+        #expect(valeurs["installation.id"]?["stringValue"] as? String
+                == IdentifiantDInstallation.calculer(materiel: "UUID-1", app: "fr.synseria.Synfus"))
     }
 
-    @Test("Le rapport dit le genre de build qui l'envoie (deployment.environment)", arguments: [
-        (DistributionUsage.release, "release"), (.local, "local"),
-    ])
-    func distribution(_ distribution: DistributionUsage, _ attendu: String) throws {
-        var contexte = contexte
-        contexte.distribution = distribution
-        var historique = HistoriqueUsage()
-        historique.compter(.palette, le: "2026-11-09")
-        let data = RapportUsage.corps(historique.aEnvoyer(aujourdhui: "2026-11-10"), contexte: contexte, envoi: Date())
-        let racine = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
-        let ressource = try #require((racine["resourceLogs"] as? [[String: Any]])?.first)
-        let attributs = try #require((ressource["resource"] as? [String: Any])?["attributes"] as? [[String: Any]])
-        let environnement = attributs.first { $0["key"] as? String == "deployment.environment" }
-        #expect((environnement?["value"] as? [String: Any])?["stringValue"] as? String == attendu)
+    @Test("Partage coupé : le compte continue, rien ne part")
+    func partageCoupe() async {
+        let collecteur = Collecteur()
+        let horloge = Horloge(date(9, 20))
+        let prefs = Preferences.forTesting(store: StockageMemoire())
+        prefs.partagerStatistiques = false
+        let configuration = ConfigurationDeTelemetrie(url: URL(string: "https://collecteur.invalid")!,
+                                                      jeton: "jeton", distribution: .local)
+        let store = UsageStore(dossier: nil, configuration: configuration, version: "0.14.0", preferences: prefs,
+                               materiel: "UUID-1", envoi: { collecteur.recevoir($0) }, horloge: { horloge.date })
+        store.noterEffectif(1)
+        store.compter(.chasse)
+        horloge.date = date(10, 9)
+        await store.registre.releve()?.value
+        #expect(collecteur.recus.isEmpty)
+        #expect(store.registre.historique.jour("2026-11-09")?.nombre(EvenementUsage.chasse.cle) == 1)
     }
 
-    /// Un rapport au format de MetricKit : une pile par fil, `remplissage`
-    /// octets de cadres dans chacune.
-    private func rapportMetricKit(enFaute: Int, autre: Int, guillemets: Bool = false) throws -> Data {
-        func pile(_ attribuee: Bool, _ remplissage: Int) -> [String: Any] {
-            let symbole = guillemets ? String(repeating: "\"\\", count: remplissage / 2) : String(repeating: "a", count: remplissage)
-            return ["threadAttributed": attribuee,
-                    "callStackRootFrames": [["binaryName": "Synfus", "address": 4_300_000_000, "symbole": symbole]]]
-        }
-        let racine: [String: Any] = [
-            "version": "1.0.0",
-            "diagnosticMetaData": ["appVersion": "0.13.0", "platformArchitecture": "arm64"],
-            "callStackTree": ["callStackPerThread": true, "callStacks": [pile(false, autre), pile(true, enFaute)]],
-        ]
-        return try JSONSerialization.data(withJSONObject: racine)
-    }
-
-    private func objet(_ contenu: String) throws -> [String: Any] {
-        try #require(try JSONSerialization.jsonObject(with: Data(contenu.utf8)) as? [String: Any])
-    }
-
-    @Test("Diagnostic trop long : réduit au fil en faute, puis aux métadonnées, toujours du JSON")
-    func reductionDiagnostic() throws {
-        let court = try rapportMetricKit(enFaute: 100, autre: 100)
-        #expect(DiagnosticUsage.reduire(court) == String(bytes: court, encoding: .utf8))
-
-        let autreLong = try objet(DiagnosticUsage.reduire(try rapportMetricKit(enFaute: 1_000, autre: 80_000)))
-        let piles = try #require((autreLong["callStackTree"] as? [String: Any])?["callStacks"] as? [[String: Any]])
-        #expect(piles.count == 1 && piles.first?["threadAttributed"] as? Bool == true)
-        #expect((autreLong["diagnosticMetaData"] as? [String: Any])?["appVersion"] as? String == "0.13.0")
-
-        let enFauteLong = try objet(DiagnosticUsage.reduire(try rapportMetricKit(enFaute: 80_000, autre: 100)))
-        #expect(Set(enFauteLong.keys) == ["version", "diagnosticMetaData"])
-
-        // Sous la limite en octets bruts, au-dessus une fois échappé.
-        let echappe = try rapportMetricKit(enFaute: 20_000, autre: 100, guillemets: true)
-        #expect(echappe.count < DiagnosticUsage.tailleMaximale)
-        let reduit = DiagnosticUsage.reduire(echappe)
-        #expect(DiagnosticUsage.tailleEchappee(reduit) <= DiagnosticUsage.tailleMaximale)
-        #expect(try objet(reduit)["callStackTree"] == nil)
-
-        #expect(DiagnosticUsage.reduire(Data(String(repeating: "x", count: 70_000).utf8)) == "{}")
-    }
-
-    @Test("Diagnostics : dix gardés au plus, le plus ancien d'abord, un corps sous la limite du collecteur")
-    func diagnostics() throws {
-        var historique = HistoriqueUsage()
-        let long = try rapportMetricKit(enFaute: 30_000, autre: 30_000, guillemets: true)
-        historique.ajouter((0..<12).map { DiagnosticUsage(genre: .plantage, version: "0.13.\($0)", json: long) })
-        #expect(historique.diagnostics.count == HistoriqueUsage.diagnosticsMaximum)
-        let premier = try #require(historique.diagnosticAEnvoyer)
-        #expect(premier.version == "0.13.2")
-        #expect(DiagnosticUsage.tailleEchappee(premier.contenu) <= DiagnosticUsage.tailleMaximale)
-
-        let data = RapportUsage.corps([], diagnostics: [premier], contexte: contexte, envoi: Date())
-        #expect(data.count < 65_536)
-        let texte = String(bytes: data, encoding: .utf8) ?? ""
-        #expect(texte.contains("\"stringValue\":\"diagnostic\""))
-        for (cle, _) in RapportUsage.attributs(premier, installation: contexte.installation) {
-            #expect(cle.wholeMatch(of: Self.clesAcceptees) != nil, "\(cle)")
-        }
-        historique.retirerDiagnostic(premier)
-        #expect(historique.diagnosticAEnvoyer?.version == "0.13.3")
-    }
-
-    @Test("Jours et diagnostics partent chacun dans sa requête, les jours d'abord")
-    func prochainEnvoi() throws {
-        var historique = HistoriqueUsage()
-        historique.compter(.palette, le: "2026-11-09")
-        let diagnostic = DiagnosticUsage(genre: .blocage, version: "0.13.0", json: try rapportMetricKit(enFaute: 10, autre: 10))
-        historique.ajouter([diagnostic])
-        let jours = try #require(historique.prochainEnvoi(aujourdhui: "2026-11-10"))
-        #expect(jours.jours.map(\.jour) == ["2026-11-09"] && jours.diagnostics.isEmpty)
-        historique.acquitter(jours)
-        #expect(historique.prochainEnvoi(aujourdhui: "2026-11-10") == .diagnostic(diagnostic))
-        historique.acquitter(.diagnostic(diagnostic))
-        #expect(historique.prochainEnvoi(aujourdhui: "2026-11-10") == nil)
-    }
-
-    @Test("Réponse du collecteur : un contenu refusé l'est pour de bon, le reste se retente")
-    func reponseCollecteur() {
-        #expect(ReponseCollecteur(statut: 204) == .acceptee)
-        #expect(ReponseCollecteur(statut: 400) == .refusee)
-        #expect(ReponseCollecteur(statut: 413) == .refusee)
-        for statut in [401, 403, 408, 429, 500, 503] { #expect(ReponseCollecteur(statut: statut) == .echec, "\(statut)") }
-        #expect(ReponseCollecteur(statut: nil) == .echec)
-    }
-
-    @Test("Tout compteur et tout réglage a une clé que le collecteur garde")
+    @Test("Tout compteur et tout réglage a une clé que le collecteur garde, telle quelle")
     func clesDuCollecteur() {
         for evenement in EvenementUsage.allCases {
-            #expect("usage.\(evenement.rawValue)".wholeMatch(of: Self.clesAcceptees) != nil, "\(evenement)")
+            #expect(evenement.cle.texte == evenement.rawValue, "\(evenement)")
+            #expect("usage.\(evenement.cle.texte)".wholeMatch(of: Self.clesAcceptees) != nil, "\(evenement)")
         }
         let prefs = Preferences.forTesting(store: StockageMemoire())
-        for cle in UsageStore.reglages(prefs, demarrageAuto: false).keys {
-            #expect("reglage.\(cle)".wholeMatch(of: Self.clesAcceptees) != nil, "\(cle)")
+        let reglages = UsageStore.reglages(prefs, demarrageAuto: false)
+        #expect(reglages.count == 19)
+        for cle in reglages.keys {
+            #expect("reglage.\(cle.texte)".wholeMatch(of: Self.clesAcceptees) != nil, "\(cle)")
         }
     }
 
-    @Test("L'identifiant : stable, propre à l'app, 64 caractères hexadécimaux")
-    func identifiant() {
-        let a = IdentifiantInstallation.calculer(materiel: "UUID-1", app: "fr.synseria.Synfus")
-        #expect(a == IdentifiantInstallation.calculer(materiel: "UUID-1", app: "fr.synseria.Synfus"))
-        #expect(a != IdentifiantInstallation.calculer(materiel: "UUID-1", app: "fr.synseria.Autre"))
-        #expect(a.wholeMatch(of: #/[0-9a-f]{64}/#) != nil)
-
-        var secours: String?
-        #expect(IdentifiantInstallation.fixer(materiel: "UUID-1", app: "fr.synseria.Synfus", secours: &secours) == a)
-        #expect(secours == nil)
-        let tire = IdentifiantInstallation.fixer(materiel: nil, app: "fr.synseria.Synfus", secours: &secours)
-        #expect(secours != nil)
-        #expect(IdentifiantInstallation.fixer(materiel: nil, app: "fr.synseria.Synfus", secours: &secours) == tire)
+    private static func textes(_ mesures: [CleDeTelemetrie: ValeurDeTelemetrie]) -> [String: ValeurDeTelemetrie] {
+        mesures.reduce(into: [:]) { $0[$1.key.texte] = $1.value }
     }
 
-    @Test("Le jour : fuseau de l'utilisateur, et décalage d'une clé")
-    func jours() {
-        let date = calendrier.date(from: DateComponents(year: 2026, month: 3, day: 1, hour: 0, minute: 30))!
-        #expect(JourUsage.cle(date, calendrier: calendrier) == "2026-03-01")
-        #expect(HistoriqueUsage.decaler("2026-03-01", de: -1, calendrier: calendrier) == "2026-02-28")
-    }
-
-    @Test("La clé d'un jour est grégorienne, même sur un Mac en calendrier bouddhiste")
-    func calendrierGregorien() {
-        #expect(JourUsage.gregorien.identifier == .gregorian)
-        #expect(JourUsage.gregorien.timeZone == .current)
-        var bouddhiste = Calendar(identifier: .buddhist)
-        bouddhiste.timeZone = .current
-        let date = JourUsage.date("2026-11-10")!
-        #expect(JourUsage.cle(date) == "2026-11-10")
-        #expect(JourUsage.cle(date, calendrier: bouddhiste) != "2026-11-10")
+    /// L'instant que voient le registre et le store, avancé par le test.
+    private final class Horloge {
+        var date: Date
+        init(_ date: Date) { self.date = date }
     }
 }
