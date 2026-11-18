@@ -1,5 +1,5 @@
 // Copié de SynseriaKit (Synseria-Design) — ne pas retoucher : changer le paquet dans Synseria-Design, puis sh propager.sh.
-// SynseriaKit ac80a4e0b47b7314 · contenu 52e596c786f964d3
+// SynseriaKit 832ae65487891069 · contenu b1eb85d9ab7438f5
 // Ce qui se compte, jour par jour, gardé sur le Mac ; ce qui reste à envoyer (pur).
 
 import Foundation
@@ -87,9 +87,8 @@ public struct HistoriqueDeTelemetrie: Codable, Equatable, Sendable {
     public static let conservation = 90
     /// Un rapport en retard part encore pendant ce nombre de jours.
     public static let retardMaximal = 7
-    /// Le collecteur fait bannir par CrowdSec (`domus/telemetrie-flood`) l'IP qui dépasse environ
-    /// 10 requêtes par heure, et toutes les apps Synseria d'un Mac partagent la sienne : 3 par app
-    /// en laisse passer trois sous le seuil.
+    /// Le collecteur limite le débit par IP, et toutes les apps Synseria d'un Mac partagent la
+    /// sienne : 3 par app laissent la place aux autres.
     public static let requetesParHeure = 3
 
     public init() {}
