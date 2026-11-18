@@ -30,7 +30,7 @@ struct PastillePerso: View {
             if affichage.nom {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(nom)
-                        .font((devant ? Jetons.typoTitreCarte : Jetons.typoCorps).font)
+                        .font(Jetons.typoCorps.font)
                         .lineLimit(1)
                         .fixedSize()
                     // Nom et classe : une pastille dit les deux ; `showClasses` ne règle que l'emblème.
@@ -51,7 +51,7 @@ struct PastillePerso: View {
         .padding(.horizontal, affichage.nom ? Jetons.espace2 : Jetons.espace1)
         .padding(.vertical, Jetons.espace1)
         .fixedSize(horizontal: true, vertical: false)
-        .fondEtat(devant ? .courant : enFermeture ? .desactive : EtatVisuel(survole: survole))
+        .fondEtat(devant ? .courant : enFermeture ? .desactive : EtatVisuel(survole: survole), rayon: Jetons.rayon2)
         .foregroundStyle(devant ? EtatVisuel.courant.encre : dormant ? Color.jeton(\.encre2) : Color.jeton(\.encre))
     }
 }
