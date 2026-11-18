@@ -60,14 +60,14 @@ jour de **toutes** les versions déjà installées : jamais sans garder l'ancien
 
 ## Statistiques d'utilisation
 
-Une release envoie les statistiques (`Usage/UsageStore`) : `publier-release.sh` lit l'adresse du
+Une release envoie les statistiques (`Usage/UsageStore`, sur `SynseriaKit.Telemetrie` : skill globale `socle-synseria`) : `publier-release.sh` lit l'adresse du
 collecteur et le jeton de Synfus dans le coffre (`secret run`, `domus:telemetrie/prod/URL` et
 `…/SYNFUS`, Touch ID) ou dans l'environnement (`TELEMETRIE_URL`, `TELEMETRIE_JETON` : secrets de la
 CI), et refuse de construire sans eux. `sh run.sh --install` les lit aussi dans le coffre (sans
 `secret` ou coffre fermé : installée sans envoi) ; le build Debug n'en a pas, il compte sans
-envoyer. `build.sh` les inscrit dans l'Info.plist avec `SynfusDistribution` (`release` si
+envoyer. `build.sh` les inscrit dans l'Info.plist (`SynseriaTelemetrieURL`, `SynseriaTelemetrieJeton`, XML échappé) avec `SynseriaDistribution` (`release` si
 `DISTRIBUTION=1`, sinon `local`), rapporté en `deployment.environment` : sans cette clé, rien ne part.
-Les plantages et blocages (MetricKit, `Usage/DiagnosticsUsage`) partent un par envoi ; chaque
+Les plantages et blocages (MetricKit, dans le paquet) partent un par envoi ; chaque
 release publie aussi `Synfus-X.Y.Z-dSYM.zip` (asset ignoré par la mise à jour), dont
 `Tools/symboliser.sh <diagnostic.json>` tire les noms de fonctions. Contrat d'envoi et
 collecteur : `docs/` de Flux-Domus. Un compteur ajouté à `EvenementUsage` est
