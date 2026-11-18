@@ -28,10 +28,10 @@ struct IconesReglables: View {
 /// est son propre aperçu, la choisie teintée.
 private struct ChoixIconeApp: View {
     @Binding var choix: IconeApp
-    private let cote = Jetons.Espace.dix
+    private let cote = Jetons.espace6 + Jetons.espace2
 
     var body: some View {
-        Grid(horizontalSpacing: Jetons.Espace.un, verticalSpacing: Jetons.Espace.un) {
+        Grid(horizontalSpacing: Jetons.espace1, verticalSpacing: Jetons.espace1) {
             ForEach(IconeApp.Motif.allCases, id: \.self) { motif in
                 GridRow {
                     ForEach(IconeApp.Fond.allCases, id: \.self) { fond in
@@ -49,7 +49,7 @@ private struct ChoixIconeApp: View {
     private func vignette(_ icone: IconeApp) -> some View {
         Button { choix = icone } label: {
             Image(nsImage: IconeAppliquee.vignette(icone, cote: cote))
-                .padding(Jetons.Espace.un)
+                .padding(Jetons.espace1)
         }
         .buttonStyle(.etat(choisi: icone == choix, nue: true))
         .elementDeGroupe()

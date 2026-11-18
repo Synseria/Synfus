@@ -19,9 +19,9 @@ struct FicheDonjonVue: View {
         if let donjon = store.donjons?.donjon(id: id) {
             let detail = store.details[id]
             let actions = modele.cartes.actions
-            VStack(alignment: .leading, spacing: Jetons.Espace.deux) {
+            VStack(alignment: .leading, spacing: Jetons.espace2) {
                 if let niveau = donjon.niveau {
-                    Text(L("donjon.niveau", niveau)).font(Jetons.Typo.raccourci.police)
+                    Text(L("donjon.niveau", niveau)).font(Jetons.typoMicro.font)
                 }
                 // Sur une ligne : faute de place (beaucoup de clefs), elle défile.
                 ViewThatFits(in: .horizontal) {
@@ -29,7 +29,7 @@ struct FicheDonjonVue: View {
                     ScrollView(.horizontal, showsIndicators: false) { rangee(actions, detail) }
                 }
                 ForEach(actions.filter { modele.ouvertes.contains($0) }, id: \.self) { action in
-                    ouverte(action, detail).padding(.leading, Jetons.Espace.trois)
+                    ouverte(action, detail).padding(.leading, Jetons.espace3)
                 }
                 if let detail {
                     ForEach(detail.monstres.filter(\.boss), id: \.id) { monstre in ligne(monstre) }
@@ -42,7 +42,7 @@ struct FicheDonjonVue: View {
     }
 
     private func rangee(_ actions: [ActionFiche], _ detail: DetailDonjon?) -> some View {
-        HStack(spacing: Jetons.Espace.un) {
+        HStack(spacing: Jetons.espace1) {
             ForEach(actions, id: \.self) { action in
                 carte(action, detail)
                     .fixedSize()
@@ -56,19 +56,19 @@ struct FicheDonjonVue: View {
     private func attente(_ donjon: Donjon) -> some View {
         Group {
             if store.echecs.contains(id) {
-                HStack(spacing: Jetons.Espace.un) {
+                HStack(spacing: Jetons.espace1) {
                     Text(L("ouTrouver.echec"))
-                    Button(L("ouTrouver.reessayer")) { store.demander(donjon) }.buttonStyle(.bouton(.tertiaire, dense: true))
+                    Button(L("ouTrouver.reessayer")) { store.demander(donjon) }.buttonStyle(BoutonTertiaire())
                 }
             } else {
-                HStack(spacing: Jetons.Espace.un) {
+                HStack(spacing: Jetons.espace1) {
                     ProgressView().controlSize(.mini)
                     Text(L("ouTrouver.chargement"))
                 }
             }
         }
-        .font(Jetons.Typo.petit.police)
-        .foregroundStyle(Color.jeton(\.encreSecondaire))
+        .font(Jetons.typoMeta.font)
+        .foregroundStyle(Color.jeton(\.encre2))
     }
 
     private func carte(_ action: ActionFiche, _ detail: DetailDonjon?) -> some View {
@@ -131,13 +131,13 @@ struct FicheDonjonVue: View {
         switch action {
         case .clef(let objet): OuTrouverVue(sujet: .objet(objet), metriques: .compact)
         case .conseils:
-            VStack(alignment: .leading, spacing: Jetons.Espace.un) { ConseilsVue(conseils: store.conseils[id] ?? []) }
+            VStack(alignment: .leading, spacing: Jetons.espace1) { ConseilsVue(conseils: store.conseils[id] ?? []) }
         case .monstres:
             ForEach(detail?.monstres.filter { !$0.boss } ?? [], id: \.id) { monstre in ligne(monstre) }
         case .succes:
             ForEach(Array((detail?.succes ?? []).enumerated()), id: \.offset) { _, succes in
                 Text("• " + (Lieu.traduit(succes.noms, langue) ?? "?"))
-                    .font(Jetons.Typo.petit.police)
+                    .font(Jetons.typoMeta.font)
                     .help(Lieu.traduit(succes.description, langue) ?? "")
             }
         case .entree, .guide, .aide: EmptyView()
@@ -145,10 +145,10 @@ struct FicheDonjonVue: View {
     }
 
     private func ligne(_ monstre: DetailDonjon.Monstre) -> some View {
-        VStack(alignment: .leading, spacing: Jetons.Espace.un) {
-            HStack(spacing: Jetons.Espace.un) {
-                if monstre.boss { Image(systemName: "crown").foregroundStyle(Color.jeton(\.safranTexte)) }
-                Text(Lieu.traduit(monstre.noms, langue) ?? "?").font((monstre.boss ? Jetons.Typo.raccourci : Jetons.Typo.petit).police)
+        VStack(alignment: .leading, spacing: Jetons.espace1) {
+            HStack(spacing: Jetons.espace1) {
+                if monstre.boss { Image(systemName: "crown").foregroundStyle(Color.jeton(\.accentTexte)) }
+                Text(Lieu.traduit(monstre.noms, langue) ?? "?").font((monstre.boss ? Jetons.typoMicro : Jetons.typoMeta).font)
             }
             FicheCombatVue(fiche: monstre.fiche)
         }
@@ -165,25 +165,25 @@ private struct CarteAction: View {
     let choisie: Bool
 
     var body: some View {
-        HStack(spacing: Jetons.Espace.un) {
+        HStack(spacing: Jetons.espace1) {
             Image(systemName: icone)
-                .foregroundStyle(choisie || ouverte == true ? Color.jeton(\.primaireEncre) : Color.jeton(\.encreSecondaire))
+                .foregroundStyle(choisie || ouverte == true ? Color.jeton(\.accentTexte) : Color.jeton(\.encre2))
             Text(titre)
-                .foregroundStyle(ouverte == true && !choisie ? Color.jeton(\.primaireEncre) : Color.jeton(\.encre))
+                .foregroundStyle(ouverte == true && !choisie ? Color.jeton(\.accentTexte) : Color.jeton(\.encre))
                 .lineLimit(1)
             if let ouverte {
                 Image(systemName: ouverte ? "chevron.down" : "chevron.right")
-                    .font(Jetons.Typo.micro.police)
-                    .foregroundStyle(Color.jeton(\.encreSecondaire))
+                    .font(Jetons.typoMicro.font)
+                    .foregroundStyle(Color.jeton(\.encre2))
             }
         }
-        .font(Jetons.Typo.petit.police)
-        .padding(.horizontal, Jetons.Espace.deux)
-        .padding(.vertical, Jetons.Espace.un)
+        .font(Jetons.typoMeta.font)
+        .padding(.horizontal, Jetons.espace2)
+        .padding(.vertical, Jetons.espace1)
         .fondEtat(choisie ? .choisi : .repos)
-        .overlay(RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous)
-            .strokeBorder(choisie ? Color.jeton(\.primaire) : ouverte == true ? Color.jeton(\.primaireEncre) : Color.jeton(\.filet),
-                          lineWidth: choisie ? Jetons.Trait.etat : Jetons.Trait.filet))
+        .overlay(RoundedRectangle(cornerRadius: Jetons.rayon1, style: .continuous)
+            .strokeBorder(choisie ? Color.jeton(\.accent) : ouverte == true ? Color.jeton(\.accentTexte) : Color.jeton(\.filet),
+                          lineWidth: choisie ? Jetons.epaisseurFocus : Jetons.epaisseurFilet))
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(choisie ? [.isButton, .isSelected] : .isButton)
     }

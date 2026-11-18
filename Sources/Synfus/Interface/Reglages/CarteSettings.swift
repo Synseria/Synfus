@@ -26,16 +26,16 @@ private struct BlocTrajets: View {
                 Stepper(L("zaap.gain.valeur", nombre: prefs.zaapGainMinimal, prefs.zaapGainMinimal),
                         value: $prefs.zaapGainMinimal, in: ItineraireZaap.gainsPossibles)
             }
-            Interrupteur(titre: L("zaap.duJeu"), aide: L("zaap.duJeu.aide", ItineraireZaap.ecartZaapDuJeu), isOn: $prefs.zaapDuJeu)
+            LigneInterrupteur(titre: L("zaap.duJeu"), aide: L("zaap.duJeu.aide", ItineraireZaap.ecartZaapDuJeu), isOn: $prefs.zaapDuJeu)
             Ligne(titre: L("zaap.intercalees"), aide: L("zaap.intercalees.aide")) {
                 TextField(L("zaap.intercalees"), text: $prefs.zaapIntercalees, prompt: Text(verbatim: "/a"))
                     .labelsHidden()
                     .textFieldStyle(.roundedBorder)
-                    .font(Jetons.Typo.codeInterface.police)
+                    .font(Jetons.typoCode.font)
                     .frame(width: 180)
             }
             if prefs.lirePosition {
-                Interrupteur(titre: L("zaap.auto"), aide: L("zaap.auto.aide"), isOn: $prefs.zaapAuto)
+                LigneInterrupteur(titre: L("zaap.auto"), aide: L("zaap.auto.aide"), isOn: $prefs.zaapAuto)
             } else {
                 // La réécriture a besoin de la position : l'état se dit dans sa ligne, avec le geste qui le lève.
                 Ligne(titre: L("zaap.auto"), etat: L("zaap.sansPosition"), aide: L("zaap.auto.aide")) {

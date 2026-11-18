@@ -34,7 +34,7 @@ struct GeneralSettings: View {
             }
 
             Bloc(L("general.systeme")) {
-                Interrupteur(titre: L("general.demarrerAvecSession"), isOn: $launchAtLogin)
+                LigneInterrupteur(titre: L("general.demarrerAvecSession"), isOn: $launchAtLogin)
                     .onChange(of: launchAtLogin) { _, value in LaunchAtLogin.set(value) }
                 languageRow
             }
@@ -45,7 +45,7 @@ struct GeneralSettings: View {
                                              verifiee: prefs.derniereVerificationMaj)) {
                     ActionMiseAJour()
                 }
-                Interrupteur(titre: L("maj.verifier"), aide: L("maj.verifier.aide"), isOn: $prefs.verifierMisesAJour)
+                LigneInterrupteur(titre: L("maj.verifier"), aide: L("maj.verifier.aide"), isOn: $prefs.verifierMisesAJour)
             }
 
             Bloc(L("general.icones")) {
@@ -70,7 +70,7 @@ struct GeneralSettings: View {
     /// prochain lancement parlerait une autre langue que celui-ci.
     private var languageRow: some View {
         Ligne(titre: L("general.langue"), aide: L("general.langue.aide")) {
-            HStack(spacing: Jetons.Espace.deux) {
+            HStack(spacing: Jetons.espace2) {
                 if LangueReglage.auProchainLancement != L10n.courante.langue {
                     Button(L("general.langue.relancer")) { LangueReglage.relancer() }
                 }
@@ -91,7 +91,7 @@ struct GeneralSettings: View {
     @ViewBuilder
     private var quarantineWarning: some View {
         Ligne(titre: L("general.quarantaine"), aide: L("general.quarantaine.aide")) {
-            Image(systemName: "exclamationmark.triangle").foregroundStyle(Color.jeton(\.alerte))
+            Image(systemName: "exclamationmark.triangle").foregroundStyle(Color.jeton(\.avertissement))
         }
         CopiableCommand(command: AppIntegrity.quarantineFix).rangee()
         CopiableCommand(command: AppIntegrity.resetCommand).rangee()

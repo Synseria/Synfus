@@ -8,12 +8,12 @@ struct ConseilsVue: View {
     var body: some View {
         ForEach(Array(conseils.enumerated()), id: \.offset) { _, conseil in
             Text("• " + conseil.titre)
-                .font(Jetons.Typo.petit.police)
+                .font(Jetons.typoMeta.font)
                 .fixedSize(horizontal: false, vertical: true)
                 .help(conseil.detail)
         }
         Text(L("donjon.conseils.source"))
-            .font(Jetons.Typo.petit.police)
-            .foregroundStyle(Color.jeton(\.encreTertiaire))
+            .font(Jetons.typoMeta.font)
+            .foregroundStyle(Color.jeton(\.encre3))
     }
 }

@@ -64,28 +64,28 @@ struct ShortcutRecorder: View {
     private var recording: Bool { session.active == id }
 
     var body: some View {
-        HStack(spacing: Jetons.Espace.un) {
+        HStack(spacing: Jetons.espace1) {
             Button(action: toggle) {
                 Group {
                     if recording {
-                        Text(label).font(Jetons.Typo.corps.police).foregroundStyle(Color.jeton(\.primaireEncre))
+                        Text(label).font(Jetons.typoCorps.font).foregroundStyle(Color.jeton(\.accentTexte))
                     } else if let hotKey {
-                        ToucheRaccourci(hotKey.displayString)
+                        ToucheDeClavier(touche: hotKey.displayString)
                     } else {
-                        Text(label).font(Jetons.Typo.corps.police).foregroundStyle(Color.jeton(\.encreSecondaire))
+                        Text(label).font(Jetons.typoCorps.font).foregroundStyle(Color.jeton(\.encre2))
                     }
                 }
-                .frame(minWidth: Jetons.Espace.huit * 3, minHeight: Jetons.Taille.controle)
-                .padding(.horizontal, Jetons.Espace.deux)
+                .frame(minWidth: Jetons.espace6 * 3, minHeight: Jetons.hauteurControle)
+                .padding(.horizontal, Jetons.espace2)
                 .background {
                     if recording {
                         EmptyView()
                     } else {
                         // Un champ : `surface` et `contourControle`.
-                        RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous)
-                            .fill(Color.jeton(\.surface))
-                            .overlay(RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous)
-                                .strokeBorder(Color.jeton(\.contourControle), lineWidth: Jetons.Trait.filet))
+                        RoundedRectangle(cornerRadius: Jetons.rayon1, style: .continuous)
+                            .fill(Color.jeton(\.plaque))
+                            .overlay(RoundedRectangle(cornerRadius: Jetons.rayon1, style: .continuous)
+                                .strokeBorder(Color.jeton(\.filet), lineWidth: Jetons.epaisseurFilet))
                     }
                 }
                 .fondEtat(recording ? .choisi : .repos)
@@ -98,7 +98,7 @@ struct ShortcutRecorder: View {
                 session.stop(id)
             } label: {
                 Image(systemName: "xmark.circle.fill")
-                    .foregroundStyle(Color.jeton(\.encreTertiaire))
+                    .foregroundStyle(Color.jeton(\.encre3))
             }
             .buttonStyle(.plain)
             .opacity(hotKey == nil ? 0 : 1)

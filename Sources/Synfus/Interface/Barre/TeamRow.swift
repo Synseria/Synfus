@@ -36,28 +36,28 @@ struct TeamSectorView: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: Jetons.Espace.un) {
+            HStack(spacing: Jetons.espace1) {
                 switch secteur {
                 case .tous:
                     Image(systemName: "person.3")
-                        .font(Jetons.Typo.petit.police)
+                        .font(Jetons.typoMeta.font)
                 case .equipe(let index):
                     Text("\(index + 1)")
-                        .font(Jetons.Typo.raccourci.police)
-                        .padding(.trailing, Jetons.Espace.un)
+                        .font(Jetons.typoMicro.font)
+                        .padding(.trailing, Jetons.espace1)
                     ForEach(membres, id: \.self) { membre in
                         PointPerso(classe: membre.classe, connecte: membre.connecte)
                     }
                 case .nouvelle:
                     Image(systemName: "plus")
-                        .font(Jetons.Typo.raccourci.police)
+                        .font(Jetons.typoMicro.font)
                 }
             }
-            .padding(.horizontal, agrandi ? Jetons.Espace.trois : Jetons.Espace.deux)
+            .padding(.horizontal, agrandi ? Jetons.espace3 : Jetons.espace2)
             // Le « + » est une cible, pas un libellé : il prend de la place.
-            .frame(minWidth: secteur == .nouvelle ? (agrandi ? Jetons.Espace.dix + Jetons.Espace.deux : Jetons.Espace.huit) : 0)
-            .frame(height: agrandi ? Jetons.Taille.cibleMin : Jetons.Taille.touche)
-            .foregroundStyle(secteur == .nouvelle && etat == .repos ? Color.jeton(\.encreSecondaire) : etat.encre)
+            .frame(minWidth: secteur == .nouvelle ? (agrandi ? Jetons.espace7 : Jetons.espace6) : 0)
+            .frame(height: agrandi ? Jetons.hauteurCase : Jetons.diametreRond)
+            .foregroundStyle(secteur == .nouvelle && etat == .repos ? Color.jeton(\.encre2) : etat.encre)
             .fondEtat(etat)
         }
         .buttonStyle(.plain)
@@ -93,7 +93,7 @@ struct PointPerso: View {
     var body: some View {
         Group {
             if !connecte {
-                Circle().strokeBorder(Color.jeton(\.encreTertiaire), lineWidth: Jetons.Trait.etat)
+                Circle().strokeBorder(Color.jeton(\.encre3), lineWidth: Jetons.epaisseurFocus)
             } else if let custom = icons.icon(for: classe) {
                 Image(nsImage: custom)
                     .resizable()
@@ -104,6 +104,6 @@ struct PointPerso: View {
                 Circle().fill(icons.catalogue.color(for: classe))
             }
         }
-        .frame(width: Jetons.Espace.trois, height: Jetons.Espace.trois)
+        .frame(width: Jetons.espace3, height: Jetons.espace3)
     }
 }

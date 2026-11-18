@@ -17,7 +17,7 @@ struct ChasseVue: View {
             if indicesIndisponibles {
                 indisponibles
             } else {
-                VStack(alignment: .leading, spacing: Jetons.Espace.deux) {
+                VStack(alignment: .leading, spacing: Jetons.espace2) {
                     depart
                     boussole.frame(maxWidth: .infinity)
                     if !previews.authorized { LigneAutorisation() }
@@ -25,19 +25,19 @@ struct ChasseVue: View {
                     lus
                     resultat
                 }
-                .padding(Jetons.Espace.trois)
+                .padding(Jetons.espace3)
             }
         }
         .frame(width: 216, alignment: .leading)
-        .font(Jetons.Typo.note.police)
+        .font(Jetons.typoMeta.font)
         .surfaceFlottante()
     }
 
     private var entete: some View {
-        EnTetePanneau(icone: BoutonBarre.chasse.symbole, teinte: Color.jeton(\.safran)) {
-            Text(L("chasse.titre")).font(Jetons.Typo.corpsFort.police)
-                .padding(.horizontal, Jetons.Espace.un)
-                .padding(.vertical, Jetons.Espace.un)
+        EnTetePanneau(icone: BoutonBarre.chasse.symbole, teinte: Color.jeton(\.accentTexte)) {
+            Text(L("chasse.titre")).font(Jetons.typoTitreCarte.font)
+                .padding(.horizontal, Jetons.espace1)
+                .padding(.vertical, Jetons.espace1)
             if modele.rechercheEnCours || modele.lectureEnCours || modele.enAttenteDesIndices { ProgressView().controlSize(.mini) }
         } boutons: {
             BoutonEnTete(icone: "xmark", aide: L("quete.fermer.simple")) { ChassePanel.shared.fermer() }
@@ -52,28 +52,28 @@ struct ChasseVue: View {
     }
 
     private var indisponibles: some View {
-        VStack(spacing: Jetons.Espace.deux) {
-            Text(L("chasse.indices.indisponibles")).foregroundStyle(Color.jeton(\.encreSecondaire))
+        VStack(spacing: Jetons.espace2) {
+            Text(L("chasse.indices.indisponibles")).foregroundStyle(Color.jeton(\.encre2))
             Button(L("commun.reessayer")) { Task { await modele.chargerIndices(forcer: true) } }
-                .buttonStyle(.bouton(.secondaire, dense: true))
+                .buttonStyle(BoutonBorde())
         }
-        .frame(maxWidth: .infinity, minHeight: Jetons.Taille.rangeePalette * 3)
-        .padding(Jetons.Espace.trois)
+        .frame(maxWidth: .infinity, minHeight: Jetons.hauteurRangee * 3)
+        .padding(Jetons.espace3)
     }
 
     // MARK: - Départ
 
     /// Les coordonnées de départ, centrées sous l'en-tête, avec la position du personnage à reprendre.
     private var depart: some View {
-        HStack(spacing: Jetons.Espace.un) {
-            Image(systemName: "flag").foregroundStyle(Color.jeton(\.encreSecondaire))
+        HStack(spacing: Jetons.espace1) {
+            Image(systemName: "flag").foregroundStyle(Color.jeton(\.encre2))
                 .help(L("chasse.depart"))
             TextField("x", value: $modele.departX, format: .number.grouping(.never), prompt: Text("x"))
                 .frame(width: 52)
             TextField("y", value: $modele.departY, format: .number.grouping(.never), prompt: Text("y"))
                 .frame(width: 52)
             Button { modele.reprendrePosition() } label: { Image(systemName: "location") }
-                .buttonStyle(.bouton(.tertiaire, dense: true))
+                .buttonStyle(BoutonTertiaire())
                 .disabled(LecteurEcran.shared.positionDuPersoDevant == nil)
                 .aide(L("chasse.depart.reprendre"))
         }
@@ -88,11 +88,11 @@ struct ChasseVue: View {
     /// Nord en haut, ouest à gauche… et « Lire » au centre : l'indice lu à
     /// l'écran, grisé tant que l'autorisation manque.
     private var boussole: some View {
-        Grid(horizontalSpacing: Jetons.Espace.un, verticalSpacing: Jetons.Espace.un) {
+        Grid(horizontalSpacing: Jetons.espace1, verticalSpacing: Jetons.espace1) {
             GridRow {
-                Color.clear.frame(width: Jetons.Taille.rangeePalette, height: Jetons.Taille.rangeePalette)
+                Color.clear.frame(width: Jetons.hauteurRangee, height: Jetons.hauteurRangee)
                 fleche(.nord)
-                Color.clear.frame(width: Jetons.Taille.rangeePalette, height: Jetons.Taille.rangeePalette)
+                Color.clear.frame(width: Jetons.hauteurRangee, height: Jetons.hauteurRangee)
             }
             GridRow {
                 fleche(.ouest)
@@ -100,9 +100,9 @@ struct ChasseVue: View {
                 fleche(.est)
             }
             GridRow {
-                Color.clear.frame(width: Jetons.Taille.rangeePalette, height: Jetons.Taille.rangeePalette)
+                Color.clear.frame(width: Jetons.hauteurRangee, height: Jetons.hauteurRangee)
                 fleche(.sud)
-                Color.clear.frame(width: Jetons.Taille.rangeePalette, height: Jetons.Taille.rangeePalette)
+                Color.clear.frame(width: Jetons.hauteurRangee, height: Jetons.hauteurRangee)
             }
         }
     }
@@ -111,8 +111,8 @@ struct ChasseVue: View {
         let choisie = modele.direction == direction
         return Button { modele.choisir(direction) } label: {
             Image(systemName: direction.symbole)
-                .font(Jetons.Typo.titre.police)
-                .frame(width: Jetons.Taille.rangeePalette, height: Jetons.Taille.rangeePalette)
+                .font(Jetons.typoSection.font)
+                .frame(width: Jetons.hauteurRangee, height: Jetons.hauteurRangee)
         }
         .buttonStyle(.etat(choisi: choisie))
         .disabled(modele.enAttenteDesIndices)
@@ -122,8 +122,8 @@ struct ChasseVue: View {
     private var centre: some View {
         Button { modele.lire() } label: {
             Image(systemName: "text.viewfinder")
-                .font(Jetons.Typo.titre.police)
-                .frame(width: Jetons.Taille.rangeePalette, height: Jetons.Taille.rangeePalette)
+                .font(Jetons.typoSection.font)
+                .frame(width: Jetons.hauteurRangee, height: Jetons.hauteurRangee)
         }
         .buttonStyle(.etat(courant: true))
         .disabled(!previews.authorized || modele.lectureEnCours || modele.indices.isEmpty)
@@ -133,7 +133,7 @@ struct ChasseVue: View {
     // MARK: - Indice
 
     private var indice: some View {
-        VStack(alignment: .leading, spacing: Jetons.Espace.un) {
+        VStack(alignment: .leading, spacing: Jetons.espace1) {
             // Ce que le champ attend s'écrit dans son texte d'exemple : le départ, puis une direction,
             // puis l'indice.
             TextField(L("chasse.indice"), text: $modele.saisie, prompt: Text(modele.attente.libelle))
@@ -144,8 +144,8 @@ struct ChasseVue: View {
                 Button { modele.choisir(cible) } label: {
                     Text(cible.nom(en: modele.langue))
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, Jetons.Espace.un)
-                        .padding(.vertical, Jetons.Espace.un)
+                        .padding(.horizontal, Jetons.espace1)
+                        .padding(.vertical, Jetons.espace1)
                 }
                 .buttonStyle(.etat(nue: true))
             }
@@ -156,24 +156,24 @@ struct ChasseVue: View {
 
     /// Les indices lus à l'écran, à choisir d'un clic.
     private var lus: some View {
-        VStack(alignment: .leading, spacing: Jetons.Espace.un) {
+        VStack(alignment: .leading, spacing: Jetons.espace1) {
             if modele.rienLu {
-                HStack(spacing: Jetons.Espace.un) {
-                    Text(L("chasse.rienLu")).font(Jetons.Typo.petit.police).foregroundStyle(Color.jeton(\.encreSecondaire))
+                HStack(spacing: Jetons.espace1) {
+                    Text(L("chasse.rienLu")).font(Jetons.typoMeta.font).foregroundStyle(Color.jeton(\.encre2))
                     Button(L("lecture.ouvrir")) { SettingsWindowController.shared.show(section: .lecture) }
-                        .buttonStyle(.bouton(.secondaire, dense: true))
+                        .buttonStyle(BoutonBorde())
                         .help(L("chasse.lire.aide"))
                 }
             }
             ForEach(modele.lues, id: \.self) { cible in
                 Button { modele.choisir(cible) } label: {
                     Text(cible.nom(en: modele.langue))
-                        .font(Jetons.Typo.petit.police)
+                        .font(Jetons.typoMeta.font)
                         .multilineTextAlignment(.leading)
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, Jetons.Espace.un)
-                        .padding(.vertical, Jetons.Espace.un)
+                        .padding(.horizontal, Jetons.espace1)
+                        .padding(.vertical, Jetons.espace1)
                 }
                 .buttonStyle(.etat(choisi: modele.cible == cible, nue: true))
             }
@@ -185,18 +185,18 @@ struct ChasseVue: View {
     @ViewBuilder
     private var resultat: some View {
         if let echec = modele.echec {
-            HStack(spacing: Jetons.Espace.un) {
-                Text(L("chasse.echec", echec)).font(Jetons.Typo.petit.police).foregroundStyle(Color.jeton(\.alerte))
+            HStack(spacing: Jetons.espace1) {
+                Text(L("chasse.echec", echec)).font(Jetons.typoMeta.font).foregroundStyle(Color.jeton(\.danger))
                 Spacer(minLength: 0)
                 boutonEtapePrecedente
             }
         } else if let constat = modele.constat {
-            VStack(alignment: .leading, spacing: Jetons.Espace.un) {
-                HStack(spacing: Jetons.Espace.un) {
-                    Image(systemName: constat.direction.symbole).foregroundStyle(Color.jeton(\.encreSecondaire))
+            VStack(alignment: .leading, spacing: Jetons.espace1) {
+                HStack(spacing: Jetons.espace1) {
+                    Image(systemName: constat.direction.symbole).foregroundStyle(Color.jeton(\.encre2))
                     Text(constat.cible.nom(en: modele.langue))
-                        .font(Jetons.Typo.petit.police)
-                        .foregroundStyle(Color.jeton(\.encreSecondaire))
+                        .font(Jetons.typoMeta.font)
+                        .foregroundStyle(Color.jeton(\.encre2))
                         .fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 0)
                     boutonEtapePrecedente
@@ -206,18 +206,18 @@ struct ChasseVue: View {
                             copie.signaler("trajet")
                         } label: {
                             IconeCopie(icone: "doc.on.doc", copie: copie.affiche("trajet"))
-                                .foregroundStyle(Color.jeton(\.encreSecondaire))
+                                .foregroundStyle(Color.jeton(\.encre2))
                         }
-                        .buttonStyle(.bouton(.tertiaire, dense: true))
+                        .buttonStyle(BoutonTertiaire())
                         .aide(L("chasse.copier"))
                     }
                 }
                 Group {
                     switch constat.resultat {
                     case .trouve(let x, let y, let distance):
-                        Text(L("chasse.trouve", nombre: distance, Coordonnees.texte(x, y), distance)).font(Jetons.Typo.corpsFort.police)
+                        Text(L("chasse.trouve", nombre: distance, Coordonnees.texte(x, y), distance)).font(Jetons.typoTitreCarte.font)
                     case .introuvable:
-                        Text(L("chasse.introuvable", EtapeChasse.portee)).foregroundStyle(Color.jeton(\.alerte))
+                        Text(L("chasse.introuvable", EtapeChasse.portee)).foregroundStyle(Color.jeton(\.danger))
                     case .phorreur:
                         Text(L("chasse.phorreur.suivre", constat.direction.libelle))
                     }
@@ -225,14 +225,13 @@ struct ChasseVue: View {
                 .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(Jetons.Espace.deux)
-            .carte(rayon: Jetons.Rayon.controle)
+            .carte(marge: Jetons.espace2)
         }
     }
 
     private var boutonEtapePrecedente: some View {
         Button { modele.etapePrecedente() } label: { Image(systemName: "arrow.uturn.backward") }
-            .buttonStyle(.bouton(.tertiaire, dense: true))
+            .buttonStyle(BoutonTertiaire())
             .disabled(!modele.etapePrecedenteDisponible)
             .aide(L("chasse.etape.precedente"))
     }

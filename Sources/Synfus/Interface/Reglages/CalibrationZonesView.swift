@@ -27,15 +27,15 @@ extension GenreLecture: Identifiable {
     }
 
     /// Couleur du cadre de la zone sur la capture — le rose du bouton de fin
-    /// de tour pour le combat, le safran d'un trésor pour la chasse.
+    /// de tour pour le combat, l'avertissement pour la chasse.
     @MainActor var teinte: Color {
         switch self {
-        case .position: return Color.jeton(\.primaire)
+        case .position: return Color.jeton(\.accent)
         case .combat: return CombatBadge.rose
-        case .chasse: return Color.jeton(\.safran)
+        case .chasse: return Color.jeton(\.avertissement)
         case .quetes: return Color.jeton(\.succes)
         case .vie: return Color.jeton(\.danger)
-        case .tchat: return Color.jeton(\.suggestionSynfus)
+        case .tchat: return Color.suggestionSynfus
         }
     }
 }
@@ -75,20 +75,20 @@ struct CalibrationZonesView: View {
     private static let hauteurImage: CGFloat = 400
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Jetons.Espace.deux) {
-            Text(L("calibration.titre", genre.libelle)).font(Jetons.Typo.titre.police)
+        VStack(alignment: .leading, spacing: Jetons.espace2) {
+            Text(L("calibration.titre", genre.libelle)).font(Jetons.typoSection.font)
             Text(genre.consigne)
-                .font(Jetons.Typo.petit.police)
-                .foregroundStyle(Color.jeton(\.encreSecondaire))
+                .font(Jetons.typoMeta.font)
+                .foregroundStyle(Color.jeton(\.encre2))
                 .fixedSize(horizontal: false, vertical: true)
 
             image
                 .frame(width: Self.largeurImage, height: Self.hauteurImage)
-                .background(RoundedRectangle(cornerRadius: Jetons.Rayon.controle).fill(Color.jeton(\.creux)))
+                .background(RoundedRectangle(cornerRadius: Jetons.rayon1).fill(Color.jeton(\.creux)))
             if let capture {
                 Text(L("calibration.capturee", capture.date.formatted(date: .abbreviated, time: .shortened)))
-                    .font(Jetons.Typo.petit.police)
-                    .foregroundStyle(Color.jeton(\.encreTertiaire))
+                    .font(Jetons.typoMeta.font)
+                    .foregroundStyle(Color.jeton(\.encre3))
             }
 
             essaiVue
@@ -106,14 +106,14 @@ struct CalibrationZonesView: View {
                 if detection != nil { ProgressView().controlSize(.small) }
                 Spacer()
                 Button(L("calibration.terminer")) { dismiss() }
-                    .buttonStyle(.bouton(.principal))
+                    .buttonStyle(BoutonPrincipal())
                     .keyboardShortcut(.defaultAction)
             }
-            .buttonStyle(.bouton(.secondaire))
+            .buttonStyle(BoutonBorde())
         }
-        .padding(Jetons.Espace.quatre)
-        .frame(width: Self.largeurImage + Jetons.Espace.huit)
-        .background(Color.jeton(\.fenetre))
+        .padding(Jetons.espace4)
+        .frame(width: Self.largeurImage + Jetons.espace6)
+        .background(Color.jeton(\.fondFenetre))
         .task {
             capture = CapturesCalibrage.gardee(genre)
             essayer()
@@ -140,7 +140,7 @@ struct CalibrationZonesView: View {
                         .frame(width: cadre.width, height: cadre.height)
                         .offset(x: cadre.minX, y: cadre.minY)
                     Rectangle()
-                        .strokeBorder(genre.teinte, lineWidth: Jetons.Trait.focus)
+                        .strokeBorder(genre.teinte, lineWidth: Jetons.epaisseurFocus)
                         // Le voile de la zone, qui laisse lire la capture dessous.
                         .background(genre.teinte.opacity(0.15))
                         .frame(width: max(zone.width, 1), height: max(zone.height, 1))
@@ -165,10 +165,10 @@ struct CalibrationZonesView: View {
         } else {
             Text(decompte != nil ? L("calibration.enCours")
                  : echec ?? (manager.clients.isEmpty ? L("calibration.aucunPerso") : L("calibration.aucuneCapture")))
-                .font(Jetons.Typo.petit.police)
-                .foregroundStyle(Color.jeton(\.encreSecondaire))
+                .font(Jetons.typoMeta.font)
+                .foregroundStyle(Color.jeton(\.encre2))
                 .multilineTextAlignment(.center)
-                .padding(Jetons.Espace.six)
+                .padding(Jetons.espace5)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
@@ -179,26 +179,26 @@ struct CalibrationZonesView: View {
     private var essaiVue: some View {
         if let capture, let recadree = capture.image.cropping(
             to: genre.zone.pixels(dans: CGSize(width: capture.image.width, height: capture.image.height))) {
-            HStack(alignment: .top, spacing: Jetons.Espace.deux) {
+            HStack(alignment: .top, spacing: Jetons.espace2) {
                 Image(decorative: recadree, scale: 1)
                     .resizable()
                     .interpolation(.high)
                     .aspectRatio(contentMode: .fit)
                     .frame(maxWidth: 200, maxHeight: 120, alignment: .topLeading)
-                    .overlay(Rectangle().strokeBorder(genre.teinte, lineWidth: Jetons.Trait.filet))
-                VStack(alignment: .leading, spacing: Jetons.Espace.un) {
-                    HStack(spacing: Jetons.Espace.un) {
-                        Text(L("calibration.essai")).font(Jetons.Typo.raccourci.police)
+                    .overlay(Rectangle().strokeBorder(genre.teinte, lineWidth: Jetons.epaisseurFilet))
+                VStack(alignment: .leading, spacing: Jetons.espace1) {
+                    HStack(spacing: Jetons.espace1) {
+                        Text(L("calibration.essai")).font(Jetons.typoMicro.font)
                         if essaiEnCours != nil { ProgressView().controlSize(.mini) }
                     }
                     if let essai {
                         Text(L("calibration.essai.compris", essai.compris))
-                            .font(Jetons.Typo.petit.police)
+                            .font(Jetons.typoMeta.font)
                             .fixedSize(horizontal: false, vertical: true)
                         Text(L("diagnostic.position.brut",
                                essai.lignes.isEmpty ? "—" : essai.lignes.joined(separator: " ⏎ ")))
-                            .font(Jetons.Typo.codeInterface.police)
-                            .foregroundStyle(Color.jeton(\.encreTertiaire))
+                            .font(Jetons.typoCode.font)
+                            .foregroundStyle(Color.jeton(\.encre3))
                             .lineLimit(6)
                             .textSelection(.enabled)
                     }

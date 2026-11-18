@@ -24,7 +24,7 @@ struct ListeQuetesVue: View {
                 if store.quetes == nil, store.chargement {
                     note(L("palette.quetes.chargement"))
                 } else if store.quetes == nil, store.echec != nil {
-                    note(L("quete.indisponible")).foregroundStyle(Color.jeton(\.alerte))
+                    note(L("quete.indisponible")).foregroundStyle(Color.jeton(\.danger))
                     geste(.reessayer)
                 } else {
                     let elements = panneau.liste()
@@ -45,8 +45,8 @@ struct ListeQuetesVue: View {
         switch element {
         case .titre(let titre):
             Text(titre)
-                .font(metriques.detailFort.police)
-                .foregroundStyle(Color.jeton(\.encreSecondaire))
+                .font(metriques.detailFort.font)
+                .foregroundStyle(Color.jeton(\.encre2))
                 .padding(.top, metriques.ecartSections)
         case .epinglee(let id, let nom, let montree):
             HStack(spacing: 0) {
@@ -58,7 +58,7 @@ struct ListeQuetesVue: View {
         case .reconnue(let reconnue, let titre):
             quete(titre, marque: "plus", detail: nil) { lecture.choisir(reconnue) }
         case .lireSuivi(let enCours):
-            HStack(spacing: Jetons.Espace.un) {
+            HStack(spacing: Jetons.espace1) {
                 Button { lecture.lire() } label: {
                     Label(enCours ? L("quete.suivi.enCours") : L("quete.suivi.lire"), systemImage: "text.viewfinder")
                 }
@@ -66,7 +66,7 @@ struct ListeQuetesVue: View {
                 Spacer(minLength: 0)
                 if toutEpingler { Button(L("quete.toutEpingler")) { lecture.toutEpingler() } }
             }
-            .buttonStyle(.bouton(.tertiaire, dense: true))
+            .buttonStyle(BoutonTertiaire())
         case .message(let texte):
             note(texte)
         case .geste(let geste):
@@ -74,7 +74,7 @@ struct ListeQuetesVue: View {
         // Sur la ligne de « Lire le suivi » quand elle est là.
         case .toutEpingler:
             if !lisible {
-                Button(L("quete.toutEpingler")) { lecture.toutEpingler() }.buttonStyle(.bouton(.tertiaire, dense: true))
+                Button(L("quete.toutEpingler")) { lecture.toutEpingler() }.buttonStyle(BoutonTertiaire())
             }
         // Le menu « ⋯ ».
         case .toutDesepingler, .option, .affichage, .fermer, .separateur:
@@ -86,21 +86,21 @@ struct ListeQuetesVue: View {
     private func quete(_ nom: String, marque: String?, detail: String?, forte: Bool = false,
                        action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack(alignment: .firstTextBaseline, spacing: Jetons.Espace.un) {
+            HStack(alignment: .firstTextBaseline, spacing: Jetons.espace1) {
                 Image(systemName: marque ?? "circle")
-                    .font(metriques.icone.police)
-                    .foregroundStyle(forte ? Color.jeton(\.primaire) : Color.jeton(\.encreSecondaire))
+                    .font(metriques.icone.font)
+                    .foregroundStyle(forte ? Color.jeton(\.accent) : Color.jeton(\.encre2))
                     .opacity(marque == nil ? 0 : 1)
                     .frame(width: Self.colonneMarque)
                 Text(nom)
-                    .font((forte ? metriques.texteFort : metriques.texte).police)
+                    .font((forte ? metriques.texteFort : metriques.texte).font)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: Jetons.Espace.un)
+                Spacer(minLength: Jetons.espace1)
                 if let detail {
                     Text(detail)
-                        .font(metriques.detail.police.monospacedDigit())
-                        .foregroundStyle(Color.jeton(\.encreSecondaire))
+                        .font(metriques.detail.font.monospacedDigit())
+                        .foregroundStyle(Color.jeton(\.encre2))
                         .fixedSize()
                 }
             }
@@ -119,15 +119,15 @@ struct ListeQuetesVue: View {
 
     private func note(_ texte: String) -> some View {
         Text(texte)
-            .font(metriques.detail.police)
-            .foregroundStyle(Color.jeton(\.encreSecondaire))
+            .font(metriques.detail.font)
+            .foregroundStyle(Color.jeton(\.encre2))
             .fixedSize(horizontal: false, vertical: true)
             .padding(.horizontal, metriques.ligneHorizontale)
     }
 
     private func geste(_ geste: MenuQuetes.Geste) -> some View {
         Button(geste.titre) { QuetePanel.faire(geste) }
-            .buttonStyle(.bouton(.secondaire, dense: true))
+            .buttonStyle(BoutonBorde())
             .padding(.horizontal, metriques.ligneHorizontale)
     }
 }

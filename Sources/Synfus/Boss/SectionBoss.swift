@@ -15,19 +15,19 @@ struct SectionBoss<Accessoire: View, Contenu: View>: View {
     @ViewBuilder let contenu: Contenu
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Jetons.Espace.un) {
-            HStack(spacing: Jetons.Espace.un) {
+        VStack(alignment: .leading, spacing: Jetons.espace1) {
+            HStack(spacing: Jetons.espace1) {
                 Button { depliee.toggle() } label: {
-                    HStack(spacing: Jetons.Espace.un) {
+                    HStack(spacing: Jetons.espace1) {
                         Image(systemName: depliee ? "chevron.down" : "chevron.right")
-                            .font(Jetons.Typo.micro.police)
-                            .foregroundStyle(Color.jeton(\.encreSecondaire))
+                            .font(Jetons.typoMicro.font)
+                            .foregroundStyle(Color.jeton(\.encre2))
                         if let icone { Image(systemName: icone) }
                         Text(titre).multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
                         Spacer(minLength: 0)
                     }
-                    .font((forte ? Jetons.Typo.corpsFort : Jetons.Typo.raccourci).police)
-                    .foregroundStyle(forte ? Color.jeton(\.encre) : Color.jeton(\.encreSecondaire))
+                    .font((forte ? Jetons.typoTitreCarte : Jetons.typoMicro).font)
+                    .foregroundStyle(forte ? Color.jeton(\.encre) : Color.jeton(\.encre2))
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -37,7 +37,7 @@ struct SectionBoss<Accessoire: View, Contenu: View>: View {
             if depliee {
                 // Courte, elle garde sa hauteur ; longue, elle défile sous le plafond.
                 ScrollView {
-                    VStack(alignment: .leading, spacing: Jetons.Espace.un) { contenu }
+                    VStack(alignment: .leading, spacing: Jetons.espace1) { contenu }
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .scrollBounceBehavior(.basedOnSize)
@@ -60,10 +60,10 @@ struct CorrectionTour: View {
     @ObservedObject private var lecteur = LecteurEcran.shared
 
     var body: some View {
-        HStack(spacing: Jetons.Espace.un) {
+        HStack(spacing: Jetons.espace1) {
             Text(aide.tour.map { L("boss.tour", $0) } ?? L("boss.tour.attente"))
-                .font(Jetons.Typo.petit.police.monospacedDigit())
-                .foregroundStyle(Color.jeton(\.encreSecondaire))
+                .font(Jetons.typoMeta.font.monospacedDigit())
+                .foregroundStyle(Color.jeton(\.encre2))
                 .fixedSize()
             PetitBouton(icone: "minus", aide: L("boss.tour.moins")) { aide.corrigerTour(-1) }
                 .disabled((aide.tour ?? 1) <= 1)
@@ -81,12 +81,12 @@ struct LigneDuTour<Contenu: View>: View {
     var body: some View {
         // Sur la ligne de la consigne quand elle y tient entière, dessous sinon.
         ViewThatFits(in: .horizontal) {
-            HStack(spacing: Jetons.Espace.un) {
+            HStack(spacing: Jetons.espace1) {
                 contenu
-                Spacer(minLength: Jetons.Espace.deux)
+                Spacer(minLength: Jetons.espace2)
                 CorrectionTour()
             }
-            VStack(alignment: .trailing, spacing: Jetons.Espace.un) {
+            VStack(alignment: .trailing, spacing: Jetons.espace1) {
                 contenu.frame(maxWidth: .infinity, alignment: .leading)
                 CorrectionTour()
             }
