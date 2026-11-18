@@ -1,5 +1,5 @@
-// Les persos connectés et joués, jour par jour, gardés sur le Mac (pur) : le paquet de
-// télémétrie ne tient que l'instantané des mesures, le cumul d'une journée vit ici.
+// Les persos connectés et joués, jour par jour, gardés sur le Mac (pur) : la seule source des
+// `persos.*`, que le registre demande jour par jour au moment de l'envoi.
 
 import Foundation
 import Telemetrie
