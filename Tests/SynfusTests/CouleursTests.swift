@@ -3,8 +3,8 @@ import Foundation
 import Testing
 @testable import Synfus
 
-/// Les couleurs viennent des jetons du design system : le fichier engendré n'est jamais
-/// retouché à la main, la couleur de l'app se relit, et « Autre… » refuse le safran.
+/// Les couleurs viennent du nuancier du design system : les fichiers engendrés ne sont jamais
+/// retouchés à la main, le thème et la nuance se relisent, les réglages d'avant se convertissent.
 @MainActor
 struct CouleursTests {
     /// L'en-tête de `Jetons.swift` porte l'empreinte de ce qui suit ses deux premières lignes
@@ -42,123 +42,135 @@ struct CouleursTests {
         }
     }
 
-    @Test("« Autre… » refuse une teinte proche du safran")
-    func autreRefuseLeSafran() {
-        for proche in [84, 56, 70, 113] { #expect(!Jetons.teinteAcceptee(proche), "\(proche)") }
-        for loin in [0, 38, 54, 114, 150, 350] { #expect(Jetons.teinteAcceptee(loin), "\(loin)") }
-        #expect(Jetons.Couleur(ecrit: "teinte:90") == nil)
-        #expect(Jetons.Couleur(ecrit: "teinte:200") == .teinte(200))
-    }
-
-    @Test("« Autre… » refuse aussi la teinte que l'app réserve à ses suggestions")
-    func autreRefuseLaSuggestion() {
-        for proche in [293, 270, 316] { #expect(!Jetons.teinteAcceptee(proche), "\(proche)") }
-        #expect(Jetons.Couleur(ecrit: "teinte:293") == nil)
-    }
-
-    @Test("La teinte d'une couleur : celle du préréglage, ou la sienne ramenée au cercle")
-    func teinteDeLaCouleur() {
-        for prereglage in Jetons.Prereglage.allCases {
-            #expect(Jetons.Couleur.prereglage(prereglage).degres == prereglage.teinte)
+    @Test("La trousse est telle que Synseria-Design l'a engendrée")
+    func empreinteDeLaTrousse() throws {
+        let trousse = SourcesDuDepot.fichiers().filter { $0.deletingLastPathComponent().lastPathComponent == "Trousse" }
+        #expect(!trousse.isEmpty)
+        for url in trousse {
+            let lignes = try String(contentsOf: url, encoding: .utf8).split(separator: "\n", maxSplits: 2, omittingEmptySubsequences: false)
+            try #require(lignes.count == 3)
+            let annoncee = try #require(lignes[1].split(separator: " ").last).description
+            let reelle = SHA256.hash(data: Data(lignes[2].utf8)).map { String(format: "%02x", $0) }.joined().prefix(16)
+            #expect(annoncee == String(reelle), "\(url.lastPathComponent) a été retouché : le régénérer par sh propager.sh")
         }
-        #expect(Jetons.Couleur.teinte(210).degres == 210)
-        #expect(Jetons.Couleur.teinte(-10).degres == 350)
     }
 
-    @Test("La couleur et les fonds se relisent")
+    @Test("Le thème s'écrit et se relit, Personnalisé compris ; une valeur illisible n'est pas un choix")
+    func texteDuTheme() {
+        for theme in Jetons.Coloris.allCases.map(Jetons.Theme.coloris) + [.personnalise(0x3FA9D8), .personnalise(0x00000A)] {
+            #expect(Jetons.Theme(ecrit: theme.ecrit) == theme)
+        }
+        #expect(Jetons.Theme.personnalise(0x0E766C).ecrit == "personnalise:0E766C")
+        #expect(Jetons.Theme(ecrit: "jade") == nil)
+        #expect(Jetons.Theme(ecrit: "personnalise:FFFFFFF") == nil)
+    }
+
+    @Test("Le thème et la nuance se relisent ; Système s'écrit, et une nuance illisible laisse le défaut")
     func persistance() {
         let store = MemoireDeTest()
         let prefs = Preferences.forTesting(store: store)
-        prefs.couleurDeLApp = .teinte(210)
-        prefs.fondsDeLApp = .teinte(30)
+        prefs.themeDeLApp = .personnalise(0x3FA9D8)
+        prefs.nuanceDeLApp = .crepuscule
         let relu = Preferences.forTesting(store: store)
-        #expect(relu.couleurDeLApp == .teinte(210) && relu.fondsDeLApp == .teinte(30))
-        prefs.couleurDeLApp = .prereglage(.corail)
-        prefs.fondsDeLApp = .neutre
+        #expect(relu.themeDeLApp == .personnalise(0x3FA9D8) && relu.nuanceDeLApp == .crepuscule)
+        prefs.themeDeLApp = .coloris(.sauge)
+        prefs.nuanceDeLApp = nil
         let encore = Preferences.forTesting(store: store)
-        #expect(encore.couleurDeLApp == .prereglage(.corail) && encore.fondsDeLApp == .neutre)
-    }
-
-    @Test("L'apparence suit macOS par défaut, se relit, et une valeur illisible laisse Auto")
-    func apparence() {
-        let store = MemoireDeTest()
-        let prefs = Preferences.forTesting(store: store)
-        #expect(prefs.apparence == .auto)
-        prefs.apparence = .clair
-        #expect(Preferences.forTesting(store: store).apparence == .clair)
-        store.enregistrer(Data(#"{"characterOrder":["A"],"hotKeys":[],"barVisible":true,"showNumbers":true,"apparence":"crepuscule"}"#.utf8),
+        #expect(encore.themeDeLApp == .coloris(.sauge) && encore.nuanceDeLApp == nil)
+        store.enregistrer(Data(#"{"characterOrder":["A"],"hotKeys":[],"barVisible":true,"showNumbers":true,"themeDeLApp":"nimporte","nuanceDeLApp":"aube"}"#.utf8),
                           pour: Preferences.key)
-        #expect(Preferences.forTesting(store: store).apparence == .auto)
+        let illisible = Preferences.forTesting(store: store)
+        #expect(illisible.characterOrder == ["A"])
+        #expect(illisible.themeDeLApp == Jetons.themeParDefaut && illisible.nuanceDeLApp == Jetons.nuanceParDefaut)
     }
 
-    @Test("Seul Auto laisse macOS décider ; Clair et Sombre imposent leur apparence")
-    func apparenceImposee() {
-        #expect(ThemeCourant.Apparence.auto.nsAppearance == nil)
-        #expect(ThemeCourant.Apparence.clair.nsAppearance?.name == .aqua)
-        #expect(ThemeCourant.Apparence.sombre.nsAppearance?.name == .darkAqua)
-    }
-
-    @Test("Le défaut est le jade, et les fonds sont en Auto : primaire en clair, nuit en sombre")
+    @Test("Le défaut est Graphite, l'app suivant macOS")
     func defauts() {
         let prefs = Preferences.forTesting(store: MemoireDeTest())
-        #expect(prefs.couleurDeLApp == .prereglage(.jade))
-        #expect(prefs.fondsDeLApp == nil)
-        #expect(Jetons.fondsParDefaut(.clair) == .primaire && Jetons.fondsParDefaut(.sombre) == .nuit)
-        #expect(Jetons.theme(.prereglage(.jade), fonds: nil, .sombre) == Jetons.theme(.prereglage(.jade), fonds: .nuit, .sombre))
-        #expect(Jetons.theme(.prereglage(.jade), fonds: nil, .clair) == Jetons.theme(.prereglage(.jade), fonds: .primaire, .clair))
+        #expect(prefs.themeDeLApp == .coloris(.graphite))
+        #expect(prefs.nuanceDeLApp == nil)
     }
 
-    @Test("Revenir à Auto efface le choix des fonds de la sauvegarde")
-    func retourALAuto() {
-        let store = MemoireDeTest()
-        let prefs = Preferences.forTesting(store: store)
-        prefs.fondsDeLApp = .neutre
-        prefs.fondsDeLApp = nil
-        #expect(Preferences.forTesting(store: store).fondsDeLApp == nil)
+    @Test("Sans nuance, macOS décide ; une nuance impose son apparence")
+    func apparenceImposee() {
+        #expect(ThemeCourant.apparence(nil) == nil)
+        #expect(ThemeCourant.apparence(.jour)?.name == .aqua)
+        #expect(ThemeCourant.apparence(.crepuscule)?.name == .aqua)
+        #expect(ThemeCourant.apparence(.penombre)?.name == .darkAqua)
+        #expect(ThemeCourant.apparence(.nuit)?.name == .darkAqua)
     }
 
-    @Test("Une ancienne sauvegarde en violet retombe sur le défaut sans perdre le reste")
-    func violetRetire() {
+    @Test("Une sauvegarde d'avant le nuancier : jade resté au défaut → Graphite, un préréglage → son coloris")
+    func conversionDesPrereglages() {
+        #expect(ConversionDuTheme.relire(couleur: nil, fonds: nil, apparence: nil) == .init())
+        #expect(ConversionDuTheme.relire(couleur: "jade", fonds: nil, apparence: nil).theme == .coloris(.graphite))
+        #expect(ConversionDuTheme.relire(couleur: "jade", fonds: "neutre", apparence: nil).theme == .coloris(.lagon))
+        #expect(ConversionDuTheme.relire(couleur: "azur", fonds: nil, apparence: nil).theme == .coloris(.bleuet))
+        #expect(ConversionDuTheme.relire(couleur: "framboise", fonds: "nuit", apparence: nil).theme == .coloris(.cerise))
+        #expect(ConversionDuTheme.relire(couleur: "corail", fonds: nil, apparence: nil).theme == .coloris(.terracotta))
+        #expect(ConversionDuTheme.relire(couleur: "ardoise", fonds: nil, apparence: nil).theme == .coloris(.graphite))
+        #expect(ConversionDuTheme.relire(couleur: "violet", fonds: nil, apparence: nil).theme == Jetons.themeParDefaut)
+    }
+
+    @Test("Clair et Sombre imposés deviennent Jour et Pénombre ; Auto suit macOS")
+    func conversionDeLApparence() {
+        #expect(ConversionDuTheme.relire(couleur: nil, fonds: nil, apparence: "clair").nuance == .jour)
+        #expect(ConversionDuTheme.relire(couleur: "jade", fonds: nil, apparence: "sombre").nuance == .penombre)
+        #expect(ConversionDuTheme.relire(couleur: nil, fonds: nil, apparence: "auto").nuance == nil)
+    }
+
+    /// `teinte:N` était un angle OKLCH : relu en TSL, un bleu-vert de 240 tournerait à l'indigo.
+    @Test("« teinte:N » devient Personnalisé à l'angle OKLCH N, pas à la teinte TSL N")
+    func conversionDUneTeinte() throws {
+        let relu = ConversionDuTheme.relire(couleur: "teinte:240", fonds: nil, apparence: nil)
+        guard case .personnalise(let couleur) = relu.theme else { Issue.record("pas Personnalisé"); return }
+        let lab = Jetons.Oklab.lab(Jetons.Octets(couleur), nil)
+        let angle = (atan2(lab[2], lab[1]) * 180 / .pi + 360).truncatingRemainder(dividingBy: 360)
+        #expect(abs(angle - 240) < 3, "\(angle)")
+        #expect(abs(ConversionDuTheme.teinte(couleur) - 240) > 10)
+    }
+
+    @Test("Une sauvegarde d'avant se convertit à la lecture sans perdre le reste, puis s'écrit au nouveau format")
+    func conversionALaLecture() {
         let store = MemoireDeTest()
-        store.enregistrer(Data(#"{"characterOrder":["A"],"hotKeys":[],"barVisible":true,"showNumbers":true,"couleurDeLApp":"violet","fondsDeLApp":"nuit"}"#.utf8),
+        store.enregistrer(Data(#"{"characterOrder":["A"],"hotKeys":[],"barVisible":true,"showNumbers":true,"couleurDeLApp":"corail","fondsDeLApp":"nuit","apparence":"sombre"}"#.utf8),
                           pour: Preferences.key)
         let prefs = Preferences.forTesting(store: store)
         #expect(prefs.characterOrder == ["A"])
-        #expect(prefs.couleurDeLApp == Jetons.couleurParDefaut && prefs.fondsDeLApp == .nuit)
+        #expect(prefs.themeDeLApp == .coloris(.terracotta) && prefs.nuanceDeLApp == .penombre)
+        prefs.nuanceDeLApp = .nuit
+        let relu = Preferences.forTesting(store: store)
+        #expect(relu.themeDeLApp == .coloris(.terracotta) && relu.nuanceDeLApp == .nuit)
     }
 
-    @Test("Une valeur illisible laisse les défauts sans rendre la sauvegarde illisible")
-    func valeurIllisible() {
-        let store = MemoireDeTest()
-        store.enregistrer(Data(#"{"characterOrder":["A"],"hotKeys":[],"barVisible":true,"showNumbers":true,"couleurDeLApp":"nimporte","fondsDeLApp":"teinte:x"}"#.utf8),
-                          pour: Preferences.key)
-        let prefs = Preferences.forTesting(store: store)
-        #expect(prefs.characterOrder == ["A"])
-        #expect(prefs.couleurDeLApp == Jetons.couleurParDefaut && prefs.fondsDeLApp == nil)
+    @Test("La teinte de Personnalisé suit le curseur, au degré près")
+    func teinteDePersonnalise() {
+        for teinte in [0, 37, 180, 293, 359] {
+            #expect(ConversionDuTheme.teinte(ConversionDuTheme.aLaTeinte(Jetons.personnaliseParDefaut, teinte)) == teinte)
+        }
     }
 
-    @Test("Le thème courant lit les jetons du réglage courant")
+    @Test("Le thème courant lit les couleurs du réglage courant")
     func facade() {
         let prefs = Preferences.shared
-        let avant = (prefs.couleurDeLApp, prefs.fondsDeLApp)
-        defer { (prefs.couleurDeLApp, prefs.fondsDeLApp) = avant }
-        prefs.couleurDeLApp = .prereglage(.azur)
-        prefs.fondsDeLApp = .nuit
-        for apparence in Jetons.apparences {
-            #expect(ThemeCourant.theme(apparence) == Jetons.theme(.prereglage(.azur), fonds: .nuit, apparence))
-        }
-        prefs.couleurDeLApp = .prereglage(.corail)
-        #expect(ThemeCourant.theme(.clair).primaire == Jetons.theme(.prereglage(.corail), fonds: .nuit, .clair).primaire)
+        let avant = (prefs.themeDeLApp, prefs.nuanceDeLApp)
+        defer { (prefs.themeDeLApp, prefs.nuanceDeLApp) = avant }
+        prefs.themeDeLApp = .coloris(.lagon)
+        prefs.nuanceDeLApp = .crepuscule
+        #expect(ThemeCourant.reglage == ThemeCourant.Reglage(theme: .coloris(.lagon), nuance: .crepuscule))
+        #expect(ThemeCourant.couleurs(.coloris(.lagon), .crepuscule) == Jetons.Nuancier.couleurs(.coloris(.lagon), .crepuscule))
+        prefs.nuanceDeLApp = nil
+        #expect(ThemeCourant.reglage.nuance(sombre: true) == .penombre && ThemeCourant.reglage.nuance(sombre: false) == .jour)
     }
 
-    @Test("Chaque préréglage garde ses textes lisibles, en clair et en sombre")
+    @Test("Chaque coloris garde ses textes lisibles, dans chaque nuance")
     func contrastes() {
-        for prereglage in Jetons.Prereglage.allCases {
-            for apparence in Jetons.apparences {
-                let theme = Jetons.theme(.prereglage(prereglage), apparence)
-                #expect(contraste(theme.encreSurPrimaire, theme.primaire) >= 4.5, "\(prereglage) \(apparence) : texte sur plein")
-                #expect(contraste(theme.primaireEncre, theme.fenetre) >= 4.5, "\(prereglage) \(apparence) : couleur écrite")
-                #expect(contraste(theme.encreSurDanger, theme.dangerPlein) >= 4.5, "\(prereglage) \(apparence) : texte sur destructif")
+        for coloris in Jetons.Coloris.allCases {
+            for nuance in Jetons.Nuance.allCases {
+                let c = Jetons.Nuancier.couleurs(.coloris(coloris), nuance)
+                #expect(contraste(c.texteSurAccent, c.accent) >= 4.5, "\(coloris) \(nuance) : texte sur plein")
+                #expect(contraste(c.accentTexte, c.fondFenetre) >= 4.5, "\(coloris) \(nuance) : couleur écrite")
+                #expect(contraste(c.texteSurDanger, c.danger) >= 4.5, "\(coloris) \(nuance) : texte sur destructif")
             }
         }
     }
