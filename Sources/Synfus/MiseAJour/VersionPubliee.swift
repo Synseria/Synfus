@@ -11,6 +11,9 @@ struct VersionPubliee: Equatable, Sendable {
     let image: URL
     let nomImage: String
     let empreintes: URL
+    /// Le macOS le plus ancien qui ouvre cette version (« 26 »), lu dans le nom du DMG avant
+    /// tout téléchargement : une version qu'on ne pourrait pas ouvrir ne se propose pas.
+    let macOSMinimum: String
 
     static let depot = "Synseria/Synfus"
     /// La page d'une release d'après son numéro : celle de la version installée, que l'API n'a pas à dire.
@@ -32,7 +35,10 @@ struct VersionPubliee: Equatable, Sendable {
 
     /// La réponse de `releases/latest` (qui écarte d'office brouillons et
     /// préversions) ; `nil` si elle n'a pas le DMG de `architecture` ou les
-    /// empreintes — une release incomplète ne se propose pas.
+    /// empreintes — une release incomplète ne se propose pas. Le DMG s'appelle
+    /// `Synfus-X.Y.Z-macos<N>-<arch>.dmg` (`MACOS_MINIMUM` de build.sh) : les versions
+    /// d'avant, qui ne lisent que `Synfus-X.Y.Z-<arch>.dmg`, ne voient pas une release
+    /// qu'elles ne sauraient pas écarter d'un macOS trop ancien.
     static func lire(_ donnees: Data, architecture: String) -> VersionPubliee? {
         struct Reponse: Decodable {
             struct Fichier: Decodable {
@@ -50,11 +56,31 @@ struct VersionPubliee: Equatable, Sendable {
               reponse.tagName.hasPrefix("v"), NumeroVersion(reponse.tagName) != nil
         else { return nil }
         let numero = String(reponse.tagName.dropFirst())
-        let nomImage = "Synfus-\(numero)-\(architecture).dmg"
-        func fichier(_ nom: String) -> URL? { reponse.assets.first { $0.name == nom }?.browserDownloadUrl }
-        guard let image = fichier(nomImage), let empreintes = fichier("SHA256SUMS.txt") else { return nil }
-        return VersionPubliee(numero: numero, page: reponse.htmlUrl, image: image, nomImage: nomImage,
-                              empreintes: empreintes)
+        let (debut, fin) = ("Synfus-\(numero)-macos", "-\(architecture).dmg")
+        guard let dmg = reponse.assets.first(where: { fichier in
+                  guard fichier.name.hasPrefix(debut), fichier.name.hasSuffix(fin) else { return false }
+                  return OperatingSystemVersion(texte: String(fichier.name.dropFirst(debut.count).dropLast(fin.count))) != nil
+              }),
+              let empreintes = reponse.assets.first(where: { $0.name == "SHA256SUMS.txt" })?.browserDownloadUrl
+        else { return nil }
+        return VersionPubliee(numero: numero, page: reponse.htmlUrl, image: dmg.browserDownloadUrl, nomImage: dmg.name,
+                              empreintes: empreintes,
+                              macOSMinimum: String(dmg.name.dropFirst(debut.count).dropLast(fin.count)))
+    }
+
+    /// Vrai si ce Mac ouvre cette version.
+    func ouvrable(sur systeme: OperatingSystemVersion) -> Bool {
+        Self.ouvrable(minimum: macOSMinimum, sur: systeme)
+    }
+
+    /// Vrai si `systeme` atteint `minimum` (« 26 », « 26.0 », « 26.1.2 », comme
+    /// `LSMinimumSystemVersion`) ; un minimum absent n'exige rien, un minimum illisible
+    /// n'ouvre rien.
+    static func ouvrable(minimum: String?, sur systeme: OperatingSystemVersion) -> Bool {
+        guard let minimum else { return true }
+        guard let exige = OperatingSystemVersion(texte: minimum) else { return false }
+        return ![systeme.majorVersion, systeme.minorVersion, systeme.patchVersion]
+            .lexicographicallyPrecedes([exige.majorVersion, exige.minorVersion, exige.patchVersion])
     }
 
     /// Vrai si cette release est plus récente que `installee` ; faux sans
@@ -116,4 +142,16 @@ struct NumeroVersion: Comparable {
     }
 
     static func == (a: NumeroVersion, b: NumeroVersion) -> Bool { !(a < b) && !(b < a) }
+}
+
+extension OperatingSystemVersion {
+    /// « 26 », « 26.1 » ou « 26.1.2 » ; `nil` pour tout autre texte.
+    init?(texte: String) {
+        let nombres = texte.split(separator: ".", omittingEmptySubsequences: false).map { Int($0) }
+        guard (1...3).contains(nombres.count), let majeur = nombres[0], majeur > 0,
+              nombres.allSatisfy({ ($0 ?? -1) >= 0 })
+        else { return nil }
+        self.init(majorVersion: majeur, minorVersion: nombres.count > 1 ? nombres[1] ?? 0 : 0,
+                  patchVersion: nombres.count > 2 ? nombres[2] ?? 0 : 0)
+    }
 }

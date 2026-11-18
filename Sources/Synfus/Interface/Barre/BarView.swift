@@ -33,8 +33,8 @@ struct BarView: View {
     private static let barSpace = "synfusBar"
 
     var body: some View {
-        VStack(spacing: Jetons.Espace.un) {
-            HStack(spacing: Jetons.Espace.un) {
+        VStack(spacing: Jetons.espace1) {
+            HStack(spacing: Jetons.espace1) {
                 handle
                 content
                 settingsButton
@@ -47,15 +47,15 @@ struct BarView: View {
                 teamRow.frame(maxWidth: .infinity)
             }
         }
-        .padding(.horizontal, Jetons.Espace.un)
-        .padding(.vertical, Jetons.Espace.un)
+        .padding(.horizontal, Jetons.espace1)
+        .padding(.vertical, Jetons.espace1)
         // Sur les deux rangées : les cadres des secteurs et des pastilles
         // doivent se comparer dans un seul repère.
         .coordinateSpace(name: Self.barSpace)
         .background(WindowDragArea())   // tout le fond libre déplace la barre
         .surfaceFlottante(verre: true)
         .fixedSize()
-        .animation(sansMouvement ? nil : Jetons.Duree.animation(Jetons.Duree.etat), value: dragging != nil)
+        .animation(sansMouvement ? nil : Jetons.courbeStandard.animation(Jetons.dureeRapide), value: dragging != nil)
         .contextMenu { contextMenu }
         .onChange(of: manager.effectif) { _, effectif in pruneChipFrames(effectif) }
         .onChange(of: prefs.equipes.count) { _, _ in pruneSectorFrames() }
@@ -63,7 +63,7 @@ struct BarView: View {
 
     /// « Tous », une case par équipe, et « + » tant qu'on peut en créer une.
     private var teamRow: some View {
-        HStack(spacing: Jetons.Espace.un) {
+        HStack(spacing: Jetons.espace1) {
             sector(.tous)
             ForEach(prefs.equipes.indices, id: \.self) { index in
                 sector(.equipe(index))
@@ -109,18 +109,18 @@ struct BarView: View {
     /// l'icône du bundle, un overlay de jeu reste un outil. La zone sensible,
     /// le curseur en main ouverte et l'infobulle sont inchangés.
     private var handle: some View {
-        HStack(spacing: Jetons.Espace.un) {
+        HStack(spacing: Jetons.espace1) {
             ForEach(0..<2, id: \.self) { _ in
-                VStack(spacing: Jetons.Espace.un) {
+                VStack(spacing: Jetons.espace1) {
                     ForEach(0..<3, id: \.self) { _ in
                         Circle()
-                            .fill(Color.jeton(\.encreTertiaire))
-                            .frame(width: Jetons.Trait.focus, height: Jetons.Trait.focus)
+                            .fill(Color.jeton(\.encre3))
+                            .frame(width: Jetons.epaisseurFocus, height: Jetons.epaisseurFocus)
                     }
                 }
             }
         }
-        .frame(width: Jetons.Espace.quatre, height: Jetons.Taille.controle)
+        .frame(width: Jetons.espace4, height: Jetons.hauteurControle)
         .overlay(WindowDragArea())
         .help(L("barre.glisser"))
     }
@@ -130,8 +130,8 @@ struct BarView: View {
     private var separator: some View {
         Capsule()
             .fill(Color.jeton(\.filet))
-            .frame(width: Jetons.Trait.filet, height: Jetons.Espace.quatre)
-            .padding(.horizontal, Jetons.Espace.un)
+            .frame(width: Jetons.epaisseurFilet, height: Jetons.espace4)
+            .padding(.horizontal, Jetons.espace1)
             .allowsHitTesting(false)
     }
 
@@ -139,7 +139,7 @@ struct BarView: View {
     /// passer par la barre de menus. Hors du contenu conditionnel : c'est quand
     /// rien ne marche qu'on cherche les réglages.
     private var settingsButton: some View {
-        GearButton().padding(.leading, Jetons.Espace.un)
+        GearButton().padding(.leading, Jetons.espace1)
     }
 
     @ViewBuilder
@@ -150,23 +150,23 @@ struct BarView: View {
             } label: {
                 Label(L("autorisation.accessibilite"), systemImage: "lock.shield")
             }
-            .buttonStyle(.bouton(.tertiaire))
+            .buttonStyle(BoutonTertiaire())
             .help(L("barre.accessibiliteRequise"))
         } else if manager.clients.isEmpty {
             Text(L("barre.aucunPerso"))
-                .font(Jetons.Typo.petit.police)
-                .foregroundStyle(Color.jeton(\.encreSecondaire))
-                .padding(.horizontal, Jetons.Espace.deux)
-                .padding(.vertical, Jetons.Espace.un)
+                .font(Jetons.typoMeta.font)
+                .foregroundStyle(Color.jeton(\.encre2))
+                .padding(.horizontal, Jetons.espace2)
+                .padding(.vertical, Jetons.espace1)
         } else {
             // L'effectif — l'équipe active, ou tous. Une équipe sans personne
             // de connecté le dit, et la rangée reste là pour revenir à « Tous ».
             if manager.effectif.isEmpty {
                 Text(L("barre.aucunPersoEquipe"))
-                    .font(Jetons.Typo.petit.police)
-                    .foregroundStyle(Color.jeton(\.encreSecondaire))
-                    .padding(.horizontal, Jetons.Espace.deux)
-                    .padding(.vertical, Jetons.Espace.un)
+                    .font(Jetons.typoMeta.font)
+                    .foregroundStyle(Color.jeton(\.encre2))
+                    .padding(.horizontal, Jetons.espace2)
+                    .padding(.vertical, Jetons.espace1)
             }
             ForEach(Array(manager.effectif.enumerated()), id: \.element.id) { index, client in
                 chip(index: index, client: client)
@@ -525,7 +525,7 @@ struct BarView: View {
                 guard let target = chipFrames.first(where: { entry in
                     entry.key != client.name && entry.value.contains(value.location)
                 })?.key else { return }
-                withAnimation(sansMouvement ? nil : Jetons.Duree.animation(Jetons.Duree.etat)) {
+                withAnimation(sansMouvement ? nil : Jetons.courbeStandard.animation(Jetons.dureeRapide)) {
                     Preferences.shared.swapOrder(client.name, target)
                     // Un tri, pas un inventaire : rien n'a changé côté clients.
                     WindowManager.shared.resort()

@@ -14,8 +14,8 @@ struct OuTrouverReseauTests {
         let fiche = try await OuTrouverDofusDB.monstre(827)
         #expect(fiche.noms["fr"] == "Minotot")
         #expect(fiche.repaires.contains { $0.genre == .donjon && $0.noms["fr"] == "Salle du Minotot" })
-        let situes = OuTrouver.situes(fiche.repaires, depuis: (0, 0), reseau: ReseauSousZones(Carte.integree),
-                                      reperes: ReperesCarte(Carte.integree.lieux)) { ItineraireZaap.distance((0, 0), $0) }
+        let situes = OuTrouver.situes(fiche.repaires, depuis: (0, 0), reseau: ReseauSousZones(CarteDuJeu.integree),
+                                      reperes: ReperesCarte(CarteDuJeu.integree.lieux)) { ItineraireZaap.distance((0, 0), $0) }
         #expect(situes.contains { [$0.situation.x, $0.situation.y, $0.situation.monde] == [-42, -17, Zaap.mondeDesDouze] })
     }
 
@@ -26,7 +26,7 @@ struct OuTrouverReseauTests {
         let bouftou = try #require(laine.lacheurs.first { $0.monstre.id == 101 })
         #expect(bouftou.taux > 10)
         #expect(bouftou.monstre.repaires.contains { $0.genre == .donjon && $0.entree == 120063489 })
-        let reseau = ReseauSousZones(Carte.integree)
+        let reseau = ReseauSousZones(CarteDuJeu.integree)
         #expect(bouftou.monstre.repaires.contains { $0.genre == .sousZone && !reseau.cases($0.id).isEmpty })
         let coiffe = try await OuTrouverDofusDB.objet(8463)
         let recette = try #require(coiffe.recette)

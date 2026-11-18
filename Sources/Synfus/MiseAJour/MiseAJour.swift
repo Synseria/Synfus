@@ -12,6 +12,8 @@ final class MiseAJour: ObservableObject {
     enum Etat: Equatable {
         case inconnu, verification, aJour
         case disponible(VersionPubliee)
+        /// Plus récente, mais pour un macOS que ce Mac n'a pas : dite, jamais proposée.
+        case incompatible(VersionPubliee)
         case installation(VersionPubliee)
         case echec(InstallateurMiseAJour.Echec, VersionPubliee)
     }
@@ -90,14 +92,17 @@ final class MiseAJour: ObservableObject {
             let derniere = await installateur.derniere()
             guard case .verification = etat else { return }
             if derniere != nil { Preferences.shared.derniereVerificationMaj = Date() }
-            if let derniere, derniere.plusRecente(que: installee) {
-                etat = .disponible(derniere)
-                NotificationMiseAJour.shared.annoncerSiNouvelle(derniere)
-            } else {
-                // GitHub muet : rien à proposer, on réessaiera au prochain tour.
-                etat = derniere == nil ? .inconnu : .aJour
-            }
+            etat = Self.etat(derniere: derniere, installee: installee, systeme: ProcessInfo.processInfo.operatingSystemVersion)
+            if case .disponible(let version) = etat { NotificationMiseAJour.shared.annoncerSiNouvelle(version) }
         }
+    }
+
+    /// Ce que dit la dernière release : GitHub muet, rien à proposer (on réessaiera au prochain
+    /// tour) ; plus récente, proposée si ce Mac l'ouvre, seulement dite sinon.
+    nonisolated static func etat(derniere: VersionPubliee?, installee: String, systeme: OperatingSystemVersion) -> Etat {
+        guard let derniere else { return .inconnu }
+        guard derniere.plusRecente(que: installee) else { return .aJour }
+        return derniere.ouvrable(sur: systeme) ? .disponible(derniere) : .incompatible(derniere)
     }
 
     /// Vrai si la version qui tourne n'est pas celle du lancement précédent.
@@ -120,10 +125,24 @@ final class MiseAJour: ObservableObject {
     func proposer() {
         guard let version = proposee else { return }
         if case .installation = etat { return }
-        let demande = DemandeConfirmation(titre: L("maj.alerte.titre", version.numero), detail: L("maj.alerte.detail"),
-                                          verbe: L("maj.alerte.installer"), rang: .principal,
-                                          lien: LienConfirmation(titre: L("maj.nouveautes"), url: version.page))
-        Task { if await Confirmation.demander(demande) { installer(version) } }
+        if Self.confirmer(version) { installer(version) }
+    }
+
+    /// « Installer Synfus X ? » : un geste qui engage sans détruire (le verbe est le défaut, ⏎), et
+    /// « Nouveautés », qui ouvre la page de la version et laisse l'alerte en place. Au premier plan :
+    /// Synfus est une app de barre de menus, l'alerte s'ouvrirait derrière le jeu.
+    private static func confirmer(_ version: VersionPubliee) -> Bool {
+        let alerte = NSAlert()
+        alerte.messageText = L("maj.alerte.titre", version.numero)
+        alerte.informativeText = L("maj.alerte.detail")
+        alerte.addButton(withTitle: L("maj.alerte.installer"))
+        alerte.addButton(withTitle: L("commun.annuler")).keyEquivalent = "\u{1b}"
+        let nouveautes = alerte.addButton(withTitle: L("maj.nouveautes"))
+        nouveautes.target = Nouveautes.shared
+        nouveautes.action = #selector(Nouveautes.ouvrir)
+        Nouveautes.shared.page = version.page
+        NSApp.activate()
+        return alerte.runModal() == .alertFirstButtonReturn
     }
 
     private func installer(_ version: VersionPubliee) {
@@ -146,7 +165,7 @@ final class MiseAJour: ObservableObject {
                 remplacer(par: neuve, cible: cible, identifiant: identifiant, dossier: dossier)
             } catch {
                 try? FileManager.default.removeItem(at: dossier)
-                etat = .echec(error, version)
+                etat = error == .systeme ? .incompatible(version) : .echec(error, version)
             }
         }
     }
@@ -191,4 +210,16 @@ final class MiseAJour: ObservableObject {
         open "$3"
         rm -rf "$5"
         """
+}
+
+/// Le bouton « Nouveautés » de l'alerte d'installation : une cible qui ouvre la page sans fermer l'alerte
+/// (un bouton d'`NSAlert` sans action propre la ferme).
+@MainActor
+private final class Nouveautes: NSObject {
+    static let shared = Nouveautes()
+    var page: URL?
+
+    @objc func ouvrir() {
+        if let page { NSWorkspace.shared.open(page) }
+    }
 }

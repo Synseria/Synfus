@@ -24,9 +24,9 @@ struct BlocZaaps: View {
         let connus = prefs.zaapsConnus
         let affiches = montres(connus, langue)
         Bloc(L("reglages.zaaps"), aide: L("zaap.liste.aide"), paresseux: true) {
-            HStack(spacing: Jetons.Espace.deux) {
+            HStack(spacing: Jetons.espace2) {
                 ChampFiltre(invite: L("palette.reglages.filtrer"), texte: $filtre)
-                Segments(L("palette.reglages.vue"), selection: $vue, choix: Vue.allCases.map { ($0, $0.libelle) })
+                SegmenteTexte(titre: L("palette.reglages.vue"), options: Vue.allCases.map { ($0, $0.libelle) }, selection: $vue)
                 AjoutZaap()
             }
             .rangee()
@@ -38,8 +38,8 @@ struct BlocZaaps: View {
             }
         } entete: {
             Text(L("zaaps.compte", nombre: prefs.zaapsActifs.count, prefs.zaapsActifs.count, connus.count))
-                .font(Jetons.Typo.note.police)
-                .foregroundStyle(Color.jeton(\.encreSecondaire))
+                .font(Jetons.typoMeta.font)
+                .foregroundStyle(Color.jeton(\.encre2))
         }
     }
 
@@ -76,42 +76,41 @@ private struct LigneZaap: View {
     let zaap: Zaap
     let langue: Langue
     @ObservedObject private var prefs = Preferences.shared
+    @State private var confirmation: Confirmation?
 
     var body: some View {
         let actif = CatalogueZaaps.estActif(zaap, choix: prefs.zaapsChoix)
         Ligne(titre: zaap.nom(en: langue),
               detail: zaap.monde == Zaap.mondeDesDouze ? nil : L("zaap.autreCarte"),
               etat: zaap.zone(en: langue) ?? (prefs.zaapsAjoutes.contains(zaap) ? L("zaap.ajoute") : nil)) {
-            HStack(spacing: Jetons.Espace.deux) {
+            HStack(spacing: Jetons.espace2) {
                 Text(Coordonnees.texte(zaap.x, zaap.y))
-                    .font(Jetons.Typo.codeInterface.police)
-                    .foregroundStyle(Color.jeton(\.encreSecondaire))
+                    .font(Jetons.typoCode.font)
+                    .foregroundStyle(Color.jeton(\.encre2))
                     .frame(width: 80, alignment: .trailing)
                 BoutonEtiquette(cle: zaap.cle)
                 BoutonFavori(cle: zaap.cle)
                 Toggle(L("palette.reglages.actif"), isOn: Binding(
                     get: { actif }, set: { prefs.zaapsChoix[zaap.cle] = $0 }))
                     .labelsHidden()
-                    .toggleStyle(.switch)
-                    .controlSize(.small)
+                    .toggleStyle(.interrupteur)
                 if let carte = zaap.idCarte { MiniatureCarte(carte: carte) }
             }
         }
-        .foregroundStyle(actif ? Color.jeton(\.encre) : Color.jeton(\.encreTertiaire))
+        .foregroundStyle(actif ? Color.jeton(\.encre) : Color.jeton(\.encre3))
         .contextMenu {
             if prefs.zaapsAjoutes.contains(zaap) {
                 Button(L("zaap.supprimer"), role: .destructive) { confirmerSuppression() }
             }
         }
+        .confirmation($confirmation, annuler: L("commun.annuler"))
     }
 
     /// Un zaap ajouté à la main ne se retrouve pas : un dernier mot avant de l'effacer.
     private func confirmerSuppression() {
         let zaap = zaap
         let langue = langue
-        Task {
-            let demande = DemandeConfirmation(titre: L("zaap.supprimer.confirmation", zaap.nom(en: langue)), verbe: L("commun.supprimer"))
-            guard await Confirmation.demander(demande) else { return }
+        confirmation = Confirmation(titre: L("zaap.supprimer.confirmation", zaap.nom(en: langue)), verbe: L("commun.supprimer")) {
             let prefs = Preferences.shared
             prefs.zaapsAjoutes.removeAll { $0.cle == zaap.cle }
             prefs.zaapsChoix[zaap.cle] = nil
@@ -132,8 +131,8 @@ private struct AjoutZaap: View {
     var body: some View {
         Button(L("zaap.ajout")) { ouvert = true }
             .popover(isPresented: $ouvert, arrowEdge: .bottom) {
-                VStack(alignment: .leading, spacing: Jetons.Espace.deux) {
-                    HStack(spacing: Jetons.Espace.un) {
+                VStack(alignment: .leading, spacing: Jetons.espace2) {
+                    HStack(spacing: Jetons.espace1) {
                         TextField(L("zaap.ajout.nom"), text: $nom)
                         TextField("x", text: $x).frame(width: 50)
                         TextField("y", text: $y).frame(width: 50)
@@ -150,11 +149,12 @@ private struct AjoutZaap: View {
                             y = ""
                             ouvert = false
                         }
-                        .buttonStyle(.bouton(.principal))
+                        .buttonStyle(BoutonPrincipal())
                         .disabled(nouveau == nil)
                     }
                 }
-                .padding(Jetons.Espace.trois)
+                .padding(Jetons.espace3)
+                .racineSynfus()
             }
     }
 

@@ -17,7 +17,7 @@ struct OuTrouverTests {
 
     /// La sous-zone 5 de 0,0 à 4,0 ; la 6 en 10,10 ; la 7, intérieur sans case,
     /// n'a qu'un repère ; un donjon en 20,20 dont l'entrée est sa carte 900.
-    private static let carte = Carte(
+    private static let carte = CarteDuJeu(
         date: .now,
         lieux: [lieu(1, 30, 30, sousZone: 7, nom: "Atelier"),
                 lieu(2, 20, 20, carte: 900, sousZone: 6, categorie: CategorieLieu.donjon.rawValue, nom: "Antre du Dragon Cochon"),
@@ -41,8 +41,8 @@ struct OuTrouverTests {
         #expect(reseau.cases(7).isEmpty)
         #expect(reseau.estDuMondeDesDouze(7) && !reseau.estDuMondeDesDouze(8))
         // La carte intégrée situe des milliers de cases.
-        let integree = ReseauSousZones(Carte.integree)
-        #expect(Carte.integree.sousZones.contains { !integree.cases($0.id).isEmpty })
+        let integree = ReseauSousZones(CarteDuJeu.integree)
+        #expect(CarteDuJeu.integree.sousZones.contains { !integree.cases($0.id).isEmpty })
     }
 
     @Test("Une sous-zone : sa case la plus proche du perso, son milieu sans position, sinon un repère")

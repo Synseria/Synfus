@@ -8,7 +8,7 @@ struct PositionsPNJVue: View {
     @Environment(\.accessibilityReduceMotion) private var sansMouvement
     @State private var disponible: CGFloat = 0
 
-    private static let interstice = Jetons.Espace.deux
+    private static let interstice = Jetons.espace2
 
     private static func ancre(_ position: PNJ.Position) -> String { "position:\(position.x),\(position.y)" }
 
@@ -37,7 +37,7 @@ struct PositionsPNJVue: View {
             .scrollDisabled(!DispositionPositions.defile(positions.count))
             .onChange(of: modele.position) { _, position in
                 guard let position else { return }
-                withAnimation(sansMouvement ? nil : Jetons.Duree.animation(Jetons.Duree.etat)) { defilement.scrollTo(Self.ancre(position), anchor: .center) }
+                withAnimation(sansMouvement ? nil : Jetons.courbeStandard.animation(Jetons.dureeRapide)) { defilement.scrollTo(Self.ancre(position), anchor: .center) }
             }
         }
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { disponible = $0 }
@@ -60,14 +60,14 @@ private struct QuetesDePosition: View {
                 .foregroundStyle(encres.accent)
                 .lineLimit(1)
         }
-        .font(Jetons.Typo.petit.police)
+        .font(Jetons.typoMeta.font)
         .background {
             if encres.surImage, !quetes.isEmpty {
-                RoundedRectangle(cornerRadius: Jetons.Rayon.pastille, style: .continuous)
-                    .fill(Color.jeton(\.nuitProfond).opacity(FondCarte.voileTexte))
-                    .padding(-Jetons.Espace.un)
+                RoundedRectangle(cornerRadius: Jetons.rayon0, style: .continuous)
+                    .fill(Color.jeton(\.fondFenetre, en: .nuit).opacity(FondCarte.voileTexte))
+                    .padding(-Jetons.espace1)
             }
         }
-        .frame(maxWidth: .infinity, minHeight: Jetons.Espace.quatre, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: Jetons.espace4, alignment: .leading)
     }
 }

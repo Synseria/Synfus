@@ -1,7 +1,7 @@
 #!/bin/bash
 # build.sh — build Release signé de Synfus.
 #   sh build.sh                    → dist/Synfus.app
-#   sh build.sh --release [X.Y.Z]  → + dist/Synfus-X.Y.Z-<arch>.dmg
+#   sh build.sh --release [X.Y.Z]  → + dist/Synfus-X.Y.Z-macos<N>-<arch>.dmg
 #   sh build.sh --publish X.Y.Z    → depuis main propre : main et tag vX.Y.Z
 #                                    poussés, DMG construits ici et publiés
 #   sh build.sh --help
@@ -23,6 +23,13 @@ cd "$(dirname "$0")"
 # 0 → construite et publiée depuis ce Mac. 0 : le runner GitHub n'a pas
 # encore Xcode 27, qu'exige la swift-tools-version du paquet.
 PUBLICATION_PAR_CI=0
+
+# Le macOS le plus ancien qui ouvre ce build : inscrit dans l'Info.plist et dans le nom du DMG, que
+# lit la mise à jour avant de proposer une version (`VersionPubliee.lire`). Une 0.14 ne connaît que
+# « Synfus-X.Y.Z-<arch>.dmg » : elle ne propose donc jamais un build qui porte son minimum dans son
+# nom, qu'elle ne pourrait peut-être pas ouvrir. Lu dans `platforms` de Package.swift, seule source.
+MACOS_MINIMUM="$(sed -n 's/.*platforms: \[\.macOS(\.v\([0-9][0-9]*\))\].*/\1/p' Package.swift)"
+[ -n "$MACOS_MINIMUM" ] || { echo "build.sh : macOS minimum illisible dans Package.swift" >&2; exit 1; }
 
 aide() { sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; }
 
@@ -134,7 +141,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>CFBundlePackageType</key>       <string>APPL</string>
     <key>CFBundleShortVersionString</key><string>$VERSION</string>
     <key>CFBundleVersion</key>           <string>$BUILD</string>
-    <key>LSMinimumSystemVersion</key>    <string>14.0</string>
+    <key>LSMinimumSystemVersion</key>    <string>$MACOS_MINIMUM.0</string>
     <!-- Les langues de l'interface (Resources/Localisation/<code>.json) : les
          déclarer fait apparaître Synfus dans Réglages Système › Langue et
          région › Applications, et Locale.preferredLanguages suit ce choix. -->
@@ -158,9 +165,11 @@ if [ -f "Resources/$NAME.icns" ]; then
     /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string $NAME" "$APP/Contents/Info.plist"
 fi
 
-# Les libellés de l'interface (une table JSON par langue), la carte intégrée.
+# Les libellés de l'interface (une table JSON par langue), la carte intégrée, l'emblème Synseria
+# (copie de marque/ du SDS, que l'À propos montre).
 cp -R "Resources/Localisation" "$APP/Contents/Resources/Localisation"
 cp "Resources/Carte.json" "$APP/Contents/Resources/Carte.json"
+cp "Resources/synseria-embleme-synfus.svg" "$APP/Contents/Resources/"
 
 echo "==> Signature"
 signer "$APP" "$BUNDLE_ID"
@@ -168,7 +177,7 @@ signer "$APP" "$BUNDLE_ID"
 echo "==> $APP prêt"
 
 if [ "$MODE" = "release" ]; then
-    DMG="$DIST/$NAME-$VERSION-${ARCH:-$(uname -m)}.dmg"
+    DMG="$DIST/$NAME-$VERSION-macos$MACOS_MINIMUM-${ARCH:-$(uname -m)}.dmg"
     ./Tools/make-dmg.sh "$APP" "$DMG"
     # Les symboles du binaire livré : un rapport de plantage (MetricKit) ne
     # porte que des adresses, Tools/symboliser.sh les traduit avec eux.

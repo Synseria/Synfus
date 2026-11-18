@@ -8,8 +8,8 @@ struct MiseAJourTests {
     {"tag_name":"v0.11.0","html_url":"https://github.com/Synseria/Synfus/releases/tag/v0.11.0","draft":false,
      "assets":[
       {"name":"SHA256SUMS.txt","browser_download_url":"https://github.com/Synseria/Synfus/releases/download/v0.11.0/SHA256SUMS.txt"},
-      {"name":"Synfus-0.11.0-arm64.dmg","browser_download_url":"https://github.com/Synseria/Synfus/releases/download/v0.11.0/Synfus-0.11.0-arm64.dmg"},
-      {"name":"Synfus-0.11.0-x86_64.dmg","browser_download_url":"https://github.com/Synseria/Synfus/releases/download/v0.11.0/Synfus-0.11.0-x86_64.dmg"}]}
+      {"name":"Synfus-0.11.0-macos26-arm64.dmg","browser_download_url":"https://github.com/Synseria/Synfus/releases/download/v0.11.0/Synfus-0.11.0-macos26-arm64.dmg"},
+      {"name":"Synfus-0.11.0-macos26-x86_64.dmg","browser_download_url":"https://github.com/Synseria/Synfus/releases/download/v0.11.0/Synfus-0.11.0-macos26-x86_64.dmg"}]}
     """
 
     @Test("La ligne de version dit de quand date la réponse de GitHub, ou seulement l'état")
@@ -48,8 +48,9 @@ struct MiseAJourTests {
     func lecture() throws {
         let version = try #require(VersionPubliee.lire(Data(Self.reponse.utf8), architecture: "x86_64"))
         #expect(version.numero == "0.11.0")
-        #expect(version.nomImage == "Synfus-0.11.0-x86_64.dmg")
-        #expect(version.image.lastPathComponent == "Synfus-0.11.0-x86_64.dmg")
+        #expect(version.nomImage == "Synfus-0.11.0-macos26-x86_64.dmg")
+        #expect(version.image.lastPathComponent == "Synfus-0.11.0-macos26-x86_64.dmg")
+        #expect(version.macOSMinimum == "26")
         #expect(version.empreintes.lastPathComponent == "SHA256SUMS.txt")
         #expect(version.page.absoluteString.hasSuffix("/tag/v0.11.0"))
     }
@@ -62,6 +63,45 @@ struct MiseAJourTests {
         #expect(VersionPubliee.lire(Data("{}".utf8), architecture: "arm64") == nil)
         #expect(VersionPubliee.lire(Data(Self.reponse.replacingOccurrences(of: "v0.11.0\",\"html", with: "nightly\",\"html").utf8),
                                     architecture: "arm64") == nil)
+    }
+
+    @Test("Une release au nom d'avant, sans macOS minimum, ne se lit pas : rien ne dirait si ce Mac l'ouvre")
+    func nomSansMinimum() {
+        let ancienne = Self.reponse.replacingOccurrences(of: "-macos26-", with: "-")
+        #expect(VersionPubliee.lire(Data(ancienne.utf8), architecture: "arm64") == nil)
+        for illisible in ["-macos-", "-macosX-", "-macos0-", "-macos26.a-"] {
+            let reponse = Self.reponse.replacingOccurrences(of: "-macos26-", with: illisible)
+            #expect(VersionPubliee.lire(Data(reponse.utf8), architecture: "arm64") == nil, "\(illisible)")
+        }
+        let fine = Self.reponse.replacingOccurrences(of: "-macos26-", with: "-macos26.2-")
+        #expect(VersionPubliee.lire(Data(fine.utf8), architecture: "arm64")?.macOSMinimum == "26.2")
+    }
+
+    @Test("Le macOS minimum se compare au système, composant par composant")
+    func macOSMinimum() {
+        let tahoe = OperatingSystemVersion(majorVersion: 26, minorVersion: 1, patchVersion: 0)
+        let sequoia = OperatingSystemVersion(majorVersion: 15, minorVersion: 7, patchVersion: 2)
+        #expect(VersionPubliee.ouvrable(minimum: "26", sur: tahoe))
+        #expect(VersionPubliee.ouvrable(minimum: "26.0", sur: tahoe))
+        #expect(VersionPubliee.ouvrable(minimum: "26.1", sur: tahoe))
+        #expect(!VersionPubliee.ouvrable(minimum: "26.1.1", sur: tahoe))
+        #expect(!VersionPubliee.ouvrable(minimum: "27", sur: tahoe))
+        #expect(!VersionPubliee.ouvrable(minimum: "26.0", sur: sequoia))
+        #expect(VersionPubliee.ouvrable(minimum: "14.0", sur: sequoia))
+        #expect(VersionPubliee.ouvrable(minimum: nil, sur: sequoia))
+        #expect(!VersionPubliee.ouvrable(minimum: "vingt-six", sur: tahoe))
+    }
+
+    @Test("Une version plus récente pour un macOS plus récent se dit sans se proposer")
+    func incompatible() throws {
+        let version = try #require(VersionPubliee.lire(Data(Self.reponse.utf8), architecture: "arm64"))
+        let tahoe = OperatingSystemVersion(majorVersion: 26, minorVersion: 0, patchVersion: 0)
+        let sequoia = OperatingSystemVersion(majorVersion: 15, minorVersion: 7, patchVersion: 0)
+        #expect(MiseAJour.etat(derniere: version, installee: "0.10.0", systeme: tahoe) == .disponible(version))
+        #expect(MiseAJour.etat(derniere: version, installee: "0.10.0", systeme: sequoia) == .incompatible(version))
+        #expect(MiseAJour.etat(derniere: version, installee: "0.11.0", systeme: sequoia) == .aJour)
+        #expect(MiseAJour.etat(derniere: nil, installee: "0.10.0", systeme: tahoe) == .inconnu)
+        #expect(MiseAJour.Etat.incompatible(version).libelle == L("maj.incompatible", "0.11.0", "26"))
     }
 
     @Test("Les versions se comparent nombre par nombre")

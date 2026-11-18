@@ -32,8 +32,8 @@ struct QuetesReseauTests {
         #expect(quetes.metiers["26"] != nil && quetes.camps["1"] != nil)
 
         var contexte = ContextePalette()
-        contexte.lieux = Carte.integree.lieux
-        contexte.zaaps = ZaapsSitues(Carte.integree.zaaps, reseau: .vide)
+        contexte.lieux = CarteDuJeu.integree.lieux
+        contexte.zaaps = ZaapsSitues(CarteDuJeu.integree.zaaps, reseau: .vide)
         contexte.quetes = quetes
         let horloge = ContinuousClock()
         let index = IndexPalette(contexte)

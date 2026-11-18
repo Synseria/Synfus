@@ -1,7 +1,7 @@
 // Copié de SynseriaKit (Synseria-Design) — ne pas retoucher : changer le paquet dans Synseria-Design, puis sh propager.sh.
-// SynseriaKit ac80a4e0b47b7314 · contenu 5de2835fd54b350d
+// SynseriaKit 832ae65487891069 · contenu 38ff176bbd95f225
 // Le rapport envoyé : des jours d'utilisation en OTLP/HTTP JSON, et ce qui le décrit (pur).
-// Contrat du collecteur : Flux-Domus, docs/11_telemetrie.md.
+// Le contrat est celui du collecteur.
 
 import CryptoKit
 import Foundation
@@ -9,7 +9,7 @@ import IOKit
 
 /// Ce qui décrit l'installation dans chaque rapport.
 public struct ContexteDeTelemetrie: Equatable, Sendable {
-    /// `service.name` : l'app, telle que le collecteur la connaît (`synfus`, `synthetic`).
+    /// `service.name` : l'app, telle que le collecteur la connaît (son nom en minuscules).
     public var service: CleDeTelemetrie
     /// `IdentifiantDInstallation` : 64 caractères hexadécimaux.
     public var installation: String
@@ -190,7 +190,7 @@ public enum IdentifiantDInstallation {
 }
 
 /// Où, avec quoi et pour quel genre de build envoyer : trois clés de l'Info.plist, posées par le
-/// `build.sh` de l'app quand le coffre les lui donne. Il en manque une — build de développement —
+/// `build.sh` de l'app quand elle les a. Il en manque une — build de développement —
 /// : l'app compte, n'envoie rien.
 public struct ConfigurationDeTelemetrie: Equatable, Sendable {
     public static let cleURL = "SynseriaTelemetrieURL"

@@ -14,7 +14,7 @@ struct SourceCarte: View {
                 ?? L("zaap.maj.date", carte.carte.date.formatted(date: .abbreviated, time: .shortened)),
               etat: L("palette.reglages.carte.contenu", carte.carte.lieux.count, carte.carte.zaaps.count),
               aide: L("zaap.maj.aide")) {
-            HStack(spacing: Jetons.Espace.deux) {
+            HStack(spacing: Jetons.espace2) {
                 if miseAJour { ProgressView().controlSize(.small) }
                 Button(L("zaap.maj")) {
                     miseAJour = true
@@ -38,7 +38,7 @@ struct SourceQuetes: View {
         Ligne(titre: titre,
               etat: quetes.quetes.map { L("palette.reglages.quetes.contenu", $0.quetes.count, $0.pnjs.count) },
               aide: L("palette.reglages.quetes.aide")) {
-            HStack(spacing: Jetons.Espace.deux) {
+            HStack(spacing: Jetons.espace2) {
                 if quetes.chargement { ProgressView().controlSize(.small) }
                 Button(L("palette.reglages.quetes.maj")) { Task { try? await quetes.mettreAJour() } }
                     .disabled(quetes.chargement)
@@ -60,7 +60,7 @@ struct SourceClasses: View {
 
     var body: some View {
         Ligne(titre: titre, aide: L("classes.maj.aide")) {
-            HStack(spacing: Jetons.Espace.deux) {
+            HStack(spacing: Jetons.espace2) {
                 if classes.chargement { ProgressView().controlSize(.small) }
                 Button(L("classes.maj")) { Task { try? await classes.mettreAJour() } }
                     .disabled(classes.chargement)
@@ -85,22 +85,23 @@ struct BoutonEtiquette: View {
     var body: some View {
         Button { texte = prefs.etiquettes[cle] ?? ""; edition = true } label: {
             if let etiquette = prefs.etiquettes[cle] {
-                PastilleEtiquette(texte: etiquette)
+                Badge(texte: etiquette, ton: .accent)
             } else {
-                Image(systemName: "tag").foregroundStyle(Color.jeton(\.encreSecondaire))
+                Image(systemName: "tag").foregroundStyle(Color.jeton(\.encre2))
                     .aide(L("palette.reglages.etiquette"))
             }
         }
         .buttonStyle(.plain)
         .popover(isPresented: $edition, arrowEdge: .bottom) {
-            HStack(spacing: Jetons.Espace.deux) {
+            HStack(spacing: Jetons.espace2) {
                 TextField(L("palette.etiquette.exemple"), text: $texte)
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 160)
                     .onSubmit(valider)
                 Button(L("palette.reglages.ok"), action: valider)
             }
-            .padding(Jetons.Espace.deux)
+            .padding(Jetons.espace2)
+            .racineSynfus()
         }
     }
 
@@ -120,7 +121,7 @@ struct BoutonFavori: View {
         let favori = prefs.estFavori(cle)
         Button { prefs.basculerFavori(cle) } label: {
             Image(systemName: favori ? "star.fill" : "star")
-                .foregroundStyle(favori ? Color.jeton(\.safranTexte) : Color.jeton(\.encreSecondaire))
+                .foregroundStyle(favori ? Color.jeton(\.accentTexte) : Color.jeton(\.encre2))
         }
         .buttonStyle(.borderless)
         .aide(favori ? L("zaap.favori.retirer") : L("zaap.favori.ajouter"))
@@ -142,11 +143,11 @@ struct BoutonTrajet: View {
             ZaapClipboard.shared.copierTrajet(vers: (x, y), sousZone: sousZone, dansLesDouze: dansLesDouze)
             copie.signaler("trajet")
         } label: {
-            HStack(spacing: Jetons.Espace.un) {
-                Text(Coordonnees.texte(x, y)).font(Jetons.Typo.codeInterface.police)
+            HStack(spacing: Jetons.espace1) {
+                Text(Coordonnees.texte(x, y)).font(Jetons.typoCode.font)
                 IconeCopie(icone: "doc.on.clipboard", copie: copie.affiche("trajet"))
             }
-            .foregroundStyle(Color.jeton(\.encreSecondaire))
+            .foregroundStyle(Color.jeton(\.encre2))
         }
         .buttonStyle(.borderless)
         .help(dansLesDouze ? L("ouTrouver.copierTrajet") : L("trajet.copier.horsDesDouze"))
@@ -160,6 +161,6 @@ struct InterrupteurVuesCartes: View {
     @ObservedObject private var prefs = Preferences.shared
 
     var body: some View {
-        Interrupteur(titre: L("vuesCartes"), aide: L("vuesCartes.aide"), isOn: $prefs.vuesCartes)
+        LigneInterrupteur(titre: L("vuesCartes"), aide: L("vuesCartes.aide"), isOn: $prefs.vuesCartes)
     }
 }

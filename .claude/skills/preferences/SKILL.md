@@ -10,7 +10,9 @@ user-invocable: false
 
 - Tout est sérialisé en JSON sous une clé unique, `fr.synseria.synfus.preferences`, dans le
   `PreferencesStore` fourni (`UserDefaults.standard` en production). Tests :
-  `Preferences.forTesting(store:)` (règle dans `CLAUDE.md`).
+  `Preferences.forTesting(store: StockageEnMemoire())` (règle dans `CLAUDE.md`). Hors d'un bundle
+  `.app` — les tests, un binaire nu —, `Preferences.shared` s'adosse lui aussi à un
+  `StockageEnMemoire` : un test qui le change ne laisse rien au run suivant.
 - Aucune migration depuis les anciens identifiants (`fr.dofusyn.DofuSyn`, `fr.synfus.Synfus`) :
   choix assumé. Le fichier de préférences est nommé d'après le `BUNDLE_ID`.
 - Chaque `@Published` appelle `save()` dans son `didSet` ; `loading` bloque les écritures
@@ -23,9 +25,12 @@ user-invocable: false
   `reglages`, qui donne la clé JSON et en dérive écriture et lecture.
 - Un nouveau réglage entre en `.facultatif` (ou `.optionnel` si `nil` est permis) : absente
   d'une ancienne sauvegarde, la clé laisse le défaut. Seules les clés d'origine sont `.requis`.
-- Un choix écrit en texte (`.enTexte`, `.enTexteOptionnel`) : une valeur illisible — un préréglage retiré
-  comme `violet` — laisse le défaut au lieu de rendre la sauvegarde illisible. `nil` est le choix « Auto »
-  (`fondsDeLApp`) : il n'est pas écrit, et revenir à Auto l'efface.
+- Un choix écrit en texte (`.enTexte`) : une valeur illisible — un préréglage retiré comme `violet` —
+  laisse le défaut au lieu de rendre la sauvegarde illisible. Le thème (`.theme`) écrit `themeDeLApp`
+  et `nuanceDeLApp` (`systeme` quand l'app suit macOS) ; une sauvegarde sans `themeDeLApp` relit
+  les clés d'avant le nuancier (`couleurDeLApp`, `apparence` ; `fondsDeLApp` sans équivalent) par `ConversionDuTheme`.
+  Elles ne sont plus écrites : une 0.14 relancée après ne retrouve pas le choix (jade par défaut), et
+  sa propre écriture efface `themeDeLApp` — la version suivante reconvertit alors ce jade en Lagon.
 - **Une clé ne se renomme jamais** : les tests d'empreinte de `PreferencesTests` figent le JSON
   écrit, et « une sauvegarde amputée des clés récentes se relit » garde la compatibilité.
 - Plusieurs clés remplacées par une seule : la nouvelle clé prime ; tant qu'une sauvegarde ne

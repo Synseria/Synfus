@@ -1,5 +1,5 @@
 // Copié de SynseriaKit (Synseria-Design) — ne pas retoucher : changer le paquet dans Synseria-Design, puis sh propager.sh.
-// SynseriaKit ac80a4e0b47b7314 · contenu 7ffae09d03f2a773
+// SynseriaKit 832ae65487891069 · contenu 2735195b573384dc
 // Le compte du jour, gardé sur le Mac, envoyé chaque jour si l'utilisateur le partage.
 
 import Foundation
@@ -70,7 +70,7 @@ public final class RegistreDeTelemetrie {
     static let attenteApresEchec: TimeInterval = 3600
 
     /// - Parameters:
-    ///   - service: `service.name` du rapport (`synthetic`).
+    ///   - service: `service.name` du rapport, le nom de l'app en minuscules.
     ///   - espaceDesMesures: le préfixe des mesures de l'app (`persos`), `nil` si elle n'en a pas.
     ///   - fichier: où garder l'historique ; `nil` : en mémoire seulement.
     ///   - configuration: `nil` : l'app compte, n'envoie rien.

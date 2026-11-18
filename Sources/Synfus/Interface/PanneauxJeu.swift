@@ -117,9 +117,9 @@ struct BoutonEnTete: View {
     var body: some View {
         Button(action: action) {
             IconeCopie(icone: icone, copie: copie)
-                .font(Jetons.Typo.raccourci.police)
-                .frame(width: Jetons.Taille.cibleMin, height: Jetons.Taille.cibleMin)
-                .foregroundStyle(discret && !survole ? Color.jeton(\.encreSecondaire) : Color.jeton(\.encre))
+                .font(Jetons.typoMicro.font)
+                .frame(width: Jetons.hauteurCase, height: Jetons.hauteurCase)
+                .foregroundStyle(discret && !survole ? Color.jeton(\.encre2) : Color.jeton(\.encre))
         }
         .buttonStyle(.etat(nue: true))
         .onHover { survole = $0 }
@@ -147,8 +147,8 @@ struct EnTetePanneau<Titre: View, Boutons: View>: View {
         HStack(spacing: 0) {
             Image(systemName: icone)
                 .foregroundStyle(teinte)
-                .padding(.leading, Jetons.Espace.deux)
-                .padding(.trailing, Jetons.Espace.un)
+                .padding(.leading, Jetons.espace2)
+                .padding(.trailing, Jetons.espace1)
                 .frame(maxHeight: .infinity)
                 .overlay(WindowDragArea())
             // Le titre d'abord : sans priorité, la zone de glisser, flexible
@@ -160,11 +160,11 @@ struct EnTetePanneau<Titre: View, Boutons: View>: View {
                 .overlay(WindowDragArea(menu: menu, clic: clic))
                 .layoutPriority(1)
             WindowDragArea().frame(minWidth: 4, maxWidth: .infinity, maxHeight: .infinity)
-            HStack(spacing: Jetons.Espace.un) { boutons }
-                .padding(.vertical, Jetons.Espace.un)
+            HStack(spacing: Jetons.espace1) { boutons }
+                .padding(.vertical, Jetons.espace1)
         }
-        .padding(.trailing, Jetons.Espace.un)
-        .font(Jetons.Typo.note.police)
+        .padding(.trailing, Jetons.espace1)
+        .font(Jetons.typoMeta.font)
         // Les zones de glisser prennent la hauteur des boutons, sans tirer
         // l'en-tête vers le bas.
         .fixedSize(horizontal: false, vertical: true)

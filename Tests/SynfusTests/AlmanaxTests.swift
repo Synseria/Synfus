@@ -97,7 +97,7 @@ struct AlmanaxTests {
 
     @Test("Le Sanctuaire de l'Almanax est sur la carte intégrée, en Plaine des Porkass")
     func sanctuaire() throws {
-        let lieu = try #require(ReperesCarte(Carte.integree.lieux).lieu(id: Almanax.sanctuaire))
+        let lieu = try #require(ReperesCarte(CarteDuJeu.integree.lieux).lieu(id: Almanax.sanctuaire))
         #expect(lieu.noms["fr"] == "Sanctuaire de l'Almanax")
         #expect(lieu.monde == Zaap.mondeDesDouze)
     }

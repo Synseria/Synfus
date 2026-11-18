@@ -20,9 +20,9 @@ struct BlocsDiagnostic: View {
         attentionProbeSection
     }
 
-    private func texteCode(_ texte: String, _ couleur: Color = Color.jeton(\.encreSecondaire)) -> some View {
+    private func texteCode(_ texte: String, _ couleur: Color = Color.jeton(\.encre2)) -> some View {
         Text(texte)
-            .font(Jetons.Typo.codeInterface.police)
+            .font(Jetons.typoCode.font)
             .foregroundStyle(couleur)
             .textSelection(.enabled)
     }
@@ -37,10 +37,10 @@ struct BlocsDiagnostic: View {
                              : L("diagnostic.accessibiliteManquante"))
             } else {
                 ForEach(manager.clients) { client in
-                    VStack(alignment: .leading, spacing: Jetons.Espace.un) {
-                        Text(client.name).font(Jetons.Typo.corpsFort.police)
+                    VStack(alignment: .leading, spacing: Jetons.espace1) {
+                        Text(client.name).font(Jetons.typoTitreCarte.font)
                         texteCode(L("diagnostic.titre", client.rawTitle))
-                        texteCode("pid " + String(client.pid), Color.jeton(\.encreTertiaire))
+                        texteCode("pid " + String(client.pid), Color.jeton(\.encre3))
                         if prefs.lirePosition {
                             positionLine(for: client)
                         }
@@ -52,19 +52,19 @@ struct BlocsDiagnostic: View {
                                       ? L("diagnostic.apercu.introuvable")
                                       : previews.previews[client.slotKey] != nil
                                         ? L("diagnostic.apercu.capture")
-                                        : L("diagnostic.apercu.pasDemande"), Color.jeton(\.encreTertiaire))
+                                        : L("diagnostic.apercu.pasDemande"), Color.jeton(\.encre3))
                         }
                     }
                     .rangee()
                 }
             }
         } entete: {
-            HStack(spacing: Jetons.Espace.deux) {
+            HStack(spacing: Jetons.espace2) {
                 // La seconde qu'un client gelé coûte se paie ici, hors main : si elle monte à ~1 s alors que
                 // la barre reste fluide, c'est que le déport fait son travail.
                 Text(L("diagnostic.dernierInventaire", Int(managerDiagnostics.lastInventoryDuration * 1000)))
-                    .font(Jetons.Typo.codeInterface.police)
-                    .foregroundStyle(managerDiagnostics.lastInventoryDuration > 0.5 ? Color.jeton(\.alerte) : Color.jeton(\.encreSecondaire))
+                    .font(Jetons.typoCode.font)
+                    .foregroundStyle(managerDiagnostics.lastInventoryDuration > 0.5 ? Color.jeton(\.avertissement) : Color.jeton(\.encre2))
                 Button(L("commun.rafraichir")) { manager.refresh() }
             }
         }
@@ -77,10 +77,10 @@ struct BlocsDiagnostic: View {
         if let lignes = lecture.lignesPosition[client.name] {
             let position = lecteur.positions[client.name]
             texteCode(L("diagnostic.position.ligne", PositionCarte.libelle(position)),
-                      position == nil ? Color.jeton(\.alerte) : Color.jeton(\.encreSecondaire))
-            texteCode(L("diagnostic.position.brut", lignes.joined(separator: " ⏎ ")), Color.jeton(\.encreTertiaire))
+                      position == nil ? Color.jeton(\.avertissement) : Color.jeton(\.encre2))
+            texteCode(L("diagnostic.position.brut", lignes.joined(separator: " ⏎ ")), Color.jeton(\.encre3))
         } else {
-            texteCode(L("diagnostic.position.pasEncore"), Color.jeton(\.encreTertiaire))
+            texteCode(L("diagnostic.position.pasEncore"), Color.jeton(\.encre3))
         }
     }
 
@@ -99,14 +99,14 @@ struct BlocsDiagnostic: View {
     private var arrangementSection: some View {
         Bloc(L("diagnostic.rangement"), aide: L("diagnostic.rangement.aide")) {
             if let rapport = arranger.dernierRapport {
-                VStack(alignment: .leading, spacing: Jetons.Espace.un) {
+                VStack(alignment: .leading, spacing: Jetons.espace1) {
                     texteCode(L("diagnostic.rangement.entete", rapport.titre, rapport.ecran)
                               + " — " + rapport.date.formatted(date: .omitted, time: .standard))
                     if !rapport.rangees.isEmpty {
                         texteCode(L("diagnostic.rangement.ranges", rapport.rangees.joined(separator: ", ")))
                     }
                     ForEach(rapport.ecartees) { ecartee in
-                        texteCode(L("diagnostic.rangement.ecarte", ecartee.nom, ecartee.raison), Color.jeton(\.alerte))
+                        texteCode(L("diagnostic.rangement.ecarte", ecartee.nom, ecartee.raison), Color.jeton(\.avertissement))
                     }
                 }
                 .rangee()
@@ -119,8 +119,8 @@ struct BlocsDiagnostic: View {
     private var attentionProbeSection: some View {
         Bloc(L("diagnostic.attention"), aide: L("diagnostic.attention.aide")) {
             if !attention.pairing.isEmpty {
-                VStack(alignment: .leading, spacing: Jetons.Espace.un) {
-                    Text(L("diagnostic.attention.appariement")).font(Jetons.Typo.raccourci.police)
+                VStack(alignment: .leading, spacing: Jetons.espace1) {
+                    Text(L("diagnostic.attention.appariement")).font(Jetons.typoMicro.font)
                     ForEach(Array(attention.pairing.enumerated()), id: \.offset) { _, pair in
                         texteCode("\(pair.dock)  →  \(pair.character)")
                     }
@@ -128,15 +128,15 @@ struct BlocsDiagnostic: View {
                     // processus ne vaut plus rien : mieux vaut le dire que laisser lire une correspondance fausse.
                     if !attention.pairingReliable {
                         Label(L("diagnostic.attention.appariementDouteux"), systemImage: "exclamationmark.triangle")
-                            .font(Jetons.Typo.petit.police)
-                            .foregroundStyle(Color.jeton(\.alerte))
+                            .font(Jetons.typoMeta.font)
+                            .foregroundStyle(Color.jeton(\.avertissement))
                     }
                 }
                 .rangee()
             }
             if let lecture = attention.dockReading {
-                VStack(alignment: .leading, spacing: Jetons.Espace.un) {
-                    Text(L("diagnostic.attention.releve")).font(Jetons.Typo.raccourci.police)
+                VStack(alignment: .leading, spacing: Jetons.espace1) {
+                    Text(L("diagnostic.attention.releve")).font(Jetons.typoMicro.font)
                     texteCode(lecture)
                 }
                 .rangee()
@@ -150,15 +150,15 @@ struct BlocsDiagnostic: View {
             }
             if probe.events.isEmpty {
                 if probe.running {
-                    texteCode(L("diagnostic.attention.enEcoute"), Color.jeton(\.encreTertiaire)).rangee()
+                    texteCode(L("diagnostic.attention.enEcoute"), Color.jeton(\.encre3)).rangee()
                 }
             } else {
                 ScrollView {
-                    VStack(alignment: .leading, spacing: Jetons.Espace.un) {
+                    VStack(alignment: .leading, spacing: Jetons.espace1) {
                         ForEach(probe.events) { event in
-                            VStack(alignment: .leading, spacing: Jetons.Espace.un) {
+                            VStack(alignment: .leading, spacing: Jetons.espace1) {
                                 Text("\(event.time.formatted(date: .omitted, time: .standard))  \(event.label)")
-                                    .font(Jetons.Typo.codeInterface.police)
+                                    .font(Jetons.typoCode.font)
                                 texteCode(event.detail)
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)

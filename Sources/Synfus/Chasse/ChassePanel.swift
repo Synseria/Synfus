@@ -89,7 +89,7 @@ final class ChassePanel: NSObject, ObservableObject, NSWindowDelegate {
         panel.isReleasedWhenClosed = false
         panel.backgroundColor = .clear
         panel.isOpaque = false
-        panel.hasShadow = true
+        panel.hasShadow = false
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.delegate = self
         if !panel.setFrameAutosaveName("ChassePanel") || panel.frame.origin == .zero {

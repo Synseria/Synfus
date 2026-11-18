@@ -14,8 +14,8 @@ private struct Consigne: View {
         } icon: {
             Image(systemName: icone)
         }
-        .font((forte ? Jetons.Typo.corpsFort : Jetons.Typo.petit).police)
-        .foregroundStyle(urgente ? Color.jeton(\.safranTexte) : forte ? Color.jeton(\.encre) : Color.jeton(\.encreSecondaire))
+        .font((forte ? Jetons.typoTitreCarte : Jetons.typoMeta).font)
+        .foregroundStyle(urgente ? Color.jeton(\.avertissement) : forte ? Color.jeton(\.encre) : Color.jeton(\.encre2))
     }
 }
 
@@ -28,15 +28,15 @@ struct KimboVue: View {
     @ObservedObject private var aide = AideBoss.shared
 
     var body: some View {
-        Text(L("boss.kimbo.question")).font(Jetons.Typo.petit.police).foregroundStyle(Color.jeton(\.encreSecondaire))
+        Text(L("boss.kimbo.question")).font(Jetons.typoMeta.font).foregroundStyle(Color.jeton(\.encre2))
         ChoixBoss(choix: [(Kimbo.Etat.impair, L("boss.kimbo.terreEau")), (.pair, L("boss.kimbo.airFeu"))],
                   actuel: aide.session.kimbo) { etat in aide.noter { session, _ in session.kimbo = etat } }
         if let etat = aide.session.kimbo {
             VStack(alignment: .leading, spacing: 0) {
                 Text(etat.glyphesImpairs ? L("boss.kimbo.reste.pair") : L("boss.kimbo.reste.impair"))
-                    .font(Jetons.Typo.titre.police).foregroundStyle(Color.jeton(\.primaireEncre))
+                    .font(Jetons.typoSection.font).foregroundStyle(Color.jeton(\.accentTexte))
                 Text(etat.glyphesImpairs ? L("boss.kimbo.reste.pair.detail") : L("boss.kimbo.reste.impair.detail"))
-                    .font(Jetons.Typo.petit.police).foregroundStyle(Color.jeton(\.encreSecondaire))
+                    .font(Jetons.typoMeta.font).foregroundStyle(Color.jeton(\.encre2))
                     .fixedSize(horizontal: false, vertical: true)
             }
             Consigne(texte: etat.glyphesImpairs ? L("boss.kimbo.kimbo.impair") : L("boss.kimbo.kimbo.pair"),
@@ -60,9 +60,9 @@ struct ToxoliathVue: View {
         let touche = aide.session.toxoliathTouche
         let sous: Int? = if let tour = aide.tour, let touche, Toxoliath.toxmose(toucheAu: touche, tour: tour) { touche } else { nil }
         // Les deux gestes d'abord, sur une ligne qui ne bouge pas.
-        HStack(spacing: Jetons.Espace.un) {
+        HStack(spacing: Jetons.espace1) {
             Button(L("boss.toxoliath.touche")) { aide.noter { session, tour in session.toxoliathTouche = tour ?? 1 } }
-                .buttonStyle(.bouton(.secondaire, dense: true))
+                .buttonStyle(BoutonBorde())
                 .help(L("boss.toxoliath.touche.aide"))
                 .disabled(sous != nil)
             Spacer(minLength: 0)
@@ -110,13 +110,13 @@ struct IlyzaelleVue: View {
         let phase = Ilyzaelle.phase(seuil75: session.ilyzaelle75, seuil50: session.ilyzaelle50, tour: tour)
         // Les gestes d'abord, sur une ligne qui ne bouge pas : le seuil attendu
         // s'allume quand une phase le demande.
-        HStack(spacing: Jetons.Espace.un) {
+        HStack(spacing: Jetons.espace1) {
             Button(session.ilyzaelle75 == nil ? L("boss.ilyzaelle.seuil75") : L("boss.ilyzaelle.seuil50")) {
                 aide.noter { session, tour in
                     if session.ilyzaelle75 == nil { session.ilyzaelle75 = tour ?? 1 } else { session.ilyzaelle50 = tour ?? 1 }
                 }
             }
-            .buttonStyle(.bouton(.secondaire, dense: true))
+            .buttonStyle(BoutonBorde())
             .disabled(phase != .premiere && phase != .seconde)
             Spacer(minLength: 0)
             PetitBouton(icone: "xmark", aide: L("boss.ilyzaelle.annuler")) {
@@ -160,14 +160,14 @@ struct TalKashaVue: View {
 
     var body: some View {
         let glyphes = aide.session.glyphesTalKasha
-        HStack(spacing: Jetons.Espace.un) {
-            Text(L("boss.talKasha.glyphes")).font(Jetons.Typo.petit.police).foregroundStyle(Color.jeton(\.encreSecondaire))
+        HStack(spacing: Jetons.espace1) {
+            Text(L("boss.talKasha.glyphes")).font(Jetons.typoMeta.font).foregroundStyle(Color.jeton(\.encre2))
             Spacer()
             ForEach(1...TalKasha.glyphesRequis, id: \.self) { rang in
                 Text(String(repeating: "I", count: rang))
-                    .font(Jetons.Typo.corpsFort.police)
-                    .frame(width: Jetons.Espace.huit, height: Jetons.Taille.cibleMin)
-                    .foregroundStyle(rang <= glyphes ? EtatVisuel.choisi.encre : Color.jeton(\.encreSecondaire))
+                    .font(Jetons.typoTitreCarte.font)
+                    .frame(width: Jetons.espace6, height: Jetons.hauteurCase)
+                    .foregroundStyle(rang <= glyphes ? EtatVisuel.choisi.encre : Color.jeton(\.encre2))
                     .fondEtat(rang <= glyphes ? .choisi : .repos)
             }
             PetitBouton(icone: "minus", aide: L("boss.talKasha.moins")) {
