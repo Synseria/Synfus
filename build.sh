@@ -27,8 +27,9 @@ PUBLICATION_PAR_CI=0
 # Le macOS le plus ancien qui ouvre ce build : inscrit dans l'Info.plist et dans le nom du DMG, que
 # lit la mise à jour avant de proposer une version (`VersionPubliee.lire`). Une 0.14 ne connaît que
 # « Synfus-X.Y.Z-<arch>.dmg » : elle ne propose donc jamais un build qui porte son minimum dans son
-# nom, qu'elle ne pourrait peut-être pas ouvrir. Suit `platforms` de Package.swift.
-MACOS_MINIMUM=26
+# nom, qu'elle ne pourrait peut-être pas ouvrir. Lu dans `platforms` de Package.swift, seule source.
+MACOS_MINIMUM="$(sed -n 's/.*platforms: \[\.macOS(\.v\([0-9][0-9]*\))\].*/\1/p' Package.swift)"
+[ -n "$MACOS_MINIMUM" ] || { echo "build.sh : macOS minimum illisible dans Package.swift" >&2; exit 1; }
 
 aide() { sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; }
 
