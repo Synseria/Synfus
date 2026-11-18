@@ -57,7 +57,7 @@ sa bascule). Toute nouvelle option suit la règle.
   système ne démarre pas de façon fiable depuis un panneau non activable.
 - Badges en overlay (`CopiedBadge`, `CombatBadge`) : la barre ne change pas de taille.
 - Une pastille dit le nom et la classe (`showClasses` ne règle que l'emblème) ; son numéro est une
-  `ToucheRaccourci` portant le raccourci réel du rang (`BarView.toucheDuPerso`), le numéro à défaut.
+  `ToucheDeClavier` portant le raccourci réel du rang (`BarView.toucheDuPerso`), le numéro à défaut.
 - **Clavier des groupes** : tout groupe à choix unique (segments, barre latérale, pastilles de couleur, icônes
   de l'app) passe par `groupeSelection` — Tab entre et sort, les flèches déplacent la sélection, aucun anneau —
   et ses boutons par `elementDeGroupe()`. Les filtres de la palette suivent Tab/⇧Tab (le panneau garde le
@@ -116,7 +116,7 @@ sa bascule). Toute nouvelle option suit la règle.
   `ListeCherchable`. Un état vide, en attente ou en erreur est un `EtatDeBloc` qui prend le bloc entier
   (« Nom indisponible » + « Réessayer », sans la cause). Aucune phrase à l'écran ; ⓘ au dernier recours
   (`aide:` du bloc), sinon `infobulle:`. Libellés sans deux-points ni « / », jamais abrégés (« Personnage »,
-  pas « Perso »). Couleurs : `Color.jeton(\.chemin)` (jetons du design system ; l'onglet Thème règle la couleur de l'app et la teinte des fonds, Auto par défaut ; les icônes de l'app et de la barre de menus sont dans Général) ; dessin commun (états, boutons, touche, cartes, surface flottante) : `Interface/Composants.swift`, détail dans `reference/grille-ui.md`. `SettingsWindowController` doit appeler
+  pas « Perso »). Couleurs : `Color.jeton(\.chemin)` (nuancier du design system ; l'onglet Thème règle la nuance et le thème, Système et Graphite par défaut ; les icônes de l'app et de la barre de menus sont dans Général) ; composants communs : la trousse `Interface/Trousse` ; dessin propre (états, surface flottante) : `Interface/Composants.swift`, détail dans `reference/grille-ui.md`. `SettingsWindowController` doit appeler
   `NSApp.activate(ignoringOtherApps:)` (app accessory) ; la fenêtre s'ouvre sous la barre
   (`visibleBarFrame`), au centre sinon.
 - Un message qui dit « Réglages › … » s'accompagne d'un bouton qui y mène :
