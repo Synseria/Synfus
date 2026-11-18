@@ -1153,3 +1153,17 @@ extension PreferencesTests {
         #expect(Preferences.forTesting(store: StockageMemoire()).premierLancement)
     }
 }
+
+@Suite("Préférences : le domaine de l'app")
+@MainActor
+struct PreferencesPartageesTests {
+    @Test("Hors de l'app, les réglages partagés vivent en mémoire : un test n'écrit rien dans les UserDefaults")
+    func partageEnMemoire() {
+        let avant = UserDefaults.standard.data(forKey: Preferences.key)
+        let prefs = Preferences.shared
+        let theme = prefs.themeDeLApp
+        defer { prefs.themeDeLApp = theme }
+        prefs.themeDeLApp = theme == .coloris(.cerise) ? .coloris(.lagon) : .coloris(.cerise)
+        #expect(UserDefaults.standard.data(forKey: Preferences.key) == avant)
+    }
+}

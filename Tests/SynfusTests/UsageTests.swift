@@ -8,12 +8,6 @@ import Testing
 /// teste le reste : débit, attente, diagnostics).
 @MainActor
 struct UsageTests {
-    private final class StockageMemoire: PreferencesStore {
-        private var contenu: [String: Data] = [:]
-        func donnees(pour cle: String) -> Data? { contenu[cle] }
-        func enregistrer(_ donnees: Data, pour cle: String) { contenu[cle] = donnees }
-    }
-
     /// Le transport remplacé : les corps envoyés, une réponse acceptée.
     private final class Collecteur: @unchecked Sendable {
         private let verrou = NSLock()
@@ -127,7 +121,7 @@ struct UsageTests {
         try tronque.write(to: dossier.appending(path: "persos.json"))
         let midi = date(11, 12)
         let store = UsageStore(dossier: dossier, configuration: nil, version: nil,
-                               preferences: Preferences.forTesting(store: StockageMemoire()),
+                               preferences: Preferences.forTesting(store: StockageEnMemoire()),
                                materiel: "UUID-1", envoi: { _ in nil }, horloge: { midi })
         store.noterEffectif(1)
         store.registre.releve(envoi: false)
@@ -154,7 +148,7 @@ struct UsageTests {
         let dossier = try dossierTemporaire()
         defer { try? FileManager.default.removeItem(at: dossier) }
         try Data(Self.ancienUsage.utf8).write(to: dossier.appending(path: "usage.json"))
-        let prefs = Preferences.forTesting(store: StockageMemoire())
+        let prefs = Preferences.forTesting(store: StockageEnMemoire())
         let midi = date(11, 12)
 
         let store = UsageStore(dossier: dossier, configuration: nil, version: "0.14.0", preferences: prefs,
@@ -192,7 +186,7 @@ struct UsageTests {
         deja.noterEffectif(5, pendant: 60, le: "2026-11-12")
         try JSONEncoder().encode(deja).write(to: dossier.appending(path: "persos.json"))
         try Data(Self.ancienUsage.utf8).write(to: dossier.appending(path: "usage.json"))
-        let prefs = Preferences.forTesting(store: StockageMemoire())
+        let prefs = Preferences.forTesting(store: StockageEnMemoire())
         let midi = date(12, 12)
 
         let store = UsageStore(dossier: dossier, configuration: nil, version: nil, preferences: prefs,
@@ -220,7 +214,7 @@ struct UsageTests {
     func rapport() async throws {
         let collecteur = Collecteur()
         let horloge = Horloge(date(9, 20))
-        let prefs = Preferences.forTesting(store: StockageMemoire())
+        let prefs = Preferences.forTesting(store: StockageEnMemoire())
         prefs.partagerStatistiques = true
         let configuration = ConfigurationDeTelemetrie(url: URL(string: "https://collecteur.invalid/v1/logs")!,
                                                       jeton: "jeton", distribution: .release)
@@ -270,7 +264,7 @@ struct UsageTests {
     func persosDesJoursEnAttente() async throws {
         let collecteur = Collecteur()
         let horloge = Horloge(date(8, 20))
-        let prefs = Preferences.forTesting(store: StockageMemoire())
+        let prefs = Preferences.forTesting(store: StockageEnMemoire())
         prefs.partagerStatistiques = true
         let configuration = ConfigurationDeTelemetrie(url: URL(string: "https://collecteur.invalid/v1/logs")!,
                                                       jeton: "jeton", distribution: .release)
@@ -313,7 +307,7 @@ struct UsageTests {
     func partageCoupe() async {
         let collecteur = Collecteur()
         let horloge = Horloge(date(9, 20))
-        let prefs = Preferences.forTesting(store: StockageMemoire())
+        let prefs = Preferences.forTesting(store: StockageEnMemoire())
         prefs.partagerStatistiques = false
         let configuration = ConfigurationDeTelemetrie(url: URL(string: "https://collecteur.invalid")!,
                                                       jeton: "jeton", distribution: .local)
@@ -333,7 +327,7 @@ struct UsageTests {
             #expect(evenement.cle.texte == evenement.rawValue, "\(evenement)")
             #expect("usage.\(evenement.cle.texte)".wholeMatch(of: Self.clesAcceptees) != nil, "\(evenement)")
         }
-        let prefs = Preferences.forTesting(store: StockageMemoire())
+        let prefs = Preferences.forTesting(store: StockageEnMemoire())
         let reglages = UsageStore.reglages(prefs, demarrageAuto: false)
         #expect(reglages.count == 19)
         for cle in reglages.keys {

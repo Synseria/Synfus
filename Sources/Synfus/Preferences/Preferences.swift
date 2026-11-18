@@ -7,7 +7,11 @@ import Carbon.HIToolbox
 /// acceptable pour la concurrence stricte de Swift 6, sans verrou ni copie.
 @MainActor
 final class Preferences: ObservableObject {
-    static let shared = Preferences()
+    /// Le domaine de l'app n'appartient qu'à l'app : hors d'un bundle `.app` — les tests
+    /// (`swiftpm-testing-helper`), un binaire nu —, les réglages vivent en mémoire. Sans quoi un test
+    /// qui change le thème le laisse au run suivant, et à toutes les vues qui lisent `shared`.
+    static let shared = Preferences(store: Bundle.main.bundleURL.pathExtension == "app"
+        ? UserDefaults.standard : StockageEnMemoire())
 
     /// Ordre de préférence des persos, par nom. Sert à donner un numéro stable à
     /// chaque perso : ceux qui ne sont pas lancés sont simplement sautés, donc
