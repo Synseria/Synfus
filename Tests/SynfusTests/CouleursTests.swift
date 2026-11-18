@@ -67,7 +67,7 @@ struct CouleursTests {
 
     @Test("Le thème et la nuance se relisent ; Système s'écrit, et une nuance illisible laisse le défaut")
     func persistance() {
-        let store = MemoireDeTest()
+        let store = StockageEnMemoire()
         let prefs = Preferences.forTesting(store: store)
         prefs.themeDeLApp = .personnalise(0x3FA9D8)
         prefs.nuanceDeLApp = .crepuscule
@@ -84,10 +84,10 @@ struct CouleursTests {
         #expect(illisible.themeDeLApp == Jetons.themeParDefaut && illisible.nuanceDeLApp == Jetons.nuanceParDefaut)
     }
 
-    @Test("Le défaut est Graphite, l'app suivant macOS")
+    @Test("Le défaut est Lagon, l'app suivant macOS")
     func defauts() {
-        let prefs = Preferences.forTesting(store: MemoireDeTest())
-        #expect(prefs.themeDeLApp == .coloris(.graphite))
+        let prefs = Preferences.forTesting(store: StockageEnMemoire())
+        #expect(prefs.themeDeLApp == .coloris(.lagon))
         #expect(prefs.nuanceDeLApp == nil)
     }
 
@@ -100,29 +100,28 @@ struct CouleursTests {
         #expect(ThemeCourant.apparence(.nuit)?.name == .darkAqua)
     }
 
-    @Test("Une sauvegarde d'avant le nuancier : jade resté au défaut → Graphite, un préréglage → son coloris")
+    @Test("Une sauvegarde d'avant le nuancier : chaque préréglage → son coloris, jade → Lagon")
     func conversionDesPrereglages() {
-        #expect(ConversionDuTheme.relire(couleur: nil, fonds: nil, apparence: nil) == .init())
-        #expect(ConversionDuTheme.relire(couleur: "jade", fonds: nil, apparence: nil).theme == .coloris(.graphite))
-        #expect(ConversionDuTheme.relire(couleur: "jade", fonds: "neutre", apparence: nil).theme == .coloris(.lagon))
-        #expect(ConversionDuTheme.relire(couleur: "azur", fonds: nil, apparence: nil).theme == .coloris(.bleuet))
-        #expect(ConversionDuTheme.relire(couleur: "framboise", fonds: "nuit", apparence: nil).theme == .coloris(.cerise))
-        #expect(ConversionDuTheme.relire(couleur: "corail", fonds: nil, apparence: nil).theme == .coloris(.terracotta))
-        #expect(ConversionDuTheme.relire(couleur: "ardoise", fonds: nil, apparence: nil).theme == .coloris(.graphite))
-        #expect(ConversionDuTheme.relire(couleur: "violet", fonds: nil, apparence: nil).theme == Jetons.themeParDefaut)
+        #expect(ConversionDuTheme.relire(couleur: nil, apparence: nil) == .init())
+        #expect(ConversionDuTheme.relire(couleur: "jade", apparence: nil).theme == .coloris(.lagon))
+        #expect(ConversionDuTheme.relire(couleur: "azur", apparence: nil).theme == .coloris(.bleuet))
+        #expect(ConversionDuTheme.relire(couleur: "framboise", apparence: nil).theme == .coloris(.cerise))
+        #expect(ConversionDuTheme.relire(couleur: "corail", apparence: nil).theme == .coloris(.terracotta))
+        #expect(ConversionDuTheme.relire(couleur: "ardoise", apparence: nil).theme == .coloris(.graphite))
+        #expect(ConversionDuTheme.relire(couleur: "violet", apparence: nil).theme == Jetons.themeParDefaut)
     }
 
     @Test("Clair et Sombre imposés deviennent Jour et Pénombre ; Auto suit macOS")
     func conversionDeLApparence() {
-        #expect(ConversionDuTheme.relire(couleur: nil, fonds: nil, apparence: "clair").nuance == .jour)
-        #expect(ConversionDuTheme.relire(couleur: "jade", fonds: nil, apparence: "sombre").nuance == .penombre)
-        #expect(ConversionDuTheme.relire(couleur: nil, fonds: nil, apparence: "auto").nuance == nil)
+        #expect(ConversionDuTheme.relire(couleur: nil, apparence: "clair").nuance == .jour)
+        #expect(ConversionDuTheme.relire(couleur: "jade", apparence: "sombre").nuance == .penombre)
+        #expect(ConversionDuTheme.relire(couleur: nil, apparence: "auto").nuance == nil)
     }
 
     /// `teinte:N` était un angle OKLCH : relu en TSL, un bleu-vert de 240 tournerait à l'indigo.
     @Test("« teinte:N » devient Personnalisé à l'angle OKLCH N, pas à la teinte TSL N")
     func conversionDUneTeinte() throws {
-        let relu = ConversionDuTheme.relire(couleur: "teinte:240", fonds: nil, apparence: nil)
+        let relu = ConversionDuTheme.relire(couleur: "teinte:240", apparence: nil)
         guard case .personnalise(let couleur) = relu.theme else { Issue.record("pas Personnalisé"); return }
         let lab = Jetons.Oklab.lab(Jetons.Octets(couleur), nil)
         let angle = (atan2(lab[2], lab[1]) * 180 / .pi + 360).truncatingRemainder(dividingBy: 360)
@@ -132,7 +131,7 @@ struct CouleursTests {
 
     @Test("Une sauvegarde d'avant se convertit à la lecture sans perdre le reste, puis s'écrit au nouveau format")
     func conversionALaLecture() {
-        let store = MemoireDeTest()
+        let store = StockageEnMemoire()
         store.enregistrer(Data(#"{"characterOrder":["A"],"hotKeys":[],"barVisible":true,"showNumbers":true,"couleurDeLApp":"corail","fondsDeLApp":"nuit","apparence":"sombre"}"#.utf8),
                           pour: Preferences.key)
         let prefs = Preferences.forTesting(store: store)
@@ -187,11 +186,4 @@ struct CouleursTests {
         let (x, y) = (luminance(a), luminance(b))
         return (max(x, y) + 0.05) / (min(x, y) + 0.05)
     }
-}
-
-/// Stockage en mémoire : aucun test ne touche au disque ni aux réglages de la machine.
-private final class MemoireDeTest: PreferencesStore {
-    private var contenu: [String: Data] = [:]
-    func donnees(pour cle: String) -> Data? { contenu[cle] }
-    func enregistrer(_ donnees: Data, pour cle: String) { contenu[cle] = donnees }
 }

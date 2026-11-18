@@ -116,7 +116,7 @@ sa bascule). Toute nouvelle option suit la règle.
   `ListeCherchable`. Un état vide, en attente ou en erreur est un `EtatDeBloc` qui prend le bloc entier
   (« Nom indisponible » + « Réessayer », sans la cause). Aucune phrase à l'écran ; ⓘ au dernier recours
   (`aide:` du bloc), sinon `infobulle:`. Libellés sans deux-points ni « / », jamais abrégés (« Personnage »,
-  pas « Perso »). Couleurs : `Color.jeton(\.chemin)` (nuancier du design system ; l'onglet Thème règle la nuance et le thème, Système et Graphite par défaut ; les icônes de l'app et de la barre de menus sont dans Général) ; composants communs : la trousse `Interface/Trousse` ; dessin propre (états, surface flottante) : `Interface/Composants.swift`, détail dans `reference/grille-ui.md`. `SettingsWindowController` doit appeler
+  pas « Perso »). Couleurs : `Color.jeton(\.chemin)` (nuancier du design system ; l'onglet Thème règle la nuance et le thème, Système et Lagon par défaut ; les icônes de l'app et de la barre de menus sont dans Général) ; composants communs : la trousse `Interface/Trousse` ; dessin propre (états, surface flottante) : `Interface/Composants.swift`, détail dans `reference/grille-ui.md`. `SettingsWindowController` doit appeler
   `NSApp.activate(ignoringOtherApps:)` (app accessory) ; la fenêtre s'ouvre sous la barre
   (`visibleBarFrame`), au centre sinon.
 - Un message qui dit « Réglages › … » s'accompagne d'un bouton qui y mène :
