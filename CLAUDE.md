@@ -77,9 +77,10 @@ SYNFUS_CAPTURE=~/Library/Logs/Synfus/captures/x.png sh test.sh RealCapture   # O
 - **Tests sur la logique pure** : chaque décision testable a son fichier pur (`WindowTitle`,
   `ClientMemory`, `LayoutComputer`, `BounceDetector`, `FreezeStrikes`…). AX, Dock et AppKit se
   vérifient par un lancement réel (`sh run.sh --install --start`) et l'onglet Diagnostic.
-  Préférences : `Preferences.forTesting(store:)`, **jamais** `UserDefaults(suiteName:)` — un
-  domaine persistant survit à `removePersistentDomain` (`cfprefsd` le réécrit) et chaque
-  exécution sèmerait un plist dans `~/Library/Preferences`.
+  Préférences : `Preferences.forTesting(store: StockageEnMemoire())`, **jamais**
+  `UserDefaults(suiteName:)` — un domaine persistant survit à `removePersistentDomain` (`cfprefsd`
+  le réécrit) et chaque exécution sèmerait un plist dans `~/Library/Preferences`. Hors d'un bundle
+  `.app` (les tests), `Preferences.shared` vit lui aussi en mémoire.
 
 ## Architecture
 
