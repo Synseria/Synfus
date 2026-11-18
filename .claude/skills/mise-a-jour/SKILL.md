@@ -13,8 +13,15 @@ user-invocable: false
   écarte brouillons et préversions. Un binaire nu (sans `CFBundleShortVersionString`) ne vérifie
   rien. GitHub muet → état `inconnu`, rien d'affiché, on réessaie au tour suivant.
 - **Proposition, jamais d'installation seule** : « Installer Synfus X.Y.Z… » en tête du menu et
-  bouton sur la ligne Version, puis la feuille `Confirmation` (Nouveautés, bouton qui la laisse ouverte · Annuler · Installer et relancer). Une notification système annonce une version une seule fois (`derniereVersionNotifiee`) ; au premier lancement après une mise à jour, le menu offre « Nouveautés de la X.Y.Z » sous À propos.
-- **Installation** (`InstallateurMiseAJour`, acteur sans état) : DMG `Synfus-X.Y.Z-<arch>.dmg`
+  bouton sur la ligne Version, puis une `NSAlert` au premier plan (Installer et relancer · Annuler ·
+  Nouveautés, qui ouvre la page et laisse l'alerte en place). Une notification système annonce une version une seule fois (`derniereVersionNotifiee`) ; au premier lancement après une mise à jour, le menu offre « Nouveautés de la X.Y.Z » sous À propos.
+- **macOS minimum** : le nom du DMG le porte (`Synfus-X.Y.Z-macos26-arm64.dmg`, `MACOS_MINIMUM`
+  de build.sh, seule source avec `platforms` de Package.swift). Une release plus récente qui exige
+  un macOS que ce Mac n'a pas passe à l'état `incompatible` : « Synfus X nécessite macOS N », ni
+  bouton, ni notification, ni entrée de menu (`MiseAJour.etat`, pur et testé). Second filet après
+  extraction : `LSMinimumSystemVersion` de l'app comparé au système (`Echec.systeme` → `incompatible`).
+  Une release sans minimum dans le nom n'est pas lue.
+- **Installation** (`InstallateurMiseAJour`, acteur sans état) : DMG `Synfus-X.Y.Z-macos<N>-<arch>.dmg`
   téléchargé (arch du binaire qui tourne : sous Rosetta, x86_64), empreinte comparée à
   `SHA256SUMS.txt` de la même release, `hdiutil attach -nobrowse -readonly`, app copiée par
   `ditto`, puis contrôlée : même `CFBundleIdentifier`, `CFBundleShortVersionString` = numéro du
@@ -54,9 +61,30 @@ installée ne s'y voit que si cette release le contient déjà.
 ## Publication — ce que l'app attend d'une release
 
 `Tools/publier-release.sh` produit exactement ce que `VersionPubliee.lire` exige : tag `vX.Y.Z`,
-assets `Synfus-X.Y.Z-arm64.dmg`, `Synfus-X.Y.Z-x86_64.dmg`, `SHA256SUMS.txt` (format `shasum`),
-l'app à la racine du DMG sous le nom `Synfus.app`. Changer un nom ou le format casse la mise à
-jour de **toutes** les versions déjà installées : jamais sans garder l'ancien en parallèle.
+assets `Synfus-X.Y.Z-macos<N>-arm64.dmg`, `Synfus-X.Y.Z-macos<N>-x86_64.dmg`, `SHA256SUMS.txt`
+(format `shasum`), l'app à la racine du DMG sous le nom `Synfus.app`. Changer un nom ou le format
+casse la mise à jour de **toutes** les versions déjà installées : jamais sans garder l'ancien en
+parallèle — sauf pour écarter à dessein des versions qui ne doivent plus rien proposer (ci-dessous).
+
+## Passage à macOS 26 (0.14 → 0.15) — le piège des versions sans garde
+
+Jusqu'à la 0.14.0 (cible macOS 14), la mise à jour ne vérifie pas le macOS : elle lit
+`releases/latest`, cherche `Synfus-X.Y.Z-<arch>.dmg` et l'installe. Sous macOS 14/15, une release
+macOS 26 publiée sous ce nom serait proposée, téléchargée, contrôlée (le contrôle ne lit pas
+`LSMinimumSystemVersion`) puis posée : le script de remplacement efface l'ancienne app
+(`rm -rf` du dossier de travail, qui la contient), efface les autorisations (`tccutil`), et
+`open` échoue — l'utilisateur n'a plus de Synfus qui s'ouvre et doit retélécharger une 0.14 à la main.
+
+**Parade en place** : depuis la 0.15, le DMG porte le minimum dans son nom. Une 0.14.0 (ou plus
+ancienne) ne trouve plus son asset, `lire` rend `nil` : état `inconnu`, rien de proposé, sur
+**tout** macOS. Coût : une 0.14.0 sous macOS 26 ne se met plus à jour d'elle-même.
+
+**Parade complète (à décider)** : publier, **avant** la 0.15, une **0.14.1 pont** tirée du tag
+`v0.14.0` (cible macOS 14 gardée, assets à l'**ancien** nom pour que toutes les versions la voient),
+qui embarque la lecture du nouveau nom et ce garde. Sous macOS 26 elle propose la 0.15 ; sous
+14/15 elle dit « nécessite macOS 26 ». Une 0.14.0 qui ne se lance pas entre la 0.14.1 et la 0.15
+reste sur place, sans danger. Un pont seul, sans le changement de nom, ne suffit pas : une 0.14.0
+qui ne l'a pas pris avant la 0.15 installerait directement la 0.15.
 
 ## Statistiques d'utilisation
 

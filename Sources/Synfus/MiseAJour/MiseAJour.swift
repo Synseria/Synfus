@@ -12,6 +12,8 @@ final class MiseAJour: ObservableObject {
     enum Etat: Equatable {
         case inconnu, verification, aJour
         case disponible(VersionPubliee)
+        /// Plus récente, mais pour un macOS que ce Mac n'a pas : dite, jamais proposée.
+        case incompatible(VersionPubliee)
         case installation(VersionPubliee)
         case echec(InstallateurMiseAJour.Echec, VersionPubliee)
     }
@@ -90,14 +92,17 @@ final class MiseAJour: ObservableObject {
             let derniere = await installateur.derniere()
             guard case .verification = etat else { return }
             if derniere != nil { Preferences.shared.derniereVerificationMaj = Date() }
-            if let derniere, derniere.plusRecente(que: installee) {
-                etat = .disponible(derniere)
-                NotificationMiseAJour.shared.annoncerSiNouvelle(derniere)
-            } else {
-                // GitHub muet : rien à proposer, on réessaiera au prochain tour.
-                etat = derniere == nil ? .inconnu : .aJour
-            }
+            etat = Self.etat(derniere: derniere, installee: installee, systeme: ProcessInfo.processInfo.operatingSystemVersion)
+            if case .disponible(let version) = etat { NotificationMiseAJour.shared.annoncerSiNouvelle(version) }
         }
+    }
+
+    /// Ce que dit la dernière release : GitHub muet, rien à proposer (on réessaiera au prochain
+    /// tour) ; plus récente, proposée si ce Mac l'ouvre, seulement dite sinon.
+    nonisolated static func etat(derniere: VersionPubliee?, installee: String, systeme: OperatingSystemVersion) -> Etat {
+        guard let derniere else { return .inconnu }
+        guard derniere.plusRecente(que: installee) else { return .aJour }
+        return derniere.ouvrable(sur: systeme) ? .disponible(derniere) : .incompatible(derniere)
     }
 
     /// Vrai si la version qui tourne n'est pas celle du lancement précédent.
@@ -160,7 +165,7 @@ final class MiseAJour: ObservableObject {
                 remplacer(par: neuve, cible: cible, identifiant: identifiant, dossier: dossier)
             } catch {
                 try? FileManager.default.removeItem(at: dossier)
-                etat = .echec(error, version)
+                etat = error == .systeme ? .incompatible(version) : .echec(error, version)
             }
         }
     }

@@ -30,7 +30,16 @@ else
     echo "publier-release.sh : ni TELEMETRIE_URL et TELEMETRIE_JETON, ni la commande secret" >&2
     exit 1
 fi
-( cd dist && shasum -a 256 "Synfus-$VERSION-arm64.dmg" "Synfus-$VERSION-x86_64.dmg" ) | tee dist/SHA256SUMS.txt
+# Le nom des DMG porte le macOS minimum (`MACOS_MINIMUM` de build.sh), que la mise à jour lit avant
+# de proposer la version : on le reprend tel que build.sh l'a écrit.
+dmg() {
+    local trouves=(dist/Synfus-"$VERSION"-macos*-"$1".dmg)
+    [ ${#trouves[@]} -eq 1 ] && [ -f "${trouves[0]}" ] || { echo "publier-release.sh : DMG $1 introuvable ou en double" >&2; exit 1; }
+    basename "${trouves[0]}"
+}
+DMG_ARM="$(dmg arm64)"; DMG_INTEL="$(dmg x86_64)"
+MINIMUM="${DMG_ARM#Synfus-"$VERSION"-macos}"; MINIMUM="${MINIMUM%-arm64.dmg}"
+( cd dist && shasum -a 256 "$DMG_ARM" "$DMG_INTEL" ) | tee dist/SHA256SUMS.txt
 ( cd dist && rm -f "Synfus-$VERSION-dSYM.zip" \
     && zip -qry "Synfus-$VERSION-dSYM.zip" "Synfus-$VERSION-arm64.dSYM" "Synfus-$VERSION-x86_64.dSYM" )
 
@@ -44,10 +53,10 @@ cat >> "$NOTES" <<'EOF'
 
 | Mac | Fichier |
 | --- | --- |
-| Apple Silicon (M1 → M4) | `Synfus-VERSION-arm64.dmg` |
-| Intel | `Synfus-VERSION-x86_64.dmg` |
+| Apple Silicon (M1 → M4) | `DMG_ARM` |
+| Intel | `DMG_INTEL` |
 
-Compatible macOS 26 (Tahoe) et suivants.
+Compatible macOS MINIMUM et suivants.
 
 ### Installation
 
@@ -91,9 +100,10 @@ Une fois Synfus installé, les versions suivantes se proposent d'elles-mêmes
 remplacement et relance, sans quarantaine ; seules les autorisations sont à
 redonner.
 EOF
-sed -i '' "s/VERSION/$VERSION/g" "$NOTES"
+sed -i '' -e "s/DMG_ARM/$DMG_ARM/g" -e "s/DMG_INTEL/$DMG_INTEL/g" -e "s/MINIMUM/$MINIMUM/g" \
+    -e "s/VERSION/$VERSION/g" "$NOTES"
 
-FICHIERS=(dist/Synfus-"$VERSION"-arm64.dmg dist/Synfus-"$VERSION"-x86_64.dmg dist/SHA256SUMS.txt
+FICHIERS=(dist/"$DMG_ARM" dist/"$DMG_INTEL" dist/SHA256SUMS.txt
           dist/Synfus-"$VERSION"-dSYM.zip)
 # La release peut déjà exister (ouverte depuis GitHub, publication rejouée) :
 # on la met alors à jour, fichiers homonymes écrasés.
