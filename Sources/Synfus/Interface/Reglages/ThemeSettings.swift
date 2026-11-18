@@ -1,14 +1,13 @@
 import SwiftUI
 
-/// Onglet Thème : la couleur de l'app et la teinte des fonds, appliquées en direct dans les réglages
-/// comme dans la barre et les panneaux (`ThemeCourant`).
+/// Onglet Thème : la nuance et le thème de l'app, appliqués en direct dans les réglages comme dans
+/// la barre et les panneaux (`ThemeCourant`).
 struct ThemeSettings: View {
     var body: some View {
         PageReglages(titre: L("reglages.theme")) {
             Bloc {
-                ChoixApparence()
-                ChoixDeCouleur()
-                ChoixDesFonds()
+                ChoixDeNuance()
+                ChoixDuTheme()
             }
             Bloc(L("theme.apercu")) {
                 ApercuTheme().rangee()
@@ -17,189 +16,140 @@ struct ThemeSettings: View {
     }
 }
 
-/// Auto suit macOS ; Clair et Sombre l'imposent à toutes les fenêtres de Synfus.
-private struct ChoixApparence: View {
+/// Système suit macOS (Jour en clair, Pénombre en sombre) ; une nuance s'impose à toutes les fenêtres.
+private struct ChoixDeNuance: View {
     @ObservedObject private var prefs = Preferences.shared
 
     var body: some View {
-        Ligne(titre: L("theme.apparence")) {
-            Segments(L("theme.apparence"), selection: $prefs.apparence,
-                     choix: ThemeCourant.Apparence.allCases.map { ($0, $0.titre) })
+        Ligne(titre: L("theme.nuance")) {
+            SegmenteTexte(titre: L("theme.nuance"),
+                          options: [(nil, L("theme.nuance.systeme"))] + Jetons.Nuance.allCases.map { ($0, $0.libelle) },
+                          selection: $prefs.nuanceDeLApp)
         }
     }
 }
 
-/// Les cinq préréglages en pastilles, puis « Autre… » : une teinte au curseur, que la primaire
-/// refuse près du safran (`Jetons.teinteAcceptee`).
-private struct ChoixDeCouleur: View {
+/// Les onze coloris en pastilles, puis Personnalisé : une teinte au curseur.
+private struct ChoixDuTheme: View {
     @ObservedObject private var prefs = Preferences.shared
     @Environment(\.colorScheme) private var schema
 
-    private var courante: Jetons.Couleur { prefs.couleurDeLApp }
-    private var estAutre: Bool {
-        if case .teinte = courante { true } else { false }
-    }
+    private enum Choix: Hashable { case coloris(Jetons.Coloris), personnalise }
+
+    private var choix: Choix { prefs.themeDeLApp.coloris.map(Choix.coloris) ?? .personnalise }
 
     var body: some View {
         Ligne(titre: L("theme.couleur")) {
-            HStack(spacing: Jetons.Espace.deux) {
-                ForEach(Jetons.Prereglage.allCases) { prereglage in
-                    pastille(prereglage)
-                }
-                Button { choisirAutre() } label: {
-                    Text(L("theme.autre"))
-                        .font(Jetons.Typo.corps.police)
-                        .padding(.horizontal, Jetons.Espace.trois)
-                        .frame(height: Jetons.Taille.controle)
+            HStack(spacing: Jetons.espace2) {
+                ForEach(Jetons.Coloris.allCases) { pastille($0) }
+                Button { choisir(.personnalise) } label: {
+                    Text(L("theme.personnalise"))
+                        .font(Jetons.typoCorps.font)
+                        .padding(.horizontal, Jetons.espace3)
+                        .frame(height: Jetons.hauteurControle)
                         .overlay {
-                            if !estAutre {
-                                Capsule().strokeBorder(Color.jeton(\.contourControle), lineWidth: Jetons.Trait.filet)
+                            if choix != .personnalise {
+                                Capsule().strokeBorder(Color.jeton(\.filet), lineWidth: Jetons.epaisseurFilet)
                             }
                         }
                 }
-                .buttonStyle(.etat(choisi: estAutre, rayon: Jetons.Rayon.capsule))
+                .buttonStyle(.etat(choisi: choix == .personnalise, rayon: Jetons.rayonPilule))
                 .elementDeGroupe()
-                .accessibilityAddTraits(estAutre ? .isSelected : [])
+                .accessibilityAddTraits(choix == .personnalise ? .isSelected : [])
             }
             .groupeSelection(L("theme.couleur"), selection: Binding(get: { choix }, set: choisir),
-                             parmi: Jetons.Prereglage.allCases.map(Choix.prereglage) + [.autre])
+                             parmi: Jetons.Coloris.allCases.map(Choix.coloris) + [.personnalise])
         }
-        if case .teinte(let teinte) = courante {
-            CurseurDeTeinte(teinte: teinte, accepte: Jetons.teinteAcceptee) { prefs.couleurDeLApp = .teinte($0) }
+        if case .personnalise(let couleur) = prefs.themeDeLApp {
+            CurseurDeTeinte(teinte: ConversionDuTheme.teinte(couleur)) {
+                prefs.themeDeLApp = .personnalise(ConversionDuTheme.aLaTeinte(couleur, $0))
+            }
         }
-    }
-
-    private enum Choix: Hashable {
-        case prereglage(Jetons.Prereglage), autre
-    }
-
-    private var choix: Choix {
-        if case .prereglage(let p) = courante { .prereglage(p) } else { .autre }
     }
 
     private func choisir(_ nouveau: Choix) {
         switch nouveau {
-        case .prereglage(let p): prefs.couleurDeLApp = .prereglage(p)
-        case .autre: choisirAutre()
+        case .coloris(let coloris): prefs.themeDeLApp = .coloris(coloris)
+        case .personnalise:
+            guard case .coloris = prefs.themeDeLApp else { return }
+            prefs.themeDeLApp = .personnalise(Jetons.personnaliseParDefaut)
         }
     }
 
-    private func pastille(_ prereglage: Jetons.Prereglage) -> some View {
-        let choisie = courante == .prereglage(prereglage)
-        let nom = prereglage.libelle
-        let plein = Jetons.theme(.prereglage(prereglage), schema == .dark ? .sombre : .clair).primaire.couleur
-        return Button { prefs.couleurDeLApp = .prereglage(prereglage) } label: {
+    private func pastille(_ coloris: Jetons.Coloris) -> some View {
+        let choisie = choix == .coloris(coloris)
+        let nuance = ThemeCourant.reglage.nuance(sombre: schema == .dark)
+        let plein = ThemeCourant.couleurs(.coloris(coloris), nuance).accent.couleur
+        return Button { prefs.themeDeLApp = .coloris(coloris) } label: {
             Circle().fill(plein)
-                .frame(width: Jetons.Taille.controle - Jetons.Espace.deux, height: Jetons.Taille.controle - Jetons.Espace.deux)
-                .padding(Jetons.Trait.focusEcart)
-                // Un anneau d'`encre` : lisible sur toutes les pastilles, en clair comme en sombre.
-                .overlay { if choisie { Circle().strokeBorder(Color.jeton(\.encre), lineWidth: Jetons.Trait.focus) } }
+                .frame(width: Jetons.diametreRond, height: Jetons.diametreRond)
+                .padding(Jetons.decalageFocus)
+                // Un anneau d'`encre` : lisible sur toutes les pastilles, dans toutes les nuances.
+                .overlay { if choisie { Circle().strokeBorder(Color.jeton(\.encre), lineWidth: Jetons.epaisseurFocus) } }
         }
         .buttonStyle(.plain)
         .elementDeGroupe()
-        .aide(nom)
+        .aide(coloris.libelle)
         .accessibilityAddTraits(choisie ? .isSelected : [])
     }
-
-    /// Part de la teinte du préréglage courant, sinon d'un bleu que le safran n'approche pas.
-    private func choisirAutre() {
-        guard case .prereglage = courante else { return }
-        prefs.couleurDeLApp = .teinte(Jetons.teinteAcceptee(courante.degres) ? courante.degres : 200)
-    }
 }
 
-private extension Jetons.Prereglage {
+extension Jetons.Coloris {
     var libelle: String {
         switch self {
-        case .azur: L("theme.prereglage.azur")
-        case .jade: L("theme.prereglage.jade")
-        case .framboise: L("theme.prereglage.framboise")
-        case .corail: L("theme.prereglage.corail")
-        case .ardoise: L("theme.prereglage.ardoise")
+        case .cerise: L("theme.coloris.cerise")
+        case .terracotta: L("theme.coloris.terracotta")
+        case .abricot: L("theme.coloris.abricot")
+        case .ambre: L("theme.coloris.ambre")
+        case .miel: L("theme.coloris.miel")
+        case .sauge: L("theme.coloris.sauge")
+        case .lagon: L("theme.coloris.lagon")
+        case .bleuet: L("theme.coloris.bleuet")
+        case .lilas: L("theme.coloris.lilas")
+        case .prune: L("theme.coloris.prune")
+        case .graphite: L("theme.coloris.graphite")
         }
     }
 }
 
-/// Auto, Primaire, Nuit, Neutre ou Autre… : seule la teinte des neutres change, jamais leur clarté.
-/// Auto est le choix non fait (`fondsDeLApp == nil`) : primaire en clair, nuit en sombre.
-private struct ChoixDesFonds: View {
-    @ObservedObject private var prefs = Preferences.shared
-
-    private enum Choix: Hashable { case auto, primaire, nuit, neutre, autre }
-
-    private var choix: Choix {
-        switch prefs.fondsDeLApp {
-        case nil: .auto
-        case .primaire: .primaire
-        case .nuit: .nuit
-        case .neutre: .neutre
-        case .teinte: .autre
-        }
-    }
-
-    var body: some View {
-        Ligne(titre: L("theme.fonds")) {
-            Segments(L("theme.fonds"), selection: Binding(get: { choix }, set: choisir), choix: [
-                (Choix.auto, L("commun.auto")), (.primaire, L("theme.fonds.primaire")), (.nuit, L("theme.fonds.nuit")),
-                (.neutre, L("theme.fonds.neutre")), (.autre, L("theme.autre"))])
-        }
-        if case .teinte(let teinte) = prefs.fondsDeLApp {
-            CurseurDeTeinte(teinte: teinte, accepte: { _ in true }) { prefs.fondsDeLApp = .teinte($0) }
-        }
-    }
-
-    private func choisir(_ nouveau: Choix) {
-        switch nouveau {
-        case .auto: prefs.fondsDeLApp = nil
-        case .primaire: prefs.fondsDeLApp = .primaire
-        case .nuit: prefs.fondsDeLApp = .nuit
-        case .neutre: prefs.fondsDeLApp = .neutre
-        case .autre:
-            if case .teinte = prefs.fondsDeLApp { return }
-            // Part de la couleur de l'app : les fonds s'accordent d'abord à ce qui est déjà choisi.
-            prefs.fondsDeLApp = .teinte(prefs.couleurDeLApp.degres)
+extension Jetons.Nuance {
+    var libelle: String {
+        switch self {
+        case .jour: L("theme.nuance.jour")
+        case .crepuscule: L("theme.nuance.crepuscule")
+        case .penombre: L("theme.nuance.penombre")
+        case .nuit: L("theme.nuance.nuit")
         }
     }
 }
 
-/// La teinte au curseur, en degrés. Une valeur refusée ne s'applique pas : le curseur la montre
-/// barrée et la couleur reste celle d'avant.
+/// La teinte de Personnalisé au curseur, en degrés.
 private struct CurseurDeTeinte: View {
-    let accepte: (Int) -> Bool
     let appliquer: (Int) -> Void
     @State private var valeur: Double
 
-    init(teinte: Int, accepte: @escaping (Int) -> Bool, appliquer: @escaping (Int) -> Void) {
-        self.accepte = accepte
+    init(teinte: Int, appliquer: @escaping (Int) -> Void) {
         self.appliquer = appliquer
         _valeur = State(initialValue: Double(teinte))
     }
 
     var body: some View {
-        let refusee = !accepte(Int(valeur))
         Ligne(titre: L("theme.teinte")) {
-            HStack(spacing: Jetons.Espace.deux) {
+            HStack(spacing: Jetons.espace2) {
                 Slider(value: $valeur, in: 0...359, step: 1)
-                    .frame(width: 200)
-                    .onChange(of: valeur) { _, nouvelle in
-                        if accepte(Int(nouvelle)) { appliquer(Int(nouvelle)) }
-                    }
+                    .frame(width: Jetons.largeurNav)
+                    .onChange(of: valeur) { _, nouvelle in appliquer(Int(nouvelle)) }
                 Text("\(Int(valeur))°")
-                    .font(Jetons.Typo.chiffre.police)
-                    .foregroundStyle(refusee ? Color.jeton(\.danger) : Color.jeton(\.encreSecondaire))
-                    .frame(width: 40, alignment: .trailing)
-                if refusee {
-                    Image(systemName: "nosign")
-                        .foregroundStyle(Color.jeton(\.danger))
-                        .aide(L("theme.proche"))
-                }
+                    .font(Jetons.typoTitreCarte.font.monospacedDigit())
+                    .foregroundStyle(Color.jeton(\.encre2))
+                    .frame(width: Jetons.espace7, alignment: .trailing)
             }
         }
     }
 }
 
-/// La barre et deux rangées de la palette par leurs vraies vues, sans interaction, sur le fond de nuit
-/// d'un jeu : la couleur se juge sur ce qu'on verra, pas sur la fenêtre des réglages.
+/// La barre et deux rangées de la palette par leurs vraies vues, sans interaction, sur le fond de la
+/// Nuit, comme un jeu : la couleur se juge sur ce qu'on verra, pas sur la fenêtre des réglages.
 private struct ApercuTheme: View {
     @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var classesStore = ClassesStore.shared
@@ -207,7 +157,7 @@ private struct ApercuTheme: View {
     /// Deux zaaps de la carte, nommés dans la langue de l'interface, comme la palette les montre.
     private static var rangees: [EntreePalette] {
         let langue = L10n.courante.langue
-        return Carte.integree.zaaps.prefix(2).enumerated().map { rang, zaap in
+        return CarteDuJeu.integree.zaaps.prefix(2).enumerated().map { rang, zaap in
             EntreePalette(id: "apercu.\(rang)", genre: .zaap, titre: zaap.nom(en: langue),
                           sousTitre: zaap.zone(en: langue), detail: Coordonnees.texte(zaap.x, zaap.y),
                           effet: .copier(""))
@@ -218,26 +168,26 @@ private struct ApercuTheme: View {
     private var classes: [DofusClass.Breed] { Array(classesStore.catalogue.breeds.prefix(2)) }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Jetons.Espace.trois) {
+        VStack(alignment: .leading, spacing: Jetons.espace3) {
             barre
             VStack(spacing: 0) {
                 ForEach(Array(Self.rangees.enumerated()), id: \.element.id) { rang, entree in
                     LigneResultat(entree: entree, choisie: rang == 0)
                 }
             }
-            .padding(Jetons.Espace.un)
+            .padding(Jetons.espace1)
             .frame(maxWidth: PalettePanel.largeur)
             .surfaceFlottante()
         }
-        .padding(Jetons.Espace.quatre)
+        .padding(Jetons.espace4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: Jetons.Rayon.carte, style: .continuous).fill(Color.jeton(\.nuitProfond)))
+        .background(RoundedRectangle(cornerRadius: Jetons.rayon2, style: .continuous).fill(Color.jeton(\.fondFenetre, en: .nuit)))
         .allowsHitTesting(false)
         .accessibilityHidden(true)
     }
 
     private var barre: some View {
-        HStack(spacing: Jetons.Espace.un) {
+        HStack(spacing: Jetons.espace1) {
             ForEach(Array(zip(["Syn-App", "Brok"], classes).enumerated()), id: \.offset) { rang, perso in
                 let devant = rang == 0
                 PastillePerso(
@@ -250,7 +200,7 @@ private struct ApercuTheme: View {
                 ModeButton(icone: bouton.symbole, actif: bouton == .palette, aide: bouton.libelle) {}
             }
         }
-        .padding(Jetons.Espace.un)
+        .padding(Jetons.espace1)
         .fixedSize()
         .surfaceFlottante(verre: true)
     }

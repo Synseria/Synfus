@@ -119,13 +119,11 @@ final class Preferences: ObservableObject {
     /// à la charge de l'appelant comme `menuBarIcon`.
     @Published var iconeApp: IconeApp = .parDefaut { didSet { save() } }
 
-    /// Clair ou sombre pour toute l'app, ou celui de macOS (`ThemeCourant.Apparence`).
-    @Published var apparence: ThemeCourant.Apparence = .auto { didSet { save() } }
-    /// La couleur de l'app et la teinte de ses fonds (Réglages ▸ Thème) : tout le reste
-    /// des couleurs vient des jetons, par `ThemeCourant`.
-    @Published var couleurDeLApp: Jetons.Couleur = Jetons.couleurParDefaut { didSet { save() } }
-    /// `nil` = Auto : primaire en clair, nuit en sombre (`Jetons.fondsParDefaut`).
-    @Published var fondsDeLApp: Jetons.Fonds? { didSet { save() } }
+    /// Le thème de l'app (Réglages ▸ Thème) : tout le reste des couleurs vient du nuancier, par
+    /// `ThemeCourant`.
+    @Published var themeDeLApp: Jetons.Theme = Jetons.themeParDefaut { didSet { save() } }
+    /// `nil` : l'app suit macOS, Jour en clair, Pénombre en sombre ; une nuance impose son apparence.
+    @Published var nuanceDeLApp: Jetons.Nuance? = Jetons.nuanceParDefaut { didSet { save() } }
 
     /// Achever les clients gelés à la fermeture (voir `FreezeWatcher`). Activé
     /// par défaut : la règle d'abattage est assez stricte pour ne viser que des
@@ -561,9 +559,7 @@ final class Preferences: ObservableObject {
         .facultatif("autoCenterBar", \.autoCenterBar),
         .facultatif("menuBarIcon", \.menuBarIcon),
         .facultatif("iconeApp", \.iconeApp),
-        .enTexte("couleurDeLApp", \.couleurDeLApp, ecrit: \.ecrit, lu: Jetons.Couleur.init(ecrit:)),
-        .enTexte("apparence", \.apparence, ecrit: \.rawValue, lu: ThemeCourant.Apparence.init(rawValue:)),
-        .enTexteOptionnel("fondsDeLApp", \.fondsDeLApp, ecrit: \.ecrit, lu: Jetons.Fonds.init(ecrit:)),
+        .theme(theme: "themeDeLApp", nuance: "nuanceDeLApp"),
         .facultatif("showPreviewOnHover", \.showPreviewOnHover),
         .optionnel("previewHotKey", \.previewHotKey),
         .facultatif("advanceOnClick", \.advanceOnClick),
@@ -766,19 +762,28 @@ final class Preferences: ObservableObject {
                     })
         }
 
-        /// Comme `enTexte`, pour un choix qui peut ne pas être fait : `nil` (Auto) n'est pas écrit.
-        static func enTexteOptionnel<V>(
-            _ cle: Cle, _ chemin: ReferenceWritableKeyPath<Preferences, V?>,
-            ecrit: @escaping @MainActor (V) -> String, lu: @escaping @MainActor (String) -> V?
-        ) -> Reglage {
+        /// Le thème et la nuance. Sans la clé du thème, une sauvegarde d'avant le nuancier : sa
+        /// couleur, ses fonds et son apparence se convertissent (`ConversionDuTheme`), relus en texte
+        /// pour qu'une valeur inattendue laisse le défaut au lieu de rendre la sauvegarde illisible.
+        static func theme(theme cleTheme: Cle, nuance cleNuance: Cle) -> Reglage {
             Reglage(ecrire: { prefs, conteneur in
-                        try conteneur.encodeIfPresent(prefs[keyPath: chemin].map(ecrit), forKey: cle)
+                        try conteneur.encode(prefs.themeDeLApp.ecrit, forKey: cleTheme)
+                        try conteneur.encode(prefs.nuanceDeLApp?.rawValue ?? ConversionDuTheme.systeme, forKey: cleNuance)
                     },
                     lire: { conteneur in
-                        guard let texte = try conteneur.decodeIfPresent(String.self, forKey: cle),
-                              let valeur = lu(texte)
-                        else { return nil }
-                        return { $0[keyPath: chemin] = valeur }
+                        func texte(_ cle: Cle) -> String? { try? conteneur.decodeIfPresent(String.self, forKey: cle) }
+                        let relu: ConversionDuTheme.Relu
+                        if let ecrit = texte(cleTheme) {
+                            relu = ConversionDuTheme.Relu(theme: Jetons.Theme(ecrit: ecrit) ?? Jetons.themeParDefaut,
+                                                          nuance: ConversionDuTheme.nuance(ecrite: texte(cleNuance)))
+                        } else {
+                            relu = ConversionDuTheme.relire(couleur: texte("couleurDeLApp"), fonds: texte("fondsDeLApp"),
+                                                            apparence: texte("apparence"))
+                        }
+                        return { prefs in
+                            prefs.themeDeLApp = relu.theme
+                            prefs.nuanceDeLApp = relu.nuance
+                        }
                     })
         }
 
