@@ -20,6 +20,28 @@ struct CouleursTests {
         #expect(annoncee == String(reelle), "Jetons.swift a été retouché : le régénérer par sh propager.sh")
     }
 
+    /// La copie de SynseriaKit porte le même en-tête, dans ses trois premières lignes
+    /// (`swift-tools-version` garde la première du manifeste) : l'empreinte couvre ce qui le suit.
+    @Test("SynseriaKit/ est tel que Synseria-Design l'a copié")
+    func empreinteDeLaCopieDuKit() throws {
+        let kit = SourcesDuDepot.dossier.deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("SynseriaKit")
+        let fichiers = (FileManager.default.enumerator(at: kit, includingPropertiesForKeys: [.isRegularFileKey],
+                                                          options: .skipsHiddenFiles)?
+            .compactMap { $0 as? URL } ?? [])
+            .filter { (try? $0.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true }
+        #expect(fichiers.contains { $0.lastPathComponent == "Package.swift" })
+        for url in fichiers {
+            let lignes = try String(contentsOf: url, encoding: .utf8)
+                .split(separator: "\n", omittingEmptySubsequences: false)
+            let k = try #require(lignes.prefix(3).firstIndex { $0.contains(" · contenu ") }, "\(url.lastPathComponent) sans en-tête")
+            let annoncee = try #require(lignes[k].split(separator: " ").last).description
+            let corps = lignes[(k + 1)...].joined(separator: "\n")
+            let reelle = SHA256.hash(data: Data(corps.utf8)).map { String(format: "%02x", $0) }.joined().prefix(16)
+            #expect(annoncee == String(reelle), "\(url.lastPathComponent) a été retouché : le recopier par sh propager.sh")
+        }
+    }
+
     @Test("« Autre… » refuse une teinte proche du safran")
     func autreRefuseLeSafran() {
         for proche in [84, 56, 70, 113] { #expect(!Jetons.teinteAcceptee(proche), "\(proche)") }
