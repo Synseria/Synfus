@@ -128,7 +128,7 @@ final class PalettePanel: NSObject, ObservableObject, NSWindowDelegate {
         panel.isReleasedWhenClosed = false
         panel.backgroundColor = .clear
         panel.isOpaque = false
-        panel.hasShadow = true
+        panel.hasShadow = false
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.delegate = self
         self.panel = panel

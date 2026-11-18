@@ -157,10 +157,10 @@ struct ModeButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: icone)
-                .font(Jetons.Typo.note.police)
+                .font(Jetons.typoMeta.font)
                 .foregroundStyle(etat.encre)
                 .contentTransition(.symbolEffect(.replace))
-                .frame(width: Jetons.Taille.cibleMin, height: Jetons.Taille.cibleMin)
+                .frame(width: Jetons.hauteurCase, height: Jetons.hauteurCase)
                 .fondEtat(etat)
         }
         .buttonStyle(.plain)
@@ -211,9 +211,9 @@ struct ArrangeMenuButton: View {
             MasquerBouton(bouton: .rangement)
         } label: {
             Image(systemName: BoutonBarre.rangement.symbole)
-                .font(Jetons.Typo.note.police)
+                .font(Jetons.typoMeta.font)
                 .foregroundStyle(Color.jeton(\.encre))
-                .frame(width: Jetons.Taille.cibleMin, height: Jetons.Taille.cibleMin)
+                .frame(width: Jetons.hauteurCase, height: Jetons.hauteurCase)
                 .fondEtat(EtatVisuel(survole: survole))
         }
         .menuStyle(.borderlessButton)
@@ -246,9 +246,9 @@ struct GearButton: View {
             SettingsWindowController.shared.show()
         } label: {
             Image(systemName: "gearshape")
-                .font(Jetons.Typo.petit.police)
-                .foregroundStyle(survole ? Color.jeton(\.encre) : Color.jeton(\.encreSecondaire))
-                .frame(width: Jetons.Taille.cibleMin, height: Jetons.Taille.cibleMin)
+                .font(Jetons.typoMeta.font)
+                .foregroundStyle(survole ? Color.jeton(\.encre) : Color.jeton(\.encre2))
+                .frame(width: Jetons.hauteurCase, height: Jetons.hauteurCase)
                 .fondEtat(EtatVisuel(survole: survole))
         }
         .buttonStyle(.plain)
@@ -267,9 +267,9 @@ struct GearButton: View {
 /// deux fois par seconde en permanence, alerte ou pas.
 struct AlertPulse: View {
     var body: some View {
-        RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous)
-            .strokeBorder(Color.jeton(\.alerte), lineWidth: Jetons.Trait.etat)
-            .modifier(Battement(bas: 0.2, demiPeriode: Jetons.Duree.feuille * 2))
+        RoundedRectangle(cornerRadius: Jetons.rayon1, style: .continuous)
+            .strokeBorder(Color.jeton(\.avertissement), lineWidth: Jetons.epaisseurFocus)
+            .modifier(Battement(bas: 0.2, demiPeriode: Jetons.dureeLente * 2))
     }
 }
 
@@ -288,7 +288,7 @@ private struct Battement: ViewModifier {
                 if sansMouvement {
                     haut = true
                 } else {
-                    withAnimation(Jetons.Duree.animation(demiPeriode).repeatForever(autoreverses: true)) {
+                    withAnimation(Jetons.courbeStandard.animation(demiPeriode).repeatForever(autoreverses: true)) {
                         haut = false
                     }
                 }
@@ -302,15 +302,15 @@ private struct Battement: ViewModifier {
 /// à la taille de la barre.
 struct CopiedBadge: View {
     var body: some View {
-        RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous)
-            .strokeBorder(Color.jeton(\.primaire), lineWidth: Jetons.Trait.etat)
+        RoundedRectangle(cornerRadius: Jetons.rayon1, style: .continuous)
+            .strokeBorder(Color.jeton(\.accent), lineWidth: Jetons.epaisseurFocus)
             .overlay(alignment: .topTrailing) {
                 Image(systemName: "doc.on.clipboard.fill")
-                    .font(Jetons.Typo.micro.police)
-                    .foregroundStyle(Color.jeton(\.encreSurPrimaire))
-                    .padding(Jetons.Espace.un)
-                    .background(Circle().fill(Color.jeton(\.primaire)))
-                    .offset(x: Jetons.Espace.un, y: -Jetons.Espace.un)
+                    .font(Jetons.typoMicro.font)
+                    .foregroundStyle(Color.jeton(\.texteSurAccent))
+                    .padding(Jetons.espace1)
+                    .background(Circle().fill(Color.jeton(\.accent)))
+                    .offset(x: Jetons.espace1, y: -Jetons.espace1)
             }
             .transition(.opacity)
             .allowsHitTesting(false)
@@ -327,9 +327,9 @@ struct CopiedBadge: View {
 /// contour qui clignote se voit du coin de l'œil, sans rien poser sur le jeu.
 struct SwitchBlink: View {
     var body: some View {
-        RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous)
-            .strokeBorder(Color.jeton(\.encreSurPrimaire), lineWidth: Jetons.Trait.focus)
-            .modifier(Battement(bas: 0.1, demiPeriode: Jetons.Duree.menu))
+        RoundedRectangle(cornerRadius: Jetons.rayon1, style: .continuous)
+            .strokeBorder(Color.jeton(\.texteSurAccent), lineWidth: Jetons.epaisseurFocus)
+            .modifier(Battement(bas: 0.1, demiPeriode: Jetons.dureeNormale))
             .allowsHitTesting(false)
     }
 }
@@ -363,8 +363,8 @@ struct CombatBadge: View {
         case .placement, .pasMonTour:
             // En combat, pas son tour : le cadre en retrait, l'épée grise.
             ZStack(alignment: .topTrailing) {
-                RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous)
-                    .strokeBorder(Color.jeton(\.encreTertiaire), lineWidth: Jetons.Trait.etat)
+                RoundedRectangle(cornerRadius: Jetons.rayon1, style: .continuous)
+                    .strokeBorder(Color.jeton(\.encre3), lineWidth: Jetons.epaisseurFocus)
                 pastille(nil)
             }
             .help(L("barre.combat.enCombat"))
@@ -382,10 +382,10 @@ struct CombatBadge: View {
     /// Le battement ne vit que dans les dernières secondes : hors de là, rien ne s'anime.
     @ViewBuilder
     private func contourDuTour(critique: Bool) -> some View {
-        let contour = RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous)
-            .strokeBorder(Self.rose, lineWidth: Jetons.Trait.focus)
+        let contour = RoundedRectangle(cornerRadius: Jetons.rayon1, style: .continuous)
+            .strokeBorder(Self.rose, lineWidth: Jetons.epaisseurFocus)
         if critique {
-            contour.modifier(Battement(bas: 0.3, demiPeriode: Jetons.Duree.menu))
+            contour.modifier(Battement(bas: 0.3, demiPeriode: Jetons.dureeNormale))
         } else {
             contour
         }
@@ -403,18 +403,18 @@ struct CombatBadge: View {
         Group {
             if let texte {
                 Text(texte)
-                    .font(Jetons.Typo.micro.police)
+                    .font(Jetons.typoMicro.font)
                     .monospacedDigit()
-                    .padding(.horizontal, Jetons.Espace.un)
+                    .padding(.horizontal, Jetons.espace1)
             } else {
                 Image(systemName: "figure.fencing")
-                    .font(Jetons.Typo.micro.police)
-                    .padding(Jetons.Espace.un)
+                    .font(Jetons.typoMicro.font)
+                    .padding(Jetons.espace1)
             }
         }
         // Le blanc ne vaut que sur le rose du jeu ; sur l'encre du thème, c'est la couleur de la fenêtre qui contraste.
-        .foregroundStyle(surRose ? Color.white : Color.jeton(\.fenetre))
-        .background(Capsule().fill(surRose ? Self.rose : Color.jeton(\.encreSecondaire)))
-        .offset(x: Jetons.Espace.un, y: -Jetons.Espace.un)
+        .foregroundStyle(surRose ? Color.white : Color.jeton(\.fondFenetre))
+        .background(Capsule().fill(surRose ? Self.rose : Color.jeton(\.encre2)))
+        .offset(x: Jetons.espace1, y: -Jetons.espace1)
     }
 }

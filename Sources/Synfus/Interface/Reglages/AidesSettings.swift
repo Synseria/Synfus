@@ -34,7 +34,7 @@ struct AidesSettings: View {
             }
         } else {
             Ligne(titre: L("chasse.indices"), etat: source) {
-                HStack(spacing: Jetons.Espace.deux) {
+                HStack(spacing: Jetons.espace2) {
                     if modele.chargementIndices { ProgressView().controlSize(.small) }
                     Button(L("chasse.indices.maj")) { Task { await modele.chargerIndices(forcer: true) } }
                         .disabled(modele.chargementIndices)

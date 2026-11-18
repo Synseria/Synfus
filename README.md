@@ -7,7 +7,7 @@ Passer d'un perso à l'autre, trouver un zaap, suivre une quête, résoudre une 
 sans quitter le jeu des yeux.
 
 [![Dernière version](https://img.shields.io/github/v/release/Synseria/Synfus?label=version&color=4f9d7f)](../../releases/latest)
-![macOS 14+](https://img.shields.io/badge/macOS-14%2B-555)
+![macOS 26+](https://img.shields.io/badge/macOS-26%2B-555)
 ![Apple Silicon et Intel](https://img.shields.io/badge/Apple%20Silicon%20%C2%B7%20Intel-555)
 [![Licence MIT](https://img.shields.io/badge/licence-MIT-555)](LICENSE)
 
@@ -162,8 +162,8 @@ focus), et **Enregistrement de l'écran** seulement pour les aperçus et la lect
 
    | Mac | Fichier |
    | --- | --- |
-   | Apple Silicon (M1 et suivants) | `Synfus-<version>-arm64.dmg` |
-   | Intel | `Synfus-<version>-x86_64.dmg` |
+   | Apple Silicon (M1 et suivants) | `Synfus-<version>-macos26-arm64.dmg` |
+   | Intel | `Synfus-<version>-macos26-x86_64.dmg` |
 
 2. Glisse **Synfus** dans **Applications**, puis, dans le Terminal :
 
@@ -190,8 +190,7 @@ La même signature *ad hoc* impose de réautoriser à chaque nouvelle version. C
 sources l'évite.
 </details>
 
-Compatible **macOS 14 (Sonoma) et suivants** ; l'effet Liquid Glass de la barre à partir de
-macOS 26.
+Compatible **macOS 26 (Tahoe) et suivants**.
 
 ## Visuels du jeu
 
@@ -214,11 +213,11 @@ sh run.sh                    # build de développement, .build/dev/Synfus.app
 sh run.sh --start            # … puis le lance
 sh run.sh --install --start  # build release, installé dans /Applications et lancé
 sh build.sh                  # build release : dist/Synfus.app
-sh build.sh --release        # + dist/Synfus-<version>-<arch>.dmg
+sh build.sh --release        # + dist/Synfus-<version>-macos<N>-<arch>.dmg
 sh test.sh                   # suite de tests (sh test.sh Rotation : filtrée)
 ```
 
-- **Xcode le plus récent requis** (Xcode 27, Swift 6.4) ; le deployment target reste macOS 14.
+- **Xcode le plus récent requis** (Xcode 27, Swift 6.4) ; macOS 26 minimum.
 - **Tests** sur la logique pure (titres de fenêtres, raccourcis, zaaps, quêtes, OCR, préférences),
   sans toucher aux réglages de la machine.
 - **Captures de cette page** : `SYNFUS_CAPTURES=$PWD/docs/screenshots sh test.sh CapturesTests` —

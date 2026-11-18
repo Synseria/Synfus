@@ -32,18 +32,18 @@ struct BlocsStatistiques: View {
 
     var body: some View {
         Bloc(L("stats.titre")) {
-            Interrupteur(titre: L("stats.partager"), aide: L("stats.partager.aide"),
+            LigneInterrupteur(titre: L("stats.partager"), aide: L("stats.partager.aide"),
                          isOn: $prefs.partagerStatistiques)
             if prefs.partagerStatistiques {
                 Ligne(titre: L("stats.dernierEnvoi")) {
-                    HStack(spacing: Jetons.Espace.deux) {
-                        Text(dernierEnvoi).foregroundStyle(Color.jeton(\.encreSecondaire))
+                    HStack(spacing: Jetons.espace2) {
+                        Text(dernierEnvoi).foregroundStyle(Color.jeton(\.encre2))
                         Button(L("stats.voirDonnees")) { donnees = true }
                     }
                 }
             }
         }
-        .sheet(isPresented: $donnees) { DonneesEnvoyeesVue() }
+        .sheet(isPresented: $donnees) { DonneesEnvoyeesVue().racineSynfus() }
         if prefs.partagerStatistiques { compteurs }
     }
 
@@ -53,9 +53,9 @@ struct BlocsStatistiques: View {
         let totaux = usage.registre.historique.totaux(sur: periode.jours, aujourdhui: aujourdhui)
         Bloc {
             Ligne(titre: L("stats.periode")) {
-                HStack(spacing: Jetons.Espace.deux) {
-                    if let depuis { Text(depuis).foregroundStyle(Color.jeton(\.encreSecondaire)) }
-                    Segments(L("stats.periode"), selection: $periode, choix: Periode.allCases.map { ($0, $0.libelle) })
+                HStack(spacing: Jetons.espace2) {
+                    if let depuis { Text(depuis).foregroundStyle(Color.jeton(\.encre2)) }
+                    SegmenteTexte(titre: L("stats.periode"), options: Periode.allCases.map { ($0, $0.libelle) }, selection: $periode)
                 }
             }
             if let moyennes = usage.persos.moyennes(sur: periode.jours, aujourdhui: aujourdhui) {
@@ -77,7 +77,7 @@ struct BlocsStatistiques: View {
 
     private func valeur(_ titre: String, _ texte: String) -> some View {
         Ligne(titre: titre) {
-            Text(texte).monospacedDigit().foregroundStyle(Color.jeton(\.encreSecondaire))
+            Text(texte).monospacedDigit().foregroundStyle(Color.jeton(\.encre2))
         }
     }
 
@@ -116,31 +116,31 @@ struct DonneesEnvoyeesVue: View {
 
     var body: some View {
         let texte = dernier ? usage.registre.historique.dernierRapport : usage.registre.apercuProchainEnvoi()
-        VStack(alignment: .leading, spacing: Jetons.Espace.trois) {
-            Segments(L("stats.voirDonnees"), selection: $dernier,
-                     choix: [(false, L("stats.prochainEnvoi")), (true, L("stats.dernierEnvoi"))])
+        VStack(alignment: .leading, spacing: Jetons.espace3) {
+            SegmenteTexte(titre: L("stats.voirDonnees"),
+                          options: [(false, L("stats.prochainEnvoi")), (true, L("stats.dernierEnvoi"))], selection: $dernier)
             ScrollView {
                 Text(texte ?? L("stats.rienAEnvoyer"))
-                    .font(Jetons.Typo.codeInterface.police)
+                    .font(Jetons.typoCode.font)
                     .textSelection(.enabled)
-                    .foregroundStyle(texte == nil ? Color.jeton(\.encreSecondaire) : Color.jeton(\.encre))
+                    .foregroundStyle(texte == nil ? Color.jeton(\.encre2) : Color.jeton(\.encre))
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(Jetons.Espace.deux)
+                    .padding(Jetons.espace2)
             }
-            .background(RoundedRectangle(cornerRadius: Jetons.Rayon.controle).fill(Color.jeton(\.creux)))
+            .background(RoundedRectangle(cornerRadius: Jetons.rayon1).fill(Color.jeton(\.creux)))
             HStack {
                 Button(L("menu.copier")) { if let texte { PressePapiers.copier(texte) } }
-                    .buttonStyle(.bouton(.secondaire))
+                    .buttonStyle(BoutonBorde())
                     .disabled(texte == nil)
                 Spacer()
                 Button(L("menu.fermer")) { dismiss() }
-                    .buttonStyle(.bouton(.principal))
+                    .buttonStyle(BoutonPrincipal())
                     .keyboardShortcut(.defaultAction)
             }
         }
-        .padding(Jetons.Espace.quatre)
+        .padding(Jetons.espace4)
         .frame(width: 620, height: 520)
-        .background(Color.jeton(\.fenetre))
+        .background(Color.jeton(\.fondFenetre))
     }
 }
 

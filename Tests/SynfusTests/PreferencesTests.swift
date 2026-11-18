@@ -263,7 +263,7 @@ struct PreferencesTests {
         #expect(prefs.barOnlyWithDofus == false)
         #expect(prefs.menuBarIcon == .logo)
         #expect(prefs.iconeApp == .parDefaut)
-        #expect(prefs.couleurDeLApp == Jetons.couleurParDefaut && prefs.fondsDeLApp == nil)
+        #expect(prefs.themeDeLApp == Jetons.themeParDefaut && prefs.nuanceDeLApp == Jetons.nuanceParDefaut)
         // Masquer la barre reste sans défaut : on ne confisque aucune
         // combinaison réservée par le système sans qu'elle ait été demandée.
         #expect(prefs.toggleBar == nil)
@@ -377,7 +377,7 @@ struct PreferencesTests {
         let relues = Preferences.forTesting(store: store)
         #expect(relues.zaapsFavoris == ["1:5,-18", "1:99,99", "1:-2,0"])
         // La carte du store se lit en tâche de fond au lancement : celle du dépôt.
-        #expect(CatalogueZaaps.favoris(relues.zaapsFavoris, parmi: Carte.integree.zaaps).map(\.cle) == ["1:5,-18", "1:-2,0"])
+        #expect(CatalogueZaaps.favoris(relues.zaapsFavoris, parmi: CarteDuJeu.integree.zaaps).map(\.cle) == ["1:5,-18", "1:-2,0"])
     }
 
     @Test("Les réglages d'aperçu se relisent après un redémarrage")
@@ -505,7 +505,7 @@ struct PreferencesTests {
      "inviteFormat":"/w %nom go","inviteGroupee":true,
      "inviteHotKey":{"keyCode":34,"modifiers":256},
      "killFrozenClients":false,"lastArrangement":"principale","lireCombat":true,"lireCombatDerriere":true,
-     "lirePosition":true,"menuBarIcon":"symbole","iconeApp":{"motif":"couvee","fond":"aube"},"apparence":"sombre","couleurDeLApp":"teinte:210","fondsDeLApp":"nuit",
+     "lirePosition":true,"menuBarIcon":"symbole","iconeApp":{"motif":"couvee","fond":"aube"},"themeDeLApp":"personnalise:3FA9D8","nuanceDeLApp":"penombre",
      "previewHotKey":{"keyCode":49,"modifiers":2048},
      "sessionHotKey":{"keyCode":1,"modifiers":256},"reduirePersosInactifs":false,"showClasses":false,
      "showNumbers":false,"showPreviewOnHover":true,"signalerBascule":false,
@@ -546,8 +546,7 @@ struct PreferencesTests {
         #expect(prefs.autoCenterBar == false)
         #expect(prefs.menuBarIcon == .symbole)
         #expect(prefs.iconeApp == IconeApp(motif: .couvee, fond: .aube))
-        #expect(prefs.apparence == .sombre)
-        #expect(prefs.couleurDeLApp == .teinte(210) && prefs.fondsDeLApp == .nuit)
+        #expect(prefs.themeDeLApp == .personnalise(0x3FA9D8) && prefs.nuanceDeLApp == .penombre)
         #expect(prefs.showPreviewOnHover == true)
         #expect(prefs.previewHotKey == HotKey(keyCode: 49, modifiers: 2048))
         #expect(prefs.advanceOnClick == true)
@@ -626,9 +625,8 @@ struct PreferencesTests {
         prefs.autoCenterBar = false
         prefs.menuBarIcon = .symbole
         prefs.iconeApp = IconeApp(motif: .couvee, fond: .aube)
-        prefs.apparence = .sombre
-        prefs.couleurDeLApp = .teinte(210)
-        prefs.fondsDeLApp = .nuit
+        prefs.themeDeLApp = .personnalise(0x3FA9D8)
+        prefs.nuanceDeLApp = .penombre
         prefs.showPreviewOnHover = true
         prefs.previewHotKey = HotKey(keyCode: 49, modifiers: 2048)
         prefs.advanceOnClick = true
@@ -714,7 +712,7 @@ struct PreferencesTests {
          "autoCenterBar":true,"barOnlyWithDofus":false,"panneauxSeulementDofus":true,"barVisible":true,"bossChoisi":"harebourg",
          "boutonsMasques":[],"characterOrder":[],
          "defaultsVersion":9,"equipes":[],"etiquettes":{},"hotKeys":[null],"inviteFormat":"/invite %nom","inviteGroupee":false,
-         "killFrozenClients":true,"lireCombat":false,"lireCombatDerriere":false,"lirePosition":false,"menuBarIcon":"logo","iconeApp":{"motif":"oeuf","fond":"transparent"},"apparence":"auto","couleurDeLApp":"jade",
+         "killFrozenClients":true,"lireCombat":false,"lireCombatDerriere":false,"lirePosition":false,"menuBarIcon":"logo","iconeApp":{"motif":"oeuf","fond":"transparent"},"themeDeLApp":"lagon","nuanceDeLApp":"systeme",
          "reduirePersosInactifs":false,"showClasses":true,"showNumbers":true,"showPreviewOnHover":false,
          "signalerBascule":true,"zaapAuto":false,
          "zaapGainMinimal":5,"zaapDuJeu":true,"zaapIntercalees":"/a","verifierMisesAJour":true,"partagerStatistiques":true,"zaapsAjoutes":[],"zaapsChoix":{},"zaapsFavoris":[],"zaapsVueCarte":true,
@@ -1153,5 +1151,19 @@ extension PreferencesTests {
         #expect(SettingsWindowController.ouvreAuLancement(premierLancement: false, accessibiliteAccordee: false))
         #expect(!SettingsWindowController.ouvreAuLancement(premierLancement: false, accessibiliteAccordee: true))
         #expect(Preferences.forTesting(store: StockageMemoire()).premierLancement)
+    }
+}
+
+@Suite("Préférences : le domaine de l'app")
+@MainActor
+struct PreferencesPartageesTests {
+    @Test("Hors de l'app, les réglages partagés vivent en mémoire : un test n'écrit rien dans les UserDefaults")
+    func partageEnMemoire() {
+        let avant = UserDefaults.standard.data(forKey: Preferences.key)
+        let prefs = Preferences.shared
+        let theme = prefs.themeDeLApp
+        defer { prefs.themeDeLApp = theme }
+        prefs.themeDeLApp = theme == .coloris(.cerise) ? .coloris(.lagon) : .coloris(.cerise)
+        #expect(UserDefaults.standard.data(forKey: Preferences.key) == avant)
     }
 }

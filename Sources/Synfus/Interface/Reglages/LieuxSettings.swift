@@ -16,7 +16,7 @@ struct BlocLieux: View {
         let langue = L10n.courante.langue
         let lieux = montres(langue)
         Bloc(L("reglages.lieux"), aide: L("palette.reglages.lieux.aide"), paresseux: true) {
-            HStack(spacing: Jetons.Espace.deux) {
+            HStack(spacing: Jetons.espace2) {
                 ChampFiltre(invite: L("lieux.filtrer"), texte: $filtre)
                 Picker(L("lieux.categorie"), selection: $categorie) {
                     Text(L("palette.reglages.tous")).tag(Int?.none)
@@ -26,11 +26,11 @@ struct BlocLieux: View {
                 .fixedSize()
                 Button { marquesSeulement.toggle() } label: {
                     Text(L("lieux.marques"))
-                        .font(Jetons.Typo.corps.police)
-                        .padding(.horizontal, Jetons.Espace.trois)
-                        .frame(height: Jetons.Taille.controle)
+                        .font(Jetons.typoCorps.font)
+                        .padding(.horizontal, Jetons.espace3)
+                        .frame(height: Jetons.hauteurControle)
                 }
-                .buttonStyle(.etat(choisi: marquesSeulement, rayon: Jetons.Rayon.capsule))
+                .buttonStyle(.etat(choisi: marquesSeulement, rayon: Jetons.rayonPilule))
                 .accessibilityAddTraits(marquesSeulement ? .isSelected : [])
             }
             .rangee()
@@ -40,11 +40,11 @@ struct BlocLieux: View {
             ForEach(lieux.prefix(Self.limite), id: \.cle) { lieu in
                 Ligne(titre: lieu.nom(en: langue), etat: Self.lieuDit(lieu, langue)) {
                     PictogrammeLieu(gfx: lieu.gfx) {
-                        Image(systemName: "mappin.and.ellipse").foregroundStyle(Color.jeton(\.encreSecondaire))
+                        Image(systemName: "mappin.and.ellipse").foregroundStyle(Color.jeton(\.encre2))
                     }
-                    .frame(width: Jetons.Taille.cibleMin, height: Jetons.Taille.cibleMin)
+                    .frame(width: Jetons.hauteurCase, height: Jetons.hauteurCase)
                 } controle: {
-                    HStack(spacing: Jetons.Espace.deux) {
+                    HStack(spacing: Jetons.espace2) {
                         BoutonEtiquette(cle: lieu.cle)
                         BoutonFavori(cle: lieu.cle)
                         BoutonTrajet(x: lieu.x, y: lieu.y, sousZone: lieu.idSousZone)
@@ -53,12 +53,12 @@ struct BlocLieux: View {
                 }
             }
             if lieux.count > Self.limite {
-                Text(L("lieux.affiner", lieux.count)).foregroundStyle(Color.jeton(\.encreSecondaire)).rangee()
+                Text(L("lieux.affiner", lieux.count)).foregroundStyle(Color.jeton(\.encre2)).rangee()
             }
         } entete: {
             Text(L("lieux.compte", lieux.count))
-                .font(Jetons.Typo.note.police)
-                .foregroundStyle(Color.jeton(\.encreSecondaire))
+                .font(Jetons.typoMeta.font)
+                .foregroundStyle(Color.jeton(\.encre2))
         }
     }
 

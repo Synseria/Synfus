@@ -9,10 +9,11 @@ extension MiseAJour.Etat {
         case .verification: L("maj.verification")
         case .aJour: L("maj.aJour")
         case .disponible(let version): L("maj.disponible", version.numero)
+        case .incompatible(let version): L("maj.incompatible", version.numero, version.macOSMinimum)
         case .installation: L("maj.installation")
         case .echec(.reseau, _): L("maj.echec.reseau")
         case .echec(.empreinte, _): L("maj.echec.empreinte")
-        case .echec(.image, _), .echec(.app, _): L("maj.echec.image")
+        case .echec(.image, _), .echec(.app, _), .echec(.systeme, _): L("maj.echec.image")
         case .echec(.ecriture, _): L("maj.echec.ecriture")
         }
     }
@@ -64,17 +65,19 @@ struct ActionMiseAJour: View {
             ProgressView().controlSize(.small)
         case .disponible:
             Button(L("maj.installer")) { miseAJour.proposer() }
-                .buttonStyle(.bouton(.principal))
+                .buttonStyle(BoutonPrincipal())
         case .echec(.ecriture, let version):
             Button(L("maj.telecharger")) { NSWorkspace.shared.open(version.page) }
-                .buttonStyle(.bouton(.secondaire))
+                .buttonStyle(BoutonBorde())
         case .echec:
             Button(L("commun.reessayer")) { miseAJour.proposer() }
-                .buttonStyle(.bouton(.secondaire))
+                .buttonStyle(BoutonBorde())
+        case .incompatible:
+            EmptyView()
         case .inconnu, .aJour:
             if prefs.verifierMisesAJour {
                 Button(rechercher) { miseAJour.verifier() }
-                    .buttonStyle(.bouton(.secondaire))
+                    .buttonStyle(BoutonBorde())
             }
         }
     }

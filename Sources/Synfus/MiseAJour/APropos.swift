@@ -7,23 +7,31 @@ struct AProposVue: View {
     @ObservedObject private var miseAJour = MiseAJour.shared
     @ObservedObject private var prefs = Preferences.shared
 
+    /// L'emblème de la marque, tel que `marque/` du SDS le dessine pour Synfus.
+    private static let embleme: Image = {
+        guard let url = Ressources.url("synseria-embleme-synfus.svg"), let image = NSImage(contentsOf: url) else {
+            return Image(systemName: "circle.fill")
+        }
+        return Image(nsImage: image)
+    }()
+
     var body: some View {
-        VStack(spacing: Jetons.Espace.quatre) {
-            SigneSynseria(hauteur: 44)
-            VStack(spacing: Jetons.Espace.deux) {
-                Text(AppIntegrity.displayName).font(Jetons.Typo.corpsFort.police).foregroundStyle(Color.jeton(\.encre))
+        VStack(spacing: Jetons.espace4) {
+            SigneSynseria(embleme: Self.embleme, hauteur: Jetons.espace7)
+            VStack(spacing: Jetons.espace2) {
+                Text(AppIntegrity.displayName).font(Jetons.typoTitreCarte.font).foregroundStyle(Color.jeton(\.encre))
                 if let etat = MiseAJour.resume(version: version, etat: miseAJour.etat,
                                                verifiee: prefs.derniereVerificationMaj) {
-                    Text(etat).font(Jetons.Typo.note.police).foregroundStyle(Color.jeton(\.encreSecondaire))
+                    Text(etat).font(Jetons.typoMeta.font).foregroundStyle(Color.jeton(\.encre2))
                         .multilineTextAlignment(.center)
                         .textSelection(.enabled)
                 }
             }
             ActionMiseAJour(rechercher: L("maj.rechercherUne"))
         }
-        .padding(Jetons.Espace.six)
-        .frame(width: 340)
-        .background(Color.jeton(\.fenetre))
+        .padding(Jetons.espace5)
+        .frame(width: Jetons.largeurApropos)
+        .background(Color.jeton(\.fondFenetre))
     }
 }
 

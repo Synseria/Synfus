@@ -3,90 +3,101 @@ import Combine
 import Observation
 import SwiftUI
 
-/// Le thème courant (réglage × clair ou sombre), fourni aux vues SwiftUI et aux panneaux AppKit :
-/// le seul code de couleur hors de `Jetons`. Un jeton se lit par son chemin (`Color.jeton(\.surface)`),
-/// jamais par une liste recopiée ici. La couleur est dynamique — clair ou sombre se décide au dessin —
-/// et, lue dans un `body`, abonne la vue au réglage : un changement se redessine partout.
+/// Le thème courant (thème × nuance), fourni aux vues SwiftUI et aux panneaux AppKit : le seul code
+/// de couleur hors de `Jetons`. Un rôle se lit par son chemin (`Color.jeton(\.plaque)`), jamais par
+/// une liste recopiée ici. Sans nuance choisie, la couleur est dynamique — Jour ou Pénombre se décide
+/// au dessin — et, lue dans un `body`, abonne la vue au réglage : un changement se redessine partout.
 @MainActor
 enum ThemeCourant {
-    typealias Jeton = KeyPath<Jetons.Theme, Jetons.RVB>
+    typealias Jeton = KeyPath<Jetons.Couleurs, Jetons.RVB>
 
-    /// Clair, sombre, ou celui de macOS. Posé sur l'app entière : fenêtres, panneaux et menus le suivent,
-    /// et les couleurs dynamiques de `nsColor` se résolvent d'après lui.
-    enum Apparence: String, CaseIterable, Sendable {
-        case auto, clair, sombre
+    /// Ce qui détermine toutes les couleurs.
+    struct Reglage: Hashable, Sendable {
+        var theme = Jetons.themeParDefaut
+        /// nil : l'app suit le système, Jour en clair, Pénombre en sombre.
+        var nuance = Jetons.nuanceParDefaut
 
-        var titre: String {
-            switch self {
-            case .auto: L("commun.auto")
-            case .clair: L("theme.apparence.clair")
-            case .sombre: L("theme.apparence.sombre")
-            }
-        }
-
-        /// `nil` : suivre le système.
-        var nsAppearance: NSAppearance? {
-            switch self {
-            case .auto: nil
-            case .clair: NSAppearance(named: .aqua)
-            case .sombre: NSAppearance(named: .darkAqua)
-            }
-        }
+        func nuance(sombre: Bool) -> Jetons.Nuance { nuance ?? .duSysteme(sombre: sombre) }
     }
 
-    /// À l'ouverture : pose l'apparence choisie, puis la suit.
+    /// À l'ouverture : pose l'apparence de la nuance choisie, puis la suit.
     static func demarrer() {
-        NSApp.appearance = Preferences.shared.apparence.nsAppearance
+        NSApp.appearance = apparence(Preferences.shared.nuanceDeLApp)
         _ = Suivi.partage
     }
 
-    /// Ce qui détermine tous les jetons ; sans fonds choisis, ceux de l'Auto.
-    struct Reglage: Hashable, Sendable {
-        var couleur = Jetons.couleurParDefaut
-        var fonds: Jetons.Fonds?
+    /// Une nuance choisie impose son apparence à toute l'app (menus, champs et curseurs du système
+    /// suivent) ; sans nuance, celle de macOS.
+    static func apparence(_ nuance: Jetons.Nuance?) -> NSAppearance? {
+        nuance.flatMap { NSAppearance(named: $0.sombre ? .darkAqua : .aqua) }
     }
 
     static var reglage: Reglage {
         _ = Suivi.partage.revision
         let prefs = Preferences.shared
-        return Reglage(couleur: prefs.couleurDeLApp, fonds: prefs.fondsDeLApp)
+        return Reglage(theme: prefs.themeDeLApp, nuance: prefs.nuanceDeLApp)
     }
 
-    static func theme(_ apparence: Jetons.Apparence, _ reglage: Reglage = ThemeCourant.reglage) -> Jetons.Theme {
-        if let memoire, memoire.reglage == reglage { return apparence == .clair ? memoire.clair : memoire.sombre }
-        let clair = Jetons.theme(reglage.couleur, fonds: reglage.fonds, .clair)
-        let sombre = Jetons.theme(reglage.couleur, fonds: reglage.fonds, .sombre)
-        memoire = (reglage, clair, sombre)
-        return apparence == .clair ? clair : sombre
+    /// Les couleurs d'un thème dans une nuance, calculées une fois : l'app comme les pastilles de
+    /// Réglages ▸ Thème (refaites à chaque pas du curseur de teinte) les lisent ici.
+    static func couleurs(_ theme: Jetons.Theme, _ nuance: Jetons.Nuance) -> Jetons.Couleurs {
+        let cle = Cle(theme: theme, nuance: nuance)
+        if let connues = calculees[cle] { return connues }
+        // Les coloris restent (44 au plus) ; d'une couleur à soi, seule la dernière.
+        if case .personnalise = theme {
+            calculees = calculees.filter { if case .personnalise = $0.key.theme { $0.key.theme == theme } else { true } }
+        }
+        let neuves = Jetons.Nuancier.couleurs(theme, nuance)
+        calculees[cle] = neuves
+        return neuves
     }
 
-    private static var memoire: (reglage: Reglage, clair: Jetons.Theme, sombre: Jetons.Theme)?
+    private struct Cle: Hashable {
+        let theme: Jetons.Theme
+        // periphery:ignore - lue par le Hashable synthétisé : c'est la moitié de la clé
+        let nuance: Jetons.Nuance
+    }
+
+    private static var calculees: [Cle: Jetons.Couleurs] = [:]
 
     /// Dynamique : la fermeture ne garde que les deux couleurs déjà calculées, jamais les préférences.
-    fileprivate static func nsColor(_ jeton: Jeton) -> NSColor {
+    fileprivate static func nsColor(_ valeur: (Jetons.Couleurs, Jetons.Nuance) -> Jetons.RVB) -> NSColor {
         let reglage = ThemeCourant.reglage
-        let (clair, sombre) = (NSColor(theme(.clair, reglage)[keyPath: jeton].couleur), NSColor(theme(.sombre, reglage)[keyPath: jeton].couleur))
+        let (jour, sombre) = (reglage.nuance(sombre: false), reglage.nuance(sombre: true))
+        let clair = NSColor(valeur(couleurs(reglage.theme, jour), jour).couleur)
+        let fonce = NSColor(valeur(couleurs(reglage.theme, sombre), sombre).couleur)
         return NSColor(name: nil) { dessin in
-            dessin.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? sombre : clair
+            dessin.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? fonce : clair
         }
     }
 }
 
 extension Color {
-    /// Un jeton du thème courant.
-    @MainActor static func jeton(_ jeton: ThemeCourant.Jeton) -> Color { Color(nsColor: ThemeCourant.nsColor(jeton)) }
+    /// Un rôle du thème courant.
+    @MainActor static func jeton(_ jeton: ThemeCourant.Jeton) -> Color {
+        Color(nsColor: ThemeCourant.nsColor { couleurs, _ in couleurs[keyPath: jeton] })
+    }
 
-    /// Un jeton lu dans une apparence fixe : ce qui se pose sur un voile nuit s'écrit en clair,
-    /// que la fenêtre soit claire ou sombre.
-    @MainActor static func jeton(_ jeton: ThemeCourant.Jeton, en apparence: Jetons.Apparence) -> Color {
-        ThemeCourant.theme(apparence)[keyPath: jeton].couleur
+    /// Un rôle lu dans une nuance fixe : ce qui se pose sur l'image d'une carte du jeu s'écrit
+    /// comme en Nuit, que la fenêtre soit claire ou sombre.
+    @MainActor static func jeton(_ jeton: ThemeCourant.Jeton, en nuance: Jetons.Nuance) -> Color {
+        ThemeCourant.couleurs(ThemeCourant.reglage.theme, nuance)[keyPath: jeton].couleur
+    }
+
+    /// Le violet des positions suggérées : une couleur propre à Synfus (`Jetons.Propres`).
+    @MainActor static var suggestionSynfus: Color {
+        Color(nsColor: ThemeCourant.nsColor { _, nuance in Jetons.Propres.suggestionSynfus(nuance) })
     }
 }
 
-/// À poser sur la racine de chaque fenêtre : sans elle, un contrôle du système y prend l'accent
-/// de l'utilisateur. Un `ViewModifier`, pour que la teinte suive la couleur choisie.
+/// À poser sur la racine de chaque fenêtre, panneau, feuille et popover : les couleurs du thème
+/// pour la trousse (`couleursSynseria`), et la teinte des contrôles du système, sans laquelle ils
+/// prendraient l'accent de l'utilisateur. Un `ViewModifier`, pour que l'une et l'autre suivent le réglage.
 struct RacineSynfus: ViewModifier {
-    func body(content: Content) -> some View { content.tint(Color.jeton(\.primaire)) }
+    func body(content: Content) -> some View {
+        let reglage = ThemeCourant.reglage
+        content.tint(Color.jeton(\.accent)).themeSynseria(reglage.theme, nuance: reglage.nuance)
+    }
 }
 
 extension View {
@@ -105,8 +116,11 @@ private final class Suivi {
     private init() {
         let prefs = Preferences.shared
         // Émis avant l'écriture : la vue relit les préférences au redessin, qui vient après.
-        prefs.$couleurDeLApp.dropFirst().sink { [weak self] _ in self?.revision += 1 }.store(in: &abonnements)
-        prefs.$fondsDeLApp.dropFirst().sink { [weak self] _ in self?.revision += 1 }.store(in: &abonnements)
-        prefs.$apparence.dropFirst().sink { NSApp.appearance = $0.nsAppearance }.store(in: &abonnements)
+        prefs.$themeDeLApp.dropFirst().sink { [weak self] _ in self?.revision += 1 }.store(in: &abonnements)
+        prefs.$nuanceDeLApp.dropFirst().sink { [weak self] nuance in
+            self?.revision += 1
+            // Sous les tests, pas d'application : les captures posent l'apparence de leurs fenêtres.
+            NSApp?.appearance = ThemeCourant.apparence(nuance)
+        }.store(in: &abonnements)
     }
 }

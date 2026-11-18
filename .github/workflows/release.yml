@@ -20,8 +20,7 @@ jobs:
   release:
     # Toujours l'image du Xcode le plus récent, celui du développement : le
     # paquet déclare la dernière swift-tools-version, qu'un Xcode antérieur
-    # refuse. Le deployment target reste 14.0 ; glassEffect (SDK ≥ 26) bascule
-    # vers le matériau translucide à l'exécution.
+    # refuse.
     runs-on: xcode-27
 
     steps:

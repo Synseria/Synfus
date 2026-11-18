@@ -102,29 +102,29 @@ struct SettingsView: View {
             detail
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 // Le rang par défaut d'un bouton des réglages, y compris hors d'un `Form` (Diagnostic, listes).
-                .buttonStyle(.bouton(.secondaire))
+                .buttonStyle(BoutonBorde())
         }
         .frame(width: 920, height: hauteur)
         // La teinte des fonds choisie dans Thème : celle de la fenêtre, que le formulaire laisse voir.
-        .background(Color.jeton(\.fenetre))
+        .background(Color.jeton(\.fondFenetre))
     }
 
     private var sidebar: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: Jetons.Espace.un) {
+            VStack(alignment: .leading, spacing: Jetons.espace1) {
                 ForEach(GroupeReglages.allCases, id: \.self) { groupe in
                     Text(groupe.titre)
-                        .font(Jetons.Typo.raccourci.police)
-                        .foregroundStyle(Color.jeton(\.encreSecondaire))
-                        .padding(.horizontal, Jetons.Espace.deux)
-                        .padding(.top, Jetons.Espace.deux)
-                        .padding(.bottom, Jetons.Espace.un)
+                        .font(Jetons.typoMicro.font)
+                        .foregroundStyle(Color.jeton(\.encre2))
+                        .padding(.horizontal, Jetons.espace2)
+                        .padding(.top, Jetons.espace2)
+                        .padding(.bottom, Jetons.espace1)
                     ForEach(SettingsSection.allCases.filter { $0.groupe == groupe }) { item in
                         RangeeLaterale(item: item, courante: section == item) { onglet.section = item }
                     }
                 }
             }
-            .padding(Jetons.Espace.deux)
+            .padding(Jetons.espace2)
             .groupeSelection(L("reglages.titre"), selection: Binding(get: { onglet.section }, set: { onglet.section = $0 }),
                              parmi: GroupeReglages.allCases.flatMap { groupe in
                                  SettingsSection.allCases.filter { $0.groupe == groupe }
@@ -163,14 +163,14 @@ private struct RangeeLaterale: View {
     var body: some View {
         let etat: EtatVisuel = courante ? .choix(.courant, auClavier: auClavier) : EtatVisuel(survole: survole)
         Button(action: action) {
-            HStack(spacing: Jetons.Espace.deux) {
+            HStack(spacing: Jetons.espace2) {
                 // Colonne assez large pour le plus large des symboles (`person.3`) : les libellés partent du même x.
-                Image(systemName: item.icon).frame(width: Jetons.Taille.cibleMin)
+                Image(systemName: item.icon).frame(width: Jetons.hauteurCase)
                 Text(item.label)
             }
-            .font(Jetons.Typo.navigation.police)
-            .frame(maxWidth: .infinity, minHeight: Jetons.Taille.rangeeNavigation, alignment: .leading)
-            .padding(.horizontal, Jetons.Espace.deux)
+            .font(Jetons.typoCorps.font)
+            .frame(maxWidth: .infinity, minHeight: Jetons.hauteurRangee, alignment: .leading)
+            .padding(.horizontal, Jetons.espace2)
             .foregroundStyle(etat.encre)
             .fondEtat(etat)
         }

@@ -27,7 +27,7 @@ final class ApercuCarte {
         let souris = NSEvent.mouseLocation
         guard let ecran = NSScreen.screens.first(where: { $0.frame.contains(souris) })?.visibleFrame else { return }
         let panel = panel ?? construire()
-        hote?.rootView = AnyView(vue(carte))
+        hote?.rootView = AnyView(vue(carte).racineSynfus())
         let cadre = Self.cadre(taille: Self.taille, fenetre: fenetreSous(souris), souris: souris, ecran: ecran)
         panel.setFrame(cadre, display: true)
         panel.orderFrontRegardless()
@@ -64,8 +64,8 @@ final class ApercuCarte {
         VueCarte(carte: carte, cote: max(Self.taille.width, Self.taille.height))
             .aspectRatio(contentMode: .fit)
             .background(Color.jeton(\.creux))
-            .clipShape(RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: Jetons.Rayon.controle, style: .continuous).strokeBorder(Color.jeton(\.filet), lineWidth: Jetons.Trait.filet))
+            .clipShape(RoundedRectangle(cornerRadius: Jetons.rayon1, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: Jetons.rayon1, style: .continuous).strokeBorder(Color.jeton(\.filet), lineWidth: Jetons.epaisseurFilet))
     }
 
     private func construire() -> NSPanel {
@@ -84,7 +84,7 @@ final class ApercuCarte {
         panel.isReleasedWhenClosed = false
         panel.backgroundColor = .clear
         panel.isOpaque = false
-        panel.hasShadow = true
+        panel.hasShadow = false
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         self.panel = panel
         self.hote = hote
@@ -122,7 +122,7 @@ struct MiniatureCarte: View {
                 .aspectRatio(contentMode: .fill)
                 .frame(width: taille.width, height: taille.height)
                 .background(Color.jeton(\.creux))
-                .clipShape(RoundedRectangle(cornerRadius: Jetons.Rayon.pastille, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: Jetons.rayon0, style: .continuous))
                 .apercuCarteAuSurvol(agrandir ? carte : nil)
         }
     }
@@ -148,7 +148,7 @@ extension View {
 }
 
 /// Le fond d'une case de zaap — réglages et palette : la vue de sa carte à pleine opacité, noircie
-/// par un voile `nuitProfond` là où le texte se pose (en haut et en bas, rien au milieu) ; sans
+/// par un voile du fond de la Nuit là où le texte se pose (en haut et en bas, rien au milieu) ; sans
 /// image, un fond uni. La forme rogne l'image, qui déborde la case.
 struct FondCarte: View {
     let carte: Int?
@@ -156,7 +156,7 @@ struct FondCarte: View {
     /// voile de couleur salirait.
     var choisie = false
     @ObservedObject private var prefs = Preferences.shared
-    private let forme = RoundedRectangle(cornerRadius: Jetons.Rayon.carte, style: .continuous)
+    private let forme = RoundedRectangle(cornerRadius: Jetons.rayon2, style: .continuous)
     /// Plus large qu'une case de la grille (palette : 4 au rang sur 660 pt ;
     /// réglages : 3), que l'image remplit.
     private static let cote: CGFloat = 200
@@ -173,8 +173,8 @@ struct FondCarte: View {
     var body: some View {
         if Self.surImage(carte), let carte {
             // Seul dégradé de l'app : le voile ne couvre que les bandes du texte, l'image reste entière au milieu.
-            let voile = Color.jeton(\.nuitProfond).opacity(Self.voileTexte)
-            Color.jeton(\.surface)
+            let voile = Color.jeton(\.fondFenetre, en: .nuit).opacity(Self.voileTexte)
+            Color.jeton(\.plaque)
                 .overlay { VueCarte(carte: carte, cote: Self.cote).scaledToFill() }
                 .overlay {
                     LinearGradient(stops: [
@@ -187,13 +187,13 @@ struct FondCarte: View {
                 .clipShape(forme)
                 .overlay(contour)
         } else {
-            forme.fill(choisie ? Color.jeton(\.primaireFond) : Color.jeton(\.surface)).overlay(contour)
+            forme.fill(choisie ? Color.jeton(\.creux) : Color.jeton(\.plaque)).overlay(contour)
         }
     }
 
     private var contour: some View {
-        forme.strokeBorder(choisie ? Color.jeton(\.primaire) : Color.jeton(\.filet),
-                           lineWidth: choisie ? Jetons.Trait.etat : Jetons.Trait.filet)
+        forme.strokeBorder(choisie ? Color.jeton(\.accent) : Color.jeton(\.filet),
+                           lineWidth: choisie ? Jetons.epaisseurFocus : Jetons.epaisseurFilet)
     }
 }
 

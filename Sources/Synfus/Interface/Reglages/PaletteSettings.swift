@@ -17,13 +17,13 @@ struct PaletteSettings: View {
                 InterrupteurVuesCartes()
             }
             Bloc(L("reglages.invitations")) {
-                Interrupteur(titre: L("raccourcis.invitation.groupee"), aide: L("raccourcis.inviter.aide"),
+                LigneInterrupteur(titre: L("raccourcis.invitation.groupee"), aide: L("raccourcis.inviter.aide"),
                              isOn: $prefs.inviteGroupee)
                 Ligne(titre: L("raccourcis.invitation.format"), aide: L("raccourcis.invitation.format.aide")) {
                     TextField(L("raccourcis.invitation.format"), text: $prefs.inviteFormat)
                         .labelsHidden()
                         .textFieldStyle(.roundedBorder)
-                        .font(Jetons.Typo.codeInterface.police)
+                        .font(Jetons.typoCode.font)
                         .frame(width: 180)
                 }
             }

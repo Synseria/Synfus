@@ -42,8 +42,8 @@ SYNFUS_CAPTURE=~/Library/Logs/Synfus/captures/x.png sh test.sh RealCapture   # O
 ## Contraintes dures
 
 - **Toujours le Xcode et le Swift les plus récents** (Xcode 27, Swift 6.4) : `swift-tools-version`
-  et runner de CI (`xcode-27`) suivent la dernière version. `BarControls` appelle `glassEffect`
-  (SDK ≥ 26) ; deployment target 14.0, repli `.ultraThinMaterial` par `if #available(macOS 26.0, *)`.
+  et runner de CI (`xcode-27`) suivent la dernière version. **macOS 26 minimum**, comme toutes les
+  apps Synseria : jamais de repli pour 14/15 ; une API macOS 27 passe par `#available(macOS 27, *)`.
 - **Swift 6, concurrence stricte, sans dérogation.** L'état vit sur main : toute classe à état est
   `@MainActor` (`Preferences` comprise) ; tout rappel livré sur main (Timer, notification, sink
   Combine, moniteur `NSEvent`) repasse par `MainActor.assumeIsolated` ; le callback C de `HotKeyManager` par `DispatchQueue.main.async`.
@@ -55,7 +55,7 @@ SYNFUS_CAPTURE=~/Library/Logs/Synfus/captures/x.png sh test.sh RealCapture   # O
   correction touche un chemin, vérifier que son jumeau en bénéficie. Foyers : lecture AX
   `AccessibilityReader` ; processus Dofus `DofusProcesses` ; titres `WindowTitle` ; fermeture
   `ClientTerminator` ; presse-papiers `PressePapiers` ; API DofusDB `DofusDB` (lots d'identifiants : `parIdentifiants`) ; images du jeu `ImagesDofusDB` (vues de carte : `VueCarte`, toujours réduites) ; effectif `republierEffectif` ; coût d'un trajet depuis le perso `ZaapClipboard` (`cout(depuis:)`, `tournee`) ; zaaps actifs indexés `ZaapClipboard.zaapsSitues` ; classes
-  `ClassesStore.catalogue` ; marque `SynfusMark` (ses variantes `IconeApp`, posées par `IconeAppliquee`) ; emblème de classe d'un perso `EmblemeClasse` ; signe Synseria (emblème + mot, À propos et mise à jour) `SigneSynseria` / `EmblemeSynseria.cercles` ; couleurs, polices et tailles `Jetons` (engendré par Synseria-Design, jamais retouché ; le thème courant : `Color.jeton(\.surface)`, `Jetons.Typo.corps.police`) ; confirmation d'un geste qui détruit `Confirmation` ; libellés `L()` ; touche de raccourci `ToucheRaccourci`, voix d'état `EtatVisuel` (`fondEtat`, `StyleEtat`), rangs de bouton `StyleBouton`, cartes `carte()`, ce qui flotte `surfaceFlottante()`, retour de copie `SignalCopie` + `IconeCopie`, autorisation d'écran manquante `LigneAutorisation` (`Interface/Composants.swift`) ; place d'un panneau sur l'écran `PanneauxJeu` (`surUnEcran`, `rattraper`, `placer`) ; texte lu ou tapé comparé à des noms `Ressemblance` ; pertinence d'un résultat de la palette `ScorePalette` ;
+  `ClassesStore.catalogue` ; marque `SynfusMark` (ses variantes `IconeApp`, posées par `IconeAppliquee`) ; emblème de classe d'un perso `EmblemeClasse` ; signe Synseria (À propos) `SigneSynseria` de la trousse, emblème `Resources/synseria-embleme-synfus.svg` (copie de `marque/` du SDS) ; couleurs, polices et tailles `Jetons` (engendré par Synseria-Design, jamais retouché ; le thème courant : `Color.jeton(\.plaque)`, `Jetons.typoCorps.font`) ; composants communs (boutons `BoutonPrincipal`/`BoutonBorde`/…, `SegmenteTexte`, `ToucheDeClavier`, `Badge`, interrupteur `.interrupteur`, `carte(marge:)`, `Confirmation`) : la trousse `Interface/Trousse/Trousse*.swift`, engendrée, jamais retouchée ; confirmation hors vue `ConfirmationHorsVue` ; libellés `L()` ; voix d'état `EtatVisuel` (`fondEtat`, `StyleEtat`), ce qui flotte `surfaceFlottante()`, retour de copie `SignalCopie` + `IconeCopie`, autorisation d'écran manquante `LigneAutorisation` (`Interface/Composants.swift`) ; place d'un panneau sur l'écran `PanneauxJeu` (`surUnEcran`, `rattraper`, `placer`) ; texte lu ou tapé comparé à des noms `Ressemblance` ; pertinence d'un résultat de la palette `ScorePalette` ;
   zones de lecture `GenreLecture` ; flèches d'un groupe à choix unique (segment, barre latérale, tuiles) `groupeSelection` + `elementDeGroupe` (`Interface/GroupeSelection.swift`) ; symbole d'une commande ou d'une variable de la palette `CommandeJeu.symbole` / `VariableJeu.symbole` ; coches, décoches, objectif en cours et étape des quêtes `Preferences.cocher` / `appliquer` (`CochesQuete`) ; coût d'un trajet `ItineraireZaap.cartes` ; distance à pied `ItineraireZaap.aPied` ; case hors du Monde des Douze `ReseauSousZones.horsDesDouze` (une entrée de palette vers une case : `versCase`) ;
   geste compté pour les statistiques `UsageStore.compter` ; plusieurs réglages d'un geste, une écriture `Preferences.enUneEcriture` ; résultat redemandé à chaque rendu
   `DernierCalcul` (sous la clé de ses entrées ; réglages des trajets et carte : `ZaapClipboard.revisionTrajets`).
@@ -77,9 +77,10 @@ SYNFUS_CAPTURE=~/Library/Logs/Synfus/captures/x.png sh test.sh RealCapture   # O
 - **Tests sur la logique pure** : chaque décision testable a son fichier pur (`WindowTitle`,
   `ClientMemory`, `LayoutComputer`, `BounceDetector`, `FreezeStrikes`…). AX, Dock et AppKit se
   vérifient par un lancement réel (`sh run.sh --install --start`) et l'onglet Diagnostic.
-  Préférences : `Preferences.forTesting(store:)`, **jamais** `UserDefaults(suiteName:)` — un
-  domaine persistant survit à `removePersistentDomain` (`cfprefsd` le réécrit) et chaque
-  exécution sèmerait un plist dans `~/Library/Preferences`.
+  Préférences : `Preferences.forTesting(store: StockageEnMemoire())`, **jamais**
+  `UserDefaults(suiteName:)` — un domaine persistant survit à `removePersistentDomain` (`cfprefsd`
+  le réécrit) et chaque exécution sèmerait un plist dans `~/Library/Preferences`. Hors d'un bundle
+  `.app` (les tests), `Preferences.shared` vit lui aussi en mémoire.
 
 ## Architecture
 
@@ -98,7 +99,7 @@ nouveau fichier va dans le dossier de son domaine ; un fichier sans domaine en a
 | `Accessibilite/` | `AccessibilityReader` (lecture AX, `DofusProcesses`), `--dump-windows`, `CrossSpaceTitles` |
 | `Clients/` | `DofusClient`, `WindowTitle`, `ClientMemory`, `Equipes`, `Rotation` (purs) ; `WindowManager` (+`PremierPlan`, `+Effectif`, `+Focus`, `+Fermeture`), `ClientInventoryEngine`, `ClientTerminator`, `FreezeWatcher` |
 | `Invitations/` | `/invite Nom` : `InvitationComposer` (pur), `InvitationClipboard` |
-| `Carte/` | Tous les repères du jeu (zaaps, banques, ateliers, donjons…) et les sous-zones du Monde des Douze : `Lieu`, `Carte`, `ReseauSousZones`, `ReperesCarte` (purs), `CarteDofusDB` (téléchargement, cache disque, `--exporter-carte` → `Resources/Carte.json`), `CarteStore` (lue et indexée hors main) |
+| `Carte/` | Tous les repères du jeu (zaaps, banques, ateliers, donjons…) et les sous-zones du Monde des Douze : `Lieu`, `CarteDuJeu` (pas `Carte` : le nom est celui de la carte de la trousse), `ReseauSousZones`, `ReperesCarte` (purs), `CarteDofusDB` (téléchargement, cache disque, `--exporter-carte` → `Resources/Carte.json`), `CarteStore` (lue et indexée hors main) |
 | `Zaaps/` | `/zaap x,y ; /travel a,b` : `Zaap` (tiré de la carte), `CatalogueZaaps`, `ItineraireZaap` (purs : le zaap de la sous-zone visée — connue d'un PNJ ou d'un lieu, sinon celle de la case —, sauf s'il est d'une autre région et que celui des voisines, dans la région, épargne `ecartZaapDuJeu` cartes), `ZaapsSitues` (pur : zaaps actifs indexés par sous-zone et par carte), `Tournee` (pur : ordre le plus court de plusieurs cases), `ZaapClipboard` (raccourci, bouton, veille du presse-papiers) |
 | `Palette/` | La palette (⌘:) : `RecherchePalette`, `CommandesJeu` (purs) — zaaps, lieux, `/` commandes, `%` variables, quêtes, PNJ, gestes, dernières copies, fautes de frappe tolérées ; `ScorePalette` (pur : tri « Auto »), `PositionsPNJ` (pur : positions d'un PNJ en cartes, leur ordre, leur part de la largeur), `PositionsPNJVue`, `VidePalette` (pur : pourquoi la liste est vide), `OriginePalette` (pur : cause d'une position inconnue), `FrequentationPalette` (pur : habitudes, gardées sur le Mac, jamais envoyées) ; `PaletteModele`, `PalettePanel` (panneau key sans activer Synfus), `PaletteVue` |
 | `Quetes/` | Quêtes et PNJ situés : `Quete` (pur : renvois, ressources, récompenses, suivantes), `QuetesDofusDB` (cache disque versionné relu au lancement, téléchargé s'il manque ou a 30 jours), `QuetesStore` (lu et indexé hors main), `QuetesEnVigueur` (pur : index et fiches gardées du jeu publié), `QuetePanel`/`QueteVue` (panneau transparent, jamais key, montré devant Dofus seulement), `MenuQuetes` (pur : la liste qui prend la place de la fiche, le menu « ⋯ », une quête qui en remplace une autre), `ListeQuetesVue`, `SuiviQuetes`, `SuiviObjectifs` (purs : suivi du jeu lu par OCR, objectifs à faire et faits), `HistoriqueSuivi` (pur : lectures par perso, quêtes sorties du suivi), `QuetesIci` (pur : quêtes qui commencent et PNJ sur la case du perso — liste du panneau), `LectureSuivi`, `DofusPourLesNoobs` (adresses candidates du guide) |
@@ -114,11 +115,11 @@ nouveau fichier va dans le dossier de son domaine ; un fichier sans domaine en a
 | `Rangement/` | `LayoutComputer` (pur), `AgencementPrincipal` (pur : le grand suit la bascule de Synfus), `WindowArranger` |
 | `Apercus/` | Captures ScreenCaptureKit, panneau d'aperçu |
 | `Lecture/` | OCR position, combat, suivis de chasse et de quêtes, vie et tchat : `ZoneEcran`, `PositionCarte`, `LectureCombat`, `LumaBitmap`, `Ressemblance`, `DetectionZones` (purs), `LecteurEcran` (+ `GenreLecture`, `DiagnosticLecture`, `MoteurOCR`), `CapturesCalibrage`, `AutoCalibrage` (zones retrouvées sur une capture) |
-| `Preferences/` | `Preferences`, protocole `PreferencesStore` |
+| `Preferences/` | `Preferences`, protocole `PreferencesStore`, `TexteDuTheme` (thème écrit, `ConversionDuTheme` des réglages d'avant le nuancier : préréglage → coloris, `teinte:N` = angle OKLCH → Personnalisé, Clair/Sombre → Jour/Pénombre) |
 | `Classes/` | `DofusClass` (table intégrée, `Catalogue`, purs), `ClassesDofusDB` (liste `breeds`, cache disque, fusion), `ClassesStore` (emblèmes DofusDB ou icône de l'utilisateur) |
-| `Marque/` | L'Œuf ajouré : `SynfusMark` (CoreGraphics pur, icône et glyphe), `Couvee` (l'autre motif), `IconeApp` (pur : motif × fond), `SynfusGlyph` (barre de menus, qui garde l'Œuf), `SigneSynseria` (`EmblemeSynseria` pur : cercles du SVG de la marque, planète à la `primaire` ; vue du signe) |
+| `Marque/` | L'Œuf ajouré : `SynfusMark` (CoreGraphics pur, icône et glyphe), `Couvee` (l'autre motif), `IconeApp` (pur : motif × fond), `SynfusGlyph` (barre de menus, qui garde l'Œuf) |
 | `Localisation/` | `L()`, choix de langue ; tables dans `Resources/Localisation/` |
-| `Interface/` | `Jetons` (engendré), `ThemeCourant` (le réglage × clair/sombre, seul code de couleur hors de Jetons), `MenuBarController`, `Confirmation` (la feuille « Verbe + objet ? »), `ConfirmationFermeture`, `Composants` (états, cartes, surface flottante, touche, boutons), `ImagesCarte` (vignette de carte, vue agrandie au survol, pictogramme d'un lieu) ; `Barre/` (barre flottante) ; `Reglages/` (une vue par page : `PageReglages` de `Bloc`) |
+| `Interface/` | `Jetons` et `Trousse/` (engendrés par Synseria-Design), `ThemeCourant` (thème × nuance, seul code de couleur hors de Jetons ; `racineSynfus()` pose les couleurs de la trousse), `MenuBarController`, `ConfirmationFermeture` (et `ConfirmationHorsVue`), `Composants` (états, surface flottante, retour de copie), `ImagesCarte` (vignette de carte, vue agrandie au survol, pictogramme d'un lieu) ; `Barre/` (barre flottante) ; `Reglages/` (une vue par page : `PageReglages` de `Bloc`) |
 
 ## Skills de domaine
 

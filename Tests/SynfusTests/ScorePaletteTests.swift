@@ -140,8 +140,8 @@ struct ScorePaletteTests {
     func accueil() {
         var contexte = ContextePalette()
         contexte.position = PositionCarte(x: -2, y: 0, zone: "Amakna")
-        contexte.zaaps = ZaapsSitues(CatalogueZaaps.actifs(base: Carte.integree.zaaps, ajoutes: [], choix: [:]),
-                                     reseau: ReseauSousZones(Carte.integree))
+        contexte.zaaps = ZaapsSitues(CatalogueZaaps.actifs(base: CarteDuJeu.integree.zaaps, ajoutes: [], choix: [:]),
+                                     reseau: ReseauSousZones(CarteDuJeu.integree))
         let (amakna, bonta) = ("1:-2,0", "1:-31,-56")
         contexte.favoris = [amakna, bonta]
         #expect(RecherchePalette.entrees("", contexte).prefix(2).compactMap(\.cle) == [amakna, bonta])

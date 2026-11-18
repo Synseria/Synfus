@@ -5,7 +5,7 @@ import PackageDescription
 // acteurs sans état partagé (captures, inventaire Accessibilité, OCR) en sortent.
 let package = Package(
     name: "Synfus",
-    platforms: [.macOS(.v14)],
+    platforms: [.macOS(.v26)],
     dependencies: [
         // Le socle commun des apps Synseria : la copie que pose `propager.sh` du SDS (privé),
         // versionnée ici, jamais retouchée.

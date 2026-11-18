@@ -20,6 +20,13 @@ extension UserDefaults: PreferencesStore {
     func enregistrer(_ donnees: Data, pour cle: String) { set(donnees, forKey: cle) }
 }
 
+/// Des réglages qui ne survivent pas au processus : ceux des tests.
+final class StockageEnMemoire: PreferencesStore {
+    private var contenu: [String: Data] = [:]
+    func donnees(pour cle: String) -> Data? { contenu[cle] }
+    func enregistrer(_ donnees: Data, pour cle: String) { contenu[cle] = donnees }
+}
+
 /// Ce que Synfus affiche dans la barre de menus du système.
 enum MenuBarIcon: String, Codable, CaseIterable, Identifiable {
     case logo

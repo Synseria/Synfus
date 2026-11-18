@@ -21,13 +21,13 @@ struct PageReglages<Contenu: View>: View {
         VStack(alignment: .leading, spacing: 0) {
             EnTetePage(titre: titre, valeur: valeur)
             ScrollView {
-                VStack(alignment: .leading, spacing: Jetons.Espace.six) { contenu }
+                VStack(alignment: .leading, spacing: Jetons.espace5) { contenu }
                     .padding(.horizontal, MargeReglages.texte)
-                    .padding(.top, Jetons.Espace.quatre)
-                    .padding(.bottom, Jetons.Espace.six)
+                    .padding(.top, Jetons.espace4)
+                    .padding(.bottom, Jetons.espace5)
             }
-            .font(Jetons.Typo.corps.police)
-            .buttonStyle(.bouton(.secondaire))
+            .font(Jetons.typoCorps.font)
+            .buttonStyle(BoutonBorde())
         }
     }
 }
@@ -39,15 +39,15 @@ struct EnTetePage: View {
     var valeur: String?
 
     var body: some View {
-        HStack(spacing: Jetons.Espace.deux) {
-            Text(titre).font(Jetons.Typo.titrePage.police)
-            Spacer(minLength: Jetons.Espace.trois)
-            if let valeur { Text(valeur).font(Jetons.Typo.note.police).foregroundStyle(Color.jeton(\.encreSecondaire)) }
+        HStack(spacing: Jetons.espace2) {
+            Text(titre).font(Jetons.typoTitrePage.font)
+            Spacer(minLength: Jetons.espace3)
+            if let valeur { Text(valeur).font(Jetons.typoMeta.font).foregroundStyle(Color.jeton(\.encre2)) }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, MargeReglages.texte)
-        .padding(.top, Jetons.Espace.six)
-        .padding(.bottom, Jetons.Espace.un)
+        .padding(.top, Jetons.espace5)
+        .padding(.bottom, Jetons.espace1)
     }
 }
 
@@ -74,20 +74,20 @@ struct Bloc<Contenu: View, Entete: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Jetons.Espace.deux) {
+        VStack(alignment: .leading, spacing: Jetons.espace2) {
             if let titre {
-                HStack(spacing: Jetons.Espace.deux) {
+                HStack(spacing: Jetons.espace2) {
                     SectionTitle(titre, help: aide).infobulleSiPresente(infobulle)
-                    Spacer(minLength: Jetons.Espace.trois)
+                    Spacer(minLength: Jetons.espace3)
                     entete
                 }
-                .font(Jetons.Typo.corpsFort.police)
-                .padding(.horizontal, Jetons.Espace.trois)
+                .font(Jetons.typoTitreCarte.font)
+                .padding(.horizontal, Jetons.espace3)
             }
             lignes
-                .padding(.bottom, -Jetons.Trait.filet)
-                .clipShape(RoundedRectangle(cornerRadius: Jetons.Rayon.carte, style: .continuous))
-                .carte()
+                .padding(.bottom, -Jetons.epaisseurFilet)
+                .clipShape(RoundedRectangle(cornerRadius: Jetons.rayon2, style: .circular))
+                .carte(marge: 0)
         }
     }
 
@@ -113,10 +113,10 @@ extension View {
     /// Une ligne de bloc : retrait, hauteur d'un contrôle, filet dessous.
     func rangee() -> some View {
         VStack(spacing: 0) {
-            frame(maxWidth: .infinity, minHeight: Jetons.Taille.controle, alignment: .leading)
-                .padding(.horizontal, Jetons.Espace.trois)
-                .padding(.vertical, Jetons.Espace.deux)
-            Rectangle().fill(Color.jeton(\.filet)).frame(height: Jetons.Trait.filet)
+            frame(maxWidth: .infinity, minHeight: Jetons.hauteurControle, alignment: .leading)
+                .padding(.horizontal, Jetons.espace3)
+                .padding(.vertical, Jetons.espace2)
+            Rectangle().fill(Color.jeton(\.filet)).frame(height: Jetons.epaisseurFilet)
         }
     }
 }
@@ -130,13 +130,13 @@ struct EtatDeBloc: View {
     var action: () -> Void = {}
 
     var body: some View {
-        VStack(spacing: Jetons.Espace.deux) {
+        VStack(spacing: Jetons.espace2) {
             if attente { ProgressView().controlSize(.small) }
-            Text(texte).foregroundStyle(Color.jeton(\.encreSecondaire))
+            Text(texte).foregroundStyle(Color.jeton(\.encre2))
             if let geste { Button(geste, action: action) }
         }
-        .frame(maxWidth: .infinity, minHeight: Jetons.Taille.rangeePalette * 3)
-        .padding(Jetons.Espace.quatre)
+        .frame(maxWidth: .infinity, minHeight: Jetons.hauteurRangee * 3)
+        .padding(Jetons.espace4)
     }
 }
 
@@ -169,20 +169,20 @@ struct Ligne<Controle: View, Icone: View>: View {
     var body: some View {
         // Le contrôle se centre sur le bloc entier du libellé (titre et état), jamais accroché à sa
         // dernière ligne : c'est ce qui tient l'alignement des lignes à état.
-        HStack(alignment: .center, spacing: Jetons.Espace.trois) {
-            HStack(spacing: Jetons.Espace.deux) {
+        HStack(alignment: .center, spacing: Jetons.espace3) {
+            HStack(spacing: Jetons.espace2) {
                 icone
-                VStack(alignment: .leading, spacing: Jetons.Espace.un) {
-                    HStack(spacing: Jetons.Espace.un) {
+                VStack(alignment: .leading, spacing: Jetons.espace1) {
+                    HStack(spacing: Jetons.espace1) {
                         Text(titre)
-                        if let detail { Text(detail).foregroundStyle(Color.jeton(\.encreSecondaire)).lineLimit(1) }
+                        if let detail { Text(detail).foregroundStyle(Color.jeton(\.encre2)).lineLimit(1) }
                     }
                     if let etat {
-                        Text(etat).font(Jetons.Typo.petit.police).foregroundStyle(Color.jeton(\.encreSecondaire))
+                        Text(etat).font(Jetons.typoMeta.font).foregroundStyle(Color.jeton(\.encre2))
                     }
                 }
             }
-            Spacer(minLength: Jetons.Espace.trois)
+            Spacer(minLength: Jetons.espace3)
             controle
         }
         // L'explication d'une ligne est une infobulle sur toute la ligne : jamais une phrase à l'écran.
@@ -199,7 +199,7 @@ extension Ligne where Icone == EmptyView {
 }
 
 /// Un interrupteur sur la grille des lignes.
-struct Interrupteur: View {
+struct LigneInterrupteur: View {
     let titre: String
     var aide: String?
     /// Le dessin de la chose réglée, dans une colonne fixe devant le libellé.
@@ -210,15 +210,14 @@ struct Interrupteur: View {
         Ligne(titre: titre, aide: aide, icone: {
             if let symbole {
                 Image(systemName: symbole)
-                    .foregroundStyle(Color.jeton(\.encreSecondaire))
-                    .frame(width: Jetons.Taille.cibleMin)
+                    .foregroundStyle(Color.jeton(\.encre2))
+                    .frame(width: Jetons.hauteurCase)
                     .accessibilityHidden(true)
             }
         }, controle: {
             Toggle(titre, isOn: isOn)
                 .labelsHidden()
-                .toggleStyle(.switch)
-                .controlSize(.small)
+                .toggleStyle(.interrupteur)
         })
     }
 }
@@ -233,17 +232,18 @@ struct HelpTip: View {
     var body: some View {
         Button { showing.toggle() } label: {
             Image(systemName: "info.circle")
-                .font(Jetons.Typo.note.police)
-                .foregroundStyle(Color.jeton(\.encreSecondaire))
+                .font(Jetons.typoMeta.font)
+                .foregroundStyle(Color.jeton(\.encre2))
         }
         .buttonStyle(.plain)
         .help(text)
         .accessibilityLabel(text)
         .popover(isPresented: $showing, arrowEdge: .bottom) {
             Text(text)
-                .font(Jetons.Typo.note.police)
-                .padding(Jetons.Espace.trois)
+                .font(Jetons.typoMeta.font)
+                .padding(Jetons.espace3)
                 .frame(width: 300, alignment: .leading)
+                .racineSynfus()
         }
     }
 }
@@ -259,7 +259,7 @@ struct SectionTitle: View {
     }
 
     var body: some View {
-        HStack(spacing: Jetons.Espace.un) {
+        HStack(spacing: Jetons.espace1) {
             Text(title)
             if let help { HelpTip(help) }
         }
@@ -281,11 +281,11 @@ struct ShortcutRow: View {
 
     var body: some View {
         Ligne(titre: label, detail: detail, aide: help) {
-            HStack(spacing: Jetons.Espace.un) {
+            HStack(spacing: Jetons.espace1) {
                 if conflit || refuse {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .font(Jetons.Typo.petit.police)
-                        .foregroundStyle(Color.jeton(\.alerte))
+                        .font(Jetons.typoMeta.font)
+                        .foregroundStyle(Color.jeton(\.avertissement))
                         .help(conflit ? L("raccourcis.conflit") : L("raccourcis.refuse"))
                 }
                 ShortcutRecorder(hotKey: hotKey, allowsBareKeys: allowsBareKeys)
@@ -342,10 +342,10 @@ struct PermissionRow: View {
 
     var body: some View {
         Ligne(titre: name, etat: etat, aide: help) {
-            HStack(spacing: Jetons.Espace.deux) {
-                Circle().fill(granted ? Color.jeton(\.succes) : Color.jeton(\.alerte)).frame(width: Jetons.Espace.deux, height: Jetons.Espace.deux)
+            HStack(spacing: Jetons.espace2) {
+                Circle().fill(granted ? Color.jeton(\.succes) : Color.jeton(\.avertissement)).frame(width: Jetons.espace2, height: Jetons.espace2)
                 Text(granted ? L("commun.accordee") : L("commun.manquante"))
-                    .foregroundStyle(granted ? Color.jeton(\.encreSecondaire) : Color.jeton(\.alerte))
+                    .foregroundStyle(granted ? Color.jeton(\.encre2) : Color.jeton(\.avertissement))
                 if !granted { Button(L("autorisation.autoriser"), action: open) }
             }
         }
@@ -358,9 +358,9 @@ struct CopiableCommand: View {
     let command: String
 
     var body: some View {
-        HStack(spacing: Jetons.Espace.un) {
+        HStack(spacing: Jetons.espace1) {
             Text(command)
-                .font(Jetons.Typo.codeInterface.police)
+                .font(Jetons.typoCode.font)
                 .textSelection(.enabled)
                 .lineLimit(2)
                 .truncationMode(.middle)
@@ -369,11 +369,11 @@ struct CopiableCommand: View {
             } label: {
                 Image(systemName: "doc.on.doc")
             }
-            .buttonStyle(.bouton(.tertiaire, dense: true))
+            .buttonStyle(BoutonTertiaire())
             .aide(L("commun.copierCommande"))
         }
-        .padding(Jetons.Espace.un)
-        .background(RoundedRectangle(cornerRadius: Jetons.Rayon.pastille).fill(Color.jeton(\.creux)))
+        .padding(Jetons.espace1)
+        .background(RoundedRectangle(cornerRadius: Jetons.rayon0).fill(Color.jeton(\.creux)))
     }
 }
 

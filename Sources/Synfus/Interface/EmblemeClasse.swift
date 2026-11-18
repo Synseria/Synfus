@@ -19,11 +19,11 @@ struct EmblemeClasse: View {
             } else {
                 Circle().fill(icons.catalogue.color(for: classe))
                 Text(icons.catalogue.abbreviation(for: classe))
-                    .font(Jetons.Typo.micro.police)
+                    .font(Jetons.typoMicro.font)
                     .foregroundStyle(Color.texteSurClasse)
             }
         }
-        .frame(width: Jetons.Taille.touche + Jetons.Trait.focus, height: Jetons.Taille.touche + Jetons.Trait.focus)
-        .overlay(Circle().strokeBorder(contour, lineWidth: Jetons.Trait.filet))
+        .frame(width: Jetons.diametreRond + Jetons.epaisseurFocus, height: Jetons.diametreRond + Jetons.epaisseurFocus)
+        .overlay(Circle().strokeBorder(contour, lineWidth: Jetons.epaisseurFilet))
     }
 }
