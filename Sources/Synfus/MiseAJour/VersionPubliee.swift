@@ -78,17 +78,27 @@ struct VersionPubliee: Equatable, Sendable {
     }
 }
 
-/// « X.Y.Z » comparé nombre par nombre : « 0.10.0 » passe après « 0.9.0 ». Un
-/// suffixe de préversion (« -beta ») est ignoré.
+/// « X.Y.Z » ou « X.Y.Z-rc.N », comparé nombre par nombre : « 0.10.0 » passe
+/// après « 0.9.0 », et `rc.1 < rc.2 < X.Y.Z < X.Y.(Z+1)-rc.1` — une rc
+/// installée ne retient jamais la stable qui la suit. Tout autre suffixe n'est
+/// pas une version de Synfus.
 struct NumeroVersion: Comparable {
     let nombres: [Int]
+    /// Le N d'une `-rc.N` ; `nil` pour une stable, qui passe après ses rc.
+    let rc: Int?
 
     init?(_ texte: String) {
         var reste = Substring(texte.trimmingCharacters(in: .whitespaces))
         if reste.hasPrefix("v") { reste = reste.dropFirst() }
-        let base = reste.split(separator: "-", maxSplits: 1).first ?? ""
-        let nombres = base.split(separator: ".", omittingEmptySubsequences: false).map { Int($0) }
+        let parties = reste.split(separator: "-", maxSplits: 1, omittingEmptySubsequences: false)
+        let nombres = (parties.first ?? "").split(separator: ".", omittingEmptySubsequences: false).map { Int($0) }
         guard !nombres.isEmpty, nombres.allSatisfy({ $0 != nil }) else { return nil }
+        if parties.count == 2 {
+            guard parties[1].hasPrefix("rc."), let rc = Int(parties[1].dropFirst(3)) else { return nil }
+            self.rc = rc
+        } else {
+            rc = nil
+        }
         self.nombres = nombres.compactMap(\.self)
     }
 
@@ -98,7 +108,11 @@ struct NumeroVersion: Comparable {
             let y = i < b.nombres.count ? b.nombres[i] : 0
             if x != y { return x < y }
         }
-        return false
+        switch (a.rc, b.rc) {
+        case let (x?, y?): return x < y
+        case (.some, nil): return true
+        default: return false
+        }
     }
 
     static func == (a: NumeroVersion, b: NumeroVersion) -> Bool { !(a < b) && !(b < a) }

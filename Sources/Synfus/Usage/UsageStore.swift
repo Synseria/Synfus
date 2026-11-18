@@ -1,201 +1,149 @@
-// Statistiques d'utilisation : le compte du jour, gardé sur le Mac, envoyé
-// chaque jour si l'utilisateur le partage.
+// Statistiques d'utilisation : Synfus vu de la télémétrie commune (SynseriaKit), et les persos
+// de chaque jour, qui lui sont propres.
 
 import Combine
 import Foundation
+import Telemetrie
 
-/// Le seul foyer des statistiques : chaque geste compté passe par `compter`,
-/// l'onglet Usage lit `historique`, et les jours terminés partent au
-/// collecteur une fois par jour (`Preferences.partagerStatistiques`). Couper
-/// le partage n'arrête pas le compte, qui ne quitte pas le Mac.
+/// Le seul foyer des statistiques : chaque geste compté passe par `compter`, l'onglet Usage lit
+/// `registre.historique` et `persos`, et les jours terminés partent au collecteur une fois par
+/// jour (`Preferences.partagerStatistiques`). Couper le partage n'arrête pas le compte, qui ne
+/// quitte pas le Mac.
 @MainActor
-final class UsageStore: ObservableObject {
-    static let shared = UsageStore(fichier: Ressources.dossierUtilisateur.appending(path: "usage.json"))
+final class UsageStore: ObservableObject, SourceDeTelemetrie {
+    static let identifiantApp = "fr.synseria.Synfus"
+    /// `service.name` et préfixe des mesures, tels que le filtre du collecteur les connaît.
+    static let service = CleDeTelemetrie(convertissant: "synfus")
+    static let espaceDesMesures = CleDeTelemetrie(convertissant: "persos")
 
-    @Published private(set) var historique: HistoriqueUsage
-
-    /// Où, avec quoi et pour quel genre de build envoyer, inscrits dans
-    /// l'Info.plist par `build.sh` (`SynfusTelemetrieURL`,
-    /// `SynfusTelemetrieJeton`, `SynfusDistribution`). Il manque une clé — build
-    /// de développement — : l'app compte, n'envoie rien.
-    struct Configuration: Sendable {
-        let url: URL
-        let jeton: String
-        let distribution: DistributionUsage
-    }
-
-    static let configuration: Configuration? = {
-        let info = Bundle.main.infoDictionary ?? [:]
-        guard let texte = info["SynfusTelemetrieURL"] as? String, let url = URL(string: texte), url.scheme == "https",
-              let jeton = info["SynfusTelemetrieJeton"] as? String, !jeton.isEmpty,
-              let distribution = (info["SynfusDistribution"] as? String).flatMap(DistributionUsage.init(rawValue:))
-        else { return nil }
-        return Configuration(url: url, jeton: jeton, distribution: distribution)
+    /// Hors de l'app signée (tests, binaire nu de `swift run`) : en mémoire, sans configuration
+    /// ni version — rien ne s'écrit sur le Mac, rien ne part.
+    static let shared: UsageStore = {
+        let app = Bundle.main.bundleIdentifier == identifiantApp
+        return UsageStore(dossier: app ? Ressources.dossierUtilisateur : nil,
+                          configuration: app ? .duBundle : nil,
+                          version: app ? AppIntegrity.version : nil)
     }()
 
-    private let fichier: URL?
-    private var modifie = false
-    private var minuterie: Timer?
-    private var subscriptions: Set<AnyCancellable> = []
+    let registre: RegistreDeTelemetrie
+    @Published private(set) var persos: HistoriquePersos
+
+    /// `persos.json`, `nil` en mémoire.
+    let fichierPersos: URL?
+    private let preferences: Preferences
+    private let horloge: () -> Date
+    private var persosModifies = false
     private var dernierEffectif: (persos: Int, instant: Date)?
-    private var derniereTentative: Date?
-    private var envoiEnCours = false
+    private var subscriptions: Set<AnyCancellable> = []
 
-    /// Relevé de l'effectif, écriture sur disque et envoi en retard.
-    private static let intervalle: TimeInterval = 10 * 60
-    /// Un échec d'envoi ne se retente qu'après ce délai.
-    private static let attenteApresEchec: TimeInterval = 3600
-    private static let session = URLSession(configuration: .ephemeral)
-
-    /// Fixé à la création du store, jamais pendant un rendu : le tirer peut
-    /// écrire `historique` (identifiant de secours).
-    private let installation: String
-
-    init(fichier: URL?) {
-        self.fichier = fichier
-        var historique = fichier.flatMap { try? Data(contentsOf: $0) }
-            .flatMap { try? Self.decodeur.decode(HistoriqueUsage.self, from: $0) } ?? HistoriqueUsage()
-        let secours = historique.identifiantDeSecours
-        installation = IdentifiantInstallation.fixer(materiel: IdentifiantInstallation.materiel(),
-                                                     app: Bundle.main.bundleIdentifier ?? "fr.synseria.Synfus",
-                                                     secours: &historique.identifiantDeSecours)
-        modifie = historique.identifiantDeSecours != secours
-        self.historique = historique
+    /// - Parameter dossier: où vivent `usage.json` (le registre commun, même fichier que
+    ///   l'ancien compte de Synfus : historique, attente et identifiant de secours relus) et
+    ///   `persos.json` ; `nil` : en mémoire.
+    init(dossier: URL?, configuration: ConfigurationDeTelemetrie?, version: String?,
+         preferences: Preferences = .shared, materiel: String? = IdentifiantDInstallation.materiel(),
+         envoi: @escaping RegistreDeTelemetrie.Envoi = RegistreDeTelemetrie.poster,
+         horloge: @escaping () -> Date = Date.init) {
+        var fichierUsage = dossier?.appending(path: "usage.json")
+        var fichierPersos = dossier?.appending(path: "persos.json")
+        var persos = HistoriquePersos()
+        let donnees = fichierPersos.flatMap { try? Data(contentsOf: $0) }
+        let relu = donnees.flatMap { try? JSONDecoder().decode(HistoriquePersos.self, from: $0) }
+        // Un `persos.json` illisible ne s'écrase jamais : mis de côté, sinon ce lancement reste
+        // en mémoire.
+        if let fichier = fichierPersos, donnees != nil, relu == nil, !Self.mettreDeCote(fichier) {
+            fichierUsage = nil
+            fichierPersos = nil
+        }
+        if let fichier = fichierPersos {
+            persos = relu ?? HistoriquePersos()
+            // À chaque lancement, avant que le registre ne réécrive `usage.json` sans eux : les
+            // persos qu'une version d'avant y a remis (retour à une ancienne version, build de
+            // dev et app installée sur le même dossier) sont repris. Si `persos.json` ne s'écrit
+            // pas, rien ne s'écrit de ce lancement : l'ancien fichier reste entier.
+            let avant = persos
+            if let ancien = fichierUsage.flatMap({ try? Data(contentsOf: $0) }) {
+                persos.fusionner(HistoriquePersos.reprendre(ancien))
+            }
+            if (persos != avant || !FileManager.default.fileExists(atPath: fichier.path)) && !Self.ecrire(persos, dans: fichier) {
+                fichierUsage = nil
+                fichierPersos = nil
+            }
+        }
+        self.persos = persos
+        self.fichierPersos = fichierPersos
+        self.preferences = preferences
+        self.horloge = horloge
+        registre = RegistreDeTelemetrie(service: Self.service, espaceDesMesures: Self.espaceDesMesures,
+                                        fichier: fichierUsage, configuration: configuration,
+                                        identifiantApp: Self.identifiantApp, version: version,
+                                        materiel: materiel, envoi: envoi, horloge: horloge)
+        registre.source = self
     }
 
+    /// Au lancement : l'effectif suivi, le relevé périodique et les diagnostics de MetricKit.
     func start() {
         WindowManager.shared.$clients
             .map(\.count)
             .removeDuplicates()
             .sink { [weak self] persos in MainActor.assumeIsolated { self?.noterEffectif(persos) } }
             .store(in: &subscriptions)
-        minuterie = Timer.scheduledTimer(withTimeInterval: Self.intervalle, repeats: true) { _ in
-            MainActor.assumeIsolated { UsageStore.shared.releve() }
-        }
-        minuterie?.tolerance = 60
-        AbonneDiagnostics.shared.start()
-        releve()
+        registre.demarrer()
     }
+
+    /// À la fermeture : le compte du jour écrit, sans envoi (la requête ne survivrait pas).
+    func arreter() { registre.releve(envoi: false) }
 
     // MARK: - Compte
 
     func compter(_ evenement: EvenementUsage) {
-        historique.compter(evenement, le: Self.aujourdhui())
-        modifie = true
-    }
-
-    func recevoir(_ diagnostics: [DiagnosticUsage]) {
-        historique.ajouter(diagnostics)
-        modifie = true
-        enregistrer()
+        registre.compter(evenement.cle)
     }
 
     func noterPersoJoue(_ nom: String) {
-        historique.noterPersoJoue(nom, le: Self.aujourdhui())
-        modifie = true
+        persos.noterPersoJoue(nom, le: Self.aujourdhui(horloge()))
+        persosModifies = true
     }
 
-    /// Le temps écoulé depuis le relevé précédent compte pour l'effectif
-    /// d'alors ; `persos` vaut à partir de maintenant.
-    private func noterEffectif(_ persos: Int, maintenant: Date = Date()) {
+    /// Le temps écoulé depuis le relevé précédent compte pour l'effectif d'alors ; `nombre` vaut
+    /// à partir de maintenant.
+    func noterEffectif(_ nombre: Int) {
+        let maintenant = horloge()
         let jour = Self.aujourdhui(maintenant)
         if let precedent = dernierEffectif {
-            historique.noterEffectif(precedent.persos, pendant: maintenant.timeIntervalSince(precedent.instant), le: jour)
+            persos.noterEffectif(precedent.persos, pendant: maintenant.timeIntervalSince(precedent.instant), le: jour)
         }
-        historique.noterEffectif(persos, pendant: 0, le: jour)
-        dernierEffectif = (persos, maintenant)
-        modifie = true
+        persos.noterEffectif(nombre, pendant: 0, le: jour)
+        dernierEffectif = (nombre, maintenant)
+        persosModifies = true
     }
 
-    /// Le relevé périodique, et celui de la fermeture de Synfus (sans envoi :
-    /// la requête ne survivrait pas au processus).
-    func releve(envoi: Bool = true) {
-        let maintenant = Date()
-        noterEffectif(dernierEffectif?.persos ?? WindowManager.shared.clients.count, maintenant: maintenant)
-        historique.noterReglages(Self.reglages(Preferences.shared, demarrageAuto: LaunchAtLogin.isEnabled),
-                                 langue: L10n.courante.langue.rawValue, le: Self.aujourdhui(maintenant))
-        enregistrer()
-        if envoi { envoyer(maintenant: maintenant) }
-    }
+    // MARK: - SourceDeTelemetrie
 
-    private func enregistrer() {
-        guard modifie, let fichier else { return }
-        modifie = false
-        guard let data = try? Self.encodeur.encode(historique) else { return }
-        try? FileManager.default.createDirectory(at: fichier.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try? data.write(to: fichier, options: .atomic)
-    }
+    var partageActif: Bool { preferences.partagerStatistiques }
 
-    // MARK: - Envoi
-
-    /// Ce qui décrit cette installation ; `nil` hors bundle (pas de version).
-    var contexte: ContexteUsage? {
-        guard let version = AppIntegrity.version else { return nil }
-        return ContexteUsage(installation: installation, version: version,
-                             systeme: ContexteUsage.systeme(ProcessInfo.processInfo.operatingSystemVersion),
-                             architecture: ContexteUsage.architectureCourante,
-                             distribution: Self.configuration?.distribution)
-    }
-
-    private func envoyer(maintenant: Date) {
-        guard Preferences.shared.partagerStatistiques, let configuration = Self.configuration,
-              !envoiEnCours, let contexte else { return }
-        if let tentative = derniereTentative, maintenant.timeIntervalSince(tentative) < Self.attenteApresEchec { return }
-        guard let envoi = historique.prochainEnvoi(aujourdhui: Self.aujourdhui(maintenant)) else { return }
-
-        var requete = URLRequest(url: configuration.url, timeoutInterval: 30)
-        requete.httpMethod = "POST"
-        requete.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        requete.setValue("Bearer \(configuration.jeton)", forHTTPHeaderField: "Authorization")
-        requete.httpBody = RapportUsage.corps(envoi.jours, diagnostics: envoi.diagnostics, contexte: contexte, envoi: maintenant)
-        derniereTentative = maintenant
-        envoiEnCours = true
-        Task {
-            let reponse = await Self.poster(requete)
-            envoiEnCours = false
-            switch reponse {
-            case .echec:
-                return
-            case .refusee:
-                // Des jours refusés restent : ils sortent seuls de l'attente
-                // passé `retardMaximal`. Un diagnostic le serait à chaque essai.
-                guard case .diagnostic = envoi else { return }
-                historique.acquitter(envoi)
-            case .acceptee:
-                historique.acquitter(envoi)
-                historique.dernierEnvoi = maintenant
-                historique.dernierRapport = RapportUsage.texte(envoi.jours, diagnostics: envoi.diagnostics,
-                                                               contexte: contexte, envoi: maintenant)
-            }
-            derniereTentative = nil
-            modifie = true
-            enregistrer()
-            // La suite de l'attente, une requête après l'autre.
-            envoyer(maintenant: Date())
+    /// L'effectif mené jusqu'à maintenant et `persos.json` écrit, puis les réglages et la langue ;
+    /// les persos partent par `mesures(jour:)`.
+    func releve() -> ReleveDeLApp {
+        noterEffectif(dernierEffectif?.persos ?? WindowManager.shared.clients.count)
+        if persosModifies, let fichierPersos {
+            persosModifies = !Self.ecrire(persos, dans: fichierPersos)
         }
+        return ReleveDeLApp(reglages: Self.reglages(preferences, demarrageAuto: LaunchAtLogin.isEnabled),
+                            langue: L10n.courante.langue.rawValue)
     }
 
-    nonisolated private static func poster(_ requete: URLRequest) async -> ReponseCollecteur {
-        let reponse = try? await session.data(for: requete).1
-        return ReponseCollecteur(statut: (reponse as? HTTPURLResponse)?.statusCode)
-    }
-
-    /// Le JSON du prochain envoi : les jours en attente, puis un diagnostic,
-    /// à défaut la journée en cours telle qu'elle partira demain.
-    func apercuProchainEnvoi(maintenant: Date = Date()) -> String? {
-        guard let contexte else { return nil }
-        let aujourdhui = Self.aujourdhui(maintenant)
-        guard let envoi = historique.prochainEnvoi(aujourdhui: aujourdhui)
-                ?? historique.jour(aujourdhui).map({ EnvoiUsage.jours([$0]) })
-        else { return nil }
-        return RapportUsage.texte(envoi.jours, diagnostics: envoi.diagnostics, contexte: contexte, envoi: maintenant)
+    /// La journée entière telle que `persos.json` la garde, demandée au moment de l'envoi : un
+    /// jour en attente part avec ses persos, et un jour terminé avec ce qui a suivi son dernier
+    /// relevé. Un jour sans perso part à 0.
+    func mesures(jour: String) -> [CleDeTelemetrie: ValeurDeTelemetrie]? {
+        (persos.jour(jour) ?? JourPersos(jour: jour)).mesures
     }
 
     // MARK: - Règles
 
     /// Les réglages qui disent quelles fonctions sont en service.
-    static func reglages(_ prefs: Preferences, demarrageAuto: Bool) -> [String: Bool] {
-        [
+    static func reglages(_ prefs: Preferences, demarrageAuto: Bool) -> [CleDeTelemetrie: Bool] {
+        let reglages: [String: Bool] = [
             "barre": prefs.barVisible,
             "barre_seulement_dofus": prefs.barOnlyWithDofus,
             "numeros": prefs.showNumbers,
@@ -216,19 +164,26 @@ final class UsageStore: ObservableObject {
             "maj_auto": prefs.verifierMisesAJour,
             "demarrage_auto": demarrageAuto,
         ]
+        return reglages.reduce(into: [:]) { $0[CleDeTelemetrie(convertissant: $1.key)] = $1.value }
     }
 
-    static func aujourdhui(_ date: Date = Date()) -> String { JourUsage.cle(date) }
+    static func aujourdhui(_ date: Date = Date()) -> String { JourDeTelemetrie.cle(date) }
 
-    private static let encodeur: JSONEncoder = {
-        let encodeur = JSONEncoder()
-        encodeur.dateEncodingStrategy = .iso8601
-        return encodeur
-    }()
+    /// `persos.illisible.json`, à côté, remplace celui d'avant : de quoi rattraper à la main.
+    private static func mettreDeCote(_ fichier: URL) -> Bool {
+        let cote = fichier.deletingLastPathComponent().appending(path: "persos.illisible.json")
+        try? FileManager.default.removeItem(at: cote)
+        return (try? FileManager.default.moveItem(at: fichier, to: cote)) != nil
+    }
 
-    private static let decodeur: JSONDecoder = {
-        let decodeur = JSONDecoder()
-        decodeur.dateDecodingStrategy = .iso8601
-        return decodeur
-    }()
+    private static func ecrire(_ persos: HistoriquePersos, dans fichier: URL) -> Bool {
+        guard let donnees = try? JSONEncoder().encode(persos) else { return false }
+        do {
+            try FileManager.default.createDirectory(at: fichier.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try donnees.write(to: fichier, options: .atomic)
+            return true
+        } catch {
+            return false
+        }
+    }
 }

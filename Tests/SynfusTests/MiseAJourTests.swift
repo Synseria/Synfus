@@ -74,8 +74,22 @@ struct MiseAJourTests {
         #expect(!version.plusRecente(que: "1.0"))
         #expect(!version.plusRecente(que: nil))
         #expect(!version.plusRecente(que: "dev"))
-        #expect(NumeroVersion("v1.2.3-beta") == NumeroVersion("1.2.3"))
         #expect(NumeroVersion("1.2") == NumeroVersion("1.2.0"))
+    }
+
+    @Test("Une rc passe avant sa stable : installée, elle ne retient jamais la stable qui la suit")
+    func versionsRC() throws {
+        let version = try #require(VersionPubliee.lire(Data(Self.reponse.utf8), architecture: "arm64"))
+        #expect(version.plusRecente(que: "0.11.0-rc.1"))
+        #expect(version.plusRecente(que: "0.11.0-rc.12"))
+        #expect(!version.plusRecente(que: "0.11.1-rc.1"))
+        let ordre = ["0.11.0-rc.1", "0.11.0-rc.2", "0.11.0-rc.10", "0.11.0", "0.11.1-rc.1", "0.11.1"]
+        let numeros = try ordre.map { try #require(NumeroVersion($0)) }
+        #expect(zip(numeros, numeros.dropFirst()).allSatisfy { $0 < $1 })
+        #expect(NumeroVersion("v1.2.3-rc.2") == NumeroVersion("1.2.3-rc.2"))
+        for invalide in ["1.2.3-beta", "1.2.3-rc", "1.2.3-rc.x", "1.2.3-"] {
+            #expect(NumeroVersion(invalide) == nil, "\(invalide)")
+        }
     }
 
     @Test("L'empreinte se lit dans SHA256SUMS.txt, au nom exact")
