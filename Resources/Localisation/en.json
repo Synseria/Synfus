@@ -416,6 +416,7 @@
   "maj.echec.reseau": "GitHub unavailable",
   "maj.etat.aJourVerifiee": "up to date, checked %@",
   "maj.etat.verifiee": "checked %@",
+  "maj.incompatible": "Synfus %@ requires macOS %@",
   "maj.installation": "Downloading…",
   "maj.installer": "Install",
   "maj.menu.installation": "Downloading Synfus %@…",

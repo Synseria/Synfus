@@ -162,8 +162,8 @@ focus), et **Enregistrement de l'écran** seulement pour les aperçus et la lect
 
    | Mac | Fichier |
    | --- | --- |
-   | Apple Silicon (M1 et suivants) | `Synfus-<version>-arm64.dmg` |
-   | Intel | `Synfus-<version>-x86_64.dmg` |
+   | Apple Silicon (M1 et suivants) | `Synfus-<version>-macos26-arm64.dmg` |
+   | Intel | `Synfus-<version>-macos26-x86_64.dmg` |
 
 2. Glisse **Synfus** dans **Applications**, puis, dans le Terminal :
 
@@ -213,7 +213,7 @@ sh run.sh                    # build de développement, .build/dev/Synfus.app
 sh run.sh --start            # … puis le lance
 sh run.sh --install --start  # build release, installé dans /Applications et lancé
 sh build.sh                  # build release : dist/Synfus.app
-sh build.sh --release        # + dist/Synfus-<version>-<arch>.dmg
+sh build.sh --release        # + dist/Synfus-<version>-macos<N>-<arch>.dmg
 sh test.sh                   # suite de tests (sh test.sh Rotation : filtrée)
 ```
 

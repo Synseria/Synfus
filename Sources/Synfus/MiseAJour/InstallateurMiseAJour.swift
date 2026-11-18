@@ -7,6 +7,8 @@ import Foundation
 actor InstallateurMiseAJour {
     enum Echec: Error, Equatable {
         case reseau, empreinte, image, app, ecriture
+        /// L'app extraite exige un macOS plus récent que celui-ci : posée, elle ne s'ouvrirait pas.
+        case systeme
     }
 
     /// La dernière release, ou `nil` si GitHub ne répond pas ou si elle est
@@ -21,7 +23,7 @@ actor InstallateurMiseAJour {
     /// L'app de `version`, extraite et contrôlée dans `dossier` (vide, créé par
     /// l'appelant) : téléchargée par HTTPS depuis GitHub, son DMG a l'empreinte
     /// publiée avec la release, et l'app qu'il contient a le même identifiant
-    /// que celle-ci, le numéro annoncé et une signature intacte.
+    /// que celle-ci, le numéro annoncé, une signature intacte, et s'ouvre sur ce macOS.
     func preparer(_ version: VersionPubliee, identifiant: String, dans dossier: URL) async throws(Echec) -> URL {
         let image = dossier.appendingPathComponent(version.nomImage)
         guard let telechargement = try? await URLSession.shared.download(for: Self.requete(version.image)),
@@ -52,6 +54,10 @@ actor InstallateurMiseAJour {
               infos["CFBundleShortVersionString"] as? String == version.numero,
               Self.lancer("/usr/bin/codesign", ["--verify", "--deep", "--strict", app.path])
         else { throw .app }
+        // Le second filet, après le nom du DMG : ce que macOS exigera à l'ouverture.
+        guard VersionPubliee.ouvrable(minimum: infos["LSMinimumSystemVersion"] as? String,
+                                      sur: ProcessInfo.processInfo.operatingSystemVersion)
+        else { throw .systeme }
         return app
     }
 
