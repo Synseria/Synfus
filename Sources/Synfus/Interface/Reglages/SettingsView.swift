@@ -1,23 +1,9 @@
 import SwiftUI
 
-/// Les groupes de la barre latérale : quatre petits titres, jamais repliables.
-enum GroupeReglages: CaseIterable {
-    case synfus, personnages, jeu, avance
-
-    var titre: String {
-        switch self {
-        case .synfus: return L("reglages.groupe.synfus")
-        case .personnages: return L("reglages.groupe.personnages")
-        case .jeu: return L("reglages.groupe.jeu")
-        case .avance: return L("reglages.groupe.avance")
-        }
-    }
-}
-
-/// Sections des réglages, listées dans la barre latérale : dix entrées, chacune une page dont les blocs
-/// reprennent les anciens onglets (Statistiques dans Général, Classes dans Personnages, Enchaîner et
-/// Attention dans Raccourcis, Invitations dans Palette, Zaaps, Lieux et Trajets dans Carte, PNJ dans
-/// Quêtes, Diagnostic dans Lecture de l'écran).
+/// Les onglets des réglages, dans l'ordre de leur barre : dix pages, chacune une suite de sections
+/// (Statistiques dans Général, Classes dans Personnages, Enchaîner et Attention dans Raccourcis,
+/// Invitations dans Palette, Zaaps, Lieux et Trajets dans Carte, PNJ dans Quêtes, Diagnostic dans
+/// Lecture).
 enum SettingsSection: String, CaseIterable, Identifiable {
     case general, theme
     case personnages, barre, raccourcis
@@ -25,15 +11,6 @@ enum SettingsSection: String, CaseIterable, Identifiable {
     case lecture
 
     var id: String { rawValue }
-
-    var groupe: GroupeReglages {
-        switch self {
-        case .general, .theme: return .synfus
-        case .personnages, .barre, .raccourcis: return .personnages
-        case .palette, .carte, .quetes, .aides: return .jeu
-        case .lecture: return .avance
-        }
-    }
 
     var label: String {
         switch self {
@@ -52,13 +29,13 @@ enum SettingsSection: String, CaseIterable, Identifiable {
 
     var icon: String {
         switch self {
-        case .general: return "gearshape"
-        case .theme: return "swatchpalette"
-        case .personnages: return "person.3"
-        case .barre: return "rectangle.topthird.inset.filled"
-        case .raccourcis: return "keyboard"
+        case .general: return "gearshape.fill"
+        case .theme: return "paintpalette.fill"
+        case .personnages: return "person.2.fill"
+        case .barre: return "line.3.horizontal"
+        case .raccourcis: return "keyboard.fill"
         case .palette: return BoutonBarre.palette.symbole
-        case .carte: return "map"
+        case .carte: return "map.fill"
         case .quetes: return BoutonBarre.quetes.symbole
         case .aides: return BoutonBarre.boss.symbole
         case .lecture: return "text.viewfinder"
@@ -80,63 +57,46 @@ final class OngletReglages: ObservableObject {
     }
 }
 
+/// La fenêtre des réglages, comme celles de toutes les apps Synseria : les onglets sans titre en haut
+/// (`BarreDesOnglets`, ils disent où l'on est), puis la page, une colonne centrée, une seule taille pour
+/// tous les onglets.
 struct SettingsView: View {
     @ObservedObject private var onglet: OngletReglages
     private let hauteur: CGFloat
 
-    /// `hauteur` : celle de la fenêtre ; les captures d'une page longue la rendent entière.
-    init(onglet: OngletReglages = .shared, hauteur: CGFloat = 680) {
+    /// La taille de la fenêtre, la même pour tous les onglets ; les captures d'une page longue passent
+    /// leur `hauteur`.
+    static let taille = CGSize(width: Jetons.largeurReglages, height: 760)
+
+    init(onglet: OngletReglages = .shared, hauteur: CGFloat = SettingsView.taille.height) {
         self.onglet = onglet
         self.hauteur = hauteur
     }
 
-    private var section: SettingsSection { onglet.section }
-
-    /// Barre latérale à gauche, contenu à droite : les quatre sections en
-    /// onglets faisaient défiler des formulaires interminables — le menu
-    /// vertical garde tout sous les yeux.
     var body: some View {
-        HStack(spacing: 0) {
-            sidebar
-            Divider()
+        VStack(spacing: 0) {
+            BarreDesOnglets(onglets: SettingsSection.allCases.map { .init(valeur: $0, libelle: $0.label, symbole: $0.icon) },
+                            selection: Binding(get: { onglet.section }, set: { onglet.section = $0 }))
+            // La page sur sa plaque pleine, sous les onglets posés sur le verre.
             detail
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                // Le rang par défaut d'un bouton des réglages, y compris hors d'un `Form` (Diagnostic, listes).
+                // Le rang par défaut d'un bouton des réglages, y compris hors d'un formulaire (Diagnostic, listes).
                 .buttonStyle(BoutonBorde())
-        }
-        .frame(width: 920, height: hauteur)
-        // La teinte des fonds choisie dans Thème : celle de la fenêtre, que le formulaire laisse voir.
-        .background(Color.jeton(\.fondFenetre))
-    }
-
-    private var sidebar: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Jetons.espace1) {
-                ForEach(GroupeReglages.allCases, id: \.self) { groupe in
-                    Text(groupe.titre)
-                        .font(Jetons.typoMicro.font)
-                        .foregroundStyle(Color.jeton(\.encre2))
-                        .padding(.horizontal, Jetons.espace2)
-                        .padding(.top, Jetons.espace2)
-                        .padding(.bottom, Jetons.espace1)
-                    ForEach(SettingsSection.allCases.filter { $0.groupe == groupe }) { item in
-                        RangeeLaterale(item: item, courante: section == item) { onglet.section = item }
-                    }
+                .background(Color.jeton(\.plaque))
+                .clipShape(RoundedRectangle(cornerRadius: Jetons.rayon3, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: Jetons.rayon3, style: .continuous)
+                        .strokeBorder(Color.jeton(\.filet), lineWidth: Jetons.epaisseurFilet)
                 }
-            }
-            .padding(Jetons.espace2)
-            .groupeSelection(L("reglages.titre"), selection: Binding(get: { onglet.section }, set: { onglet.section = $0 }),
-                             parmi: GroupeReglages.allCases.flatMap { groupe in
-                                 SettingsSection.allCases.filter { $0.groupe == groupe }
-                             }, disposition: .verticale, parent: true)
+                .padding([.horizontal, .bottom], Jetons.espace2)
         }
-        .frame(width: 196)
-        .background(Color.jeton(\.creux))
+        .frame(width: Self.taille.width, height: hauteur)
+        .background { VerreDeFenetre() }
     }
 
     @ViewBuilder
     private var detail: some View {
-        switch section {
+        switch onglet.section {
         case .general: GeneralSettings()
         case .theme: ThemeSettings()
         case .personnages: CharactersSettings()
@@ -151,31 +111,20 @@ struct SettingsView: View {
     }
 }
 
-/// Une entrée de la barre latérale : icône et nom, en `navigation` sur une rangée `rangeeNavigation`.
-/// La page courante est pleine tant que la barre a la voix, grise dès qu'un groupe de la page a le clavier.
-private struct RangeeLaterale: View {
-    let item: SettingsSection
-    let courante: Bool
-    let action: () -> Void
-    @Environment(\.groupeAuClavier) private var auClavier
-    @State private var survole = false
+/// Le verre d'une fenêtre, sous tout son contenu, barre de titre comprise : franc au focus, dense hors
+/// focus (`TeinteDuVerre`). Transparence réduite, contraste augmenté et captures : le fond plein.
+struct VerreDeFenetre: View {
+    @Environment(\.accessibilityReduceTransparency) private var transparenceReduite
+    @Environment(\.colorSchemeContrast) private var contraste
 
     var body: some View {
-        let etat: EtatVisuel = courante ? .choix(.courant, auClavier: auClavier) : EtatVisuel(survole: survole)
-        Button(action: action) {
-            HStack(spacing: Jetons.espace2) {
-                // Colonne assez large pour le plus large des symboles (`person.3`) : les libellés partent du même x.
-                Image(systemName: item.icon).frame(width: Jetons.hauteurCase)
-                Text(item.label)
-            }
-            .font(Jetons.typoCorps.font)
-            .frame(maxWidth: .infinity, minHeight: Jetons.hauteurRangee, alignment: .leading)
-            .padding(.horizontal, Jetons.espace2)
-            .foregroundStyle(etat.encre)
-            .fondEtat(etat)
+        if transparenceReduite || contraste == .increased || Ressources.captureDocumentation {
+            Color.jeton(\.fondFenetre)
+        } else {
+            Color.clear
+                .glassEffect(.regular, in: .rect)
+                .background { TeinteDuVerre(usage: .fenetre) }
+                .ignoresSafeArea()
         }
-        .buttonStyle(.plain)
-        .elementDeGroupe()
-        .onHover { survole = $0 }
     }
 }
