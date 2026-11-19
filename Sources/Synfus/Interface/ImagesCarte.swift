@@ -147,56 +147,6 @@ extension View {
     }
 }
 
-/// Le fond d'une case de zaap — réglages et palette : la vue de sa carte à pleine opacité, noircie
-/// par un voile du fond de la Nuit là où le texte se pose (en haut et en bas, rien au milieu) ; sans
-/// image, un fond uni. La forme rogne l'image, qui déborde la case.
-struct FondCarte: View {
-    let carte: Int?
-    /// Choisie, la case prend le contour `primaire` ; son fond ne se teinte que sans image, qu'un
-    /// voile de couleur salirait.
-    var choisie = false
-    @ObservedObject private var prefs = Preferences.shared
-    private let forme = RoundedRectangle(cornerRadius: Jetons.rayon2, style: .continuous)
-    /// Plus large qu'une case de la grille (palette : 4 au rang sur 660 pt ;
-    /// réglages : 3), que l'image remplit.
-    private static let cote: CGFloat = 200
-    static let voileTexte = 0.8
-    private static let bandeHaute = 0.55
-    private static let bandeBasse = 0.7
-
-    /// Le texte de la case se pose sur une image : il s'écrit en clair, quel que soit le thème.
-    @MainActor static func surImage(_ carte: Int?) -> Bool {
-        carte != nil && Preferences.shared.vuesCartes && Ressources.visuelsDuJeu
-    }
-
-
-    var body: some View {
-        if Self.surImage(carte), let carte {
-            // Seul dégradé de l'app : le voile ne couvre que les bandes du texte, l'image reste entière au milieu.
-            let voile = Color.jeton(\.fondFenetre, en: .nuit).opacity(Self.voileTexte)
-            Color.jeton(\.plaque)
-                .overlay { VueCarte(carte: carte, cote: Self.cote).scaledToFill() }
-                .overlay {
-                    LinearGradient(stops: [
-                        .init(color: voile, location: 0),
-                        .init(color: .clear, location: Self.bandeHaute),
-                        .init(color: .clear, location: Self.bandeBasse),
-                        .init(color: voile, location: 1),
-                    ], startPoint: .top, endPoint: .bottom)
-                }
-                .clipShape(forme)
-                .overlay(contour)
-        } else {
-            forme.fill(choisie ? Color.jeton(\.creux) : Color.jeton(\.plaque)).overlay(contour)
-        }
-    }
-
-    private var contour: some View {
-        forme.strokeBorder(choisie ? Color.jeton(\.accent) : Color.jeton(\.filet),
-                           lineWidth: choisie ? Jetons.epaisseurFocus : Jetons.epaisseurFilet)
-    }
-}
-
 /// Le pictogramme d'un repère tel que la carte du jeu le montre ; le symbole
 /// tant qu'il n'est pas venu, ou quand le repère n'en a pas.
 struct PictogrammeLieu<Symbole: View>: View {

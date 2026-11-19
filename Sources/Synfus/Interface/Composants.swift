@@ -42,14 +42,6 @@ enum EtatVisuel: Equatable {
         case .repos, .survol, .presse, .inactif: Color.jeton(\.encre)
         }
     }
-
-    /// L'encre d'un contenu secondaire (libellé de second rang) dans le même état.
-    @MainActor var encreSecondaire: Color {
-        switch self {
-        case .courant, .choisi, .inactif, .desactive: encre
-        case .repos, .survol, .presse: Color.jeton(\.encre2)
-        }
-    }
 }
 
 extension View {
@@ -61,32 +53,39 @@ extension View {
             .animation(Jetons.courbeStandard.animation(Jetons.dureeRapide), value: etat)
     }
 
-    /// Ce qui flotte sur le jeu : barre, palette, panneaux. Rayon `rayon3`, sans ombre (ni SwiftUI ni
-    /// `hasShadow` de la fenêtre) : sans verre, la surface est bordée d'un `filet`.
-    /// `verre` : le Liquid Glass de la barre, qui ne porte que des pastilles ; les panneaux
-    /// qui lisent du texte gardent le matériau épais.
-    func surfaceFlottante(verre: Bool = false) -> some View {
-        modifier(SurfaceFlottante(verre: verre))
+    /// Ce qui flotte sur le jeu : barre, palette, panneaux, aperçus. Le verre léger des flottants
+    /// (`TeinteDuVerre(.flottant)` dessous), sans liseré : le verre dessine son bord. Rayon `rayon3`,
+    /// sans ombre (ni SwiftUI ni `hasShadow` de la fenêtre). Le texte long va sur une `plaquePleine`.
+    func surfaceFlottante() -> some View {
+        modifier(SurfaceFlottante())
+    }
+
+    /// Le contenu d'un flottant (résultats de la palette, corps d'un panneau) : la plaque pleine, son
+    /// filet, `rayon2` — jamais de texte long sur le verre.
+    func plaquePleine() -> some View {
+        let forme = RoundedRectangle(cornerRadius: Jetons.rayon2, style: .circular)
+        return background(Color.jeton(\.plaque), in: forme)
+            .overlay { forme.strokeBorder(Color.jeton(\.filet), lineWidth: Jetons.epaisseurFilet) }
     }
 }
 
 private struct SurfaceFlottante: ViewModifier {
-    let verre: Bool
+    @Environment(\.accessibilityReduceTransparency) private var transparenceReduite
+    @Environment(\.colorSchemeContrast) private var contraste
 
     func body(content: Content) -> some View {
         let forme = RoundedRectangle(cornerRadius: Jetons.rayon3, style: .continuous)
-        if verre, !Ressources.captureDocumentation {
-            content.glassEffect(.regular, in: .rect(cornerRadius: Jetons.rayon3))
+        // « Réduire la transparence » et « Augmenter le contraste » refusent le verre : le fond plein
+        // reprend son filet. `cacheDisplay` (captures) ne dessine pas le verre, qui échantillonne l'écran.
+        if transparenceReduite || contraste == .increased || Ressources.captureDocumentation {
+            content
+                .background(Color.jeton(\.fondFenetre), in: forme)
+                .overlay(forme.strokeBorder(Color.jeton(\.filet), lineWidth: Jetons.epaisseurFilet))
         } else {
-            // `cacheDisplay` ne dessine ni le verre ni les matériaux, qui échantillonnent l'écran.
-            Group {
-                if Ressources.captureDocumentation {
-                    content.background(forme.fill(Color.jeton(\.plaque)))
-                } else {
-                    content.background(.regularMaterial, in: forme)
-                }
-            }
-            .overlay(forme.strokeBorder(Color.jeton(\.filet), lineWidth: Jetons.epaisseurFilet))
+            // La teinte sous le verre : au-dessus, elle couvrirait son reflet.
+            content
+                .glassEffect(.regular, in: .rect(cornerRadius: Jetons.rayon3))
+                .background { TeinteDuVerre(usage: .flottant).clipShape(forme) }
         }
     }
 }

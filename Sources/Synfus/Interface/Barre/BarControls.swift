@@ -143,34 +143,22 @@ enum CurseurArrierePlan {
     static func autoriser() { _ = fait }
 }
 
-/// Gabarit commun des bascules de mode — éclair du passage automatique, menu
-/// de rangement. Au repos le bouton est nu : le fond n'apparaît qu'au
-/// survol ou quand le mode est actif, la barre ne montre plus une rangée de
-/// carrés gris en permanence.
+/// Un outil de la barre : le bouton-icône de la trousse, allumé quand son mode ou son panneau est
+/// ouvert (le fond du choix, l'accent en texte).
 struct ModeButton: View {
     let icone: String
     let actif: Bool
     let aide: String
     let action: () -> Void
-    @State private var survole = false
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: icone)
-                .font(Jetons.typoMeta.font)
-                .foregroundStyle(etat.encre)
-                .contentTransition(.symbolEffect(.replace))
-                .frame(width: Jetons.hauteurCase, height: Jetons.hauteurCase)
-                .fondEtat(etat)
+            Label(aide, systemImage: icone).contentTransition(.symbolEffect(.replace))
         }
-        .buttonStyle(.plain)
-        .onHover { survole = $0 }
+        .boutonIcone(allume: actif)
         .aide(aide)
         .accessibilityAddTraits(actif ? .isSelected : [])
     }
-
-    /// Un mode allumé est un choix : la voix teintée.
-    private var etat: EtatVisuel { actif ? .choisi : EtatVisuel(survole: survole) }
 }
 
 /// Les entrées du menu de rangement — les mêmes sous le bouton de la barre et
@@ -199,9 +187,9 @@ struct ArrangementMenuItems: View {
 /// et non une bascule : il propose des gestes, il ne porte pas d'état.
 struct ArrangeMenuButton: View {
     @ObservedObject private var prefs = Preferences.shared
-    @State private var survole = false
 
     var body: some View {
+        let aide = BoutonBarre.rangement.infobulle(touche: BoutonBarre.rangement.raccourci(prefs)?.displayString)
         Menu {
             ArrangementMenuItems()
             Divider()
@@ -210,19 +198,10 @@ struct ArrangeMenuButton: View {
             Divider()
             MasquerBouton(bouton: .rangement)
         } label: {
-            Image(systemName: BoutonBarre.rangement.symbole)
-                .font(Jetons.typoMeta.font)
-                .foregroundStyle(Color.jeton(\.encre))
-                .frame(width: Jetons.hauteurCase, height: Jetons.hauteurCase)
-                .fondEtat(EtatVisuel(survole: survole))
+            Label(aide, systemImage: BoutonBarre.rangement.symbole)
         }
-        .menuStyle(.borderlessButton)
-        .tint(Color.jeton(\.encre))
-        .menuIndicator(.hidden)
-        .fixedSize()
-        .onHover { survole = $0 }
-        .aide(BoutonBarre.rangement.infobulle(
-            touche: BoutonBarre.rangement.raccourci(prefs)?.displayString))
+        .menuIcone()
+        .aide(aide)
     }
 }
 
@@ -236,23 +215,15 @@ struct MasquerBouton: View {
     }
 }
 
-/// L'engrenage d'accès aux réglages. Plus discret que les bascules — pas de
-/// fond, contour seulement — : c'est une porte, pas un état.
+/// L'engrenage d'accès aux réglages : une porte, jamais allumée.
 struct GearButton: View {
-    @State private var survole = false
-
     var body: some View {
         Button {
             SettingsWindowController.shared.show()
         } label: {
-            Image(systemName: "gearshape")
-                .font(Jetons.typoMeta.font)
-                .foregroundStyle(survole ? Color.jeton(\.encre) : Color.jeton(\.encre2))
-                .frame(width: Jetons.hauteurCase, height: Jetons.hauteurCase)
-                .fondEtat(EtatVisuel(survole: survole))
+            Label(L("barre.reglagesAide"), systemImage: "gearshape")
         }
-        .buttonStyle(.plain)
-        .onHover { survole = $0 }
+        .boutonIcone()
         .aide(L("barre.reglagesAide"))
     }
 }

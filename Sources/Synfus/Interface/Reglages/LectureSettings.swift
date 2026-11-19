@@ -13,7 +13,7 @@ struct LectureSettings: View {
     @State private var resultat: String?
 
     var body: some View {
-        PageReglages(titre: L("reglages.lecture")) {
+        PageReglages {
             // Chasse et suivi de quêtes se lisent à la demande, depuis leur panneau : leurs zones se
             // calibrent même lecture éteinte. La position et le combat se lisent en continu, d'où leur
             // interrupteur ; l'allumer demande l'autorisation, que la première ligne du bloc redonne tant qu'elle manque.

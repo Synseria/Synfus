@@ -20,8 +20,8 @@ struct PositionsPNJVue: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(alignment: .top, spacing: Self.interstice) {
                     ForEach(positions) { position in
-                        CarteZaap(entree: position.entree, choisie: modele.position == position.position) { encres in
-                            QuetesDePosition(quetes: position.quetes, encres: encres)
+                        CarteZaap(entree: position.entree, choisie: modele.position == position.position) {
+                            QuetesDePosition(quetes: position.quetes)
                         }
                         .frame(width: largeur)
                         .id(Self.ancre(position.position))
@@ -45,29 +45,20 @@ struct PositionsPNJVue: View {
 }
 
 /// Ce qu'il y a à faire à une position, sur une ligne : les noms des quêtes quand ils y entrent, sinon
-/// leur nombre, jamais coupé ; la liste entière est dans l'infobulle. Sur la vue de la carte, un voile la
-/// garde lisible.
+/// leur nombre, jamais coupé ; la liste entière est dans l'infobulle.
 private struct QuetesDePosition: View {
     let quetes: [String]
-    let encres: EncresCarte
 
     var body: some View {
         ViewThatFits(in: .horizontal) {
             Text(quetes.joined(separator: " · "))
-                .foregroundStyle(encres.encre)
+                .foregroundStyle(Color.jeton(\.encre))
                 .lineLimit(1)
             Text(L("pnj.quetes", nombre: quetes.count, quetes.count))
-                .foregroundStyle(encres.accent)
+                .foregroundStyle(Color.jeton(\.accentTexte))
                 .lineLimit(1)
         }
         .font(Jetons.typoMeta.font)
-        .background {
-            if encres.surImage, !quetes.isEmpty {
-                RoundedRectangle(cornerRadius: Jetons.rayon0, style: .continuous)
-                    .fill(Color.jeton(\.fondFenetre, en: .nuit).opacity(FondCarte.voileTexte))
-                    .padding(-Jetons.espace1)
-            }
-        }
         .frame(maxWidth: .infinity, minHeight: Jetons.espace4, alignment: .leading)
     }
 }

@@ -12,7 +12,7 @@ struct GeneralSettings: View {
     @State private var langue = LangueReglage.choisie?.rawValue ?? ""
 
     var body: some View {
-        PageReglages(titre: L("reglages.general")) {
+        PageReglages {
             Bloc(L("general.autorisations")) {
                 PermissionRow(
                     name: L("general.accessibilite"),
@@ -74,12 +74,9 @@ struct GeneralSettings: View {
                 if LangueReglage.auProchainLancement != L10n.courante.langue {
                     Button(L("general.langue.relancer")) { LangueReglage.relancer() }
                 }
-                Picker(L("general.langue"), selection: $langue) {
-                    Text(L("general.langue.systeme")).tag("")
-                    ForEach(Langue.allCases) { Text($0.nom).tag($0.rawValue) }
-                }
-                .labelsHidden()
-                .fixedSize()
+                MenuEnChamp(titre: L("general.langue"),
+                            options: [("", L("general.langue.systeme"))] + Langue.allCases.map { ($0.rawValue, $0.nom) },
+                            selection: $langue)
                 .onChange(of: langue) { _, value in LangueReglage.choisie = Langue(rawValue: value) }
             }
         }

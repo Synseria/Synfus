@@ -12,14 +12,9 @@ struct IconesReglables: View {
             ))
         }
         Ligne(titre: L("general.icone")) {
-            Picker(L("general.icone"), selection: Binding(
-                get: { prefs.menuBarIcon },
-                set: { prefs.menuBarIcon = $0; MenuBarController.shared.refreshIcon() }
-            )) {
-                ForEach(MenuBarIcon.allCases) { Text($0.label).tag($0) }
-            }
-            .labelsHidden()
-            .fixedSize()
+            SegmenteTexte(titre: L("general.icone"), options: MenuBarIcon.allCases.map { ($0, $0.label) },
+                          selection: Binding(get: { prefs.menuBarIcon },
+                                             set: { prefs.menuBarIcon = $0; MenuBarController.shared.refreshIcon() }))
         }
     }
 }

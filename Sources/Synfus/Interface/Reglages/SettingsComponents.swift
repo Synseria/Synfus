@@ -1,88 +1,60 @@
 import SwiftUI
 
 /// Les briques communes des réglages. La règle d'interface : **un réglage par ligne, le libellé à
-/// gauche, le contrôle à droite** (`Ligne`), sous le libellé une valeur ou un état en gris (`etat`),
-/// toute explication en infobulle de la ligne — jamais une phrase à l'écran. Les lignes se rangent
-/// dans un `Bloc` : une carte, un seul dessin pour toutes les pages. Libellés : sans deux-points ni
-/// « / », un nom (« Gain minimal ») ou un infinitif (« Afficher la barre »).
+/// gauche, le contrôle à droite** (`Ligne`), une valeur ou un état en méta juste avant le contrôle
+/// (`etat`), toute explication en infobulle — jamais une phrase à l'écran, jamais un ⓘ. Les lignes se
+/// rangent dans un `Bloc`, au dessin de `SectionCompacte` de la trousse. Libellés : sans deux-points
+/// ni « / », un nom (« Gain minimal ») ou un infinitif (« Afficher la barre »).
 
-/// Le bord gauche du texte d'une page.
-enum MargeReglages {
-    static let texte: CGFloat = 32
-}
-
-/// Une page de réglages : son titre, puis ses blocs.
+/// Une page de réglages : le formulaire de la trousse (`FormulaireCompact`), en colonne centrée de
+/// `largeur-colonne`. Pas de titre : les onglets disent où l'on est.
 struct PageReglages<Contenu: View>: View {
-    let titre: String
-    var valeur: String?
     @ViewBuilder let contenu: Contenu
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            EnTetePage(titre: titre, valeur: valeur)
-            ScrollView {
-                VStack(alignment: .leading, spacing: Jetons.espace5) { contenu }
-                    .padding(.horizontal, MargeReglages.texte)
-                    .padding(.top, Jetons.espace4)
-                    .padding(.bottom, Jetons.espace5)
-            }
-            .font(Jetons.typoCorps.font)
-            .buttonStyle(BoutonBorde())
+        FormulaireCompact {
+            contenu
+                .frame(maxWidth: Jetons.largeurColonne)
+                .frame(maxWidth: .infinity)
         }
+        .font(Jetons.typoCorps.font)
+        .buttonStyle(BoutonBorde())
     }
 }
 
-/// Le titre d'une page.
-struct EnTetePage: View {
-    let titre: String
-    /// Un compte ou un état de la page, jamais une phrase.
-    var valeur: String?
-
-    var body: some View {
-        HStack(spacing: Jetons.espace2) {
-            Text(titre).font(Jetons.typoTitrePage.font)
-            Spacer(minLength: Jetons.espace3)
-            if let valeur { Text(valeur).font(Jetons.typoMeta.font).foregroundStyle(Color.jeton(\.encre2)) }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, MargeReglages.texte)
-        .padding(.top, Jetons.espace5)
-        .padding(.bottom, Jetons.espace1)
-    }
-}
-
-/// Un groupe de lignes sous son titre : une carte (`carte()`), un filet entre deux lignes. Le filet que
-/// chaque ligne porte sous elle, le dernier compris, est rogné au bas du cadre. `paresseux` : une longue
-/// liste ne construit que les lignes qui paraissent. `entete` : le geste qui concerne tout le bloc.
+/// Une section : son titre (l'explication en infobulle), puis une carte dont chaque ligne porte son
+/// filet, le dernier rogné au bas du cadre — le dessin de `SectionCompacte`, avec ce qu'elle n'a pas :
+/// `paresseux` (une longue liste ne construit que les lignes qui paraissent) et `entete` (le geste qui
+/// concerne tout le bloc, au bout du titre).
 struct Bloc<Contenu: View, Entete: View>: View {
     var titre: String?
-    /// Le ⓘ du titre, dernier recours ; `infobulle` : le même texte au seul survol du titre.
+    /// L'explication du bloc, en infobulle sur son titre.
     var aide: String?
-    var infobulle: String?
     var paresseux = false
     @ViewBuilder let contenu: Contenu
     @ViewBuilder let entete: Entete
 
-    init(_ titre: String? = nil, aide: String? = nil, infobulle: String? = nil, paresseux: Bool = false,
+    init(_ titre: String? = nil, aide: String? = nil, paresseux: Bool = false,
          @ViewBuilder contenu: () -> Contenu, @ViewBuilder entete: () -> Entete) {
         self.titre = titre
         self.aide = aide
-        self.infobulle = infobulle
         self.paresseux = paresseux
         self.contenu = contenu()
         self.entete = entete()
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Jetons.espace2) {
+        VStack(alignment: .leading, spacing: Jetons.espace1) {
             if let titre {
                 HStack(spacing: Jetons.espace2) {
-                    SectionTitle(titre, help: aide).infobulleSiPresente(infobulle)
+                    Text(titre)
+                        .font(Jetons.typoTitreCarte.font)
+                        .foregroundStyle(Color.jeton(\.encre2))
+                        .infobulleSiPresente(aide)
                     Spacer(minLength: Jetons.espace3)
                     entete
                 }
-                .font(Jetons.typoTitreCarte.font)
-                .padding(.horizontal, Jetons.espace3)
+                .padding(.leading, Jetons.espace1)
             }
             lignes
                 .padding(.bottom, -Jetons.epaisseurFilet)
@@ -102,20 +74,19 @@ struct Bloc<Contenu: View, Entete: View>: View {
 }
 
 extension Bloc where Entete == EmptyView {
-    init(_ titre: String? = nil, aide: String? = nil, infobulle: String? = nil, paresseux: Bool = false,
-         @ViewBuilder contenu: () -> Contenu) {
-        self.init(titre, aide: aide, infobulle: infobulle, paresseux: paresseux, contenu: contenu,
-                  entete: { EmptyView() })
+    init(_ titre: String? = nil, aide: String? = nil, paresseux: Bool = false, @ViewBuilder contenu: () -> Contenu) {
+        self.init(titre, aide: aide, paresseux: paresseux, contenu: contenu, entete: { EmptyView() })
     }
 }
 
 extension View {
-    /// Une ligne de bloc : retrait, hauteur d'un contrôle, filet dessous.
+    /// Une ligne de bloc, aux mesures des rangées de `SectionCompacte` : `hauteur-rangee` − `espace-2`
+    /// au moins, `espace-3` de côté, filet dessous.
     func rangee() -> some View {
         VStack(spacing: 0) {
-            frame(maxWidth: .infinity, minHeight: Jetons.hauteurControle, alignment: .leading)
+            frame(maxWidth: .infinity, minHeight: Jetons.hauteurRangee - Jetons.espace2, alignment: .leading)
                 .padding(.horizontal, Jetons.espace3)
-                .padding(.vertical, Jetons.espace2)
+                .padding(.vertical, Jetons.espace1)
             Rectangle().fill(Color.jeton(\.filet)).frame(height: Jetons.epaisseurFilet)
         }
     }
@@ -147,7 +118,7 @@ extension EtatDeBloc {
     }
 }
 
-/// Une ligne : libellé (état) à gauche, précédé d'une icône s'il y en a une, contrôle à droite.
+/// Une ligne : libellé à gauche, précédé d'une icône s'il y en a une ; l'état puis le contrôle à droite.
 struct Ligne<Controle: View, Icone: View>: View {
     let titre: String
     var detail: String?
@@ -167,22 +138,20 @@ struct Ligne<Controle: View, Icone: View>: View {
     }
 
     var body: some View {
-        // Le contrôle se centre sur le bloc entier du libellé (titre et état), jamais accroché à sa
-        // dernière ligne : c'est ce qui tient l'alignement des lignes à état.
         HStack(alignment: .center, spacing: Jetons.espace3) {
             HStack(spacing: Jetons.espace2) {
                 icone
-                VStack(alignment: .leading, spacing: Jetons.espace1) {
-                    HStack(spacing: Jetons.espace1) {
-                        Text(titre)
-                        if let detail { Text(detail).foregroundStyle(Color.jeton(\.encre2)).lineLimit(1) }
-                    }
-                    if let etat {
-                        Text(etat).font(Jetons.typoMeta.font).foregroundStyle(Color.jeton(\.encre2))
-                    }
+                HStack(spacing: Jetons.espace1) {
+                    Text(titre)
+                    if let detail { Text(detail).foregroundStyle(Color.jeton(\.encre2)).lineLimit(1) }
                 }
             }
             Spacer(minLength: Jetons.espace3)
+            // La valeur ou l'état, en méta juste avant le contrôle : jamais une ligne sous le libellé.
+            if let etat {
+                Text(etat).font(Jetons.typoMeta.font).foregroundStyle(Color.jeton(\.encre2))
+                    .multilineTextAlignment(.trailing)
+            }
             controle
         }
         // L'explication d'une ligne est une infobulle sur toute la ligne : jamais une phrase à l'écran.
@@ -222,50 +191,6 @@ struct LigneInterrupteur: View {
     }
 }
 
-/// Le ⓘ : une bulle d'aide, au clic.
-struct HelpTip: View {
-    let text: String
-    @State private var showing = false
-
-    init(_ text: String) { self.text = text }
-
-    var body: some View {
-        Button { showing.toggle() } label: {
-            Image(systemName: "info.circle")
-                .font(Jetons.typoMeta.font)
-                .foregroundStyle(Color.jeton(\.encre2))
-        }
-        .buttonStyle(.plain)
-        .help(text)
-        .accessibilityLabel(text)
-        .popover(isPresented: $showing, arrowEdge: .bottom) {
-            Text(text)
-                .font(Jetons.typoMeta.font)
-                .padding(Jetons.espace3)
-                .frame(width: 300, alignment: .leading)
-                .racineSynfus()
-        }
-    }
-}
-
-/// En-tête de section avec son ⓘ.
-struct SectionTitle: View {
-    let title: String
-    let help: String?
-
-    init(_ title: String, help: String? = nil) {
-        self.title = title
-        self.help = help
-    }
-
-    var body: some View {
-        HStack(spacing: Jetons.espace1) {
-            Text(title)
-            if let help { HelpTip(help) }
-        }
-    }
-}
-
 /// Une ligne « libellé — enregistreur de raccourci ».
 struct ShortcutRow: View {
     let label: String
@@ -288,7 +213,9 @@ struct ShortcutRow: View {
                         .foregroundStyle(Color.jeton(\.avertissement))
                         .help(conflit ? L("raccourcis.conflit") : L("raccourcis.refuse"))
                 }
-                ShortcutRecorder(hotKey: hotKey, allowsBareKeys: allowsBareKeys)
+                EnregistreurDeRaccourci(valeur: hotKey, touches: \.touches, lire: { HotKey.lu($0, nues: allowsBareKeys) },
+                                        invite: L("raccourci.pressez"), aucun: L("raccourci.aucun"))
+                    .help(L("raccourci.enregistrer.aide"))
             }
         }
     }
@@ -343,9 +270,7 @@ struct PermissionRow: View {
     var body: some View {
         Ligne(titre: name, etat: etat, aide: help) {
             HStack(spacing: Jetons.espace2) {
-                Circle().fill(granted ? Color.jeton(\.succes) : Color.jeton(\.avertissement)).frame(width: Jetons.espace2, height: Jetons.espace2)
-                Text(granted ? L("commun.accordee") : L("commun.manquante"))
-                    .foregroundStyle(granted ? Color.jeton(\.encre2) : Color.jeton(\.avertissement))
+                Badge(texte: granted ? L("commun.accordee") : L("commun.manquante"), ton: granted ? .succes : .avertissement, point: true)
                 if !granted { Button(L("autorisation.autoriser"), action: open) }
             }
         }

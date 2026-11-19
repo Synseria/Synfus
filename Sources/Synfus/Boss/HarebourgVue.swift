@@ -8,6 +8,8 @@ struct HarebourgVue: View {
     @ObservedObject private var lecteur = LecteurEcran.shared
     @ObservedObject private var previews = WindowPreviewService.shared
     @State private var regleDepliee = false
+    // periphery:ignore - lu par son `$` (le dépliable), que Periphery ne voit pas
+    @State private var attenteDepliee = false
     private static let hauteurSchema: CGFloat = 48
 
     /// Les contrôles gardent leur place d'un tour à l'autre : la réponse au-dessus a
@@ -34,10 +36,7 @@ struct HarebourgVue: View {
                     icone: impair ? "shield" : "arrow.left.arrow.right", forte: true, depliee: $regleDepliee) {
             CorrectionTour()
         } contenu: {
-            Text(impair ? L("boss.harebourg.impair") : L("boss.harebourg.pair"))
-                .font(Jetons.typoMeta.font)
-                .foregroundStyle(Color.jeton(\.encre2))
-                .fixedSize(horizontal: false, vertical: true)
+            TexteDeDetail(texte: impair ? L("boss.harebourg.impair") : L("boss.harebourg.pair"))
         }
     }
 
@@ -61,6 +60,8 @@ struct HarebourgVue: View {
 
     @ViewBuilder
     private func details(_ estimation: SuiviConfusion.Estimation) -> some View {
+        // D'où vient la réponse change d'un tour à l'autre et dit ce qu'elle vaut : une ligne, pas une
+        // infobulle, que macOS ne montre pas sur un panneau d'une app inactive.
         Label(source(estimation), systemImage: icone(estimation.source))
             .font(Jetons.typoMeta.font)
             .foregroundStyle(Color.jeton(\.encre2))
@@ -121,7 +122,11 @@ struct HarebourgVue: View {
             let enCombat = lecteur.persoDevant.flatMap { lecteur.combats[$0] }?.enCombat == true
             Group {
                 if !enCombat {
-                    Text(L("boss.attente.combat"))
+                    SectionBoss(titre: L("boss.attente.court"), icone: "scope", depliee: $attenteDepliee) {
+                        EmptyView()
+                    } contenu: {
+                        TexteDeDetail(texte: L("boss.attente.combat"))
+                    }
                 } else if case .points(let actuels, nil)? = aide.vieLue {
                     Text(L("boss.vie.sansMax", actuels))
                 } else {

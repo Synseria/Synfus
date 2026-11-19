@@ -4,7 +4,7 @@ import SwiftUI
 /// la barre et les panneaux (`ThemeCourant`).
 struct ThemeSettings: View {
     var body: some View {
-        PageReglages(titre: L("reglages.theme")) {
+        PageReglages {
             Bloc {
                 ChoixDeNuance()
                 ChoixDuTheme()
@@ -202,6 +202,6 @@ private struct ApercuTheme: View {
         }
         .padding(Jetons.espace1)
         .fixedSize()
-        .surfaceFlottante(verre: true)
+        .surfaceFlottante()
     }
 }
