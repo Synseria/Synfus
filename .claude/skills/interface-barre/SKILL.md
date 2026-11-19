@@ -111,7 +111,7 @@ sa bascule). Toute nouvelle option suit la règle.
 - `Reglages/SettingsView.swift` : la fenêtre de toutes les apps Synseria — `BarreDesOnglets` en haut (dix
   onglets `SettingsSection`, sans titre : ils disent où l'on est), fenêtre sans titre affiché, sous tout le
   contenu le matériau du système voilé de la page (`FondDeFenetre`, pas le verre nu), une seule taille
-  (`SettingsView.taille`, faite pour Général, barre de titre comprise, que la vue remplit) ; la page sur
+  (`SettingsView.taille`, barre de titre comprise, que la vue remplit) ; la page sur
   une plaque pleine. Une page fusionnée est une suite de `Bloc`, jamais des onglets dans l'onglet. Chaque page est une
   `PageReglages` (`FormulaireCompact` de la trousse, colonne de `largeur-colonne`) de `Bloc` — le dessin de
   `SectionCompacte`, plus `paresseux` et `entete` qu'elle n'a pas : une carte, un filet entre les lignes ;
