@@ -104,4 +104,15 @@ struct MiseAJourTests {
         #expect(SuiviDeMiseAJour.Etat.echec(.ecriture("refus"), version).libelle == L("maj.echec.ecriture"))
         #expect(SuiviDeMiseAJour.Etat.echec(.reseau, nil).libelle == L("maj.echec.reseau"))
     }
+
+    /// Les deux dernières releases telles que l'API les donnait au passage au canal : la 0.14.0, au nom
+    /// d'avant le macOS minimum, ne se propose pas sur Stable ; la rc de la 0.15 se propose sur Bêta.
+    @Test("Les releases publiées se lisent sur chaque canal")
+    func releasesPubliees() throws {
+        let liste = #"[{"tag_name": "v0.15.0-rc.1", "html_url": "https://github.com/Synseria/Synfus/releases/tag/v0.15.0-rc.1", "prerelease": true, "draft": false, "body": "…", "assets": [{"name": "SHA256SUMS.txt", "browser_download_url": "https://github.com/Synseria/Synfus/releases/download/v0.15.0-rc.1/SHA256SUMS.txt"}, {"name": "Synfus-0.15.0-rc.1-dSYM.zip", "browser_download_url": "https://github.com/Synseria/Synfus/releases/download/v0.15.0-rc.1/Synfus-0.15.0-rc.1-dSYM.zip"}, {"name": "Synfus-0.15.0-rc.1-macos26-arm64.dmg", "browser_download_url": "https://github.com/Synseria/Synfus/releases/download/v0.15.0-rc.1/Synfus-0.15.0-rc.1-macos26-arm64.dmg"}, {"name": "Synfus-0.15.0-rc.1-macos26-x86_64.dmg", "browser_download_url": "https://github.com/Synseria/Synfus/releases/download/v0.15.0-rc.1/Synfus-0.15.0-rc.1-macos26-x86_64.dmg"}]}, {"tag_name": "v0.14.0", "html_url": "https://github.com/Synseria/Synfus/releases/tag/v0.14.0", "prerelease": false, "draft": false, "body": "…", "assets": [{"name": "SHA256SUMS.txt", "browser_download_url": "https://github.com/Synseria/Synfus/releases/download/v0.14.0/SHA256SUMS.txt"}, {"name": "Synfus-0.14.0-arm64.dmg", "browser_download_url": "https://github.com/Synseria/Synfus/releases/download/v0.14.0/Synfus-0.14.0-arm64.dmg"}, {"name": "Synfus-0.14.0-dSYM.zip", "browser_download_url": "https://github.com/Synseria/Synfus/releases/download/v0.14.0/Synfus-0.14.0-dSYM.zip"}, {"name": "Synfus-0.14.0-x86_64.dmg", "browser_download_url": "https://github.com/Synseria/Synfus/releases/download/v0.14.0/Synfus-0.14.0-x86_64.dmg"}]}]"#
+        #expect(Self.lire(liste, canal: .stable) == nil)
+        let beta = try #require(Self.lire(liste, canal: .beta))
+        #expect(beta.numero.texte == "0.15.0-rc.1" && beta.macOSMinimum == "26")
+        #expect(ReleasesDeSynfus.image(de: beta, architecture: "arm64")?.nom == "Synfus-0.15.0-rc.1-macos26-arm64.dmg")
+    }
 }
