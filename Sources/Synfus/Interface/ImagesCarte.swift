@@ -147,24 +147,27 @@ extension View {
     }
 }
 
-/// Le fond d'une carte de la palette : la carte du jeu, voilée sous le texte seulement — le haut (titre,
-/// sous-titre) et le bas (étiquette, coordonnées) —, entière au milieu ; la plaque sans elle. Choisie, le
-/// contour de l'accent sur l'image, le fond du choix sur la plaque.
+/// Le fond d'une carte de la palette : la carte du jeu sous un seul voile continu, dense sous le texte
+/// du haut (titre, sous-titre) et du bas (étiquette, coordonnées), plus léger entre les deux, jamais
+/// de bord net ; la plaque sans elle. Choisie, le contour de l'accent sur l'image, le fond du choix
+/// sur la plaque.
 struct FondCarte: View {
     let carte: Int?
     var choisie = false
     var survole = false
-    /// Où finit le voile du haut et où commence celui du bas, en part de la hauteur de la carte : le
-    /// bas du texte du haut, le haut du pied (1 : pas de pied).
+    /// Où finit le texte du haut et où commence celui du bas, en part de la hauteur de la carte : le
+    /// voile y est encore dense (1 : pas de pied).
     var finHaut: CGFloat = 0.5
     var debutBas: CGFloat = 1
     private let forme = RoundedRectangle(cornerRadius: Jetons.rayon2, style: .circular)
     /// Plus large qu'une case de la grille (trois au rang sur la largeur de la palette), que l'image remplit.
     private static let cote: CGFloat = 240
-    /// Le voile sous le texte : assez dense pour le lire sur n'importe quel décor du jeu.
-    private static let voileTexte = 0.8
-    /// Le fondu de chaque voile vers l'image, en part de la hauteur de la carte.
-    private static let fondu = 0.08
+    /// L'opacité du voile aux bords, sous le titre et les coordonnées ; à la lisière du texte, où se
+    /// lit encore le sous-titre ; entre les deux, où l'image reste assombrie : du texte clair se lit
+    /// sur n'importe quel décor du jeu, et aucune bande vive ne raye la carte.
+    private static let voileBord = 0.85
+    private static let voileTexte = 0.72
+    private static let voileMilieu = 0.55
 
     /// Le texte de la carte se pose sur une image : il s'écrit en clair, quel que soit le thème.
     @MainActor static func surImage(_ carte: Int?) -> Bool {
@@ -173,18 +176,17 @@ struct FondCarte: View {
 
     var body: some View {
         if Self.surImage(carte), let carte {
-            let voile = Color.jeton(\.fondFenetre, en: .nuit).opacity(Self.voileTexte)
+            let voile = Color.jeton(\.fondFenetre, en: .nuit)
             Color.jeton(\.creux)
                 .overlay { VueCarte(carte: carte, cote: Self.cote).scaledToFill() }
                 .overlay {
-                    // Seul dégradé de l'app : le voile ne couvre que les bandes du texte.
+                    // Seul dégradé de l'app : un voile d'un bord à l'autre, sans palier.
                     LinearGradient(stops: [
-                        .init(color: voile, location: 0),
-                        .init(color: voile, location: finHaut),
-                        .init(color: .clear, location: min(finHaut + Self.fondu, debutBas)),
-                        .init(color: .clear, location: max(debutBas - Self.fondu, finHaut)),
-                        .init(color: voile, location: debutBas),
-                        .init(color: voile, location: 1),
+                        .init(color: voile.opacity(Self.voileBord), location: 0),
+                        .init(color: voile.opacity(Self.voileTexte), location: finHaut),
+                        .init(color: voile.opacity(Self.voileMilieu), location: (finHaut + debutBas) / 2),
+                        .init(color: voile.opacity(debutBas < 1 ? Self.voileTexte : Self.voileMilieu), location: debutBas),
+                        .init(color: voile.opacity(Self.voileBord), location: 1),
                     ], startPoint: .top, endPoint: .bottom)
                 }
                 .clipShape(forme)

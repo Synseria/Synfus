@@ -13,9 +13,8 @@ struct PaletteVue: View {
 
     private enum Champ { case recherche, etiquette }
 
-    /// Trois rangées de cartes à image entières et leurs interstices ; les cartes sans image, plus
-    /// basses, montrent le haut d'une quatrième : la grille dit qu'elle défile.
-    static let hauteurCartes = 3 * CarteZaap<Never>.hauteur(disposition: .init(avecImage: true)) + 2 * Jetons.espace2
+    /// Trois rangées de cartes entières et la moitié d'une quatrième : la grille dit qu'elle défile.
+    static let hauteurCartes = 3.5 * CarteZaap<Never>.hauteur() + 3 * Jetons.espace2
 
     var body: some View {
         VStack(spacing: Jetons.espace2) {
@@ -380,10 +379,10 @@ struct PaletteVue: View {
 }
 
 /// Une carte de la palette (zaap, lieu, donjon, PNJ, quête) : titre et sous-titre en haut, l'étiquette et
-/// les coordonnées en bas, le favori dans le coin haut droit. La carte du jeu fait le fond, voilée sous le
-/// texte seulement (`FondCarte`), entière au survol (`apercuCarteAuSurvol`) ; sans elle, la plaque. Toutes
-/// les cartes d'une grille ont la même hauteur (`hauteur`) : le titre sur deux lignes au plus, coupé en
-/// fin, le sous-titre et le pied sur une, la bande de l'image quand la grille en montre une.
+/// les coordonnées en bas, le favori dans le coin haut droit. La carte du jeu fait le fond, sous un voile
+/// continu (`FondCarte`), entière au survol (`apercuCarteAuSurvol`) ; sans elle, la plaque. Toutes les
+/// cartes d'une grille ont la même hauteur (`hauteur`) : le titre sur deux lignes au plus, coupé en fin,
+/// le sous-titre et le pied sur une.
 struct CarteZaap<Corps: View>: View {
     let entree: EntreePalette
     let choisie: Bool
@@ -408,12 +407,15 @@ struct CarteZaap<Corps: View>: View {
         return Jetons.espace2 + 2 * Jetons.typoTitreCarte.interligne + Jetons.typoMeta.interligne + corps
     }
 
-    /// La hauteur d'une carte : le haut, la bande de l'image, le pied, la marge du bas.
+    /// La hauteur d'une carte : le haut, le pied d'une ligne de coordonnées, la marge du bas — l'image
+    /// fait le fond, elle ne prend pas de place à elle.
     static func hauteur(avecCorps: Bool = false, disposition: DispositionCartes = .init()) -> CGFloat {
-        let image = disposition.avecImage ? Jetons.espace1 + Jetons.espace6 : 0
-        let pied = disposition.avecPied ? Jetons.espace1 + Jetons.hauteurCase : 0
-        return haut(avecCorps: avecCorps) + image + pied + Jetons.espace2
+        let pied = disposition.avecPied ? Jetons.espace1 + hauteurPied : 0
+        return haut(avecCorps: avecCorps) + pied + Jetons.espace2
     }
+
+    /// La ligne des coordonnées, la plus haute du pied.
+    private static var hauteurPied: CGFloat { Jetons.typoCode.interligne }
 
     private var surImage: Bool { FondCarte.surImage(entree.carte) }
     private var hauteur: CGFloat { Self.hauteur(avecCorps: corps != nil, disposition: disposition) }
@@ -456,7 +458,7 @@ struct CarteZaap<Corps: View>: View {
             // Le voile couvre le haut jusqu'au bas du texte, et le pied.
             FondCarte(carte: entree.carte, choisie: choisie, survole: survole,
                       finHaut: Self.haut(avecCorps: corps != nil) / hauteur,
-                      debutBas: disposition.avecPied ? (hauteur - Jetons.espace2 - Jetons.hauteurCase) / hauteur : 1)
+                      debutBas: disposition.avecPied ? (hauteur - Jetons.espace2 - Self.hauteurPied) / hauteur : 1)
         }
         .contentShape(RoundedRectangle(cornerRadius: Jetons.rayon2, style: .circular))
         .onHover { survole = $0 }
@@ -484,7 +486,7 @@ struct CarteZaap<Corps: View>: View {
                 .lineLimit(1)
                 .fixedSize()
         }
-        .frame(height: Jetons.hauteurCase)
+        .frame(height: Self.hauteurPied)
     }
 }
 
@@ -494,16 +496,14 @@ extension CarteZaap where Corps == Never {
     }
 }
 
-/// Ce qu'une grille de cartes montre, pour que toutes ses cartes aient la même hauteur : la bande de
-/// l'image dès qu'une carte en a une, le pied dès qu'une carte a de quoi l'emplir (étiquette, intérieur,
-/// coordonnées) — une grille de quêtes n'en a pas et s'en passe.
+/// Ce qu'une grille de cartes montre, pour que toutes ses cartes aient la même hauteur : le pied dès
+/// qu'une carte a de quoi l'emplir (étiquette, intérieur, coordonnées) — une grille de quêtes n'en a
+/// pas et s'en passe.
 struct DispositionCartes: Equatable {
-    var avecImage = false
     var avecPied = true
 
-    @MainActor static func de(_ entrees: [EntreePalette]) -> DispositionCartes {
-        DispositionCartes(avecImage: entrees.contains { FondCarte.surImage($0.carte) },
-                          avecPied: entrees.contains { $0.etiquette != nil || $0.interieur || $0.detail != nil })
+    static func de(_ entrees: [EntreePalette]) -> DispositionCartes {
+        DispositionCartes(avecPied: entrees.contains { $0.etiquette != nil || $0.interieur || $0.detail != nil })
     }
 }
 
