@@ -2,8 +2,8 @@
 # build.sh — build Release signé de Synfus.
 #   sh build.sh                    → dist/Synfus.app
 #   sh build.sh --release [X.Y.Z]  → + dist/Synfus-X.Y.Z-macos<N>-<arch>.dmg
-#   sh build.sh --publish X.Y.Z    → depuis main propre : main et tag vX.Y.Z
-#                                    poussés, DMG construits ici et publiés
+#   sh build.sh --publish X.Y.Z[-rc.N] → depuis main propre : main et tag
+#                                    poussés, DMG publiés (une rc : pre-release)
 #   sh build.sh --help
 # Installer et lancer, c'est `sh run.sh --install [--start]`.
 #

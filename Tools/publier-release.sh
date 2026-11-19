@@ -1,13 +1,19 @@
 #!/bin/bash
-# publier-release.sh X.Y.Z — construit les DMG arm64 et x86_64 à distribuer
+# publier-release.sh X.Y.Z[-rc.N] — construit les DMG arm64 et x86_64 à distribuer
 # (signés ad hoc, sans aucun visuel du jeu), compose les notes et crée — ou
 # met à jour — la release GitHub vX.Y.Z. Le tag doit déjà être poussé.
 # Lancé par `sh build.sh --publish X.Y.Z` ; release.yml le rejoue à la main.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-VERSION="${1:?usage : publier-release.sh X.Y.Z}"
+VERSION="${1:?usage : publier-release.sh X.Y.Z[-rc.N]}"
 TAG="v$VERSION"
+# Une rc part en pre-release : `releases/latest`, que lit la mise à jour des versions installées,
+# l'écarte, et elle ne devient jamais la « dernière release » proposée à tous.
+case "$VERSION" in
+    *-rc.*) PRERELEASE=(--prerelease) ;;
+    *) PRERELEASE=(--prerelease=false) ;;
+esac
 
 # Les deux tranches avec le même SDK ; x86_64 par cross-compilation.
 construire() {
@@ -108,9 +114,9 @@ FICHIERS=(dist/"$DMG_ARM" dist/"$DMG_INTEL" dist/SHA256SUMS.txt
 # La release peut déjà exister (ouverte depuis GitHub, publication rejouée) :
 # on la met alors à jour, fichiers homonymes écrasés.
 if gh release view "$TAG" >/dev/null 2>&1; then
-    gh release edit "$TAG" --title "Synfus $VERSION" --notes-file "$NOTES"
+    gh release edit "$TAG" --title "Synfus $VERSION" --notes-file "$NOTES" "${PRERELEASE[@]}"
     gh release upload "$TAG" "${FICHIERS[@]}" --clobber
 else
-    gh release create "$TAG" --title "Synfus $VERSION" --notes-file "$NOTES" "${FICHIERS[@]}"
+    gh release create "$TAG" --title "Synfus $VERSION" --notes-file "$NOTES" "${PRERELEASE[@]}" "${FICHIERS[@]}"
 fi
 echo "==> https://github.com/Synseria/Synfus/releases/tag/$TAG"

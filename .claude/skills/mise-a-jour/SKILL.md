@@ -65,6 +65,8 @@ assets `Synfus-X.Y.Z-macos<N>-arm64.dmg`, `Synfus-X.Y.Z-macos<N>-x86_64.dmg`, `S
 (format `shasum`), l'app à la racine du DMG sous le nom `Synfus.app`. Changer un nom ou le format
 casse la mise à jour de **toutes** les versions déjà installées : jamais sans garder l'ancien en
 parallèle — sauf pour écarter à dessein des versions qui ne doivent plus rien proposer (ci-dessous).
+Une `X.Y.Z-rc.N` part en **pre-release** (`--prerelease`) : `releases/latest` l'écarte, aucune
+version installée ne la propose ; elle s'installe à la main (DMG ou `sh run.sh --install`).
 
 ## Passage à macOS 26 (0.14 → 0.15) — le piège des versions sans garde
 
