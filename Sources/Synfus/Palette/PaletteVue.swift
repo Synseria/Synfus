@@ -42,7 +42,6 @@ struct PaletteVue: View {
             TextField(L("palette.invite"), text: $modele.requete, prompt: Text(L("palette.invite")))
                 .textFieldStyle(.plain)
                 .focused($champ, equals: .recherche)
-                .help(L("palette.invite.aide"))
             origine
             if let mode {
                 Text(mode)
