@@ -105,6 +105,24 @@ enum PanneauxJeu {
     }
 }
 
+/// Un panneau posé sur le jeu, à la taille de son contenu, jamais clé : la frappe reste au jeu, un
+/// clic dessus ne la lui retire pas. Il se tient par son en-tête : quand son contenu change de
+/// hauteur, le haut reste où on l'a posé — AppKit garderait le bas, et l'en-tête sauterait.
+final class PanneauDeJeu: NSPanel {
+    override var canBecomeKey: Bool { false }
+    override var canBecomeMain: Bool { false }
+
+    override func setFrame(_ cadre: NSRect, display: Bool) {
+        var cadre = cadre
+        // Seul un changement de hauteur sur place (la taille du contenu) garde le haut ; un
+        // déplacement ou une place restaurée passent tels quels.
+        if cadre.origin == frame.origin, cadre.height != frame.height {
+            cadre.origin.y = frame.maxY - cadre.height
+        }
+        super.setFrame(cadre, display: display)
+    }
+}
+
 /// Un bouton d'icône d'un panneau : une cible de 24 pt, quelle que soit l'icône, au même dessin partout.
 /// `copie` : l'icône devient la coche de copie le temps du signal (`IconeCopie`) ; `discret` : encre
 /// secondaire au repos, pleine au survol.

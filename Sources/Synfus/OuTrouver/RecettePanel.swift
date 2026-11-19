@@ -1,28 +1,10 @@
 import AppKit
 import SwiftUI
 
-/// Jamais clé : à l'hôtel de vente, la frappe va au champ de recherche du jeu ; un clic sur un
-/// ingrédient copie son nom sans la lui retirer. Il se tient par son en-tête : quand la recette qui en
-/// remplace une autre change sa hauteur, le haut reste où on l'a posé — AppKit garderait le bas, et
-/// l'en-tête sauterait.
-final class PanneauRecette: NSPanel {
-    override var canBecomeKey: Bool { false }
-    override var canBecomeMain: Bool { false }
-
-    override func setFrame(_ cadre: NSRect, display: Bool) {
-        var cadre = cadre
-        // Seul un changement de hauteur sur place (la taille du contenu) garde le haut ; un
-        // déplacement ou une place restaurée passent tels quels.
-        if cadre.origin == frame.origin, cadre.height != frame.height {
-            cadre.origin.y = frame.maxY - cadre.height
-        }
-        super.setFrame(cadre, display: display)
-    }
-}
-
 /// La recette épinglée, posée sur le jeu le temps des courses : une seule, que la suivante remplace
 /// — on achète pour un objet à la fois, et une pile de panneaux couvrirait le jeu. Elle survit à la
-/// palette qui l'a ouverte ; comme les autres panneaux, elle ne se montre que devant Dofus
+/// palette qui l'a ouverte. Jamais clé (`PanneauDeJeu`) : à l'hôtel de vente, la frappe reste au champ
+/// de recherche du jeu. Comme les autres panneaux, elle ne se montre que devant Dofus
 /// (`PanneauxJeu`), et AppKit garde sa position.
 @MainActor
 final class RecettePanel: NSObject, ObservableObject {
@@ -64,7 +46,7 @@ final class RecettePanel: NSObject, ObservableObject {
     private func construire() -> NSPanel {
         let hosting = NSHostingController(rootView: RecetteVue().racineSynfus())
         hosting.sizingOptions = [.preferredContentSize]
-        let panel = PanneauRecette(
+        let panel = PanneauDeJeu(
             contentRect: NSRect(x: 0, y: 0, width: RecetteVue.largeur, height: 200),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
