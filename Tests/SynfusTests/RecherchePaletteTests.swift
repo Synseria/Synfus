@@ -339,7 +339,7 @@ struct RecherchePaletteTests {
         avecRecents.recents = ["/travel 12,34"]
         #expect(premiere("travel", avecRecents)?.effet == .copier("/travel 12,34"))
         // Au repos, aucune vue ne les montre : elles ne se trouvent qu'en tapant.
-        for filtre in FiltrePalette.jeu(enRecherche: false) {
+        for filtre in FiltrePalette.allCases {
             #expect(!RecherchePalette.entrees("", avecRecents, filtre: filtre).contains { $0.genre == .recent })
         }
     }

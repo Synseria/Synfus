@@ -99,10 +99,10 @@ sa bascule). Toute nouvelle option suit la règle.
 - Pictogramme d'un lieu : `PictogrammeLieu` (`Lieu.gfx`), le symbole en repli.
 - Palette : un trajet affiche `itineraire` (`ItineraireZaap.trajet`, « via X · N cartes »), le tri
   garde la distance à pied ; `EtiquetteInterieur` (cartes `CarteStore.interieurs`).
-- Palette, la rangée suit l'état (`FiltrePalette.jeu(enRecherche:)`) : au repos les vues
-  Accueil · Zaaps · Donjons · PNJ · Quêtes · Almanax, dès la première lettre les portées Tout · Lieux ·
-  Quêtes · PNJ · Donjons · Créatures · Objets (Créatures = monstres, sans PNJ ni boss) ; le champ vidé revient à la vue quittée (`vueQuittee`), Tab parcourt
-  le jeu affiché, la palette s'ouvre toujours sur l'Accueil (`ouvrir(requete:vue:)`). L'almanax
+- Palette, une seule rangée (`FiltrePalette.allCases`), la même avec ou sans texte tapé (une
+  rangée qui bouge à la frappe déroute) : Accueil · Zaaps · Lieux · Donjons · PNJ · Quêtes ·
+  Créatures · Objets · Almanax, chacune vue au repos et portée de la recherche (Créatures = monstres,
+  sans PNJ ni boss) ; taper ne change jamais la capsule choisie, Tab parcourt la rangée, la palette s'ouvre toujours sur l'Accueil (`ouvrir(requete:vue:)`). L'almanax
   (`AlmanaxSemaineVue`, sept jours) n'est que sa vue, par Tab ou par l'outil « Almanax » de la barre
   (`PalettePanel.basculerAlmanax`) ; le tri ne se montre que là où il range (`triAgit`).
 

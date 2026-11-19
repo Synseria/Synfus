@@ -50,6 +50,12 @@ struct PaletteVue: View {
                     .frame(height: Jetons.hauteurCase)
                     .fondEtat(.courant, rayon: Jetons.rayonPilule)
             }
+            // Dans le champ, pas sur la rangée des capsules, qui n'a pas la place pour lui. Toujours à
+            // sa place, éteint là où il ne range rien : rien ne bouge quand on tape ou change de vue.
+            tri
+                .opacity(modele.triAgit ? 1 : 0)
+                .disabled(!modele.triAgit)
+                .accessibilityHidden(!modele.triAgit)
         }
         .font(Jetons.typoCorps.font)
         .padding(.horizontal, Jetons.espace3)
@@ -100,15 +106,15 @@ struct PaletteVue: View {
         .help(aide)
     }
 
-    /// Les familles que Tab fait défiler, en puces ; le tri, un bouton-icône (⌘T).
+    /// Les familles que Tab fait défiler, en puces, jamais tronquées : toute la largeur leur revient.
     private var filtres: some View {
         HStack(spacing: Jetons.espace2) {
             HStack(spacing: Jetons.espace2) {
-                ForEach(modele.jeu, id: \.self) { filtre in
+                ForEach(FiltrePalette.allCases, id: \.self) { filtre in
                     let choisi = modele.filtre == filtre
                     // Tab et ⇧Tab parcourent les filtres (le panneau) : aucun d'eux ne prend le focus.
                     Button { modele.choisir(filtre) } label: {
-                        Puce(libelle: filtre.titre(enRecherche: modele.enRecherche), choisie: choisi)
+                        Puce(libelle: filtre.titre, choisie: choisi)
                     }
                     .buttonStyle(.plain)
                     .focusable(false)
@@ -117,9 +123,9 @@ struct PaletteVue: View {
                     .accessibilityAddTraits(choisi ? .isSelected : [])
                 }
             }
+            .fixedSize(horizontal: true, vertical: false)
             .help(L("palette.touche.filtre"))
-            Spacer(minLength: Jetons.espace2)
-            if modele.triAgit { tri }
+            Spacer(minLength: 0)
         }
         .padding(.horizontal, Jetons.espace1)
     }
