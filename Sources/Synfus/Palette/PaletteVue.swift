@@ -380,7 +380,7 @@ struct PaletteVue: View {
 
 /// Une carte de la palette (zaap, lieu, donjon, PNJ, quête) : titre et sous-titre en haut, l'étiquette et
 /// les coordonnées en bas, le favori dans le coin haut droit. La carte du jeu fait le fond, sous un voile
-/// continu (`FondCarte`), entière au survol (`apercuCarteAuSurvol`) ; sans elle, la plaque. Toutes les
+/// continu (`FondCarte`), en grand au survol de sa loupe (`LoupeCarte`) ; sans elle, la plaque. Toutes les
 /// cartes d'une grille ont la même hauteur (`hauteur`) : le titre sur deux lignes au plus, coupé en fin,
 /// le sous-titre et le pied sur une.
 struct CarteZaap<Corps: View>: View {
@@ -462,7 +462,6 @@ struct CarteZaap<Corps: View>: View {
         }
         .contentShape(RoundedRectangle(cornerRadius: Jetons.rayon2, style: .circular))
         .onHover { survole = $0 }
-        .apercuCarteAuSurvol(surImage ? entree.carte : nil)
     }
 
     /// L'étiquette à gauche, « intérieur » et les coordonnées à droite, sur une ligne : les
@@ -480,6 +479,12 @@ struct CarteZaap<Corps: View>: View {
             }
             Spacer(minLength: 0)
             if entree.interieur { EtiquetteInterieur(taille: Jetons.typoMicro, surImage: surImage) }
+            // La loupe tient sa place, visible au survol de la carte seulement : le pied ne bouge pas.
+            if surImage, let carte = entree.carte {
+                LoupeCarte(carte: carte, surImage: true)
+                    .opacity(survole ? 1 : 0)
+                    .allowsHitTesting(survole)
+            }
             Text(entree.detail ?? "")
                 .font(Jetons.typoCode.font)
                 .foregroundStyle(encre(\.encre2))
