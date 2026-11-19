@@ -57,14 +57,12 @@ struct HarebourgVue: View {
             }
             .fixedSize(horizontal: false, vertical: true)
         }
+        // D'où vient la réponse (vie lue, canal combat, choix à la main) : l'infobulle, pas une ligne.
+        .help(source(estimation))
     }
 
     @ViewBuilder
     private func details(_ estimation: SuiviConfusion.Estimation) -> some View {
-        Label(source(estimation), systemImage: icone(estimation.source))
-            .font(Jetons.typoMeta.font)
-            .foregroundStyle(Color.jeton(\.encre2))
-            .fixedSize(horizontal: false, vertical: true)
         if let voisine = estimation.voisine {
             Label(L("boss.frontiere", Self.titre(voisine.visee)), systemImage: "exclamationmark.triangle")
                 .font(Jetons.typoMeta.font)
@@ -102,14 +100,6 @@ struct HarebourgVue: View {
         }
     }
 
-    private func icone(_ source: SuiviConfusion.Source) -> String {
-        switch source {
-        case .tchat: return "text.bubble"
-        case .vie: return "heart"
-        case .manuelle: return "hand.point.up.left"
-        }
-    }
-
     // MARK: - Sans estimation
 
     /// Ce que la grille dit : où viser, ou pourquoi elle ne le dit pas encore.
@@ -121,7 +111,7 @@ struct HarebourgVue: View {
             let enCombat = lecteur.persoDevant.flatMap { lecteur.combats[$0] }?.enCombat == true
             Group {
                 if !enCombat {
-                    Text(L("boss.attente.combat"))
+                    Label(L("boss.attente.court"), systemImage: "scope").help(L("boss.attente.combat"))
                 } else if case .points(let actuels, nil)? = aide.vieLue {
                     Text(L("boss.vie.sansMax", actuels))
                 } else {

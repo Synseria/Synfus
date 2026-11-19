@@ -1,21 +1,28 @@
 import SwiftUI
 
-/// Une consigne du panneau d'aide : une icône, un texte qui passe à la ligne,
-/// en couleur quand elle presse.
+/// Une consigne du panneau d'aide : une icône et un texte qui passe à la ligne ; celle qui presse est
+/// une alerte de la trousse (`avertissement`).
 private struct Consigne: View {
     let texte: String
     let icone: String
     var urgente = false
     var forte = false
+    /// Le détail, en infobulle : jamais une phrase de mode d'emploi à l'écran.
+    var aide: String?
 
     var body: some View {
-        Label {
-            Text(texte).fixedSize(horizontal: false, vertical: true)
-        } icon: {
-            Image(systemName: icone)
+        if urgente {
+            Alerte(ton: .avertissement, symbole: icone, titre: texte).infobulleSiPresente(aide)
+        } else {
+            Label {
+                Text(texte).fixedSize(horizontal: false, vertical: true)
+            } icon: {
+                Image(systemName: icone)
+            }
+            .font((forte ? Jetons.typoTitreCarte : Jetons.typoMeta).font)
+            .foregroundStyle(forte ? Color.jeton(\.encre) : Color.jeton(\.encre2))
+            .infobulleSiPresente(aide)
         }
-        .font((forte ? Jetons.typoTitreCarte : Jetons.typoMeta).font)
-        .foregroundStyle(urgente ? Color.jeton(\.avertissement) : forte ? Color.jeton(\.encre) : Color.jeton(\.encre2))
     }
 }
 
@@ -44,7 +51,7 @@ struct KimboVue: View {
             Consigne(texte: etat.glyphesImpairs ? L("boss.kimbo.frappe.terreEau") : L("boss.kimbo.frappe.airFeu"),
                      icone: "flame")
         } else {
-            Consigne(texte: L("boss.kimbo.attente"), icone: "questionmark.circle")
+            Consigne(texte: L("boss.kimbo.attente.court"), icone: "questionmark.circle", aide: L("boss.kimbo.attente"))
         }
     }
 }
@@ -84,7 +91,7 @@ struct ToxoliathVue: View {
 extension ToxoliathVue {
     /// Où en est Poison Volatile au tour compté.
     private func poison(au tour: Int?) -> Consigne {
-        guard let tour else { return Consigne(texte: L("boss.toxoliath.avantCombat"), icone: "timer") }
+        guard let tour else { return Consigne(texte: L("boss.attente.court"), icone: "timer", aide: L("boss.toxoliath.avantCombat")) }
         if tour < Toxoliath.premierPoisonVolatile {
             let reste = Toxoliath.premierPoisonVolatile - tour
             return Consigne(texte: L("boss.toxoliath.avant", nombre: reste, reste), icone: "timer", urgente: reste <= 2, forte: true)

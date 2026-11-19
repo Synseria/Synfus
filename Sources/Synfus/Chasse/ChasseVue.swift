@@ -11,24 +11,31 @@ struct ChasseVue: View {
     @StateObject private var copie = SignalCopie()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        // L'en-tête sur le verre, le contenu sur une plaque pleine.
+        VStack(alignment: .leading, spacing: Jetons.espace1) {
             entete
-            Divider()
-            if indicesIndisponibles {
-                indisponibles
-            } else {
-                VStack(alignment: .leading, spacing: Jetons.espace2) {
-                    depart
-                    boussole.frame(maxWidth: .infinity)
-                    if !previews.authorized { LigneAutorisation() }
-                    indice
-                    lus
-                    resultat
+            Group {
+                if indicesIndisponibles {
+                    indisponibles
+                } else {
+                    VStack(alignment: .leading, spacing: Jetons.espace2) {
+                        depart
+                        boussole.frame(maxWidth: .infinity)
+                        if !previews.authorized { LigneAutorisation() }
+                        indice
+                        lus
+                        resultat
+                    }
+                    .padding(.vertical, Jetons.espace2)
+                    .padding(.horizontal, Jetons.espace1)
                 }
-                .padding(Jetons.espace3)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .plaquePleine()
         }
-        .frame(width: 216, alignment: .leading)
+        .padding([.horizontal, .bottom], Jetons.espace2)
+        .padding(.top, Jetons.espace1)
+        .frame(width: Jetons.largeurPanneauChasse, alignment: .leading)
         .font(Jetons.typoMeta.font)
         .surfaceFlottante()
     }
@@ -52,13 +59,13 @@ struct ChasseVue: View {
     }
 
     private var indisponibles: some View {
-        VStack(spacing: Jetons.espace2) {
-            Text(L("chasse.indices.indisponibles")).foregroundStyle(Color.jeton(\.encre2))
-            Button(L("commun.reessayer")) { Task { await modele.chargerIndices(forcer: true) } }
-                .buttonStyle(BoutonBorde())
+        EtatVide(L("chasse.indices.indisponibles"), symbole: "exclamationmark.circle", ton: .danger) {
+            Button { Task { await modele.chargerIndices(forcer: true) } } label: {
+                Label(L("commun.reessayer"), systemImage: "arrow.clockwise")
+            }
         }
-        .frame(maxWidth: .infinity, minHeight: Jetons.hauteurRangee * 3)
-        .padding(Jetons.espace3)
+        .frame(minHeight: Jetons.hauteurRangee * 4)
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     // MARK: - Départ

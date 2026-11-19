@@ -256,6 +256,12 @@ extension QuetePanel {
         }
     }
 
+    /// Une quête à chercher : la palette, ouverte sur `/quete`.
+    static func chercher() {
+        PalettePanel.shared.ouvrir()
+        PaletteModele.shared.requete = "/quete "
+    }
+
     /// Le menu des étapes (`MenuEtapes`) : en choisir une la montre.
     func menuEtapes(_ entrees: [MenuEtapes.Entree], choisir: @escaping @MainActor (Int) -> Void) -> NSMenu {
         let menu = NSMenu()

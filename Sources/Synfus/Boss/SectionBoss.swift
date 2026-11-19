@@ -17,20 +17,16 @@ struct SectionBoss<Accessoire: View, Contenu: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Jetons.espace1) {
             HStack(spacing: Jetons.espace1) {
-                Button { depliee.toggle() } label: {
+                // Le dépliable de la trousse : un clic sur le libellé ouvre aussi.
+                EnTeteRepliable(deplie: depliee, basculer: { depliee.toggle() }) {
                     HStack(spacing: Jetons.espace1) {
-                        Image(systemName: depliee ? "chevron.down" : "chevron.right")
-                            .font(Jetons.typoMicro.font)
-                            .foregroundStyle(Color.jeton(\.encre2))
                         if let icone { Image(systemName: icone) }
                         Text(titre).multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
                         Spacer(minLength: 0)
                     }
-                    .font((forte ? Jetons.typoTitreCarte : Jetons.typoMicro).font)
+                    .font((forte ? Jetons.typoTitreCarte : Jetons.typoMeta).font)
                     .foregroundStyle(forte ? Color.jeton(\.encre) : Color.jeton(\.encre2))
-                    .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
                 .help(aide ?? "")
                 accessoire
             }
