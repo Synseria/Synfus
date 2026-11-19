@@ -13,9 +13,9 @@ struct PaletteVue: View {
 
     private enum Champ { case recherche, etiquette }
 
-    /// Trois rangées de cartes entières et leurs interstices, puis le haut de la quatrième : la grille
-    /// dit qu'elle défile.
-    static let hauteurCartes = 3 * CarteZaap<Never>.hauteur() + 3 * Jetons.espace2 + Jetons.espace5
+    /// Trois rangées de cartes à image entières et leurs interstices ; les cartes sans image, plus
+    /// basses, montrent le haut d'une quatrième : la grille dit qu'elle défile.
+    static let hauteurCartes = 3 * CarteZaap<Never>.hauteur(avecImage: true) + 2 * Jetons.espace2
 
     var body: some View {
         VStack(spacing: Jetons.espace2) {
@@ -232,10 +232,11 @@ struct PaletteVue: View {
     }
 
     private var grille: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Jetons.espace2), count: PaletteModele.colonnes),
+        let avecImage = CarteZaap<Never>.avecImage(modele.entrees)
+        return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Jetons.espace2), count: PaletteModele.colonnes),
                   spacing: Jetons.espace2) {
             ForEach(Array(modele.entrees.enumerated()), id: \.element.id) { index, entree in
-                CarteZaap(entree: entree, choisie: index == modele.selection)
+                CarteZaap(entree: entree, choisie: index == modele.selection, avecImage: avecImage)
                     .id(entree.id)
                     .onTapGesture { modele.executer(entree) }
                     .help(entree.complet)
@@ -379,47 +380,62 @@ struct PaletteVue: View {
     }
 }
 
-/// Une carte de la palette (zaap, lieu, donjon, PNJ, quête), pleine : titre et sous-titre, la vignette de
-/// la carte du jeu à droite, puis l'étiquette, le favori et les coordonnées. Toutes les cartes d'une
-/// grille ont la même hauteur (`hauteur`) : le titre sur deux lignes au plus, coupé en fin, le
-/// sous-titre et le pied sur une. Choisie, le fond du choix et son titre à l'accent.
+/// Une carte de la palette (zaap, lieu, donjon, PNJ, quête) : titre et sous-titre en haut, l'étiquette et
+/// les coordonnées en bas, le favori dans le coin haut droit. La carte du jeu fait le fond, voilée sous le
+/// texte seulement (`FondCarte`), entière au survol (`apercuCarteAuSurvol`) ; sans elle, la plaque. Toutes
+/// les cartes d'une grille ont la même hauteur (`hauteur`) : le titre sur deux lignes au plus, coupé en
+/// fin, le sous-titre et le pied sur une, la bande de l'image quand la grille en montre une.
 struct CarteZaap<Corps: View>: View {
     let entree: EntreePalette
     let choisie: Bool
+    /// La grille montre des images : la carte garde leur bande, même sans la sienne.
+    var avecImage = false
     /// Ce qui prend la place entre l'en-tête et le pied (les quêtes d'une position), sur une ligne.
     private let corps: (() -> Corps)?
     @State private var survole = false
+    // periphery:ignore - observé pour redessiner la carte quand `vuesCartes` change
+    @ObservedObject private var prefs = Preferences.shared
 
-    init(entree: EntreePalette, choisie: Bool, @ViewBuilder corps: @escaping () -> Corps) {
-        (self.entree, self.choisie, self.corps) = (entree, choisie, corps)
+    init(entree: EntreePalette, choisie: Bool, avecImage: Bool = false, @ViewBuilder corps: @escaping () -> Corps) {
+        (self.entree, self.choisie, self.avecImage, self.corps) = (entree, choisie, avecImage, corps)
     }
 
     /// La hauteur d'une carte : deux lignes de titre, une de sous-titre, le pied, leurs interstices et
-    /// la marge — et la ligne du corps quand la carte en a un.
-    static func hauteur(avecCorps: Bool = false) -> CGFloat {
+    /// la marge — la ligne du corps et la bande de l'image quand la carte en a.
+    static func hauteur(avecCorps: Bool = false, avecImage: Bool = false) -> CGFloat {
         let texte = 2 * Jetons.typoTitreCarte.interligne + Jetons.typoMeta.interligne
         let corps = avecCorps ? Jetons.typoMeta.interligne + Jetons.espace1 : 0
-        return 2 * Jetons.espace2 + texte + Jetons.espace1 + corps + Jetons.espace1 + Jetons.hauteurCase
+        let image = avecImage ? Jetons.espace6 : 0
+        return 2 * Jetons.espace2 + texte + Jetons.espace1 + corps + image + Jetons.espace1 + Jetons.hauteurCase
+    }
+
+    /// Une grille d'entrées montre-t-elle des images ? Ses cartes ont alors toutes la bande.
+    @MainActor static func avecImage(_ entrees: [EntreePalette]) -> Bool {
+        entrees.contains { FondCarte.surImage($0.carte) }
+    }
+
+    private var surImage: Bool { FondCarte.surImage(entree.carte) }
+    /// Sur l'image, le texte s'écrit en clair quel que soit le thème : le voile est sombre.
+    private func encre(_ jeton: ThemeCourant.Jeton) -> Color {
+        surImage ? Color.jeton(jeton, en: .nuit) : Color.jeton(jeton)
     }
 
     var body: some View {
-        let forme = RoundedRectangle(cornerRadius: Jetons.rayon2, style: .circular)
         VStack(alignment: .leading, spacing: Jetons.espace1) {
-            HStack(alignment: .top, spacing: Jetons.espace2) {
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(entree.titre)
-                        .font(Jetons.typoTitreCarte.font)
-                        .foregroundStyle(Color.jeton(choisie ? \.accentTexte : \.encre))
-                        .lineLimit(2)
-                        .truncationMode(.tail)
-                    Text(entree.itineraire ?? entree.sousTitre ?? "")
-                        .font(Jetons.typoMeta.font)
-                        .foregroundStyle(Color.jeton(entree.itineraire != nil ? \.accentTexte : \.encre2))
-                        .lineLimit(1)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                if let carte = entree.carte { MiniatureCarte(carte: carte, taille: LigneResultat.vignette) }
+            VStack(alignment: .leading, spacing: 0) {
+                Text(entree.titre)
+                    .font(Jetons.typoTitreCarte.font)
+                    .foregroundStyle(encre(choisie ? \.accentTexte : \.encre))
+                    .lineLimit(2)
+                    .truncationMode(.tail)
+                Text(entree.itineraire ?? entree.sousTitre ?? "")
+                    .font(Jetons.typoMeta.font)
+                    .foregroundStyle(encre(entree.itineraire != nil ? \.accentTexte : \.encre2))
+                    .lineLimit(1)
             }
+            // Le favori occupe le coin : le titre ne passe pas dessous.
+            .padding(.trailing, entree.favori ? Jetons.espace4 : 0)
+            .frame(maxWidth: .infinity, alignment: .leading)
             if let corps { corps() }
             Spacer(minLength: 0)
             pied
@@ -427,21 +443,23 @@ struct CarteZaap<Corps: View>: View {
         .padding(.vertical, Jetons.espace2)
         .padding(.horizontal, Jetons.espace3)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(height: Self.hauteur(avecCorps: corps != nil))
-        // Le fond du choix et le survol se posent sur la plaque, sous le texte.
-        .background {
-            ZStack {
-                forme.fill(Color.jeton(\.plaque))
-                if choisie || survole { forme.fill(Color.jeton(choisie ? \.selection : \.survol)) }
+        .frame(height: Self.hauteur(avecCorps: corps != nil, avecImage: avecImage))
+        .overlay(alignment: .topTrailing) {
+            if entree.favori {
+                Image(systemName: "star.fill")
+                    .font(Jetons.typoMeta.font)
+                    .foregroundStyle(encre(\.accentTexte))
+                    .padding(Jetons.espace2)
             }
         }
-        .overlay { forme.strokeBorder(Color.jeton(\.filet), lineWidth: Jetons.epaisseurFilet) }
-        .contentShape(forme)
+        .background { FondCarte(carte: entree.carte, choisie: choisie, survole: survole) }
+        .contentShape(RoundedRectangle(cornerRadius: Jetons.rayon2, style: .circular))
         .onHover { survole = $0 }
+        .apercuCarteAuSurvol(surImage ? entree.carte : nil)
     }
 
-    /// L'étiquette et le favori à gauche, « intérieur » et les coordonnées à droite, sur une ligne :
-    /// les coordonnées ne se coupent jamais, l'étiquette cède et se coupe en fin.
+    /// L'étiquette à gauche, « intérieur » et les coordonnées à droite, sur une ligne : les
+    /// coordonnées ne se coupent jamais, l'étiquette cède et se coupe en fin.
     private var pied: some View {
         HStack(spacing: Jetons.espace2) {
             // L'étiquette en une ligne micro, sans pastille : elle aide à reconnaître la carte, elle
@@ -449,18 +467,15 @@ struct CarteZaap<Corps: View>: View {
             if let etiquette = entree.etiquette {
                 Text(etiquette)
                     .font(Jetons.typoMicro.font)
-                    .foregroundStyle(Color.jeton(\.accentTexte))
+                    .foregroundStyle(encre(\.accentTexte))
                     .lineLimit(1)
                     .truncationMode(.tail)
-            }
-            if entree.favori {
-                Image(systemName: "star.fill").font(Jetons.typoMeta.font).foregroundStyle(Color.jeton(\.accentTexte))
             }
             Spacer(minLength: 0)
             if entree.interieur { EtiquetteInterieur(taille: Jetons.typoMicro) }
             Text(entree.detail ?? "")
                 .font(Jetons.typoCode.font)
-                .foregroundStyle(Color.jeton(\.encre2))
+                .foregroundStyle(encre(\.encre2))
                 .lineLimit(1)
                 .fixedSize()
         }
@@ -469,8 +484,8 @@ struct CarteZaap<Corps: View>: View {
 }
 
 extension CarteZaap where Corps == Never {
-    init(entree: EntreePalette, choisie: Bool) {
-        (self.entree, self.choisie, self.corps) = (entree, choisie, nil)
+    init(entree: EntreePalette, choisie: Bool, avecImage: Bool = false) {
+        (self.entree, self.choisie, self.avecImage, self.corps) = (entree, choisie, avecImage, nil)
     }
 }
 
