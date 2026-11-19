@@ -48,8 +48,8 @@ enum FiltrePalette: CaseIterable, Sendable {
         }
     }
 
-    /// Les zaaps et les donjons viennent de la carte : tant qu'elle manque, une liste vide le dit.
-    var dependDeLaCarte: Bool { self == .tout || self == .zaaps || self == .donjons }
+    /// Les zaaps, les lieux et les donjons viennent de la carte : tant qu'elle manque, une liste vide le dit.
+    var dependDeLaCarte: Bool { self == .tout || self == .zaaps || self == .lieux || self == .donjons }
 
     /// Au repos, les boss n'ont pas de carte : seuls les donjons se montrent ; en recherche, leurs boss
     /// ouvrent la même fiche.
