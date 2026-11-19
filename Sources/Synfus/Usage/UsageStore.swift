@@ -162,6 +162,7 @@ final class UsageStore: ObservableObject, SourceDeTelemetrie {
             "lire_combat": prefs.lireCombat,
             "lire_combat_derriere": prefs.lireCombatDerriere,
             "maj_auto": prefs.verifierMisesAJour,
+            "canal_beta": prefs.canalDeMiseAJour == .beta,
             "demarrage_auto": demarrageAuto,
         ]
         return reglages.reduce(into: [:]) { $0[CleDeTelemetrie(convertissant: $1.key)] = $1.value }
