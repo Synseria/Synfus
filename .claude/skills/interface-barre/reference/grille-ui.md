@@ -26,10 +26,10 @@ La grille est le skill global `grille-ui`. Ici, seulement ce qui lui manque ou l
   appuyer un texte, c'est changer de rôle ; un chiffre aligné, `.monospacedDigit()`. Racine de fenêtre,
   feuille et popover : `.racineSynfus()` (teinte = accent, couleurs de la trousse). `JetonsTests` et
   `CouleursTests` tiennent le tout.
-- Lignes de réglage : `Ligne`, `LigneInterrupteur`, `RaccourciReglable`. Sous un libellé, `etat:` ne prend
-  qu'une valeur, un état, le résultat d'une action ou une mention légale ; une explication va dans
-  `aide:` (ⓘ). `LigneInterrupteur` n'a pas d'`etat:`. Un titre de page n'a pas de phrase : `EnTetePage`
-  prend un compte (`valeur:`) et une `aide:`.
+- Lignes de réglage : `Ligne`, `LigneInterrupteur`, `RaccourciReglable`. `etat:` (en méta, avant le
+  contrôle) ne prend qu'une valeur, un état, le résultat d'une action ou une mention légale ; une
+  explication va en infobulle (`aide:`), jamais derrière un ⓘ. `LigneInterrupteur` n'a pas d'`etat:`.
+  Une page n'a pas de titre : les onglets (`BarreDesOnglets`) disent où l'on est.
 - En-têtes de panneau : `EnTetePanneau` ; tailles de la fiche : `MetriquesQuete`.
 - Un libellé passe par `L()` et se vérifie dans les trois langues : l'espagnol et le français sont
   les plus longs, un nom du jeu peut l'être davantage.
@@ -48,7 +48,9 @@ La grille est le skill global `grille-ui`. Ici, seulement ce qui lui manque ou l
 - Tout geste qui détruit se confirme : dans une vue, `.confirmation($demande, annuler:)` (feuille de la
   trousse) ; hors de toute vue (menu, panneau sur le jeu), `ConfirmationHorsVue.demander` (l'alerte de la
   trousse, au premier plan). « Verbe + objet ? », Entrée ne détruit jamais.
-- Ce qui flotte : `surfaceFlottante()`, sans ombre (`hasShadow = false`) ; sans verre, bordée d'un filet.
+- Ce qui flotte : `surfaceFlottante()`, le verre léger des flottants sans liseré ni ombre (`hasShadow =
+  false`) ; verre refusé (transparence réduite, contraste augmenté, captures), plein et bordé d'un filet.
+  Le texte long d'un flottant est sur `plaquePleine()` : liste de la palette, corps des panneaux.
 - `Tests/ComposantsTests` refuse rayon, marge, espace, police, courbe ou encre du système chiffrés dans une vue.
 
 ## Écarts gardés
@@ -56,8 +58,8 @@ La grille est le skill global `grille-ui`. Ici, seulement ce qui lui manque ou l
 - Couleurs venues du jeu, hors thème : les classes (`DofusClass`), le rose de « Fin de tour »
   (`CombatBadge.rose`), `Color.texteSurClasse` (le blanc du sigle sur une couleur de classe).
 - `MetriquesQuete.compact` : tout en méta, lignes collées, pour laisser voir le jeu.
-- `FondCarte` : seul dégradé et seul voile d'opacité (`voileTexte`, le fond de la Nuit) ; le texte d'une
-  case passe sur une image du jeu (la vitrine le retire : lot des écrans). Voile de zone de `CalibrationZonesView`, opacité de glisser des pastilles.
+- Voile de zone de `CalibrationZonesView`, opacité de glisser des pastilles. Jamais de texte sur une
+  image du jeu : la carte d'un zaap est pleine, sa vue en vignette (`MiniatureCarte`).
 - Battement de l'alerte et de la bascule (`Battement`) : l'opacité qui pulse est le signal.
 - Largeurs de colonnes, de champs et de fenêtres (réglages, panneaux) : mises en page, pas des tailles de décor.
 

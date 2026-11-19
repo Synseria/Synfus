@@ -33,8 +33,9 @@ user-invocable: false
 - Changer un défaut exige une nouvelle génération : voir skill `preferences`
   (`defaultsVersion`, `adoptDefaults`). « Rétablir les raccourcis par défaut » :
   `Preferences.resetShortcuts`.
-- `ShortcutRecording` (dans `ShortcutRecorder.swift`) tient l'**unique** moniteur local et le
-  champ qui a la parole : un seul champ enregistre à la fois.
+- L'enregistreur est celui de la trousse (`EnregistreurDeRaccourci`, posé par `ShortcutRow`) : un
+  clic l'arme, ⌫ efface, ⎋ renonce ; `HotKey.lu` dit quelle frappe devient un raccourci (nue
+  seulement pour les touches du jeu), `HotKey.touches` les touches qu'il dessine.
 - `HotKeyConflicts` (pur, testé) rend les combinaisons en double ; la ligne concernée porte un
   avertissement (`@Published`, il suit les modifications), comme celle que macOS a refusée
   (`HotKeyManager.rejected` : une autre app la tient) — dans tous les onglets.
