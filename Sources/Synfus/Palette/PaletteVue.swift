@@ -100,7 +100,7 @@ struct PaletteVue: View {
         .help(aide)
     }
 
-    /// Les familles que Tab fait défiler, en puces ; le tri, un bouton-icône (⌘T).
+    /// Les familles que Tab fait défiler, en puces, jamais tronquées ; le tri, un bouton-icône (⌘T).
     private var filtres: some View {
         HStack(spacing: Jetons.espace2) {
             HStack(spacing: Jetons.espace2) {
@@ -117,9 +117,15 @@ struct PaletteVue: View {
                     .accessibilityAddTraits(choisi ? .isSelected : [])
                 }
             }
+            .fixedSize(horizontal: true, vertical: false)
             .help(L("palette.touche.filtre"))
             Spacer(minLength: Jetons.espace2)
-            if modele.triAgit { tri }
+            // Toujours à sa place, éteint là où il ne range rien : la rangée garde sa hauteur et ses
+            // capsules leur place, qu'on tape ou qu'on passe d'une vue à l'autre.
+            tri
+                .opacity(modele.triAgit ? 1 : 0)
+                .disabled(!modele.triAgit)
+                .accessibilityHidden(!modele.triAgit)
         }
         .padding(.horizontal, Jetons.espace1)
     }
