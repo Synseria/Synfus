@@ -147,6 +147,58 @@ extension View {
     }
 }
 
+/// Le fond d'une carte de la palette : la carte du jeu, voilée sous le texte seulement — le haut (titre,
+/// sous-titre) et le bas (étiquette, coordonnées) —, entière au milieu ; la plaque sans elle. Choisie, le
+/// contour de l'accent sur l'image, le fond du choix sur la plaque.
+struct FondCarte: View {
+    let carte: Int?
+    var choisie = false
+    var survole = false
+    private let forme = RoundedRectangle(cornerRadius: Jetons.rayon2, style: .circular)
+    /// Plus large qu'une case de la grille (trois au rang sur la largeur de la palette), que l'image remplit.
+    private static let cote: CGFloat = 240
+    /// Le voile sous le texte : assez dense pour le lire sur n'importe quel décor du jeu.
+    private static let voileTexte = 0.8
+    /// Où finit le voile du haut et où commence celui du bas, en part de la hauteur de la carte (le
+    /// titre et le sous-titre au-dessus, le pied au-dessous), et le fondu de chacun vers l'image.
+    private static let (finHaut, debutBas, fondu) = (0.4, 0.8, 0.1)
+
+    /// Le texte de la carte se pose sur une image : il s'écrit en clair, quel que soit le thème.
+    @MainActor static func surImage(_ carte: Int?) -> Bool {
+        carte != nil && Preferences.shared.vuesCartes && Ressources.visuelsDuJeu
+    }
+
+    var body: some View {
+        if Self.surImage(carte), let carte {
+            let voile = Color.jeton(\.fondFenetre, en: .nuit).opacity(Self.voileTexte)
+            Color.jeton(\.creux)
+                .overlay { VueCarte(carte: carte, cote: Self.cote).scaledToFill() }
+                .overlay {
+                    // Seul dégradé de l'app : le voile ne couvre que les bandes du texte.
+                    LinearGradient(stops: [
+                        .init(color: voile, location: 0),
+                        .init(color: voile, location: Self.finHaut),
+                        .init(color: .clear, location: Self.finHaut + Self.fondu),
+                        .init(color: .clear, location: Self.debutBas - Self.fondu),
+                        .init(color: voile, location: Self.debutBas),
+                        .init(color: voile, location: 1),
+                    ], startPoint: .top, endPoint: .bottom)
+                }
+                .clipShape(forme)
+                .overlay {
+                    forme.strokeBorder(Color.jeton(choisie ? \.accent : survole ? \.encre3 : \.filet),
+                                       lineWidth: choisie ? Jetons.epaisseurFocus : Jetons.epaisseurFilet)
+                }
+        } else {
+            ZStack {
+                forme.fill(Color.jeton(\.plaque))
+                if choisie || survole { forme.fill(Color.jeton(choisie ? \.selection : \.survol)) }
+            }
+            .overlay { forme.strokeBorder(Color.jeton(\.filet), lineWidth: Jetons.epaisseurFilet) }
+        }
+    }
+}
+
 /// Le pictogramme d'un repère tel que la carte du jeu le montre ; le symbole
 /// tant qu'il n'est pas venu, ou quand le repère n'en a pas.
 struct PictogrammeLieu<Symbole: View>: View {

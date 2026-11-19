@@ -14,13 +14,14 @@ struct PositionsPNJVue: View {
 
     var body: some View {
         let positions = modele.positionsDeplie
+        let avecImage = CarteZaap<Never>.avecImage(positions.map(\.entree))
         let largeur = DispositionPositions.largeur(nombre: positions.count, disponible: disponible,
                                                    interstice: Self.interstice)
         ScrollViewReader { defilement in
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(alignment: .top, spacing: Self.interstice) {
                     ForEach(positions) { position in
-                        CarteZaap(entree: position.entree, choisie: modele.position == position.position) {
+                        CarteZaap(entree: position.entree, choisie: modele.position == position.position, avecImage: avecImage) {
                             QuetesDePosition(quetes: position.quetes)
                         }
                         .frame(width: largeur)
