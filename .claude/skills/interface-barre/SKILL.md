@@ -87,7 +87,7 @@ sa bascule). Toute nouvelle option suit la règle.
 
 - Toute vue de carte passe par `VueCarte` (deux pixels par point de son plus grand côté, jamais
   l'image entière) : `MiniatureCarte` (lignes de la palette, listes des lieux et des PNJ, lignes de zaaps,
-  panneau des quêtes), `FondCarte` (fond des cartes de la palette, voilé sous le texte ; la carte entière au
+  panneau des quêtes), `FondCarte` (fond des cartes de la palette, sous un voile continu ; la carte entière au
   survol), `ApercuCarte`. `ImagesDofusDB` décode hors main (ImageIO) et
   range les copies réduites dans un `NSCache` borné à 64 Mo décodés ; seules les images sans
   `cote` — emblèmes, pictogrammes, petits et en nombre fini — restent à vie. Masquée par
