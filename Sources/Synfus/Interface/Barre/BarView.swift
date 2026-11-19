@@ -60,11 +60,10 @@ struct BarView: View {
         .onChange(of: prefs.equipes.count) { _, _ in pruneSectorFrames() }
     }
 
-    /// La pilule d'équipe ne sert que s'il y a un choix à faire : deux équipes au moins, ou une équipe
-    /// active (sans elle, on ne reviendrait plus à « Tous » depuis la barre).
+    /// La pilule d'équipe dès qu'une équipe existe : avec une seule, « Tous » ou elle reste un choix, et
+    /// la barre est le seul endroit où le faire sans raccourci.
     private var montrePiluleEquipe: Bool {
-        manager.accessibilityGranted && !manager.clients.isEmpty
-            && (prefs.equipes.count >= 2 || manager.equipeActive != nil)
+        manager.accessibilityGranted && !manager.clients.isEmpty && !prefs.equipes.isEmpty
     }
 
     /// L'effectif montré et le menu qui en change : « Tous », chaque équipe (la courante cochée), puis

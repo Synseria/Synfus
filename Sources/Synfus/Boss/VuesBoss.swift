@@ -7,12 +7,20 @@ private struct Consigne: View {
     let icone: String
     var urgente = false
     var forte = false
-    /// Le détail, en infobulle : jamais une phrase de mode d'emploi à l'écran.
-    var aide: String?
+    /// Le comment, replié sous la consigne (un clic la déplie) : le panneau est posé sur le jeu, Synfus
+    /// n'y est jamais l'app active et macOS n'y montre aucune infobulle.
+    var detail: String?
+    @State private var deplie = false
 
     var body: some View {
         if urgente {
-            Alerte(ton: .avertissement, symbole: icone, titre: texte).infobulleSiPresente(aide)
+            Alerte(ton: .avertissement, symbole: icone, titre: texte)
+        } else if let detail {
+            SectionBoss(titre: texte, icone: icone, forte: forte, depliee: $deplie) {
+                EmptyView()
+            } contenu: {
+                TexteDeDetail(texte: detail)
+            }
         } else {
             Label {
                 Text(texte).fixedSize(horizontal: false, vertical: true)
@@ -21,8 +29,19 @@ private struct Consigne: View {
             }
             .font((forte ? Jetons.typoTitreCarte : Jetons.typoMeta).font)
             .foregroundStyle(forte ? Color.jeton(\.encre) : Color.jeton(\.encre2))
-            .infobulleSiPresente(aide)
         }
+    }
+}
+
+/// Le texte d'une section dépliée du panneau d'aide.
+struct TexteDeDetail: View {
+    let texte: String
+
+    var body: some View {
+        Text(texte)
+            .font(Jetons.typoMeta.font)
+            .foregroundStyle(Color.jeton(\.encre2))
+            .fixedSize(horizontal: false, vertical: true)
     }
 }
 
@@ -51,7 +70,7 @@ struct KimboVue: View {
             Consigne(texte: etat.glyphesImpairs ? L("boss.kimbo.frappe.terreEau") : L("boss.kimbo.frappe.airFeu"),
                      icone: "flame")
         } else {
-            Consigne(texte: L("boss.kimbo.attente.court"), icone: "questionmark.circle", aide: L("boss.kimbo.attente"))
+            Consigne(texte: L("boss.kimbo.attente.court"), icone: "questionmark.circle", detail: L("boss.kimbo.attente"))
         }
     }
 }
@@ -91,7 +110,7 @@ struct ToxoliathVue: View {
 extension ToxoliathVue {
     /// Où en est Poison Volatile au tour compté.
     private func poison(au tour: Int?) -> Consigne {
-        guard let tour else { return Consigne(texte: L("boss.attente.court"), icone: "timer", aide: L("boss.toxoliath.avantCombat")) }
+        guard let tour else { return Consigne(texte: L("boss.attente.court"), icone: "timer", detail: L("boss.toxoliath.avantCombat")) }
         if tour < Toxoliath.premierPoisonVolatile {
             let reste = Toxoliath.premierPoisonVolatile - tour
             return Consigne(texte: L("boss.toxoliath.avant", nombre: reste, reste), icone: "timer", urgente: reste <= 2, forte: true)

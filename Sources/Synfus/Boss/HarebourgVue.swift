@@ -8,6 +8,7 @@ struct HarebourgVue: View {
     @ObservedObject private var lecteur = LecteurEcran.shared
     @ObservedObject private var previews = WindowPreviewService.shared
     @State private var regleDepliee = false
+    @State private var attenteDepliee = false
     private static let hauteurSchema: CGFloat = 48
 
     /// Les contrôles gardent leur place d'un tour à l'autre : la réponse au-dessus a
@@ -34,10 +35,7 @@ struct HarebourgVue: View {
                     icone: impair ? "shield" : "arrow.left.arrow.right", forte: true, depliee: $regleDepliee) {
             CorrectionTour()
         } contenu: {
-            Text(impair ? L("boss.harebourg.impair") : L("boss.harebourg.pair"))
-                .font(Jetons.typoMeta.font)
-                .foregroundStyle(Color.jeton(\.encre2))
-                .fixedSize(horizontal: false, vertical: true)
+            TexteDeDetail(texte: impair ? L("boss.harebourg.impair") : L("boss.harebourg.pair"))
         }
     }
 
@@ -57,12 +55,16 @@ struct HarebourgVue: View {
             }
             .fixedSize(horizontal: false, vertical: true)
         }
-        // D'où vient la réponse (vie lue, canal combat, choix à la main) : l'infobulle, pas une ligne.
-        .help(source(estimation))
     }
 
     @ViewBuilder
     private func details(_ estimation: SuiviConfusion.Estimation) -> some View {
+        // D'où vient la réponse change d'un tour à l'autre et dit ce qu'elle vaut : une ligne, pas une
+        // infobulle, que macOS ne montre pas sur un panneau d'une app inactive.
+        Label(source(estimation), systemImage: icone(estimation.source))
+            .font(Jetons.typoMeta.font)
+            .foregroundStyle(Color.jeton(\.encre2))
+            .fixedSize(horizontal: false, vertical: true)
         if let voisine = estimation.voisine {
             Label(L("boss.frontiere", Self.titre(voisine.visee)), systemImage: "exclamationmark.triangle")
                 .font(Jetons.typoMeta.font)
@@ -100,6 +102,14 @@ struct HarebourgVue: View {
         }
     }
 
+    private func icone(_ source: SuiviConfusion.Source) -> String {
+        switch source {
+        case .tchat: return "text.bubble"
+        case .vie: return "heart"
+        case .manuelle: return "hand.point.up.left"
+        }
+    }
+
     // MARK: - Sans estimation
 
     /// Ce que la grille dit : où viser, ou pourquoi elle ne le dit pas encore.
@@ -111,7 +121,11 @@ struct HarebourgVue: View {
             let enCombat = lecteur.persoDevant.flatMap { lecteur.combats[$0] }?.enCombat == true
             Group {
                 if !enCombat {
-                    Label(L("boss.attente.court"), systemImage: "scope").help(L("boss.attente.combat"))
+                    SectionBoss(titre: L("boss.attente.court"), icone: "scope", depliee: $attenteDepliee) {
+                        EmptyView()
+                    } contenu: {
+                        TexteDeDetail(texte: L("boss.attente.combat"))
+                    }
                 } else if case .points(let actuels, nil)? = aide.vieLue {
                     Text(L("boss.vie.sansMax", actuels))
                 } else {

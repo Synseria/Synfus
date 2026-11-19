@@ -70,8 +70,8 @@ sa bascule). Toute nouvelle option suit la règle.
 
 - Une seule rangée. La **pilule d'équipe** (`BarView.piluleEquipe`, devant les pastilles) dit
   l'effectif et ouvre un `Menu` (jamais un popover : il activerait Synfus) — Tous, les équipes
-  cochées, « Créer une équipe… » (Réglages ▸ Personnages). Elle ne se montre qu'avec deux équipes, ou
-  une équipe active (sinon plus de retour à « Tous »).
+  cochées, « Créer une équipe… » (Réglages ▸ Personnages). Elle se montre dès qu'une équipe existe : avec
+  une seule, passer de « Tous » à elle reste un choix que seule la barre offre sans raccourci.
 - Les secteurs de `TeamRow` (Tous, chaque équipe, « + ») ne sont que des **cibles de dépôt** : ils
   n'apparaissent que pendant le glisser d'une pastille. Une équipe disparaît quand elle se vide.
 - Le **même** `DragGesture` que le réordonnancement : au-dessus d'un secteur on surligne
