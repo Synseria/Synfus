@@ -128,7 +128,7 @@ struct FondDeFenetre: View {
 
     var body: some View {
         if transparenceReduite || contraste == .increased || Ressources.captureDocumentation {
-            Color.jeton(\.fondFenetre)
+            Color.jeton(\.fondFenetre).ignoresSafeArea()
         } else {
             MateriauDeFenetre()
                 .overlay { TeinteDuVerre(usage: .fenetre) }
