@@ -5,7 +5,7 @@ import SwiftUI
 /// le boss choisi au titre (un clic en change), sa fiche, sa mécanique, puis
 /// rappels et conseils, qui défilent chez eux (`SectionBoss`).
 struct BossVue: View {
-    static let largeur: CGFloat = 252
+    static let largeur = Jetons.largeurPanneauBoss
 
     @ObservedObject private var aide = AideBoss.shared
     @ObservedObject private var lecteur = LecteurEcran.shared
@@ -20,9 +20,9 @@ struct BossVue: View {
     @StateObject private var copie = SignalCopie()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        // L'en-tête sur le verre, le contenu sur une plaque pleine.
+        VStack(alignment: .leading, spacing: Jetons.espace1) {
             entete
-            Divider()
             VStack(alignment: .leading, spacing: Jetons.espace2) {
                 if let fiche = aide.fiches[prefs.bossChoisi.monstre] { FicheCombatVue(fiche: fiche) }
                 switch prefs.bossChoisi.special {
@@ -37,8 +37,13 @@ struct BossVue: View {
                 if let special = prefs.bossChoisi.special { rappelsVue(special) }
                 conseilsVue
             }
-            .padding(Jetons.espace3)
+            .padding(.vertical, Jetons.espace2)
+            .padding(.horizontal, Jetons.espace2)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .plaquePleine()
         }
+        .padding([.horizontal, .bottom], Jetons.espace2)
+        .padding(.top, Jetons.espace1)
         .frame(width: Self.largeur, alignment: .leading)
         .font(Jetons.typoMeta.font)
         .surfaceFlottante()
