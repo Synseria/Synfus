@@ -40,60 +40,31 @@ struct PaletteModeleTests {
         #expect(modele.selection == 2)
     }
 
-    @Test("La rangée suit l'état : six vues au repos, sept portées en recherche")
-    func jeu() {
-        #expect(FiltrePalette.jeu(enRecherche: false) == [.tout, .zaaps, .donjons, .pnj, .quetes, .almanax])
-        #expect(FiltrePalette.jeu(enRecherche: true) == [.tout, .lieux, .quetes, .pnj, .donjons, .creatures, .objets])
-        let modele = PaletteModele(contexte: ContextePalette())
-        #expect(modele.jeu == FiltrePalette.jeu(enRecherche: false))
-        modele.requete = "a"
-        #expect(modele.jeu == FiltrePalette.jeu(enRecherche: true))
-        modele.requete = "  "
-        #expect(modele.jeu == FiltrePalette.jeu(enRecherche: false))
+    @Test("Une seule rangée, dans l'ordre des capsules, quel que soit le texte tapé")
+    func rangee() {
+        #expect(FiltrePalette.allCases == [.tout, .zaaps, .lieux, .donjons, .pnj, .quetes, .creatures, .objets, .almanax])
+        #expect(FiltrePalette.tout.titre == L("palette.filtre.accueil"))
     }
 
-    @Test("La première capsule s'appelle « Accueil » au repos, « Tout » en recherche")
-    func titreDeLaPremiere() {
-        #expect(FiltrePalette.tout.titre(enRecherche: false) == L("palette.filtre.accueil"))
-        #expect(FiltrePalette.tout.titre(enRecherche: true) == L("palette.filtre.tout"))
-        #expect(FiltrePalette.zaaps.titre(enRecherche: false) == FiltrePalette.zaaps.titre(enRecherche: true))
-    }
-
-    @Test("La première lettre choisit « Tout » ; le champ vidé ramène à la vue quittée, même après une portée")
-    func vueQuittee() {
+    @Test("Taper puis effacer ne change ni la capsule choisie ni son nom", arguments: FiltrePalette.allCases)
+    func capsuleStable(filtre: FiltrePalette) {
         let modele = PaletteModele(contexte: ContextePalette())
-        modele.choisir(.zaaps)
-        modele.requete = "b"
-        #expect(modele.filtre == .tout)
-        modele.choisir(.lieux)
-        modele.requete = ""
-        #expect(modele.filtre == .zaaps)
-        modele.choisir(.almanax)
-        modele.requete = "b"
-        #expect(modele.filtre == .tout && !modele.surAlmanax)
-        modele.requete = ""
-        #expect(modele.filtre == .almanax && modele.surAlmanax)
-    }
-
-    @Test("La première lettre choisit « Tout » même depuis une vue qui est aussi une portée, et le champ vidé la rend")
-    func vueQuitteeDeDonjons() {
-        let modele = PaletteModele(contexte: ContextePalette())
-        for vue in [FiltrePalette.donjons, .pnj, .quetes] {
-            modele.choisir(vue)
-            modele.requete = "b"
-            #expect(modele.filtre == .tout)
-            modele.requete = ""
-            #expect(modele.filtre == vue)
+        modele.choisir(filtre)
+        let titre = filtre.titre
+        for requete in ["b", "bonta", "  ", "", "/zaap", "%", ""] {
+            modele.requete = requete
+            #expect(modele.filtre == filtre)
+            #expect(modele.filtre.titre == titre)
         }
     }
 
-    @Test("Tab et ⇧Tab parcourent le jeu affiché, en boucle")
+    @Test("Tab et ⇧Tab parcourent la rangée, en boucle, avec ou sans texte")
     func tabulation() {
         let modele = PaletteModele(contexte: ContextePalette())
         modele.tabulation()
         #expect(modele.filtre == .zaaps)
         modele.tabulation()
-        #expect(modele.filtre == .donjons)
+        #expect(modele.filtre == .lieux)
         modele.tabulation(arriere: true)
         modele.tabulation(arriere: true)
         #expect(modele.filtre == .tout)
@@ -102,12 +73,11 @@ struct PaletteModeleTests {
         modele.tabulation()
         #expect(modele.filtre == .tout)
         modele.requete = "b"
-        modele.choisir(.tout)
         modele.tabulation()
-        #expect(modele.filtre == .lieux)
+        #expect(modele.filtre == .zaaps)
     }
 
-    @Test("Échap : efface la recherche (la vue revient), puis rend l'Accueil")
+    @Test("Échap : efface la recherche (la capsule reste), puis rend l'Accueil")
     func echap() {
         let modele = PaletteModele(contexte: ContextePalette())
         modele.choisir(.zaaps)

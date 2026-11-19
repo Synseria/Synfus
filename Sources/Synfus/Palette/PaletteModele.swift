@@ -16,7 +16,6 @@ final class PaletteModele: ObservableObject {
             guard requete != oldValue else { return }
             selection = 0
             deplie = nil
-            changerDeJeu(avant: oldValue)
             recalculer()
         }
     }
@@ -37,8 +36,6 @@ final class PaletteModele: ObservableObject {
     /// Les cartes de la fiche dépliée ouvertes (clef, monstres, succès).
     @Published private(set) var ouvertes: Set<ActionFiche> = []
     @Published private(set) var entrees: [EntreePalette] = []
-    /// La vue qu'on a quittée en tapant : le champ vidé y ramène.
-    private var vueQuittee: FiltrePalette = .tout
     /// La famille montrée, que Tab fait défiler.
     @Published private(set) var filtre: FiltrePalette = .tout {
         didSet {
@@ -50,7 +47,7 @@ final class PaletteModele: ObservableObject {
     /// La carte de l'almanax dont « Localiser » est déplié.
     @Published private(set) var almanaxDeplie: Int?
     @Published private(set) var tri: TriPalette = .auto
-    /// Ce que « Tout » répondrait à la même recherche, demandé seulement quand la liste d'un filtre
+    /// Ce que l'Accueil répondrait à la même recherche, demandé seulement quand la liste d'un filtre
     /// est vide et redemandé à chaque rendu : la clé dit tout ce dont il dépend.
     private var ailleursGarde = DernierCalcul<CleAilleurs, Int>()
 
@@ -162,23 +159,8 @@ final class PaletteModele: ObservableObject {
         recalculer()
     }
 
-    /// Une recherche est en cours : la rangée montre des portées, sinon des vues.
+    /// Une recherche est en cours : le filtre choisi en est la portée.
     var enRecherche: Bool { !requete.trimmingCharacters(in: .whitespaces).isEmpty }
-
-    /// Les capsules de la rangée, que Tab et ⇧Tab parcourent.
-    var jeu: [FiltrePalette] { FiltrePalette.jeu(enRecherche: enRecherche) }
-
-    /// À la première lettre la rangée passe des vues aux portées, « Tout » d'office, même depuis une
-    /// vue qui porte aussi un nom de portée ; le champ vidé revient à la vue quittée.
-    private func changerDeJeu(avant ancienne: String) {
-        let etaitVide = ancienne.trimmingCharacters(in: .whitespaces).isEmpty
-        if etaitVide, enRecherche {
-            vueQuittee = filtre
-            filtre = .tout
-        } else if !etaitVide, !enRecherche {
-            filtre = vueQuittee
-        }
-    }
 
     /// Rien de tapé : l'Accueil, « Zaaps », « Donjons », « PNJ » et « Quêtes » se montrent en cartes — jusqu'à
     /// ce qu'une fiche se déplie, qui n'a de place que sous une ligne.
@@ -232,7 +214,6 @@ final class PaletteModele: ObservableObject {
     func ouvrir(vue: FiltrePalette = .tout) {
         requete = ""
         filtre = vue
-        vueQuittee = .tout
         deplie = nil
         almanaxDeplie = nil
         edition = nil
@@ -353,7 +334,7 @@ final class PaletteModele: ObservableObject {
             requete = texte
             return
         }
-        choisir(filtre.suivant(arriere ? -1 : 1, dans: jeu))
+        choisir(filtre.suivant(arriere ? -1 : 1))
     }
 
     /// Un filtre : Tab, ou un clic sur sa capsule.
