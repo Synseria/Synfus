@@ -52,12 +52,12 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         let prefs = Preferences.shared
 
         if let version = MiseAJour.shared.proposee {
-            if case .installation = MiseAJour.shared.etat {
-                let item = NSMenuItem(title: L("maj.menu.installation", version.numero), action: nil, keyEquivalent: "")
+            if MiseAJour.shared.suivi.occupee || MiseAJour.shared.suivi.versionPrete != nil {
+                let item = NSMenuItem(title: L("maj.menu.installation", version.numero.texte), action: nil, keyEquivalent: "")
                 item.isEnabled = false
                 menu.addItem(item)
             } else {
-                add(to: menu, title: L("maj.menu.installer", version.numero), action: #selector(installUpdate), icone: "arrow.down.circle")
+                add(to: menu, title: L("maj.menu.installer", version.numero.texte), action: #selector(installUpdate), icone: "arrow.down.circle")
             }
             menu.addItem(.separator())
         }

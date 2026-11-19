@@ -1,5 +1,5 @@
 // Copié de SynseriaKit (Synseria-Design) — ne pas retoucher : changer le paquet dans Synseria-Design, puis sh propager.sh.
-// SynseriaKit 832ae65487891069 · contenu bc4f33effc055101
+// SynseriaKit 25f4236349ad81d5 · contenu bc4f33effc055101
 // Les noms qu'un rapport peut porter, et ses valeurs (pur).
 
 import Foundation

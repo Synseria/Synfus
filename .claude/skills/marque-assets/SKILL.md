@@ -63,7 +63,7 @@ user-invocable: false
   et au lancement si elle n'est pas le défaut (une mise à jour remplace le bundle). Rendu hors de
   main ; hors bundle, rien. `setIcon` ajoute `Icon\r` et `com.apple.FinderInfo` au bundle :
   lancement et TCC tiennent (le code signé est intact), mais `codesign --verify --strict` refuse
-  le bundle installé — ne jamais vérifier ni re-signer l'app en place (`InstallateurMiseAJour`
+  le bundle installé — ne jamais vérifier ni re-signer l'app en place (la mise à jour
   vérifie l'app téléchargée ; `build.sh` signe une copie neuve).
 - Usages du dessin : icône du bundle, icône choisie et ses vignettes (`IconeAppliquee.vignette`),
   symbole de la barre de menus (`SynfusGlyph.menuBarImage()` → `SynfusMark.dessinerGlyphe`, l'Œuf

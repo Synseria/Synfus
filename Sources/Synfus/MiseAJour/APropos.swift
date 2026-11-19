@@ -5,7 +5,7 @@ import SwiftUI
 /// Synseria —, puis la version et l'état de la mise à jour avec son geste.
 struct AProposVue: View {
     var version = AppIntegrity.version
-    @ObservedObject private var miseAJour = MiseAJour.shared
+    private let miseAJour = MiseAJour.shared
     @ObservedObject private var prefs = Preferences.shared
 
     /// L'emblème de la marque, tel que `marque/` du SDS le dessine pour Synfus.

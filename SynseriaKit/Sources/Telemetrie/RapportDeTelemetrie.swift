@@ -1,11 +1,12 @@
 // Copié de SynseriaKit (Synseria-Design) — ne pas retoucher : changer le paquet dans Synseria-Design, puis sh propager.sh.
-// SynseriaKit 832ae65487891069 · contenu 38ff176bbd95f225
+// SynseriaKit 25f4236349ad81d5 · contenu 94c1276b703559ea
 // Le rapport envoyé : des jours d'utilisation en OTLP/HTTP JSON, et ce qui le décrit (pur).
 // Le contrat est celui du collecteur.
 
 import CryptoKit
 import Foundation
 import IOKit
+import Versions
 
 /// Ce qui décrit l'installation dans chaque rapport.
 public struct ContexteDeTelemetrie: Equatable, Sendable {
@@ -33,7 +34,7 @@ public struct ContexteDeTelemetrie: Equatable, Sendable {
     /// `X.Y.Z` ou `X.Y.Z-rc.N` seuls : le collecteur jette en silence (réponse 200) toute autre
     /// forme, si bien qu'un suffixe de plus verrait ses jours acquittés puis perdus.
     public static func version(_ version: String) -> String {
-        version.prefixMatch(of: /\d+\.\d+\.\d+(-rc\.\d+)?/).map { String($0.output.0) } ?? version
+        NumeroDeVersion.prefixe(de: version)?.texte ?? version
     }
 
     /// La version de macOS sans le correctif (`26.1`).

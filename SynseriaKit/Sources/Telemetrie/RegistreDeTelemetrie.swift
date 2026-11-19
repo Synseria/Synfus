@@ -1,5 +1,5 @@
 // Copié de SynseriaKit (Synseria-Design) — ne pas retoucher : changer le paquet dans Synseria-Design, puis sh propager.sh.
-// SynseriaKit 832ae65487891069 · contenu 2735195b573384dc
+// SynseriaKit 25f4236349ad81d5 · contenu c4afe252f7d311b0
 // Le compte du jour, gardé sur le Mac, envoyé chaque jour si l'utilisateur le partage.
 
 import Foundation
@@ -35,7 +35,7 @@ public protocol SourceDeTelemetrie: AnyObject {
 }
 
 extension SourceDeTelemetrie {
-    public func mesures(jour: String) -> [CleDeTelemetrie: ValeurDeTelemetrie]? { nil }
+    public func mesures(jour _: String) -> [CleDeTelemetrie: ValeurDeTelemetrie]? { nil }
 }
 
 /// Le seul foyer de la télémétrie d'une app : chaque geste compté passe par `compter`, l'app lit
