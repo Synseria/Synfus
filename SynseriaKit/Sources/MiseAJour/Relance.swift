@@ -1,5 +1,5 @@
 // Copié de SynseriaKit (Synseria-Design) — ne pas retoucher : changer le paquet dans Synseria-Design, puis sh propager.sh.
-// SynseriaKit 040a56e0df16d7e2 · contenu dce09d0174d40237
+// SynseriaKit 25f4236349ad81d5 · contenu 02f3b5c5283ab0c0
 // Poser une app à la place de celle qui tourne, et relancer l'app.
 
 import AppKit
@@ -20,6 +20,16 @@ public enum Relance {
         NSApp.terminate(nil)
     }
 
+    /// Après une pose : le shell d'attente part d'abord, puis `preparatif` (ce que la nouvelle version
+    /// demande), qui s'exécute même si le shell n'a pas pu partir — l'app est déjà remplacée. Sans
+    /// shell, rien ne quitte : l'erreur le dit, l'app tourne encore.
+    static func relancer(apres preparatif: () async -> Void) async throws {
+        let shell = Result { try attente(de: ProcessInfo.processInfo.processIdentifier, puisOuvrir: Bundle.main.bundleURL.path).run() }
+        await preparatif()
+        if case .failure(let erreur) = shell { throw EchecDeMiseAJour.autre(erreur.localizedDescription) }
+        NSApp.terminate(nil)
+    }
+
     /// Le shell qui attend la fin de `pid` puis lance `ouvreur chemin`. Les valeurs passent en
     /// arguments, jamais dans le script : un chemin à espaces ou à guillemets reste entier.
     public nonisolated static func attente(de pid: Int32, puisOuvrir chemin: String, ouvreur: String = "/usr/bin/open") -> Process {
@@ -37,16 +47,22 @@ public enum PoseDeMiseAJour {
     /// échoue), et macOS garde ouverts les fichiers de l'app qui tourne encore. Seul un paquet `.app`
     /// se remplace : un binaire nu (`swift run`) a pour `bundleURL` son dossier de build.
     public static func remplacer(_ installee: URL, par nouvelle: URL) throws {
+        try verifierEcriture(installee)
+        do {
+            _ = try FileManager.default.replaceItemAt(installee, withItemAt: nouvelle)
+        } catch {
+            throw EchecDeMiseAJour.ecriture(error.localizedDescription)
+        }
+    }
+
+    /// Lève `ecriture` si `installee` ne se remplacerait pas : vérifié aussi avant de télécharger,
+    /// pour ne pas préparer une version qu'on ne pourra pas poser.
+    static func verifierEcriture(_ installee: URL) throws {
         let parent = installee.deletingLastPathComponent().path
         guard installee.pathExtension == "app", FileManager.default.isWritableFile(atPath: parent),
               FileManager.default.isWritableFile(atPath: installee.path)
         else {
             throw EchecDeMiseAJour.ecriture(CocoaError(.fileWriteNoPermission).localizedDescription)
-        }
-        do {
-            _ = try FileManager.default.replaceItemAt(installee, withItemAt: nouvelle)
-        } catch {
-            throw EchecDeMiseAJour.ecriture(error.localizedDescription)
         }
     }
 }

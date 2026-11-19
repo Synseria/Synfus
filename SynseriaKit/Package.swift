@@ -1,6 +1,6 @@
 // swift-tools-version: 6.4
 // Copié de SynseriaKit (Synseria-Design) — ne pas retoucher : changer le paquet dans Synseria-Design, puis sh propager.sh.
-// SynseriaKit 040a56e0df16d7e2 · contenu 004a0e60045df933
+// SynseriaKit 25f4236349ad81d5 · contenu 004a0e60045df933
 
 import PackageDescription
 

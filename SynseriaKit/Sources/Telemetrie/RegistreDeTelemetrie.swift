@@ -1,5 +1,5 @@
 // Copié de SynseriaKit (Synseria-Design) — ne pas retoucher : changer le paquet dans Synseria-Design, puis sh propager.sh.
-// SynseriaKit 040a56e0df16d7e2 · contenu c4afe252f7d311b0
+// SynseriaKit 25f4236349ad81d5 · contenu c4afe252f7d311b0
 // Le compte du jour, gardé sur le Mac, envoyé chaque jour si l'utilisateur le partage.
 
 import Foundation

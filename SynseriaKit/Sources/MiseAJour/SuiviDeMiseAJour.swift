@@ -1,5 +1,5 @@
 // Copié de SynseriaKit (Synseria-Design) — ne pas retoucher : changer le paquet dans Synseria-Design, puis sh propager.sh.
-// SynseriaKit 040a56e0df16d7e2 · contenu b833bdec5a52be4b
+// SynseriaKit 25f4236349ad81d5 · contenu 30a002ba5ff71252
 // Le déroulé d'une mise à jour, commun aux apps : chercher la release du canal, la préparer, la poser
 // sur un geste. L'app fournit sa source, ses vérifications et ses mots.
 
@@ -20,6 +20,7 @@ public final class SuiviDeMiseAJour {
         case disponible(ReleasePubliee)
         /// Plus récente, mais pour un macOS que ce Mac n'a pas : dite, jamais proposée.
         case incompatible(ReleasePubliee)
+        /// Téléchargée, contrôlée ou posée : un geste en cours, que rien ne double.
         case telechargement(ReleasePubliee)
         case prete(ReleasePubliee)
         /// La release en cause, quand l'échec est venu après l'avoir trouvée.
@@ -49,19 +50,19 @@ public final class SuiviDeMiseAJour {
     @ObservationIgnored private let canal: @MainActor () -> CanalDeMiseAJour
     @ObservationIgnored private let systeme: OperatingSystemVersion
     @ObservationIgnored private let preparation: @Sendable (ReleasePubliee) async throws -> URL
-    @ObservationIgnored private let poser: @MainActor (URL) throws -> Void
+    @ObservationIgnored private let poser: @MainActor (URL) async throws -> Void
 
     /// - Parameters:
     ///   - installee: l'app que la mise à jour remplace.
     ///   - dossier: où préparer la nouvelle version ; vidé à chaque préparation.
     ///   - actuelle: la version qui tourne (ou simulée) ; nil, illisible : rien ne se cherche.
     ///   - preparer: nil (hors tests) : télécharger, vérifier et extraire par le fournisseur.
-    ///   - poser: nil (hors tests) : remplacer l'app installée, `apresPose`, puis relancer.
+    ///   - poser: nil (hors tests) : recontrôler l'app prête, remplacer l'installée, `apresPose`, puis relancer.
     public init(fournisseur: any FournisseurDeMiseAJour, deroule: Deroule, installee: URL = Bundle.main.bundleURL,
                 dossier: URL, actuelle: @escaping @MainActor () -> String?, canal: @escaping @MainActor () -> CanalDeMiseAJour,
                 systeme: OperatingSystemVersion = ProcessInfo.processInfo.operatingSystemVersion,
                 preparer: (@Sendable (ReleasePubliee) async throws -> URL)? = nil,
-                poser: (@MainActor (URL) throws -> Void)? = nil) {
+                poser: (@MainActor (URL) async throws -> Void)? = nil) {
         self.fournisseur = fournisseur
         self.deroule = deroule
         self.actuelle = actuelle
@@ -70,9 +71,9 @@ public final class SuiviDeMiseAJour {
         let atelier = PreparationDeMiseAJour(fournisseur: fournisseur, installee: installee, dossier: dossier, systeme: systeme)
         self.preparation = preparer ?? { try await atelier.preparer($0) }
         self.poser = poser ?? { nouvelle in
+            try await atelier.recontroler(nouvelle)
             try PoseDeMiseAJour.remplacer(installee, par: nouvelle)
-            fournisseur.apresPose(de: installee)
-            Relance.relancer()
+            try await Relance.relancer(apres: { await atelier.apresPose() })
         }
     }
 
@@ -121,9 +122,11 @@ public final class SuiviDeMiseAJour {
         etat = .recherche
         let canalCherche = canal()
         do {
-            let trouvee = try await fournisseur.derniere(canal: canalCherche)
+            var trouvee = try await fournisseur.derniere(canal: canalCherche)
             guard canalCherche == canal() else { return await relancer() }
             if trouvee != nil { apresReponse?() }
+            // Le seul verrou du canal, quelle que soit la façon dont la source a choisi.
+            if canalCherche == .stable, trouvee?.preliminaire == true { trouvee = nil }
             etat = Self.etat(trouvee: trouvee, actuelle: actuelle, systeme: systeme)
             guard case .disponible(let release) = etat else { return }
             switch deroule {
@@ -136,10 +139,12 @@ public final class SuiviDeMiseAJour {
         }
     }
 
-    /// Ce que dit la release trouvée face à la version qui tourne.
+    /// Ce que dit la release trouvée face à la version qui tourne. Sans release (aucune, ou incomplète
+    /// pour ce Mac), rien ne s'affirme : « à jour » serait faux.
     public nonisolated static func etat(trouvee: ReleasePubliee?, actuelle: NumeroDeVersion,
                                         systeme: OperatingSystemVersion) -> Etat {
-        guard let trouvee, trouvee.numero > actuelle else { return .aJour }
+        guard let trouvee else { return .repos }
+        guard trouvee.numero > actuelle else { return .aJour }
         return trouvee.ouvrable(sur: systeme) ? .disponible(trouvee) : .incompatible(trouvee)
     }
 
@@ -151,20 +156,26 @@ public final class SuiviDeMiseAJour {
     }
 
     /// Le geste : pose la version prête et relance ; une version trouvée mais pas prête se prépare
-    /// d'abord. Un échec laisse l'app en place, telle quelle.
+    /// d'abord. Un échec laisse l'app en place, telle quelle. L'état passe en cours avant de rendre la
+    /// main : un second geste ne lance pas une seconde préparation dans le même dossier.
     public func installer() {
         switch etat {
         case .prete(let release):
             guard let appPrete else { return }
-            do {
-                try poser(appPrete)
-            } catch {
-                etat = .echec(Self.echec(error), release)
+            etat = .telechargement(release)
+            Task {
+                do {
+                    try await poser(appPrete)
+                } catch {
+                    etat = .echec(Self.echec(error), release)
+                }
             }
         case .disponible(let release), .echec(_, let release?):
+            etat = .telechargement(release)
             Task {
                 await preparer(release)
-                if case .prete = etat { installer() }
+                // Seulement celle du geste : un canal changé en route en a préparé une autre.
+                if case .prete(release) = etat { installer() }
             }
         default:
             return

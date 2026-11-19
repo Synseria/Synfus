@@ -1,5 +1,5 @@
 // Copié de SynseriaKit (Synseria-Design) — ne pas retoucher : changer le paquet dans Synseria-Design, puis sh propager.sh.
-// SynseriaKit 040a56e0df16d7e2 · contenu 7b94aa967433925b
+// SynseriaKit 25f4236349ad81d5 · contenu 8e8be4e543b80537
 // Ce que chaque app fournit à la mise à jour (sa source de releases, ses assets, sa vérification,
 // ses gestes propres), ses échecs, et les vérifications au choix.
 
@@ -34,7 +34,8 @@ public enum EchecDeMiseAJour: Error, Equatable, Sendable {
 /// vérifier, et ce qu'elle fait de propre après la pose. Appelé hors du main actor.
 public protocol FournisseurDeMiseAJour: Sendable {
     /// La release à suivre sur `canal`, avec ce qu'il faut pour la télécharger (choisie par
-    /// `ReleasePubliee.plusHaute`) ; nil s'il n'y en a pas, ou si elle est incomplète pour ce Mac.
+    /// `ReleasePubliee.plusHaute`) ; nil s'il n'y en a pas, ou si elle est incomplète pour ce Mac :
+    /// rien ne se dit alors (`repos`), ni « à jour » ni échec.
     func derniere(canal: CanalDeMiseAJour) async throws -> ReleasePubliee?
     /// Télécharge le DMG de `release` dans `dossier` (vide) et rend son chemin.
     func telecharger(_ release: ReleasePubliee, dans dossier: URL) async throws -> URL
@@ -98,7 +99,10 @@ public enum VerificationDeMiseAJour {
     private static func valide(_ app: URL, exigence: SecRequirement?) -> Bool {
         var code: SecStaticCode?
         guard SecStaticCodeCreateWithPath(app as CFURL, [], &code) == errSecSuccess, let code else { return false }
-        let controles = SecCSFlags(rawValue: kSecCSCheckAllArchitectures | kSecCSCheckNestedCode | kSecCSStrictValidate)
+        // `kSecCSStrictValidate` seul laisse passer un lien qui sort du paquet. Pas de
+        // `kSecCSRestrictSidebandData` : un FinderInfo posé par le Finder ferait refuser une app saine.
+        let controles = SecCSFlags(rawValue: kSecCSCheckAllArchitectures | kSecCSCheckNestedCode | kSecCSStrictValidate
+            | kSecCSRestrictSymlinks)
         return SecStaticCodeCheckValidity(code, controles, exigence) == errSecSuccess
     }
 }
