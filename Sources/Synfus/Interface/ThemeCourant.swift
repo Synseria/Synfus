@@ -84,6 +84,12 @@ extension Color {
         ThemeCourant.couleurs(ThemeCourant.reglage.theme, nuance)[keyPath: jeton].couleur
     }
 
+    /// Un rôle écrit sur l'image d'une carte du jeu (`surImage`, sous son voile sombre) : en Nuit ;
+    /// ailleurs, celui du thème courant.
+    @MainActor static func jeton(_ jeton: ThemeCourant.Jeton, surImage: Bool) -> Color {
+        surImage ? Color.jeton(jeton, en: .nuit) : Color.jeton(jeton)
+    }
+
     /// Le violet des positions suggérées : une couleur propre à Synfus (`Jetons.Propres`).
     @MainActor static var suggestionSynfus: Color {
         Color(nsColor: ThemeCourant.nsColor { _, nuance in Jetons.Propres.suggestionSynfus(nuance) })
