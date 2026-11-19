@@ -29,8 +29,11 @@ struct ListeQuetesVue: View {
                     }
                     .frame(height: Jetons.hauteurRangee * 4 + Jetons.espace4)
                 } else {
-                    let elements = panneau.liste()
-                    if !elements.contains(where: \.estUneQuete) {
+                    let toutes = panneau.liste()
+                    let sansQuete = !toutes.contains(where: \.estUneQuete)
+                    // L'état vide dit déjà « Aucune quête » : la ligne de la liste ne le répète pas.
+                    let elements = sansQuete ? toutes.filter { $0 != .message(L("quete.menu.aucune")) } : toutes
+                    if sansQuete {
                         EtatVide(L("quete.aucune"), symbole: BoutonBarre.quetes.symbole) {
                             Button { QuetePanel.chercher() } label: { Label(L("quete.chercher"), systemImage: "magnifyingglass") }
                         }

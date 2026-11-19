@@ -91,6 +91,8 @@ struct SettingsView: View {
                 .padding([.horizontal, .bottom], Jetons.espace2)
         }
         .frame(width: Self.taille.width, height: hauteur)
+        // Les onglets montent sous la barre de titre transparente, à hauteur des boutons de la fenêtre.
+        .ignoresSafeArea(.container, edges: .top)
         .background { VerreDeFenetre() }
     }
 
