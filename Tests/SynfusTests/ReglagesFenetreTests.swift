@@ -3,8 +3,7 @@ import SwiftUI
 import Testing
 @testable import Synfus
 
-/// La fenêtre des réglages telle que bâtie : une taille commune, que Général remplit sans défiler ni
-/// laisser de vide sous sa page.
+/// La fenêtre des réglages telle que bâtie : une taille commune, que la vue remplit jusqu'en bas.
 @MainActor
 struct ReglagesFenetreTests {
     private func fenetre(_ section: SettingsSection) throws -> (NSWindow, NSView) {
@@ -30,14 +29,5 @@ struct ReglagesFenetreTests {
         // La page s'arrête à sa marge du bas de la fenêtre, pas plus haut.
         #expect(abs(min(basDeLaPage, vue.bounds.height - vue.convert(page.bounds, from: page).maxY) - Jetons.espace2) < 1,
                 "bande vide sous la page : \(vue.convert(page.bounds, from: page)) dans \(vue.bounds)")
-    }
-
-    @Test func generalTientSansDefiler() throws {
-        let (fenetre, vue) = try fenetre(.general)
-        defer { fenetre.close() }
-        let page = try #require(defilement(vue)), contenu = try #require(page.documentView).frame.height
-        let visible = page.contentView.bounds.height
-        #expect(contenu <= visible, "Général défile : \(contenu) pour \(visible)")
-        #expect(visible - contenu < Jetons.espace4, "un vide sous Général : \(contenu) pour \(visible)")
     }
 }

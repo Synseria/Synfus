@@ -66,10 +66,10 @@ struct SettingsView: View {
     @ObservedObject private var onglet: OngletReglages
     private let hauteur: CGFloat?
 
-    /// La taille de la fenêtre, barre de titre comprise, la même pour tous les onglets : faite pour
-    /// Général, la page qui s'ouvre au lancement, qui tient sans défiler ni laisser de vide dessous
-    /// (`ReglagesFenetreTests`). Les pages plus longues défilent.
-    static let taille = CGSize(width: Jetons.largeurReglages, height: 780)
+    /// La taille de la fenêtre, barre de titre comprise, la même pour tous les onglets : Général
+    /// (hors compteurs des statistiques, qui grandissent avec l'usage) y tient presque, les pages plus
+    /// longues défilent ; bornée à l'écran par `SettingsWindowController`.
+    static let taille = CGSize(width: Jetons.largeurReglages, height: 760)
 
     /// `hauteur` : les captures, hors fenêtre, fixent la leur ; dans la fenêtre, la vue la remplit.
     init(onglet: OngletReglages = .shared, hauteur: CGFloat? = nil) {
