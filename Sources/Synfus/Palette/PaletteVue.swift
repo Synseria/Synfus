@@ -10,8 +10,6 @@ struct PaletteVue: View {
     /// Le détail d'un donjon arrive après l'ouverture : ↵ et les cartes de sa fiche changent.
     @ObservedObject private var donjons = DonjonsStore.shared
     @FocusState private var champ: Champ?
-    @State private var filtreSurvole: FiltrePalette?
-    @State private var triSurvole = false
 
     private enum Champ { case recherche, etiquette }
 
