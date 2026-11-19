@@ -2,12 +2,12 @@ import AppKit
 import Testing
 @testable import Synfus
 
-/// Le panneau de la recette se tient par son en-tête : une recette plus longue ou plus courte le
-/// fait grandir ou rétrécir vers le bas, jamais sauter.
+/// Un panneau posé sur le jeu (recette, boss) se tient par son en-tête : un contenu plus long ou plus
+/// court le fait grandir ou rétrécir vers le bas, jamais sauter.
 @MainActor
-struct RecettePanelTests {
-    private func panneau() -> PanneauRecette {
-        PanneauRecette(contentRect: NSRect(x: 100, y: 100, width: 300, height: 200),
+struct PanneauDeJeuTests {
+    private func panneau() -> PanneauDeJeu {
+        PanneauDeJeu(contentRect: NSRect(x: 100, y: 100, width: 300, height: 200),
                        styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: true)
     }
 
