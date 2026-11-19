@@ -3,6 +3,29 @@
 Une section par version, `## X.Y.Z — AAAA-MM-JJ` : la release GitHub de `vX.Y.Z` en reprend le
 contenu (`Tools/notes-de-version.sh`), et `sh build.sh --publish` refuse une version absente d'ici.
 
+## 0.15.0-rc.1 — 2026-11-19
+
+Préversion : elle ne se propose pas d'elle-même, elle s'installe par son DMG.
+
+### Nouveautés
+
+- **macOS 26 minimum.** Une version qui exige un macOS plus récent que celui du Mac se dit
+  (« nécessite macOS N ») sans se proposer ni s'installer.
+- **Nouvelle apparence**, commune aux apps Synseria : thème **Lagon** par défaut, thème × nuance
+  dans Réglages → Thème (les réglages d'avant sont repris).
+- **Barre à une rangée** : une pilule d'équipe et son menu, les outils en boutons-icônes.
+- **Palette** : une seule rangée de puces qui ne bouge plus, avec ou sans texte tapé ; zaaps en
+  cartes d'une même hauteur sur l'image de la carte du jeu, agrandie au survol de sa loupe.
+- **Panneau Recette** épinglable à côté du jeu ; un clic copie le nom d'un ingrédient.
+- **Aides des boss** repliées sous leur consigne, à déplier.
+
+### Améliorations
+
+- **Réglages** en onglets, page posée sur une plaque, hauteur bornée à l'écran.
+- Les panneaux de jeu (Recette, boss) gardent leur haut quand leur contenu change.
+- **Statistiques d'utilisation** : la télémétrie commune aux apps Synseria (des compteurs, jamais
+  de contenu).
+
 ## 0.14.0 — 2026-11-17
 
 ### Nouveautés
