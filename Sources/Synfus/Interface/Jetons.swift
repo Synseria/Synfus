@@ -1,5 +1,5 @@
 // Engendré par Synseria-Design — ne pas retoucher : changer jetons.json ou apps/Synfus.json, puis sh propager.sh.
-// jetons.json 9109fc88022f5d8a · contenu f7136300d799d962
+// jetons.json c5f3400ce23232ce · contenu 29894f4de41090a5
 import SwiftUI
 
 /// Les valeurs de design Synseria telles que Synfus les reçoit : toute couleur, taille ou durée
@@ -115,7 +115,7 @@ enum Jetons {
     static let largeurInterrupteur: CGFloat = 48
     /// barre latérale ; base des petites largeurs (menus, listes)
     static let largeurNav: CGFloat = 200
-    /// feuille de confirmation
+    /// feuille de confirmation ; borne de la liste d'un champ à suggestions
     static let largeurFeuille: CGFloat = 400
     /// fenêtre À propos
     static let largeurApropos: CGFloat = 340
@@ -139,11 +139,9 @@ enum Jetons {
     static let courbeEntree = Courbe(x1: 0.4, y1: 0, x2: 1, y2: 1)
 
     // MARK: Verre et états
-    /// part du fond de fenêtre dans le verre d'une fenêtre au focus : franc, le bureau flouté se voit
+    /// part du fond de fenêtre dans le verre de ce qui prend le clavier (fenêtre, palette, overlay, panneau, bloc-notes), focus ou pas : franc, le bureau flouté se voit ; une teinte sous le verre — valeur d'essai, à fixer par les essais de l'utilisateur
     static let verreOpaciteFocus: Double = 0.41
-    /// verre d'une fenêtre hors focus : dense, elle reste posée
-    static let verreOpaciteHorsFocus: Double = 0.88
-    /// verre d'un flottant (palette, overlay, panneau, barre) — valeur d'essai, à fixer par les essais de l'utilisateur
+    /// verre de ce qui ne prend jamais le clavier (carte de réunion) — valeur d'essai, à fixer par les essais de l'utilisateur
     static let verreOpaciteFlottant: Double = 0.45
     /// flou derrière le verre
     static let verreFlou: CGFloat = 28
