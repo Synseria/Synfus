@@ -25,7 +25,7 @@ sa bascule). Toute nouvelle option suit la règle.
 - Boutons après les persos : `BoutonBarre` (pur) est le seul endroit qui les liste, dans
   l'ordre de la barre ; masqués par `Preferences.boutonsMasques` (Réglages → Barre, ou clic droit
   « Masquer ce bouton »). L'engrenage n'est jamais masquable.
-- Panneaux du jeu (quêtes, chasse, boss) : leur visibilité passe par `PanneauxJeu.revoir`, le
+- Panneaux du jeu (quêtes, chasse, boss, recette épinglée) : leur visibilité passe par `PanneauxJeu.revoir`, le
   seul endroit qui les énumère. Panneau d'aide aux boss (`Boss/BossPanel`) : jamais clé, taille
   de son contenu (skill `aide-boss`).
 - Panneau des quêtes (`Quetes/QuetePanel`) : sans bordure, jamais clé, jamais zoomé. Pas de
@@ -86,8 +86,9 @@ sa bascule). Toute nouvelle option suit la règle.
 ## Vues des cartes — `Interface/ImagesCarte.swift`
 
 - Toute vue de carte passe par `VueCarte` (deux pixels par point de son plus grand côté, jamais
-  l'image entière) : `MiniatureCarte` (palette, listes des lieux et des PNJ, lignes de zaaps, panneau des quêtes),
-  `ApercuCarte`. `ImagesDofusDB` décode hors main (ImageIO) et
+  l'image entière) : `MiniatureCarte` (lignes de la palette, listes des lieux et des PNJ, lignes de zaaps,
+  panneau des quêtes), `FondCarte` (fond des cartes de la palette, sous un voile continu ; en grand au
+  survol de sa loupe `LoupeCarte`, jamais de la carte), `ApercuCarte`. `ImagesDofusDB` décode hors main (ImageIO) et
   range les copies réduites dans un `NSCache` borné à 64 Mo décodés ; seules les images sans
   `cote` — emblèmes, pictogrammes, petits et en nombre fini — restent à vie. Masquée par
   `vuesCartes` (clé de sauvegarde `zaapsVueCarte`, qui masque aussi le fond des zaaps), agrandie
@@ -108,9 +109,10 @@ sa bascule). Toute nouvelle option suit la règle.
 ## Réglages et menu
 
 - `Reglages/SettingsView.swift` : la fenêtre de toutes les apps Synseria — `BarreDesOnglets` en haut (dix
-  onglets `SettingsSection`, sans titre : ils disent où l'on est), fenêtre sans titre affiché, verre sous
-  tout le contenu (`VerreDeFenetre`), une seule taille (`largeur-reglages`) ; la page sur une plaque
-  pleine. Une page fusionnée est une suite de `Bloc`, jamais des onglets dans l'onglet. Chaque page est une
+  onglets `SettingsSection`, sans titre : ils disent où l'on est), fenêtre sans titre affiché, sous tout le
+  contenu le matériau du système voilé de la page (`FondDeFenetre`, pas le verre nu), une seule taille
+  (`SettingsView.taille`, barre de titre comprise, que la vue remplit) ; la page sur
+  une plaque pleine. Une page fusionnée est une suite de `Bloc`, jamais des onglets dans l'onglet. Chaque page est une
   `PageReglages` (`FormulaireCompact` de la trousse, colonne de `largeur-colonne`) de `Bloc` — le dessin de
   `SectionCompacte`, plus `paresseux` et `entete` qu'elle n'a pas : une carte, un filet entre les lignes ;
   une ligne est `Ligne` (libellé à gauche, état en méta puis contrôle à droite), `LigneInterrupteur`,

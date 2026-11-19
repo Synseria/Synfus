@@ -423,6 +423,21 @@ struct CapturesTests {
         try ecrire(vue, vers: dossier.appending(path: "boss-fiche.png"))
     }
 
+    @Test("Capture de la recette épinglée", .enabled(if: dossier != nil))
+    func recette() throws {
+        let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
+        try FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)
+        let recette = SourcesObjet.Recette(
+            metier: ["fr": "Bricoleur"], niveau: 60,
+            ingredients: [("Planche de Frêne", 3), ("Gelée Bleue", 10), ("Poils de Pétartifoux et autres fibres", 4),
+                          ("Clef du Donjon des Bouftous", 1)].map { .init(noms: ["fr": $0.0], quantite: $0.1) })
+        let vue = FicheRecette(recette: RecetteEpinglee(recette, objet: "Clef du Château du Wa Wabbit", langue: .fr))
+            .padding(24)
+            .background(Self.fondCapture)
+            .environment(\.colorScheme, Self.schema)
+        try ecrire(vue, vers: dossier.appending(path: "recette.png"))
+    }
+
     @Test("Captures des réglages", .enabled(if: dossier != nil))
     func reglages() throws {
         let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)

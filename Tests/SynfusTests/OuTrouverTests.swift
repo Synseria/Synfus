@@ -201,4 +201,19 @@ struct OuTrouverTests {
         #expect(Quetes.sujet(objectif("Ramener à {npc,1} : x3 {item,12}", objet: 12)) == nil)
         #expect(Quetes.sujet(objectif("Aller voir {npc,1}")) == nil)
     }
+
+    /// La recette épinglée se lit dans la langue de l'app, avec un repli sur le français puis sur « ? ».
+    @Test func recetteEpingleeDansLaLangue() {
+        let recette = SourcesObjet.Recette(
+            metier: ["fr": "Bricoleur", "en": "Handyman"], niveau: 60,
+            ingredients: [.init(noms: ["fr": "Planche de Frêne", "en": "Ash Plank"], quantite: 3),
+                          .init(noms: ["fr": "Gelée Bleue"], quantite: 10),
+                          .init(noms: [:], quantite: 1)])
+        let epinglee = RecetteEpinglee(recette, objet: "Clef du Bouftou", langue: .en)
+        #expect(epinglee.objet == "Clef du Bouftou")
+        #expect(epinglee.metier == "Handyman")
+        #expect(epinglee.niveau == 60)
+        #expect(epinglee.ingredients == [.init(nom: "Ash Plank", quantite: 3), .init(nom: "Gelée Bleue", quantite: 10),
+                                         .init(nom: "?", quantite: 1)])
+    }
 }

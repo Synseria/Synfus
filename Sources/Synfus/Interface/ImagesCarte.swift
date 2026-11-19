@@ -147,6 +147,100 @@ extension View {
     }
 }
 
+/// Le fond d'une carte de la palette : la carte du jeu sous un seul voile continu, dense sous le texte
+/// du haut (titre, sous-titre) et du bas (étiquette, coordonnées), plus léger entre les deux, jamais
+/// de bord net ; la plaque sans elle. Choisie, le contour de l'accent sur l'image, le fond du choix
+/// sur la plaque.
+struct FondCarte: View {
+    let carte: Int?
+    var choisie = false
+    var survole = false
+    /// Où finit le texte du haut et où commence celui du bas, en part de la hauteur de la carte : le
+    /// voile y est encore dense (1 : pas de pied).
+    var finHaut: CGFloat = 0.5
+    var debutBas: CGFloat = 1
+    private let forme = RoundedRectangle(cornerRadius: Jetons.rayon2, style: .circular)
+    /// Plus large qu'une case de la grille (trois au rang sur la largeur de la palette), que l'image remplit.
+    private static let cote: CGFloat = 240
+    /// L'opacité du voile aux bords, sous le titre et les coordonnées ; à la lisière du texte, où se
+    /// lit encore le sous-titre ; entre les deux, où l'image reste assombrie : du texte clair se lit
+    /// sur n'importe quel décor du jeu, et aucune bande vive ne raye la carte.
+    private static let voileBord = 0.85
+    private static let voileTexte = 0.72
+    private static let voileMilieu = 0.55
+
+    /// Le texte de la carte se pose sur une image : il s'écrit en clair, quel que soit le thème.
+    @MainActor static func surImage(_ carte: Int?) -> Bool {
+        carte != nil && Preferences.shared.vuesCartes && Ressources.visuelsDuJeu
+    }
+
+    var body: some View {
+        if Self.surImage(carte), let carte {
+            let voile = Color.jeton(\.fondFenetre, en: .nuit)
+            Color.jeton(\.creux)
+                .overlay { VueCarte(carte: carte, cote: Self.cote).scaledToFill() }
+                .overlay {
+                    // Seul dégradé de l'app : un voile d'un bord à l'autre, sans palier.
+                    LinearGradient(stops: [
+                        .init(color: voile.opacity(Self.voileBord), location: 0),
+                        .init(color: voile.opacity(Self.voileTexte), location: finHaut),
+                        .init(color: voile.opacity(Self.voileMilieu), location: (finHaut + debutBas) / 2),
+                        .init(color: voile.opacity(debutBas < 1 ? Self.voileTexte : Self.voileMilieu), location: debutBas),
+                        .init(color: voile.opacity(Self.voileBord), location: 1),
+                    ], startPoint: .top, endPoint: .bottom)
+                }
+                .clipShape(forme)
+                .overlay {
+                    forme.strokeBorder(Color.jeton(choisie ? \.accent : survole ? \.encre3 : \.filet),
+                                       lineWidth: choisie ? Jetons.epaisseurFocus : Jetons.epaisseurFilet)
+                }
+        } else {
+            ZStack {
+                forme.fill(Color.jeton(\.plaque))
+                if choisie || survole { forme.fill(Color.jeton(choisie ? \.selection : \.survol)) }
+            }
+            .overlay { forme.strokeBorder(Color.jeton(\.filet), lineWidth: Jetons.epaisseurFilet) }
+        }
+    }
+}
+
+/// La loupe d'une carte de la palette : la vue de la carte en grand (`ApercuCarte`) au survol de ce seul
+/// bouton, après un court délai — un passage de la souris sur la grille n'ouvre rien —, ou d'un clic.
+/// `surImage` : posée sur le voile, dessinée en Nuit.
+struct LoupeCarte: View {
+    let carte: Int
+    var surImage = false
+    @State private var attente: Task<Void, Never>?
+    /// Le temps de viser la loupe plutôt que de la traverser.
+    private static let delai: Duration = .milliseconds(250)
+
+    var body: some View {
+        Button { ApercuCarte.shared.montrer(carte) } label: {
+            Image(systemName: "magnifyingglass")
+                .font(Jetons.typoMicro.font)
+        }
+        .buttonStyle(BoutonIcone())
+        .focusable(false)
+        .themeSynseria(ThemeCourant.reglage.theme, nuance: surImage ? .nuit : ThemeCourant.reglage.nuance)
+        .accessibilityLabel(L("palette.carte.agrandir"))
+        .onHover { dedans in
+            attente?.cancel()
+            if dedans {
+                attente = Task {
+                    try? await Task.sleep(for: Self.delai)
+                    if !Task.isCancelled { ApercuCarte.shared.montrer(carte) }
+                }
+            } else {
+                ApercuCarte.shared.cacher()
+            }
+        }
+        .onDisappear {
+            attente?.cancel()
+            ApercuCarte.shared.cacher()
+        }
+    }
+}
+
 /// Le pictogramme d'un repère tel que la carte du jeu le montre ; le symbole
 /// tant qu'il n'est pas venu, ou quand le repère n'en a pas.
 struct PictogrammeLieu<Symbole: View>: View {

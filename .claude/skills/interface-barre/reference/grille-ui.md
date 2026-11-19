@@ -58,8 +58,9 @@ La grille est le skill global `grille-ui`. Ici, seulement ce qui lui manque ou l
 - Couleurs venues du jeu, hors thème : les classes (`DofusClass`), le rose de « Fin de tour »
   (`CombatBadge.rose`), `Color.texteSurClasse` (le blanc du sigle sur une couleur de classe).
 - `MetriquesQuete.compact` : tout en méta, lignes collées, pour laisser voir le jeu.
-- Voile de zone de `CalibrationZonesView`, opacité de glisser des pastilles. Jamais de texte sur une
-  image du jeu : la carte d'un zaap est pleine, sa vue en vignette (`MiniatureCarte`).
+- Voile de zone de `CalibrationZonesView`, opacité de glisser des pastilles. Les cartes de la palette
+  ont la carte du jeu en fond (`FondCarte`) : le texte s'y pose sur un voile continu, dense sous le texte, sans bord net,
+  écrit en Nuit ; ailleurs, une vue de carte est une vignette (`MiniatureCarte`).
 - Battement de l'alerte et de la bascule (`Battement`) : l'opacité qui pulse est le signal.
 - Largeurs de colonnes, de champs et de fenêtres (réglages, panneaux) : mises en page, pas des tailles de décor.
 

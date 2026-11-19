@@ -8,6 +8,8 @@ import SwiftUI
 struct OuTrouverVue: View {
     let sujet: OuTrouver.Sujet
     let metriques: MetriquesQuete
+    /// Le nom de l'objet, quand l'appelant le sait : le titre de sa recette épinglée.
+    var nom: String?
     @ObservedObject private var store = OuTrouverStore.shared
     /// La position du perso range les repaires.
     @ObservedObject private var lecteur = LecteurEcran.shared
@@ -77,9 +79,20 @@ struct OuTrouverVue: View {
         if sources.recette == nil, lacheurs.isEmpty { Text(L("ouTrouver.rien")) }
     }
 
+    /// La recette, et le bouton qui l'épingle à côté du jeu (`RecettePanel`) : ses ingrédients s'y
+    /// copient d'un clic, le temps des courses.
     private func recette(_ recette: SourcesObjet.Recette) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            Label(L("ouTrouver.recette", Lieu.traduit(recette.metier, langue) ?? "?", recette.niveau), systemImage: "hammer")
+            HStack(spacing: Jetons.espace1) {
+                Label(L("ouTrouver.recette", Lieu.traduit(recette.metier, langue) ?? "?", recette.niveau), systemImage: "hammer")
+                Button {
+                    RecettePanel.shared.epingler(RecetteEpinglee(recette, objet: nom, langue: langue))
+                } label: {
+                    Label(L("recette.epingler"), systemImage: "pin")
+                }
+                .buttonStyle(BoutonTertiaire())
+                .focusable(false)
+            }
             Text(recette.ingredients.map { L("quete.ressource", Lieu.traduit($0.noms, langue) ?? "?", $0.quantite) }
                 .joined(separator: " · "))
                 .foregroundStyle(Color.jeton(\.encre3))

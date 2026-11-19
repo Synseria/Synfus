@@ -13,9 +13,8 @@ struct PaletteVue: View {
 
     private enum Champ { case recherche, etiquette }
 
-    /// Mesure de mise en page : trois rangées de cartes entières (deux lignes de titre et deux de sous-titre
-    /// réservées, étiquette sur sa ligne) avec leurs interstices.
-    static let hauteurCartes: CGFloat = 404
+    /// Trois rangées de cartes entières et la moitié d'une quatrième : la grille dit qu'elle défile.
+    static let hauteurCartes = 3.5 * CarteZaap<Never>.hauteur() + 3 * Jetons.espace2
 
     var body: some View {
         VStack(spacing: Jetons.espace2) {
@@ -42,7 +41,6 @@ struct PaletteVue: View {
             TextField(L("palette.invite"), text: $modele.requete, prompt: Text(L("palette.invite")))
                 .textFieldStyle(.plain)
                 .focused($champ, equals: .recherche)
-                .help(L("palette.invite.aide"))
             origine
             if let mode {
                 Text(mode)
@@ -232,10 +230,11 @@ struct PaletteVue: View {
     }
 
     private var grille: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Jetons.espace2), count: PaletteModele.colonnes),
+        let disposition = DispositionCartes.de(modele.entrees)
+        return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Jetons.espace2), count: PaletteModele.colonnes),
                   spacing: Jetons.espace2) {
             ForEach(Array(modele.entrees.enumerated()), id: \.element.id) { index, entree in
-                CarteZaap(entree: entree, choisie: index == modele.selection)
+                CarteZaap(entree: entree, choisie: index == modele.selection, disposition: disposition)
                     .id(entree.id)
                     .onTapGesture { modele.executer(entree) }
                     .help(entree.complet)
@@ -262,7 +261,7 @@ struct PaletteVue: View {
                 if deplie {
                     Group {
                         switch entree.effet {
-                        case .ouTrouver(let sujet): OuTrouverVue(sujet: sujet, metriques: .confort)
+                        case .ouTrouver(let sujet): OuTrouverVue(sujet: sujet, metriques: .confort, nom: entree.titre)
                         case .donjon(let id): FicheDonjonVue(id: id, modele: modele)
                         default: if entree.pnj != nil { PositionsPNJVue(modele: modele) }
                         }
@@ -379,96 +378,137 @@ struct PaletteVue: View {
     }
 }
 
-/// Une carte de zaap, pleine : nom et zone, la vignette de la carte du jeu à droite — jamais de texte
-/// posé sur une image du jeu —, puis l'étiquette, le favori et les coordonnées. Choisie, le fond du
-/// choix et son titre à l'accent.
+/// Une carte de la palette (zaap, lieu, donjon, PNJ, quête) : titre et sous-titre en haut, l'étiquette et
+/// les coordonnées en bas, le favori dans le coin haut droit. La carte du jeu fait le fond, sous un voile
+/// continu (`FondCarte`), en grand au survol de sa loupe (`LoupeCarte`) ; sans elle, la plaque. Toutes les
+/// cartes d'une grille ont la même hauteur (`hauteur`) : le titre sur deux lignes au plus, coupé en fin,
+/// le sous-titre et le pied sur une.
 struct CarteZaap<Corps: View>: View {
     let entree: EntreePalette
     let choisie: Bool
-    /// Ce qui prend la place entre l'en-tête et le pied (les quêtes d'une position).
-    private let corps: (() -> Corps)?
+    /// Ce que la grille montre : toutes ses cartes en gardent la place.
+    var disposition = DispositionCartes()
+    /// Ce qui prend la place entre l'en-tête et le pied (les quêtes d'une position), sur une ligne ;
+    /// `surImage` : écrit en Nuit, sur le voile.
+    private let corps: ((_ surImage: Bool) -> Corps)?
     @State private var survole = false
+    // periphery:ignore - observé pour redessiner la carte quand `vuesCartes` change
+    @ObservedObject private var prefs = Preferences.shared
 
-    init(entree: EntreePalette, choisie: Bool, @ViewBuilder corps: @escaping () -> Corps) {
-        (self.entree, self.choisie, self.corps) = (entree, choisie, corps)
+    init(entree: EntreePalette, choisie: Bool, disposition: DispositionCartes = .init(),
+         @ViewBuilder corps: @escaping (_ surImage: Bool) -> Corps) {
+        (self.entree, self.choisie, self.disposition, self.corps) = (entree, choisie, disposition, corps)
     }
 
+    /// La hauteur du haut de la carte, de son bord au bas du texte : deux lignes de titre, une de
+    /// sous-titre, et la ligne du corps quand la carte en a un.
+    static func haut(avecCorps: Bool) -> CGFloat {
+        let corps = avecCorps ? Jetons.espace1 + Jetons.typoMeta.interligne : 0
+        return Jetons.espace2 + 2 * Jetons.typoTitreCarte.interligne + Jetons.typoMeta.interligne + corps
+    }
+
+    /// La hauteur d'une carte : le haut, le pied d'une ligne de coordonnées, la marge du bas — l'image
+    /// fait le fond, elle ne prend pas de place à elle.
+    static func hauteur(avecCorps: Bool = false, disposition: DispositionCartes = .init()) -> CGFloat {
+        let pied = disposition.avecPied ? Jetons.espace1 + hauteurPied : 0
+        return haut(avecCorps: avecCorps) + pied + Jetons.espace2
+    }
+
+    /// La ligne des coordonnées, la plus haute du pied.
+    private static var hauteurPied: CGFloat { Jetons.typoCode.interligne }
+
+    private var surImage: Bool { FondCarte.surImage(entree.carte) }
+    private var hauteur: CGFloat { Self.hauteur(avecCorps: corps != nil, disposition: disposition) }
+    /// Sur l'image, le texte s'écrit en clair quel que soit le thème : le voile est sombre.
+    private func encre(_ jeton: ThemeCourant.Jeton) -> Color { Color.jeton(jeton, surImage: surImage) }
+
     var body: some View {
-        let forme = RoundedRectangle(cornerRadius: Jetons.rayon2, style: .circular)
         VStack(alignment: .leading, spacing: Jetons.espace1) {
-            HStack(alignment: .top, spacing: Jetons.espace2) {
-                // Deux lignes de titre et deux de sous-titre, réservées : rien de tronqué, et les cartes
-                // d'une même rangée ont la même hauteur.
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(entree.titre)
-                        .font(Jetons.typoTitreCarte.font)
-                        .foregroundStyle(Color.jeton(choisie ? \.accentTexte : \.encre))
-                        .lineLimit(2, reservesSpace: true)
-                    Text(entree.itineraire ?? entree.sousTitre ?? "")
-                        .font(Jetons.typoMeta.font)
-                        .foregroundStyle(Color.jeton(entree.itineraire != nil ? \.accentTexte : \.encre2))
-                        .lineLimit(2, reservesSpace: true)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                if let carte = entree.carte { MiniatureCarte(carte: carte, taille: LigneResultat.vignette) }
+            VStack(alignment: .leading, spacing: 0) {
+                Text(entree.titre)
+                    .font(Jetons.typoTitreCarte.font)
+                    .foregroundStyle(encre(choisie ? \.accentTexte : \.encre))
+                    .lineLimit(2)
+                    .truncationMode(.tail)
+                Text(entree.itineraire ?? entree.sousTitre ?? "")
+                    .font(Jetons.typoMeta.font)
+                    .foregroundStyle(encre(entree.itineraire != nil ? \.accentTexte : \.encre2))
+                    .lineLimit(1)
             }
-            if let corps {
-                corps().frame(maxHeight: .infinity, alignment: .top)
-            } else {
-                Spacer(minLength: Jetons.espace2)
-            }
-            pied
+            // Le favori occupe le coin : le titre ne passe pas dessous.
+            .padding(.trailing, entree.favori ? Jetons.espace4 : 0)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            if let corps { corps(surImage) }
+            Spacer(minLength: 0)
+            if disposition.avecPied { pied }
         }
         .padding(.vertical, Jetons.espace2)
         .padding(.horizontal, Jetons.espace3)
         .frame(maxWidth: .infinity, alignment: .leading)
-        // Le fond du choix et le survol se posent sur la plaque, sous le texte.
-        .background {
-            ZStack {
-                forme.fill(Color.jeton(\.plaque))
-                if choisie || survole { forme.fill(Color.jeton(choisie ? \.selection : \.survol)) }
+        .frame(height: hauteur)
+        .overlay(alignment: .topTrailing) {
+            if entree.favori {
+                Image(systemName: "star.fill")
+                    .font(Jetons.typoMeta.font)
+                    .foregroundStyle(encre(\.accentTexte))
+                    .padding(Jetons.espace2)
             }
         }
-        .overlay { forme.strokeBorder(Color.jeton(\.filet), lineWidth: Jetons.epaisseurFilet) }
-        .contentShape(forme)
+        .background {
+            // Le voile couvre le haut jusqu'au bas du texte, et le pied.
+            FondCarte(carte: entree.carte, choisie: choisie, survole: survole,
+                      finHaut: Self.haut(avecCorps: corps != nil) / hauteur,
+                      debutBas: disposition.avecPied ? (hauteur - Jetons.espace2 - Self.hauteurPied) / hauteur : 1)
+        }
+        .contentShape(RoundedRectangle(cornerRadius: Jetons.rayon2, style: .circular))
         .onHover { survole = $0 }
     }
 
-    /// L'étiquette et le favori à gauche, « intérieur » et les coordonnées à droite : jamais coupés,
-    /// l'étiquette prend sa ligne quand elle n'entre pas.
+    /// L'étiquette à gauche, « intérieur » et les coordonnées à droite, sur une ligne : les
+    /// coordonnées ne se coupent jamais, l'étiquette cède et se coupe en fin.
     private var pied: some View {
-        let gauche = HStack(spacing: Jetons.espace2) {
-            if let etiquette = entree.etiquette { Badge(texte: etiquette, ton: .accent) }
-            if entree.favori {
-                Image(systemName: "star.fill").font(Jetons.typoMeta.font).foregroundStyle(Color.jeton(\.accentTexte))
+        HStack(spacing: Jetons.espace2) {
+            // L'étiquette en une ligne micro, sans pastille : elle aide à reconnaître la carte, elle
+            // n'a pas à peser plus que son titre.
+            if let etiquette = entree.etiquette {
+                Text(etiquette)
+                    .font(Jetons.typoMicro.font)
+                    .foregroundStyle(encre(\.accentTexte))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
             }
-            if entree.interieur { EtiquetteInterieur(taille: Jetons.typoMicro) }
+            Spacer(minLength: 0)
+            if entree.interieur { EtiquetteInterieur(taille: Jetons.typoMicro, surImage: surImage) }
+            // La loupe tient sa place, visible au survol de la carte seulement : le pied ne bouge pas.
+            if surImage, let carte = entree.carte {
+                LoupeCarte(carte: carte, surImage: true)
+                    .opacity(survole ? 1 : 0)
+                    .allowsHitTesting(survole)
+            }
+            Text(entree.detail ?? "")
+                .font(Jetons.typoCode.font)
+                .foregroundStyle(encre(\.encre2))
+                .lineLimit(1)
+                .fixedSize()
         }
-        let droite = Text(entree.detail ?? "")
-            .font(Jetons.typoCode.font)
-            .foregroundStyle(Color.jeton(\.encre2))
-            .lineLimit(1)
-        return ViewThatFits(in: .horizontal) {
-            HStack(spacing: Jetons.espace2) {
-                gauche
-                Spacer(minLength: 0)
-                droite
-            }
-            VStack(alignment: .leading, spacing: Jetons.espace1) {
-                gauche
-                HStack(spacing: 0) {
-                    Spacer(minLength: 0)
-                    droite
-                }
-            }
-        }
-        .frame(minHeight: Jetons.hauteurCase)
+        .frame(height: Self.hauteurPied)
     }
 }
 
 extension CarteZaap where Corps == Never {
-    init(entree: EntreePalette, choisie: Bool) {
-        (self.entree, self.choisie, self.corps) = (entree, choisie, nil)
+    init(entree: EntreePalette, choisie: Bool, disposition: DispositionCartes = .init()) {
+        (self.entree, self.choisie, self.disposition, self.corps) = (entree, choisie, disposition, nil)
+    }
+}
+
+/// Ce qu'une grille de cartes montre, pour que toutes ses cartes aient la même hauteur : le pied dès
+/// qu'une carte a de quoi l'emplir (étiquette, intérieur, coordonnées) — une grille de quêtes n'en a
+/// pas et s'en passe.
+struct DispositionCartes: Equatable {
+    var avecPied = true
+
+    static func de(_ entrees: [EntreePalette]) -> DispositionCartes {
+        DispositionCartes(avecPied: entrees.contains { $0.etiquette != nil || $0.interieur || $0.detail != nil })
     }
 }
 
@@ -578,13 +618,15 @@ struct LigneResultat: View {
 /// à entrer. La palette et le panneau des quêtes la disent pareil.
 struct EtiquetteInterieur: View {
     let taille: Jetons.Typo
+    /// Sur le voile d'une carte à image : en Nuit, lisible quelle que soit la nuance.
+    var surImage = false
 
     var body: some View {
         Text(L("carte.interieur"))
             .font(taille.font)
-            .foregroundStyle(Color.jeton(\.encre2))
+            .foregroundStyle(Color.jeton(\.encre2, surImage: surImage))
             .padding(.horizontal, Jetons.espace1)
-            .overlay(Capsule().strokeBorder(Color.jeton(\.filet), lineWidth: Jetons.epaisseurFilet))
+            .overlay(Capsule().strokeBorder(Color.jeton(\.filet, surImage: surImage), lineWidth: Jetons.epaisseurFilet))
             .lineLimit(1)
             .help(L("carte.interieur.aide"))
     }

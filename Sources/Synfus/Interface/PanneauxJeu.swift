@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 /// Ce que partagent les panneaux posés sur le jeu — quêtes, chasse, aide aux
-/// boss : quand ils se montrent, et les boutons de leur en-tête.
+/// boss, recette : quand ils se montrent, et les boutons de leur en-tête.
 @MainActor
 enum PanneauxJeu {
     /// Chaque panneau revoit s'il se montre — au changement d'app (`force`),
@@ -12,6 +12,7 @@ enum PanneauxJeu {
         QuetePanel.shared.revoirVisibilite(force: force)
         ChassePanel.shared.revoirVisibilite(force: force)
         BossPanel.shared.revoirVisibilite(force: force)
+        RecettePanel.shared.revoirVisibilite(force: force)
     }
 
     /// Remet à leur place d'origine les panneaux ouverts, avec la barre : le geste du menu pour un
@@ -21,6 +22,7 @@ enum PanneauxJeu {
         QuetePanel.shared.recentrer()
         ChassePanel.shared.recentrer()
         BossPanel.shared.recentrer()
+        RecettePanel.shared.recentrer()
     }
 
     // MARK: - Place d'un panneau
@@ -100,6 +102,24 @@ enum PanneauxJeu {
             barVisible: ouvert, onlyWithDofus: Preferences.shared.panneauxSeulementDofus,
             frontPID: manager.frontmostPID, frontIsDofus: manager.frontmostIsDofus,
             ownPID: ProcessInfo.processInfo.processIdentifier)
+    }
+}
+
+/// Un panneau posé sur le jeu, à la taille de son contenu, jamais clé : la frappe reste au jeu, un
+/// clic dessus ne la lui retire pas. Il se tient par son en-tête : quand son contenu change de
+/// hauteur, le haut reste où on l'a posé — AppKit garderait le bas, et l'en-tête sauterait.
+final class PanneauDeJeu: NSPanel {
+    override var canBecomeKey: Bool { false }
+    override var canBecomeMain: Bool { false }
+
+    override func setFrame(_ cadre: NSRect, display: Bool) {
+        var cadre = cadre
+        // Seul un changement de hauteur sur place (la taille du contenu) garde le haut ; un
+        // déplacement ou une place restaurée passent tels quels.
+        if cadre.origin == frame.origin, cadre.height != frame.height {
+            cadre.origin.y = frame.maxY - cadre.height
+        }
+        super.setFrame(cadre, display: display)
     }
 }
 

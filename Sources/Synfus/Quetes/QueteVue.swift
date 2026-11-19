@@ -291,7 +291,7 @@ struct QueteVue: View {
                     }
                     deplier(.objet(ressource.objet))
                 }
-                ouTrouver(.objet(ressource.objet), retrait: Self.colonneCoche + 2)
+                ouTrouver(.objet(ressource.objet), nom: ressource.nom, retrait: Self.colonneCoche + 2)
             }
         }
     }
@@ -314,13 +314,14 @@ struct QueteVue: View {
         .aide(sujet.estUnMonstre ? L("ouTrouver.aide.monstre") : L("ouTrouver.aide.objet"))
     }
 
-    /// `retrait` : sous le texte de la ligne, pas sous son icône.
+    /// `retrait` : sous le texte de la ligne, pas sous son icône ; `nom` : celui de l'objet, quand la
+    /// ligne le dit (le titre de sa recette épinglée).
     @ViewBuilder
-    private func ouTrouver(_ sujet: OuTrouver.Sujet, retrait: CGFloat) -> some View {
+    private func ouTrouver(_ sujet: OuTrouver.Sujet, nom: String? = nil, retrait: CGFloat) -> some View {
         if deplies.contains(sujet) {
             // Un autre sujet à la même place (autre quête) : une autre vue, qui
             // fait sa demande en paraissant.
-            OuTrouverVue(sujet: sujet, metriques: metriques)
+            OuTrouverVue(sujet: sujet, metriques: metriques, nom: nom)
                 .id(sujet)
                 .padding(.leading, retrait + metriques.ligneHorizontale)
                 .padding(.trailing, metriques.ligneHorizontale)
