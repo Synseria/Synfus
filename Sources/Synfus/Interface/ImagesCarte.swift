@@ -169,6 +169,29 @@ struct FondCarte: View {
     private static let voileTexte = 0.72
     private static let voileMilieu = 0.55
 
+    /// Les arrêts du voile, échantillonnés sur une courbe lisse : quelques arrêts reliés en ligne
+    /// droite font un creux en pointe au milieu, que l'œil lit comme un trait clair.
+    static func arrets(voile: Color, finHaut: CGFloat, debutBas: CGFloat) -> [Gradient.Stop] {
+        let haut = min(max(finHaut, 0.05), 0.95)
+        let bas = min(max(debutBas, haut), 1)
+        return (0...24).map { i in
+            let t = CGFloat(i) / 24
+            return Gradient.Stop(color: voile.opacity(opacite(t, haut: haut, bas: bas)), location: t)
+        }
+    }
+
+    /// L'opacité du voile à `t` (0 en haut, 1 en bas) : dense au bord, à la lisière du texte, puis
+    /// une cloche lisse (dérivée nulle aux deux bouts) vers le milieu.
+    static func opacite(_ t: CGFloat, haut: CGFloat, bas: CGFloat) -> Double {
+        func lisse(_ x: CGFloat) -> CGFloat { let x = min(max(x, 0), 1); return x * x * (3 - 2 * x) }
+        let piedBas = bas < 1 ? voileTexte : voileMilieu
+        if t <= haut { return voileBord + (voileTexte - voileBord) * Double(lisse(t / haut)) }
+        if t >= bas { return piedBas + (voileBord - piedBas) * Double(lisse((t - bas) / max(1 - bas, 0.0001))) }
+        let milieu = (haut + bas) / 2
+        if t <= milieu { return voileTexte + (voileMilieu - voileTexte) * Double(lisse((t - haut) / max(milieu - haut, 0.0001))) }
+        return voileMilieu + (piedBas - voileMilieu) * Double(lisse((t - milieu) / max(bas - milieu, 0.0001)))
+    }
+
     /// Le texte de la carte se pose sur une image : il s'écrit en clair, quel que soit le thème.
     @MainActor static func surImage(_ carte: Int?) -> Bool {
         carte != nil && Preferences.shared.vuesCartes && Ressources.visuelsDuJeu
@@ -181,13 +204,8 @@ struct FondCarte: View {
                 .overlay { VueCarte(carte: carte, cote: Self.cote).scaledToFill() }
                 .overlay {
                     // Seul dégradé de l'app : un voile d'un bord à l'autre, sans palier.
-                    LinearGradient(stops: [
-                        .init(color: voile.opacity(Self.voileBord), location: 0),
-                        .init(color: voile.opacity(Self.voileTexte), location: finHaut),
-                        .init(color: voile.opacity(Self.voileMilieu), location: (finHaut + debutBas) / 2),
-                        .init(color: voile.opacity(debutBas < 1 ? Self.voileTexte : Self.voileMilieu), location: debutBas),
-                        .init(color: voile.opacity(Self.voileBord), location: 1),
-                    ], startPoint: .top, endPoint: .bottom)
+                    LinearGradient(stops: Self.arrets(voile: voile, finHaut: finHaut, debutBas: debutBas),
+                                   startPoint: .top, endPoint: .bottom)
                 }
                 .clipShape(forme)
                 .overlay {
