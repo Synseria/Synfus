@@ -8,6 +8,7 @@ struct HarebourgVue: View {
     @ObservedObject private var lecteur = LecteurEcran.shared
     @ObservedObject private var previews = WindowPreviewService.shared
     @State private var regleDepliee = false
+    // periphery:ignore - lu par son `$` (le dépliable), que Periphery ne voit pas
     @State private var attenteDepliee = false
     private static let hauteurSchema: CGFloat = 48
 
