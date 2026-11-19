@@ -13,9 +13,9 @@ struct PaletteVue: View {
 
     private enum Champ { case recherche, etiquette }
 
-    /// Mesure de mise en page : trois rangées de cartes entières (deux lignes de titre et deux de sous-titre
-    /// réservées, étiquette sur sa ligne) avec leurs interstices.
-    static let hauteurCartes: CGFloat = 404
+    /// Trois rangées de cartes entières et leurs interstices, puis le haut de la quatrième : la grille
+    /// dit qu'elle défile.
+    static let hauteurCartes = 3 * CarteZaap<Never>.hauteur() + 3 * Jetons.espace2 + Jetons.espace5
 
     var body: some View {
         VStack(spacing: Jetons.espace2) {
@@ -379,13 +379,14 @@ struct PaletteVue: View {
     }
 }
 
-/// Une carte de zaap, pleine : nom et zone, la vignette de la carte du jeu à droite — jamais de texte
-/// posé sur une image du jeu —, puis l'étiquette, le favori et les coordonnées. Choisie, le fond du
-/// choix et son titre à l'accent.
+/// Une carte de la palette (zaap, lieu, donjon, PNJ, quête), pleine : titre et sous-titre, la vignette de
+/// la carte du jeu à droite, puis l'étiquette, le favori et les coordonnées. Toutes les cartes d'une
+/// grille ont la même hauteur (`hauteur`) : le titre sur deux lignes au plus, coupé en fin, le
+/// sous-titre et le pied sur une. Choisie, le fond du choix et son titre à l'accent.
 struct CarteZaap<Corps: View>: View {
     let entree: EntreePalette
     let choisie: Bool
-    /// Ce qui prend la place entre l'en-tête et le pied (les quêtes d'une position).
+    /// Ce qui prend la place entre l'en-tête et le pied (les quêtes d'une position), sur une ligne.
     private let corps: (() -> Corps)?
     @State private var survole = false
 
@@ -393,35 +394,40 @@ struct CarteZaap<Corps: View>: View {
         (self.entree, self.choisie, self.corps) = (entree, choisie, corps)
     }
 
+    /// La hauteur d'une carte : deux lignes de titre, une de sous-titre, le pied, leurs interstices et
+    /// la marge — et la ligne du corps quand la carte en a un.
+    static func hauteur(avecCorps: Bool = false) -> CGFloat {
+        let texte = 2 * Jetons.typoTitreCarte.interligne + Jetons.typoMeta.interligne
+        let corps = avecCorps ? Jetons.typoMeta.interligne + Jetons.espace1 : 0
+        return 2 * Jetons.espace2 + texte + Jetons.espace1 + corps + Jetons.espace1 + Jetons.hauteurCase
+    }
+
     var body: some View {
         let forme = RoundedRectangle(cornerRadius: Jetons.rayon2, style: .circular)
         VStack(alignment: .leading, spacing: Jetons.espace1) {
             HStack(alignment: .top, spacing: Jetons.espace2) {
-                // Deux lignes de titre et deux de sous-titre, réservées : rien de tronqué, et les cartes
-                // d'une même rangée ont la même hauteur.
                 VStack(alignment: .leading, spacing: 0) {
                     Text(entree.titre)
                         .font(Jetons.typoTitreCarte.font)
                         .foregroundStyle(Color.jeton(choisie ? \.accentTexte : \.encre))
-                        .lineLimit(2, reservesSpace: true)
+                        .lineLimit(2)
+                        .truncationMode(.tail)
                     Text(entree.itineraire ?? entree.sousTitre ?? "")
                         .font(Jetons.typoMeta.font)
                         .foregroundStyle(Color.jeton(entree.itineraire != nil ? \.accentTexte : \.encre2))
-                        .lineLimit(2, reservesSpace: true)
+                        .lineLimit(1)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 if let carte = entree.carte { MiniatureCarte(carte: carte, taille: LigneResultat.vignette) }
             }
-            if let corps {
-                corps().frame(maxHeight: .infinity, alignment: .top)
-            } else {
-                Spacer(minLength: Jetons.espace2)
-            }
+            if let corps { corps() }
+            Spacer(minLength: 0)
             pied
         }
         .padding(.vertical, Jetons.espace2)
         .padding(.horizontal, Jetons.espace3)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: Self.hauteur(avecCorps: corps != nil))
         // Le fond du choix et le survol se posent sur la plaque, sous le texte.
         .background {
             ZStack {
@@ -434,35 +440,31 @@ struct CarteZaap<Corps: View>: View {
         .onHover { survole = $0 }
     }
 
-    /// L'étiquette et le favori à gauche, « intérieur » et les coordonnées à droite : jamais coupés,
-    /// l'étiquette prend sa ligne quand elle n'entre pas.
+    /// L'étiquette et le favori à gauche, « intérieur » et les coordonnées à droite, sur une ligne :
+    /// les coordonnées ne se coupent jamais, l'étiquette cède et se coupe en fin.
     private var pied: some View {
-        let gauche = HStack(spacing: Jetons.espace2) {
-            if let etiquette = entree.etiquette { Badge(texte: etiquette, ton: .accent) }
+        HStack(spacing: Jetons.espace2) {
+            // L'étiquette en une ligne micro, sans pastille : elle aide à reconnaître la carte, elle
+            // n'a pas à peser plus que son titre.
+            if let etiquette = entree.etiquette {
+                Text(etiquette)
+                    .font(Jetons.typoMicro.font)
+                    .foregroundStyle(Color.jeton(\.accentTexte))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
             if entree.favori {
                 Image(systemName: "star.fill").font(Jetons.typoMeta.font).foregroundStyle(Color.jeton(\.accentTexte))
             }
+            Spacer(minLength: 0)
             if entree.interieur { EtiquetteInterieur(taille: Jetons.typoMicro) }
+            Text(entree.detail ?? "")
+                .font(Jetons.typoCode.font)
+                .foregroundStyle(Color.jeton(\.encre2))
+                .lineLimit(1)
+                .fixedSize()
         }
-        let droite = Text(entree.detail ?? "")
-            .font(Jetons.typoCode.font)
-            .foregroundStyle(Color.jeton(\.encre2))
-            .lineLimit(1)
-        return ViewThatFits(in: .horizontal) {
-            HStack(spacing: Jetons.espace2) {
-                gauche
-                Spacer(minLength: 0)
-                droite
-            }
-            VStack(alignment: .leading, spacing: Jetons.espace1) {
-                gauche
-                HStack(spacing: 0) {
-                    Spacer(minLength: 0)
-                    droite
-                }
-            }
-        }
-        .frame(minHeight: Jetons.hauteurCase)
+        .frame(height: Jetons.hauteurCase)
     }
 }
 
