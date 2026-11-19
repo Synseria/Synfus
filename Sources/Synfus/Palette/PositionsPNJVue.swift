@@ -52,17 +52,13 @@ private struct QuetesDePosition: View {
     /// Sur l'image de la carte : écrit en Nuit, sur le voile.
     let surImage: Bool
 
-    private func encre(_ jeton: ThemeCourant.Jeton) -> Color {
-        surImage ? Color.jeton(jeton, en: .nuit) : Color.jeton(jeton)
-    }
-
     var body: some View {
         ViewThatFits(in: .horizontal) {
             Text(quetes.joined(separator: " · "))
-                .foregroundStyle(encre(\.encre))
+                .foregroundStyle(Color.jeton(\.encre, surImage: surImage))
                 .lineLimit(1)
             Text(L("pnj.quetes", nombre: quetes.count, quetes.count))
-                .foregroundStyle(encre(\.accentTexte))
+                .foregroundStyle(Color.jeton(\.accentTexte, surImage: surImage))
                 .lineLimit(1)
         }
         .font(Jetons.typoMeta.font)

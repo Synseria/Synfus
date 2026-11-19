@@ -418,9 +418,7 @@ struct CarteZaap<Corps: View>: View {
     private var surImage: Bool { FondCarte.surImage(entree.carte) }
     private var hauteur: CGFloat { Self.hauteur(avecCorps: corps != nil, disposition: disposition) }
     /// Sur l'image, le texte s'écrit en clair quel que soit le thème : le voile est sombre.
-    private func encre(_ jeton: ThemeCourant.Jeton) -> Color {
-        surImage ? Color.jeton(jeton, en: .nuit) : Color.jeton(jeton)
-    }
+    private func encre(_ jeton: ThemeCourant.Jeton) -> Color { Color.jeton(jeton, surImage: surImage) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Jetons.espace1) {
@@ -479,7 +477,7 @@ struct CarteZaap<Corps: View>: View {
                     .truncationMode(.tail)
             }
             Spacer(minLength: 0)
-            if entree.interieur { EtiquetteInterieur(taille: Jetons.typoMicro) }
+            if entree.interieur { EtiquetteInterieur(taille: Jetons.typoMicro, surImage: surImage) }
             Text(entree.detail ?? "")
                 .font(Jetons.typoCode.font)
                 .foregroundStyle(encre(\.encre2))
@@ -615,13 +613,15 @@ struct LigneResultat: View {
 /// à entrer. La palette et le panneau des quêtes la disent pareil.
 struct EtiquetteInterieur: View {
     let taille: Jetons.Typo
+    /// Sur le voile d'une carte à image : en Nuit, lisible quelle que soit la nuance.
+    var surImage = false
 
     var body: some View {
         Text(L("carte.interieur"))
             .font(taille.font)
-            .foregroundStyle(Color.jeton(\.encre2))
+            .foregroundStyle(Color.jeton(\.encre2, surImage: surImage))
             .padding(.horizontal, Jetons.espace1)
-            .overlay(Capsule().strokeBorder(Color.jeton(\.filet), lineWidth: Jetons.epaisseurFilet))
+            .overlay(Capsule().strokeBorder(Color.jeton(\.filet, surImage: surImage), lineWidth: Jetons.epaisseurFilet))
             .lineLimit(1)
             .help(L("carte.interieur.aide"))
     }
