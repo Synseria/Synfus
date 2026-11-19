@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 /// Les onglets des réglages, dans l'ordre de leur barre : dix pages, chacune une suite de sections
@@ -59,16 +60,19 @@ final class OngletReglages: ObservableObject {
 
 /// La fenêtre des réglages, comme celles de toutes les apps Synseria : les onglets sans titre en haut
 /// (`BarreDesOnglets`, ils disent où l'on est), puis la page, une colonne centrée, une seule taille pour
-/// tous les onglets.
+/// tous les onglets. La vue remplit la fenêtre : une hauteur fixée dans la vue, plus courte que la
+/// fenêtre de toute sa barre de titre, laissait une bande vide sous la plaque.
 struct SettingsView: View {
     @ObservedObject private var onglet: OngletReglages
-    private let hauteur: CGFloat
+    private let hauteur: CGFloat?
 
-    /// La taille de la fenêtre, la même pour tous les onglets ; les captures d'une page longue passent
-    /// leur `hauteur`.
-    static let taille = CGSize(width: Jetons.largeurReglages, height: 760)
+    /// La taille de la fenêtre, barre de titre comprise, la même pour tous les onglets : faite pour
+    /// Général, la page qui s'ouvre au lancement, qui tient sans défiler ni laisser de vide dessous
+    /// (`ReglagesFenetreTests`). Les pages plus longues défilent.
+    static let taille = CGSize(width: Jetons.largeurReglages, height: 780)
 
-    init(onglet: OngletReglages = .shared, hauteur: CGFloat = SettingsView.taille.height) {
+    /// `hauteur` : les captures, hors fenêtre, fixent la leur ; dans la fenêtre, la vue la remplit.
+    init(onglet: OngletReglages = .shared, hauteur: CGFloat? = nil) {
         self.onglet = onglet
         self.hauteur = hauteur
     }
@@ -77,7 +81,7 @@ struct SettingsView: View {
         VStack(spacing: 0) {
             BarreDesOnglets(onglets: SettingsSection.allCases.map { .init(valeur: $0, libelle: $0.label, symbole: $0.icon) },
                             selection: Binding(get: { onglet.section }, set: { onglet.section = $0 }))
-            // La page sur sa plaque pleine, sous les onglets posés sur le verre.
+            // La page sur sa plaque pleine, sous les onglets posés sur le fond de la fenêtre.
             detail
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 // Le rang par défaut d'un bouton des réglages, y compris hors d'un formulaire (Diagnostic, listes).
@@ -91,9 +95,10 @@ struct SettingsView: View {
                 .padding([.horizontal, .bottom], Jetons.espace2)
         }
         .frame(width: Self.taille.width, height: hauteur)
+        .frame(maxHeight: .infinity)
         // Les onglets montent sous la barre de titre transparente, à hauteur des boutons de la fenêtre.
         .ignoresSafeArea(.container, edges: .top)
-        .background { VerreDeFenetre() }
+        .background { FondDeFenetre() }
     }
 
     @ViewBuilder
@@ -113,9 +118,11 @@ struct SettingsView: View {
     }
 }
 
-/// Le verre d'une fenêtre, sous tout son contenu, barre de titre comprise : franc au focus, dense hors
-/// focus (`TeinteDuVerre`). Transparence réduite, contraste augmenté et captures : le fond plein.
-struct VerreDeFenetre: View {
+/// Le fond d'une fenêtre, sous tout son contenu, barre de titre comprise : le matériau du système
+/// flouté sur ce qui est derrière, voilé de la page (`TeinteDuVerre`, franc au focus, dense hors focus) —
+/// le fond de la barre de titre des notes de Synthetic. Le verre nu laissait trop voir le décor autour de
+/// la plaque. Transparence réduite, contraste augmenté et captures : le fond plein.
+struct FondDeFenetre: View {
     @Environment(\.accessibilityReduceTransparency) private var transparenceReduite
     @Environment(\.colorSchemeContrast) private var contraste
 
@@ -123,10 +130,22 @@ struct VerreDeFenetre: View {
         if transparenceReduite || contraste == .increased || Ressources.captureDocumentation {
             Color.jeton(\.fondFenetre)
         } else {
-            Color.clear
-                .glassEffect(.regular, in: .rect)
-                .background { TeinteDuVerre(usage: .fenetre) }
+            MateriauDeFenetre()
+                .overlay { TeinteDuVerre(usage: .fenetre) }
                 .ignoresSafeArea()
         }
     }
+}
+
+/// Le matériau du système, toujours actif, même fenêtre non clé : la teinte posée dessus dit le focus.
+private struct MateriauDeFenetre: NSViewRepresentable {
+    func makeNSView(context _: Context) -> NSVisualEffectView {
+        let vue = NSVisualEffectView()
+        vue.material = .underWindowBackground
+        vue.blendingMode = .behindWindow
+        vue.state = .active
+        return vue
+    }
+
+    func updateNSView(_: NSVisualEffectView, context _: Context) {}
 }
