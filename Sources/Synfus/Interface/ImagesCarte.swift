@@ -154,14 +154,17 @@ struct FondCarte: View {
     let carte: Int?
     var choisie = false
     var survole = false
+    /// Où finit le voile du haut et où commence celui du bas, en part de la hauteur de la carte : le
+    /// bas du texte du haut, le haut du pied (1 : pas de pied).
+    var finHaut: CGFloat = 0.5
+    var debutBas: CGFloat = 1
     private let forme = RoundedRectangle(cornerRadius: Jetons.rayon2, style: .circular)
     /// Plus large qu'une case de la grille (trois au rang sur la largeur de la palette), que l'image remplit.
     private static let cote: CGFloat = 240
     /// Le voile sous le texte : assez dense pour le lire sur n'importe quel décor du jeu.
     private static let voileTexte = 0.8
-    /// Où finit le voile du haut et où commence celui du bas, en part de la hauteur de la carte (le
-    /// titre et le sous-titre au-dessus, le pied au-dessous), et le fondu de chacun vers l'image.
-    private static let (finHaut, debutBas, fondu) = (0.4, 0.8, 0.1)
+    /// Le fondu de chaque voile vers l'image, en part de la hauteur de la carte.
+    private static let fondu = 0.08
 
     /// Le texte de la carte se pose sur une image : il s'écrit en clair, quel que soit le thème.
     @MainActor static func surImage(_ carte: Int?) -> Bool {
@@ -177,10 +180,10 @@ struct FondCarte: View {
                     // Seul dégradé de l'app : le voile ne couvre que les bandes du texte.
                     LinearGradient(stops: [
                         .init(color: voile, location: 0),
-                        .init(color: voile, location: Self.finHaut),
-                        .init(color: .clear, location: Self.finHaut + Self.fondu),
-                        .init(color: .clear, location: Self.debutBas - Self.fondu),
-                        .init(color: voile, location: Self.debutBas),
+                        .init(color: voile, location: finHaut),
+                        .init(color: .clear, location: min(finHaut + Self.fondu, debutBas)),
+                        .init(color: .clear, location: max(debutBas - Self.fondu, finHaut)),
+                        .init(color: voile, location: debutBas),
                         .init(color: voile, location: 1),
                     ], startPoint: .top, endPoint: .bottom)
                 }

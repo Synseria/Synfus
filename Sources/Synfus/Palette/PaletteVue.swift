@@ -15,7 +15,7 @@ struct PaletteVue: View {
 
     /// Trois rangées de cartes à image entières et leurs interstices ; les cartes sans image, plus
     /// basses, montrent le haut d'une quatrième : la grille dit qu'elle défile.
-    static let hauteurCartes = 3 * CarteZaap<Never>.hauteur(avecImage: true) + 2 * Jetons.espace2
+    static let hauteurCartes = 3 * CarteZaap<Never>.hauteur(disposition: .init(avecImage: true)) + 2 * Jetons.espace2
 
     var body: some View {
         VStack(spacing: Jetons.espace2) {
@@ -231,11 +231,11 @@ struct PaletteVue: View {
     }
 
     private var grille: some View {
-        let avecImage = CarteZaap<Never>.avecImage(modele.entrees)
+        let disposition = DispositionCartes.de(modele.entrees)
         return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Jetons.espace2), count: PaletteModele.colonnes),
                   spacing: Jetons.espace2) {
             ForEach(Array(modele.entrees.enumerated()), id: \.element.id) { index, entree in
-                CarteZaap(entree: entree, choisie: index == modele.selection, avecImage: avecImage)
+                CarteZaap(entree: entree, choisie: index == modele.selection, disposition: disposition)
                     .id(entree.id)
                     .onTapGesture { modele.executer(entree) }
                     .help(entree.complet)
@@ -387,33 +387,36 @@ struct PaletteVue: View {
 struct CarteZaap<Corps: View>: View {
     let entree: EntreePalette
     let choisie: Bool
-    /// La grille montre des images : la carte garde leur bande, même sans la sienne.
-    var avecImage = false
-    /// Ce qui prend la place entre l'en-tête et le pied (les quêtes d'une position), sur une ligne.
-    private let corps: (() -> Corps)?
+    /// Ce que la grille montre : toutes ses cartes en gardent la place.
+    var disposition = DispositionCartes()
+    /// Ce qui prend la place entre l'en-tête et le pied (les quêtes d'une position), sur une ligne ;
+    /// `surImage` : écrit en Nuit, sur le voile.
+    private let corps: ((_ surImage: Bool) -> Corps)?
     @State private var survole = false
     // periphery:ignore - observé pour redessiner la carte quand `vuesCartes` change
     @ObservedObject private var prefs = Preferences.shared
 
-    init(entree: EntreePalette, choisie: Bool, avecImage: Bool = false, @ViewBuilder corps: @escaping () -> Corps) {
-        (self.entree, self.choisie, self.avecImage, self.corps) = (entree, choisie, avecImage, corps)
+    init(entree: EntreePalette, choisie: Bool, disposition: DispositionCartes = .init(),
+         @ViewBuilder corps: @escaping (_ surImage: Bool) -> Corps) {
+        (self.entree, self.choisie, self.disposition, self.corps) = (entree, choisie, disposition, corps)
     }
 
-    /// La hauteur d'une carte : deux lignes de titre, une de sous-titre, le pied, leurs interstices et
-    /// la marge — la ligne du corps et la bande de l'image quand la carte en a.
-    static func hauteur(avecCorps: Bool = false, avecImage: Bool = false) -> CGFloat {
-        let texte = 2 * Jetons.typoTitreCarte.interligne + Jetons.typoMeta.interligne
-        let corps = avecCorps ? Jetons.typoMeta.interligne + Jetons.espace1 : 0
-        let image = avecImage ? Jetons.espace6 : 0
-        return 2 * Jetons.espace2 + texte + Jetons.espace1 + corps + image + Jetons.espace1 + Jetons.hauteurCase
+    /// La hauteur du haut de la carte, de son bord au bas du texte : deux lignes de titre, une de
+    /// sous-titre, et la ligne du corps quand la carte en a un.
+    static func haut(avecCorps: Bool) -> CGFloat {
+        let corps = avecCorps ? Jetons.espace1 + Jetons.typoMeta.interligne : 0
+        return Jetons.espace2 + 2 * Jetons.typoTitreCarte.interligne + Jetons.typoMeta.interligne + corps
     }
 
-    /// Une grille d'entrées montre-t-elle des images ? Ses cartes ont alors toutes la bande.
-    @MainActor static func avecImage(_ entrees: [EntreePalette]) -> Bool {
-        entrees.contains { FondCarte.surImage($0.carte) }
+    /// La hauteur d'une carte : le haut, la bande de l'image, le pied, la marge du bas.
+    static func hauteur(avecCorps: Bool = false, disposition: DispositionCartes = .init()) -> CGFloat {
+        let image = disposition.avecImage ? Jetons.espace1 + Jetons.espace6 : 0
+        let pied = disposition.avecPied ? Jetons.espace1 + Jetons.hauteurCase : 0
+        return haut(avecCorps: avecCorps) + image + pied + Jetons.espace2
     }
 
     private var surImage: Bool { FondCarte.surImage(entree.carte) }
+    private var hauteur: CGFloat { Self.hauteur(avecCorps: corps != nil, disposition: disposition) }
     /// Sur l'image, le texte s'écrit en clair quel que soit le thème : le voile est sombre.
     private func encre(_ jeton: ThemeCourant.Jeton) -> Color {
         surImage ? Color.jeton(jeton, en: .nuit) : Color.jeton(jeton)
@@ -435,14 +438,14 @@ struct CarteZaap<Corps: View>: View {
             // Le favori occupe le coin : le titre ne passe pas dessous.
             .padding(.trailing, entree.favori ? Jetons.espace4 : 0)
             .frame(maxWidth: .infinity, alignment: .leading)
-            if let corps { corps() }
+            if let corps { corps(surImage) }
             Spacer(minLength: 0)
-            pied
+            if disposition.avecPied { pied }
         }
         .padding(.vertical, Jetons.espace2)
         .padding(.horizontal, Jetons.espace3)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(height: Self.hauteur(avecCorps: corps != nil, avecImage: avecImage))
+        .frame(height: hauteur)
         .overlay(alignment: .topTrailing) {
             if entree.favori {
                 Image(systemName: "star.fill")
@@ -451,7 +454,12 @@ struct CarteZaap<Corps: View>: View {
                     .padding(Jetons.espace2)
             }
         }
-        .background { FondCarte(carte: entree.carte, choisie: choisie, survole: survole) }
+        .background {
+            // Le voile couvre le haut jusqu'au bas du texte, et le pied.
+            FondCarte(carte: entree.carte, choisie: choisie, survole: survole,
+                      finHaut: Self.haut(avecCorps: corps != nil) / hauteur,
+                      debutBas: disposition.avecPied ? (hauteur - Jetons.espace2 - Jetons.hauteurCase) / hauteur : 1)
+        }
         .contentShape(RoundedRectangle(cornerRadius: Jetons.rayon2, style: .circular))
         .onHover { survole = $0 }
         .apercuCarteAuSurvol(surImage ? entree.carte : nil)
@@ -483,8 +491,21 @@ struct CarteZaap<Corps: View>: View {
 }
 
 extension CarteZaap where Corps == Never {
-    init(entree: EntreePalette, choisie: Bool, avecImage: Bool = false) {
-        (self.entree, self.choisie, self.avecImage, self.corps) = (entree, choisie, avecImage, nil)
+    init(entree: EntreePalette, choisie: Bool, disposition: DispositionCartes = .init()) {
+        (self.entree, self.choisie, self.disposition, self.corps) = (entree, choisie, disposition, nil)
+    }
+}
+
+/// Ce qu'une grille de cartes montre, pour que toutes ses cartes aient la même hauteur : la bande de
+/// l'image dès qu'une carte en a une, le pied dès qu'une carte a de quoi l'emplir (étiquette, intérieur,
+/// coordonnées) — une grille de quêtes n'en a pas et s'en passe.
+struct DispositionCartes: Equatable {
+    var avecImage = false
+    var avecPied = true
+
+    @MainActor static func de(_ entrees: [EntreePalette]) -> DispositionCartes {
+        DispositionCartes(avecImage: entrees.contains { FondCarte.surImage($0.carte) },
+                          avecPied: entrees.contains { $0.etiquette != nil || $0.interieur || $0.detail != nil })
     }
 }
 
