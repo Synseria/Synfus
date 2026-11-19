@@ -14,14 +14,15 @@ struct PositionsPNJVue: View {
 
     var body: some View {
         let positions = modele.positionsDeplie
+        let disposition = DispositionCartes.de(positions.map(\.entree))
         let largeur = DispositionPositions.largeur(nombre: positions.count, disponible: disponible,
                                                    interstice: Self.interstice)
         ScrollViewReader { defilement in
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(alignment: .top, spacing: Self.interstice) {
                     ForEach(positions) { position in
-                        CarteZaap(entree: position.entree, choisie: modele.position == position.position) {
-                            QuetesDePosition(quetes: position.quetes)
+                        CarteZaap(entree: position.entree, choisie: modele.position == position.position, disposition: disposition) { surImage in
+                            QuetesDePosition(quetes: position.quetes, surImage: surImage)
                         }
                         .frame(width: largeur)
                         .id(Self.ancre(position.position))
@@ -48,14 +49,16 @@ struct PositionsPNJVue: View {
 /// leur nombre, jamais coupé ; la liste entière est dans l'infobulle.
 private struct QuetesDePosition: View {
     let quetes: [String]
+    /// Sur l'image de la carte : écrit en Nuit, sur le voile.
+    let surImage: Bool
 
     var body: some View {
         ViewThatFits(in: .horizontal) {
             Text(quetes.joined(separator: " · "))
-                .foregroundStyle(Color.jeton(\.encre))
+                .foregroundStyle(Color.jeton(\.encre, surImage: surImage))
                 .lineLimit(1)
             Text(L("pnj.quetes", nombre: quetes.count, quetes.count))
-                .foregroundStyle(Color.jeton(\.accentTexte))
+                .foregroundStyle(Color.jeton(\.accentTexte, surImage: surImage))
                 .lineLimit(1)
         }
         .font(Jetons.typoMeta.font)

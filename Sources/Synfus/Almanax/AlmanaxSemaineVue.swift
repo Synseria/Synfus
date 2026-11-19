@@ -34,7 +34,8 @@ struct AlmanaxSemaineVue: View {
         if let deplie, NavigationAlmanax.ligne(de: index).contains(deplie),
            let objet = semaine[deplie].almanax?.offrandes.first?.objet {
             // Sur la largeur de la ligne, dans un creux : le chargement se lit comme le contenu de la carte.
-            OuTrouverVue(sujet: .objet(objet), metriques: .confort)
+            OuTrouverVue(sujet: .objet(objet), metriques: .confort,
+                         nom: semaine[deplie].almanax?.nomOffrande(L10n.courante.langue))
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(Jetons.espace2)
                 .background(RoundedRectangle(cornerRadius: Jetons.rayon2, style: .continuous).fill(Color.jeton(\.creux)))

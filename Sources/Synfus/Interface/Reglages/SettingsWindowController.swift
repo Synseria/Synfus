@@ -22,7 +22,7 @@ final class SettingsWindowController: NSObject {
             let utile = (FloatingBarController.shared.visibleBarFrame.flatMap { barre in
                 NSScreen.screens.first { $0.frame.intersects(barre) } } ?? NSScreen.main)?.visibleFrame.height
             let hauteur = min(SettingsView.taille.height, (utile ?? SettingsView.taille.height) - Self.gap * 2)
-            let window = Self.batir(SettingsView(hauteur: hauteur))
+            let window = Self.batir(SettingsView(), hauteur: hauteur)
             self.window = window
             NotificationCenter.default.addObserver(self, selector: #selector(windowWillClose),
                                                    name: NSWindow.willCloseNotification, object: window)
@@ -44,11 +44,18 @@ final class SettingsWindowController: NSObject {
 
     /// La fenêtre autour de `contenu`, l'unique façon de la bâtir : les captures jugent celle que
     /// l'utilisateur voit. Sans titre affiché : les onglets disent où l'on est ; le nom reste pour le
-    /// menu Fenêtre et VoiceOver. Le verre monte sous la barre de titre, la fenêtre n'a pas de fond.
-    static func batir(_ contenu: some View) -> NSWindow {
-        let window = NSWindow(contentViewController: NSHostingController(rootView: contenu.racineSynfus()))
+    /// menu Fenêtre et VoiceOver. Le fond monte sous la barre de titre, la fenêtre n'a pas le sien. La
+    /// fenêtre a la taille commune, barre de titre comprise, et la vue la remplit : jamais l'inverse,
+    /// la taille idéale de la vue poussait la fenêtre de la hauteur de sa barre de titre.
+    static func batir(_ contenu: some View, hauteur: CGFloat = SettingsView.taille.height) -> NSWindow {
+        let hote = NSHostingController(rootView: contenu.racineSynfus())
+        hote.sizingOptions = []
+        let window = NSWindow(contentRect: NSRect(origin: .zero, size: CGSize(width: SettingsView.taille.width, height: hauteur)),
+                              styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
+                              backing: .buffered, defer: true)
+        window.contentViewController = hote
+        window.setContentSize(CGSize(width: SettingsView.taille.width, height: hauteur))
         window.title = L("reglages.titre")
-        window.styleMask = [.titled, .closable, .miniaturizable, .fullSizeContentView]
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
         window.isOpaque = false

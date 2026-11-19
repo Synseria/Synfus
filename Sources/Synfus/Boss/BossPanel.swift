@@ -1,20 +1,13 @@
 import AppKit
 import SwiftUI
 
-/// Jamais clé : en combat, la frappe va aux raccourcis de sorts du jeu, et un
-/// clic sur le panneau (un coup compté, une confusion choisie) ne la lui
-/// retire pas.
-private final class PanneauBoss: NSPanel {
-    override var canBecomeKey: Bool { false }
-    override var canBecomeMain: Bool { false }
-}
-
 /// Le panneau d'aide aux boss, posé sur le jeu : la mécanique du boss choisi
 /// et le tour du combat. Montré, il fait lire au tour le combat, et en combat
 /// ce que le boss demande (`CibleBoss.lectures`) chez le perso devant — si
 /// l'enregistrement de l'écran est déjà permis, jamais il ne le demande de
 /// lui-même. Comme les quêtes, il ne se montre que
-/// devant Dofus (`PanneauxJeu`) ; AppKit garde sa position.
+/// devant Dofus (`PanneauxJeu`) ; AppKit garde sa position. Jamais clé
+/// (`PanneauDeJeu`) : en combat, la frappe va aux raccourcis de sorts du jeu.
 @MainActor
 final class BossPanel: NSObject, ObservableObject {
     static let shared = BossPanel()
@@ -67,7 +60,7 @@ final class BossPanel: NSObject, ObservableObject {
     private func construire() -> NSPanel {
         let hosting = NSHostingController(rootView: BossVue().racineSynfus())
         hosting.sizingOptions = [.preferredContentSize]
-        let panel = PanneauBoss(
+        let panel = PanneauDeJeu(
             contentRect: NSRect(x: 0, y: 0, width: BossVue.largeur, height: 300),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
