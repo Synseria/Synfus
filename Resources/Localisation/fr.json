@@ -409,7 +409,7 @@
   "lieux.marques": "Étiquetés ou favoris",
   "maj.aJour": "À jour",
   "maj.alerte.detail": "Synfus se relance ; macOS redemandera les autorisations.",
-  "maj.alerte.installer": "Installer et relancer",
+  "maj.alerte.installer": "Installer",
   "maj.alerte.titre": "Installer Synfus %@ ?",
   "maj.autorisations": "À redonner après la mise à jour",
   "maj.autorisations.aide": "Les versions publiées ne sont pas signées par un certificat Apple payant : macOS reconnaît Synfus à l'empreinte de son binaire, qui change à chaque version, et les autorisations de l'ancienne ne valent plus. Si une case reste cochée sans effet, retirer Synfus de la liste (−) puis l'y remettre.",
