@@ -79,8 +79,9 @@ struct ShortcutsSettings: View {
                       aide: L("raccourcis.enchainer.aide") + "\n\n" + L("raccourcis.enchainer.touche.aide")) {
                     HStack(spacing: Jetons.espace2) {
                         if prefs.advanceOnClick {
-                            MenuEnChamp(titre: L("raccourcis.enchainer.touche"),
-                                        options: ClickModifier.allCases.map { ($0, $0.label) }, selection: $prefs.advanceModifier)
+                            SelecteurEnListe(L("raccourcis.enchainer.touche"), selection: $prefs.advanceModifier,
+                                             options: ClickModifier.allCases.map { ($0, $0.label) })
+                                .fixedSize()
                         }
                         Toggle(L("raccourcis.enchainer.bascule"), isOn: Binding(
                             get: { prefs.advanceOnClick },
@@ -103,8 +104,9 @@ struct ShortcutsSettings: View {
 
             Bloc(L("reglages.attention")) {
                 Ligne(titre: L("raccourcis.attention.reaction"), aide: aideAttention) {
-                    MenuEnChamp(titre: L("raccourcis.attention.reaction"),
-                                options: AttentionAction.allCases.map { ($0, $0.label) }, selection: $prefs.attentionAction)
+                    SelecteurEnListe(L("raccourcis.attention.reaction"), selection: $prefs.attentionAction,
+                                     options: AttentionAction.allCases.map { ($0, $0.label) })
+                        .fixedSize()
                 }
                 RaccourciReglable(label: L("raccourcis.attention.bascule"), chemin: \.toggleAutoFocus)
             }

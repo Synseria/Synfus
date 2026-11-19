@@ -1,5 +1,5 @@
 // Engendré par Synseria-Design — ne pas retoucher : changer jetons.json ou apps/Synfus.json, puis sh propager.sh.
-// jetons.json 9109fc88022f5d8a · contenu 625eae04c1e0a0dd
+// jetons.json c5f3400ce23232ce · contenu d4eb838d050ab382
 import SwiftUI
 
 // Les choix de la trousse : interrupteur, case ronde et radio, segmentés, onglets ronds, puces, barre
@@ -275,6 +275,7 @@ private struct OngletRond: ButtonStyle {
                 .compositingGroup()
                 .opacity(actif ? 1 : Jetons.opaciteDesactive)
                 .onHover { survoleALaSouris = $0 }
+                .curseurDeClic(actif)
                 .animation(Jetons.courbeStandard.animation(Jetons.dureeRapide), value: survole)
         }
 
@@ -334,29 +335,27 @@ private struct RondACocher: ButtonStyle {
     let coche: Bool
     let radio: Bool
 
-    func makeBody(configuration: Configuration) -> some View { Corps(coche: coche, radio: radio, appuye: configuration.isPressed) }
+    func makeBody(configuration: Configuration) -> some View {
+        ReactionDeCase(diametre: Jetons.diametreRond, cochee: coche, appuye: configuration.isPressed) { survole, presse in
+            Dessin(coche: coche, radio: radio, survole: survole, presse: presse)
+        }
+    }
 
-    private struct Corps: View {
+    private struct Dessin: View {
         let coche: Bool
         let radio: Bool
-        let appuye: Bool
-        @Environment(\.isEnabled) private var actif
-        @Environment(\.isFocused) private var focalise
-        @Environment(\.etatImpose) private var impose
+        let survole: Bool
+        let presse: Bool
         @Environment(\.couleursSynseria) private var c
-        @State private var survoleALaSouris = false
         /// Le trait du rond (`.ck` : 2 px).
         private static let trait: CGFloat = 2
 
-        private var presse: Bool { actif && (impose?.presse ?? appuye) }
-        private var survole: Bool { actif && (impose?.survole ?? survoleALaSouris) }
-
         var body: some View {
             let plein = presse ? c.accentPresse : survole ? c.accentSurvol : c.accent
-            let bord = coche ? plein : survole && !presse ? c.encre2 : c.encre3
-            let fond = coche ? plein : presse ? c.selection : survole ? c.survol : c.encre.voile(0)
+            let bord = coche ? plein : survole || presse ? c.encre2 : c.encre3
             ZStack {
-                Circle().fill(fond.couleur)
+                // Non cochée, rien dedans : le halo, dessous, en fait un seul disque.
+                Circle().fill((coche ? plein : c.encre.voile(0)).couleur)
                 if coche && radio {
                     Circle().inset(by: Self.trait).strokeBorder(c.plaque.couleur, lineWidth: Jetons.espace1)
                 }
@@ -366,14 +365,114 @@ private struct RondACocher: ButtonStyle {
                 }
             }
             .frame(width: Jetons.diametreRond, height: Jetons.diametreRond)
+        }
+    }
+}
+
+/// Ce qui réagit dans toute case ronde qui se coche (`.ck`, `.rd`, `.rond`), une seule règle : comme
+/// un bouton-icône, la main, au survol puis sous le doigt un halo de `hauteur-controle`, le voile de
+/// l'encre (`survol` se perdrait dans une rangée survolée), qui ne pousse rien ; la pression la
+/// rétrécit ; l'anneau du focus. Toute la case prend le clic, son centre compris.
+private struct ReactionDeCase<Dessin: View>: View {
+    let diametre: CGFloat
+    let cochee: Bool
+    let appuye: Bool
+    @ViewBuilder let dessin: (_ survole: Bool, _ presse: Bool) -> Dessin
+    @Environment(\.isEnabled) private var actif
+    @Environment(\.isFocused) private var focalise
+    @Environment(\.etatImpose) private var impose
+    @Environment(\.couleursSynseria) private var c
+    @State private var survoleALaSouris = false
+
+    /// Le halo déborde de la case d'autant tout autour : `hauteur-controle` autour de `diametre-rond`.
+    private static var debord: CGFloat { (Jetons.hauteurControle - Jetons.diametreRond) / 2 }
+
+    private var presse: Bool { actif && (impose?.presse ?? appuye) }
+    private var survole: Bool { actif && (impose?.survole ?? survoleALaSouris) }
+
+    var body: some View {
+        let halo = diametre + 2 * Self.debord
+        dessin(survole, presse)
+            .background {
+                if survole || presse {
+                    Circle().fill(c.rvb(presse ? .voileDePression : .voileDeSurvol).couleur).frame(width: halo, height: halo)
+                }
+            }
             .anneauDeFocus(Circle(), visible: actif && (impose?.focus ?? focalise))
             .contentShape(.circle)
+            .scaleEffect(presse ? Jetons.echellePressee : 1)
             .compositingGroup()
             .opacity(actif ? 1 : Jetons.opaciteDesactive)
             .onHover { survoleALaSouris = $0 }
             .curseurDeClic(actif)
-            .animation(Jetons.courbeStandard.animation(Jetons.dureeRapide), value: [coche, survole, presse])
+            .animation(Jetons.courbeStandard.animation(Jetons.dureeRapide), value: [cochee, survole, presse])
+    }
+}
+
+// MARK: - La case d'une tâche
+
+/// La case ronde d'une tâche (`.rond`), le dessin seul : un rond de `diametre-rond` (`diametre-mini`
+/// en mini) au trait d'`encre-3`, pointillé pour ce qui ne se compte pas ; cochée, pleine `accent` et
+/// la coche. Inerte (un pas fait, un calage) : ce qui se coche passe par `.caseDeTache`.
+struct CaseDeTache: View {
+    let cochee: Bool
+    var pointillee = false
+    var mini = false
+    fileprivate var survolee = false
+    fileprivate var pressee = false
+    @Environment(\.couleursSynseria) private var c
+
+    init(cochee: Bool, pointillee: Bool = false, mini: Bool = false) {
+        self.cochee = cochee
+        self.pointillee = pointillee
+        self.mini = mini
+    }
+
+    /// Le trait du rond (`.rond` : 2 px) ; le pointillé, son pas (le masque de `.rond.pt`).
+    static let trait: CGFloat = 2
+    static let pas: [CGFloat] = [2, 4]
+    var diametre: CGFloat { mini ? Jetons.diametreMini : Jetons.diametreRond }
+
+    var body: some View {
+        let reagit = survolee || pressee
+        let plein = pressee ? c.accentPresse : survolee ? c.accentSurvol : c.accent
+        let bord = cochee ? plein : reagit ? c.encre2 : c.encre3
+        ZStack {
+            // Non cochée, rien dedans : le halo du bouton, dessous, en fait un seul disque.
+            Circle().fill((cochee ? plein : c.encre.voile(0)).couleur)
+            if cochee {
+                // La coche de `.rond.ok svg` : `diametre-mini`, le tiers de moins en mini (8 sur 12).
+                let coche = mini ? Jetons.diametreMini * 2 / 3 : Jetons.diametreMini
+                Coche().fill(c.texteSurAccent.couleur).frame(width: coche, height: coche)
+            } else {
+                Circle().strokeBorder(bord.couleur, style: StrokeStyle(lineWidth: Self.trait, dash: pointillee ? Self.pas : []))
+            }
         }
+        .frame(width: diametre, height: diametre)
+    }
+}
+
+/// La case d'une tâche qui se coche : elle réagit comme toute case ronde (`ReactionDeCase`).
+/// L'étiquette du bouton n'est pas dessinée : `Button(action:) { EmptyView() }`.
+struct BoutonDeCase: ButtonStyle {
+    let cochee: Bool
+    var pointillee = false
+    var mini = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        let dessin = CaseDeTache(cochee: cochee, pointillee: pointillee, mini: mini)
+        return ReactionDeCase(diametre: dessin.diametre, cochee: cochee, appuye: configuration.isPressed) { survole, presse in
+            var reagit = dessin
+            reagit.survolee = survole
+            reagit.pressee = presse
+            return reagit
+        }
+    }
+}
+
+extension ButtonStyle where Self == BoutonDeCase {
+    static func caseDeTache(cochee: Bool, pointillee: Bool = false, mini: Bool = false) -> BoutonDeCase {
+        BoutonDeCase(cochee: cochee, pointillee: pointillee, mini: mini)
     }
 }
 
@@ -457,6 +556,7 @@ struct Puce: View {
         .background((choisie ? c.selection : c.survol).couleur, in: .capsule)
         .overlay { if auClavier { Capsule().strokeBorder(c.accent.couleur, lineWidth: Jetons.epaisseurFocus) } }
         .contentShape(.capsule)
+        .curseurDeClic(true)
     }
 }
 
