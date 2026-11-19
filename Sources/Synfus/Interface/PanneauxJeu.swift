@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 /// Ce que partagent les panneaux posés sur le jeu — quêtes, chasse, aide aux
-/// boss : quand ils se montrent, et les boutons de leur en-tête.
+/// boss, recette : quand ils se montrent, et les boutons de leur en-tête.
 @MainActor
 enum PanneauxJeu {
     /// Chaque panneau revoit s'il se montre — au changement d'app (`force`),
@@ -12,6 +12,7 @@ enum PanneauxJeu {
         QuetePanel.shared.revoirVisibilite(force: force)
         ChassePanel.shared.revoirVisibilite(force: force)
         BossPanel.shared.revoirVisibilite(force: force)
+        RecettePanel.shared.revoirVisibilite(force: force)
     }
 
     /// Remet à leur place d'origine les panneaux ouverts, avec la barre : le geste du menu pour un
@@ -21,6 +22,7 @@ enum PanneauxJeu {
         QuetePanel.shared.recentrer()
         ChassePanel.shared.recentrer()
         BossPanel.shared.recentrer()
+        RecettePanel.shared.recentrer()
     }
 
     // MARK: - Place d'un panneau

@@ -262,7 +262,7 @@ struct PaletteVue: View {
                 if deplie {
                     Group {
                         switch entree.effet {
-                        case .ouTrouver(let sujet): OuTrouverVue(sujet: sujet, metriques: .confort)
+                        case .ouTrouver(let sujet): OuTrouverVue(sujet: sujet, metriques: .confort, nom: entree.titre)
                         case .donjon(let id): FicheDonjonVue(id: id, modele: modele)
                         default: if entree.pnj != nil { PositionsPNJVue(modele: modele) }
                         }
