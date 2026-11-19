@@ -1,6 +1,6 @@
 ---
 name: mise-a-jour
-description: Mise à jour de Synfus depuis les releases GitHub — vérification quotidienne, proposition, téléchargement contrôlé, remplacement par un script détaché, autorisations TCC effacées (releases ad hoc), message après mise à jour, essai local par --simuler-version ; et le rafraîchissement quotidien des données DofusDB. Charger avant de toucher MiseAJour/, App/DonneesDuJeu.swift, Tools/publier-release.sh ou le format des assets d'une release.
+description: Mise à jour de Synfus depuis les releases GitHub — vérification quotidienne, proposition, téléchargement contrôlé, canal Stable/Bêta, remplacement atomique et relance, autorisations TCC effacées (releases ad hoc), message après mise à jour, essai local par --simuler-version ; et le rafraîchissement quotidien des données DofusDB. Charger avant de toucher MiseAJour/, App/DonneesDuJeu.swift, Tools/publier-release.sh ou le format des assets d'une release.
 user-invocable: false
 ---
 
@@ -8,35 +8,40 @@ user-invocable: false
 
 ## Comportement
 
+Le déroulé est celui de `SynseriaKit` ▸ `MiseAJour` (skill globale `socle-synseria`), au geste
+(`.auGeste`) ; `ReleasesDeSynfus` en est la part propre à Synfus.
+
 - **Vérification** au lancement puis toutes les 24 h tant que `verifierMisesAJour` (Réglages ›
-  Général, allumé par défaut) : `GET api.github.com/repos/Synseria/Synfus/releases/latest`, qui
-  écarte brouillons et préversions. Un binaire nu (sans `CFBundleShortVersionString`) ne vérifie
-  rien. GitHub muet → état `inconnu`, rien d'affiché, on réessaie au tour suivant.
+  Général, allumé par défaut) : `GET api.github.com/repos/Synseria/Synfus/releases?per_page=30`
+  (brouillons écartés par l'API). **Canal** (`canalDeMiseAJour`, Stable par défaut) : Stable prend
+  la plus haute release finale, Bêta la plus haute de toutes, `-rc.N` comprises
+  (`ReleasePubliee.plusHaute`) ; changer de canal relance la recherche ; jamais de retour en
+  arrière. La release choisie sans le DMG de ce Mac ou sans `SHA256SUMS.txt` ne se propose pas
+  (rien ne se dit : `repos`, comme avant). Un binaire nu (sans `CFBundleShortVersionString`) ne vérifie rien. GitHub muet →
+  `echec(.reseau, nil)`, « Réessayer ».
 - **Proposition, jamais d'installation seule** : « Installer Synfus X.Y.Z… » en tête du menu et
   bouton sur la ligne Version, puis une `NSAlert` au premier plan (Installer et relancer · Annuler ·
   Nouveautés, qui ouvre la page et laisse l'alerte en place). Une notification système annonce une version une seule fois (`derniereVersionNotifiee`) ; au premier lancement après une mise à jour, le menu offre « Nouveautés de la X.Y.Z » sous À propos.
 - **macOS minimum** : le nom du DMG le porte (`Synfus-X.Y.Z-macos26-arm64.dmg`, `MACOS_MINIMUM`
   de build.sh, lu dans `platforms` de Package.swift, seule source). Une release plus récente qui exige
   un macOS que ce Mac n'a pas passe à l'état `incompatible` : « Synfus X nécessite macOS N », ni
-  bouton, ni notification, ni entrée de menu (`MiseAJour.etat`, pur et testé). Second filet après
-  extraction : `LSMinimumSystemVersion` de l'app comparé au système (`Echec.systeme` → `incompatible`).
+  bouton, ni notification, ni entrée de menu. Second filet après extraction (kit) :
+  `LSMinimumSystemVersion` de l'app comparé au système (`.systeme` → `incompatible`).
   Une release sans minimum dans le nom n'est pas lue.
-- **Installation** (`InstallateurMiseAJour`, acteur sans état) : DMG `Synfus-X.Y.Z-macos<N>-<arch>.dmg`
-  téléchargé (arch du binaire qui tourne : sous Rosetta, x86_64), empreinte comparée à
-  `SHA256SUMS.txt` de la même release, `hdiutil attach -nobrowse -readonly`, app copiée par
-  `ditto`, puis contrôlée : même `CFBundleIdentifier`, `CFBundleShortVersionString` = numéro du
-  tag, `codesign --verify --deep --strict`. Téléchargée par `URLSession`, l'app n'a **pas** de
-  quarantaine.
-- **Remplacement** : une app ne se remplace pas en marche. Un script `bash -c` détaché attend la
-  fin du PID (une minute au plus, sinon abandon sans rien toucher), déplace l'ancienne dans le
-  dossier de travail, copie la nouvelle (l'ancienne revient si la copie échoue), lance
-  `tccutil reset Accessibility|ScreenCapture fr.synseria.Synfus`, puis `open`. Dossier parent ou
-  bundle non inscriptible (app traduite, volume en lecture seule) → `echec(.ecriture)` et bouton
-  « Télécharger » vers la page de la release.
+- **Installation** (kit, sur le geste) : DMG `Synfus-X.Y.Z-macos<N>-<arch>.dmg` téléchargé (arch
+  du binaire qui tourne : sous Rosetta, x86_64), empreinte comparée à `SHA256SUMS.txt` de la même
+  release, `hdiutil attach -nobrowse -readonly`, app copiée par `ditto`, puis contrôlée : même
+  `CFBundleIdentifier`, `CFBundleShortVersionString` = numéro du tag, signature intacte (code
+  imbriqué compris). Téléchargée par `URLSession`, l'app n'a **pas** de quarantaine.
+- **Remplacement** (kit) : l'app prête recontrôlée (entière, signature), `replaceItemAt`, atomique, en place pendant que Synfus tourne (l'ancienne
+  reste entière si l'échange échoue), puis `tccutil reset Accessibility|ScreenCapture
+  fr.synseria.Synfus`, puis relance (un shell attend la fin du processus avant `open`). Paquet qui
+  n'est pas un `.app`, dossier parent ou bundle non inscriptible (app traduite, volume en lecture
+  seule) → `echec(.ecriture)` et bouton « Télécharger » vers la page de la release.
 - **Pourquoi effacer les autorisations** : les releases sont signées **ad hoc** (pas de Developer
   ID). TCC lie alors l'autorisation à l'empreinte du binaire : l'entrée de l'ancienne version
   resterait cochée sans effet. Effacée, macOS la redemande proprement.
-- **Après une mise à jour** (`apresMiseAJour`, pur et testé) : `derniereVersionLancee` différente
+- **Après une mise à jour** (`VersionInstallee.apresMiseAJour`, kit) : `derniereVersionLancee` différente
   de la version qui tourne, ou absente d'une sauvegarde existante (version d'avant ce réglage) —
   jamais au premier lancement. Tant qu'une autorisation manque, l'onglet Général affiche
   « Mis à jour en X.Y.Z : autorisations à redonner » avec le pourquoi en ⓘ. Vaut aussi pour une
@@ -60,13 +65,13 @@ installée ne s'y voit que si cette release le contient déjà.
 
 ## Publication — ce que l'app attend d'une release
 
-`Tools/publier-release.sh` produit exactement ce que `VersionPubliee.lire` exige : tag `vX.Y.Z`,
+`Tools/publier-release.sh` produit exactement ce que `ReleasesDeSynfus.lire` exige : tag `vX.Y.Z`,
 assets `Synfus-X.Y.Z-macos<N>-arm64.dmg`, `Synfus-X.Y.Z-macos<N>-x86_64.dmg`, `SHA256SUMS.txt`
 (format `shasum`), l'app à la racine du DMG sous le nom `Synfus.app`. Changer un nom ou le format
 casse la mise à jour de **toutes** les versions déjà installées : jamais sans garder l'ancien en
 parallèle — sauf pour écarter à dessein des versions qui ne doivent plus rien proposer (ci-dessous).
-Une `X.Y.Z-rc.N` part en **pre-release** (`--prerelease`) : `releases/latest` l'écarte, aucune
-version installée ne la propose ; elle s'installe à la main (DMG ou `sh run.sh --install`).
+Une `X.Y.Z-rc.N` part en **pre-release** (`--prerelease`) : seul le canal Bêta la propose ; les
+versions d'avant le canal (qui lisent `releases/latest`) ne la voient jamais.
 
 ## Passage à macOS 26 (0.14 → 0.15) — le piège des versions sans garde
 

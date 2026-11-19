@@ -1,6 +1,6 @@
 // swift-tools-version: 6.4
 // Copié de SynseriaKit (Synseria-Design) — ne pas retoucher : changer le paquet dans Synseria-Design, puis sh propager.sh.
-// SynseriaKit 832ae65487891069 · contenu 824b28ea4e81e2e3
+// SynseriaKit 25f4236349ad81d5 · contenu 004a0e60045df933
 
 import PackageDescription
 
@@ -9,9 +9,12 @@ let package = Package(
     platforms: [.macOS(.v26)],
     products: [
         .library(name: "Telemetrie", targets: ["Telemetrie"]),
+        .library(name: "MiseAJour", targets: ["MiseAJour", "Versions"]),
     ],
     targets: [
-        .target(name: "Telemetrie", path: "Sources/Telemetrie"),
+        .target(name: "Versions", path: "Sources/Versions"),
+        .target(name: "Telemetrie", dependencies: ["Versions"], path: "Sources/Telemetrie"),
+        .target(name: "MiseAJour", dependencies: ["Versions"], path: "Sources/MiseAJour"),
     ],
     swiftLanguageModes: [.v6]
 )

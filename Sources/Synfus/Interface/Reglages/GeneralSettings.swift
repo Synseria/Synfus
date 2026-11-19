@@ -1,3 +1,4 @@
+import MiseAJour
 import SwiftUI
 
 /// Onglet Général : ce qui conditionne tout le reste — les deux autorisations système —, puis le
@@ -6,7 +7,7 @@ struct GeneralSettings: View {
     @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var manager = WindowManager.shared
     @ObservedObject private var previews = WindowPreviewService.shared
-    @ObservedObject private var miseAJour = MiseAJour.shared
+    private let miseAJour = MiseAJour.shared
     @State private var launchAtLogin = LaunchAtLogin.isEnabled
     /// `""` = suivre le système, sinon le code de la langue imposée.
     @State private var langue = LangueReglage.choisie?.rawValue ?? ""
@@ -46,6 +47,12 @@ struct GeneralSettings: View {
                     ActionMiseAJour()
                 }
                 LigneInterrupteur(titre: L("maj.verifier"), aide: L("maj.verifier.aide"), isOn: $prefs.verifierMisesAJour)
+                Ligne(titre: L("maj.canal"), aide: L("maj.canal.aide")) {
+                    SelecteurEnListe(L("maj.canal"), selection: $prefs.canalDeMiseAJour,
+                                     options: CanalDeMiseAJour.allCases.map { ($0, $0.libelle) })
+                        .fixedSize()
+                        .onChange(of: prefs.canalDeMiseAJour) { miseAJour.canalChange() }
+                }
             }
 
             Bloc(L("general.icones")) {

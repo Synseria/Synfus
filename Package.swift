@@ -14,12 +14,12 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "Synfus",
-            dependencies: [.product(name: "Telemetrie", package: "SynseriaKit")],
+            dependencies: [.product(name: "Telemetrie", package: "SynseriaKit"), .product(name: "MiseAJour", package: "SynseriaKit")],
             path: "Sources/Synfus"
         ),
         .testTarget(
             name: "SynfusTests",
-            dependencies: ["Synfus", .product(name: "Telemetrie", package: "SynseriaKit")],
+            dependencies: ["Synfus", .product(name: "Telemetrie", package: "SynseriaKit"), .product(name: "MiseAJour", package: "SynseriaKit")],
             path: "Tests/SynfusTests"
         ),
     ]

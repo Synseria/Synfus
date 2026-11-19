@@ -1,4 +1,5 @@
 import AppKit
+import MiseAJour
 import UserNotifications
 
 /// La notification système d'une version trouvée : une seule par version, le jour où elle l'est. Un clic ouvre
@@ -18,14 +19,14 @@ final class NotificationMiseAJour: NSObject, @preconcurrency UNUserNotificationC
     }
 
     /// Sans bundle (`swift run`, tests) le centre de notifications n'existe pas : rien à faire.
-    func annoncerSiNouvelle(_ version: VersionPubliee) {
+    func annoncerSiNouvelle(_ version: ReleasePubliee) {
         let prefs = Preferences.shared
-        guard Bundle.main.bundleIdentifier != nil, Self.aAnnoncer(version.numero, derniere: prefs.derniereVersionNotifiee) else { return }
-        prefs.derniereVersionNotifiee = version.numero
+        guard Bundle.main.bundleIdentifier != nil, Self.aAnnoncer(version.numero.texte, derniere: prefs.derniereVersionNotifiee) else { return }
+        prefs.derniereVersionNotifiee = version.numero.texte
         let centre = UNUserNotificationCenter.current()
         let contenu = UNMutableNotificationContent()
-        contenu.title = L("maj.disponible", version.numero)
-        let demande = UNNotificationRequest(identifier: "maj-\(version.numero)", content: contenu, trigger: nil)
+        contenu.title = L("maj.disponible", version.numero.texte)
+        let demande = UNNotificationRequest(identifier: "maj-\(version.numero.texte)", content: contenu, trigger: nil)
         Task {
             guard (try? await centre.requestAuthorization(options: [.alert])) == true else { return }
             try? await centre.add(demande)
