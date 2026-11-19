@@ -10,6 +10,7 @@ private struct Consigne: View {
     /// Le comment, replié sous la consigne (un clic la déplie) : le panneau est posé sur le jeu, Synfus
     /// n'y est jamais l'app active et macOS n'y montre aucune infobulle.
     var detail: String?
+    // periphery:ignore - lu par son `$` (le dépliable), que Periphery ne voit pas
     @State private var deplie = false
 
     var body: some View {
