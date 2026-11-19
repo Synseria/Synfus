@@ -510,7 +510,7 @@ struct PreferencesTests {
      "sessionHotKey":{"keyCode":1,"modifiers":256},"reduirePersosInactifs":false,"showClasses":false,
      "showNumbers":false,"showPreviewOnHover":true,"signalerBascule":false,
      "toggleAutoFocus":{"keyCode":99,"modifiers":0},
-     "zaapAuto":true,"zaapGainMinimal":8,"zaapDuJeu":false,"zaapIntercalees":"/a ; /b","verifierMisesAJour":false,"derniereVersionLancee":"0.11.0","derniereVersionNotifiee":"0.12.0","derniereVerificationMaj":800000000,"partagerStatistiques":false,
+     "zaapAuto":true,"zaapGainMinimal":8,"zaapDuJeu":false,"zaapIntercalees":"/a ; /b","verifierMisesAJour":false,"canalDeMiseAJour":"beta","derniereVersionLancee":"0.11.0","derniereVersionNotifiee":"0.12.0","derniereVerificationMaj":800000000,"partagerStatistiques":false,
      "zaapHotKey":{"keyCode":17,"modifiers":2048},
      "zaapsAjoutes":[{"monde":1,"noms":{"fr":"Mon zaap"},"x":50,"y":-50,"zone":{}}],
      "zaapsChoix":{"1:-2,0":false},
@@ -573,6 +573,7 @@ struct PreferencesTests {
         #expect(prefs.zaapDuJeu == false)
         #expect(prefs.zaapIntercalees == "/a ; /b")
         #expect(prefs.verifierMisesAJour == false)
+        #expect(prefs.canalDeMiseAJour == .beta)
         #expect(prefs.partagerStatistiques == false)
         #expect(prefs.derniereVersionLancee == "0.11.0")
         #expect(prefs.derniereVersionNotifiee == "0.12.0")
@@ -653,6 +654,7 @@ struct PreferencesTests {
         prefs.zaapDuJeu = false
         prefs.zaapIntercalees = "/a ; /b"
         prefs.verifierMisesAJour = false
+        prefs.canalDeMiseAJour = .beta
         prefs.partagerStatistiques = false
         prefs.derniereVersionLancee = "0.11.0"
         prefs.derniereVersionNotifiee = "0.12.0"
@@ -715,7 +717,7 @@ struct PreferencesTests {
          "killFrozenClients":true,"lireCombat":false,"lireCombatDerriere":false,"lirePosition":false,"menuBarIcon":"logo","iconeApp":{"motif":"oeuf","fond":"transparent"},"themeDeLApp":"lagon","nuanceDeLApp":"systeme",
          "reduirePersosInactifs":false,"showClasses":true,"showNumbers":true,"showPreviewOnHover":false,
          "signalerBascule":true,"zaapAuto":false,
-         "zaapGainMinimal":5,"zaapDuJeu":true,"zaapIntercalees":"/a","verifierMisesAJour":true,"partagerStatistiques":true,"zaapsAjoutes":[],"zaapsChoix":{},"zaapsFavoris":[],"zaapsVueCarte":true,
+         "zaapGainMinimal":5,"zaapDuJeu":true,"zaapIntercalees":"/a","verifierMisesAJour":true,"canalDeMiseAJour":"stable","partagerStatistiques":true,"zaapsAjoutes":[],"zaapsChoix":{},"zaapsFavoris":[],"zaapsVueCarte":true,
          "lieuxFavoris":[],"pnjsFavoris":[],"paletteRecents":[],"paletteTri":"auto","paletteFrequentation":{},"quetesEpinglees":[],"quetesEtape":{},
          "quetesValides":{},"quetesMasquerObjets":false,
          "quetesCompact":true,"quetesConsigne":true,"quetesVignettes":false,
@@ -1165,5 +1167,16 @@ struct PreferencesPartageesTests {
         defer { prefs.themeDeLApp = theme }
         prefs.themeDeLApp = theme == .coloris(.cerise) ? .coloris(.lagon) : .coloris(.cerise)
         #expect(UserDefaults.standard.data(forKey: Preferences.key) == avant)
+    }
+}
+
+/// Le canal de mise à jour.
+extension PreferencesTests {
+    @Test("Le canal est Stable par défaut, et un canal inconnu le laisse à Stable")
+    func canalDeMiseAJour() {
+        #expect(neuves().0.canalDeMiseAJour == .stable)
+        let ancien = #"{"characterOrder":["Amarine"],"hotKeys":[],"barVisible":true,"showNumbers":true,"defaultsVersion":9,"canalDeMiseAJour":"nocturne"}"#
+        let relue = Preferences.forTesting(store: StockageMemoire([Preferences.key: Data(ancien.utf8)]))
+        #expect(relue.canalDeMiseAJour == .stable && relue.characterOrder == ["Amarine"])
     }
 }

@@ -1,5 +1,6 @@
 import AppKit
 import Carbon.HIToolbox
+import MiseAJour
 
 /// Réglages persistés dans les UserDefaults, sérialisés en JSON sous une seule clé.
 ///
@@ -81,6 +82,8 @@ final class Preferences: ObservableObject {
 
     /// Chercher chaque jour une version plus récente sur GitHub (`MiseAJour`).
     @Published var verifierMisesAJour: Bool = true { didSet { save() } }
+    /// Stable, ou Bêta qui propose aussi les préversions (`-rc.N`).
+    @Published var canalDeMiseAJour: CanalDeMiseAJour = .stable { didSet { save() } }
     /// La version du lancement précédent (`MiseAJour.apresMiseAJour`).
     @Published var derniereVersionLancee: String? { didSet { save() } }
     /// La dernière version annoncée par une notification : chacune ne l'est qu'une fois.
@@ -593,6 +596,7 @@ final class Preferences: ObservableObject {
         .facultatif("zaapDuJeu", \.zaapDuJeu),
         .facultatif("zaapIntercalees", \.zaapIntercalees),
         .facultatif("verifierMisesAJour", \.verifierMisesAJour),
+        .enTexte("canalDeMiseAJour", \.canalDeMiseAJour, ecrit: \.rawValue, lu: CanalDeMiseAJour.init(rawValue:)),
         .optionnel("derniereVersionLancee", \.derniereVersionLancee),
         .optionnel("derniereVersionNotifiee", \.derniereVersionNotifiee),
         .optionnel("derniereVerificationMaj", \.derniereVerificationMaj),
