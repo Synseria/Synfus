@@ -17,7 +17,7 @@ Le déroulé est celui de `SynseriaKit` ▸ `MiseAJour` (skill globale `socle-sy
   la plus haute release finale, Bêta la plus haute de toutes, `-rc.N` comprises
   (`ReleasePubliee.plusHaute`) ; changer de canal relance la recherche ; jamais de retour en
   arrière. La release choisie sans le DMG de ce Mac ou sans `SHA256SUMS.txt` ne se propose pas
-  (« à jour »). Un binaire nu (sans `CFBundleShortVersionString`) ne vérifie rien. GitHub muet →
+  (rien ne se dit : `repos`, comme avant). Un binaire nu (sans `CFBundleShortVersionString`) ne vérifie rien. GitHub muet →
   `echec(.reseau, nil)`, « Réessayer ».
 - **Proposition, jamais d'installation seule** : « Installer Synfus X.Y.Z… » en tête du menu et
   bouton sur la ligne Version, puis une `NSAlert` au premier plan (Installer et relancer · Annuler ·
@@ -33,7 +33,7 @@ Le déroulé est celui de `SynseriaKit` ▸ `MiseAJour` (skill globale `socle-sy
   release, `hdiutil attach -nobrowse -readonly`, app copiée par `ditto`, puis contrôlée : même
   `CFBundleIdentifier`, `CFBundleShortVersionString` = numéro du tag, signature intacte (code
   imbriqué compris). Téléchargée par `URLSession`, l'app n'a **pas** de quarantaine.
-- **Remplacement** (kit) : `replaceItemAt`, atomique, en place pendant que Synfus tourne (l'ancienne
+- **Remplacement** (kit) : l'app prête recontrôlée (entière, signature), `replaceItemAt`, atomique, en place pendant que Synfus tourne (l'ancienne
   reste entière si l'échange échoue), puis `tccutil reset Accessibility|ScreenCapture
   fr.synseria.Synfus`, puis relance (un shell attend la fin du processus avant `open`). Paquet qui
   n'est pas un `.app`, dossier parent ou bundle non inscriptible (app traduite, volume en lecture

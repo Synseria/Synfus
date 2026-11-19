@@ -1,5 +1,5 @@
 // Copié de SynseriaKit (Synseria-Design) — ne pas retoucher : changer le paquet dans Synseria-Design, puis sh propager.sh.
-// SynseriaKit 040a56e0df16d7e2 · contenu 25e116b7b0d9e318
+// SynseriaKit 25f4236349ad81d5 · contenu 24f1dc07f0cc60eb
 // Ce qu'une release publiée dit d'elle, le canal qui la choisit, et le macOS qu'elle exige (pur).
 
 import Foundation
@@ -30,7 +30,8 @@ public struct ReleasePubliee: Equatable, Sendable {
     /// Le tag tel que publié (« v0.11.0-rc.2 »).
     public let tag: String
     public let numero: NumeroDeVersion
-    /// Une pre-release : vue du seul canal Bêta.
+    /// Une pre-release : vue du seul canal Bêta. Un numéro `-rc.N` en est toujours une, quoi que dise
+    /// la source : une rc publiée sans le drapeau ne passe pas en Stable.
     public let preliminaire: Bool
     /// Les notes de version, en Markdown.
     public let notes: String
@@ -45,7 +46,7 @@ public struct ReleasePubliee: Equatable, Sendable {
                 fichiers: [FichierDeRelease] = [], macOSMinimum: String? = nil) {
         self.tag = tag
         self.numero = numero
-        self.preliminaire = preliminaire ?? numero.estPreliminaire
+        self.preliminaire = preliminaire == true || numero.estPreliminaire
         self.notes = notes
         self.page = page
         self.fichiers = fichiers

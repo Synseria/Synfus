@@ -1,5 +1,5 @@
 // Copié de SynseriaKit (Synseria-Design) — ne pas retoucher : changer le paquet dans Synseria-Design, puis sh propager.sh.
-// SynseriaKit 040a56e0df16d7e2 · contenu 94c1276b703559ea
+// SynseriaKit 25f4236349ad81d5 · contenu 94c1276b703559ea
 // Le rapport envoyé : des jours d'utilisation en OTLP/HTTP JSON, et ce qui le décrit (pur).
 // Le contrat est celui du collecteur.
 
