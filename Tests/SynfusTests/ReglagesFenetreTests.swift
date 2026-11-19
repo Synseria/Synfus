@@ -30,4 +30,23 @@ struct ReglagesFenetreTests {
         #expect(abs(min(basDeLaPage, vue.bounds.height - vue.convert(page.bounds, from: page).maxY) - Jetons.espace2) < 1,
                 "bande vide sous la page : \(vue.convert(page.bounds, from: page)) dans \(vue.bounds)")
     }
+
+    /// Le fond, d'un seul tenant, descend sous les onglets jusqu'à la plaque : au-dessus d'elle le même
+    /// `espace-2` que sur ses côtés et en bas, jamais une bande de plus entre la barre et la plaque.
+    @Test func laPlaqueALaMemeMargePartout() throws {
+        let (fenetre, vue) = try fenetre(.theme)
+        defer { fenetre.close() }
+        let barre = NSHostingView(rootView: BarreDesOnglets(
+            onglets: SettingsSection.allCases.map { .init(valeur: $0, libelle: $0.label, symbole: $0.icon) },
+            selection: .constant(SettingsSection.theme)).racineSynfus())
+        let hauteurDeLaBarre = barre.fittingSize.height
+        let page = try #require(defilement(vue))
+        let cadre = vue.convert(page.bounds, from: page)
+        let haut = vue.isFlipped ? cadre.minY : vue.bounds.height - cadre.maxY
+        let bas = vue.isFlipped ? vue.bounds.height - cadre.maxY : cadre.minY
+        let marges = [cadre.minX, vue.bounds.width - cadre.maxX, bas]
+        #expect(marges.allSatisfy { abs($0 - Jetons.espace2) < 1 }, "marges \(marges) autour de \(cadre)")
+        // Le bas de la barre porte déjà son `espace-2` : la plaque commence juste dessous.
+        #expect(abs(haut - hauteurDeLaBarre) < 1, "plaque à \(haut) du haut, barre de \(hauteurDeLaBarre)")
+    }
 }
