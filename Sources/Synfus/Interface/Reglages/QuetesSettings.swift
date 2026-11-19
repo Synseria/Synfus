@@ -6,7 +6,7 @@ struct QuetesSettings: View {
     @ObservedObject private var prefs = Preferences.shared
 
     var body: some View {
-        PageReglages(titre: L("reglages.quetes")) {
+        PageReglages {
             Bloc {
                 SourceQuetes()
             }

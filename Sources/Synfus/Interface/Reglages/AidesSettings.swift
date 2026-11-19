@@ -6,7 +6,7 @@ struct AidesSettings: View {
     @ObservedObject private var previews = WindowPreviewService.shared
 
     var body: some View {
-        PageReglages(titre: L("reglages.aides")) {
+        PageReglages {
             Bloc(L("chasse.titre")) {
                 indices
             }

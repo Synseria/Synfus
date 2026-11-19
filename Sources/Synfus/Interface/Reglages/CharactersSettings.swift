@@ -32,7 +32,7 @@ struct CharactersSettings: View {
     }
 
     var body: some View {
-        PageReglages(titre: L("reglages.personnages")) {
+        PageReglages {
             Bloc(L("persos.ordre"), aide: L("persos.ordre.aide") + "\n\n" + L("persos.equipes.aide")) {
                 if !prefs.characterOrder.isEmpty { enTetes }
                 ForEach(Array(prefs.characterOrder.enumerated()), id: \.element) { index, name in
@@ -59,7 +59,7 @@ struct CharactersSettings: View {
         .confirmation($confirmation, annuler: L("commun.annuler"))
     }
 
-    private static let largeurEquipe: CGFloat = 112
+    private static let largeurEquipe = Jetons.largeurNav * 0.9
     private static let largeurTouche: CGFloat = 88
     private static let largeurFleches = Jetons.hauteurCase * 2 + Jetons.espace1
 
@@ -141,17 +141,12 @@ struct CharactersSettings: View {
     private func teamPicker(for name: String) -> some View {
         let count = prefs.equipes.count
         let choix = count < Equipes.maximum ? count + 1 : count
-        return Picker(L("persos.equipe"), selection: Binding(
-            get: { (Equipes.indexEquipe(de: name, dans: prefs.equipes) ?? -1) + 1 },
-            set: { prefs.affecter(name, aEquipe: $0 == 0 ? nil : $0 - 1) }
-        )) {
-            Text(L("barre.equipe.aucune")).tag(0)
-            ForEach(1...max(choix, 1), id: \.self) { Text(L("persos.equipeN", $0)).tag($0) }
-        }
-        .labelsHidden()
-        .frame(width: Self.largeurEquipe)
-        .font(Jetons.typoMeta.font)
-        .help(L("persos.equipeDuPerso"))
+        return MenuEnChamp(titre: L("persos.equipe"),
+                           options: [(0, L("barre.equipe.aucune"))] + (1...max(choix, 1)).map { ($0, L("persos.equipeN", $0)) },
+                           selection: Binding(get: { (Equipes.indexEquipe(de: name, dans: prefs.equipes) ?? -1) + 1 },
+                                              set: { prefs.affecter(name, aEquipe: $0 == 0 ? nil : $0 - 1) }))
+            .frame(width: Self.largeurEquipe, alignment: .leading)
+            .help(L("persos.equipeDuPerso"))
     }
 
     private func moveCharacter(at index: Int, by delta: Int) {

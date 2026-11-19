@@ -4,7 +4,7 @@ import SwiftUI
 /// zaaps et lieux, à activer, étiqueter, mettre en favori.
 struct CarteSettings: View {
     var body: some View {
-        PageReglages(titre: L("reglages.carte")) {
+        PageReglages {
             Bloc {
                 SourceCarte()
                 InterrupteurVuesCartes()
