@@ -102,7 +102,8 @@ extension Color {
 struct RacineSynfus: ViewModifier {
     func body(content: Content) -> some View {
         let reglage = ThemeCourant.reglage
-        content.tint(Color.jeton(\.accent)).themeSynseria(reglage.theme, nuance: reglage.nuance)
+        // L'hôte sous les couleurs : la liste d'un sélecteur s'y ouvre, au-dessus de tout, avec elles.
+        content.hoteDesSuggestions().tint(Color.jeton(\.accent)).themeSynseria(reglage.theme, nuance: reglage.nuance)
     }
 }
 

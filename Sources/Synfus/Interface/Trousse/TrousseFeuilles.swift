@@ -1,5 +1,5 @@
 // Engendré par Synseria-Design — ne pas retoucher : changer jetons.json ou apps/Synfus.json, puis sh propager.sh.
-// jetons.json 9109fc88022f5d8a · contenu 346ae04f3ee999db
+// jetons.json c5f3400ce23232ce · contenu 346ae04f3ee999db
 import SwiftUI
 
 // La feuille et la confirmation d'un geste que ⌘Z ne rattrape pas.

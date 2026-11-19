@@ -1,5 +1,5 @@
 // Engendré par Synseria-Design — ne pas retoucher : changer jetons.json ou apps/Synfus.json, puis sh propager.sh.
-// jetons.json 9109fc88022f5d8a · contenu 6d565750bb9153ec
+// jetons.json c5f3400ce23232ce · contenu 6d565750bb9153ec
 import SwiftUI
 
 // Les boutons de la trousse (`.b`) et le menu à icône à leur gabarit.
