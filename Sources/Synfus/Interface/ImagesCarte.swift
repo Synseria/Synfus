@@ -204,6 +204,43 @@ struct FondCarte: View {
     }
 }
 
+/// La loupe d'une carte de la palette : la vue de la carte en grand (`ApercuCarte`) au survol de ce seul
+/// bouton, après un court délai — un passage de la souris sur la grille n'ouvre rien —, ou d'un clic.
+/// `surImage` : posée sur le voile, dessinée en Nuit.
+struct LoupeCarte: View {
+    let carte: Int
+    var surImage = false
+    @State private var attente: Task<Void, Never>?
+    /// Le temps de viser la loupe plutôt que de la traverser.
+    private static let delai: Duration = .milliseconds(250)
+
+    var body: some View {
+        Button { ApercuCarte.shared.montrer(carte) } label: {
+            Image(systemName: "magnifyingglass")
+                .font(Jetons.typoMicro.font)
+        }
+        .buttonStyle(BoutonIcone())
+        .focusable(false)
+        .themeSynseria(ThemeCourant.reglage.theme, nuance: surImage ? .nuit : ThemeCourant.reglage.nuance)
+        .accessibilityLabel(L("palette.carte.agrandir"))
+        .onHover { dedans in
+            attente?.cancel()
+            if dedans {
+                attente = Task {
+                    try? await Task.sleep(for: Self.delai)
+                    if !Task.isCancelled { ApercuCarte.shared.montrer(carte) }
+                }
+            } else {
+                ApercuCarte.shared.cacher()
+            }
+        }
+        .onDisappear {
+            attente?.cancel()
+            ApercuCarte.shared.cacher()
+        }
+    }
+}
+
 /// Le pictogramme d'un repère tel que la carte du jeu le montre ; le symbole
 /// tant qu'il n'est pas venu, ou quand le repère n'en a pas.
 struct PictogrammeLieu<Symbole: View>: View {
