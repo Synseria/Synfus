@@ -6,7 +6,7 @@ enum VidePalette: Equatable, Sendable {
     case carteEnChargement
     case carteIndisponible
     case quetesEnChargement
-    /// Rien sous ce filtre, mais `nombre` réponses sous « Tout ».
+    /// Rien sous ce filtre, mais `nombre` réponses sous « Accueil ».
     case rienDansLeFiltre(FiltrePalette, ailleurs: Int)
     case aucun
 
@@ -21,7 +21,7 @@ enum VidePalette: Equatable, Sendable {
 
     enum Entree: Equatable, Sendable { case reessayer, toutVoir }
 
-    /// `ailleurs` : le nombre de réponses sous « Tout » pour la même recherche.
+    /// `ailleurs` : le nombre de réponses sous « Accueil » pour la même recherche.
     static func de(carte: EtatCarte, requeteVide: Bool, filtre: FiltrePalette,
                    quetesEnChargement: Bool, ailleurs: Int) -> VidePalette {
         if carte != .prete, requeteVide, filtre.dependDeLaCarte {

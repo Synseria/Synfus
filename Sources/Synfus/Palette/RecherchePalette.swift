@@ -19,15 +19,16 @@ enum ActionPalette: Equatable, Sendable {
     }
 }
 
-/// Ce que Tab fait défiler : une vue au repos (Accueil, Zaaps, Donjons, PNJ, Quêtes, Almanax), une
-/// portée en recherche (Tout, Lieux, Quêtes, PNJ, Donjons, Créatures, Objets). Les zaaps sont des
-/// lieux ; un boss est dans les donjons, pas parmi les créatures.
-enum FiltrePalette: Sendable {
-    case tout, zaaps, almanax, donjons, pnj, lieux, quetes, creatures, objets
+/// Les capsules de la rangée, que Tab fait défiler, dans l'ordre des cas : la même rangée, au même
+/// nom, avec ou sans texte tapé — une rangée qui bougerait à la frappe déroute. Chacune est une vue
+/// au repos et la portée de la recherche dès qu'on tape. Les zaaps sont des lieux ; un boss est
+/// dans les donjons, pas parmi les créatures.
+enum FiltrePalette: CaseIterable, Sendable {
+    case tout, zaaps, lieux, donjons, pnj, quetes, creatures, objets, almanax
 
     var titre: String {
         switch self {
-        case .tout: return L("palette.filtre.tout")
+        case .tout: return L("palette.filtre.accueil")
         case .zaaps: return L("palette.filtre.zaaps")
         case .almanax: return L("palette.filtre.almanax")
         case .donjons: return L("palette.filtre.donjons")
@@ -39,11 +40,6 @@ enum FiltrePalette: Sendable {
         }
     }
 
-    /// Le nom de la capsule : « Accueil » au repos, où « Tout » ne dirait pas vrai.
-    func titre(enRecherche: Bool) -> String {
-        self == .tout && !enRecherche ? L("palette.filtre.accueil") : titre
-    }
-
     /// Rien de tapé, ces vues-là se montrent en cartes.
     var enCartes: Bool {
         switch self {
@@ -52,8 +48,8 @@ enum FiltrePalette: Sendable {
         }
     }
 
-    /// Les zaaps et les donjons viennent de la carte : tant qu'elle manque, une liste vide le dit.
-    var dependDeLaCarte: Bool { self == .tout || self == .zaaps || self == .donjons }
+    /// Les zaaps, les lieux et les donjons viennent de la carte : tant qu'elle manque, une liste vide le dit.
+    var dependDeLaCarte: Bool { self == .tout || self == .zaaps || self == .lieux || self == .donjons }
 
     /// Au repos, les boss n'ont pas de carte : seuls les donjons se montrent ; en recherche, leurs boss
     /// ouvrent la même fiche.
@@ -87,17 +83,11 @@ enum FiltrePalette: Sendable {
         }
     }
 
-    /// Ce que la rangée montre : au repos, les vues où aller sans taper ; dès qu'on tape, les
-    /// portées qui restreignent la réponse.
-    static func jeu(enRecherche: Bool) -> [FiltrePalette] {
-        enRecherche ? [.tout, .lieux, .quetes, .pnj, .donjons, .creatures, .objets]
-            : [.tout, .zaaps, .donjons, .pnj, .quetes, .almanax]
-    }
-
-    /// Le suivant (Tab) ou le précédent (⇧Tab) du jeu affiché, en boucle ; le premier si `self` n'y est pas.
-    func suivant(_ pas: Int, dans jeu: [FiltrePalette]) -> FiltrePalette {
-        guard let rang = jeu.firstIndex(of: self) else { return jeu[0] }
-        return jeu[(rang + pas + jeu.count) % jeu.count]
+    /// Le suivant (Tab) ou le précédent (⇧Tab) de la rangée, en boucle.
+    func suivant(_ pas: Int) -> FiltrePalette {
+        let rangee = Self.allCases
+        let rang = rangee.firstIndex(of: self) ?? 0
+        return rangee[(rang + pas + rangee.count) % rangee.count]
     }
 }
 
@@ -127,7 +117,7 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
     enum Genre: Equatable, Sendable {
         case zaap, lieu, commande, variable, perso, action, recent, quete, pnj, monstre, objet
 
-        /// Monstres et objets se cherchent par milliers : dans « Tout », après
+        /// Monstres et objets se cherchent par milliers : sous « Accueil », après
         /// le reste, pour ne pas noyer zaaps et lieux.
         var enDernier: Bool { self == .monstre || self == .objet }
     }
