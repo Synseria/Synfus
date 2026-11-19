@@ -42,14 +42,6 @@ enum EtatVisuel: Equatable {
         case .repos, .survol, .presse, .inactif: Color.jeton(\.encre)
         }
     }
-
-    /// L'encre d'un contenu secondaire (libellé de second rang) dans le même état.
-    @MainActor var encreSecondaire: Color {
-        switch self {
-        case .courant, .choisi, .inactif, .desactive: encre
-        case .repos, .survol, .presse: Color.jeton(\.encre2)
-        }
-    }
 }
 
 extension View {
