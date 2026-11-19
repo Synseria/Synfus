@@ -1,5 +1,5 @@
 // Engendré par Synseria-Design — ne pas retoucher : changer jetons.json ou apps/Synfus.json, puis sh propager.sh.
-// jetons.json 9109fc88022f5d8a · contenu 11ce5392a68b609b
+// jetons.json c5f3400ce23232ce · contenu 11ce5392a68b609b
 import SwiftUI
 
 // Ce que la trousse affiche sans qu'on le règle : touche, badge, alerte, infobulle, activité.

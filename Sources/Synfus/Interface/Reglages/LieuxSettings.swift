@@ -18,9 +18,9 @@ struct BlocLieux: View {
         Bloc(L("reglages.lieux"), aide: L("palette.reglages.lieux.aide"), paresseux: true) {
             HStack(spacing: Jetons.espace2) {
                 ChampFiltre(invite: L("lieux.filtrer"), texte: $filtre)
-                MenuEnChamp(titre: L("lieux.categorie"),
-                            options: [(Int?.none, L("palette.reglages.tous"))] + CategorieLieu.allCases.map { (Int?.some($0.rawValue), $0.titre) },
-                            selection: $categorie)
+                SelecteurEnListe(L("lieux.categorie"), selection: $categorie,
+                                 options: [(Int?.none, L("palette.reglages.tous"))] + CategorieLieu.allCases.map { (Int?.some($0.rawValue), $0.titre) })
+                    .fixedSize()
                 Button { marquesSeulement.toggle() } label: {
                     Text(L("lieux.marques"))
                         .font(Jetons.typoCorps.font)

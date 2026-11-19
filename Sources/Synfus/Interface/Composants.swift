@@ -54,7 +54,7 @@ extension View {
     }
 
     /// Ce qui flotte sur le jeu : barre, palette, panneaux, aperçus. Le verre léger des flottants
-    /// (`TeinteDuVerre(.flottant)` dessous), sans liseré : le verre dessine son bord. Rayon `rayon3`,
+    /// (la teinte `UsageDuVerre.inerte` dessous), sans liseré : le verre dessine son bord. Rayon `rayon3`,
     /// sans ombre (ni SwiftUI ni `hasShadow` de la fenêtre). Le texte long va sur une `plaquePleine`.
     func surfaceFlottante() -> some View {
         modifier(SurfaceFlottante())
@@ -70,6 +70,7 @@ extension View {
 }
 
 private struct SurfaceFlottante: ViewModifier {
+    @Environment(\.couleursSynseria) private var c
     @Environment(\.accessibilityReduceTransparency) private var transparenceReduite
     @Environment(\.colorSchemeContrast) private var contraste
 
@@ -85,7 +86,7 @@ private struct SurfaceFlottante: ViewModifier {
             // La teinte sous le verre : au-dessus, elle couvrirait son reflet.
             content
                 .glassEffect(.regular, in: .rect(cornerRadius: Jetons.rayon3))
-                .background { TeinteDuVerre(usage: .flottant).clipShape(forme) }
+                .background { forme.fill(UsageDuVerre.inerte.teinte(c).couleur).allowsHitTesting(false) }
         }
     }
 }

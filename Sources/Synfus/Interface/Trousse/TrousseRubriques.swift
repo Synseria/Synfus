@@ -1,5 +1,5 @@
 // Engendré par Synseria-Design — ne pas retoucher : changer jetons.json ou apps/Synfus.json, puis sh propager.sh.
-// jetons.json 9109fc88022f5d8a · contenu 6126883cdbd3bc7d
+// jetons.json c5f3400ce23232ce · contenu 5dff8476e21beb7d
 import SwiftUI
 
 // Ce qui range une page : état vide, carte, dépliable, formulaire de réglages en sections.
@@ -131,37 +131,58 @@ struct FormulaireCompact<Contenu: View>: View {
     }
 }
 
-/// Une section : son titre (l'explication en infobulle, jamais dessous), puis une carte dont chaque
-/// vue est une rangée, séparée de la suivante par un filet.
-struct SectionCompacte<Contenu: View>: View {
+/// Une section : son titre (l'explication en infobulle, jamais dessous) et, à sa droite, le geste qui
+/// vaut pour toute la section (`entete`), puis une carte dont chaque vue est une rangée, séparée de
+/// la suivante par un filet. `paresseux` : une longue liste ne bâtit que les rangées qui paraissent
+/// (dans un défilement : `FormulaireCompact`).
+struct SectionCompacte<Contenu: View, Entete: View>: View {
     var titre: String?
     var aide: String?
-    @ViewBuilder var contenu: Contenu
+    var paresseux: Bool
+    var contenu: Contenu
+    var entete: Entete
     @Environment(\.couleursSynseria) private var c
+
+    init(titre: String? = nil, aide: String? = nil, paresseux: Bool = false,
+         @ViewBuilder contenu: () -> Contenu, @ViewBuilder entete: () -> Entete) {
+        (self.titre, self.aide, self.paresseux) = (titre, aide, paresseux)
+        (self.contenu, self.entete) = (contenu(), entete())
+    }
 
     var body: some View {
         let forme = RoundedRectangle(cornerRadius: Jetons.rayon2, style: .circular)
         VStack(alignment: .leading, spacing: Jetons.espace1) {
-            if let titre {
-                Text(titre)
-                    .font(Jetons.typoTitreCarte.font)
-                    .foregroundStyle(c.encre2.couleur)
-                    .padding(.leading, Jetons.espace1)
-                    .help(aide ?? "")
+            if titre != nil || Entete.self != EmptyView.self {
+                HStack(spacing: Jetons.espace2) {
+                    if let titre {
+                        Text(titre)
+                            .font(Jetons.typoTitreCarte.font)
+                            .foregroundStyle(c.encre2.couleur)
+                            .help(aide ?? "")
+                    }
+                    Spacer(minLength: Jetons.espace3)
+                    entete
+                }
+                .padding(.leading, Jetons.espace1)
             }
-            rangees
-                .background(c.carte.couleur, in: forme)
-                .overlay { forme.strokeBorder(c.filet.couleur, lineWidth: Jetons.epaisseurFilet) }
-                .clipShape(forme)
+            Group {
+                if paresseux { LazyVStack(spacing: 0) { rangees } } else { VStack(spacing: 0) { rangees } }
+            }
+            .background(c.carte.couleur, in: forme)
+            .overlay { forme.strokeBorder(c.filet.couleur, lineWidth: Jetons.epaisseurFilet) }
+            .clipShape(forme)
         }
     }
 
-    /// Chaque vue, une rangée : `hauteur-rangee` − `espace-2` au moins, `espace-3` de côté.
+    /// Chaque vue, une rangée : `hauteur-rangee` − `espace-2` au moins, `espace-3` de côté. Le filet
+    /// se pose au-dessus de chaque rangée sauf la première, sans compter les rangées : les énumérer
+    /// les bâtirait toutes, même dans la pile paresseuse.
     private var rangees: some View {
-        VStack(spacing: 0) {
-            Group(subviews: contenu) { vues in
-                ForEach(Array(vues.enumerated()), id: \.element.id) { index, vue in
-                    if index > 0 { Rectangle().fill(c.filet.couleur).frame(height: Jetons.epaisseurFilet) }
+        Group(subviews: contenu) { vues in
+            let premiere = vues.first?.id
+            ForEach(vues) { vue in
+                VStack(spacing: 0) {
+                    if vue.id != premiere { Rectangle().fill(c.filet.couleur).frame(height: Jetons.epaisseurFilet) }
                     vue
                         .frame(maxWidth: .infinity, minHeight: Jetons.hauteurRangee - Jetons.espace2, alignment: .leading)
                         .padding(.horizontal, Jetons.espace3)
@@ -169,6 +190,12 @@ struct SectionCompacte<Contenu: View>: View {
                 }
             }
         }
+    }
+}
+
+extension SectionCompacte where Entete == EmptyView {
+    init(titre: String? = nil, aide: String? = nil, paresseux: Bool = false, @ViewBuilder contenu: () -> Contenu) {
+        self.init(titre: titre, aide: aide, paresseux: paresseux, contenu: contenu) { EmptyView() }
     }
 }
 

@@ -119,10 +119,11 @@ struct SettingsView: View {
 }
 
 /// Le fond d'une fenêtre, sous tout son contenu, barre de titre comprise : le matériau du système
-/// flouté sur ce qui est derrière, voilé de la page (`TeinteDuVerre`, franc au focus, dense hors focus) —
+/// flouté sur ce qui est derrière, voilé de la page (`UsageDuVerre.clavier`, la même focus ou pas) —
 /// le fond de la barre de titre des notes de Synthetic. Le verre nu laissait trop voir le décor autour de
 /// la plaque. Transparence réduite, contraste augmenté et captures : le fond plein.
 struct FondDeFenetre: View {
+    @Environment(\.couleursSynseria) private var c
     @Environment(\.accessibilityReduceTransparency) private var transparenceReduite
     @Environment(\.colorSchemeContrast) private var contraste
 
@@ -131,7 +132,7 @@ struct FondDeFenetre: View {
             Color.jeton(\.fondFenetre).ignoresSafeArea()
         } else {
             MateriauDeFenetre()
-                .overlay { TeinteDuVerre(usage: .fenetre) }
+                .overlay { Rectangle().fill(UsageDuVerre.clavier.teinte(c).couleur).allowsHitTesting(false) }
                 .ignoresSafeArea()
         }
     }

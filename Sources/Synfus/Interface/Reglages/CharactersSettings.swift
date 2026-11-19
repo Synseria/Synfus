@@ -141,10 +141,10 @@ struct CharactersSettings: View {
     private func teamPicker(for name: String) -> some View {
         let count = prefs.equipes.count
         let choix = count < Equipes.maximum ? count + 1 : count
-        return MenuEnChamp(titre: L("persos.equipe"),
-                           options: [(0, L("barre.equipe.aucune"))] + (1...max(choix, 1)).map { ($0, L("persos.equipeN", $0)) },
-                           selection: Binding(get: { (Equipes.indexEquipe(de: name, dans: prefs.equipes) ?? -1) + 1 },
-                                              set: { prefs.affecter(name, aEquipe: $0 == 0 ? nil : $0 - 1) }))
+        return SelecteurEnListe(L("persos.equipe"),
+                                selection: Binding(get: { (Equipes.indexEquipe(de: name, dans: prefs.equipes) ?? -1) + 1 },
+                                                   set: { prefs.affecter(name, aEquipe: $0 == 0 ? nil : $0 - 1) }),
+                                options: [(0, L("barre.equipe.aucune"))] + (1...max(choix, 1)).map { ($0, L("persos.equipeN", $0)) })
             .frame(width: Self.largeurEquipe, alignment: .leading)
             .help(L("persos.equipeDuPerso"))
     }

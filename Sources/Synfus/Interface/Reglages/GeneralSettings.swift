@@ -74,9 +74,9 @@ struct GeneralSettings: View {
                 if LangueReglage.auProchainLancement != L10n.courante.langue {
                     Button(L("general.langue.relancer")) { LangueReglage.relancer() }
                 }
-                MenuEnChamp(titre: L("general.langue"),
-                            options: [("", L("general.langue.systeme"))] + Langue.allCases.map { ($0.rawValue, $0.nom) },
-                            selection: $langue)
+                SelecteurEnListe(L("general.langue"), selection: $langue,
+                                 options: [("", L("general.langue.systeme"))] + Langue.allCases.map { ($0.rawValue, $0.nom) })
+                    .fixedSize()
                 .onChange(of: langue) { _, value in LangueReglage.choisie = Langue(rawValue: value) }
             }
         }

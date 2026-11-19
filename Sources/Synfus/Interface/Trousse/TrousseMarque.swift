@@ -1,8 +1,8 @@
 // Engendré par Synseria-Design — ne pas retoucher : changer jetons.json ou apps/Synfus.json, puis sh propager.sh.
-// jetons.json 9109fc88022f5d8a · contenu e75a740215f4405a
+// jetons.json c5f3400ce23232ce · contenu 5e6f3a378d9cee3d
 import SwiftUI
 
-// La marque et le verre : le signe Synseria, le gabarit d'À propos, la teinte du verre.
+// La marque et le verre : le signe Synseria, le gabarit d'À propos, le verre et sa teinte dessous.
 
 // MARK: - Le signe et l'À propos
 
@@ -79,38 +79,124 @@ struct LigneDeVersion: View {
 
 // MARK: - Le verre
 
-/// Ce que porte un verre et ce que la page en couvre — la seule mesure. Une fenêtre au focus : du
-/// verre franc (`verre-opacite-focus`), le bureau flouté se voit, le texte reste sur ses plaques ;
-/// hors focus, le système éteint le reflet et le verre s'éclaircirait : un voile dense
-/// (`verre-opacite-hors-focus`) la garde posée. Un flottant, rarement au focus, garde un verre plus
-/// léger (`verre-opacite-flottant`). « Réduire la transparence » et « Augmenter le contraste »
-/// refusent le verre : la page pleine.
+/// Ce que porte un verre, et l'opacité de sa teinte — la seule mesure. **La même, focus ou pas** :
+/// le fond reste du verre, jamais plus opaque sans le clavier. Ce qui prend le clavier (une
+/// fenêtre, et les flottants qu'on tape : palette, overlay, panneau, bloc-notes) : le verre franc
+/// de la fenêtre (`verre-opacite-focus`), le bureau flouté se voit, le texte long reste sur ses
+/// plaques. Ce qui ne prend jamais le clavier (une carte de réunion) : `verre-opacite-flottant`.
+/// « Réduire la transparence » et « Augmenter le contraste » refusent le verre : la page pleine.
 enum UsageDuVerre: Hashable, Sendable {
-    case fenetre, flottant
+    case clavier, inerte
 
-    func opacite(auFocus: Bool, verreRefuse: Bool = false) -> Double {
+    func opacite(verreRefuse: Bool = false) -> Double {
         if verreRefuse { return 1 }
         switch self {
-        case .fenetre: return auFocus ? Jetons.verreOpaciteFocus : Jetons.verreOpaciteHorsFocus
-        case .flottant: return Jetons.verreOpaciteFlottant
+        case .clavier: return Jetons.verreOpaciteFocus
+        case .inerte: return Jetons.verreOpaciteFlottant
         }
+    }
+
+    /// La teinte sous le verre : la page du thème à l'opacité de l'usage.
+    func teinte(_ c: Jetons.Couleurs, verreRefuse: Bool = false) -> Jetons.RVB {
+        c.fondFenetre.voile(opacite(verreRefuse: verreRefuse))
+    }
+
+    /// Les options du Mac qui refusent le verre.
+    static func refuse(transparenceReduite: Bool, contraste: ColorSchemeContrast) -> Bool {
+        transparenceReduite || contraste == .increased
     }
 }
 
-/// La teinte posée sur le verre (le matériau, Liquid Glass ou son repli, reste à l'app) : la page à
-/// l'opacité de son usage, qui suit le focus de la fenêtre (courbe standard, durée normale).
-struct TeinteDuVerre: View {
-    var usage: UsageDuVerre = .fenetre
+#if os(macOS)
+/// Le verre d'une surface flottante (Liquid Glass, `.regular`) et sa teinte **dessous**, à `rayon`
+/// près, posé en fond, sous le contenu. Le système efface la `tintColor` d'un verre hors fenêtre
+/// clé (il la remplace par ce qui est derrière à peine éclairci) : aucun verre n'en a, la teinte
+/// est une couche à nous, que le verre floute comme le reste, toujours montrée ; au-dessus, elle
+/// couvrirait son reflet, qui reste au système. Refusé : la page pleine et son filet. Le verre
+/// d'une fenêtre n'est pas celui-ci (`VueDuVerreTeinte`).
+struct VerreTeinte: View {
+    var rayon: CGFloat = 0
+    var usage: UsageDuVerre = .clavier
     @Environment(\.couleursSynseria) private var c
     @Environment(\.accessibilityReduceTransparency) private var transparenceReduite
     @Environment(\.colorSchemeContrast) private var contraste
-    @Environment(\.appearsActive) private var auFocus
 
     var body: some View {
-        let refuse = transparenceReduite || contraste == .increased
-        Rectangle()
-            .fill(c.fondFenetre.couleur.opacity(usage.opacite(auFocus: auFocus, verreRefuse: refuse)))
-            .animation(Jetons.courbeStandard.animation(Jetons.dureeNormale), value: auFocus)
-            .allowsHitTesting(false)
+        if UsageDuVerre.refuse(transparenceReduite: transparenceReduite, contraste: contraste) {
+            let forme = RoundedRectangle(cornerRadius: rayon, style: .circular)
+            forme.fill(c.fondFenetre.couleur)
+                .overlay { forme.strokeBorder(c.filet.couleur, lineWidth: Jetons.epaisseurFilet) }
+                .allowsHitTesting(false)
+        } else {
+            Hote(rayon: rayon, teinte: usage.teinte(c))
+        }
+    }
+
+    private struct Hote: NSViewRepresentable {
+        let rayon: CGFloat
+        let teinte: Jetons.RVB
+
+        func makeNSView(context _: Context) -> VueDuVerreTeinte { VueDuVerreTeinte(rayon: rayon, teinte: teinte) }
+
+        func updateNSView(_ vue: VueDuVerreTeinte, context _: Context) { vue.accorder(rayon: rayon, teinte: teinte) }
     }
 }
+
+/// Le verre d'une fenêtre (teinte `UsageDuVerre.clavier`), posé par l'app sous l'hôte SwiftUI : frère
+/// du contenu, juste dessous, dans le cadre de la fenêtre (sous-vue de l'hôte, il passerait devant
+/// ce qu'il dessine). La teinte, puis le verre ; ne prend aucun clic. Il ne lit pas les options du
+/// Mac : verre refusé, l'app le retire et peint la page pleine (sans filet : une fenêtre a son bord).
+final class VueDuVerreTeinte: NSView {
+    let verre: NSGlassEffectView = VerreSansClic()
+    let teinte = TeinteSousLeVerre()
+
+    init(rayon: CGFloat = 0, teinte couleur: Jetons.RVB) {
+        super.init(frame: .zero)
+        for vue in [teinte, verre] as [NSView] {
+            vue.frame = bounds
+            vue.autoresizingMask = [.width, .height]
+            addSubview(vue)
+        }
+        accorder(rayon: rayon, teinte: couleur)
+    }
+
+    @available(*, unavailable)
+    required init?(coder _: NSCoder) { nil }
+
+    override func hitTest(_: NSPoint) -> NSView? { nil }
+
+    /// Écrit seulement ce qui change : une barre les reçoit à chaque image d'une animation.
+    func accorder(rayon: CGFloat, teinte couleur: Jetons.RVB) {
+        if verre.cornerRadius != rayon { verre.cornerRadius = rayon }
+        Self.accorder(verre)
+        teinte.rayon = rayon
+        teinte.couleur = couleur
+    }
+
+    /// Les réglages publics d'un verre, la seule source — aussi pour celui que le système donne à
+    /// une barre latérale, dont le bord se fond ainsi dans le reste : `.regular` (`.clear` laisse
+    /// lire net ce qui est derrière), jamais de `tintColor`.
+    static func accorder(_ verre: NSGlassEffectView) {
+        if verre.style != .regular { verre.style = .regular }
+        if verre.tintColor != nil { verre.tintColor = nil }
+    }
+
+    private final class VerreSansClic: NSGlassEffectView {
+        override func hitTest(_: NSPoint) -> NSView? { nil }
+    }
+
+    /// La teinte, à l'arrondi du verre qu'elle double.
+    final class TeinteSousLeVerre: NSView {
+        var couleur: Jetons.RVB? { didSet { if couleur != oldValue { needsDisplay = true } } }
+        var rayon: CGFloat = 0 { didSet { if rayon != oldValue { needsDisplay = true } } }
+
+        override func hitTest(_: NSPoint) -> NSView? { nil }
+
+        override func draw(_: NSRect) {
+            guard let couleur else { return }
+            NSColor(couleur.couleur).setFill()
+            NSBezierPath(roundedRect: bounds, xRadius: rayon, yRadius: rayon).fill()
+        }
+    }
+}
+#endif
