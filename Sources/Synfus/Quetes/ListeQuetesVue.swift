@@ -24,10 +24,21 @@ struct ListeQuetesVue: View {
                 if store.quetes == nil, store.chargement {
                     note(L("palette.quetes.chargement"))
                 } else if store.quetes == nil, store.echec != nil {
-                    note(L("quete.indisponible")).foregroundStyle(Color.jeton(\.danger))
-                    geste(.reessayer)
+                    EtatVide(L("quete.indisponible"), symbole: "exclamationmark.circle", ton: .danger) {
+                        Button { QuetePanel.faire(.reessayer) } label: { Label(L("commun.reessayer"), systemImage: "arrow.clockwise") }
+                    }
+                    .frame(height: Jetons.hauteurRangee * 4 + Jetons.espace4)
                 } else {
-                    let elements = panneau.liste()
+                    let toutes = panneau.liste()
+                    let sansQuete = !toutes.contains(where: \.estUneQuete)
+                    // L'état vide dit déjà « Aucune quête » : la ligne de la liste ne le répète pas.
+                    let elements = sansQuete ? toutes.filter { $0 != .message(L("quete.menu.aucune")) } : toutes
+                    if sansQuete {
+                        EtatVide(L("quete.aucune"), symbole: BoutonBarre.quetes.symbole) {
+                            Button { QuetePanel.chercher() } label: { Label(L("quete.chercher"), systemImage: "magnifyingglass") }
+                        }
+                        .frame(height: Jetons.hauteurRangee * 4 + Jetons.espace4)
+                    }
                     ForEach(Array(elements.enumerated()), id: \.offset) { _, element in
                         ligne(element, toutEpingler: elements.contains(.toutEpingler),
                               lecture: elements.contains { if case .lireSuivi = $0 { true } else { false } })
@@ -129,5 +140,15 @@ struct ListeQuetesVue: View {
         Button(geste.titre) { QuetePanel.faire(geste) }
             .buttonStyle(BoutonBorde())
             .padding(.horizontal, metriques.ligneHorizontale)
+    }
+}
+
+private extension MenuQuetes.Element {
+    /// Une quête de la liste (du panneau, d'ici ou du suivi) : sans aucune, la liste est un état vide.
+    var estUneQuete: Bool {
+        switch self {
+        case .epinglee, .ici, .reconnue: true
+        default: false
+        }
     }
 }

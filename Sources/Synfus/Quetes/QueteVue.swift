@@ -51,9 +51,10 @@ struct QueteVue: View {
     private static let traitAFaire: CGFloat = 3
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        // L'en-tête sur le verre, la fiche ou la liste sur une plaque pleine.
+        VStack(alignment: .leading, spacing: Jetons.espace1) {
             enTete
-            Divider()
+            Group {
             if let fiche {
                 // Une autre quête, ou l'étape suivante prise en pied : la fiche
                 // repart du haut, sans quoi elle s'ouvre là où l'autre défilait.
@@ -76,7 +77,13 @@ struct QueteVue: View {
             } else {
                 ListeQuetesVue(metriques: metriques)
             }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .clipShape(RoundedRectangle(cornerRadius: Jetons.rayon2, style: .circular))
+            .plaquePleine()
         }
+        .padding([.horizontal, .bottom], Jetons.espace2)
+        .padding(.top, Jetons.espace1)
         .frame(minWidth: QuetePanel.tailleMinimale.width, maxWidth: .infinity,
                minHeight: QuetePanel.tailleMinimale.height, maxHeight: .infinity, alignment: .top)
         .surfaceFlottante()
@@ -100,14 +107,11 @@ struct QueteVue: View {
                             : L("quete.menu.titre")
         let basculer: (@MainActor () -> Void)? = ficheImposee == nil && panneau.idMontre != nil
             ? { @MainActor in QuetePanel.shared.enListe.toggle() } : nil
-        return EnTetePanneau(icone: BoutonBarre.quetes.symbole, teinte: Color.jeton(\.accent), clic: basculer) {
+        return EnTetePanneau(icone: BoutonBarre.quetes.symbole, teinte: Color.jeton(\.accentTexte), clic: basculer) {
             titreQuetes(titre, enFiche: enFiche, bascule: basculer != nil || ficheImposee != nil)
             if lecture.etat == .enCours { ProgressView().controlSize(.mini).padding(.leading, Jetons.espace1) }
         } boutons: {
-            BoutonEnTete(icone: "magnifyingglass", aide: L("quete.chercher"), discret: true) {
-                PalettePanel.shared.ouvrir()
-                PaletteModele.shared.requete = "/quete "
-            }
+            BoutonEnTete(icone: "magnifyingglass", aide: L("quete.chercher"), discret: true) { QuetePanel.chercher() }
             BoutonEnTete(icone: "ellipsis", aide: L("quete.menu.affichage"), discret: true) {
                 QuetePanel.shared.menu().popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
             }

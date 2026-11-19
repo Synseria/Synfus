@@ -22,9 +22,9 @@ struct ShortcutsSettings: View {
     }
 
     var body: some View {
-        PageReglages(titre: L("reglages.raccourcis")) {
+        PageReglages {
             // Un emplacement par ligne, connecté ou non : ils se règlent jeu fermé, sans dépendre de l'équipe active.
-            Bloc(L("raccourcis.allerAUnPerso"), infobulle: L("raccourcis.allerAUnPerso.aide")) {
+            Bloc(L("raccourcis.allerAUnPerso"), aide: L("raccourcis.allerAUnPerso.aide")) {
                 ForEach(0..<min(max(Self.emplacementsMontres, manager.effectif.count), prefs.hotKeys.count), id: \.self) { slot in
                     ShortcutRow(label: L("raccourcis.perso", slot + 1),
                                 detail: slot < manager.effectif.count ? manager.effectif[slot].name : nil,
@@ -79,11 +79,8 @@ struct ShortcutsSettings: View {
                       aide: L("raccourcis.enchainer.aide") + "\n\n" + L("raccourcis.enchainer.touche.aide")) {
                     HStack(spacing: Jetons.espace2) {
                         if prefs.advanceOnClick {
-                            Picker(L("raccourcis.enchainer.touche"), selection: $prefs.advanceModifier) {
-                                ForEach(ClickModifier.allCases) { Text($0.label).tag($0) }
-                            }
-                            .labelsHidden()
-                            .fixedSize()
+                            MenuEnChamp(titre: L("raccourcis.enchainer.touche"),
+                                        options: ClickModifier.allCases.map { ($0, $0.label) }, selection: $prefs.advanceModifier)
                         }
                         Toggle(L("raccourcis.enchainer.bascule"), isOn: Binding(
                             get: { prefs.advanceOnClick },
@@ -106,11 +103,8 @@ struct ShortcutsSettings: View {
 
             Bloc(L("reglages.attention")) {
                 Ligne(titre: L("raccourcis.attention.reaction"), aide: aideAttention) {
-                    Picker(L("raccourcis.attention.reaction"), selection: $prefs.attentionAction) {
-                        ForEach(AttentionAction.allCases) { Text($0.label).tag($0) }
-                    }
-                    .labelsHidden()
-                    .fixedSize()
+                    MenuEnChamp(titre: L("raccourcis.attention.reaction"),
+                                options: AttentionAction.allCases.map { ($0, $0.label) }, selection: $prefs.attentionAction)
                 }
                 RaccourciReglable(label: L("raccourcis.attention.bascule"), chemin: \.toggleAutoFocus)
             }

@@ -6,14 +6,6 @@ final class SettingsWindowController: NSObject {
     static let shared = SettingsWindowController()
     private var window: NSWindow?
 
-    /// La fenêtre est en cours de placement automatique : tant que ce drapeau
-    /// tient, chaque changement de taille la replace. Un déplacement à la souris
-    /// y met fin — l'utilisateur a dit où il la voulait.
-    private var placing = false
-    /// Distingue notre propre `setFrameOrigin` d'un geste de l'utilisateur, comme
-    /// le fait `FloatingBarController` pour la barre.
-    private var repositioning = false
-
     private override init() { super.init() }
 
     /// Le premier lancement et tant que l'accessibilité manque : les autorisations sont le premier bloc de Général.
@@ -26,36 +18,20 @@ final class SettingsWindowController: NSObject {
         UsageStore.shared.compter(.reglages)
         if let section { OngletReglages.shared.section = section }
         if window == nil {
-            let hosting = NSHostingController(rootView: SettingsView().racineSynfus())
-            let window = NSWindow(contentViewController: hosting)
-            window.title = L("reglages.titre")
-            window.styleMask = [.titled, .closable, .miniaturizable]
-            window.isReleasedWhenClosed = false
+            // La taille commune, bornée à la place utile de l'écran (sans le Dock ni la barre des menus).
+            let utile = (FloatingBarController.shared.visibleBarFrame.flatMap { barre in
+                NSScreen.screens.first { $0.frame.intersects(barre) } } ?? NSScreen.main)?.visibleFrame.height
+            let hauteur = min(SettingsView.taille.height, (utile ?? SettingsView.taille.height) - Self.gap * 2)
+            let window = Self.batir(SettingsView(hauteur: hauteur))
             self.window = window
-
-            for (note, action) in [
-                (NSWindow.didResizeNotification, #selector(windowResized)),
-                (NSWindow.didMoveNotification, #selector(windowMoved)),
-                (NSWindow.willCloseNotification, #selector(windowWillClose)),
-            ] {
-                NotificationCenter.default.addObserver(
-                    self, selector: action, name: note, object: window
-                )
-            }
+            NotificationCenter.default.addObserver(self, selector: #selector(windowWillClose),
+                                                   name: NSWindow.willCloseNotification, object: window)
         }
         guard let window else { return }
 
-        // À chaque (ré)ouverture, la fenêtre se place sous la barre flottante :
-        // c'est de là qu'on l'invoque, autant qu'elle apparaisse sous les yeux.
-        // Tant qu'elle reste ouverte, en revanche, on ne la déplace pas.
+        // À chaque (ré)ouverture, la fenêtre se place sous la barre flottante : c'est de là qu'on
+        // l'invoque. Ouverte, on ne la déplace pas. Sa taille est la même pour tous les onglets.
         if !window.isVisible {
-            placing = true
-            // La taille définitive n'est connue qu'une fois SwiftUI passé. Placer
-            // avant revenait à calculer sur une fenêtre encore vide : elle
-            // grandissait ensuite vers le haut — AppKit ancre au coin bas gauche —
-            // et se retrouvait n'importe où sauf sous la barre. D'où la mise en
-            // page forcée, doublée du replacement à chaque redimensionnement :
-            // changer d'onglet change aussi la hauteur.
             window.layoutIfNeeded()
             position(window)
         }
@@ -66,14 +42,19 @@ final class SettingsWindowController: NSObject {
         window.makeKeyAndOrderFront(nil)
     }
 
-    @objc private func windowResized() {
-        guard placing, let window else { return }
-        position(window)
-    }
-
-    @objc private func windowMoved() {
-        guard !repositioning else { return }
-        placing = false
+    /// La fenêtre autour de `contenu`, l'unique façon de la bâtir : les captures jugent celle que
+    /// l'utilisateur voit. Sans titre affiché : les onglets disent où l'on est ; le nom reste pour le
+    /// menu Fenêtre et VoiceOver. Le verre monte sous la barre de titre, la fenêtre n'a pas de fond.
+    static func batir(_ contenu: some View) -> NSWindow {
+        let window = NSWindow(contentViewController: NSHostingController(rootView: contenu.racineSynfus()))
+        window.title = L("reglages.titre")
+        window.styleMask = [.titled, .closable, .miniaturizable, .fullSizeContentView]
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
+        window.isOpaque = false
+        window.backgroundColor = .clear
+        window.isReleasedWhenClosed = false
+        return window
     }
 
     /// La sonde d'attention se démarre à la main depuis l'onglet Diagnostic et
@@ -110,11 +91,7 @@ final class SettingsWindowController: NSObject {
         origin.x = min(max(origin.x, visible.minX + 8), visible.maxX - size.width - 8)
         origin.y = min(max(origin.y, visible.minY + 8), visible.maxY - size.height - 8)
 
-        repositioning = true
         window.setFrameOrigin(origin)
-        // `didMove` peut arriver au tour de boucle suivant : on ne relâche le
-        // drapeau qu'une fois la notification passée.
-        DispatchQueue.main.async { self.repositioning = false }
     }
 
     /// Écart entre la barre et le haut de la fenêtre de réglages.

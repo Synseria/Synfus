@@ -10,8 +10,6 @@ struct PaletteVue: View {
     /// Le détail d'un donjon arrive après l'ouverture : ↵ et les cartes de sa fiche changent.
     @ObservedObject private var donjons = DonjonsStore.shared
     @FocusState private var champ: Champ?
-    @State private var filtreSurvole: FiltrePalette?
-    @State private var triSurvole = false
 
     private enum Champ { case recherche, etiquette }
 
@@ -20,14 +18,13 @@ struct PaletteVue: View {
     static let hauteurCartes: CGFloat = 404
 
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: Jetons.espace2) {
             recherche
             filtres
-            Divider()
             resultats
-            Divider()
             pied
         }
+        .padding(Jetons.espace2)
         .frame(width: PalettePanel.largeur)
         .surfaceFlottante()
         .onAppear { champ = .recherche }
@@ -37,16 +34,15 @@ struct PaletteVue: View {
 
     // MARK: - Champ
 
+    /// Le champ de la palette : la plaque pleine, son filet, l'accent quand il a le clavier.
     private var recherche: some View {
         HStack(spacing: Jetons.espace2) {
             Image(systemName: "magnifyingglass")
-                .font(Jetons.typoSection.font)
                 .foregroundStyle(Color.jeton(\.encre2))
-            TextField(L("palette.invite"), text: $modele.requete)
+            TextField(L("palette.invite"), text: $modele.requete, prompt: Text(L("palette.invite")))
                 .textFieldStyle(.plain)
-                .font(Jetons.typoSection.font)
                 .focused($champ, equals: .recherche)
-                .help(L("raccourcis.palette.aide"))
+                .help(L("palette.invite.aide"))
             origine
             if let mode {
                 Text(mode)
@@ -57,8 +53,16 @@ struct PaletteVue: View {
                     .fondEtat(.courant, rayon: Jetons.rayonPilule)
             }
         }
-        .padding(.horizontal, Jetons.espace4)
-        .frame(height: Jetons.hauteurRangee + Jetons.espace4)
+        .font(Jetons.typoCorps.font)
+        .padding(.horizontal, Jetons.espace3)
+        .frame(height: Jetons.hauteurRangee + Jetons.espace2)
+        .plaquePleine()
+        .overlay {
+            if champ == .recherche {
+                RoundedRectangle(cornerRadius: Jetons.rayon2, style: .circular)
+                    .strokeBorder(Color.jeton(\.accent), lineWidth: Jetons.epaisseurFocus)
+            }
+        }
     }
 
     /// D'où partent distances et trajets : le dernier perso lu devant, pas forcément celui qu'on
@@ -98,43 +102,33 @@ struct PaletteVue: View {
         .help(aide)
     }
 
-    /// Les familles que Tab fait défiler, et le tri (⌘T).
+    /// Les familles que Tab fait défiler, en puces ; le tri, un bouton-icône (⌘T).
     private var filtres: some View {
-        HStack(spacing: Jetons.espace1) {
-            ForEach(modele.jeu, id: \.self) { filtre in
-                let choisi = modele.filtre == filtre
-                // Le filtre est le niveau au-dessus des résultats, que les flèches parcourent : son choix est gris.
-                let etat: EtatVisuel = choisi ? .inactif : EtatVisuel(survole: filtreSurvole == filtre)
-                // Tab et ⇧Tab parcourent les filtres (le panneau) : aucun d'eux ne prend le focus.
-                Button { modele.choisir(filtre) } label: {
-                    Text(filtre.titre(enRecherche: modele.enRecherche))
-                        .font((choisi ? Jetons.typoMicro : Jetons.typoMeta).font)
-                        .foregroundStyle(choisi ? etat.encre : etat.encreSecondaire)
-                        .padding(.horizontal, Jetons.espace2)
-                        .frame(height: Jetons.hauteurCase)
-                        .fondEtat(etat, rayon: Jetons.rayonPilule)
+        HStack(spacing: Jetons.espace2) {
+            HStack(spacing: Jetons.espace2) {
+                ForEach(modele.jeu, id: \.self) { filtre in
+                    let choisi = modele.filtre == filtre
+                    // Tab et ⇧Tab parcourent les filtres (le panneau) : aucun d'eux ne prend le focus.
+                    Button { modele.choisir(filtre) } label: {
+                        Puce(libelle: filtre.titre(enRecherche: modele.enRecherche), choisie: choisi)
+                    }
+                    .buttonStyle(.plain)
+                    .focusable(false)
+                    .curseurDeClic(true)
+                    .elementDeGroupe()
+                    .accessibilityAddTraits(choisi ? .isSelected : [])
                 }
-                .buttonStyle(.plain)
-                .elementDeGroupe()
-                .onHover { filtreSurvole = $0 ? filtre : nil }
-                .accessibilityAddTraits(choisi ? .isSelected : [])
             }
-            ToucheDeClavier(touche: "⇥")
-                .padding(.leading, Jetons.espace1)
-                .help(L("palette.touche.filtre"))
+            .help(L("palette.touche.filtre"))
             Spacer(minLength: Jetons.espace2)
-            if modele.triAgit {
-                tri
-                ToucheDeClavier(touche: "⌘T")
-            }
+            if modele.triAgit { tri }
         }
-        .padding(.horizontal, Jetons.espace4)
-        .padding(.bottom, Jetons.espace2)
+        .padding(.horizontal, Jetons.espace1)
     }
 
-    /// Le tri courant, en capsule : un clic ouvre les choix, ⌘T passe au suivant.
+    /// Le tri courant : un clic ouvre les choix, ⌘T passe au suivant.
     private var tri: some View {
-        let etat = EtatVisuel(survole: triSurvole)
+        let aide = L("palette.tri.bouton", modele.triAffiche.titre)
         return Menu {
             Picker(L("palette.tri.titre"), selection: Binding(get: { modele.triAffiche }, set: { modele.choisirTri($0) })) {
                 ForEach(modele.tris, id: \.self) { Text($0.titre).tag($0) }
@@ -142,19 +136,11 @@ struct PaletteVue: View {
             .pickerStyle(.inline)
             .labelsHidden()
         } label: {
-            Label(modele.triAffiche.titre, systemImage: "arrow.up.arrow.down")
-                .font(Jetons.typoMeta.font)
-                .foregroundStyle(etat.encreSecondaire)
-                .padding(.horizontal, Jetons.espace2)
-                .frame(height: Jetons.hauteurCase)
-                .fondEtat(etat, rayon: Jetons.rayonPilule)
+            Label(aide, systemImage: "list.bullet")
         }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .fixedSize()
+        .menuIcone()
         .focusable(false)
-        .onHover { triSurvole = $0 }
-        .help(L("palette.tri.aide"))
+        .aide(aide)
     }
 
     /// Le mode d'une commande tapée ; rien quand on cherche partout, que les filtres disent déjà.
@@ -181,12 +167,14 @@ struct PaletteVue: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: Jetons.espace2) {
                         if modele.surAlmanax { semaineAlmanax }
-                        if modele.enGrille { grille } else if !modele.surAlmanax { liste }
+                        if modele.enGrille { grille } else if !modele.surAlmanax { liste.padding(Jetons.espace1) }
                     }
-                    .padding(Jetons.espace2)
                 }
+                // Une liste se lit sur sa plaque ; les cartes (accueil, almanax) sont chacune la leur.
+                .background { if !modele.enCartes, !modele.surAlmanax { RoundedRectangle(cornerRadius: Jetons.rayon2).fill(.clear).plaquePleine() } }
+                .clipShape(RoundedRectangle(cornerRadius: Jetons.rayon2, style: .circular))
                 .frame(height: modele.enCartes ? Self.hauteurCartes
-                       : modele.deplie != nil ? 380 : min(CGFloat(modele.entrees.count) * 44 + 20, 380))
+                       : modele.deplie != nil ? 380 : min(CGFloat(modele.entrees.count) * 44 + Jetons.espace4, 380))
                 .onChange(of: modele.selection) { _, index in
                     if modele.surAlmanax { return defilement.scrollTo(AlmanaxSemaineVue.ancre(index)) }
                     guard modele.entrees.indices.contains(index) else { return }
@@ -216,43 +204,31 @@ struct PaletteVue: View {
                           allerAuSanctuaire: modele.sanctuaire.map { lieu in { modele.copierTrajet(vers: lieu) } })
     }
 
-    /// La liste vide dit pourquoi, et propose ce qui répare.
+    /// La liste vide dit pourquoi, et propose ce qui répare : l'état vide de la trousse, sur la plaque.
+    @ViewBuilder
     private func videVue(_ vide: VidePalette) -> some View {
-        VStack(spacing: Jetons.espace2) {
+        Group {
             switch vide {
             case .carteEnChargement:
-                ProgressView().controlSize(.small)
-                texteVide(L("palette.carte.chargement"))
+                ProgressView().controlSize(.small).help(L("palette.carte.chargement"))
             case .carteIndisponible:
-                texteVide(L("palette.carte.indisponible"))
-                Button(L("palette.carte.reessayer")) { carte.reessayer() }
-                    .buttonStyle(BoutonBorde())
-            case .quetesEnChargement:
-                texteVide(L("palette.quetes.chargement"))
-            case .rienDansLeFiltre(let filtre, let ailleurs):
-                texteVide(L("palette.vide.filtre", filtre.titre))
-                Button { modele.choisir(.tout) } label: {
-                    Text(L("palette.vide.ailleurs", nombre: ailleurs, ailleurs, FiltrePalette.tout.titre))
-                        .font(Jetons.typoCorps.font)
-                        .foregroundStyle(EtatVisuel.choisi.encre)
-                        .padding(.horizontal, Jetons.espace3)
-                        .frame(height: Jetons.hauteurRangee)
-                        .fondEtat(.choisi)
+                EtatVide(L("palette.carte.indisponible"), symbole: "exclamationmark.triangle", ton: .danger) {
+                    Button { carte.reessayer() } label: { Label(L("palette.carte.reessayer"), systemImage: "arrow.clockwise") }
                 }
-                .buttonStyle(.plain)
+            case .quetesEnChargement:
+                ProgressView().controlSize(.small).help(L("palette.quetes.chargement"))
+            case .rienDansLeFiltre(let filtre, let ailleurs):
+                EtatVide(L("palette.vide.filtre", filtre.titre), symbole: "magnifyingglass") {
+                    Button(L("palette.vide.rechercherDans", FiltrePalette.tout.titre)) { modele.choisir(.tout) }
+                        .help(L("palette.vide.ailleurs", nombre: ailleurs, ailleurs, FiltrePalette.tout.titre))
+                }
             case .aucun:
-                texteVide(L("palette.aucun"))
+                EtatVide(L("palette.aucun"), symbole: "magnifyingglass")
             }
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 120)
-    }
-
-    private func texteVide(_ texte: String) -> some View {
-        Text(texte)
-            .font(Jetons.typoCorps.font)
-            .foregroundStyle(Color.jeton(\.encre2))
-            .multilineTextAlignment(.center)
+        .frame(height: Jetons.hauteurRangee * 4 + Jetons.espace4)
+        .plaquePleine()
     }
 
     private var grille: some View {
@@ -329,8 +305,8 @@ struct PaletteVue: View {
                 ToucheDeClavier(touche: "↵")
                 ToucheDeClavier(touche: "esc")
             }
-            .padding(.horizontal, Jetons.espace4)
-            .frame(height: Jetons.hauteurRangee + Jetons.espace1)
+            .padding(.horizontal, Jetons.espace2)
+            .frame(height: Jetons.hauteurRangee)
         } else {
             HStack(spacing: Jetons.espace3) {
                 if let vide = modele.vide {
@@ -362,8 +338,8 @@ struct PaletteVue: View {
             }
             .font(Jetons.typoMeta.font)
             .foregroundStyle(Color.jeton(\.encre2))
-            .padding(.horizontal, Jetons.espace4)
-            .frame(height: Jetons.hauteurRangee)
+            .padding(.horizontal, Jetons.espace2)
+            .frame(height: Jetons.hauteurCase)
         }
     }
 
@@ -403,96 +379,90 @@ struct PaletteVue: View {
     }
 }
 
-/// Les encres d'une carte, sur l'image de la carte du jeu (écrites en clair) ou sur le fond du thème.
-struct EncresCarte {
-    let encre: Color
-    /// Le trajet, en rose.
-    let accent: Color
-    let surImage: Bool
-}
-
-/// Une carte de zaap : nom et zone en haut, étiquette et coordonnées en bas. Sur l'image de la
-/// carte, le texte est clair ; sans image, il prend les encres du thème.
+/// Une carte de zaap, pleine : nom et zone, la vignette de la carte du jeu à droite — jamais de texte
+/// posé sur une image du jeu —, puis l'étiquette, le favori et les coordonnées. Choisie, le fond du
+/// choix et son titre à l'accent.
 struct CarteZaap<Corps: View>: View {
     let entree: EntreePalette
     let choisie: Bool
-    /// Ce qui prend la place entre l'en-tête et le pied : la liste des quêtes d'une position, écrite des
-    /// encres de la carte.
-    private let corps: ((EncresCarte) -> Corps)?
-    // periphery:ignore - observé pour redessiner la carte quand `vuesCartes` change
-    @ObservedObject private var prefs = Preferences.shared
+    /// Ce qui prend la place entre l'en-tête et le pied (les quêtes d'une position).
+    private let corps: (() -> Corps)?
+    @State private var survole = false
 
-    init(entree: EntreePalette, choisie: Bool, @ViewBuilder corps: @escaping (EncresCarte) -> Corps) {
+    init(entree: EntreePalette, choisie: Bool, @ViewBuilder corps: @escaping () -> Corps) {
         (self.entree, self.choisie, self.corps) = (entree, choisie, corps)
     }
 
-    private var etat: EtatVisuel { choisie ? .choisi : .repos }
-    private var surImage: Bool { FondCarte.surImage(entree.carte) }
-    private var encre: Color { surImage ? Color.jeton(\.encre, en: .nuit) : etat.encre }
-    private var accent: Color { surImage ? Color.jeton(\.accentTexte, en: .nuit) : Color.jeton(\.accentTexte) }
-    private var encreSecondaire: Color { surImage ? Color.jeton(\.encre2, en: .nuit) : etat.encreSecondaire }
     var body: some View {
+        let forme = RoundedRectangle(cornerRadius: Jetons.rayon2, style: .circular)
         VStack(alignment: .leading, spacing: Jetons.espace1) {
-            VStack(alignment: .leading, spacing: 0) {
-                Text(entree.titre)
-                    .font(Jetons.typoTitreCarte.font)
-                    .foregroundStyle(encre)
-                    .lineLimit(2, reservesSpace: true)
-                    .padding(.trailing, entree.favori ? Jetons.espace4 : 0)
-                // Sur l'image, le sous-titre prend l'encre du titre : le voile couvre ses deux lignes.
+            HStack(alignment: .top, spacing: Jetons.espace2) {
                 // Deux lignes de titre et deux de sous-titre, réservées : rien de tronqué, et les cartes
                 // d'une même rangée ont la même hauteur.
-                Text(entree.itineraire ?? entree.sousTitre ?? "")
-                    .font(Jetons.typoMeta.font)
-                    .foregroundStyle(surImage ? encre : encreSecondaire)
-                    .lineLimit(2, reservesSpace: true)
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(entree.titre)
+                        .font(Jetons.typoTitreCarte.font)
+                        .foregroundStyle(Color.jeton(choisie ? \.accentTexte : \.encre))
+                        .lineLimit(2, reservesSpace: true)
+                    Text(entree.itineraire ?? entree.sousTitre ?? "")
+                        .font(Jetons.typoMeta.font)
+                        .foregroundStyle(Color.jeton(entree.itineraire != nil ? \.accentTexte : \.encre2))
+                        .lineLimit(2, reservesSpace: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                if let carte = entree.carte { MiniatureCarte(carte: carte, taille: LigneResultat.vignette) }
             }
             if let corps {
-                corps(EncresCarte(encre: encre, accent: accent, surImage: surImage))
-                    .frame(maxHeight: .infinity, alignment: .top)
+                corps().frame(maxHeight: .infinity, alignment: .top)
             } else {
-                Spacer(minLength: Jetons.espace4)
+                Spacer(minLength: Jetons.espace2)
             }
             pied
         }
-        .padding(Jetons.espace2)
+        .padding(.vertical, Jetons.espace2)
+        .padding(.horizontal, Jetons.espace3)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .overlay(alignment: .topTrailing) {
-            if entree.favori {
-                Image(systemName: "star.fill").font(Jetons.typoMicro.font)
-                    .foregroundStyle(surImage ? Color.jeton(\.accentTexte, en: .nuit) : Color.jeton(\.accentTexte))
-                    .padding(Jetons.espace2)
+        // Le fond du choix et le survol se posent sur la plaque, sous le texte.
+        .background {
+            ZStack {
+                forme.fill(Color.jeton(\.plaque))
+                if choisie || survole { forme.fill(Color.jeton(choisie ? \.selection : \.survol)) }
             }
         }
-        .background { FondCarte(carte: entree.carte, choisie: choisie) }
-        .contentShape(Rectangle())
+        .overlay { forme.strokeBorder(Color.jeton(\.filet), lineWidth: Jetons.epaisseurFilet) }
+        .contentShape(forme)
+        .onHover { survole = $0 }
     }
 
-    /// L'étiquette à gauche, « intérieur » au-dessus des coordonnées à droite : les deux pastilles ne se
-    /// touchent jamais. L'étiquette prend sa propre ligne quand elle n'entre pas : jamais coupée.
+    /// L'étiquette et le favori à gauche, « intérieur » et les coordonnées à droite : jamais coupés,
+    /// l'étiquette prend sa ligne quand elle n'entre pas.
     private var pied: some View {
-        let droite = VStack(alignment: .trailing, spacing: Jetons.espace1) {
+        let gauche = HStack(spacing: Jetons.espace2) {
+            if let etiquette = entree.etiquette { Badge(texte: etiquette, ton: .accent) }
+            if entree.favori {
+                Image(systemName: "star.fill").font(Jetons.typoMeta.font).foregroundStyle(Color.jeton(\.accentTexte))
+            }
             if entree.interieur { EtiquetteInterieur(taille: Jetons.typoMicro) }
-            Text(entree.detail ?? "")
-                .font(Jetons.typoCode.font)
-                .foregroundStyle(encreSecondaire)
-                .lineLimit(1)
         }
+        let droite = Text(entree.detail ?? "")
+            .font(Jetons.typoCode.font)
+            .foregroundStyle(Color.jeton(\.encre2))
+            .lineLimit(1)
         return ViewThatFits(in: .horizontal) {
-            HStack(alignment: .bottom, spacing: Jetons.espace1) {
-                if let etiquette = entree.etiquette { Badge(texte: etiquette, ton: .accent) }
+            HStack(spacing: Jetons.espace2) {
+                gauche
                 Spacer(minLength: 0)
                 droite
             }
             VStack(alignment: .leading, spacing: Jetons.espace1) {
-                if let etiquette = entree.etiquette { Badge(texte: etiquette, ton: .accent) }
+                gauche
                 HStack(spacing: 0) {
                     Spacer(minLength: 0)
                     droite
                 }
             }
         }
-        .frame(minHeight: Jetons.espace4)
+        .frame(minHeight: Jetons.hauteurCase)
     }
 }
 
@@ -525,14 +495,13 @@ struct LigneResultat: View {
                     }
                 }
             }
-            .frame(width: Jetons.hauteurCase, height: Jetons.hauteurCase)
-            .frame(width: Jetons.hauteurRangee, height: Jetons.hauteurRangee)
-            // Le carré teinté de l'icône ; sur la rangée choisie, qui l'est déjà, il passe en `surface`.
-            .background(RoundedRectangle(cornerRadius: Jetons.rayon0, style: .continuous)
-                .fill(Color.jeton(choisie ? \.plaque : \.creux)))
+            .frame(width: Jetons.tailleIcone, height: Jetons.tailleIcone)
+            .frame(width: Jetons.hauteurControle, height: Jetons.hauteurControle)
+            // Le rond `creux` de l'icône ; sur la rangée choisie, qui l'est déjà, il passe en `plaque`.
+            .background(Circle().fill(Color.jeton(choisie ? \.plaque : \.creux)))
             VStack(alignment: .leading, spacing: Jetons.espace1) {
                 HStack(spacing: Jetons.espace1) {
-                    Text(entree.titre).font(Jetons.typoCorps.font).foregroundStyle(etat.encre).lineLimit(1)
+                    Text(entree.titre).font(Jetons.typoCorps.font).foregroundStyle(Color.jeton(\.encre)).lineLimit(1)
                     if let etiquette = entree.etiquette { Badge(texte: etiquette, ton: .accent) }
                     if entree.favori {
                         Image(systemName: "star.fill").font(Jetons.typoMicro.font).foregroundStyle(Color.jeton(\.accentTexte))
@@ -541,10 +510,10 @@ struct LigneResultat: View {
                 }
                 if entree.sousTitre != nil || entree.itineraire != nil {
                     HStack(spacing: Jetons.espace1) {
-                        if let sousTitre = entree.sousTitre { Text(sousTitre).foregroundStyle(etat.encreSecondaire) }
+                        if let sousTitre = entree.sousTitre { Text(sousTitre).foregroundStyle(Color.jeton(\.encre2)) }
                         // Le zaap retenu, à lire avant d'Entrée : le trajet copié y passe.
                         if let itineraire = entree.itineraire {
-                            if entree.sousTitre != nil { Text("·").foregroundStyle(etat.encreSecondaire) }
+                            if entree.sousTitre != nil { Text("·").foregroundStyle(Color.jeton(\.encre2)) }
                             Text(itineraire).foregroundStyle(Color.jeton(\.accentTexte)).layoutPriority(1)
                         }
                     }
@@ -555,8 +524,8 @@ struct LigneResultat: View {
             Spacer(minLength: Jetons.espace2)
             if let detail = entree.detail {
                 Text(detail)
-                    .font(Jetons.typoCode.font)
-                    .foregroundStyle(etat.encreSecondaire)
+                    .font(Jetons.typoMeta.font.monospaced())
+                    .foregroundStyle(Color.jeton(\.encre2))
                     .lineLimit(1)
             }
             if let touche = entree.touche { ToucheDeClavier(touche: touche) }
@@ -564,7 +533,7 @@ struct LigneResultat: View {
             if entree.effet.sePlie || deplier != nil {
                 let chevron = Image(systemName: deplie ? "chevron.down" : "chevron.right")
                     .font(Jetons.typoMicro.font)
-                    .foregroundStyle(Color.jeton(\.encre2))
+                    .foregroundStyle(Color.jeton(\.encre3))
                     .frame(width: Jetons.tailleIcone)
                 if let deplier {
                     Button(action: deplier) { chevron.contentShape(Rectangle()) }
@@ -577,14 +546,15 @@ struct LigneResultat: View {
         }
         .padding(.horizontal, Jetons.espace2)
         .padding(.vertical, Jetons.espace1)
-        .fondEtat(etat)
+        .frame(minHeight: Jetons.hauteurRangee)
+        .fondEtat(etat, rayon: Jetons.rayon2)
         .onHover { survole = $0 }
     }
 
     private var etat: EtatVisuel { choisie ? .choisi : EtatVisuel(survole: survole) }
 
-    /// À la hauteur d'une ligne de deux textes : la liste ne s'allonge pas.
-    private static let vignette = CGSize(width: 46, height: 32)
+    /// La vignette d'une carte du jeu, à la hauteur d'une rangée.
+    static let vignette = CGSize(width: Jetons.largeurVignette, height: Jetons.hauteurRangee)
 
     private var icone: String {
         if let symbole = entree.symbole { return symbole }

@@ -35,14 +35,21 @@ struct HotKey: Codable, Equatable, Hashable {
     }
 
     /// Rendu type « ⌘1 », dans l'ordre canonique des modificateurs macOS.
-    var displayString: String {
-        var out = ""
-        if modifiers & UInt32(controlKey) != 0 { out += "⌃" }
-        if modifiers & UInt32(optionKey) != 0 { out += "⌥" }
-        if modifiers & UInt32(shiftKey) != 0 { out += "⇧" }
-        if modifiers & UInt32(cmdKey) != 0 { out += "⌘" }
-        out += HotKey.keyName(keyCode)
-        return out
+    var displayString: String { touches.joined() }
+
+    /// Chaque touche à presser, modificateurs d'abord, dans l'ordre canonique de macOS : l'enregistreur
+    /// les dessine une à une.
+    var touches: [String] {
+        let modificateurs: [(Int, String)] = [(controlKey, "⌃"), (optionKey, "⌥"), (shiftKey, "⇧"), (cmdKey, "⌘")]
+        return modificateurs.filter { modifiers & UInt32($0.0) != 0 }.map(\.1) + [HotKey.keyName(keyCode)]
+    }
+
+    /// La frappe comme raccourci : avec un modificateur (`init?(event:)`), ou nue quand `nues` le permet
+    /// (les touches du jeu). Un modificateur seul : nil, l'écoute continue.
+    static func lu(_ event: NSEvent, nues: Bool) -> HotKey? {
+        if let raccourci = HotKey(event: event) { return raccourci }
+        guard nues, event.modifierFlags.intersection([.command, .option, .control, .shift]).isEmpty else { return nil }
+        return HotKey(keyCode: UInt32(event.keyCode), modifiers: 0)
     }
 
     /// Libellé d'une touche.

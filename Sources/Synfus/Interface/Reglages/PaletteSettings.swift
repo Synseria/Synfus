@@ -5,14 +5,11 @@ struct PaletteSettings: View {
     @ObservedObject private var prefs = Preferences.shared
 
     var body: some View {
-        PageReglages(titre: L("reglages.palette")) {
+        PageReglages {
             Bloc {
                 Ligne(titre: L("palette.reglages.tri"), aide: L("palette.reglages.tri.aide")) {
-                    Picker(L("palette.reglages.tri"), selection: $prefs.paletteTri) {
-                        ForEach(TriPalette.allCases, id: \.self) { Text($0.titre).tag($0) }
-                    }
-                    .labelsHidden()
-                    .fixedSize()
+                    SegmenteTexte(titre: L("palette.reglages.tri"), options: TriPalette.allCases.map { ($0, $0.titre) },
+                                  selection: $prefs.paletteTri)
                 }
                 InterrupteurVuesCartes()
             }

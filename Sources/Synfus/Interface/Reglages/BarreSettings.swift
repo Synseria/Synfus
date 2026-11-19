@@ -7,7 +7,7 @@ struct BarreSettings: View {
     @ObservedObject private var previews = WindowPreviewService.shared
 
     var body: some View {
-        PageReglages(titre: L("reglages.barre")) {
+        PageReglages {
             Bloc {
                 LigneInterrupteur(titre: L("general.barre.afficher"), isOn: Binding(
                     get: { prefs.barVisible },

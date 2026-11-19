@@ -36,24 +36,23 @@ struct BarView: View {
         VStack(spacing: Jetons.espace1) {
             HStack(spacing: Jetons.espace1) {
                 handle
+                if montrePiluleEquipe { piluleEquipe }
                 content
                 settingsButton
             }
-            // La rangée des équipes, sous les pastilles, dans le même panneau.
-            // Elle n'existe que s'il y a des équipes — ou le temps d'un
-            // glisser, pour en créer une : sans équipe, rien à montrer.
-            if manager.accessibilityGranted, !manager.clients.isEmpty,
-               !prefs.equipes.isEmpty || dragging != nil {
+            // Une seule rangée : les cibles de dépôt (« Tous », chaque équipe, « + ») n'apparaissent
+            // que le temps d'un glisser de pastille, pour affecter ou créer une équipe.
+            if manager.accessibilityGranted, !manager.clients.isEmpty, dragging != nil {
                 teamRow.frame(maxWidth: .infinity)
             }
         }
-        .padding(.horizontal, Jetons.espace1)
-        .padding(.vertical, Jetons.espace1)
+        .padding([.vertical, .leading], Jetons.espace1)
+        .padding(.trailing, Jetons.espace2)
         // Sur les deux rangées : les cadres des secteurs et des pastilles
         // doivent se comparer dans un seul repère.
         .coordinateSpace(name: Self.barSpace)
         .background(WindowDragArea())   // tout le fond libre déplace la barre
-        .surfaceFlottante(verre: true)
+        .surfaceFlottante()
         .fixedSize()
         .animation(sansMouvement ? nil : Jetons.courbeStandard.animation(Jetons.dureeRapide), value: dragging != nil)
         .contextMenu { contextMenu }
@@ -61,7 +60,44 @@ struct BarView: View {
         .onChange(of: prefs.equipes.count) { _, _ in pruneSectorFrames() }
     }
 
-    /// « Tous », une case par équipe, et « + » tant qu'on peut en créer une.
+    /// La pilule d'équipe dès qu'une équipe existe : avec une seule, « Tous » ou elle reste un choix, et
+    /// la barre est le seul endroit où le faire sans raccourci.
+    private var montrePiluleEquipe: Bool {
+        manager.accessibilityGranted && !manager.clients.isEmpty && !prefs.equipes.isEmpty
+    }
+
+    /// L'effectif montré et le menu qui en change : « Tous », chaque équipe (la courante cochée), puis
+    /// « Créer une équipe… », qui mène à Réglages ▸ Personnages (une équipe vide n'existe pas : on la
+    /// crée en y mettant quelqu'un). Un `Menu`, jamais un popover : il activerait Synfus.
+    private var piluleEquipe: some View {
+        let active = manager.equipeActive
+        return Menu {
+            Toggle(L("equipes.tous"), isOn: Binding(get: { active == nil }, set: { _ in manager.activerEquipe(nil) }))
+            ForEach(prefs.equipes.indices, id: \.self) { index in
+                Toggle(L("persos.equipeN", index + 1),
+                       isOn: Binding(get: { active == index }, set: { _ in manager.activerEquipe(index) }))
+            }
+            if prefs.equipes.count < Equipes.maximum {
+                Divider()
+                Button { SettingsWindowController.shared.show(section: .personnages) } label: {
+                    Label(L("barre.equipe.creer"), systemImage: "plus")
+                }
+            }
+        } label: {
+            HStack(spacing: Jetons.espace1) {
+                Text(active.map { L("persos.equipeN", $0 + 1) } ?? L("equipes.tous"))
+                Image(systemName: "chevron.down").imageScale(.small)
+            }
+        }
+        .menuStyle(.button)
+        .menuIndicator(.hidden)
+        .buttonStyle(BoutonBorde())
+        .fixedSize()
+        .aide(L("barre.equipe.changer"))
+    }
+
+    /// Les cibles du dépôt d'une pastille : « Tous », une case par équipe, et « + » tant qu'on peut en
+    /// créer une.
     private var teamRow: some View {
         HStack(spacing: Jetons.espace1) {
             sector(.tous)
@@ -130,7 +166,7 @@ struct BarView: View {
     private var separator: some View {
         Capsule()
             .fill(Color.jeton(\.filet))
-            .frame(width: Jetons.epaisseurFilet, height: Jetons.espace4)
+            .frame(width: Jetons.epaisseurFilet, height: Jetons.hauteurCase)
             .padding(.horizontal, Jetons.espace1)
             .allowsHitTesting(false)
     }
@@ -139,7 +175,7 @@ struct BarView: View {
     /// passer par la barre de menus. Hors du contenu conditionnel : c'est quand
     /// rien ne marche qu'on cherche les réglages.
     private var settingsButton: some View {
-        GearButton().padding(.leading, Jetons.espace1)
+        GearButton()
     }
 
     @ViewBuilder
