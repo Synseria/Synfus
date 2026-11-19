@@ -18,17 +18,11 @@ final class SettingsWindowController: NSObject {
         UsageStore.shared.compter(.reglages)
         if let section { OngletReglages.shared.section = section }
         if window == nil {
-            let hosting = NSHostingController(rootView: SettingsView().racineSynfus())
-            let window = NSWindow(contentViewController: hosting)
-            // Sans titre affiché : les onglets disent où l'on est. Le nom reste pour le menu Fenêtre et
-            // VoiceOver ; le verre monte sous la barre de titre, la fenêtre n'a pas de fond à elle.
-            window.title = L("reglages.titre")
-            window.styleMask = [.titled, .closable, .miniaturizable, .fullSizeContentView]
-            window.titleVisibility = .hidden
-            window.titlebarAppearsTransparent = true
-            window.isOpaque = false
-            window.backgroundColor = .clear
-            window.isReleasedWhenClosed = false
+            // La taille commune, bornée à la place utile de l'écran (sans le Dock ni la barre des menus).
+            let utile = (FloatingBarController.shared.visibleBarFrame.flatMap { barre in
+                NSScreen.screens.first { $0.frame.intersects(barre) } } ?? NSScreen.main)?.visibleFrame.height
+            let hauteur = min(SettingsView.taille.height, (utile ?? SettingsView.taille.height) - Self.gap * 2)
+            let window = Self.batir(SettingsView(hauteur: hauteur))
             self.window = window
             NotificationCenter.default.addObserver(self, selector: #selector(windowWillClose),
                                                    name: NSWindow.willCloseNotification, object: window)
@@ -46,6 +40,21 @@ final class SettingsWindowController: NSObject {
         // s'ouvrirait derrière le jeu.
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
+    }
+
+    /// La fenêtre autour de `contenu`, l'unique façon de la bâtir : les captures jugent celle que
+    /// l'utilisateur voit. Sans titre affiché : les onglets disent où l'on est ; le nom reste pour le
+    /// menu Fenêtre et VoiceOver. Le verre monte sous la barre de titre, la fenêtre n'a pas de fond.
+    static func batir(_ contenu: some View) -> NSWindow {
+        let window = NSWindow(contentViewController: NSHostingController(rootView: contenu.racineSynfus()))
+        window.title = L("reglages.titre")
+        window.styleMask = [.titled, .closable, .miniaturizable, .fullSizeContentView]
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
+        window.isOpaque = false
+        window.backgroundColor = .clear
+        window.isReleasedWhenClosed = false
+        return window
     }
 
     /// La sonde d'attention se démarre à la main depuis l'onglet Diagnostic et

@@ -448,6 +448,23 @@ struct CapturesTests {
         try ecrire(vue, vers: dossier.appending(path: "reglages-quetes-indisponibles.png"))
     }
 
+    @Test("Capture de la fenêtre des réglages, telle que bâtie", .enabled(if: dossier != nil))
+    func fenetreDesReglages() throws {
+        let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
+        try FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)
+        equipe()
+        NSApplication.shared.appearance = NSAppearance(named: Self.apparence)
+        let fenetre = SettingsWindowController.batir(SettingsView(onglet: OngletReglages(.general))
+            .environment(\.colorScheme, Self.schema))
+        fenetre.appearance = NSAppearance(named: Self.apparence)
+        let vue = try #require(fenetre.contentView)
+        vue.layoutSubtreeIfNeeded()
+        RunLoop.main.run(until: Date().addingTimeInterval(0.3))
+        let rep = try #require(vue.bitmapImageRepForCachingDisplay(in: vue.bounds))
+        vue.cacheDisplay(in: vue.bounds, to: rep)
+        try #require(rep.representation(using: .png, properties: [:])).write(to: dossier.appending(path: "reglages-fenetre.png"))
+    }
+
     @Test("Capture de la fenêtre À propos", .enabled(if: dossier != nil))
     func aPropos() throws {
         let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
