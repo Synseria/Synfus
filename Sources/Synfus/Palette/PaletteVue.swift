@@ -104,11 +104,11 @@ struct PaletteVue: View {
     private var filtres: some View {
         HStack(spacing: Jetons.espace2) {
             HStack(spacing: Jetons.espace2) {
-                ForEach(modele.jeu, id: \.self) { filtre in
+                ForEach(FiltrePalette.allCases, id: \.self) { filtre in
                     let choisi = modele.filtre == filtre
                     // Tab et ⇧Tab parcourent les filtres (le panneau) : aucun d'eux ne prend le focus.
                     Button { modele.choisir(filtre) } label: {
-                        Puce(libelle: filtre.titre(enRecherche: modele.enRecherche), choisie: choisi)
+                        Puce(libelle: filtre.titre, choisie: choisi)
                     }
                     .buttonStyle(.plain)
                     .focusable(false)
