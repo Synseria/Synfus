@@ -123,17 +123,19 @@ struct QueteVue: View {
     private func titreQuetes(_ titre: String, enFiche: Bool, bascule: Bool) -> some View {
         let nouvelles = MenuQuetes.nouvelles(lecture.reconnues, epinglees: prefs.quetesEpinglees)
         return HStack(spacing: Jetons.espace1) {
-            if bascule, !enFiche {
+            // C'est la quête ouverte qui porte le retour : « ‹ » mène à la liste.
+            if bascule, enFiche {
                 Image(systemName: "chevron.left")
-                    .font(Jetons.typoMicro.font).foregroundStyle(Color.jeton(\.encre2))
-                    .help(L("quete.liste.retour"))
+                    .font(Jetons.typoMicro.font).foregroundStyle(Color.jeton(\.accentTexte))
+                    .help(L("quete.liste.aide"))
             }
             Text(titre).font(metriques.titreFort.font).lineLimit(2).fixedSize(horizontal: false, vertical: true)
                 .help(titre)
-            if bascule, enFiche {
-                Image(systemName: "list.bullet")
+            // Sur la liste, c'est la quête montrée qu'on rejoint : sa marque.
+            if bascule, !enFiche {
+                Image(systemName: "circle.fill")
                     .font(Jetons.typoMicro.font).foregroundStyle(Color.jeton(\.encre2))
-                    .help(L("quete.liste.aide"))
+                    .help(L("quete.liste.retour"))
             }
             let ici = ficheImposee == nil && enFiche ? (QuetePanel.shared.ici()?.aEpingler(prefs.quetesEpinglees).count ?? 0) : 0
             if ici > 0 {
@@ -272,6 +274,7 @@ struct QueteVue: View {
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .curseurDeClic(ficheImposee == nil)
                     .disabled(ficheImposee != nil)
                     .accessibilityLabel(ressource.nom)
                     .accessibilityAddTraits(cochee ? .isSelected : [])
@@ -311,6 +314,7 @@ struct QueteVue: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .curseurDeClic(true)
         .aide(sujet.estUnMonstre ? L("ouTrouver.aide.monstre") : L("ouTrouver.aide.objet"))
     }
 
@@ -643,6 +647,7 @@ struct QueteVue: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .curseurDeClic(true)
                 .accessibilityLabel(objectif.texte)
                 .accessibilityAddTraits(valide ? .isSelected : [])
                 .help(suggere ? (objectif.combat ? L("quete.suggestion.combat.aide") : L("quete.suggestion.aide"))
@@ -795,6 +800,7 @@ struct QueteVue: View {
                 .padding(.vertical, metriques.ligneVerticale)
         }
         .buttonStyle(.etat(choisi: copie.affiche(id), nue: true))
+        .curseurDeClic(action != nil)
         .disabled(action == nil)
         .help(action == nil ? "" : aide ?? "")
     }

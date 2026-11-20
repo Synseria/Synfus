@@ -347,6 +347,7 @@ struct BarView: View {
                 }
         }
         .buttonStyle(.plain)
+        .curseurDeClic(!closing)
         .disabled(closing)
         // Fermer depuis la barre : le client gèle souvent quand on le quitte
         // par sa propre fenêtre, et il fallait alors « Forcer à quitter » à la

@@ -1,12 +1,23 @@
 import SwiftUI
 
+/// La racine du panneau de chasse : la vue de l'instance du perso devant —
+/// chaque perso a la sienne (`Chasses`), refaite quand le perso devant change.
+struct ChasseRacine: View {
+    @ObservedObject private var chasses = Chasses.shared
+
+    var body: some View {
+        ChasseVue(modele: chasses.courant)
+            .id(chasses.perso ?? "")
+    }
+}
+
 /// Le panneau de chasse, au style du panneau de quêtes : transparent, un
 /// en-tête par lequel on le déplace. Une seule colonne, aussi étroite que la
-/// boussole le permet, pour masquer le moins de jeu possible : le départ, la
-/// boussole — les quatre directions autour de « Lire » —, puis l'indice et
-/// le résultat dessous.
+/// boussole le permet, pour masquer le moins de jeu possible : le départ —
+/// centré, aligné sur la boussole —, les quatre directions autour de « Lire »,
+/// puis l'indice et le résultat dessous.
 struct ChasseVue: View {
-    @ObservedObject private var modele = ChasseModele.shared
+    @ObservedObject var modele = ChasseModele.shared
     @ObservedObject private var previews = WindowPreviewService.shared
     @StateObject private var copie = SignalCopie()
 
@@ -23,11 +34,10 @@ struct ChasseVue: View {
                         boussole.frame(maxWidth: .infinity)
                         if !previews.authorized { LigneAutorisation() }
                         indice
-                        lus
+                        rienLu
                         resultat
                     }
-                    .padding(.vertical, Jetons.espace2)
-                    .padding(.horizontal, Jetons.espace1)
+                    .padding(Jetons.espace1)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -70,24 +80,32 @@ struct ChasseVue: View {
 
     // MARK: - Départ
 
-    /// Les coordonnées de départ, centrées sous l'en-tête, avec la position du personnage à reprendre.
+    /// Les coordonnées de départ, **centrées** pour tomber sous la colonne du
+    /// milieu de la boussole (les flèches nord/sud et « Lire ») ; le drapeau
+    /// et le bouton de reprise de position restent aux bords, en surimpression.
     private var depart: some View {
-        HStack(spacing: Jetons.espace1) {
-            Image(systemName: "flag").foregroundStyle(Color.jeton(\.encre2))
-                .help(L("chasse.depart"))
-            TextField("x", value: $modele.departX, format: .number.grouping(.never), prompt: Text("x"))
-                .frame(width: 52)
-            TextField("y", value: $modele.departY, format: .number.grouping(.never), prompt: Text("y"))
-                .frame(width: 52)
-            Button { modele.reprendrePosition() } label: { Image(systemName: "location") }
-                .buttonStyle(BoutonTertiaire())
-                .disabled(LecteurEcran.shared.positionDuPersoDevant == nil)
-                .aide(L("chasse.depart.reprendre"))
+        ZStack {
+            HStack(spacing: Jetons.espace1) {
+                TextField("x", value: $modele.departX, format: .number.grouping(.never), prompt: Text("x"))
+                    .frame(width: 52)
+                TextField("y", value: $modele.departY, format: .number.grouping(.never), prompt: Text("y"))
+                    .frame(width: 52)
+            }
+            .frame(maxWidth: .infinity)
+            HStack(spacing: Jetons.espace1) {
+                Image(systemName: "flag").foregroundStyle(Color.jeton(\.encre2))
+                    .help(L("chasse.depart"))
+                Spacer(minLength: 0)
+                Button { modele.reprendrePosition() } label: { Image(systemName: "location") }
+                    .buttonStyle(BoutonTertiaire())
+                    .disabled(LecteurEcran.shared.positionDuPersoDevant == nil)
+                    .aide(L("chasse.depart.reprendre"))
+            }
+            .frame(maxWidth: .infinity)
         }
-        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
         .textFieldStyle(.roundedBorder)
         .fixedSize(horizontal: false, vertical: true)
-        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Boussole
@@ -116,14 +134,17 @@ struct ChasseVue: View {
 
     private func fleche(_ direction: Direction) -> some View {
         let choisie = modele.direction == direction
+        // La direction trouvée par le scan passe en accent, au-dessus du choisi.
+        let lue = modele.directionLue == direction
         return Button { modele.choisir(direction) } label: {
-            Image(systemName: direction.symbole)
+            let icone = Image(systemName: direction.symbole)
                 .font(Jetons.typoSection.font)
                 .frame(width: Jetons.hauteurRangee, height: Jetons.hauteurRangee)
+            Group { if lue { icone.foregroundStyle(Color.jeton(\.accentTexte)) } else { icone } }
         }
         .buttonStyle(.etat(choisi: choisie))
         .disabled(modele.enAttenteDesIndices)
-        .aide(direction.libelle)
+        .aide(lue ? L("chasse.direction.lue", direction.libelle) : direction.libelle)
     }
 
     private var centre: some View {
@@ -142,10 +163,16 @@ struct ChasseVue: View {
     private var indice: some View {
         VStack(alignment: .leading, spacing: Jetons.espace1) {
             // Ce que le champ attend s'écrit dans son texte d'exemple : le départ, puis une direction,
-            // puis l'indice.
+            // puis l'indice. L'indice lu par le scan y est, encadré d'accent.
             TextField(L("chasse.indice"), text: $modele.saisie, prompt: Text(modele.attente.libelle))
                 .textFieldStyle(.roundedBorder)
                 .disabled(modele.enAttenteDesIndices)
+                .overlay {
+                    if modele.cibleLue, modele.cible != nil {
+                        RoundedRectangle(cornerRadius: Jetons.rayon1, style: .circular)
+                            .strokeBorder(Color.jeton(\.accent), lineWidth: Jetons.epaisseurFocus)
+                    }
+                }
                 .onSubmit { modele.validerSaisie() }
             ForEach(modele.suggestions, id: \.self) { cible in
                 Button { modele.choisir(cible) } label: {
@@ -159,30 +186,19 @@ struct ChasseVue: View {
         }
     }
 
-    // MARK: - Indices lus
+    // MARK: - Rien de lu
 
-    /// Les indices lus à l'écran, à choisir d'un clic.
-    private var lus: some View {
-        VStack(alignment: .leading, spacing: Jetons.espace1) {
-            if modele.rienLu {
-                HStack(spacing: Jetons.espace1) {
-                    Text(L("chasse.rienLu")).font(Jetons.typoMeta.font).foregroundStyle(Color.jeton(\.encre2))
-                    Button(L("lecture.ouvrir")) { SettingsWindowController.shared.show(section: .lecture) }
-                        .buttonStyle(BoutonBorde())
-                        .help(L("chasse.lire.aide"))
-                }
-            }
-            ForEach(modele.lues, id: \.self) { cible in
-                Button { modele.choisir(cible) } label: {
-                    Text(cible.nom(en: modele.langue))
-                        .font(Jetons.typoMeta.font)
-                        .multilineTextAlignment(.leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, Jetons.espace1)
-                        .padding(.vertical, Jetons.espace1)
-                }
-                .buttonStyle(.etat(choisi: modele.cible == cible, nue: true))
+    /// Le dernier scan n'a rien reconnu : le geste qui règle la lecture. Les
+    /// indices lus ne s'affichent plus en liste — le scan choisit celui de la
+    /// ligne fléchée, et le champ permet d'en taper un autre.
+    @ViewBuilder
+    private var rienLu: some View {
+        if modele.rienLu {
+            HStack(spacing: Jetons.espace1) {
+                Text(L("chasse.rienLu")).font(Jetons.typoMeta.font).foregroundStyle(Color.jeton(\.encre2))
+                Button(L("lecture.ouvrir")) { SettingsWindowController.shared.show(section: .lecture) }
+                    .buttonStyle(BoutonBorde())
+                    .help(L("chasse.lire.aide"))
             }
         }
     }

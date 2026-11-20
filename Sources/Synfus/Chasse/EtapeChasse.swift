@@ -38,6 +38,25 @@ enum Direction: Int, CaseIterable, Identifiable, Sendable {
         default: return nil
         }
     }
+
+    /// La flèche que le jeu met devant l'indice de l'étape en cours, lue par
+    /// l'OCR dans sa ligne (« → … ») — Vision écorche parfois la flèche en
+    /// triangle plein, d'où les variantes.
+    init?(ligneLue ligne: String) {
+        for (fleches, direction) in Self.flechesLues where fleches.contains(where: { ligne.contains($0) }) {
+            self = direction
+            return
+        }
+        return nil
+    }
+
+    /// Les glyphes de flèche reconnus, par direction.
+    private static let flechesLues: [(String, Direction)] = [
+        ("→➔➜➞➟⇨⇒►▶︎", .est),
+        ("←⇦⇐◄◀︎", .ouest),
+        ("↑⇧⇑▲", .nord),
+        ("↓⇩⇓▼", .sud),
+    ]
 }
 
 /// Une étape de chasse : d'une carte de départ, dans une direction, la
@@ -105,6 +124,22 @@ enum EtapeChasse {
             lues.append(cible)
         }
         return lues
+    }
+
+    /// La direction de l'étape en cours, lue sur la flèche de sa ligne : la
+    /// dernière ligne qui en porte une (les étapes faites restent au-dessus).
+    static func directionLue(dans lignes: [String]) -> Direction? {
+        lignes.reversed().compactMap { Direction(ligneLue: $0) }.first
+    }
+
+    /// La cible de l'étape en cours : celle de la **ligne fléchée**, pas la
+    /// dernière ligne lue — le suivi peut garder d'anciennes étapes dessous,
+    /// ou l'OCR en écorcher une ; la flèche désigne l'étape à jouer.
+    static func cibleLue(dans lignes: [String], parmi indices: [Indice]) -> Cible? {
+        for ligne in lignes.reversed() where Direction(ligneLue: ligne) != nil {
+            if let cible = ciblesLues(dans: [ligne], parmi: indices).first { return cible }
+        }
+        return nil
     }
 
     /// DofusDB ne cherche pas plus loin, le jeu non plus.

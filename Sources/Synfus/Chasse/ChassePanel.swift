@@ -12,7 +12,7 @@ private final class PanneauChasse: NSPanel {
     override func sendEvent(_ event: NSEvent) {
         if event.type == .keyDown, event.modifierFlags.intersection([.command, .option, .control]).isEmpty {
             if let direction = Direction(toucheFleche: event.keyCode) {
-                ChasseModele.shared.choisir(direction)
+                Chasses.shared.courant.choisir(direction)
                 return
             }
             if event.keyCode == 53 {
@@ -46,7 +46,7 @@ final class ChassePanel: NSObject, ObservableObject, NSWindowDelegate {
         panel.makeKeyAndOrderFront(nil)
         if !ouvert { UsageStore.shared.compter(.chasse) }
         ouvert = true
-        ChasseModele.shared.ouvrir()
+        Chasses.shared.ouvrir()
     }
 
     func fermer() {
@@ -73,7 +73,7 @@ final class ChassePanel: NSObject, ObservableObject, NSWindowDelegate {
     }
 
     private func construire() -> NSPanel {
-        let hosting = NSHostingController(rootView: ChasseVue().racineSynfus())
+        let hosting = NSHostingController(rootView: ChasseRacine().racineSynfus())
         hosting.sizingOptions = [.preferredContentSize]
         let panel = PanneauChasse(
             contentRect: NSRect(x: 0, y: 0, width: 216, height: 360),

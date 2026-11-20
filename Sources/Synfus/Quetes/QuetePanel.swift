@@ -109,13 +109,13 @@ final class QuetePanel: NSObject, ObservableObject {
         return montree.flatMap { epinglees.contains($0) ? $0 : nil } ?? epinglees.last
     }
 
-    /// Retire la quête ; le panneau se ferme avec la dernière.
+    /// Retire la quête ; la dernière retirée laisse le panneau ouvert sur la liste.
     func desepingler(_ id: Int) {
         let prefs = Preferences.shared
         prefs.quetesEpinglees.removeAll { $0 == id }
         LectureSuivi.shared.oublier([id])
         if montree == id { montree = prefs.quetesEpinglees.last }
-        if prefs.quetesEpinglees.isEmpty { fermer() }
+        if prefs.quetesEpinglees.isEmpty { enListe = true }
     }
 
     /// Un dernier mot avant : le panneau se vide d'un coup.
@@ -127,12 +127,13 @@ final class QuetePanel: NSObject, ObservableObject {
         }
     }
 
-    /// Retire toutes les quêtes et cache le panneau.
+    /// Retire toutes les quêtes ; le panneau reste ouvert sur la liste, qui
+    /// invite à en chercher une — fermer se fait par « ⋯ ».
     func toutDesepingler() {
         LectureSuivi.shared.oublier(Preferences.shared.quetesEpinglees)
         Preferences.shared.quetesEpinglees = []
         montree = nil
-        fermer()
+        enListe = true
     }
 
     /// Cache le panneau ; les quêtes restent épinglées pour la prochaine fois.

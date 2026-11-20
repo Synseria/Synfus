@@ -92,6 +92,7 @@ struct BoutonEtiquette: View {
             }
         }
         .buttonStyle(.plain)
+        .curseurDeClic(true)
         .popover(isPresented: $edition, arrowEdge: .bottom) {
             HStack(spacing: Jetons.espace2) {
                 TextField(L("palette.etiquette.exemple"), text: $texte)

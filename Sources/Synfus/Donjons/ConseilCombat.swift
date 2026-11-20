@@ -8,17 +8,21 @@ struct ConseilCombat: Equatable, Sendable {
     let titre: String
     let detail: String
 
-    /// Les sections lues, la première qui en donne : les pages récentes ont
-    /// leurs conseils tactiques, les anciennes seulement une stratégie ou le
-    /// principe du combat, en puces aussi.
+    /// Les sections lues, **toutes**, dans l'ordre de la page : les pages
+    /// récentes ont leurs conseils tactiques, les anciennes seulement une
+    /// stratégie globale ou le principe du combat — la tactique vaut les puces.
+    /// Un même titre deux fois n'est gardé qu'une fois.
     static let sections = ["conseils-tactiques", "strategie-globale", "principe-combat"]
 
     static func extraire(_ html: String) -> [ConseilCombat] {
+        var tous: [ConseilCombat] = []
+        var vus: Set<String> = []
         for section in sections {
-            let conseils = extraire(html, section: section)
-            if !conseils.isEmpty { return conseils }
+            for conseil in extraire(html, section: section) where vus.insert(conseil.titre).inserted {
+                tous.append(conseil)
+            }
         }
-        return []
+        return tous
     }
 
     /// La section commence à son ancre et s'arrête à l'ancre suivante ; une

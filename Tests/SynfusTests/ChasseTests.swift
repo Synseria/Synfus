@@ -154,6 +154,33 @@ struct ChasseTests {
         if case .indice(let indice) = lues.first { #expect(indice.id == 993) } else { Issue.record("indice attendu") }
     }
 
+    // MARK: - Lecture de l'étape en cours
+
+    @Test("La flèche lue dans une ligne donne la direction de l'étape en cours")
+    func directionLue() {
+        #expect(Direction(ligneLue: "→ Poupee koaiak") == .est)
+        #expect(Direction(ligneLue: "↑ Cairn") == .nord)
+        #expect(Direction(ligneLue: "Grelot") == nil)
+        let lignes = ["CHASSE AU TRÉSOR", "Départ [-25,-36]", "→ Poupee koaiak", "Etape 3/6"]
+        #expect(EtapeChasse.directionLue(dans: lignes) == .est)
+        // La dernière ligne fléchée gagne : les étapes faites restent au-dessus.
+        #expect(EtapeChasse.directionLue(dans: ["↑ Cairn", "→ Grelot"]) == .est)
+        #expect(EtapeChasse.directionLue(dans: ["rien de fléché"]) == nil)
+    }
+
+    @Test("L'indice de l'étape en cours est celui de la ligne fléchée, pas la dernière ligne lue")
+    func cibleLue() {
+        let logo = Indice(id: 42, noms: ["fr": "Gravure de logo Ankama", "en": "Ankama logo engraving"])
+        let etoile = Indice(id: 43, noms: ["fr": "Gravure d'étoile"])
+        let wabbit = Indice(id: 44, noms: ["fr": "Gravure de wabbit"])
+        let parmi = [logo, etoile, wabbit]
+        // La dernière ligne est une ancienne étape (ou mal lue) : la flèche désigne la bonne.
+        #expect(EtapeChasse.cibleLue(dans: ["Gravure de wabbit", "→ Gravure de logo Ankama"], parmi: parmi) == .indice(logo))
+        #expect(EtapeChasse.cibleLue(dans: ["→ Gravure d'étoile", "Gravure de wabbit"], parmi: parmi) == .indice(etoile))
+        // Sans flèche lisible, aucune cible n'est désignée.
+        #expect(EtapeChasse.cibleLue(dans: ["Gravure de wabbit"], parmi: parmi) == nil)
+    }
+
     // MARK: - Étapes et attente
 
     @Test("L'historique rend les étapes de la dernière à la première, puis rien")

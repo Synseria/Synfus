@@ -9,7 +9,7 @@ enum MenuQuetes {
         case titre(String)
         /// Une quête du panneau : la choisir la montre, sa croix la retire.
         case epinglee(id: Int, nom: String, montree: Bool)
-        /// Retirer toutes les quêtes du panneau, le panneau avec.
+        /// Retirer toutes les quêtes du panneau ; la liste reste ouverte.
         case toutDesepingler
         /// Une quête qui commence sur la case du perso : la choisir l'ajoute.
         case ici(id: Int, titre: String)

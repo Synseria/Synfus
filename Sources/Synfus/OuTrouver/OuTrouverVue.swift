@@ -143,6 +143,7 @@ struct OuTrouverVue: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .curseurDeClic(true)
         .help(L("ouTrouver.copierTrajet"))
     }
 
