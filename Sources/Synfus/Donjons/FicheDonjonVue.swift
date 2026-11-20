@@ -48,6 +48,7 @@ struct FicheDonjonVue: View {
                     .fixedSize()
                     .id(Self.ancre(action))
                     .onTapGesture { modele.cliquer(action) }
+                    .curseurDeClic(true)
             }
         }
     }

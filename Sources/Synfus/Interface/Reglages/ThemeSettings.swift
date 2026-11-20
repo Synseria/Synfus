@@ -88,6 +88,7 @@ private struct ChoixDuTheme: View {
                 .overlay { if choisie { Circle().strokeBorder(Color.jeton(\.encre), lineWidth: Jetons.epaisseurFocus) } }
         }
         .buttonStyle(.plain)
+        .curseurDeClic(true)
         .elementDeGroupe()
         .aide(coloris.libelle)
         .accessibilityAddTraits(choisie ? .isSelected : [])

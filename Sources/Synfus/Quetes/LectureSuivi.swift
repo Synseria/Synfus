@@ -141,12 +141,17 @@ final class LectureSuivi: ObservableObject {
         // rapporter son suivi.
         if WindowTitle.isPersistableName(perso) {
             vusLe[perso] = Date()
-            // Une relecture identique ne change rien : rien à redessiner.
-            var historique = self.historique
-            let disparues = historique.noter(lu, perso: perso, date: Date())
-            if historique != self.historique { self.historique = historique }
-            let restent = terminees.union(disparues).subtracting(lu.reconnues.map(\.id))
-            if restent != terminees { terminees = restent }
+            // Une lecture du tour qui ne voit pas le suivi — map ouverte,
+            // fenêtre du jeu posée dessus — ne dit rien des quêtes : la
+            // dernière lecture qui le voyait tient (pas d'effet boomerang).
+            // Une lecture demandée, si, même vide : elle dit « rien ».
+            if demandee || !lu.reconnues.isEmpty {
+                var historique = self.historique
+                let disparues = historique.noter(lu, perso: perso, date: Date())
+                if historique != self.historique { self.historique = historique }
+                let restent = terminees.union(disparues).subtracting(lu.reconnues.map(\.id))
+                if restent != terminees { terminees = restent }
+            }
         }
         if etat != .lu, demandee || etat != .enCours { etat = .lu }
         revoir()

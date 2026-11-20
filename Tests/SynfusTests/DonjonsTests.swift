@@ -192,6 +192,23 @@ struct DonjonsTests {
         #expect(ConseilCombat.texte("&Eacute;t&eacute; &oelig;uf &#233;&#xE9; &inconnu;") == "Été œuf éé &inconnu;")
     }
 
+    @Test("Toutes les sections de la page sont lues — tactique, stratégie, principe — pas seulement la première")
+    func conseilsToutesSections() {
+        let html = """
+        <span class="ancres-dpln" id="conseils-tactiques"></span>
+        <div class="paragraph"><ul><li>Conseil tactique.</li></ul></div>
+        <span class="ancres-dpln" id="strategie-globale"></span>
+        <div class="paragraph"><ul><li>Stratégie globale.</li></ul>Détail.</div>
+        <span class="ancres-dpln" id="principe-combat"></span>
+        <div class="paragraph"><ul><li>Principe du combat.</li></ul></div>
+        """
+        #expect(ConseilCombat.extraire(html) == [
+            ConseilCombat(titre: "Conseil tactique.", detail: ""),
+            ConseilCombat(titre: "Stratégie globale.", detail: "Détail."),
+            ConseilCombat(titre: "Principe du combat.", detail: ""),
+        ])
+    }
+
     @Test("Éléments : frapper où il résiste le moins, éviter où il résiste le plus ; rien quand tout se vaut")
     func elements() throws {
         func fiche(_ neutre: Int, _ terre: Int, _ feu: Int, _ eau: Int, _ air: Int) throws -> FicheCombat {

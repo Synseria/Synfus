@@ -60,8 +60,12 @@ struct BossVue: View {
 
     private var entete: some View {
         EnTetePanneau(icone: BoutonBarre.boss.symbole, teinte: Color.jeton(\.accentTexte), menu: Self.menu) {
+            // Une seule ligne, même long : le nom du boss ne passe pas à la ligne
+            // (le perso suivi à côté a la sienne).
             Text(Self.nom(prefs.bossChoisi, donjons: donjons.donjons, garde: prefs.nomsBossChoisi))
                 .font(Jetons.typoTitreCarte.font)
+                .lineLimit(1)
+                .truncationMode(.tail)
                 .padding(.leading, Jetons.espace1)
             if donjons.enCours, prefs.bossChoisi.special == nil, prefs.nomsBossChoisi == nil {
                 ProgressView().controlSize(.mini).padding(.leading, Jetons.espace1)
@@ -136,6 +140,7 @@ struct BossVue: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .curseurDeClic(true)
                 .aide(L("boss.rappel.copier"))
             }
         }
@@ -146,13 +151,25 @@ struct BossVue: View {
         copie.signaler(signal)
     }
 
-    /// Les conseils de Dofus pour les noobs pour ce combat.
+    /// Les conseils de Dofus pour les noobs pour ce combat — conseils tactiques,
+    /// stratégie globale et principe : tous se copient d'un clic, un par un ou
+    /// d'un coup par l'icône du titre.
     @ViewBuilder
     private var conseilsVue: some View {
         if let liste = aide.donjon.flatMap({ donjons.conseils[$0.id] }), !liste.isEmpty {
             let depliee = Binding { conseils ?? (prefs.bossChoisi.special == nil) } set: { conseils = $0 }
             SectionBoss(titre: L("donjon.conseils", nombre: liste.count, liste.count), aide: L("donjon.conseils.aide"),
-                        depliee: depliee) {} contenu: {
+                        depliee: depliee) {
+                if depliee.wrappedValue {
+                    Button { copier(liste.map(\.titre).joined(separator: " "), signal: "") } label: {
+                        IconeCopie(icone: "doc.on.doc", copie: copie.affiche(""))
+                            .font(Jetons.typoMeta.font)
+                            .foregroundStyle(Color.jeton(\.encre2))
+                    }
+                    .buttonStyle(BoutonTertiaire())
+                    .aide(L("boss.rappels.copier"))
+                }
+            } contenu: {
                 ConseilsVue(conseils: liste).foregroundStyle(Color.jeton(\.encre2))
             }
         }

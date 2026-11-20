@@ -117,6 +117,7 @@ struct PaletteVue: View {
                         Puce(libelle: filtre.titre, choisie: choisi)
                     }
                     .buttonStyle(.plain)
+                    .curseurDeClic(true)
                     .focusable(false)
                     .curseurDeClic(true)
                     .elementDeGroupe()
@@ -243,6 +244,7 @@ struct PaletteVue: View {
                 CarteZaap(entree: entree, choisie: index == modele.selection, disposition: disposition)
                     .id(entree.id)
                     .onTapGesture { modele.executer(entree) }
+                    .curseurDeClic(true)
                     .help(entree.complet)
                     .accessibilityElement(children: .combine)
                     .accessibilityAddTraits(.isButton)
@@ -260,6 +262,7 @@ struct PaletteVue: View {
                               deplier: entree.pnj == nil ? nil : { modele.deplier(entree) })
                     .id(entree.id)
                     .onTapGesture { modele.executer(entree) }
+                    .curseurDeClic(true)
                     .help(entree.complet)
                     .accessibilityElement(children: .combine)
                     .accessibilityAddTraits(.isButton)
@@ -310,6 +313,9 @@ struct PaletteVue: View {
                 ToucheDeClavier(touche: "↵")
                 ToucheDeClavier(touche: "esc")
             }
+            // ⌘E ouvre cette ligne : le clavier y va, même si le champ de
+            // recherche le tenait (le focus posé à l'apparition est le seul sûr).
+            .onAppear { champ = .etiquette }
             .padding(.horizontal, Jetons.espace2)
             .frame(height: Jetons.hauteurRangee)
         } else {
@@ -584,6 +590,7 @@ struct LigneResultat: View {
                 if let deplier {
                     Button(action: deplier) { chevron.contentShape(Rectangle()) }
                         .buttonStyle(.plain)
+                        .curseurDeClic(true)
                         .focusable(false)
                 } else {
                     chevron

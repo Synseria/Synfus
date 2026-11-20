@@ -20,7 +20,13 @@ final class ChasseModele: ObservableObject {
     @Published var departX: Int?
     @Published var departY: Int?
     @Published private(set) var direction: Direction?
+    /// La direction lue par le dernier scan, à mettre en couleur ; un choix
+    /// manuel la remplace.
+    @Published private(set) var directionLue: Direction?
     @Published private(set) var cible: EtapeChasse.Cible?
+    /// L'indice choisi par le dernier scan, à mettre en couleur ; une saisie
+    /// ou un clic manuel le remplace.
+    @Published private(set) var cibleLue = false
     /// Le champ de l'indice ; il ne propose rien tant qu'il nomme la cible.
     @Published var saisie = ""
     /// Les cibles proposées par la dernière lecture de l'écran.
@@ -41,6 +47,10 @@ final class ChasseModele: ObservableObject {
     private var historique = HistoriqueChasse()
 
     private init() {}
+
+    /// Une instance de chasse, pour un perso de plus (`Chasses`) : la liste
+    /// des indices se partage par le cache disque, chaque instance la relit.
+    static func nouveau() -> ChasseModele { ChasseModele() }
 
     var departConnu: Bool { departX != nil && departY != nil }
 
@@ -68,6 +78,8 @@ final class ChasseModele: ObservableObject {
         constat = Constat(cible: cible, direction: .est, resultat: .trouve(x: -3, y: 0, distance: 1))
         self.lues = lues
         self.cible = lues.first
+        directionLue = .est
+        cibleLue = true
     }
 
     func viderPourCaptures() {
@@ -76,6 +88,8 @@ final class ChasseModele: ObservableObject {
         constat = nil
         lues = []
         cible = nil
+        cibleLue = false
+        directionLue = nil
     }
 
     /// Les indices indisponibles, pour la capture de la documentation (`CapturesTests`).
@@ -133,31 +147,46 @@ final class ChasseModele: ObservableObject {
 
     /// La reconnaissance cherche chaque nom d'indice, à quelques fautes près,
     /// dans chaque ligne lue : un dixième de seconde, hors du fil principal.
+    /// Le scan lit toute l'étape en cours d'un coup : la direction sur la
+    /// flèche de la ligne de l'indice, et l'indice de cette même ligne —
+    /// pas la dernière ligne lue, une ancienne étape peut traîner dessous.
     func lire() {
         guard !lectureEnCours, !indices.isEmpty else { return }
         lectureEnCours = true
         let indices = indices
         Task {
             let lignes = await LecteurEcran.shared.lireUneFois(.chasse)?.lignes ?? []
-            lues = await Task.detached(priority: .userInitiated) {
+            let lues = await Task.detached(priority: .userInitiated) {
                 EtapeChasse.ciblesLues(dans: lignes, parmi: indices)
             }.value
+            self.lues = lues
             rienLu = lues.isEmpty
+            // La direction d'abord : choisir l'indice déclenche la recherche
+            // dès que les deux sont là.
+            if let direction = EtapeChasse.directionLue(dans: lignes) {
+                directionLue = direction
+                self.direction = direction
+            }
             lectureEnCours = false
-            if let derniere = lues.last { choisir(derniere) }
+            if let cible = EtapeChasse.cibleLue(dans: lignes, parmi: indices) ?? lues.last {
+                choisir(cible, lue: true)
+            }
         }
     }
 
     // MARK: - Étape
 
-    func choisir(_ cible: EtapeChasse.Cible) {
+    func choisir(_ cible: EtapeChasse.Cible, lue: Bool = false) {
         self.cible = cible
+        cibleLue = lue
         saisie = cible.nom(en: langue)
         chercherSiPret()
     }
 
     func choisir(_ direction: Direction) {
         guard !enAttenteDesIndices else { return }
+        // Un choix manuel efface la direction lue au scan.
+        directionLue = nil
         self.direction = direction
         chercherSiPret()
     }
@@ -204,7 +233,9 @@ final class ChasseModele: ObservableObject {
         historique.noter(reprise)
         self.constat = constat
         direction = nil
+        directionLue = nil
         cible = nil
+        cibleLue = false
         saisie = ""
         lues.removeAll { $0 == constat.cible }
         if case .trouve(let x, let y, _) = constat.resultat {
@@ -224,7 +255,9 @@ final class ChasseModele: ObservableObject {
         departY = rouverture.departY
         lues = rouverture.lues
         direction = reprise.direction
+        directionLue = nil
         cible = reprise.cible
+        cibleLue = false
         saisie = reprise.cible.nom(en: langue)
         constat = nil
         echec = nil
