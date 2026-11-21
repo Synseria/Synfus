@@ -28,7 +28,14 @@ struct PaletteVue: View {
         .surfaceFlottante()
         .onAppear { champ = .recherche }
         .onChange(of: modele.ouverture) { _, _ in champ = .recherche }
-        .onChange(of: modele.edition) { _, edition in champ = edition == nil ? .recherche : .etiquette }
+        .onChange(of: modele.edition) { _, edition in
+            // Le focus ne suit que si la valeur change une fois le champ monté :
+            // on repasse par nil, puis on pose la cible au tour suivant — poser
+            // .etiquette tout de suite (champ déjà à .etiquette via l'apparition)
+            // ne changerait rien et le clavier resterait à la recherche.
+            champ = nil
+            DispatchQueue.main.async { champ = edition == nil ? .recherche : .etiquette }
+        }
     }
 
     // MARK: - Champ
