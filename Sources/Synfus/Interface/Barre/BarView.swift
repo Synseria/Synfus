@@ -25,6 +25,8 @@ struct BarView: View {
     @State private var hoverTarget: String?
     /// La pastille sous le curseur, pour sa voix de survol (distincte de l'attente de l'aperçu).
     @State private var survolChip: String?
+    /// La pastille dont l'infobulle (sous la barre) est montrée, après un bref survol.
+    @State private var infobulleChip: String?
     /// Une pastille qu'on tient s'efface à peine ; le reste ne bouge pas de place.
     private static let opaciteGlisse = 0.35
     private static let echelleGlisse = 1.06
@@ -378,9 +380,17 @@ struct BarView: View {
             }
         }
         .overlay { if invitations.copiesRecentes.contains(client.slotKey) { CopiedBadge() } }
-        .help(tooltip(index: index, client: client))
-        // Un perso sur un autre espace reste cliquable, mais on ne le donne pas
-        // pour présent : sa vignette et son titre datent de sa dernière visite.
+        // La pastille se survole : une petite infobulle paraît **dessous** —
+        // le nom à gauche, le raccourci à droite quand il existe (la barre est
+        // en haut de l'écran, l'infobulle système y serait rognée).
+        .overlay(alignment: .bottom) {
+            if infobulleChip == client.slotKey {
+                infobulle(index: index, client: client)
+                    .offset(y: Jetons.hauteurControle / 2 + Jetons.espace1)
+                    .allowsHitTesting(false)
+                    .transition(.opacity)
+            }
+        }
         .opacity(dragging == client.name ? Self.opaciteGlisse : 1)
         .scaleEffect(dragging == client.name ? Self.echelleGlisse : 1)
         .background(chipFrameReader(for: client.name))
@@ -388,7 +398,35 @@ struct BarView: View {
         .onHover { inside in
             survolChip = inside ? client.slotKey : (survolChip == client.slotKey ? nil : survolChip)
             hover(client, inside: inside)
+            let slot = client.slotKey
+            if inside {
+                // Un bref séjour ne l'affiche pas : il faut laisser la souris.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    if survolChip == slot { infobulleChip = slot }
+                }
+            } else if infobulleChip == slot {
+                infobulleChip = nil
+            }
         }
+    }
+
+    /// L'infobulle sous la pastille : nom à gauche, raccourci à droite.
+    private func infobulle(index: Int, client: DofusClient) -> some View {
+        HStack(spacing: Jetons.espace3) {
+            Text(client.name).lineLimit(1)
+            if index < prefs.hotKeys.count, let hotKey = prefs.hotKeys[index] {
+                Text(hotKey.displayString)
+                    .font(Jetons.typoMicro.font)
+                    .foregroundStyle(Color.jeton(\.encre2))
+            }
+        }
+        .font(Jetons.typoMeta.font)
+        .foregroundStyle(Color.jeton(\.encre))
+        .padding(.horizontal, Jetons.espace2)
+        .padding(.vertical, Jetons.espace1)
+        .background(Capsule().fill(Color.jeton(\.plaque)))
+        .overlay(Capsule().strokeBorder(Color.jeton(\.filet), lineWidth: Jetons.epaisseurFilet))
+        .fixedSize()
     }
 
     /// L'équipe et le rang du perso, avec les mêmes écritures que le glisser. Un nom que les
@@ -586,20 +624,6 @@ struct BarView: View {
     nonisolated static func toucheDuPerso(index: Int, raccourcis: [HotKey?]) -> String {
         if index < raccourcis.count, let raccourci = raccourcis[index] { return raccourci.displayString }
         return "\(index + 1)"
-    }
-
-    private func tooltip(index: Int, client: DofusClient) -> String {
-        var lines = [client.name]
-        if client.dormant {
-            lines.append(L("barre.autreBureau"))
-        }
-        if index < prefs.hotKeys.count, let hotKey = prefs.hotKeys[index] {
-            lines.append(L("barre.raccourci", hotKey.displayString))
-        }
-        if !client.rawTitle.isEmpty, client.rawTitle != client.name {
-            lines.append(L("barre.fenetre", client.rawTitle))
-        }
-        return lines.joined(separator: "\n")
     }
 
     @ViewBuilder

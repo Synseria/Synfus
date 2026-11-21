@@ -110,9 +110,22 @@ class VueACurseur: NSView {
         if window != nil { CurseurArrierePlan.autoriser() }
     }
 
-    override func mouseEntered(with _: NSEvent) { curseur.set() }
-    override func mouseMoved(with _: NSEvent) { curseur.set() }
+    override func mouseEntered(with event: NSEvent) { poserLeCurseur(event) }
+    override func mouseMoved(with event: NSEvent) { poserLeCurseur(event) }
     override func mouseExited(with _: NSEvent) { NSCursor.arrow.set() }
+
+    /// Le curseur de la zone — sauf si un contrôle est posé au-dessus au même
+    /// point : il garde le sien (main pointée), la zone de glisser ne lui vole
+    /// pas. C'est le cas des pastilles de persos, au-dessus du fond de la barre.
+    private func poserLeCurseur(_ event: NSEvent) {
+        guard let contenu = window?.contentView,
+              let touche = contenu.hitTest(contenu.convert(event.locationInWindow, from: nil)) else { return curseur.set() }
+        if touche == self || touche is VueACurseur || isDescendant(of: touche) {
+            curseur.set()
+        } else {
+            NSCursor.pointingHand.set()      // un contrôle au-dessus de la zone : c'est un clic
+        }
+    }
 }
 
 /// Permet à Synfus de poser le curseur alors qu'il n'est pas l'app active.
