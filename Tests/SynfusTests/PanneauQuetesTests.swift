@@ -138,21 +138,24 @@ struct PanneauQuetesTests {
         #expect(Array(sansEcran.suffix(3)) == [.titre(L("quete.menu.suivi")), .message(L("quete.suivi.sansAutorisation")), .geste(.autoriser)])
     }
 
-    @Test("La liste dit ce qui commence sur la case du perso : les quêtes que le panneau n'a pas, et les PNJ")
+    @Test("La liste dit ce qui commence sur la case du perso : « Ici » en dernier, replié, compté")
     func listeIci() {
         let ici = MenuQuetes.Ici(coordonnees: "[1,2]", quetes: [.init(id: 5, nom: "Q5", niveau: 10),
                                                                .init(id: 18, nom: "Q18", niveau: 70)], pnjs: ["Wogew", "Otomaï"])
         let elements = MenuQuetes.liste(epinglees: [18], montree: 18, reconnues: [], etat: .jamaisLu, coches: 0, ici: ici, nom: nom)
-        #expect(Array(elements.prefix(4)) == [
+        // L'en-tête « Ici » ferme la liste, avec le nombre de quêtes à épingler ; son contenu suit.
+        #expect(elements == [
             .epinglee(id: 18, nom: "Q18", montree: true),
-            .titre(L("quete.menu.ici", "[1,2]")),
+            .titre(L("quete.menu.suivi")),
+            .lireSuivi(enCours: false),
+            .iciEnTete(coordonnees: "[1,2]", nombre: 1),
             .ici(id: 5, titre: L("quete.menu.iciQuete", "Q5", 10)),
             .message(L("quete.menu.iciPNJ", "Wogew, Otomaï")),
         ])
         #expect(ici.aEpingler([5, 18]).isEmpty)
         let rien = MenuQuetes.liste(epinglees: [18], montree: 18, reconnues: [], etat: .jamaisLu, coches: 0,
                                     ici: MenuQuetes.Ici(coordonnees: "[1,2]", quetes: [], pnjs: []), nom: nom)
-        #expect(!rien.contains(.titre(L("quete.menu.ici", "[1,2]"))))
+        #expect(!rien.contains { if case .iciEnTete = $0 { return true } else { return false } })
     }
 
     @Test("Le mode compact ne grandit aucune mesure de la fiche")

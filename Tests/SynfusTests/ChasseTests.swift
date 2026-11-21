@@ -163,20 +163,20 @@ struct ChasseTests {
         #expect(Direction(ligneLue: "Grelot") == nil)
         let lignes = ["CHASSE AU TRÉSOR", "Départ [-25,-36]", "→ Poupee koaiak", "Etape 3/6"]
         #expect(EtapeChasse.directionLue(dans: lignes) == .est)
-        // La dernière ligne fléchée gagne : les étapes faites restent au-dessus.
-        #expect(EtapeChasse.directionLue(dans: ["↑ Cairn", "→ Grelot"]) == .est)
+        // La première ligne fléchée gagne : le jeu liste l'étape en cours en haut.
+        #expect(EtapeChasse.directionLue(dans: ["↑ Cairn", "→ Grelot"]) == .nord)
         #expect(EtapeChasse.directionLue(dans: ["rien de fléché"]) == nil)
     }
 
-    @Test("L'indice de l'étape en cours est celui de la ligne fléchée, pas la dernière ligne lue")
+    @Test("L'indice de l'étape en cours est celui de la première ligne fléchée, pas la dernière ligne lue")
     func cibleLue() {
         let logo = Indice(id: 42, noms: ["fr": "Gravure de logo Ankama", "en": "Ankama logo engraving"])
         let etoile = Indice(id: 43, noms: ["fr": "Gravure d'étoile"])
         let wabbit = Indice(id: 44, noms: ["fr": "Gravure de wabbit"])
         let parmi = [logo, etoile, wabbit]
-        // La dernière ligne est une ancienne étape (ou mal lue) : la flèche désigne la bonne.
-        #expect(EtapeChasse.cibleLue(dans: ["Gravure de wabbit", "→ Gravure de logo Ankama"], parmi: parmi) == .indice(logo))
-        #expect(EtapeChasse.cibleLue(dans: ["→ Gravure d'étoile", "Gravure de wabbit"], parmi: parmi) == .indice(etoile))
+        // La dernière ligne est une étape suivante : la première flèche désigne la bonne.
+        #expect(EtapeChasse.cibleLue(dans: ["→ Gravure de logo Ankama", "Gravure de wabbit"], parmi: parmi) == .indice(logo))
+        #expect(EtapeChasse.cibleLue(dans: ["→ Gravure de wabbit", "← Gravure d'étoile"], parmi: parmi) == .indice(wabbit))
         // Sans flèche lisible, aucune cible n'est désignée.
         #expect(EtapeChasse.cibleLue(dans: ["Gravure de wabbit"], parmi: parmi) == nil)
     }

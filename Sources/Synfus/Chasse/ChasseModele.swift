@@ -23,6 +23,9 @@ final class ChasseModele: ObservableObject {
     /// La direction lue par le dernier scan, à mettre en couleur ; un choix
     /// manuel la remplace.
     @Published private(set) var directionLue: Direction?
+    /// La direction devinée (indice cherché dans les quatre directions) quand
+    /// le scan n'a pas lu de flèche ; un choix manuel la remplace.
+    @Published private(set) var directionDevinee: Direction?
     @Published private(set) var cible: EtapeChasse.Cible?
     /// L'indice choisi par le dernier scan, à mettre en couleur ; une saisie
     /// ou un clic manuel le remplace.
@@ -78,7 +81,9 @@ final class ChasseModele: ObservableObject {
         constat = Constat(cible: cible, direction: .est, resultat: .trouve(x: -3, y: 0, distance: 1))
         self.lues = lues
         self.cible = lues.first
+        direction = .est
         directionLue = .est
+        directionDevinee = nil
         cibleLue = true
     }
 
@@ -90,6 +95,7 @@ final class ChasseModele: ObservableObject {
         cible = nil
         cibleLue = false
         directionLue = nil
+        directionDevinee = nil
     }
 
     /// Les indices indisponibles, pour la capture de la documentation (`CapturesTests`).
@@ -162,11 +168,10 @@ final class ChasseModele: ObservableObject {
             self.lues = lues
             rienLu = lues.isEmpty
             // La direction d'abord : choisir l'indice déclenche la recherche
-            // dès que les deux sont là.
-            if let direction = EtapeChasse.directionLue(dans: lignes) {
-                directionLue = direction
-                self.direction = direction
-            }
+            // dès que les deux sont là. Sans flèche lue, elle reste à deviner.
+            directionLue = EtapeChasse.directionLue(dans: lignes)
+            direction = directionLue
+            directionDevinee = nil
             lectureEnCours = false
             if let cible = EtapeChasse.cibleLue(dans: lignes, parmi: indices) ?? lues.last {
                 choisir(cible, lue: true)
@@ -185,8 +190,9 @@ final class ChasseModele: ObservableObject {
 
     func choisir(_ direction: Direction) {
         guard !enAttenteDesIndices else { return }
-        // Un choix manuel efface la direction lue au scan.
+        // Un choix manuel efface la direction lue ou devinée.
         directionLue = nil
+        directionDevinee = nil
         self.direction = direction
         chercherSiPret()
     }
@@ -199,22 +205,34 @@ final class ChasseModele: ObservableObject {
     }
 
     /// Une étape se cherche quand elle est complète ; le Phorreur n'a pas besoin de départ.
+    /// Sans direction — aucune flèche lue au scan — elle se devine : l'indice
+    /// cherché dans les quatre directions, la carte la plus proche gagne.
     private func chercherSiPret() {
-        guard let cible, let direction, cible.nom(en: langue) == saisie else { return }
+        guard let cible, cible.nom(en: langue) == saisie else { return }
         recherche?.cancel()
         echec = nil
         guard case .indice(let indice) = cible else {
-            let reprise = HistoriqueChasse.Reprise(departX: departX, departY: departY, direction: direction, cible: cible)
-            conclure(Constat(cible: cible, direction: direction, resultat: .phorreur), reprise: reprise)
+            let reprise = HistoriqueChasse.Reprise(departX: departX, departY: departY, direction: direction ?? .est, cible: cible)
+            conclure(Constat(cible: cible, direction: direction ?? .est, resultat: .phorreur), reprise: reprise)
             return
         }
         guard let x = departX, let y = departY else { return }
-        let reprise = HistoriqueChasse.Reprise(departX: x, departY: y, direction: direction, cible: cible)
+        if let direction {
+            lancer(indice: indice, depuis: (x, y), direction: direction, cible: cible)
+        } else if cibleLue {
+            deviner(indice: indice, depuis: (x, y), cible: cible)
+        }
+        // Sinon, on attend un clic sur la boussole.
+    }
+
+    /// La recherche dans une direction donnée.
+    private func lancer(indice: Indice, depuis: (x: Int, y: Int), direction: Direction, cible: EtapeChasse.Cible) {
+        let reprise = HistoriqueChasse.Reprise(departX: depuis.x, departY: depuis.y, direction: direction, cible: cible)
         rechercheEnCours = true
         recherche = Task {
             defer { rechercheEnCours = false }
             do {
-                let cartes = try await ChasseDofusDB.cartes(depuis: x, y, direction: direction)
+                let cartes = try await ChasseDofusDB.cartes(depuis: depuis.x, depuis.y, direction: direction)
                 guard !Task.isCancelled else { return }
                 conclure(Constat(cible: cible, direction: direction,
                                  resultat: EtapeChasse.resultat(indice: indice.id, cartes: cartes)), reprise: reprise)
@@ -225,6 +243,35 @@ final class ChasseModele: ObservableObject {
         }
     }
 
+    /// La direction se devine : l'indice est cherché dans les quatre
+    /// directions, la carte trouvée la plus proche gagne. Plusieurs directions
+    /// le portent : la plus proche est un pari, signalée « devinée ».
+    private func deviner(indice: Indice, depuis: (x: Int, y: Int), cible: EtapeChasse.Cible) {
+        rechercheEnCours = true
+        recherche = Task {
+            defer { rechercheEnCours = false }
+            var trouves: [(direction: Direction, carte: EtapeChasse.Carte)] = []
+            for direction in Direction.allCases {
+                guard !Task.isCancelled else { return }
+                let cartes = try? await ChasseDofusDB.cartes(depuis: depuis.x, depuis.y, direction: direction)
+                if let carte = cartes.flatMap({ EtapeChasse.destination(indice: indice.id, cartes: $0) }) {
+                    trouves.append((direction, carte))
+                }
+            }
+            guard !Task.isCancelled else { return }
+            guard let meilleure = trouves.min(by: { $0.carte.distance < $1.carte.distance }) else {
+                echec = L("chasse.introuvableDirections", EtapeChasse.portee)
+                return
+            }
+            directionDevinee = meilleure.direction
+            let reprise = HistoriqueChasse.Reprise(departX: depuis.x, departY: depuis.y,
+                                                   direction: meilleure.direction, cible: cible)
+            conclure(Constat(cible: cible, direction: meilleure.direction,
+                             resultat: .trouve(x: meilleure.carte.x, y: meilleure.carte.y, distance: meilleure.carte.distance)),
+                     reprise: reprise)
+        }
+    }
+
     /// Une étape trouvée devient le départ de la suivante, et son trajet est
     /// copié par le seul foyer des trajets — zaap compris s'il fait gagner.
     private func conclure(_ constat: Constat, reprise: HistoriqueChasse.Reprise) {
@@ -232,8 +279,8 @@ final class ChasseModele: ObservableObject {
         reprise.rangLu = lues.firstIndex(of: constat.cible)
         historique.noter(reprise)
         self.constat = constat
-        direction = nil
-        directionLue = nil
+        // La direction reste allumée sur la boussole tant que le résultat
+        // s'affiche — le prochain scan la remplacera.
         cible = nil
         cibleLue = false
         saisie = ""
@@ -256,6 +303,7 @@ final class ChasseModele: ObservableObject {
         lues = rouverture.lues
         direction = reprise.direction
         directionLue = nil
+        directionDevinee = nil
         cible = reprise.cible
         cibleLue = false
         saisie = reprise.cible.nom(en: langue)

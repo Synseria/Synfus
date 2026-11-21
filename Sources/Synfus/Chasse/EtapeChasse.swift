@@ -127,16 +127,17 @@ enum EtapeChasse {
     }
 
     /// La direction de l'étape en cours, lue sur la flèche de sa ligne : la
-    /// dernière ligne qui en porte une (les étapes faites restent au-dessus).
+    /// **première** ligne qui en porte une — le jeu liste l'étape en cours en
+    /// haut, sous le départ.
     static func directionLue(dans lignes: [String]) -> Direction? {
-        lignes.reversed().compactMap { Direction(ligneLue: $0) }.first
+        lignes.compactMap { Direction(ligneLue: $0) }.first
     }
 
-    /// La cible de l'étape en cours : celle de la **ligne fléchée**, pas la
-    /// dernière ligne lue — le suivi peut garder d'anciennes étapes dessous,
-    /// ou l'OCR en écorcher une ; la flèche désigne l'étape à jouer.
+    /// La cible de l'étape en cours : celle de la **première ligne fléchée**,
+    /// pas la dernière ligne lue — le suivi garde les étapes suivantes dessous.
     static func cibleLue(dans lignes: [String], parmi indices: [Indice]) -> Cible? {
-        for ligne in lignes.reversed() where Direction(ligneLue: ligne) != nil {
+        for ligne in lignes {
+            guard Direction(ligneLue: ligne) != nil else { continue }
             if let cible = ciblesLues(dans: [ligne], parmi: indices).first { return cible }
         }
         return nil
