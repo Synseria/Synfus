@@ -240,7 +240,7 @@ extension QuetePanel {
             menu.addItem(CibleMenu.shared.element(L("panneau.fermer"), raccourci: prefs.quetesHotKey) { QuetePanel.shared.fermer() })
         case .separateur:
             menu.addItem(.separator())
-        case .titre, .epinglee, .ici, .toutEpingler, .lireSuivi, .reconnue, .message, .geste:
+        case .titre, .epinglee, .ici, .iciEnTete, .toutEpingler, .lireSuivi, .reconnue, .message, .geste:
             break
         }
     }

@@ -14,6 +14,8 @@ struct ListeQuetesVue: View {
     @ObservedObject private var lecteur = LecteurEcran.shared
     // periphery:ignore - observé : l'autorisation d'écran, dont dépend le suivi (`QuetePanel.liste`)
     @ObservedObject private var previews = WindowPreviewService.shared
+    /// La section « Ici », en dernier, est repliée d'office.
+    @State private var iciDeplie = false
 
     /// La colonne des marques, à gauche des noms.
     private static let colonneMarque: CGFloat = 14
@@ -39,9 +41,17 @@ struct ListeQuetesVue: View {
                         }
                         .frame(height: Jetons.hauteurRangee * 4 + Jetons.espace4)
                     }
-                    ForEach(Array(elements.enumerated()), id: \.offset) { _, element in
-                        ligne(element, toutEpingler: elements.contains(.toutEpingler),
-                              lecture: elements.contains { if case .lireSuivi = $0 { true } else { false } })
+                    // « Ici » est la dernière section : repliée, seul son en-tête se montre.
+                    let rangIci = elements.firstIndex { if case .iciEnTete = $0 { return true } else { return false } }
+                    ForEach(Array(elements.enumerated()), id: \.offset) { rang, element in
+                        if case .iciEnTete(let coordonnees, let nombre) = element {
+                            boutonIci(coordonnees: coordonnees, nombre: nombre)
+                        } else if let rangIci, rang > rangIci, !iciDeplie {
+                            EmptyView()
+                        } else {
+                            ligne(element, toutEpingler: elements.contains(.toutEpingler),
+                                  lecture: elements.contains { if case .lireSuivi = $0 { true } else { false } })
+                        }
                     }
                 }
             }
@@ -88,9 +98,39 @@ struct ListeQuetesVue: View {
                 Button(L("quete.toutEpingler")) { lecture.toutEpingler() }.buttonStyle(BoutonTertiaire())
             }
         // Le menu « ⋯ ».
-        case .toutDesepingler, .option, .affichage, .fermer, .separateur:
+        case .toutDesepingler, .option, .affichage, .fermer, .separateur, .iciEnTete:
             EmptyView()
         }
+    }
+
+    /// L'en-tête de la section « Ici », repliée d'office : un chevron, le titre,
+    /// et le nombre de quêtes à épingler à droite de la ligne.
+    private func boutonIci(coordonnees: String, nombre: Int) -> some View {
+        Button { iciDeplie.toggle() } label: {
+            HStack(alignment: .firstTextBaseline, spacing: Jetons.espace1) {
+                Image(systemName: iciDeplie ? "chevron.down" : "chevron.right")
+                    .font(metriques.icone.font)
+                    .foregroundStyle(Color.jeton(\.encre2))
+                    .frame(width: Jetons.espace4)
+                Text(L("quete.menu.ici", coordonnees))
+                    .font(metriques.detailFort.font)
+                    .foregroundStyle(Color.jeton(\.encre2))
+                Spacer(minLength: Jetons.espace1)
+                if nombre > 0 {
+                    Text("\(nombre)")
+                        .font(metriques.detailFort.font)
+                        .foregroundStyle(Color.jeton(\.texteSurAccent))
+                        .padding(.horizontal, Jetons.espace1)
+                        .background(Capsule().fill(Color.jeton(\.accent)))
+                }
+            }
+            .padding(.horizontal, metriques.ligneHorizontale)
+            .padding(.vertical, metriques.ligneVerticale)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.etat(nue: true))
+        .help(L("quete.ici.aide", nombre: nombre, nombre))
     }
 
     /// Une quête : sa marque, son nom entier, son détail au bout.

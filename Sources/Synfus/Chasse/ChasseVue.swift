@@ -19,6 +19,8 @@ struct ChasseRacine: View {
 struct ChasseVue: View {
     @ObservedObject var modele = ChasseModele.shared
     @ObservedObject private var previews = WindowPreviewService.shared
+    // periphery:ignore - observé : la position du perso devant, pour le cadre de la position
+    @ObservedObject private var lecteur = LecteurEcran.shared
     @StateObject private var copie = SignalCopie()
 
     var body: some View {
@@ -83,6 +85,8 @@ struct ChasseVue: View {
     /// Les coordonnées de départ, **centrées** pour tomber sous la colonne du
     /// milieu de la boussole (les flèches nord/sud et « Lire ») ; le drapeau
     /// et le bouton de reprise de position restent aux bords, en surimpression.
+    /// Un **encadré très léger** dit si le perso est sur la bonne position :
+    /// accent quand il y est, danger sinon.
     private var depart: some View {
         ZStack {
             HStack(spacing: Jetons.espace1) {
@@ -98,7 +102,7 @@ struct ChasseVue: View {
                 Spacer(minLength: 0)
                 Button { modele.reprendrePosition() } label: { Image(systemName: "location") }
                     .buttonStyle(BoutonTertiaire())
-                    .disabled(LecteurEcran.shared.positionDuPersoDevant == nil)
+                    .disabled(lecteur.positionDuPersoDevant == nil)
                     .aide(L("chasse.depart.reprendre"))
             }
             .frame(maxWidth: .infinity)
@@ -106,6 +110,15 @@ struct ChasseVue: View {
         .frame(maxWidth: .infinity)
         .textFieldStyle(.roundedBorder)
         .fixedSize(horizontal: false, vertical: true)
+        .overlay {
+            if let position = lecteur.positionDuPersoDevant, let x = modele.departX, let y = modele.departY {
+                let bonnePosition = position.x == x && position.y == y
+                RoundedRectangle(cornerRadius: Jetons.rayon2, style: .circular)
+                    .strokeBorder(bonnePosition ? Color.jeton(\.accent) : Color.jeton(\.danger),
+                                  lineWidth: Jetons.epaisseurFilet)
+                    .opacity(0.7)
+            }
+        }
     }
 
     // MARK: - Boussole
@@ -134,17 +147,20 @@ struct ChasseVue: View {
 
     private func fleche(_ direction: Direction) -> some View {
         let choisie = modele.direction == direction
-        // La direction trouvée par le scan passe en accent, au-dessus du choisi.
+        // La direction trouvée par le scan (lue, ou devinée) passe en accent, au-dessus du choisi.
         let lue = modele.directionLue == direction
+        let devinee = modele.directionDevinee == direction
         return Button { modele.choisir(direction) } label: {
             let icone = Image(systemName: direction.symbole)
                 .font(Jetons.typoSection.font)
                 .frame(width: Jetons.hauteurRangee, height: Jetons.hauteurRangee)
-            Group { if lue { icone.foregroundStyle(Color.jeton(\.accentTexte)) } else { icone } }
+            Group { if lue || devinee { icone.foregroundStyle(Color.jeton(\.accentTexte)) } else { icone } }
         }
         .buttonStyle(.etat(choisi: choisie))
         .disabled(modele.enAttenteDesIndices)
-        .aide(lue ? L("chasse.direction.lue", direction.libelle) : direction.libelle)
+        .aide(lue ? L("chasse.direction.lue", direction.libelle)
+             : devinee ? L("chasse.direction.devinee", direction.libelle)
+             : direction.libelle)
     }
 
     private var centre: some View {
