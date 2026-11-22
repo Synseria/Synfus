@@ -86,8 +86,9 @@ struct ChasseVue: View {
     // MARK: - Historique (horloge)
 
     /// Le bouton horloge, à gauche des coordonnées de départ : un menu popup
-    /// des étapes — validées avec leur carte atteinte, et celle en cours.
-    /// Rien d'autre en haut du panneau.
+    /// des étapes validées **de la chasse en cours** (avec leur carte atteinte),
+    /// et celle en cours en dessous. Style `menuIcone` de la trousse : fond au
+    /// survol, curseur main — on voit que c'est cliquable. Rien d'autre en haut.
     private var menuHorloge: some View {
         Menu {
             ForEach(Array(modele.etapesValidees.reversed().enumerated()), id: \.offset) { _, reprise in
@@ -107,9 +108,8 @@ struct ChasseVue: View {
             }
         } label: {
             Image(systemName: "clock.arrow.circlepath")
-                .foregroundStyle(Color.jeton(\.encre2))
         }
-        .menuStyle(.borderlessButton)
+        .menuIcone()
         .help(L("chasse.historique"))
     }
 

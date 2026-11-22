@@ -37,11 +37,29 @@ struct HistoriqueChasse: Equatable {
     }
 
     private var etapes: [Reprise] = []
+    /// Les indices du panneau de chasse en cours à l'écran : une étape affichée
+    /// n'a de sens que si son indice y est — un autre panneau est une chasse neuve.
+    private var ciblesDeLaChasse: [EtapeChasse.Cible] = []
 
     var vide: Bool { etapes.isEmpty }
 
     /// Toutes les étapes notées, de la première à la dernière — pour l'historique affiché.
     var toutes: [Reprise] { etapes }
+
+    /// Les étapes notées **de la chasse en cours** : celles dont l'indice est
+    /// dans le panneau lu à l'écran. Celles d'une chasse d'avant sont oubliées.
+    var deLaChasseEnCours: [Reprise] { etapes.filter { ciblesDeLaChasse.contains($0.cible) } }
+
+    /// Les indices lus à l'écran à ce scan. Un panneau qui ne contient aucun
+    /// indice connu est une **chasse neuve** : l'historique repart à zéro,
+    /// on n'y garde que la chasse en cours.
+    mutating func lire(_ lues: [EtapeChasse.Cible]) {
+        if !lues.isEmpty, !ciblesDeLaChasse.isEmpty, !lues.contains(where: { ciblesDeLaChasse.contains($0) }) {
+            etapes = []
+            ciblesDeLaChasse = []
+        }
+        for cible in lues where !ciblesDeLaChasse.contains(cible) { ciblesDeLaChasse.append(cible) }
+    }
 
     mutating func noter(_ reprise: Reprise) { etapes.append(reprise) }
 

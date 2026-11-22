@@ -158,13 +158,15 @@ enum EtapeChasse {
 
         /// La direction retenue pour la ligne — **seulement si la lecture est
         /// sûre** : un pixel à ≥ 0,75 gagne (Vision inverse parfois ↑ et ↓ dans
-        /// le texte) ; sinon glyphe et pixel doivent s'accorder ; en cas de
-        /// désaccord, aucune direction : mieux vaut attendre un clic que d'en
-        /// définir une fausse. Seul le glyphe lu vaut direction.
+        /// le texte) ; sinon un pixel à ≥ 0,6 vaut s'il n'y a pas de glyphe
+        /// contraire ; glyphe et pixel qui se contredisent sous 0,75 : aucune
+        /// direction — mieux vaut attendre un clic que d'en définir une fausse.
         var retenue: Direction? {
             if let pixel, pixel.score >= 0.75 { return pixel.direction }
-            if let pixel, let glyphe { return pixel.direction == glyphe ? glyphe : nil }
-            if let pixel { return pixel.score >= 0.75 ? pixel.direction : nil }
+            if let pixel, pixel.score >= 0.6 {
+                if let glyphe, glyphe != pixel.direction { return nil }
+                return pixel.direction
+            }
             return glyphe
         }
 
@@ -210,13 +212,20 @@ enum EtapeChasse {
     static func etapeLue(dans lignes: [String], cadres: [CGRect], image: LumaBitmap?, parmi indices: [Indice]) -> (direction: Direction?, cible: Cible?, rang: Int?) {
         let analyse = analyser(dans: lignes, cadres: cadres, image: image)
         let lues = ciblesLues(dans: lignes, parmi: indices)
-        // Les lignes qui portent un indice reconnu.
+        // Les lignes qui portent un indice reconnu, avec le badge de la ligne
+        // du dessus quand l'OCR a séparé le badge de l'indice.
         let avecCible = analyse.enumerated().compactMap { i, _ in
             ciblesLues(dans: [lignes[i]], parmi: indices).first != nil ? i : nil
         }
+        func badgeDe(_ rang: Int) -> AnalyseLigne {
+            if analyse[rang].enCours || analyse[rang].validee { return analyse[rang] }
+            // le badge « EN COURS »/« VALIDÉ » peut être la ligne juste au-dessus
+            if rang > 0, analyse[rang - 1].enCours || analyse[rang - 1].validee { return analyse[rang - 1] }
+            return analyse[rang]
+        }
         // L'étape en cours : badge « EN COURS », sinon la dernière ligne à indice non validée.
-        let enCours = avecCible.filter { analyse[$0].enCours }
-        let pool = enCours.isEmpty ? avecCible.filter { !analyse[$0].validee } : enCours
+        let enCours = avecCible.filter { badgeDe($0).enCours }
+        let pool = enCours.isEmpty ? avecCible.filter { !badgeDe($0).validee } : enCours
         guard let rang = pool.last ?? avecCible.last else { return (nil, lues.last, nil) }
         // Direction et indice de la **même** ligne ; la direction reste nil si
         // la flèche n'a pas été lue sûrement — aucun pari automatique.

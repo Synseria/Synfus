@@ -78,10 +78,11 @@ final class ChasseModele: ObservableObject {
         return PhaseChasse(departConnu: departConnu, cible: cible, position: position)
     }
 
-    var etapePrecedenteDisponible: Bool { !historique.vide }
+    /// Les étapes déjà conclues (validées) **de la chasse en cours** —
+    /// pour le menu horloge ; celles d'une chasse d'avant n'y sont pas.
+    var etapesValidees: [HistoriqueChasse.Reprise] { historique.deLaChasseEnCours }
 
-    /// Les étapes déjà conclues (validées), pour l'historique du panneau.
-    var etapesValidees: [HistoriqueChasse.Reprise] { historique.toutes }
+    var etapePrecedenteDisponible: Bool { !etapesValidees.isEmpty }
 
     /// Rouvre une étape passée choisie dans le menu horloge : les étapes
     /// suivantes sont retirées de l'historique, celle-ci est rouverte.
@@ -103,6 +104,7 @@ final class ChasseModele: ObservableObject {
     /// Un résultat et deux indices lus, pour la capture de la documentation (`CapturesTests`).
     func poserResultatPourCaptures(cible: EtapeChasse.Cible, lues: [EtapeChasse.Cible]) {
         constat = Constat(cible: cible, direction: .est, resultat: .trouve(x: -3, y: 0, distance: 1))
+        historique.lire(lues + [cible])
         historique.noter(.init(departX: -2, departY: 0, direction: .est, cible: cible, cibleAtteinte: .init(x: -3, y: 0)))
         self.lues = lues
         self.cible = lues.first
@@ -115,6 +117,7 @@ final class ChasseModele: ObservableObject {
         departX = nil
         departY = nil
         constat = nil
+        historique = HistoriqueChasse()
         lues = []
         cible = nil
         cibleLue = false
@@ -213,6 +216,9 @@ final class ChasseModele: ObservableObject {
                 return (lues, etape)
             }.value
             self.lues = lues
+            // Le panneau lu dit quelles sont les étapes de la chasse en cours :
+            // un panneau inconnu est une chasse neuve, l'historique repart à zéro.
+            historique.lire(lues)
             rienLu = lues.isEmpty && etape.direction == nil && etape.cible == nil
             // La direction d'abord : choisir l'indice déclenche la recherche
             // dès que les deux sont là. Flèche pas lue sûrement : pas de

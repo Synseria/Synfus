@@ -74,9 +74,9 @@ enum DetectionFleche {
     static func directionConicite(_ image: LumaBitmap, ligne cadre: CGRect) -> Correspondance? {
         let h = Int(cadre.height)
         guard h >= 8 else { return nil }
-        let region = CGRect(x: cadre.minX, y: cadre.minY - CGFloat(h) * 0.6,
+        let region = CGRect(x: cadre.minX, y: cadre.minY - CGFloat(h) * 0.3,
                             width: min(cadre.width, CGFloat(h) * 2.5),
-                            height: cadre.height + CGFloat(h) * 1.2)
+                            height: cadre.height + CGFloat(h) * 0.6)
             .intersection(CGRect(x: 0, y: 0, width: image.width, height: image.height))
         guard region.width > 8, region.height > 8 else { return nil }
         // binarisation "blanc pur" : seuil à 80 % de la plage
@@ -145,7 +145,7 @@ enum DetectionFleche {
             else { direction = .sud; score = Double(haut - bas) / Double(total) }
         }
         guard score > 0.05 else { return nil }
-        return Correspondance(direction: direction, score: min(1, 0.3 + 2 * score))
+        return Correspondance(direction: direction, score: min(1, 0.4 + 2 * score))
     }
 
     /// Le meilleur score de chaque direction sur une ligne, toutes variantes
@@ -155,9 +155,9 @@ enum DetectionFleche {
         guard h >= 8 else { return [:] }
         let debutTexte = texte ?? cadre.minX
         let marge = CGFloat(h) * 1.9
-        let region = CGRect(x: min(cadre.minX, debutTexte) - marge, y: cadre.minY - CGFloat(h) * 0.6,
+        let region = CGRect(x: min(cadre.minX, debutTexte) - marge, y: cadre.minY - CGFloat(h) * 0.3,
                             width: marge + (debutTexte - min(cadre.minX, debutTexte)) + min(cadre.width, CGFloat(h) * 0.5) + CGFloat(h) * 0.4,
-                            height: cadre.height + CGFloat(h) * 1.2)
+                            height: cadre.height + CGFloat(h) * 0.6)
             .intersection(CGRect(x: 0, y: 0, width: image.width, height: image.height))
         guard region.width > 8, region.height > 8, let encre = binariser(image, dans: region) else { return [:] }
         let rw = Int(region.width)
