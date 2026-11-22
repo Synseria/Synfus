@@ -30,7 +30,7 @@ enum DetectionFleche {
     /// `contour` : seulement le bord de la flèche — le jeu la dessine creuse.
     static func gabarit(_ direction: Direction, hauteur: Int, contour: Bool = false) -> LumaBitmap {
         let h = max(hauteur, 6)
-        let w = max(Int(CGFloat(h) * 1.3), 8)
+        let w = max(Int(CGFloat(h) * 1.1), 8)
         var resultat = dessinerEst(largeur: w, hauteur: h)
         if contour { resultat = contourDe(resultat) }
         let tours: Int
@@ -150,20 +150,22 @@ enum DetectionFleche {
         let total = masse(bx0, bx1, yTop, yBot)
         guard total > 20 else { return nil }
         // L'apex (la pointe) est le côté du blob le moins chargé : on compare
-        // les quarts EXTRÊMES du blob, pas ceux de la région (qui contient du vide).
+        // les quarts EXTRÊMES du blob sur les deux axes, l'axe le plus asymétrique
+        // gagne (la flèche du jeu est quasi carrée, w ≈ h).
         let quart = max(1, w / 4)
         let quartHaut = max(1, hmax / 4)
+        let gauche = masse(bx0, bx0 + quart - 1, yTop, yBot)
+        let droite = masse(bx1 - quart + 1, bx1, yTop, yBot)
+        let haut = masse(bx0, bx1, yTop, yTop + quartHaut - 1)
+        let bas = masse(bx0, bx1, yBot - quartHaut + 1, yBot)
+        let asymX = abs(gauche - droite), asymY = abs(haut - bas)
         var direction: Direction, score: Double
-        if w >= hmax {
-            let gauche = masse(bx0, bx0 + quart - 1, yTop, yBot)
-            let droite = masse(bx1 - quart + 1, bx1, yTop, yBot)
-            if gauche <= droite { direction = .ouest; score = Double(droite - gauche) / Double(total) }
-            else { direction = .est; score = Double(gauche - droite) / Double(total) }
+        if asymX >= asymY {
+            if gauche <= droite { direction = .ouest } else { direction = .est }
+            score = Double(asymX) / Double(total)
         } else {
-            let haut = masse(bx0, bx1, yTop, yTop + quartHaut - 1)
-            let bas = masse(bx0, bx1, yBot - quartHaut + 1, yBot)
-            if haut <= bas { direction = .nord; score = Double(bas - haut) / Double(total) }
-            else { direction = .sud; score = Double(haut - bas) / Double(total) }
+            if haut <= bas { direction = .nord } else { direction = .sud }
+            score = Double(asymY) / Double(total)
         }
         guard score > 0.05 else { return nil }
         return Correspondance(direction: direction, score: min(1, 0.4 + 2 * score), parGabarits: false)
@@ -183,7 +185,7 @@ enum DetectionFleche {
         guard region.width > 8, region.height > 8, let encre = binariser(image, dans: region) else { return [:] }
         let rw = Int(region.width)
         var parDirection: [Direction: Double] = [:]
-        for facteur in [1.15, 0.85, 0.6] {
+        for facteur in [1.3, 1.15, 1.0, 0.85, 0.7, 0.55] {
             for contour in [false, true] {
                 for direction in Direction.allCases {
                     let gabarit = Self.gabarit(direction, hauteur: Int(CGFloat(cadre.height) * facteur), contour: contour)
@@ -238,7 +240,9 @@ enum DetectionFleche {
         guard let premier = xs.first else { return cadre.minX }
         var c1 = premier
         for x in xs.dropFirst() { if x - c1 <= 3 { c1 = x } else { break } }
-        if c1 - premier + 1 >= h, xs.contains(where: { $0 > c1 + 3 }) {
+        // La flèche fait ~0,6 à 1,2 hauteur de ligne et colle au bord gauche ;
+        // une lettre est plus étroite et le texte continue après un blanc.
+        if c1 - premier + 1 >= h * 3 / 5, premier <= h + 4, xs.contains(where: { $0 > c1 + 3 }) {
             return region.minX + CGFloat(c1 + 3)
         }
         return cadre.minX
@@ -289,8 +293,8 @@ enum DetectionFleche {
                                            bitmapInfo: CGImageAlphaInfo.none.rawValue)
             else { return false }
             contexte.setFillColor(CGColor(gray: 1, alpha: 1))
-            let e = max(2, h / 5)
-            let tete = max(w / 3, 4)
+            let e = max(2, h / 4)
+            let tete = max(w / 2, 4)
             contexte.fill(CGRect(x: 0, y: (h - e) / 2, width: w - tete, height: e))
             let chemin = CGMutablePath()
             chemin.move(to: CGPoint(x: w - tete, y: h / 5))

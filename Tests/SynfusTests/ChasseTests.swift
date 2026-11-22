@@ -384,6 +384,21 @@ struct ChasseTests {
         }
     }
 
+    @Test("Le vrai début du texte est estimé après la flèche quand le cadre OCR l'englobe")
+    func debutDuTexteApresLaFleche() {
+        // La flèche (gabarit) est collée au bord gauche, le texte après un blanc.
+        let (zone, cadres) = Self.zoneAvecFleche(.sud, rang: 1)
+        let cadre = cadres[1] // x = 44, la flèche dessinée en x 6..42 est DANS la zone élargie
+        // cadre qui englobe la flèche : x = 6
+        let cadreAvecFleche = CGRect(x: 6, y: cadre.minY, width: cadre.width + 38, height: cadre.height)
+        let debut = DetectionFleche.debutDuTexte(zone, dans: cadreAvecFleche)
+        // après la flèche (qui va de x=6 à ~x=37), avant ou au début du texte (x 48)
+        #expect(debut > cadreAvecFleche.minX + 20)
+        #expect(debut <= cadre.minX + 4)
+        // Sans flèche à gauche (cadre sur le texte seul) : le début du texte = le cadre.
+        #expect(DetectionFleche.debutDuTexte(zone, dans: cadre) == cadre.minX)
+    }
+
     @Test("Les scores par direction sont exposés pour le diagnostic du scan")
     func scoresParDirection() {
         let (zone, cadres) = Self.zoneAvecFleche(.ouest, rang: 1)
