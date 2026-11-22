@@ -189,6 +189,15 @@ struct ChasseTests {
         #expect(historique.reprendre() == seconde)
         #expect(historique.reprendre() == premiere)
         #expect(historique.vide)
+        // Tronquer jusqu'à une étape choisie (menu horloge) ne garde que celle-là et avant.
+        let troisieme = HistoriqueChasse.Reprise(departX: 5, departY: 6, direction: .sud, cible: .phorreur)
+        historique.noter(premiere)
+        historique.noter(seconde)
+        historique.noter(troisieme)
+        historique.tronquer(jusqua: 0)
+        #expect(historique.toutes == [premiere])
+        #expect(historique.reprendre() == premiere)
+        #expect(historique.vide)
     }
 
     @Test("Rouvrir une étape remet la pastille de l'indice lu à sa place")

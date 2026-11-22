@@ -156,10 +156,11 @@ enum EtapeChasse {
         let enCours: Bool
         let validee: Bool
 
-        /// La direction retenue pour la ligne : une flèche sûre en pixels
-        /// (score ≥ 0,8) prime sur le glyphe lu, le glyphe sur le pixel douteux.
+        /// La direction retenue pour la ligne : une flèche assez sûre en pixels
+        /// (score ≥ 0,7) prime sur le glyphe lu — Vision inverse parfois ↑ et ↓ —
+        /// le glyphe sinon, le pixel douteux en dernier.
         var retenue: Direction? {
-            if let pixel, pixel.score >= 0.8 { return pixel.direction }
+            if let pixel, pixel.score >= 0.7 { return pixel.direction }
             return glyphe ?? pixel?.direction
         }
 

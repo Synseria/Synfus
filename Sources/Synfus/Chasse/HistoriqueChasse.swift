@@ -47,4 +47,11 @@ struct HistoriqueChasse: Equatable {
 
     /// L'étape conclue en dernier, retirée de l'historique.
     mutating func reprendre() -> Reprise? { etapes.popLast() }
+
+    /// Garde les étapes jusqu'à l'index `i` inclus — pour rouvrir une étape
+    /// passée choisie dans le menu horloge.
+    mutating func tronquer(jusqua i: Int) {
+        guard i < etapes.count - 1 else { return }
+        etapes.removeLast(etapes.count - 1 - i)
+    }
 }
