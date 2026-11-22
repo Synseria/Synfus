@@ -135,21 +135,16 @@ enum EtapeChasse {
         return lues
     }
 
-    /// La direction de l'étape en cours, lue sur la flèche de sa ligne : la
-    /// **première** ligne qui en porte une — le jeu liste l'étape en cours en
-    /// haut, sous le départ.
-    static func directionLue(dans lignes: [String]) -> Direction? {
-        lignes.compactMap { Direction(ligneLue: $0) }.first
+    /// Le badge « EN COURS » de la ligne : l'étape en cours du suivi la porte
+    /// (pin blanche) ; les étapes faites portent « VALIDÉ » (pin bleue).
+    static func estEnCours(_ ligne: String) -> Bool {
+        Ressemblance.normaliser(ligne).contains("en cours")
     }
 
-    /// La cible de l'étape en cours : celle de la **première ligne fléchée**,
-    /// pas la dernière ligne lue — le suivi garde les étapes suivantes dessous.
-    static func cibleLue(dans lignes: [String], parmi indices: [Indice]) -> Cible? {
-        for ligne in lignes {
-            guard Direction(ligneLue: ligne) != nil else { continue }
-            if let cible = ciblesLues(dans: [ligne], parmi: indices).first { return cible }
-        }
-        return nil
+    /// Le badge « VALIDÉ » de la ligne — pas le bouton « VALIDER » du bas.
+    static func estValidee(_ ligne: String) -> Bool {
+        let n = Ressemblance.normaliser(ligne)
+        return n.contains("valide") && !n.contains("valider")
     }
 
     /// Toutes les lignes fléchées du suivi, de haut en bas : la flèche **lue par
@@ -193,20 +188,23 @@ enum EtapeChasse {
     }
 
     /// L'étape en cours lue sur l'écran : direction **et** indice viennent de la
-    /// **même** ligne — le panneau du jeu liste les étapes et l'étape en cours
-    /// est la **dernière** ligne fléchée dont l'indice est reconnu. Si aucune
-    /// ligne fléchée n'a d'indice reconnu : la dernière fléchée donne la
+    /// **même** ligne — la dernière ligne fléchée portant le badge « EN COURS »
+    /// dont l'indice est reconnu (les étapes « VALIDÉ » restent au-dessus).
+    /// Sans badge lisible : la dernière ligne fléchée non validée. Si aucune
+    /// ligne fléchée n'a d'indice reconnu : la dernière retenue donne la
     /// direction, le dernier indice lu donne la cible. Sans aucune flèche :
     /// la cible seule, la direction reste à deviner.
     static func etapeLue(dans lignes: [String], cadres: [CGRect], image: LumaBitmap?, parmi indices: [Indice]) -> (direction: Direction?, cible: Cible?, rang: Int?) {
         let flechees = lignesFlechees(dans: lignes, cadres: cadres, image: image)
         let lues = ciblesLues(dans: lignes, parmi: indices)
-        for f in flechees.reversed() {
+        let enCours = flechees.filter { estEnCours(lignes[$0.rang]) }
+        let retenues = enCours.isEmpty ? flechees.filter { !estValidee(lignes[$0.rang]) } : enCours
+        for f in retenues.reversed() {
             if let cible = ciblesLues(dans: [lignes[f.rang]], parmi: indices).first {
                 return (f.direction, cible, f.rang)
             }
         }
-        if let derniere = flechees.last {
+        if let derniere = retenues.last {
             return (derniere.direction, lues.last, derniere.rang)
         }
         return (nil, lues.last, nil)
