@@ -316,7 +316,7 @@ struct ChasseTests {
     @Test("Les scores par direction sont exposés pour le diagnostic du scan")
     func scoresParDirection() {
         let (zone, cadres) = Self.zoneAvecFleche(.ouest, rang: 1)
-        let scores = DetectionFleche.scoresParDirection(dans: zone, ligne: cadres[1])
+        let scores = DetectionFleche.scoresParGabarits(dans: zone, ligne: cadres[1])
         #expect((scores[.ouest] ?? 0) >= DetectionFleche.seuil)
         #expect((scores[.ouest] ?? 0) > (scores[.est] ?? 0))
         #expect((scores[.ouest] ?? 0) > (scores[.nord] ?? 0))
