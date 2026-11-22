@@ -23,9 +23,6 @@ final class ChasseModele: ObservableObject {
     /// La direction lue par le dernier scan, à mettre en couleur ; un choix
     /// manuel la remplace.
     @Published private(set) var directionLue: Direction?
-    /// La direction devinée (indice cherché dans les quatre directions) quand
-    /// le scan n'a pas lu de flèche ; un choix manuel la remplace.
-    @Published private(set) var directionDevinee: Direction?
     /// La direction a été choisie à la main sur la boussole : le prochain scan
     /// ne la change pas. Remise à zéro à l'étape suivante.
     @Published private(set) var directionManuelle = false
@@ -125,7 +122,6 @@ final class ChasseModele: ObservableObject {
         self.cible = lues.first
         direction = .est
         directionLue = .est
-        directionDevinee = nil
         cibleLue = true
     }
 
@@ -137,7 +133,6 @@ final class ChasseModele: ObservableObject {
         cible = nil
         cibleLue = false
         directionLue = nil
-        directionDevinee = nil
     }
 
     /// Les indices indisponibles, pour la capture de la documentation (`CapturesTests`).
@@ -232,12 +227,12 @@ final class ChasseModele: ObservableObject {
             self.lues = lues
             rienLu = lues.isEmpty && etape.direction == nil && etape.cible == nil
             // La direction d'abord : choisir l'indice déclenche la recherche
-            // dès que les deux sont là. Sans flèche lue, elle reste à deviner.
-            // Une direction choisie à la main n'est pas écrasée par le scan.
+            // dès que les deux sont là. Flèche pas lue sûrement : pas de
+            // direction posée, on attend un clic. Une direction choisie à la
+            // main n'est pas écrasée par le scan.
             directionLue = etape.direction
             if !directionManuelle { direction = etape.direction }
-            directionDevinee = nil
-            lectureEnCours = false
+                lectureEnCours = false
             if let cible = etape.cible {
                 choisir(cible, lue: true)
             }
@@ -265,7 +260,6 @@ final class ChasseModele: ObservableObject {
         }
         directionManuelle = true
         directionLue = nil
-        directionDevinee = nil
         self.direction = direction
         chercherSiPret()
     }
@@ -277,9 +271,9 @@ final class ChasseModele: ObservableObject {
         if let premiere = suggestions.first { choisir(premiere) } else { chercherSiPret() }
     }
 
-    /// Une étape se cherche quand elle est complète ; le Phorreur n'a pas besoin de départ.
-    /// Sans direction — aucune flèche lue au scan — elle se devine : l'indice
-    /// cherché dans les quatre directions, la carte la plus proche gagne.
+    /// Une étape se cherche quand elle est complète ; le Phorreur n'a pas besoin
+    /// de départ. Sans direction — aucune flèche lue sûrement au scan — on
+    /// attend un clic sur la boussole : jamais de direction inventée.
     private func chercherSiPret() {
         guard let cible, cible.nom(en: langue) == saisie else { return }
         recherche?.cancel()
@@ -293,8 +287,6 @@ final class ChasseModele: ObservableObject {
         guard let x = departX, let y = departY else { return }
         if let direction {
             lancer(indice: indice, depuis: (x, y), direction: direction, cible: cible)
-        } else if cibleLue {
-            deviner(indice: indice, depuis: (x, y), cible: cible)
         }
         // Sinon, on attend un clic sur la boussole.
     }
@@ -314,43 +306,6 @@ final class ChasseModele: ObservableObject {
                 guard !Task.isCancelled else { return }
                 echec = Self.messageErreur(error)
             }
-        }
-    }
-
-    /// La direction se devine : l'indice est cherché dans les quatre
-    /// directions **en parallèle** (le cache disque des rayons rend les
-    /// suivantes locales), la carte trouvée la plus proche gagne. Plusieurs
-    /// directions le portent : la plus proche est un pari, signalée « devinée ».
-    private func deviner(indice: Indice, depuis: (x: Int, y: Int), cible: EtapeChasse.Cible) {
-        rechercheEnCours = true
-        recherche = Task {
-            defer { rechercheEnCours = false }
-            let trouves: [(direction: Direction, carte: EtapeChasse.Carte)] =
-                await withTaskGroup(of: (Direction, [EtapeChasse.Carte]?).self) { groupe in
-                    for direction in Direction.allCases {
-                        groupe.addTask {
-                            (direction, try? await ChasseDofusDB.cartes(depuis: depuis.x, depuis.y, direction: direction))
-                        }
-                    }
-                    var trouves: [(direction: Direction, carte: EtapeChasse.Carte)] = []
-                    for await (direction, cartes) in groupe {
-                        if let carte = cartes.flatMap({ EtapeChasse.destination(indice: indice.id, cartes: $0) }) {
-                            trouves.append((direction, carte))
-                        }
-                    }
-                    return trouves
-                }
-            guard !Task.isCancelled else { return }
-            guard let meilleure = trouves.min(by: { $0.carte.distance < $1.carte.distance }) else {
-                echec = L("chasse.introuvableDirections", EtapeChasse.portee)
-                return
-            }
-            directionDevinee = meilleure.direction
-            let reprise = HistoriqueChasse.Reprise(departX: depuis.x, departY: depuis.y,
-                                                   direction: meilleure.direction, cible: cible)
-            conclure(Constat(cible: cible, direction: meilleure.direction,
-                             resultat: .trouve(x: meilleure.carte.x, y: meilleure.carte.y, distance: meilleure.carte.distance)),
-                     reprise: reprise)
         }
     }
 
@@ -397,7 +352,6 @@ final class ChasseModele: ObservableObject {
         lues = rouverture.lues
         direction = reprise.direction
         directionLue = nil
-        directionDevinee = nil
         cible = reprise.cible
         cibleLue = false
         saisie = reprise.cible.nom(en: langue)

@@ -415,25 +415,48 @@ struct ChasseTests {
         #expect(etape.rang == 1)
     }
 
-    @Test("Sans flèche lue, la cible est le dernier indice lu et la direction reste à deviner")
+    @Test("Sans flèche lue, la cible est le dernier indice lu et aucune direction n’est posée")
     func etapeLueSansFleche() throws {
         let liste = try indices()
         let lignes = ["titre", "Poupée koalak", "Théière à rayures"]
         let cadres = (0..<lignes.count).map { CGRect(x: 30, y: CGFloat(8 + $0 * 32), width: 150, height: 26) }
         let etape = EtapeChasse.etapeLue(dans: lignes, cadres: cadres, image: nil, parmi: liste)
-        #expect(etape.direction == nil)
+        #expect(etape.direction == nil) // aucune flèche lue sûrement : aucune direction posée
         #expect(etape.cible == .indice(liste[6])) // le dernier lu
-        #expect(etape.rang == nil)
+        #expect(etape.rang == 2)
     }
 
-    @Test("Une ligne fléchée sans aucun indice reconnu garde la direction de la dernière fléchée et le dernier indice lu")
+    @Test("La direction retenue exige une lecture sûre : pixel ≥ 0,75, ou glyphe et pixel d'accord")
+    func retenueSure() {
+        let base = { (g: Direction?, p: (Direction, Double)?) in
+            EtapeChasse.AnalyseLigne(texte: "x", glyphe: g,
+                                     pixel: p.map { DetectionFleche.Correspondance(direction: $0.0, score: $0.1) },
+                                     enCours: false, validee: false)
+        }
+        // pixel sûr : il gagne même contre un glyphe trompé
+        #expect(base(.nord, (.sud, 0.9)).retenue == .sud)
+        // glyphe et pixel d'accord, pixel moyen : le glyphe suffit
+        #expect(base(.nord, (.nord, 0.65)).retenue == .nord)
+        // désaccord avec pixel moyen : aucune direction (pas de pari)
+        #expect(base(.nord, (.sud, 0.65)).retenue == nil)
+        // pixel seul trop faible : rien
+        #expect(base(nil, (.sud, 0.65)).retenue == nil)
+        // pixel seul sûr : retenu
+        #expect(base(nil, (.sud, 0.8)).retenue == .sud)
+        // glyphe seul : retenu
+        #expect(base(.nord, nil).retenue == .nord)
+        // rien : rien
+        #expect(base(nil, nil).retenue == nil)
+    }
+
+    @Test("Une ligne fléchée sans indice reconnu n'est pas l'étape : sa flèche ne dicte pas la direction")
     func etapeLueFlecheSansCible() throws {
         let liste = try indices()
         let lignes = ["titre", "← ???", "Théière à rayures"]
         let cadres = (0..<lignes.count).map { CGRect(x: 30, y: CGFloat(8 + $0 * 32), width: 150, height: 26) }
         let etape = EtapeChasse.etapeLue(dans: lignes, cadres: cadres, image: nil, parmi: liste)
-        #expect(etape.direction == .ouest)
+        #expect(etape.direction == nil) // la flèche de « ??? » n'est pas celle de l'étape
         #expect(etape.cible == .indice(liste[6]))
-        #expect(etape.rang == 1)
+        #expect(etape.rang == 2)
     }
 }
