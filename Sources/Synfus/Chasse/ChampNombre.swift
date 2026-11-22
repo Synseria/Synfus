@@ -5,6 +5,10 @@ import AppKit
 /// (nombre seul accepté) + stepper (flèches haut/bas) et roulette de la souris
 /// pour incrémenter / décrémenter facilement.
 struct ChampNombre: View {
+    /// Les coordonnées d'une carte du Monde des Douze tiennent entre -100 et 100.
+    static let minimum = -100
+    static let maximum = 100
+
     /// Étiquette d'axe (« X »/« Y ») quand le champ en a une ; sans étiquette
     /// pour les deux champs du départ, centrés au-dessus de la boussole.
     var axe: String? = nil
@@ -48,12 +52,14 @@ private struct ChampNombreNS: NSViewRepresentable {
         let formateur = NumberFormatter()
         formateur.numberStyle = .none
         formateur.allowsFloats = false
+        formateur.minimum = ChampNombre.minimum as NSNumber
+        formateur.maximum = ChampNombre.maximum as NSNumber
         champ.formatter = formateur
         champ.bezelStyle = .roundedBezel
         champ.alignment = .right
         let stepper = NSStepper()
-        stepper.minValue = -999
-        stepper.maxValue = 999
+        stepper.minValue = Double(ChampNombre.minimum)
+        stepper.maxValue = Double(ChampNombre.maximum)
         stepper.increment = 1
         stepper.target = coord
         stepper.action = #selector(Coordinator.stepperChange(_:))
@@ -97,17 +103,21 @@ private struct ChampNombreNS: NSViewRepresentable {
             if Int(stepper.doubleValue) != n { stepper.doubleValue = Double(n) }
         }
 
+        func borner(_ n: Int) -> Int {
+            min(ChampNombre.maximum, max(ChampNombre.minimum, n))
+        }
+
         func controlTextDidChange(_ notification: Notification) {
             guard let champ = notification.object as? NSTextField else { return }
-            parent.valeur = champ.stringValue.isEmpty ? nil : champ.integerValue
+            parent.valeur = champ.stringValue.isEmpty ? nil : borner(champ.integerValue)
         }
 
         @objc func stepperChange(_ stepper: NSStepper) {
-            parent.valeur = Int(stepper.integerValue)
+            parent.valeur = borner(Int(stepper.integerValue))
         }
 
         func roulette(_ delta: Int) {
-            parent.valeur = (parent.valeur ?? 0) + delta
+            parent.valeur = borner((parent.valeur ?? 0) + delta)
         }
     }
 }

@@ -124,15 +124,15 @@ struct ChasseVue: View {
 
     // MARK: - Départ
 
-    /// Les deux champs du départ (x, y), **centrés au-dessus de la boussole** et
-    /// de la même largeur que la rangée des trois flèches en dessous (deux champs
-    /// + l'espacement du milieu). Nombre uniquement, stepper et roulette pour
-    /// incrémenter ; bordure selon que la position lue du perso y est.
+    /// Les deux champs du départ (x, y), **centrés au-dessus de la boussole**,
+    /// assez larges pour « -100 » sans troncature (stepper compris). Bornés à
+    /// [-100, 100], nombre uniquement, stepper et roulette pour incrémenter ;
+    /// bordure selon que la position lue du perso y est.
     private var depart: some View {
         let position = lecteur.positionDuPersoDevant
         let bonX = modele.departX.flatMap { x in position.map { $0.x == x } }
         let bonY = modele.departY.flatMap { y in position.map { $0.y == y } }
-        let largeurChamp = (Jetons.hauteurRangee * 3 + Jetons.espace1) / 2
+        let largeurChamp = Jetons.hauteurRangee * 2 - Jetons.espace1
         return HStack(spacing: Jetons.espace1) {
             ChampNombre(valeur: $modele.departX, largeur: largeurChamp, bon: bonX)
             ChampNombre(valeur: $modele.departY, largeur: largeurChamp, bon: bonY)
