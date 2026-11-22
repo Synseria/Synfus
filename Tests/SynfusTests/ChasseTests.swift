@@ -222,6 +222,15 @@ struct ChasseTests {
         #expect(AttenteChasse(departConnu: true, directionChoisie: true) == .indice)
     }
 
+    @Test("La phase de la chasse dit ce qu'il reste à faire")
+    func phaseChasse() {
+        #expect(PhaseChasse(departConnu: false, cible: nil, position: nil) == .depart)
+        #expect(PhaseChasse(departConnu: true, cible: nil, position: nil) == .lire)
+        #expect(PhaseChasse(departConnu: true, cible: (5, 18), position: nil) == .aller(x: 5, y: 18))
+        #expect(PhaseChasse(departConnu: true, cible: (5, 18), position: (5, 22)) == .aller(x: 5, y: 18))
+        #expect(PhaseChasse(departConnu: true, cible: (5, 18), position: (5, 18)) == .valider(x: 5, y: 18))
+    }
+
     // MARK: - Recherche mot à mot
 
     @Test("Chaque mot de la saisie reconnaît un mot du nom : « cra ren » trouve « Crâne de renne »")

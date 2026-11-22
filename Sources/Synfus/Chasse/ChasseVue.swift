@@ -32,6 +32,7 @@ struct ChasseVue: View {
                     indisponibles
                 } else {
                     VStack(alignment: .leading, spacing: Jetons.espace2) {
+                        phaseEtHistorique
                         depart
                         boussole.frame(maxWidth: .infinity)
                         if !previews.authorized { LigneAutorisation() }
@@ -81,6 +82,50 @@ struct ChasseVue: View {
         }
         .frame(minHeight: Jetons.hauteurRangee * 4)
         .fixedSize(horizontal: false, vertical: true)
+    }
+
+    // MARK: - Phase et historique
+
+    /// Où en est la chasse et par où elle est passée : la phase en cours
+    /// (« allez en [5,18] — trajet copié », « vous y êtes — validez »), et la
+    /// chaîne des positions, du départ à la dernière carte trouvée.
+    private var phaseEtHistorique: some View {
+        VStack(alignment: .leading, spacing: Jetons.espace1) {
+            HStack(spacing: Jetons.espace1) {
+                Image(systemName: modele.phase.symbole)
+                    .foregroundStyle(Color.jeton(\.accentTexte))
+                Text(modele.phase.libelle)
+                    .font(Jetons.typoMeta.font)
+                    .foregroundStyle(Color.jeton(\.encre2))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if !modele.positions.isEmpty {
+                HStack(spacing: Jetons.espace1) {
+                    if let dx = modele.departX, let dy = modele.departY {
+                        pastille(Coordonnees.texte(dx, dy), courant: false)
+                    }
+                    ForEach(Array(modele.positions.enumerated()), id: \.offset) { i, pos in
+                        Image(systemName: "arrow.right")
+                            .font(Jetons.typoMicro.font)
+                            .foregroundStyle(Color.jeton(\.encre2))
+                        pastille(Coordonnees.texte(pos.x, pos.y), courant: i == modele.positions.count - 1)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Une position de l'historique, en petite pastille ; la dernière en accent.
+    private func pastille(_ texte: String, courant: Bool) -> some View {
+        Text(texte)
+            .font(Jetons.typoMicro.font)
+            .foregroundStyle(courant ? Color.jeton(\.accentTexte) : Color.jeton(\.encre2))
+            .padding(.horizontal, Jetons.espace1)
+            .padding(.vertical, Jetons.espace1)
+            .background(
+                RoundedRectangle(cornerRadius: Jetons.rayon1, style: .circular)
+                    .fill(courant ? Color.jeton(\.accent).opacity(0.25) : Color.jeton(\.plaque).opacity(0.6))
+            )
     }
 
     // MARK: - Départ
@@ -250,7 +295,7 @@ struct ChasseVue: View {
                     Image(systemName: constat.direction.symbole).foregroundStyle(Color.jeton(\.encre2))
                     // Une direction devinée (aucune flèche lue) se dit : c'est un pari, pas une lecture.
                     if modele.directionDevinee == constat.direction {
-                        Text(L("chasse.devinee"))
+                        Image(systemName: "questionmark.circle")
                             .font(Jetons.typoMicro.font)
                             .foregroundStyle(Color.jeton(\.encre2))
                             .help(L("chasse.direction.devinee", constat.direction.libelle))
