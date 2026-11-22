@@ -5,18 +5,24 @@ import AppKit
 /// (nombre seul accepté) + stepper (flèches haut/bas) et roulette de la souris
 /// pour incrémenter / décrémenter facilement.
 struct ChampNombre: View {
-    let axe: String
+    /// Étiquette d'axe (« X »/« Y ») quand le champ en a une ; sans étiquette
+    /// pour les deux champs du départ, centrés au-dessus de la boussole.
+    var axe: String? = nil
     @Binding var valeur: Int?
+    /// Largeur du champ (stepper compris).
+    var largeur: CGFloat = 56
     /// Encadrement de l'axe : accent si la position lue du perso y est, danger sinon.
     var bon: Bool? = nil
 
     var body: some View {
         HStack(spacing: Jetons.espace1) {
-            Text(axe)
-                .font(Jetons.typoMeta.font)
-                .foregroundStyle(Color.jeton(\.encre2))
+            if let axe {
+                Text(axe)
+                    .font(Jetons.typoMeta.font)
+                    .foregroundStyle(Color.jeton(\.encre2))
+            }
             ChampNombreNS(valeur: $valeur)
-                .frame(width: 44, height: Jetons.hauteurControle)
+                .frame(width: largeur, height: Jetons.hauteurControle)
                 .overlay {
                     if let bon {
                         RoundedRectangle(cornerRadius: Jetons.rayon1, style: .circular)

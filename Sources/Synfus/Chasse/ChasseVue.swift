@@ -13,9 +13,10 @@ struct ChasseRacine: View {
 
 /// Le panneau de chasse, au style du panneau de quêtes : transparent, un
 /// en-tête par lequel on le déplace. Une seule colonne, aussi étroite que la
-/// boussole le permet, pour masquer le moins de jeu possible : la boussole 3×3
-/// (X et Y en haut, « Lire » au centre, horloge et maison en bas), puis
-/// l'indice et le résultat dessous.
+/// boussole le permet, pour masquer le moins de jeu possible : le départ centré
+/// en haut (même largeur que la rangée de flèches), la boussole 3×3 dessous
+/// (« Lire » au centre, position en haut à droite, horloge et maison en bas),
+/// puis l'indice et le résultat.
 struct ChasseVue: View {
     @ObservedObject var modele = ChasseModele.shared
     @ObservedObject private var previews = WindowPreviewService.shared
@@ -32,6 +33,7 @@ struct ChasseVue: View {
                     indisponibles
                 } else {
                     VStack(alignment: .leading, spacing: Jetons.espace2) {
+                        depart
                         boussole.frame(maxWidth: .infinity)
                         if !previews.authorized { LigneAutorisation() }
                         indice
@@ -120,24 +122,35 @@ struct ChasseVue: View {
         .help(L("chasse.historique"))
     }
 
-    // MARK: - Boussole
+    // MARK: - Départ
 
-    // MARK: - Boussole
-
-    /// Nord en haut, ouest à gauche… et « Lire » au centre : l'indice lu à
-    /// l'écran, grisé tant que l'autorisation manque.
-    /// La boussole 3×3 : **X en haut à gauche, Y en haut à droite**, « Lire » au
-    /// centre, l'**historique (horloge) en bas à gauche** et le **trajet vers le
-    /// départ (maison) en bas à droite** — chaque bouton du même format que les flèches.
-    private var boussole: some View {
+    /// Les deux champs du départ (x, y), **centrés au-dessus de la boussole** et
+    /// de la même largeur que la rangée des trois flèches en dessous (deux champs
+    /// + l'espacement du milieu). Nombre uniquement, stepper et roulette pour
+    /// incrémenter ; bordure selon que la position lue du perso y est.
+    private var depart: some View {
         let position = lecteur.positionDuPersoDevant
         let bonX = modele.departX.flatMap { x in position.map { $0.x == x } }
         let bonY = modele.departY.flatMap { y in position.map { $0.y == y } }
-        return Grid(horizontalSpacing: Jetons.espace1, verticalSpacing: Jetons.espace1) {
+        let largeurChamp = (Jetons.hauteurRangee * 3 + Jetons.espace1) / 2
+        return HStack(spacing: Jetons.espace1) {
+            ChampNombre(valeur: $modele.departX, largeur: largeurChamp, bon: bonX)
+            ChampNombre(valeur: $modele.departY, largeur: largeurChamp, bon: bonY)
+        }
+        .frame(maxWidth: .infinity, alignment: .center)
+    }
+
+    // MARK: - Boussole
+
+    /// La boussole 3×3, sans marge en trop : « Lire » au centre, la **position
+    /// actuelle en haut à droite**, l'**historique (horloge) en bas à gauche** et
+    /// le **trajet vers le départ (maison) en bas à droite** — même format que les flèches.
+    private var boussole: some View {
+        Grid(horizontalSpacing: Jetons.espace1, verticalSpacing: Jetons.espace1) {
             GridRow {
-                ChampNombre(axe: "X", valeur: $modele.departX, bon: bonX)
+                Color.clear.frame(width: Jetons.hauteurRangee, height: Jetons.hauteurRangee)
                 fleche(.nord)
-                ChampNombre(axe: "Y", valeur: $modele.departY, bon: bonY)
+                boutonPosition
             }
             GridRow {
                 fleche(.ouest)
@@ -150,6 +163,19 @@ struct ChasseVue: View {
                 boutonMaison
             }
         }
+    }
+
+    /// En haut à droite de la boussole : reprend la position actuelle du perso
+    /// devant comme départ — même format que les flèches.
+    private var boutonPosition: some View {
+        Button { modele.reprendrePositionSiInconnue(); modele.reprendrePosition() } label: {
+            Image(systemName: "location.circle")
+                .font(Jetons.typoSection.font)
+        }
+        .boutonIcone()
+        .frame(width: Jetons.hauteurRangee, height: Jetons.hauteurRangee)
+        .disabled(lecteur.positionDuPersoDevant == nil)
+        .aide(L("chasse.depart.reprendre"))
     }
 
     /// La maison, en bas à droite de la boussole : copie le trajet
