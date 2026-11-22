@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import Testing
 @testable import Synfus
@@ -227,5 +228,92 @@ struct ChasseTests {
         #expect(AttenteChasse(departConnu: false, directionChoisie: true) == .depart)
         #expect(AttenteChasse(departConnu: true, directionChoisie: false) == .direction)
         #expect(AttenteChasse(departConnu: true, directionChoisie: true) == .indice)
+    }
+
+    // MARK: - Recherche mot à mot
+
+    @Test("Chaque mot de la saisie reconnaît un mot du nom : « cra ren » trouve « Crâne de renne »")
+    func rechercheParMots() {
+        let renne = Indice(id: 1, noms: ["fr": "Crâne de renne"])
+        let arbre = Indice(id: 2, noms: ["fr": "Arbre à moitié coupé"])
+        let coupe = Indice(id: 3, noms: ["fr": "Arbre coupé"])
+        let parmi = [renne, arbre, coupe]
+        #expect(IndicesChasse.rechercher("cra ren", parmi: parmi, langue: .fr) == [renne])
+        // « arbre coupé » : le nom complet passe avant le mot-à-mot, qui trouve les deux
+        let trouves = IndicesChasse.rechercher("arbre coupe", parmi: parmi, langue: .fr)
+        #expect(trouves.first == coupe)
+        #expect(trouves.contains(arbre))
+        #expect(IndicesChasse.rechercher("ren crâne", parmi: parmi, langue: .fr) == [renne])
+        #expect(IndicesChasse.rechercher("zzzz ren", parmi: parmi, langue: .fr).isEmpty)
+    }
+
+    // MARK: - Flèche cherchée en pixels
+
+    /// Une fausse zone de chasse : fond sombre, une flèche dessinée avec le
+    /// gabarit lui-même, et un « texte » (blocs clairs) à droite du cadre de ligne.
+    private static func zoneAvecFleche(_ direction: Direction, rang: Int = 0, lignes: Int = 3) -> (LumaBitmap, [CGRect]) {
+        let largeur = 240, hauteurLigne = 26, marge = 8
+        let hauteur = marge + lignes * (hauteurLigne + 6)
+        var pixels = [UInt8](repeating: 12, count: largeur * hauteur)
+        var cadres: [CGRect] = []
+        for i in 0..<lignes {
+            let y = marge + i * (hauteurLigne + 6)
+            cadres.append(CGRect(x: 44, y: y, width: 150, height: hauteurLigne))
+            // le « texte » de la ligne : blocs clairs après la flèche
+            for x in stride(from: 48, to: 190, by: 14) {
+                for dy in 4..<(hauteurLigne - 4) {
+                    for dx in 0..<8 { pixels[(y + dy) * largeur + x + dx] = 235 }
+                }
+            }
+            if i == rang {
+                let gabarit = DetectionFleche.gabarit(direction, hauteur: Int(CGFloat(hauteurLigne) * 1.15))
+                for gy in 0..<gabarit.height {
+                    for gx in 0..<gabarit.width {
+                        if gabarit[gx, gy] > 127 {
+                            let px = 6 + gx, py = y + (hauteurLigne - gabarit.height) / 2 + gy
+                            pixels[py * largeur + px] = 250
+                        }
+                    }
+                }
+            }
+        }
+        return (LumaBitmap(width: largeur, height: hauteur, pixels: pixels), cadres)
+    }
+
+    @Test("La flèche d'une ligne se retrouve en pixels, dans les quatre directions")
+    func flecheEnPixels() {
+        for direction in Direction.allCases {
+            let (zone, cadres) = Self.zoneAvecFleche(direction, rang: 1)
+            let trouvee = DetectionFleche.direction(dans: zone, ligne: cadres[1])
+            #expect(trouvee?.direction == direction)
+            #expect((trouvee?.score ?? 0) >= DetectionFleche.seuil)
+        }
+    }
+
+    @Test("Une ligne sans flèche ne vaut aucune direction")
+    func pasDeFlecheEnPixels() {
+        let (zone, cadres) = Self.zoneAvecFleche(.est, rang: 0)
+        // la ligne 2 n'a que du texte
+        #expect(DetectionFleche.direction(dans: zone, ligne: cadres[2]) == nil)
+    }
+
+    @Test("La première ligne fléchée gagne : lue par l'OCR, sinon en pixels")
+    func premiereFlechee() throws {
+        let liste = try indices()
+        // L'OCR a lu le glyphe de la première ligne : il prime sur les pixels.
+        let (zone, cadres) = Self.zoneAvecFleche(.sud, rang: 1)
+        let lignes = ["CHASSE AU TRÉSOR", "↓ Poupée koalak", "Poupée koalak"]
+        let flechee = EtapeChasse.premiereFlechee(dans: lignes, cadres: cadres, image: zone)
+        #expect(flechee?.rang == 1)
+        #expect(flechee?.direction == .sud)
+        // Sans glyphe lu, la flèche est cherchée en pixels dans l'image.
+        let lignesSansGlyphe = ["CHASSE AU TRÉSOR", "Poupée koalak", "Poupée koalak"]
+        let enPixels = EtapeChasse.premiereFlechee(dans: lignesSansGlyphe, cadres: cadres, image: zone)
+        #expect(enPixels?.rang == 1)
+        #expect(enPixels?.direction == .sud)
+        // Sans image, sans glyphe : rien.
+        #expect(EtapeChasse.premiereFlechee(dans: lignesSansGlyphe, cadres: cadres, image: nil) == nil)
+        // La cible de l'étape en cours est celle de la ligne fléchée trouvée en pixels.
+        #expect(EtapeChasse.ciblesLues(dans: [lignesSansGlyphe[enPixels!.rang]], parmi: liste).first == .indice(liste[5]))
     }
 }

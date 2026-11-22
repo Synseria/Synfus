@@ -1,14 +1,14 @@
 import AppKit
 import SwiftUI
 
-/// Les onglets des réglages, dans l'ordre de leur barre : dix pages, chacune une suite de sections
+/// Les onglets des réglages, dans l'ordre de leur barre : neuf pages, chacune une suite de sections
 /// (Statistiques dans Général, Classes dans Personnages, Enchaîner et Attention dans Raccourcis,
-/// Invitations dans Palette, Zaaps, Lieux et Trajets dans Carte, PNJ dans Quêtes, Diagnostic dans
+/// Invitations dans Palette, Zaaps, Lieux, Trajets, Quêtes et PNJ dans Données, Diagnostic dans
 /// Lecture).
 enum SettingsSection: String, CaseIterable, Identifiable {
     case general, theme
     case personnages, barre, raccourcis
-    case palette, carte, quetes, aides
+    case palette, donnees, aides
     case lecture
 
     var id: String { rawValue }
@@ -21,8 +21,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .barre: return L("reglages.barre")
         case .raccourcis: return L("reglages.raccourcis")
         case .palette: return L("reglages.palette")
-        case .carte: return L("reglages.carte")
-        case .quetes: return L("reglages.quetes")
+        case .donnees: return L("reglages.donnees")
         case .aides: return L("reglages.aides")
         case .lecture: return L("reglages.lecture")
         }
@@ -36,8 +35,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .barre: return "line.3.horizontal"
         case .raccourcis: return "keyboard.fill"
         case .palette: return BoutonBarre.palette.symbole
-        case .carte: return "map.fill"
-        case .quetes: return BoutonBarre.quetes.symbole
+        case .donnees: return "map.fill"
         case .aides: return BoutonBarre.boss.symbole
         case .lecture: return "text.viewfinder"
         }
@@ -71,6 +69,9 @@ struct SettingsView: View {
     /// longues défilent ; bornée à l'écran par `SettingsWindowController`.
     static let taille = CGSize(width: Jetons.largeurReglages, height: 760)
 
+    /// Largeur des trois feux de la fenêtre (fermer, réduire, zoom) à gauche de la barre de titre.
+    private static let margeFeuxTricolores: CGFloat = 78
+
     /// `hauteur` : les captures, hors fenêtre, fixent la leur ; dans la fenêtre, la vue la remplit.
     init(onglet: OngletReglages = .shared, hauteur: CGFloat? = nil) {
         self.onglet = onglet
@@ -81,6 +82,10 @@ struct SettingsView: View {
         VStack(spacing: 0) {
             BarreDesOnglets(onglets: SettingsSection.allCases.map { .init(valeur: $0, libelle: $0.label, symbole: $0.icon) },
                             selection: Binding(get: { onglet.section }, set: { onglet.section = $0 }))
+                // La barre de titre est transparente et les onglets montent à hauteur
+                // des boutons de la fenêtre : le premier onglet passerait sous les
+                // trois feux — une marge à gauche les en dégage.
+                .padding(.leading, Self.margeFeuxTricolores)
             // La page sur sa plaque pleine, sous les onglets posés sur le fond de la fenêtre.
             detail
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -110,8 +115,7 @@ struct SettingsView: View {
         case .barre: BarreSettings()
         case .raccourcis: ShortcutsSettings()
         case .palette: PaletteSettings()
-        case .carte: CarteSettings()
-        case .quetes: QuetesSettings()
+        case .donnees: DonneesSettings()
         case .aides: AidesSettings()
         case .lecture: LectureSettings()
         }

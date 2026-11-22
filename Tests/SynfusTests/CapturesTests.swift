@@ -448,7 +448,7 @@ struct CapturesTests {
         let toutes = ProcessInfo.processInfo.environment["SYNFUS_CAPTURES_TOUT"] != nil
         // `SYNFUS_CAPTURES_HAUTEUR` : la fenêtre plus haute, pour voir une page longue en entier.
         let hauteur = ProcessInfo.processInfo.environment["SYNFUS_CAPTURES_HAUTEUR"].flatMap(Double.init) ?? 680
-        let sections: [SettingsSection] = toutes ? SettingsSection.allCases : [.barre, .carte, .raccourcis, .lecture]
+        let sections: [SettingsSection] = toutes ? SettingsSection.allCases : [.barre, .donnees, .raccourcis, .lecture]
         for (nom, section) in sections.map({ ("reglages-" + $0.rawValue, $0) }) {
             let vue = SettingsView(onglet: OngletReglages(section), hauteur: CGFloat(hauteur))
                 .background(Color(nsColor: .windowBackgroundColor))
@@ -457,7 +457,7 @@ struct CapturesTests {
         }
         // L'échec du téléchargement des quêtes : l'état occupe le bloc entier.
         QuetesStore.shared.poserPourCaptures(nil, echec: "hors ligne")
-        let vue = SettingsView(onglet: OngletReglages(.quetes), hauteur: CGFloat(hauteur))
+        let vue = SettingsView(onglet: OngletReglages(.donnees), hauteur: CGFloat(hauteur))
             .background(Color(nsColor: .windowBackgroundColor))
             .environment(\.colorScheme, Self.schema)
         try ecrire(vue, vers: dossier.appending(path: "reglages-quetes-indisponibles.png"))

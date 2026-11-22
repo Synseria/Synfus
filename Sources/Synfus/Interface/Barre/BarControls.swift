@@ -115,13 +115,17 @@ class VueACurseur: NSView {
     override func mouseExited(with _: NSEvent) { NSCursor.arrow.set() }
 
     /// Le curseur de la zone — sauf si un contrôle est posé au-dessus au même
-    /// point : il garde le sien (main pointée), la zone de glisser ne lui vole
-    /// pas. C'est le cas des pastilles de persos, au-dessus du fond de la barre.
+    /// point : il garde le sien, la zone de glisser ne lui vole pas. C'est le cas
+    /// des pastilles de persos, au-dessus du fond de la barre : une autre zone
+    /// de curseur (une poignée) garde **son** curseur, pas celui de celle-ci ;
+    /// tout autre contrôle vaut un clic : main pointée.
     private func poserLeCurseur(_ event: NSEvent) {
         guard let contenu = window?.contentView,
               let touche = contenu.hitTest(contenu.convert(event.locationInWindow, from: nil)) else { return curseur.set() }
-        if touche == self || touche is VueACurseur || isDescendant(of: touche) {
+        if touche == self || isDescendant(of: touche) {
             curseur.set()
+        } else if let zone = touche as? VueACurseur {
+            zone.curseur.set()
         } else {
             NSCursor.pointingHand.set()      // un contrôle au-dessus de la zone : c'est un clic
         }
@@ -169,7 +173,9 @@ struct ModeButton: View {
             Label(aide, systemImage: icone).contentTransition(.symbolEffect(.replace))
         }
         .boutonIcone(allume: actif)
-        .aide(aide)
+        // Pas `.help` : en haut de l'écran l'infobulle système y serait rognée —
+        // l'infobulle de la barre se pose en fenêtre dédiée, sous le bouton.
+        .accessibilityLabel(aide)
         .accessibilityAddTraits(actif ? .isSelected : [])
     }
 }
@@ -214,7 +220,7 @@ struct ArrangeMenuButton: View {
             Label(aide, systemImage: BoutonBarre.rangement.symbole)
         }
         .menuIcone()
-        .aide(aide)
+        .accessibilityLabel(aide)
     }
 }
 
@@ -237,7 +243,7 @@ struct GearButton: View {
             Label(L("barre.reglagesAide"), systemImage: "gearshape")
         }
         .boutonIcone()
-        .aide(L("barre.reglagesAide"))
+        .accessibilityLabel(L("barre.reglagesAide"))
     }
 }
 

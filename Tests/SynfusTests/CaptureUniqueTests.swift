@@ -240,7 +240,7 @@ struct CaptureUniqueTests {
     }
 
     private func lignes(_ moteur: MoteurOCR, _ image: CGImage, _ genre: GenreLecture) async -> [String] {
-        guard case .lue(_, let lignes, _, _) = await moteur.lire(image: image, precedente: nil, mesure: genre.mesure)
+        guard case .lue(_, let lignes, _, _, _) = await moteur.lire(image: image, precedente: nil, mesure: genre.mesure)
         else { return [] }
         return lignes.map { $0.trimmingCharacters(in: .whitespaces) }
     }
