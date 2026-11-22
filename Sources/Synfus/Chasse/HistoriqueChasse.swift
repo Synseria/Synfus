@@ -4,11 +4,19 @@ import Foundation
 /// ressaisir le départ. Pur : le modèle y note ce qu'il avait avant chaque étape.
 struct HistoriqueChasse: Equatable {
     /// L'état d'une étape avant sa recherche : de quoi la rouvrir telle quelle.
+    /// Une carte atteinte à une étape.
+    struct Carte: Equatable, Sendable {
+        let x: Int
+        let y: Int
+    }
+
     struct Reprise: Equatable {
         let departX: Int?
         let departY: Int?
         let direction: Direction
         let cible: EtapeChasse.Cible
+        /// La carte atteinte à cette étape, si la recherche l'a trouvée.
+        var cibleAtteinte: Carte? = nil
         /// Sa place parmi les indices lus à l'écran, s'il y en avait un : conclure l'en retire.
         var rangLu: Int?
 
@@ -31,6 +39,9 @@ struct HistoriqueChasse: Equatable {
     private var etapes: [Reprise] = []
 
     var vide: Bool { etapes.isEmpty }
+
+    /// Toutes les étapes notées, de la première à la dernière — pour l'historique affiché.
+    var toutes: [Reprise] { etapes }
 
     mutating func noter(_ reprise: Reprise) { etapes.append(reprise) }
 

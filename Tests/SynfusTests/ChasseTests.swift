@@ -253,9 +253,10 @@ struct ChasseTests {
     /// Une fausse zone de chasse : fond sombre, une flèche dessinée avec le
     /// gabarit lui-même, et un « texte » (blocs clairs) à droite du cadre de ligne.
     private static func zoneAvecFleche(_ direction: Direction, rang: Int = 0, lignes: Int = 3,
-                                        texteX: CGFloat = 44) -> (LumaBitmap, [CGRect]) {
+                                        texteX: CGFloat = 44, contour: Bool = false) -> (LumaBitmap, [CGRect]) {
         let largeur = 240, hauteurLigne = 26, marge = 8
-        let hauteur = marge + lignes * (hauteurLigne + 6)
+        // + une hauteur de ligne : la flèche dessinée dépasse un peu du cadre, ne pas la couper.
+        let hauteur = marge + lignes * (hauteurLigne + 6) + hauteurLigne
         var pixels = [UInt8](repeating: 12, count: largeur * hauteur)
         var cadres: [CGRect] = []
         for i in 0..<lignes {
@@ -269,7 +270,7 @@ struct ChasseTests {
                 }
             }
             if i == rang {
-                let gabarit = DetectionFleche.gabarit(direction, hauteur: Int(CGFloat(hauteurLigne) * 1.15))
+                let gabarit = DetectionFleche.gabarit(direction, hauteur: Int(CGFloat(hauteurLigne) * 1.15), contour: contour)
                 for gy in 0..<gabarit.height {
                     for gx in 0..<gabarit.width {
                         if gabarit[gx, gy] > 127 {
@@ -291,6 +292,25 @@ struct ChasseTests {
             #expect(trouvee?.direction == direction)
             #expect((trouvee?.score ?? 0) >= DetectionFleche.seuil)
         }
+    }
+
+    @Test("Une flèche creuse (en contour, comme le jeu la dessine) est reconnue en pixels")
+    func flecheCreuseEnPixels() {
+        for direction in Direction.allCases {
+            let (zone, cadres) = Self.zoneAvecFleche(direction, rang: 1, contour: true)
+            let trouvee = DetectionFleche.direction(dans: zone, ligne: cadres[1])
+            #expect(trouvee?.direction == direction)
+            #expect((trouvee?.score ?? 0) >= DetectionFleche.seuil)
+        }
+    }
+
+    @Test("Les scores par direction sont exposés pour le diagnostic du scan")
+    func scoresParDirection() {
+        let (zone, cadres) = Self.zoneAvecFleche(.ouest, rang: 1)
+        let scores = DetectionFleche.scoresParDirection(dans: zone, ligne: cadres[1])
+        #expect((scores[.ouest] ?? 0) >= DetectionFleche.seuil)
+        #expect((scores[.ouest] ?? 0) > (scores[.est] ?? 0))
+        #expect((scores[.ouest] ?? 0) > (scores[.nord] ?? 0))
     }
 
     @Test("Une ligne sans flèche ne vaut aucune direction")

@@ -147,39 +147,51 @@ enum EtapeChasse {
         return n.contains("valide") && !n.contains("valider")
     }
 
-    /// Toutes les lignes fléchées du suivi, de haut en bas : la flèche **lue par
-    /// l'OCR** dans le texte, sinon **cherchée en pixels** dans l'image de la zone
-    /// (Vision écorche la flèche en triangle plein, voire inverse son sens). Une
-    /// flèche trouvée en pixels avec un score élevé prime sur le glyphe lu.
-    /// `cadres` : le cadre de chaque ligne en pixels de `image`, aligné sur `lignes`.
-    static func lignesFlechees(dans lignes: [String], cadres: [CGRect], image: LumaBitmap?) -> [(rang: Int, direction: Direction)] {
-        var flechees: [(rang: Int, direction: Direction)] = []
-        let n = min(lignes.count, cadres.count)
-        for rang in 0..<n {
-            let glyph = Direction(ligneLue: lignes[rang])
-            guard let image else {
-                if let glyph { flechees.append((rang, glyph)) }
-                continue
-            }
-            let cadre = cadres[rang]
-            let pixel = DetectionFleche.direction(dans: image, ligne: cadre)
-            // Score élevé en pixels : la forme ne ment pas sur le sens, le glyphe lu si.
-            if let pixel, pixel.score >= 0.8 {
-                flechees.append((rang, pixel.direction))
-            } else if let glyph {
-                flechees.append((rang, glyph))
-            } else if let pixel {
-                flechees.append((rang, pixel.direction))
-            } else if cadre.minX > 0 {
-                // Dernier recours : la flèche peut être au bord gauche de la zone,
-                // le cadre OCR du texte commençant plus à droite.
-                let elargi = CGRect(x: 0, y: cadre.minY, width: cadre.maxX, height: cadre.height)
-                if let p = DetectionFleche.direction(dans: image, ligne: elargi, texte: cadre.minX) {
-                    flechees.append((rang, p.direction))
-                }
-            }
+    /// Ce que le scan a vu sur une ligne du suivi : le texte lu, la flèche lue
+    /// par l'OCR, la meilleure correspondance en pixels, et le badge du jeu.
+    struct AnalyseLigne: Sendable, Equatable {
+        let texte: String
+        let glyphe: Direction?
+        let pixel: DetectionFleche.Correspondance?
+        let enCours: Bool
+        let validee: Bool
+
+        /// La direction retenue pour la ligne : une flèche sûre en pixels
+        /// (score ≥ 0,8) prime sur le glyphe lu, le glyphe sur le pixel douteux.
+        var retenue: Direction? {
+            if let pixel, pixel.score >= 0.8 { return pixel.direction }
+            return glyphe ?? pixel?.direction
         }
-        return flechees
+
+        /// La ligne porte une flèche : un glyphe lu, ou un pixel sûr (≥ 0,75) —
+        /// les blocs du texte montent rarement au-dessus (≈ 0,5).
+        var flechee: Bool {
+            glyphe != nil || (pixel?.score ?? 0) >= 0.75
+        }
+    }
+
+    /// L'analyse ligne à ligne du suivi de chasse, de haut en bas.
+    /// `cadres` : le cadre de chaque ligne en pixels de `image`, aligné sur `lignes`.
+    static func analyser(dans lignes: [String], cadres: [CGRect], image: LumaBitmap?) -> [AnalyseLigne] {
+        let n = min(lignes.count, cadres.count)
+        return (0..<n).map { rang in
+            var detail = DetectionFleche.detail(dans: lignes[rang], cadre: cadres[rang], image: image)
+            // Dernier recours : la flèche peut être au bord gauche de la zone,
+            // le cadre OCR du texte commençant plus à droite.
+            if detail.pixel == nil, let image, cadres[rang].minX > 0 {
+                let elargi = CGRect(x: 0, y: cadres[rang].minY, width: cadres[rang].maxX, height: cadres[rang].height)
+                detail.pixel = DetectionFleche.direction(dans: image, ligne: elargi, texte: cadres[rang].minX)
+            }
+            return AnalyseLigne(texte: lignes[rang], glyphe: detail.glyphe, pixel: detail.pixel,
+                                enCours: estEnCours(lignes[rang]), validee: estValidee(lignes[rang]))
+        }
+    }
+
+    /// Toutes les lignes fléchées du suivi, de haut en bas.
+    static func lignesFlechees(dans lignes: [String], cadres: [CGRect], image: LumaBitmap?) -> [(rang: Int, direction: Direction)] {
+        analyser(dans: lignes, cadres: cadres, image: image).enumerated().compactMap { rang, a in
+            a.flechee ? a.retenue.map { (rang, $0) } : nil
+        }
     }
 
     /// La première ligne fléchée du suivi.
