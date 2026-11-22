@@ -200,6 +200,32 @@ struct ChasseTests {
         #expect(historique.vide)
     }
 
+    @Test("L'historique affiché ne garde que les étapes de la chasse en cours")
+    func historiqueChasseEnCours() throws {
+        let liste = try indices()
+        let a = EtapeChasse.Cible.indice(liste[0])
+        let b = EtapeChasse.Cible.indice(liste[1])
+        let autre = EtapeChasse.Cible.indice(liste[5])
+        var historique = HistoriqueChasse()
+        // Première chasse : deux étapes conclues sur les indices A et B.
+        historique.lire([a, b])
+        historique.noter(.init(departX: 0, departY: 0, direction: .est, cible: a))
+        historique.noter(.init(departX: 1, departY: 0, direction: .nord, cible: b))
+        #expect(historique.deLaChasseEnCours.count == 2)
+        // Chasse neuve à l'écran (aucun indice connu en commun) : tout repart à zéro.
+        historique.lire([autre])
+        #expect(historique.deLaChasseEnCours.isEmpty)
+        #expect(historique.toutes.isEmpty)
+        historique.noter(.init(departX: 2, departY: 0, direction: .sud, cible: autre))
+        #expect(historique.deLaChasseEnCours.count == 1)
+        // Un scan qui ne lit rien (OCR en rade) ne change rien.
+        historique.lire([])
+        #expect(historique.deLaChasseEnCours.count == 1)
+        // Un scan partiel de la même chasse garde tout.
+        historique.lire([autre, b])
+        #expect(historique.deLaChasseEnCours.count == 1)
+    }
+
     @Test("Rouvrir une étape remet la pastille de l'indice lu à sa place")
     func rouvertureRemetLIndiceLu() {
         let a = EtapeChasse.Cible.phorreur
@@ -439,14 +465,26 @@ struct ChasseTests {
         #expect(base(.nord, (.nord, 0.65)).retenue == .nord)
         // désaccord avec pixel moyen : aucune direction (pas de pari)
         #expect(base(.nord, (.sud, 0.65)).retenue == nil)
-        // pixel seul trop faible : rien
-        #expect(base(nil, (.sud, 0.65)).retenue == nil)
+        // pixel seul à 0,65 : retenu ; sous 0,6 : rien
+        #expect(base(nil, (.sud, 0.65)).retenue == .sud)
+        #expect(base(nil, (.sud, 0.55)).retenue == nil)
         // pixel seul sûr : retenu
         #expect(base(nil, (.sud, 0.8)).retenue == .sud)
         // glyphe seul : retenu
         #expect(base(.nord, nil).retenue == .nord)
         // rien : rien
         #expect(base(nil, nil).retenue == nil)
+    }
+
+    @Test("Quand l'OCR sépare le badge de la ligne d'indice, le badge de la ligne du dessus compte")
+    func etapeLueBadgeSepare() throws {
+        let liste = try indices()
+        // comme le log natif : « EN COURS » sur sa propre ligne, l'indice dessous
+        let lignes = ["Épisode : 2/4", "EN COURS", "• Poupée koalak", "VALIDÉ", "Théière à rayures", "EN COURS", "• Crâne de likrone"]
+        let cadres = (0..<lignes.count).map { CGRect(x: 30, y: CGFloat(8 + $0 * 32), width: 150, height: 26) }
+        let etape = EtapeChasse.etapeLue(dans: lignes, cadres: cadres, image: nil, parmi: liste)
+        #expect(etape.cible == .indice(liste[1])) // Crâne de likrone, dernière ligne EN COURS
+        #expect(etape.rang == 6)
     }
 
     @Test("Une ligne fléchée sans indice reconnu n'est pas l'étape : sa flèche ne dicte pas la direction")
