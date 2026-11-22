@@ -156,19 +156,20 @@ enum EtapeChasse {
         let enCours: Bool
         let validee: Bool
 
-        /// La direction retenue pour la ligne : une flèche assez sûre en pixels
-        /// (score ≥ 0,7) prime sur le glyphe lu — Vision inverse parfois ↑ et ↓ —
-        /// le glyphe sinon, le pixel douteux en dernier.
+        /// La direction retenue pour la ligne — **seulement si la lecture est
+        /// sûre** : un pixel à ≥ 0,75 gagne (Vision inverse parfois ↑ et ↓ dans
+        /// le texte) ; sinon glyphe et pixel doivent s'accorder ; en cas de
+        /// désaccord, aucune direction : mieux vaut attendre un clic que d'en
+        /// définir une fausse. Seul le glyphe lu vaut direction.
         var retenue: Direction? {
-            if let pixel, pixel.score >= 0.7 { return pixel.direction }
-            return glyphe ?? pixel?.direction
+            if let pixel, pixel.score >= 0.75 { return pixel.direction }
+            if let pixel, let glyphe { return pixel.direction == glyphe ? glyphe : nil }
+            if let pixel { return pixel.score >= 0.75 ? pixel.direction : nil }
+            return glyphe
         }
 
-        /// La ligne porte une flèche : un glyphe lu, ou un pixel sûr (≥ 0,75) —
-        /// les blocs du texte montent rarement au-dessus (≈ 0,5).
-        var flechee: Bool {
-            glyphe != nil || (pixel?.score ?? 0) >= 0.75
-        }
+        /// La ligne porte une flèche lisible avec certitude.
+        var flechee: Bool { retenue != nil }
     }
 
     /// L'analyse ligne à ligne du suivi de chasse, de haut en bas.
@@ -188,10 +189,10 @@ enum EtapeChasse {
         }
     }
 
-    /// Toutes les lignes fléchées du suivi, de haut en bas.
+    /// Toutes les lignes à flèche sûre, de haut en bas.
     static func lignesFlechees(dans lignes: [String], cadres: [CGRect], image: LumaBitmap?) -> [(rang: Int, direction: Direction)] {
         analyser(dans: lignes, cadres: cadres, image: image).enumerated().compactMap { rang, a in
-            a.flechee ? a.retenue.map { (rang, $0) } : nil
+            a.retenue.map { (rang, $0) }
         }
     }
 
@@ -201,26 +202,26 @@ enum EtapeChasse {
     }
 
     /// L'étape en cours lue sur l'écran : direction **et** indice viennent de la
-    /// **même** ligne — la dernière ligne fléchée portant le badge « EN COURS »
-    /// dont l'indice est reconnu (les étapes « VALIDÉ » restent au-dessus).
-    /// Sans badge lisible : la dernière ligne fléchée non validée. Si aucune
-    /// ligne fléchée n'a d'indice reconnu : la dernière retenue donne la
-    /// direction, le dernier indice lu donne la cible. Sans aucune flèche :
-    /// la cible seule, la direction reste à deviner.
+    /// **même** ligne — la dernière portant le badge « EN COURS » et un indice
+    /// reconnu (les « VALIDÉ » restent au-dessus ; sans badge, la dernière à
+    /// indice non validée). La direction n'est posée que si sa flèche a été lue
+    /// sûrement (voir `AnalyseLigne.retenue`) : sinon elle reste nil, à choisir
+    /// à la main — jamais devinée.
     static func etapeLue(dans lignes: [String], cadres: [CGRect], image: LumaBitmap?, parmi indices: [Indice]) -> (direction: Direction?, cible: Cible?, rang: Int?) {
-        let flechees = lignesFlechees(dans: lignes, cadres: cadres, image: image)
+        let analyse = analyser(dans: lignes, cadres: cadres, image: image)
         let lues = ciblesLues(dans: lignes, parmi: indices)
-        let enCours = flechees.filter { estEnCours(lignes[$0.rang]) }
-        let retenues = enCours.isEmpty ? flechees.filter { !estValidee(lignes[$0.rang]) } : enCours
-        for f in retenues.reversed() {
-            if let cible = ciblesLues(dans: [lignes[f.rang]], parmi: indices).first {
-                return (f.direction, cible, f.rang)
-            }
+        // Les lignes qui portent un indice reconnu.
+        let avecCible = analyse.enumerated().compactMap { i, _ in
+            ciblesLues(dans: [lignes[i]], parmi: indices).first != nil ? i : nil
         }
-        if let derniere = retenues.last {
-            return (derniere.direction, lues.last, derniere.rang)
-        }
-        return (nil, lues.last, nil)
+        // L'étape en cours : badge « EN COURS », sinon la dernière ligne à indice non validée.
+        let enCours = avecCible.filter { analyse[$0].enCours }
+        let pool = enCours.isEmpty ? avecCible.filter { !analyse[$0].validee } : enCours
+        guard let rang = pool.last ?? avecCible.last else { return (nil, lues.last, nil) }
+        // Direction et indice de la **même** ligne ; la direction reste nil si
+        // la flèche n'a pas été lue sûrement — aucun pari automatique.
+        let cible = ciblesLues(dans: [lignes[rang]], parmi: indices).first ?? lues.last
+        return (analyse[rang].retenue, cible, rang)
     }
 
     /// DofusDB ne cherche pas plus loin, le jeu non plus.

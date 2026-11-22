@@ -218,20 +218,17 @@ struct ChasseVue: View {
 
     private func fleche(_ direction: Direction) -> some View {
         let choisie = modele.direction == direction
-        // La direction trouvée par le scan (lue, ou devinée) passe en accent, au-dessus du choisi.
+        // La direction lue sûrement par le scan passe en accent, au-dessus du choisi.
         let lue = modele.directionLue == direction
-        let devinee = modele.directionDevinee == direction
         return Button { modele.choisir(direction) } label: {
             let icone = Image(systemName: direction.symbole)
                 .font(Jetons.typoSection.font)
                 .frame(width: Jetons.hauteurRangee, height: Jetons.hauteurRangee)
-            Group { if lue || devinee { icone.foregroundStyle(Color.jeton(\.accentTexte)) } else { icone } }
+            Group { if lue { icone.foregroundStyle(Color.jeton(\.accentTexte)) } else { icone } }
         }
         .buttonStyle(.etat(choisi: choisie))
         .disabled(modele.enAttenteDesIndices)
-        .aide(lue ? L("chasse.direction.lue", direction.libelle)
-             : devinee ? L("chasse.direction.devinee", direction.libelle)
-             : direction.libelle)
+        .aide(lue ? L("chasse.direction.lue", direction.libelle) : direction.libelle)
     }
 
     private var centre: some View {
@@ -304,13 +301,6 @@ struct ChasseVue: View {
             VStack(alignment: .leading, spacing: Jetons.espace1) {
                 HStack(spacing: Jetons.espace1) {
                     Image(systemName: constat.direction.symbole).foregroundStyle(Color.jeton(\.encre2))
-                    // Une direction devinée (aucune flèche lue) se dit : c'est un pari, pas une lecture.
-                    if modele.directionDevinee == constat.direction {
-                        Image(systemName: "questionmark.circle")
-                            .font(Jetons.typoMicro.font)
-                            .foregroundStyle(Color.jeton(\.encre2))
-                            .help(L("chasse.direction.devinee", constat.direction.libelle))
-                    }
                     Text(constat.cible.nom(en: modele.langue))
                         .font(Jetons.typoMeta.font)
                         .foregroundStyle(Color.jeton(\.encre2))
