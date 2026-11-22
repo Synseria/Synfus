@@ -339,6 +339,51 @@ struct ChasseTests {
         }
     }
 
+    /// Une flèche dessinée à la main, pixel par pixel, pointe dans `direction`
+    /// (indépendante des gabarits de détection : verrouille la sémantique).
+    private static func flecheAMain(_ direction: Direction, hauteur: Int = 24) -> LumaBitmap {
+        let w = Int(CGFloat(hauteur) * 1.3), h = hauteur
+        var px = [UInt8](repeating: 0, count: w * h)
+        func set(_ x: Int, _ y: Int) { if x >= 0, x < w, y >= 0, y < h { px[y * w + x] = 255 } }
+        let e = max(2, h / 5)
+        let tete = max(w / 3, 4)
+        switch direction {
+        case .est:
+            for y in h / 2 - e / 2 ..< h / 2 - e / 2 + e { for x in 0..<(w - tete) { set(x, y) } }
+            for dx in 0..<tete { let demi = dx * (h / 2) / tete; for y in h / 2 - demi...h / 2 + demi { set(w - 1 - dx, y) } }
+        case .ouest:
+            for y in h / 2 - e / 2 ..< h / 2 - e / 2 + e { for x in tete..<w { set(x, y) } }
+            for dx in 0..<tete { let demi = dx * (h / 2) / tete; for y in h / 2 - demi...h / 2 + demi { set(dx, y) } }
+        case .sud:
+            for x in w / 2 - e / 2 ..< w / 2 - e / 2 + e { for y in 0..<(h - tete) { set(x, y) } }
+            for dy in 0..<tete { let demi = dy * (w / 2) / tete; for x in w / 2 - demi...w / 2 + demi { set(x, h - 1 - dy) } }
+        case .nord:
+            for x in w / 2 - e / 2 ..< w / 2 - e / 2 + e { for y in tete..<h { set(x, y) } }
+            for dy in 0..<tete { let demi = dy * (w / 2) / tete; for x in w / 2 - demi...w / 2 + demi { set(x, dy) } }
+        }
+        return LumaBitmap(width: w, height: h, pixels: px)
+    }
+
+    @Test("Une flèche dessinée à la main est reconnue dans sa vraie direction, sans inversion")
+    func flecheDessineeAMain() {
+        for direction in Direction.allCases {
+            let (zone, cadres) = Self.zoneAvecFleche(direction, rang: 1)
+            // on colle la flèche à la main à la place du gabarit, au bord gauche
+            let f = Self.flecheAMain(direction)
+            var pixels = zone.pixels
+            let largeur = zone.width
+            let y0 = Int(cadres[1].minY) + (Int(cadres[1].height) - f.height) / 2
+            for gy in 0..<f.height { for gx in 0..<f.width {
+                if f[gx, gy] > 127 { pixels[(y0 + gy) * largeur + 6 + gx] = 250 }
+            } }
+            // on efface l'ancien gabarit (drawn at rang 1) : fond sombre
+            let propre = LumaBitmap(width: zone.width, height: zone.height, pixels: pixels)
+            let trouvee = EtapeChasse.premiereFlechee(dans: ["titre", "indice", "rien"], cadres: cadres, image: propre)
+            #expect(trouvee?.rang == 1)
+            #expect(trouvee?.direction == direction)
+        }
+    }
+
     @Test("Les scores par direction sont exposés pour le diagnostic du scan")
     func scoresParDirection() {
         let (zone, cadres) = Self.zoneAvecFleche(.ouest, rang: 1)
@@ -452,24 +497,29 @@ struct ChasseTests {
         #expect(etape.rang == 2)
     }
 
-    @Test("La direction retenue exige une lecture sûre : pixel ≥ 0,75, ou glyphe et pixel d'accord")
+    @Test("La direction retenue exige une lecture sûre : pixel ≥ 0,75, ou gabarit ≥ 0,6 et glyphe d'accord")
     func retenueSure() {
-        let base = { (g: Direction?, p: (Direction, Double)?) in
+        // p = (direction, score, parGabarits)
+        let base = { (g: Direction?, p: (Direction, Double, Bool)?) in
             EtapeChasse.AnalyseLigne(texte: "x", glyphe: g,
-                                     pixel: p.map { DetectionFleche.Correspondance(direction: $0.0, score: $0.1) },
+                                     pixel: p.map { DetectionFleche.Correspondance(direction: $0.0, score: $0.1, parGabarits: $0.2) },
                                      enCours: false, validee: false)
         }
         // pixel sûr : il gagne même contre un glyphe trompé
-        #expect(base(.nord, (.sud, 0.9)).retenue == .sud)
-        // glyphe et pixel d'accord, pixel moyen : le glyphe suffit
-        #expect(base(.nord, (.nord, 0.65)).retenue == .nord)
-        // désaccord avec pixel moyen : aucune direction (pas de pari)
-        #expect(base(.nord, (.sud, 0.65)).retenue == nil)
-        // pixel seul à 0,65 : retenu ; sous 0,6 : rien
-        #expect(base(nil, (.sud, 0.65)).retenue == .sud)
-        #expect(base(nil, (.sud, 0.55)).retenue == nil)
-        // pixel seul sûr : retenu
-        #expect(base(nil, (.sud, 0.8)).retenue == .sud)
+        #expect(base(.nord, (.sud, 0.9, true)).retenue == .sud)
+        #expect(base(.nord, (.sud, 0.9, false)).retenue == .sud)
+        // gabarit moyen et glyphe d'accord : retenu
+        #expect(base(.nord, (.nord, 0.65, true)).retenue == .nord)
+        // désaccord gabarit moyen / glyphe : aucune direction (pas de pari)
+        #expect(base(.nord, (.sud, 0.65, true)).retenue == nil)
+        // gabarit seul à 0,65 : retenu ; sous 0,6 : rien
+        #expect(base(nil, (.sud, 0.65, true)).retenue == .sud)
+        #expect(base(nil, (.sud, 0.55, true)).retenue == nil)
+        // conicité seule : sous 0,75, aucune direction (une lettre peut faire une tête)
+        #expect(base(nil, (.sud, 0.65, false)).retenue == nil)
+        #expect(base(.nord, (.sud, 0.65, false)).retenue == .nord)
+        // conicité seule mais sûre (≥ 0,75) : retenu
+        #expect(base(nil, (.sud, 0.8, false)).retenue == .sud)
         // glyphe seul : retenu
         #expect(base(.nord, nil).retenue == .nord)
         // rien : rien

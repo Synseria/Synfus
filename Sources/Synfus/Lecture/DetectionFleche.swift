@@ -10,10 +10,18 @@ enum DetectionFleche {
     /// Au-delà, le meilleur gabarit est retenu comme la direction de la ligne.
     static let seuil = 0.6
 
-    /// La meilleure correspondance trouvée : direction et score de Dice.
+    /// La meilleure correspondance trouvée : direction et score.
     struct Correspondance: Equatable, Sendable {
         let direction: Direction
         let score: Double
+        /// Le score vient des gabarits (Dice, reconnaissance de forme) — la
+        /// conicité seule est moins sûre (une lettre peut passer pour une tête).
+        let parGabarits: Bool
+        init(direction: Direction, score: Double, parGabarits: Bool = true) {
+            self.direction = direction
+            self.score = score
+            self.parGabarits = parGabarits
+        }
     }
 
     /// Le gabarit d'une flèche pointant dans `direction`, haute de `hauteur`
@@ -57,25 +65,34 @@ enum DetectionFleche {
     /// contenir la flèche ou la coller à son bord) ; défaut : `cadre.minX`.
     /// `nil` : aucune direction ne colle assez.
     static func direction(dans image: LumaBitmap, ligne cadre: CGRect, texte: CGFloat? = nil) -> Correspondance? {
-        // Deux lectures de la même flèche, combinées : les gabarits (Dice sur
-        // l'encre binarisée) et la conicité (l'apex de la tête est le côté le
-        // moins chargé du plus gros bloc d'encre à gauche de la ligne).
-        var parDirection = scoresParGabarits(dans: image, ligne: cadre, texte: texte)
-        if let c = directionConicite(image, ligne: cadre) {
-            parDirection[c.direction] = max(parDirection[c.direction] ?? 0, c.score)
+        // Deux lectures de la même flèche : les gabarits d'abord (Dice sur
+        // l'encre binarisée — une vraie reconnaissance de forme), la conicité
+        // en repli (l'apex est le côté le moins chargé du plus gros bloc
+        // d'encre). Un gabarit au-dessus du seuil gagne sur la conicité.
+        if let meilleur = scoresParGabarits(dans: image, ligne: cadre, texte: texte)
+            .max(by: { $0.value < $1.value }), meilleur.value >= Self.seuil {
+            return Correspondance(direction: meilleur.key, score: meilleur.value, parGabarits: true)
         }
-        guard let meilleur = parDirection.max(by: { $0.value < $1.value }), meilleur.value >= Self.seuil else { return nil }
-        return Correspondance(direction: meilleur.key, score: meilleur.value)
+        if let c = directionConicite(image, ligne: cadre, texte: texte), c.score >= Self.seuil {
+            return Correspondance(direction: c.direction, score: c.score, parGabarits: false)
+        }
+        return nil
     }
 
     /// La direction par conicité : la flèche du jeu est un triangle blanc à
     /// liseré noir — seuil haut pour ne garder que le blanc plein. L'apex
     /// (la pointe) est le côté du blob le moins chargé en encre.
-    static func directionConicite(_ image: LumaBitmap, ligne cadre: CGRect) -> Correspondance? {
+    static func directionConicite(_ image: LumaBitmap, ligne cadre: CGRect, texte: CGFloat? = nil) -> Correspondance? {
         let h = Int(cadre.height)
         guard h >= 8 else { return nil }
-        let region = CGRect(x: cadre.minX, y: cadre.minY - CGFloat(h) * 0.3,
-                            width: min(cadre.width, CGFloat(h) * 2.5),
+        // Région : à gauche du début du texte, là où le jeu met la flèche —
+        // jamais dans le texte, dont une lettre ronde passerait pour une tête.
+        // Pas de marge sous la ligne : la flèche de la ligne du dessous n'est pas nous.
+        let debutTexte = texte ?? cadre.minX
+        let bordGauche = min(cadre.minX, debutTexte)
+        let largeur = min(max(debutTexte - bordGauche, CGFloat(h) * 0.8), CGFloat(h) * 2.5)
+        let region = CGRect(x: bordGauche, y: cadre.minY - CGFloat(h) * 0.3,
+                            width: largeur,
                             height: cadre.height + CGFloat(h) * 0.6)
             .intersection(CGRect(x: 0, y: 0, width: image.width, height: image.height))
         guard region.width > 8, region.height > 8 else { return nil }
@@ -124,28 +141,32 @@ enum DetectionFleche {
             for x in xa...xb { for y in ya...yb { m += encre(x, y) } }
             return m
         }
-        let total = masse(bx0, bx1, 0, rh - 1)
-        guard total > 20 else { return nil }
-        // hauteur du blob pour classer horizontal/vertical
-        var hmax = 0
-        for x in bx0...bx1 { var y0 = rh, y1 = -1; for y in 0..<rh { if encre(x, y) == 1 { if y < y0 { y0 = y }; if y > y1 { y1 = y } } }; if y1 >= y0 { hmax = max(hmax, y1 - y0 + 1) } }
+        // Étendue verticale du blob lui-même (pas de la région paddée).
+        var yTop = rh, yBot = -1
+        for x in bx0...bx1 { for y in 0..<rh { if encre(x, y) == 1 { if y < yTop { yTop = y }; if y > yBot { yBot = y } } } }
+        guard yBot >= yTop else { return nil }
+        let hmax = yBot - yTop + 1
         let w = bx1 - bx0 + 1
+        let total = masse(bx0, bx1, yTop, yBot)
+        guard total > 20 else { return nil }
+        // L'apex (la pointe) est le côté du blob le moins chargé : on compare
+        // les quarts EXTRÊMES du blob, pas ceux de la région (qui contient du vide).
         let quart = max(1, w / 4)
-        let quartHaut = max(1, rh / 4)
+        let quartHaut = max(1, hmax / 4)
         var direction: Direction, score: Double
         if w >= hmax {
-            let gauche = masse(bx0, bx0 + quart - 1, 0, rh - 1)
-            let droite = masse(bx1 - quart + 1, bx1, 0, rh - 1)
+            let gauche = masse(bx0, bx0 + quart - 1, yTop, yBot)
+            let droite = masse(bx1 - quart + 1, bx1, yTop, yBot)
             if gauche <= droite { direction = .ouest; score = Double(droite - gauche) / Double(total) }
             else { direction = .est; score = Double(gauche - droite) / Double(total) }
         } else {
-            let haut = masse(bx0, bx1, 0, quartHaut - 1)
-            let bas = masse(bx0, bx1, rh - quartHaut, rh - 1)
+            let haut = masse(bx0, bx1, yTop, yTop + quartHaut - 1)
+            let bas = masse(bx0, bx1, yBot - quartHaut + 1, yBot)
             if haut <= bas { direction = .nord; score = Double(bas - haut) / Double(total) }
             else { direction = .sud; score = Double(haut - bas) / Double(total) }
         }
         guard score > 0.05 else { return nil }
-        return Correspondance(direction: direction, score: min(1, 0.4 + 2 * score))
+        return Correspondance(direction: direction, score: min(1, 0.4 + 2 * score), parGabarits: false)
     }
 
     /// Le meilleur score de chaque direction sur une ligne, toutes variantes
@@ -172,7 +193,7 @@ enum DetectionFleche {
                     let totalGabarit = gabaritEncre.reduce(0) { $0 + Int($1) }
                     guard totalGabarit > 4 else { continue }
                     let localTexte = debutTexte - region.minX
-                    let pxMax = min(rw - gw, Int(max(localTexte, CGFloat(gw) * 1.5) + CGFloat(h) * 0.25) - gw)
+                    let pxMax = min(rw - gw, Int(localTexte + CGFloat(h) * 0.5) - gw)
                     guard pxMax >= 0 else { continue }
                     var meilleurLocal = 0.0
                     for py in stride(from: 0, to: Int(region.height) - gh, by: 1) {
@@ -197,6 +218,30 @@ enum DetectionFleche {
             }
         }
         return parDirection
+    }
+
+    /// Le vrai début du texte d'une ligne : le cadre OCR englobe parfois la
+    /// flèche — un premier bloc d'encre large (≥ une hauteur de ligne) et isolé
+    /// à gauche est la flèche, le texte commence après le blanc qui le suit.
+    static func debutDuTexte(_ image: LumaBitmap, dans cadre: CGRect) -> CGFloat {
+        let h = Int(cadre.height)
+        guard h >= 8 else { return cadre.minX }
+        let region = CGRect(x: max(0, cadre.minX - CGFloat(h)), y: cadre.minY - CGFloat(h) * 0.3,
+                            width: min(cadre.width + CGFloat(h), CGFloat(h) * 4),
+                            height: cadre.height + CGFloat(h) * 0.6)
+            .intersection(CGRect(x: 0, y: 0, width: image.width, height: image.height))
+        guard region.width > 8, region.height > 8, let encre = binariser(image, dans: region) else { return cadre.minX }
+        let rw = Int(region.width), rh = Int(region.height)
+        var cols = [Int](repeating: 0, count: rw)
+        for x in 0..<rw { for y in 0..<rh { cols[x] += Int(encre[y * rw + x]) } }
+        let xs = (0..<rw).filter { cols[$0] > 0 }
+        guard let premier = xs.first else { return cadre.minX }
+        var c1 = premier
+        for x in xs.dropFirst() { if x - c1 <= 3 { c1 = x } else { break } }
+        if c1 - premier + 1 >= h, xs.contains(where: { $0 > c1 + 3 }) {
+            return region.minX + CGFloat(c1 + 3)
+        }
+        return cadre.minX
     }
 
     /// Le détail de la détection sur une ligne : le glyphe lu par l'OCR dans le

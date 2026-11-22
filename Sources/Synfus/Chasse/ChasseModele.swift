@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 
 /// L'état du panneau de chasse : départ, direction, indice, résultat. Synfus
 /// ne fait que lire l'écran et copier le trajet trouvé — le joueur colle,
@@ -211,7 +212,7 @@ final class ChasseModele: ObservableObject {
                 let lues = EtapeChasse.ciblesLues(dans: lu.lignes, parmi: indices)
                 let etape = EtapeChasse.etapeLue(dans: lu.lignes, cadres: lu.cadres,
                                                  image: image, parmi: indices)
-                Self.journaliserScan(lignes: lu.lignes, cadres: lu.cadres, image: image,
+                Self.journaliserScan(lignes: lu.lignes, cadres: lu.cadres, image: image, capture: lu.image,
                                     indices: indices, etape: etape)
                 return (lues, etape)
             }.value
@@ -237,13 +238,27 @@ final class ChasseModele: ObservableObject {
     /// retenue) dans `~/Library/Logs/Synfus/chasse.log` — pour régler la
     /// détection sur de vraies captures en résolution native.
     private nonisolated static func journaliserScan(lignes: [String], cadres: [CGRect], image: LumaBitmap?,
+                                        capture: CGImage? = nil,
                                         indices: [Indice], etape: (direction: Direction?, cible: EtapeChasse.Cible?, rang: Int?)) {
         let analyse = EtapeChasse.analyser(dans: lignes, cadres: cadres, image: image)
         var texte = "=== \(Date()) | étape: dir=\(etape.direction.map { "\($0)" } ?? "-") cible=\(etape.cible.map { "\($0)" } ?? "-") rang=\(etape.rang.map { "\($0)" } ?? "-")\n"
-        for a in analyse {
+        for (i, a) in analyse.enumerated() {
             let badge = a.enCours ? "EN COURS" : a.validee ? "VALIDÉ" : "-"
-            let pixel = a.pixel.map { "\($0.direction):\(String(format: "%.2f", $0.score))" } ?? "-"
-            texte += "  [\(badge)] glyphe=\(a.glyphe.map { "\($0)" } ?? "-") pixel=\(pixel) retenue=\(a.retenue.map { "\($0)" } ?? "-") | \(a.texte)\n"
+            let pixel = a.pixel.map { "\($0.direction):\(String(format: "%.2f", $0.score))\($0.parGabarits ? "g" : "c")" } ?? "-"
+            // Diagnostic fin : scores des 4 directions par gabarits, conicité seule, cadre.
+            var gabarits = "-", conicite = "-"
+            if let image, i < cadres.count {
+                var cadre = cadres[i]
+                var texteX: CGFloat? = nil
+                if cadre.minX > 0 { texteX = cadre.minX; cadre = CGRect(x: 0, y: cadre.minY, width: cadre.maxX, height: cadre.height) }
+                gabarits = DetectionFleche.scoresParGabarits(dans: image, ligne: cadre, texte: texteX)
+                    .sorted { $0.value > $1.value }
+                    .map { "\($0.key):\(String(format: "%.2f", $0.value))" }.joined(separator: " ")
+                conicite = DetectionFleche.directionConicite(image, ligne: cadre, texte: texteX)
+                    .map { "\($0.direction):\(String(format: "%.2f", $0.score))" } ?? "-"
+            }
+            let c = i < cadres.count ? cadres[i] : .zero
+            texte += "  [\(badge)] cadre=(\(Int(c.minX)),\(Int(c.minY)) \(Int(c.width))x\(Int(c.height))) glyphe=\(a.glyphe.map { "\($0)" } ?? "-") pixel=\(pixel) gabarits=[\(gabarits)] conicite=\(conicite) retenue=\(a.retenue.map { "\($0)" } ?? "-") | \(a.texte)\n"
         }
         guard let dossier = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first?
             .appendingPathComponent("Logs/Synfus", isDirectory: true) else { return }
@@ -254,6 +269,22 @@ final class ChasseModele: ObservableObject {
         var tous = blocs + [texte]
         while tous.count > 50 { tous.removeFirst() }
         try? tous.joined().write(to: url, atomically: true, encoding: .utf8)
+        // La capture du scan, pour voir la flèche de ses yeux — 20 dernières gardées.
+        if let capture {
+            let dossierCaptures = dossier.appendingPathComponent("captures", isDirectory: true)
+            try? FileManager.default.createDirectory(at: dossierCaptures, withIntermediateDirectories: true)
+            let urlCapture = dossierCaptures.appendingPathComponent("chasse-\(Int(Date().timeIntervalSince1970)).png")
+            let rep = NSBitmapImageRep(cgImage: capture)
+            if let data = rep.representation(using: .png, properties: [:]) {
+                try? data.write(to: urlCapture)
+            }
+            if let fichiers = try? FileManager.default.contentsOfDirectory(atPath: dossierCaptures.path)
+                .filter({ $0.hasPrefix("chasse-") }).sorted(), fichiers.count > 20 {
+                for vieux in fichiers.prefix(fichiers.count - 20) {
+                    try? FileManager.default.removeItem(at: dossierCaptures.appendingPathComponent(vieux))
+                }
+            }
+        }
     }
 
     // MARK: - Étape
@@ -379,6 +410,13 @@ final class ChasseModele: ObservableObject {
     func copier() {
         guard case .trouve(let x, let y, _) = constat?.resultat else { return }
         // Une chasse se joue dans le Monde des Douze.
+        ZaapClipboard.shared.copierTrajet(vers: (x, y), sousZone: nil, dansLesDouze: true)
+    }
+
+    /// Copie le trajet vers le **départ** détecté (`/travel x,y`, zaap compris
+    /// s'il fait gagner) — pour y retourner par `/zaap` ou `/travel`.
+    func copierTrajetDepart() {
+        guard let x = departX, let y = departY else { return }
         ZaapClipboard.shared.copierTrajet(vers: (x, y), sousZone: nil, dansLesDouze: true)
     }
 }

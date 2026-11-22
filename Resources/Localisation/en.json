@@ -197,6 +197,7 @@
   "chasse.copier": "Copy the route again",
   "chasse.depart.reprendre": "Use the front character's position",
   "chasse.depart.saisir": "Enter a start",
+  "chasse.depart.trajet": "Copy the route to the start (/zaap or /travel)",
   "chasse.direction.choisir": "Choose a direction",
   "chasse.direction.est": "East",
   "chasse.direction.lue": "%@ — read on screen",

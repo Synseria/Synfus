@@ -157,13 +157,15 @@ enum EtapeChasse {
         let validee: Bool
 
         /// La direction retenue pour la ligne — **seulement si la lecture est
-        /// sûre** : un pixel à ≥ 0,75 gagne (Vision inverse parfois ↑ et ↓ dans
-        /// le texte) ; sinon un pixel à ≥ 0,6 vaut s'il n'y a pas de glyphe
-        /// contraire ; glyphe et pixel qui se contredisent sous 0,75 : aucune
-        /// direction — mieux vaut attendre un clic que d'en définir une fausse.
+        /// sûre** : un pixel à ≥ 0,75 gagne (Vision écorche la flèche en « • »,
+        /// le pixel est alors le seul vrai signal) ; sinon un pixel à ≥ 0,6 ne
+        /// vaut que s'il vient des **gabarits** (reconnaissance de forme) et
+        /// sans glyphe contraire — la conicité seule peut confondre une lettre
+        /// avec une tête ; glyphe et pixel qui se contredisent sous 0,75 :
+        /// aucune direction, mieux vaut attendre un clic qu'en poser une fausse.
         var retenue: Direction? {
             if let pixel, pixel.score >= 0.75 { return pixel.direction }
-            if let pixel, pixel.score >= 0.6 {
+            if let pixel, pixel.parGabarits, pixel.score >= 0.6 {
                 if let glyphe, glyphe != pixel.direction { return nil }
                 return pixel.direction
             }
@@ -179,13 +181,16 @@ enum EtapeChasse {
     static func analyser(dans lignes: [String], cadres: [CGRect], image: LumaBitmap?) -> [AnalyseLigne] {
         let n = min(lignes.count, cadres.count)
         return (0..<n).map { rang in
-            var detail = DetectionFleche.detail(dans: lignes[rang], cadre: cadres[rang], image: image)
-            // Dernier recours : la flèche peut être au bord gauche de la zone,
-            // le cadre OCR du texte commençant plus à droite.
-            if detail.pixel == nil, let image, cadres[rang].minX > 0 {
-                let elargi = CGRect(x: 0, y: cadres[rang].minY, width: cadres[rang].maxX, height: cadres[rang].height)
-                detail.pixel = DetectionFleche.direction(dans: image, ligne: elargi, texte: cadres[rang].minX)
+            // La flèche est à gauche du texte lu — le cadre OCR l'englobe parfois :
+            // on élargit toujours la zone jusqu'au bord gauche, bornée par le vrai
+            // début du texte (`texte:`), pour que la flèche soit dans la fenêtre.
+            var cadre = cadres[rang]
+            var texte: CGFloat? = nil
+            if cadre.minX > 0 {
+                texte = image.map { DetectionFleche.debutDuTexte($0, dans: cadre) } ?? cadre.minX
+                cadre = CGRect(x: 0, y: cadre.minY, width: cadre.maxX, height: cadre.height)
             }
+            let detail = DetectionFleche.detail(dans: lignes[rang], cadre: cadre, image: image, texte: texte)
             return AnalyseLigne(texte: lignes[rang], glyphe: detail.glyphe, pixel: detail.pixel,
                                 enCours: estEnCours(lignes[rang]), validee: estValidee(lignes[rang]))
         }
