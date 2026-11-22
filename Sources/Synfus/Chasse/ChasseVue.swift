@@ -46,7 +46,9 @@ struct ChasseVue: View {
         }
         .padding([.horizontal, .bottom], Jetons.espace2)
         .padding(.top, Jetons.espace1)
-        .frame(width: Jetons.largeurPanneauChasse, alignment: .leading)
+        // Largeur minimale du panneau de quêtes, mais assez large pour la
+        // boussole complète (départ à gauche de la flèche du haut + 2 colonnes).
+        .frame(minWidth: Jetons.largeurPanneauChasse, alignment: .leading)
         .font(Jetons.typoMeta.font)
         .surfaceFlottante()
         // Le trajet copié tout seul à la validation d'une étape : la coche
