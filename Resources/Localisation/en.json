@@ -195,7 +195,6 @@
   "chasse.aide": "A floating panel: the start (your read position), a direction (buttons or arrow keys) and the clue (typed, or read on screen) give the next map from DofusDB, and its /travel is copied — through a zaap if it saves enough maps. Synfus validates nothing and sends nothing to the game: paste, walk and validate yourself. The panel takes the keyboard without leaving the game; a click in the game gives it back.",
   "chasse.arrive": "Arrived — validate the step in the game",
   "chasse.copier": "Copy the route again",
-  "chasse.depart": "Start",
   "chasse.depart.reprendre": "Use the front character's position",
   "chasse.depart.saisir": "Enter a start",
   "chasse.devinee": "guessed",

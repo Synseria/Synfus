@@ -26,6 +26,9 @@ final class ChasseModele: ObservableObject {
     /// La direction devinée (indice cherché dans les quatre directions) quand
     /// le scan n'a pas lu de flèche ; un choix manuel la remplace.
     @Published private(set) var directionDevinee: Direction?
+    /// La direction a été choisie à la main sur la boussole : le prochain scan
+    /// ne la change pas. Remise à zéro à l'étape suivante.
+    @Published private(set) var directionManuelle = false
     @Published private(set) var cible: EtapeChasse.Cible?
     /// L'indice choisi par le dernier scan, à mettre en couleur ; une saisie
     /// ou un clic manuel le remplace.
@@ -168,13 +171,10 @@ final class ChasseModele: ObservableObject {
     /// La reconnaissance cherche chaque nom d'indice, à quelques fautes près,
     /// dans chaque ligne lue : un dixième de seconde, hors du fil principal.
     /// Le scan lit toute l'étape en cours d'un coup : la direction sur la
-    /// flèche de la ligne de l'indice, et l'indice de cette même ligne —
-    /// pas la dernière ligne lue, une ancienne étape peut traîner dessous.
     /// Le scan lit toute l'étape en cours d'un coup : la direction sur la
     /// flèche de la ligne de l'indice — lue par l'OCR, sinon cherchée en pixels
     /// dans l'image de la zone (Vision écorche la flèche en triangle plein) —
-    /// et l'indice de cette même ligne, pas la dernière ligne lue : une
-    /// ancienne étape peut traîner dessous.
+    /// et l'indice de cette **même** ligne, la dernière fléchée du panneau.
     func lire() {
         guard !lectureEnCours, !indices.isEmpty else { return }
         lectureEnCours = true
@@ -186,25 +186,22 @@ final class ChasseModele: ObservableObject {
                 self.lectureEnCours = false
                 return
             }
-            let lues = await Task.detached(priority: .userInitiated) {
-                EtapeChasse.ciblesLues(dans: lu.lignes, parmi: indices)
-            }.value
-            let flechee = await Task.detached(priority: .userInitiated) {
-                EtapeChasse.premiereFlechee(dans: lu.lignes, cadres: lu.cadres,
-                                             image: LumaBitmap(cgImage: lu.image))
+            let (lues, etape) = await Task.detached(priority: .userInitiated) {
+                let lues = EtapeChasse.ciblesLues(dans: lu.lignes, parmi: indices)
+                let etape = EtapeChasse.etapeLue(dans: lu.lignes, cadres: lu.cadres,
+                                                 image: LumaBitmap(cgImage: lu.image), parmi: indices)
+                return (lues, etape)
             }.value
             self.lues = lues
-            rienLu = lues.isEmpty && flechee == nil
+            rienLu = lues.isEmpty && etape.direction == nil && etape.cible == nil
             // La direction d'abord : choisir l'indice déclenche la recherche
             // dès que les deux sont là. Sans flèche lue, elle reste à deviner.
-            directionLue = flechee?.direction
-            direction = directionLue
+            // Une direction choisie à la main n'est pas écrasée par le scan.
+            directionLue = etape.direction
+            if !directionManuelle { direction = etape.direction }
             directionDevinee = nil
             lectureEnCours = false
-            if let rang = flechee?.rang,
-               let cible = EtapeChasse.ciblesLues(dans: [lu.lignes[rang]], parmi: indices).first {
-                choisir(cible, lue: true)
-            } else if let cible = lues.last {
+            if let cible = etape.cible {
                 choisir(cible, lue: true)
             }
         }
@@ -221,7 +218,9 @@ final class ChasseModele: ObservableObject {
 
     func choisir(_ direction: Direction) {
         guard !enAttenteDesIndices else { return }
-        // Un choix manuel efface la direction lue ou devinée.
+        // Un choix manuel efface la direction lue ou devinée, et le scan
+        // suivant ne la remplacera pas.
+        directionManuelle = true
         directionLue = nil
         directionDevinee = nil
         self.direction = direction
@@ -326,7 +325,9 @@ final class ChasseModele: ObservableObject {
         historique.noter(reprise)
         self.constat = constat
         // La direction reste allumée sur la boussole tant que le résultat
-        // s'affiche — le prochain scan la remplacera.
+        // s'affiche — le prochain scan la remplacera. Le choix manuel, lui,
+        // ne tient que jusqu'à l'étape suivante.
+        directionManuelle = false
         cible = nil
         cibleLue = false
         saisie = ""
@@ -345,6 +346,7 @@ final class ChasseModele: ObservableObject {
         guard let reprise = historique.reprendre() else { return }
         recherche?.cancel()
         trajetCopie = false
+        directionManuelle = false
         let rouverture = reprise.rouverture(departX: departX, departY: departY, lues: lues)
         departX = rouverture.departX
         departY = rouverture.departY

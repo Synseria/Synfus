@@ -152,36 +152,64 @@ enum EtapeChasse {
         return nil
     }
 
-    /// La première ligne fléchée du suivi : la flèche **lue par l'OCR** dans le
-    /// texte, sinon **cherchée en pixels** dans l'image de la zone (Vision
-    /// écorche la flèche en triangle plein, voire inverse son sens). Une flèche
-    /// trouvée en pixels avec un score élevé prime sur le glyphe lu. `cadres` :
-    /// le cadre de chaque ligne en pixels de `image`, aligné sur `lignes`.
-    /// `nil` : aucune ligne fléchée.
-    static func premiereFlechee(dans lignes: [String], cadres: [CGRect], image: LumaBitmap?) -> (rang: Int, direction: Direction)? {
+    /// Toutes les lignes fléchées du suivi, de haut en bas : la flèche **lue par
+    /// l'OCR** dans le texte, sinon **cherchée en pixels** dans l'image de la zone
+    /// (Vision écorche la flèche en triangle plein, voire inverse son sens). Une
+    /// flèche trouvée en pixels avec un score élevé prime sur le glyphe lu.
+    /// `cadres` : le cadre de chaque ligne en pixels de `image`, aligné sur `lignes`.
+    static func lignesFlechees(dans lignes: [String], cadres: [CGRect], image: LumaBitmap?) -> [(rang: Int, direction: Direction)] {
+        var flechees: [(rang: Int, direction: Direction)] = []
         let n = min(lignes.count, cadres.count)
         for rang in 0..<n {
             let glyph = Direction(ligneLue: lignes[rang])
             guard let image else {
-                if let glyph { return (rang, glyph) }
+                if let glyph { flechees.append((rang, glyph)) }
                 continue
             }
             let cadre = cadres[rang]
             let pixel = DetectionFleche.direction(dans: image, ligne: cadre)
             // Score élevé en pixels : la forme ne ment pas sur le sens, le glyphe lu si.
-            if let pixel, pixel.score >= 0.8 { return (rang, pixel.direction) }
-            if let glyph { return (rang, glyph) }
-            if let pixel { return (rang, pixel.direction) }
-            // Dernier recours : la flèche peut être au bord gauche de la zone, le
-            // cadre OCR du texte commençant plus à droite.
-            if cadre.minX > 0 {
+            if let pixel, pixel.score >= 0.8 {
+                flechees.append((rang, pixel.direction))
+            } else if let glyph {
+                flechees.append((rang, glyph))
+            } else if let pixel {
+                flechees.append((rang, pixel.direction))
+            } else if cadre.minX > 0 {
+                // Dernier recours : la flèche peut être au bord gauche de la zone,
+                // le cadre OCR du texte commençant plus à droite.
                 let elargi = CGRect(x: 0, y: cadre.minY, width: cadre.maxX, height: cadre.height)
                 if let p = DetectionFleche.direction(dans: image, ligne: elargi, texte: cadre.minX) {
-                    return (rang, p.direction)
+                    flechees.append((rang, p.direction))
                 }
             }
         }
-        return nil
+        return flechees
+    }
+
+    /// La première ligne fléchée du suivi.
+    static func premiereFlechee(dans lignes: [String], cadres: [CGRect], image: LumaBitmap?) -> (rang: Int, direction: Direction)? {
+        lignesFlechees(dans: lignes, cadres: cadres, image: image).first
+    }
+
+    /// L'étape en cours lue sur l'écran : direction **et** indice viennent de la
+    /// **même** ligne — le panneau du jeu liste les étapes et l'étape en cours
+    /// est la **dernière** ligne fléchée dont l'indice est reconnu. Si aucune
+    /// ligne fléchée n'a d'indice reconnu : la dernière fléchée donne la
+    /// direction, le dernier indice lu donne la cible. Sans aucune flèche :
+    /// la cible seule, la direction reste à deviner.
+    static func etapeLue(dans lignes: [String], cadres: [CGRect], image: LumaBitmap?, parmi indices: [Indice]) -> (direction: Direction?, cible: Cible?, rang: Int?) {
+        let flechees = lignesFlechees(dans: lignes, cadres: cadres, image: image)
+        let lues = ciblesLues(dans: lignes, parmi: indices)
+        for f in flechees.reversed() {
+            if let cible = ciblesLues(dans: [lignes[f.rang]], parmi: indices).first {
+                return (f.direction, cible, f.rang)
+            }
+        }
+        if let derniere = flechees.last {
+            return (derniere.direction, lues.last, derniere.rang)
+        }
+        return (nil, lues.last, nil)
     }
 
     /// DofusDB ne cherche pas plus loin, le jeu non plus.

@@ -50,6 +50,9 @@ struct ChasseVue: View {
         .frame(width: Jetons.largeurPanneauChasse, alignment: .leading)
         .font(Jetons.typoMeta.font)
         .surfaceFlottante()
+        // Le trajet copié tout seul à la validation d'une étape : la coche
+        // verte du bouton un instant, puis il redevient le bouton copier.
+        .onChange(of: modele.trajetCopie) { _, oui in if oui { copie.signaler("trajet") } }
     }
 
     private var entete: some View {
@@ -83,11 +86,11 @@ struct ChasseVue: View {
     // MARK: - Départ
 
     /// Les coordonnées de départ, **centrées** pour tomber sous la colonne du
-    /// milieu de la boussole (les flèches nord/sud et « Lire ») ; le drapeau
-    /// et le bouton de reprise de position restent aux bords, en surimpression.
+    /// milieu de la boussole (les flèches nord/sud et « Lire ») ; le bouton de
+    /// reprise de position reste au bord droit, en surimpression.
     /// Chaque champ est **encadré très légèrement selon son axe** : accent quand
     /// la position lue du perso y est, danger sinon — on voit quel axe cloche.
-    /// Sur la bonne position : une coche « arrivé » à côté du drapeau.
+    /// Sur la bonne position : une coche « arrivé » à gauche.
     private var depart: some View {
         let position = lecteur.positionDuPersoDevant
         let bonX = modele.departX.flatMap { x in position.map { $0.x == x } }
@@ -100,15 +103,12 @@ struct ChasseVue: View {
             }
             .frame(maxWidth: .infinity)
             HStack(spacing: Jetons.espace1) {
-                HStack(spacing: Jetons.espace1) {
-                    Image(systemName: "flag").foregroundStyle(Color.jeton(\.encre2))
-                    if arrivé {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(Color.jeton(\.accentTexte))
-                            .transition(.opacity)
-                    }
+                if arrivé {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(Color.jeton(\.accentTexte))
+                        .transition(.opacity)
+                        .help(L("chasse.arrive"))
                 }
-                .help(arrivé ? L("chasse.arrive") : L("chasse.depart"))
                 Spacer(minLength: 0)
                 Button { modele.reprendrePositionSiInconnue(); modele.reprendrePosition() } label: { Image(systemName: "location") }
                     .buttonStyle(BoutonTertiaire())
@@ -266,9 +266,9 @@ struct ChasseVue: View {
                             modele.copier()
                             copie.signaler("trajet")
                         } label: {
-                            // La coche verte dit « copié » — le libellé ne le répète pas.
-                            IconeCopie(icone: "doc.on.doc", copie: copie.affiche("trajet") || modele.trajetCopie)
-                                .foregroundStyle(copie.affiche("trajet") || modele.trajetCopie
+                            // La coche verte dit « copié » un instant — le bouton revient ensuite.
+                            IconeCopie(icone: "doc.on.doc", copie: copie.affiche("trajet"))
+                                .foregroundStyle(copie.affiche("trajet")
                                                  ? Color.jeton(\.accentTexte) : Color.jeton(\.encre2))
                         }
                         .buttonStyle(BoutonTertiaire())

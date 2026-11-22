@@ -195,7 +195,6 @@
   "chasse.aide": "Un panel flotante: el punto de partida (tu posición leída), una dirección (botones o flechas del teclado) y la pista (escrita, o leída en pantalla) dan el mapa siguiente según DofusDB, y se copia su /travel — por un zaap si ahorra bastantes mapas. Synfus no valida nada ni envía nada al juego: pega, camina y valida tú mismo. El panel toma el teclado sin salir del juego; un clic en el juego se lo devuelve.",
   "chasse.arrive": "Llegado — valida la etapa en el juego",
   "chasse.copier": "Copiar el trayecto de nuevo",
-  "chasse.depart": "Salida",
   "chasse.depart.reprendre": "Usar la posición del personaje en primer plano",
   "chasse.depart.saisir": "Introduce la salida",
   "chasse.devinee": "adivinada",

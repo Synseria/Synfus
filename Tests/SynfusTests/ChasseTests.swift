@@ -337,4 +337,50 @@ struct ChasseTests {
         #expect(trouvee?.rang == 2)
         #expect(trouvee?.direction == .sud)
     }
+
+    @Test("L'étape lue apparie la direction et l'indice de la même ligne, la dernière fléchée")
+    func etapeLueAppariement() throws {
+        let liste = try indices()
+        // Comme sur l'écran : plusieurs lignes fléchées, l'étape en cours est la dernière.
+        let lignes = ["Apprentissage : Assassin", "ÉTAPE : 1/4", "Départ [10,22]", "Baie de Sufokia",
+                      "← Poupée koalak", "↑ Théière à rayures", "???"]
+        let cadres = (0..<lignes.count).map { CGRect(x: 30, y: CGFloat(8 + $0 * 32), width: 150, height: 26) }
+        let etape = EtapeChasse.etapeLue(dans: lignes, cadres: cadres, image: nil, parmi: liste)
+        #expect(etape.direction == .nord)
+        #expect(etape.cible == .indice(liste[6])) // Théière à rayures, la dernière ligne fléchée
+        #expect(etape.rang == 5)
+    }
+
+    @Test("L'étape lue remonte aux lignes fléchées du dessus quand la dernière n'a pas d'indice reconnu")
+    func etapeLueLigneSansIndice() throws {
+        let liste = try indices()
+        let lignes = ["titre", "← Poupée koalak", "↑ ???"]
+        let cadres = (0..<lignes.count).map { CGRect(x: 30, y: CGFloat(8 + $0 * 32), width: 150, height: 26) }
+        let etape = EtapeChasse.etapeLue(dans: lignes, cadres: cadres, image: nil, parmi: liste)
+        #expect(etape.direction == .ouest)
+        #expect(etape.cible == .indice(liste[5]))
+        #expect(etape.rang == 1)
+    }
+
+    @Test("Sans flèche lue, la cible est le dernier indice lu et la direction reste à deviner")
+    func etapeLueSansFleche() throws {
+        let liste = try indices()
+        let lignes = ["titre", "Poupée koalak", "Théière à rayures"]
+        let cadres = (0..<lignes.count).map { CGRect(x: 30, y: CGFloat(8 + $0 * 32), width: 150, height: 26) }
+        let etape = EtapeChasse.etapeLue(dans: lignes, cadres: cadres, image: nil, parmi: liste)
+        #expect(etape.direction == nil)
+        #expect(etape.cible == .indice(liste[6])) // le dernier lu
+        #expect(etape.rang == nil)
+    }
+
+    @Test("Une ligne fléchée sans aucun indice reconnu garde la direction de la dernière fléchée et le dernier indice lu")
+    func etapeLueFlecheSansCible() throws {
+        let liste = try indices()
+        let lignes = ["titre", "← ???", "Théière à rayures"]
+        let cadres = (0..<lignes.count).map { CGRect(x: 30, y: CGFloat(8 + $0 * 32), width: 150, height: 26) }
+        let etape = EtapeChasse.etapeLue(dans: lignes, cadres: cadres, image: nil, parmi: liste)
+        #expect(etape.direction == .ouest)
+        #expect(etape.cible == .indice(liste[6]))
+        #expect(etape.rang == 1)
+    }
 }
