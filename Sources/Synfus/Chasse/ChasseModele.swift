@@ -41,10 +41,6 @@ final class ChasseModele: ObservableObject {
     /// La dernière lecture n'a rien reconnu.
     @Published private(set) var rienLu = false
     @Published private(set) var constat: Constat?
-    /// Ce que le dernier scan a vu, ligne à ligne — pour dire ce qui a été lu.
-    @Published private(set) var analyse: [EtapeChasse.AnalyseLigne] = []
-    /// L'historique des étapes est ouvert dans le panneau.
-    @Published var historiqueVisible = false
     @Published private(set) var rechercheEnCours = false
     @Published private(set) var echec: String?
     /// Le trajet du dernier résultat a été copié : la coche verte du bouton
@@ -90,6 +86,28 @@ final class ChasseModele: ObservableObject {
     /// Les étapes déjà conclues (validées), pour l'historique du panneau.
     var etapesValidees: [HistoriqueChasse.Reprise] { historique.toutes }
 
+    /// La chaîne des positions en haut du panneau : le départ, puis chaque
+    /// carte atteinte — sans doublon consécutif.
+    var chainePositions: [(x: Int, y: Int)] {
+        var chaine: [(x: Int, y: Int)] = []
+        if let dx = departX, let dy = departY { chaine.append((dx, dy)) }
+        for reprise in historique.toutes {
+            guard let atteinte = reprise.cibleAtteinte else { continue }
+            if chaine.last?.x != atteinte.x || chaine.last?.y != atteinte.y {
+                chaine.append((atteinte.x, atteinte.y))
+            }
+        }
+        return chaine
+    }
+
+    /// Rouvre une étape passée choisie dans le menu horloge : les étapes
+    /// suivantes sont retirées de l'historique, celle-ci est rouverte.
+    func rouvrir(_ reprise: HistoriqueChasse.Reprise) {
+        guard let i = historique.toutes.firstIndex(of: reprise) else { return }
+        historique.tronquer(jusqua: i)
+        etapePrecedente()
+    }
+
     var langue: Langue { L10n.courante.langue }
 
     var suggestions: [EtapeChasse.Cible] {
@@ -115,7 +133,6 @@ final class ChasseModele: ObservableObject {
         departX = nil
         departY = nil
         constat = nil
-        analyse = []
         lues = []
         cible = nil
         cibleLue = false
@@ -205,16 +222,14 @@ final class ChasseModele: ObservableObject {
                 self.lectureEnCours = false
                 return
             }
-            let (lues, etape, analyse) = await Task.detached(priority: .userInitiated) {
+            let (lues, etape) = await Task.detached(priority: .userInitiated) {
                 let image = LumaBitmap(cgImage: lu.image)
                 let lues = EtapeChasse.ciblesLues(dans: lu.lignes, parmi: indices)
                 let etape = EtapeChasse.etapeLue(dans: lu.lignes, cadres: lu.cadres,
                                                  image: image, parmi: indices)
-                let analyse = EtapeChasse.analyser(dans: lu.lignes, cadres: lu.cadres, image: image)
-                return (lues, etape, analyse)
+                return (lues, etape)
             }.value
             self.lues = lues
-            self.analyse = analyse
             rienLu = lues.isEmpty && etape.direction == nil && etape.cible == nil
             // La direction d'abord : choisir l'indice déclenche la recherche
             // dès que les deux sont là. Sans flèche lue, elle reste à deviner.
@@ -240,8 +255,14 @@ final class ChasseModele: ObservableObject {
 
     func choisir(_ direction: Direction) {
         guard !enAttenteDesIndices else { return }
-        // Un choix manuel efface la direction lue ou devinée, et le scan
-        // suivant ne la remplacera pas.
+        // Un choix manuel bloque la direction contre le prochain scan ;
+        // re-cliquer dessus annule le choix : retour à la direction lue (auto).
+        if directionManuelle, self.direction == direction {
+            directionManuelle = false
+            self.direction = directionLue
+            chercherSiPret()
+            return
+        }
         directionManuelle = true
         directionLue = nil
         directionDevinee = nil
