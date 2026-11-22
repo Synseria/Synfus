@@ -248,6 +248,13 @@ struct ChasseVue: View {
             VStack(alignment: .leading, spacing: Jetons.espace1) {
                 HStack(spacing: Jetons.espace1) {
                     Image(systemName: constat.direction.symbole).foregroundStyle(Color.jeton(\.encre2))
+                    // Une direction devinée (aucune flèche lue) se dit : c'est un pari, pas une lecture.
+                    if modele.directionDevinee == constat.direction {
+                        Text(L("chasse.devinee"))
+                            .font(Jetons.typoMicro.font)
+                            .foregroundStyle(Color.jeton(\.encre2))
+                            .help(L("chasse.direction.devinee", constat.direction.libelle))
+                    }
                     Text(constat.cible.nom(en: modele.langue))
                         .font(Jetons.typoMeta.font)
                         .foregroundStyle(Color.jeton(\.encre2))
