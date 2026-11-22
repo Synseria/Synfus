@@ -85,22 +85,32 @@ struct ChasseVue: View {
     /// Les coordonnées de départ, **centrées** pour tomber sous la colonne du
     /// milieu de la boussole (les flèches nord/sud et « Lire ») ; le drapeau
     /// et le bouton de reprise de position restent aux bords, en surimpression.
-    /// Un **encadré très léger** dit si le perso est sur la bonne position :
-    /// accent quand il y est, danger sinon.
+    /// Chaque champ est **encadré très légèrement selon son axe** : accent quand
+    /// la position lue du perso y est, danger sinon — on voit quel axe cloche.
+    /// Sur la bonne position : une coche « arrivé » à côté du drapeau.
     private var depart: some View {
-        ZStack {
+        let position = lecteur.positionDuPersoDevant
+        let bonX = modele.departX.flatMap { x in position.map { $0.x == x } }
+        let bonY = modele.departY.flatMap { y in position.map { $0.y == y } }
+        let arrivé = bonX == true && bonY == true
+        return ZStack {
             HStack(spacing: Jetons.espace1) {
-                TextField("x", value: $modele.departX, format: .number.grouping(.never), prompt: Text("x"))
-                    .frame(width: 52)
-                TextField("y", value: $modele.departY, format: .number.grouping(.never), prompt: Text("y"))
-                    .frame(width: 52)
+                champCoordonnee(valeur: $modele.departX, prompt: "x", bon: bonX)
+                champCoordonnee(valeur: $modele.departY, prompt: "y", bon: bonY)
             }
             .frame(maxWidth: .infinity)
             HStack(spacing: Jetons.espace1) {
-                Image(systemName: "flag").foregroundStyle(Color.jeton(\.encre2))
-                    .help(L("chasse.depart"))
+                HStack(spacing: Jetons.espace1) {
+                    Image(systemName: "flag").foregroundStyle(Color.jeton(\.encre2))
+                    if arrivé {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(Color.jeton(\.accentTexte))
+                            .transition(.opacity)
+                    }
+                }
+                .help(arrivé ? L("chasse.arrive") : L("chasse.depart"))
                 Spacer(minLength: 0)
-                Button { modele.reprendrePosition() } label: { Image(systemName: "location") }
+                Button { modele.reprendrePositionSiInconnue(); modele.reprendrePosition() } label: { Image(systemName: "location") }
                     .buttonStyle(BoutonTertiaire())
                     .disabled(lecteur.positionDuPersoDevant == nil)
                     .aide(L("chasse.depart.reprendre"))
@@ -110,15 +120,20 @@ struct ChasseVue: View {
         .frame(maxWidth: .infinity)
         .textFieldStyle(.roundedBorder)
         .fixedSize(horizontal: false, vertical: true)
-        .overlay {
-            if let position = lecteur.positionDuPersoDevant, let x = modele.departX, let y = modele.departY {
-                let bonnePosition = position.x == x && position.y == y
-                RoundedRectangle(cornerRadius: Jetons.rayon2, style: .circular)
-                    .strokeBorder(bonnePosition ? Color.jeton(\.accent) : Color.jeton(\.danger),
-                                  lineWidth: Jetons.epaisseurFilet)
-                    .opacity(0.7)
+    }
+
+    /// Un champ x ou y, encadré très légèrement quand la position lue dit si cet axe est bon.
+    private func champCoordonnee(valeur: Binding<Int?>, prompt: String, bon: Bool?) -> some View {
+        TextField(prompt, value: valeur, format: .number.grouping(.never), prompt: Text(prompt))
+            .frame(width: 52)
+            .overlay {
+                if let bon {
+                    RoundedRectangle(cornerRadius: Jetons.rayon1, style: .circular)
+                        .strokeBorder(bon ? Color.jeton(\.accent) : Color.jeton(\.danger),
+                                      lineWidth: Jetons.epaisseurFilet)
+                        .opacity(0.7)
+                }
             }
-        }
     }
 
     // MARK: - Boussole
@@ -244,8 +259,10 @@ struct ChasseVue: View {
                             modele.copier()
                             copie.signaler("trajet")
                         } label: {
-                            IconeCopie(icone: "doc.on.doc", copie: copie.affiche("trajet"))
-                                .foregroundStyle(Color.jeton(\.encre2))
+                            // La coche verte dit « copié » — le libellé ne le répète pas.
+                            IconeCopie(icone: "doc.on.doc", copie: copie.affiche("trajet") || modele.trajetCopie)
+                                .foregroundStyle(copie.affiche("trajet") || modele.trajetCopie
+                                                 ? Color.jeton(\.accentTexte) : Color.jeton(\.encre2))
                         }
                         .buttonStyle(BoutonTertiaire())
                         .aide(L("chasse.copier"))

@@ -40,6 +40,9 @@ final class ChasseModele: ObservableObject {
     @Published private(set) var constat: Constat?
     @Published private(set) var rechercheEnCours = false
     @Published private(set) var echec: String?
+    /// Le trajet du dernier résultat a été copié : la coche verte du bouton
+    /// suffit, le libellé ne le répète pas.
+    @Published private(set) var trajetCopie = false
 
     @Published private(set) var indices: [Indice] = []
     @Published private(set) var dateIndices: Date?
@@ -110,10 +113,21 @@ final class ChasseModele: ObservableObject {
     /// À l'ouverture du panneau : le départ là où se tient le perso devant,
     /// la liste des indices, et la lecture de l'écran.
     func ouvrir() {
-        reprendrePosition()
+        reprendrePositionSiInconnue()
         Task {
             if indices.isEmpty { await chargerIndices() }
             lire()
+        }
+    }
+
+    /// Reprend la position du perso devant — lue à l'occasion si aucune
+    /// position n'est connue de ce perso (la lecture régulière de la position
+    /// peut être éteinte, la chasse s'ouvre quand même dessus).
+    func reprendrePositionSiInconnue() {
+        guard !departConnu else { return }
+        Task {
+            await LecteurEcran.shared.lirePositionDevantUneFois()
+            reprendrePosition()
         }
     }
 
@@ -156,24 +170,41 @@ final class ChasseModele: ObservableObject {
     /// Le scan lit toute l'étape en cours d'un coup : la direction sur la
     /// flèche de la ligne de l'indice, et l'indice de cette même ligne —
     /// pas la dernière ligne lue, une ancienne étape peut traîner dessous.
+    /// Le scan lit toute l'étape en cours d'un coup : la direction sur la
+    /// flèche de la ligne de l'indice — lue par l'OCR, sinon cherchée en pixels
+    /// dans l'image de la zone (Vision écorche la flèche en triangle plein) —
+    /// et l'indice de cette même ligne, pas la dernière ligne lue : une
+    /// ancienne étape peut traîner dessous.
     func lire() {
         guard !lectureEnCours, !indices.isEmpty else { return }
         lectureEnCours = true
         let indices = indices
         Task {
-            let lignes = await LecteurEcran.shared.lireUneFois(.chasse)?.lignes ?? []
+            guard let lu = await LecteurEcran.shared.lireChasseUneFois() else {
+                self.lues = []
+                self.rienLu = true
+                self.lectureEnCours = false
+                return
+            }
             let lues = await Task.detached(priority: .userInitiated) {
-                EtapeChasse.ciblesLues(dans: lignes, parmi: indices)
+                EtapeChasse.ciblesLues(dans: lu.lignes, parmi: indices)
+            }.value
+            let flechee = await Task.detached(priority: .userInitiated) {
+                EtapeChasse.premiereFlechee(dans: lu.lignes, cadres: lu.cadres,
+                                             image: LumaBitmap(cgImage: lu.image))
             }.value
             self.lues = lues
-            rienLu = lues.isEmpty
+            rienLu = lues.isEmpty && flechee == nil
             // La direction d'abord : choisir l'indice déclenche la recherche
             // dès que les deux sont là. Sans flèche lue, elle reste à deviner.
-            directionLue = EtapeChasse.directionLue(dans: lignes)
+            directionLue = flechee?.direction
             direction = directionLue
             directionDevinee = nil
             lectureEnCours = false
-            if let cible = EtapeChasse.cibleLue(dans: lignes, parmi: indices) ?? lues.last {
+            if let rang = flechee?.rang,
+               let cible = EtapeChasse.ciblesLues(dans: [lu.lignes[rang]], parmi: indices).first {
+                choisir(cible, lue: true)
+            } else if let cible = lues.last {
                 choisir(cible, lue: true)
             }
         }
@@ -211,6 +242,7 @@ final class ChasseModele: ObservableObject {
         guard let cible, cible.nom(en: langue) == saisie else { return }
         recherche?.cancel()
         echec = nil
+        trajetCopie = false
         guard case .indice(let indice) = cible else {
             let reprise = HistoriqueChasse.Reprise(departX: departX, departY: departY, direction: direction ?? .est, cible: cible)
             conclure(Constat(cible: cible, direction: direction ?? .est, resultat: .phorreur), reprise: reprise)
@@ -238,26 +270,34 @@ final class ChasseModele: ObservableObject {
                                  resultat: EtapeChasse.resultat(indice: indice.id, cartes: cartes)), reprise: reprise)
             } catch {
                 guard !Task.isCancelled else { return }
-                echec = error.localizedDescription
+                echec = Self.messageErreur(error)
             }
         }
     }
 
     /// La direction se devine : l'indice est cherché dans les quatre
-    /// directions, la carte trouvée la plus proche gagne. Plusieurs directions
-    /// le portent : la plus proche est un pari, signalée « devinée ».
+    /// directions **en parallèle** (le cache disque des rayons rend les
+    /// suivantes locales), la carte trouvée la plus proche gagne. Plusieurs
+    /// directions le portent : la plus proche est un pari, signalée « devinée ».
     private func deviner(indice: Indice, depuis: (x: Int, y: Int), cible: EtapeChasse.Cible) {
         rechercheEnCours = true
         recherche = Task {
             defer { rechercheEnCours = false }
-            var trouves: [(direction: Direction, carte: EtapeChasse.Carte)] = []
-            for direction in Direction.allCases {
-                guard !Task.isCancelled else { return }
-                let cartes = try? await ChasseDofusDB.cartes(depuis: depuis.x, depuis.y, direction: direction)
-                if let carte = cartes.flatMap({ EtapeChasse.destination(indice: indice.id, cartes: $0) }) {
-                    trouves.append((direction, carte))
+            let trouves: [(direction: Direction, carte: EtapeChasse.Carte)] =
+                await withTaskGroup(of: (Direction, [EtapeChasse.Carte]?).self) { groupe in
+                    for direction in Direction.allCases {
+                        groupe.addTask {
+                            (direction, try? await ChasseDofusDB.cartes(depuis: depuis.x, depuis.y, direction: direction))
+                        }
+                    }
+                    var trouves: [(direction: Direction, carte: EtapeChasse.Carte)] = []
+                    for await (direction, cartes) in groupe {
+                        if let carte = cartes.flatMap({ EtapeChasse.destination(indice: indice.id, cartes: $0) }) {
+                            trouves.append((direction, carte))
+                        }
+                    }
+                    return trouves
                 }
-            }
             guard !Task.isCancelled else { return }
             guard let meilleure = trouves.min(by: { $0.carte.distance < $1.carte.distance }) else {
                 echec = L("chasse.introuvableDirections", EtapeChasse.portee)
@@ -270,6 +310,12 @@ final class ChasseModele: ObservableObject {
                              resultat: .trouve(x: meilleure.carte.x, y: meilleure.carte.y, distance: meilleure.carte.distance)),
                      reprise: reprise)
         }
+    }
+
+    /// Un échec réseau se dit « hors ligne », pas un code NSURLError.
+    private static func messageErreur(_ error: Error) -> String {
+        if error is URLError { return L("chasse.horsLigne") }
+        return error.localizedDescription
     }
 
     /// Une étape trouvée devient le départ de la suivante, et son trajet est
@@ -289,6 +335,7 @@ final class ChasseModele: ObservableObject {
             departX = x
             departY = y
             copier()
+            trajetCopie = true
         }
     }
 
@@ -297,6 +344,7 @@ final class ChasseModele: ObservableObject {
     func etapePrecedente() {
         guard let reprise = historique.reprendre() else { return }
         recherche?.cancel()
+        trajetCopie = false
         let rouverture = reprise.rouverture(departX: departX, departY: departY, lues: lues)
         departX = rouverture.departX
         departY = rouverture.departY

@@ -65,6 +65,7 @@ final class FloatingBarController: NSObject {
     private func conceal() {
         panel?.orderOut(nil)
         PreviewPanelController.shared.hideAnchored()
+        InfobulleBarre.shared.cacher()
     }
 
     /// La barre peut être réservée aux moments où Dofus est devant. Synfus
@@ -137,6 +138,11 @@ final class FloatingBarController: NSObject {
         panel.isOpaque = false
         panel.hasShadow = false
         panel.hidesOnDeactivate = false
+        // Sans lui, un panneau d'une app inactive ne reçoit que les entrées/sorties
+        // de souris, pas les mouvements : le `pointerStyle` des boutons et le
+        // re-posé du curseur à chaque mouvement (`VueACurseur`) resteraient muets,
+        // et la main ouverte de la zone de glisser s'afficherait partout.
+        panel.acceptsMouseMovedEvents = true
         // Le déplacement est confié à `performDrag(with:)` depuis la vue, ce qui
         // donne un suivi parfaitement fluide sans capter les clics sur les persos.
         panel.isMovableByWindowBackground = false

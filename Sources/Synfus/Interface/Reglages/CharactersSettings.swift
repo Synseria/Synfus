@@ -168,16 +168,39 @@ struct CharactersSettings: View {
     }
 
     /// « Aucune » ou le numéro de l'équipe ; une entrée de plus tant qu'une équipe
-    /// peut encore être créée. Tag 0 = aucune, n = équipe n.
+    /// peut encore être créée. Un `Menu`, pas le sélecteur de la trousse : sa
+    /// liste, posée sur toute la fenêtre, prenait les clics des boutons voisins
+    /// (la corbeille ouvrait le sélecteur au lieu de confirmer). Tag 0 = aucune,
+    /// n = équipe n.
     private func teamPicker(for name: String) -> some View {
-        let count = prefs.equipes.count
-        let choix = count < Equipes.maximum ? count + 1 : count
-        return SelecteurEnListe(L("persos.equipe"),
-                                selection: Binding(get: { (Equipes.indexEquipe(de: name, dans: prefs.equipes) ?? -1) + 1 },
-                                                   set: { prefs.affecter(name, aEquipe: $0 == 0 ? nil : $0 - 1) }),
-                                options: [(0, L("barre.equipe.aucune"))] + (1...max(choix, 1)).map { ($0, L("persos.equipeN", $0)) })
-            .frame(width: Self.largeurEquipe, alignment: .leading)
-            .help(L("persos.equipeDuPerso"))
+        let nombre = prefs.equipes.count
+        let rang = (Equipes.indexEquipe(de: name, dans: prefs.equipes) ?? -1) + 1
+        return Menu {
+            Picker(L("persos.equipe"), selection: Binding(
+                get: { rang },
+                set: { prefs.affecter(name, aEquipe: $0 == 0 ? nil : $0 - 1) }
+            )) {
+                Text(L("barre.equipe.aucune")).tag(0)
+                ForEach(0..<nombre, id: \.self) { Text(L("persos.equipeN", $0 + 1)).tag($0 + 1) }
+            }
+            .pickerStyle(.inline)
+            .labelsHidden()
+            if nombre < Equipes.maximum {
+                Divider()
+                Button(L("barre.equipe.nouvelle")) { prefs.affecter(name, aEquipe: nombre) }
+            }
+        } label: {
+            HStack(spacing: Jetons.espace1) {
+                Text(rang == 0 ? L("barre.equipe.aucune") : L("persos.equipeN", rang))
+                    .lineLimit(1)
+                Image(systemName: "chevron.down").imageScale(.small)
+            }
+        }
+        .menuStyle(.button)
+        .menuIndicator(.hidden)
+        .buttonStyle(BoutonBorde())
+        .frame(width: Self.largeurEquipe, alignment: .leading)
+        .help(L("persos.equipeDuPerso"))
     }
 
     private func moveCharacter(at index: Int, by delta: Int) {

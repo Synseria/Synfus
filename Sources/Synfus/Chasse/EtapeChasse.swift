@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 
 /// La direction d'une étape, telle que l'API de DofusDB la code.
@@ -63,7 +64,7 @@ enum Direction: Int, CaseIterable, Identifiable, Sendable {
 /// première carte qui porte l'indice. Pur : la réponse de DofusDB est fournie.
 enum EtapeChasse {
     /// Une carte de la direction demandée et les indices qu'elle porte.
-    struct Carte: Decodable, Equatable, Sendable {
+    struct Carte: Codable, Equatable, Sendable {
         let x: Int
         let y: Int
         /// En cartes depuis le départ.
@@ -78,7 +79,7 @@ enum EtapeChasse {
         }
 
         private enum CodingKeys: String, CodingKey { case posX, posY, distance, pois }
-        private struct Poi: Decodable { let id: Int }
+        private struct Poi: Codable { let id: Int }
 
         init(from decoder: any Decoder) throws {
             let conteneur = try decoder.container(keyedBy: CodingKeys.self)
@@ -86,6 +87,14 @@ enum EtapeChasse {
             y = try conteneur.decode(Int.self, forKey: .posY)
             distance = try conteneur.decode(Int.self, forKey: .distance)
             indices = Set(try conteneur.decode([Poi].self, forKey: .pois).map(\.id))
+        }
+
+        func encode(to encoder: any Encoder) throws {
+            var conteneur = encoder.container(keyedBy: CodingKeys.self)
+            try conteneur.encode(x, forKey: .posX)
+            try conteneur.encode(y, forKey: .posY)
+            try conteneur.encode(distance, forKey: .distance)
+            try conteneur.encode(indices.sorted().map { Poi(id: $0) }, forKey: .pois)
         }
     }
 
@@ -139,6 +148,21 @@ enum EtapeChasse {
         for ligne in lignes {
             guard Direction(ligneLue: ligne) != nil else { continue }
             if let cible = ciblesLues(dans: [ligne], parmi: indices).first { return cible }
+        }
+        return nil
+    }
+
+    /// La première ligne fléchée du suivi : la flèche **lue par l'OCR** dans le
+    /// texte, sinon **cherchée en pixels** dans l'image de la zone (Vision
+    /// écorche la flèche en triangle plein). `cadres` : le cadre de chaque ligne
+    /// en pixels de `image`, aligné sur `lignes`. `nil` : aucune ligne fléchée.
+    static func premiereFlechee(dans lignes: [String], cadres: [CGRect], image: LumaBitmap?) -> (rang: Int, direction: Direction)? {
+        let n = min(lignes.count, cadres.count)
+        for rang in 0..<n {
+            if let direction = Direction(ligneLue: lignes[rang]) { return (rang, direction) }
+            if let image, let trouvee = DetectionFleche.direction(dans: image, ligne: cadres[rang]) {
+                return (rang, trouvee.direction)
+            }
         }
         return nil
     }

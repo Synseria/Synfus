@@ -25,14 +25,13 @@ struct BarView: View {
     @State private var hoverTarget: String?
     /// La pastille sous le curseur, pour sa voix de survol (distincte de l'attente de l'aperçu).
     @State private var survolChip: String?
-    /// La pastille dont l'infobulle (sous la barre) est montrée, après un bref survol.
-    @State private var infobulleChip: String?
     /// Une pastille qu'on tient s'efface à peine ; le reste ne bouge pas de place.
     private static let opaciteGlisse = 0.35
     private static let echelleGlisse = 1.06
 
-    /// Repère commun aux cadres des pastilles et au geste de réordonnancement.
-    private static let barSpace = "synfusBar"
+    /// Repère commun aux cadres des pastilles, au geste de réordonnancement et
+    /// aux cadres des boutons pour leurs infobulles.
+    static let barSpace = "synfusBar"
 
     var body: some View {
         VStack(spacing: Jetons.espace1) {
@@ -95,7 +94,7 @@ struct BarView: View {
         .menuIndicator(.hidden)
         .buttonStyle(BoutonBorde())
         .fixedSize()
-        .aide(L("barre.equipe.changer"))
+        .infobulleBarre(nom: L("barre.equipe.changer"), touche: nil)
     }
 
     /// Les cibles du dépôt d'une pastille : « Tous », une case par équipe, et « + » tant qu'on peut en
@@ -160,7 +159,7 @@ struct BarView: View {
         }
         .frame(width: Jetons.espace4, height: Jetons.hauteurControle)
         .overlay(WindowDragArea())
-        .help(L("barre.glisser"))
+        .infobulleBarre(nom: L("barre.glisser"), touche: nil)
     }
 
     /// Trait qui sépare le territoire des persos de celui des modes : sans lui,
@@ -178,6 +177,7 @@ struct BarView: View {
     /// rien ne marche qu'on cherche les réglages.
     private var settingsButton: some View {
         GearButton()
+            .infobulleBarre(nom: L("barre.reglagesAide"), touche: nil)
     }
 
     @ViewBuilder
@@ -218,15 +218,31 @@ struct BarView: View {
 
     @ViewBuilder
     private func vue(de bouton: BoutonBarre) -> some View {
-        switch bouton {
-        case .quetes: quetesButton.contextMenu { MasquerBouton(bouton: bouton) }
-        case .boss: bossButton.contextMenu { MasquerBouton(bouton: bouton) }
-        case .chasse: chasseButton.contextMenu { MasquerBouton(bouton: bouton) }
-        case .almanax: almanaxButton.contextMenu { MasquerBouton(bouton: bouton) }
-        case .rangement: ArrangeMenuButton()
-        case .palette: zaapButton
-        case .passageAuto: autoFocusToggle.contextMenu { MasquerBouton(bouton: bouton) }
+        let parties = partiesInfobulle(bouton)
+        Group {
+            switch bouton {
+            case .quetes: quetesButton.contextMenu { MasquerBouton(bouton: bouton) }
+            case .boss: bossButton.contextMenu { MasquerBouton(bouton: bouton) }
+            case .chasse: chasseButton.contextMenu { MasquerBouton(bouton: bouton) }
+            case .almanax: almanaxButton.contextMenu { MasquerBouton(bouton: bouton) }
+            case .rangement: ArrangeMenuButton()
+            case .palette: zaapButton
+            case .passageAuto: autoFocusToggle.contextMenu { MasquerBouton(bouton: bouton) }
+            }
         }
+        .infobulleBarre(nom: parties.nom, touche: parties.touche)
+    }
+
+    /// Les deux parties de l'infobulle d'un bouton : son nom (son état pour le
+    /// passage automatique), et son raccourci quand il en a un.
+    private func partiesInfobulle(_ bouton: BoutonBarre) -> (nom: String, touche: String?) {
+        let nom: String
+        if bouton == .passageAuto {
+            nom = prefs.passageAuto ? L("barre.passageAuto.actif") : L("barre.passageAuto.inactif")
+        } else {
+            nom = bouton.libelle
+        }
+        return (nom, bouton.raccourci(prefs)?.displayString)
     }
 
     /// La palette : zaaps, lieux, commandes. Elle prend le clavier sans
@@ -380,17 +396,6 @@ struct BarView: View {
             }
         }
         .overlay { if invitations.copiesRecentes.contains(client.slotKey) { CopiedBadge() } }
-        // La pastille se survole : une petite infobulle paraît **dessous** —
-        // le nom à gauche, le raccourci à droite quand il existe (la barre est
-        // en haut de l'écran, l'infobulle système y serait rognée).
-        .overlay(alignment: .bottom) {
-            if infobulleChip == client.slotKey {
-                infobulle(index: index, client: client)
-                    .offset(y: Jetons.hauteurControle / 2 + Jetons.espace1)
-                    .allowsHitTesting(false)
-                    .transition(.opacity)
-            }
-        }
         .opacity(dragging == client.name ? Self.opaciteGlisse : 1)
         .scaleEffect(dragging == client.name ? Self.echelleGlisse : 1)
         .background(chipFrameReader(for: client.name))
@@ -398,35 +403,7 @@ struct BarView: View {
         .onHover { inside in
             survolChip = inside ? client.slotKey : (survolChip == client.slotKey ? nil : survolChip)
             hover(client, inside: inside)
-            let slot = client.slotKey
-            if inside {
-                // Un bref séjour ne l'affiche pas : il faut laisser la souris.
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    if survolChip == slot { infobulleChip = slot }
-                }
-            } else if infobulleChip == slot {
-                infobulleChip = nil
-            }
         }
-    }
-
-    /// L'infobulle sous la pastille : nom à gauche, raccourci à droite.
-    private func infobulle(index: Int, client: DofusClient) -> some View {
-        HStack(spacing: Jetons.espace3) {
-            Text(client.name).lineLimit(1)
-            if index < prefs.hotKeys.count, let hotKey = prefs.hotKeys[index] {
-                Text(hotKey.displayString)
-                    .font(Jetons.typoMicro.font)
-                    .foregroundStyle(Color.jeton(\.encre2))
-            }
-        }
-        .font(Jetons.typoMeta.font)
-        .foregroundStyle(Color.jeton(\.encre))
-        .padding(.horizontal, Jetons.espace2)
-        .padding(.vertical, Jetons.espace1)
-        .background(Capsule().fill(Color.jeton(\.plaque)))
-        .overlay(Capsule().strokeBorder(Color.jeton(\.filet), lineWidth: Jetons.epaisseurFilet))
-        .fixedSize()
     }
 
     /// L'équipe et le rang du perso, avec les mêmes écritures que le glisser. Un nom que les

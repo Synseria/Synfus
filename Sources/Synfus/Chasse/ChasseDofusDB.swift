@@ -69,14 +69,48 @@ enum ChasseDofusDB {
         return indices
     }
 
-    /// Les cartes de `direction` qui portent des indices, jusqu'à la portée.
-    static func cartes(depuis x: Int, _ y: Int, direction: Direction) async throws -> [EtapeChasse.Carte] {
+    /// Les rayons de chasse gardés sur le disque : la clé « x,y,direction » mène
+    /// aux cartes que DofusDB a rendues pour ce départ et cette direction. Le
+    /// lien indice → carte n'existe que par cette requête calculée (x, y et
+    /// direction obligatoires côté API) : le premier passage la télécharge, les
+    /// suivants lisent le disque.
+    struct CacheRayons: Codable, Sendable {
+        let date: Date
+        var rayons: [String: [EtapeChasse.Carte]]
+    }
+
+    private static var fichierRayons: URL {
+        Ressources.dossierUtilisateur.appending(path: "RayonsChasse.json", directoryHint: .notDirectory)
+    }
+
+    private static func lireRayons() -> CacheRayons? {
+        guard let donnees = try? Data(contentsOf: fichierRayons) else { return nil }
+        return try? JSONDecoder().decode(CacheRayons.self, from: donnees)
+    }
+
+    private static func ecrire(_ cache: CacheRayons) throws {
+        try FileManager.default.createDirectory(at: fichierRayons.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try JSONEncoder().encode(cache).write(to: fichierRayons, options: .atomic)
+    }
+
+    /// Les cartes de `direction` qui portent des indices, jusqu'à la portée :
+    /// le cache disque s'il est frais, sinon la requête DofusDB, remise en cache.
+    static func cartes(depuis x: Int, _ y: Int, direction: Direction, maintenant: Date = Date()) async throws -> [EtapeChasse.Carte] {
+        let cle = "\(x),\(y),\(direction.rawValue)"
+        let garde = lireRayons()
+        if let garde, !DofusDB.perimee(depuis: garde.date, maintenant: maintenant), let rayon = garde.rayons[cle] {
+            return rayon
+        }
         let page: DofusDB.Page<EtapeChasse.Carte> = try await DofusDB.page("treasure-hunt", [
             URLQueryItem(name: "x", value: "\(x)"),
             URLQueryItem(name: "y", value: "\(y)"),
             URLQueryItem(name: "direction", value: "\(direction.rawValue)"),
             URLQueryItem(name: "$limit", value: "\(DofusDB.parPage)"),
         ])
+        var cache = garde ?? CacheRayons(date: maintenant, rayons: [:])
+        if DofusDB.perimee(depuis: cache.date, maintenant: maintenant) { cache = CacheRayons(date: maintenant, rayons: [:]) }
+        cache.rayons[cle] = page.data
+        try? ecrire(cache)
         return page.data
     }
 }
