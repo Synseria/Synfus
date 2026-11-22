@@ -195,7 +195,6 @@
   "chasse.aide": "Un panneau flottant : le départ (ta position lue), une direction (boutons ou flèches du clavier) et l'indice (tapé, ou lu à l'écran) donnent la carte suivante d'après DofusDB, et son /travel est copié — par un zaap s'il fait gagner assez de cartes. Synfus ne valide rien et n'envoie rien au jeu : colle, marche, valide toi-même. Le panneau prend le clavier sans quitter le jeu ; un clic dans le jeu le lui rend.",
   "chasse.arrive": "Arrivé — valide l'étape dans le jeu",
   "chasse.copier": "Copier le trajet à nouveau",
-  "chasse.depart": "Départ",
   "chasse.depart.reprendre": "Reprendre la position du personnage devant",
   "chasse.depart.saisir": "Départ à saisir",
   "chasse.devinee": "devinée",
