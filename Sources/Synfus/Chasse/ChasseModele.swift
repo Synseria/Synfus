@@ -41,6 +41,8 @@ final class ChasseModele: ObservableObject {
     /// La dernière lecture n'a rien reconnu.
     @Published private(set) var rienLu = false
     @Published private(set) var constat: Constat?
+    /// Les cartes trouvées, dans l'ordre — l'historique des positions de la chasse.
+    @Published private(set) var positions: [(x: Int, y: Int)] = []
     @Published private(set) var rechercheEnCours = false
     @Published private(set) var echec: String?
     /// Le trajet du dernier résultat a été copié : la coche verte du bouton
@@ -70,6 +72,17 @@ final class ChasseModele: ObservableObject {
         AttenteChasse(departConnu: departConnu, directionChoisie: direction != nil)
     }
 
+    /// La phase où en est la chasse : départ à poser, étape à lire, carte à
+    /// rejoindre, ou étape atteinte à valider dans le jeu.
+    var phase: PhaseChasse {
+        let cible: (x: Int, y: Int)? = {
+            if case .trouve(let x, let y, _)? = constat?.resultat { return (x, y) }
+            return nil
+        }()
+        let position = LecteurEcran.shared.positionDuPersoDevant.map { (x: $0.x, y: $0.y) }
+        return PhaseChasse(departConnu: departConnu, cible: cible, position: position)
+    }
+
     var etapePrecedenteDisponible: Bool { !historique.vide }
 
     var langue: Langue { L10n.courante.langue }
@@ -85,6 +98,7 @@ final class ChasseModele: ObservableObject {
     func poserResultatPourCaptures(cible: EtapeChasse.Cible, lues: [EtapeChasse.Cible]) {
         historique.noter(.init(departX: -2, departY: 0, direction: .est, cible: cible))
         constat = Constat(cible: cible, direction: .est, resultat: .trouve(x: -3, y: 0, distance: 1))
+        positions = [(-3, 0)]
         self.lues = lues
         self.cible = lues.first
         direction = .est
@@ -97,6 +111,7 @@ final class ChasseModele: ObservableObject {
         departX = nil
         departY = nil
         constat = nil
+        positions = []
         lues = []
         cible = nil
         cibleLue = false
@@ -335,6 +350,7 @@ final class ChasseModele: ObservableObject {
         if case .trouve(let x, let y, _) = constat.resultat {
             departX = x
             departY = y
+            if positions.last?.x != x || positions.last?.y != y { positions.append((x, y)) }
             copier()
             trajetCopie = true
         }
@@ -347,6 +363,7 @@ final class ChasseModele: ObservableObject {
         recherche?.cancel()
         trajetCopie = false
         directionManuelle = false
+        if case .trouve = constat?.resultat { positions.popLast() }
         let rouverture = reprise.rouverture(departX: departX, departY: departY, lues: lues)
         departX = rouverture.departX
         departY = rouverture.departY
