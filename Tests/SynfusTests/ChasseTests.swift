@@ -157,29 +157,21 @@ struct ChasseTests {
 
     // MARK: - Lecture de l'étape en cours
 
-    @Test("La flèche lue dans une ligne donne la direction de l'étape en cours")
+    @Test("La flèche lue dans une ligne donne une direction")
     func directionLue() {
         #expect(Direction(ligneLue: "→ Poupee koaiak") == .est)
         #expect(Direction(ligneLue: "↑ Cairn") == .nord)
         #expect(Direction(ligneLue: "Grelot") == nil)
-        let lignes = ["CHASSE AU TRÉSOR", "Départ [-25,-36]", "→ Poupee koaiak", "Etape 3/6"]
-        #expect(EtapeChasse.directionLue(dans: lignes) == .est)
-        // La première ligne fléchée gagne : le jeu liste l'étape en cours en haut.
-        #expect(EtapeChasse.directionLue(dans: ["↑ Cairn", "→ Grelot"]) == .nord)
-        #expect(EtapeChasse.directionLue(dans: ["rien de fléché"]) == nil)
     }
 
-    @Test("L'indice de l'étape en cours est celui de la première ligne fléchée, pas la dernière ligne lue")
-    func cibleLue() {
-        let logo = Indice(id: 42, noms: ["fr": "Gravure de logo Ankama", "en": "Ankama logo engraving"])
-        let etoile = Indice(id: 43, noms: ["fr": "Gravure d'étoile"])
-        let wabbit = Indice(id: 44, noms: ["fr": "Gravure de wabbit"])
-        let parmi = [logo, etoile, wabbit]
-        // La dernière ligne est une étape suivante : la première flèche désigne la bonne.
-        #expect(EtapeChasse.cibleLue(dans: ["→ Gravure de logo Ankama", "Gravure de wabbit"], parmi: parmi) == .indice(logo))
-        #expect(EtapeChasse.cibleLue(dans: ["→ Gravure de wabbit", "← Gravure d'étoile"], parmi: parmi) == .indice(wabbit))
-        // Sans flèche lisible, aucune cible n'est désignée.
-        #expect(EtapeChasse.cibleLue(dans: ["Gravure de wabbit"], parmi: parmi) == nil)
+    @Test("Les badges EN COURS et VALIDÉ se reconnaissent dans une ligne lue")
+    func badgesLus() {
+        #expect(EtapeChasse.estEnCours("↑ Gravure d'œil EN COURS"))
+        #expect(!EtapeChasse.estEnCours("← Flèche dans une pomme VALIDÉ"))
+        #expect(EtapeChasse.estValidee("← Flèche dans une pomme VALIDÉ"))
+        // Le bouton « VALIDER » du bas du panneau n'est pas un badge validé.
+        #expect(!EtapeChasse.estValidee("3 essais restants VALIDER"))
+        #expect(!EtapeChasse.estValidee("↑ Gravure d'œil EN COURS"))
     }
 
     // MARK: - Étapes et attente
@@ -341,14 +333,37 @@ struct ChasseTests {
     @Test("L'étape lue apparie la direction et l'indice de la même ligne, la dernière fléchée")
     func etapeLueAppariement() throws {
         let liste = try indices()
-        // Comme sur l'écran : plusieurs lignes fléchées, l'étape en cours est la dernière.
+        // Comme sur l'écran : plusieurs lignes fléchées « EN COURS », l'étape en cours est la dernière.
         let lignes = ["Apprentissage : Assassin", "ÉTAPE : 1/4", "Départ [10,22]", "Baie de Sufokia",
-                      "← Poupée koalak", "↑ Théière à rayures", "???"]
+                      "← Poupée koalak EN COURS", "↑ Théière à rayures EN COURS", "???"]
         let cadres = (0..<lignes.count).map { CGRect(x: 30, y: CGFloat(8 + $0 * 32), width: 150, height: 26) }
         let etape = EtapeChasse.etapeLue(dans: lignes, cadres: cadres, image: nil, parmi: liste)
         #expect(etape.direction == .nord)
         #expect(etape.cible == .indice(liste[6])) // Théière à rayures, la dernière ligne fléchée
         #expect(etape.rang == 5)
+    }
+
+    @Test("L'étape lue ignore la ligne VALIDÉ au-dessus de la ligne EN COURS")
+    func etapeLueLigneValidee() throws {
+        let liste = try indices()
+        // Capture réelle : « ← Flèche… VALIDÉ » au-dessus, « ↑ Gravure… EN COURS » en dessous.
+        let lignes = ["Départ [10,22]", "← Poupée koalak VALIDÉ", "↑ Théière à rayures EN COURS", "???"]
+        let cadres = (0..<lignes.count).map { CGRect(x: 30, y: CGFloat(8 + $0 * 32), width: 150, height: 26) }
+        let etape = EtapeChasse.etapeLue(dans: lignes, cadres: cadres, image: nil, parmi: liste)
+        #expect(etape.direction == .nord)
+        #expect(etape.cible == .indice(liste[6])) // Théière à rayures, pas la validée
+        #expect(etape.rang == 2)
+    }
+
+    @Test("Sans badge lisible, la dernière ligne fléchée non validée gagne")
+    func etapeLueSansBadge() throws {
+        let liste = try indices()
+        let lignes = ["← Poupée koalak VALIDÉ", "↑ Théière à rayures"]
+        let cadres = (0..<lignes.count).map { CGRect(x: 30, y: CGFloat(8 + $0 * 32), width: 150, height: 26) }
+        let etape = EtapeChasse.etapeLue(dans: lignes, cadres: cadres, image: nil, parmi: liste)
+        #expect(etape.direction == .nord)
+        #expect(etape.cible == .indice(liste[6]))
+        #expect(etape.rang == 1)
     }
 
     @Test("L'étape lue remonte aux lignes fléchées du dessus quand la dernière n'a pas d'indice reconnu")
