@@ -30,17 +30,19 @@ enum DetectionFleche {
 
     /// La direction de la flèche dessinée au début de la ligne `cadre` dans
     /// `image` — cherchée dans une marge à gauche du texte lu, là où le jeu la
-    /// met. `nil` : aucune direction ne colle assez.
-    static func direction(dans image: LumaBitmap, ligne cadre: CGRect) -> (direction: Direction, score: Double)? {
+    /// met. `texte` : début du texte de la ligne en x absolus (le cadre OCR peut
+    /// contenir la flèche ou la coller à son bord) ; défaut : `cadre.minX`.
+    /// `nil` : aucune direction ne colle assez.
+    static func direction(dans image: LumaBitmap, ligne cadre: CGRect, texte: CGFloat? = nil) -> (direction: Direction, score: Double)? {
         let h = Int(cadre.height)
         guard h >= 8 else { return nil }
-        // Région de recherche : la flèche est juste à gauche du texte lu — le
-        // cadre OCR peut la contenir ou la coller à son bord gauche, la marge
-        // couvre les deux —, et serrée verticalement sur la ligne : au-delà,
-        // ce sont les flèches des lignes voisines.
+        // Région de recherche : de la gauche de la ligne jusqu'au début du texte,
+        // et serrée verticalement sur la ligne : au-delà, ce sont les flèches
+        // des lignes voisines.
+        let debutTexte = texte ?? cadre.minX
         let marge = CGFloat(h) * 1.9
-        let region = CGRect(x: cadre.minX - marge, y: cadre.minY - CGFloat(h) * 0.3,
-                            width: marge + min(cadre.width, CGFloat(h) * 0.5) + CGFloat(h) * 0.4,
+        let region = CGRect(x: min(cadre.minX, debutTexte) - marge, y: cadre.minY - CGFloat(h) * 0.3,
+                            width: marge + (debutTexte - min(cadre.minX, debutTexte)) + min(cadre.width, CGFloat(h) * 0.5) + CGFloat(h) * 0.4,
                             height: cadre.height + CGFloat(h) * 0.6)
             .intersection(CGRect(x: 0, y: 0, width: image.width, height: image.height))
         guard region.width > 8, region.height > 8 else { return nil }
@@ -58,7 +60,7 @@ enum DetectionFleche {
             guard totalGabarit > 4 else { continue }
             // La flèche se termine au début du texte lu : on ne cherche que là —
             // sinon les blocs du texte lui-même vaudraient une flèche.
-            let localTexte = cadre.minX - region.minX
+            let localTexte = debutTexte - region.minX
             let pxMax = Int(localTexte + CGFloat(h) * 0.25) - gw
             guard pxMax >= 0 else { continue }
             var meilleurLocal = 0.0

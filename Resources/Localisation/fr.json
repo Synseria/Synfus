@@ -198,6 +198,7 @@
   "chasse.depart": "Départ",
   "chasse.depart.reprendre": "Reprendre la position du personnage devant",
   "chasse.depart.saisir": "Départ à saisir",
+  "chasse.devinee": "devinée",
   "chasse.direction.choisir": "Choisir une direction",
   "chasse.direction.devinee": "%@ — devinée d'après les cartes",
   "chasse.direction.est": "Est",

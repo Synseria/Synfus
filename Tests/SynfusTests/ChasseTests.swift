@@ -251,16 +251,18 @@ struct ChasseTests {
 
     /// Une fausse zone de chasse : fond sombre, une flèche dessinée avec le
     /// gabarit lui-même, et un « texte » (blocs clairs) à droite du cadre de ligne.
-    private static func zoneAvecFleche(_ direction: Direction, rang: Int = 0, lignes: Int = 3) -> (LumaBitmap, [CGRect]) {
+    private static func zoneAvecFleche(_ direction: Direction, rang: Int = 0, lignes: Int = 3,
+                                        texteX: CGFloat = 44) -> (LumaBitmap, [CGRect]) {
         let largeur = 240, hauteurLigne = 26, marge = 8
         let hauteur = marge + lignes * (hauteurLigne + 6)
         var pixels = [UInt8](repeating: 12, count: largeur * hauteur)
         var cadres: [CGRect] = []
         for i in 0..<lignes {
             let y = marge + i * (hauteurLigne + 6)
-            cadres.append(CGRect(x: 44, y: y, width: 150, height: hauteurLigne))
+            cadres.append(CGRect(x: texteX, y: CGFloat(y), width: 150, height: CGFloat(hauteurLigne)))
             // le « texte » de la ligne : blocs clairs après la flèche
-            for x in stride(from: 48, to: 190, by: 14) {
+            let premierBloc = Int(texteX) + 4
+            for x in stride(from: premierBloc, to: 190, by: 14) {
                 for dy in 4..<(hauteurLigne - 4) {
                     for dx in 0..<8 { pixels[(y + dy) * largeur + x + dx] = 235 }
                 }
@@ -315,5 +317,24 @@ struct ChasseTests {
         #expect(EtapeChasse.premiereFlechee(dans: lignesSansGlyphe, cadres: cadres, image: nil) == nil)
         // La cible de l'étape en cours est celle de la ligne fléchée trouvée en pixels.
         #expect(EtapeChasse.ciblesLues(dans: [lignesSansGlyphe[enPixels!.rang]], parmi: liste).first == .indice(liste[5]))
+    }
+
+    @Test("Une flèche sûre en pixels prime sur un glyphe lu qui se trompe de sens")
+    func flechePixelsPrimeGlyphe() {
+        // Le jeu montre « ← », Vision a lu « ► » : le pixel (score ~1) gagne.
+        let (zone, cadres) = Self.zoneAvecFleche(.ouest, rang: 1)
+        let lignes = ["CHASSE AU TRÉSOR", "► Poupée koalak", "rien"]
+        let trouvee = EtapeChasse.premiereFlechee(dans: lignes, cadres: cadres, image: zone)
+        #expect(trouvee?.rang == 1)
+        #expect(trouvee?.direction == .ouest)
+    }
+
+    @Test("La flèche au bord gauche de la zone est trouvée même si le cadre du texte commence loin")
+    func flecheAuBordGauche() {
+        let (zone, cadres) = Self.zoneAvecFleche(.sud, rang: 2, texteX: 110)
+        let lignes = ["titre", "étape 1/4", "Phorreur"]
+        let trouvee = EtapeChasse.premiereFlechee(dans: lignes, cadres: cadres, image: zone)
+        #expect(trouvee?.rang == 2)
+        #expect(trouvee?.direction == .sud)
     }
 }

@@ -154,14 +154,31 @@ enum EtapeChasse {
 
     /// La première ligne fléchée du suivi : la flèche **lue par l'OCR** dans le
     /// texte, sinon **cherchée en pixels** dans l'image de la zone (Vision
-    /// écorche la flèche en triangle plein). `cadres` : le cadre de chaque ligne
-    /// en pixels de `image`, aligné sur `lignes`. `nil` : aucune ligne fléchée.
+    /// écorche la flèche en triangle plein, voire inverse son sens). Une flèche
+    /// trouvée en pixels avec un score élevé prime sur le glyphe lu. `cadres` :
+    /// le cadre de chaque ligne en pixels de `image`, aligné sur `lignes`.
+    /// `nil` : aucune ligne fléchée.
     static func premiereFlechee(dans lignes: [String], cadres: [CGRect], image: LumaBitmap?) -> (rang: Int, direction: Direction)? {
         let n = min(lignes.count, cadres.count)
         for rang in 0..<n {
-            if let direction = Direction(ligneLue: lignes[rang]) { return (rang, direction) }
-            if let image, let trouvee = DetectionFleche.direction(dans: image, ligne: cadres[rang]) {
-                return (rang, trouvee.direction)
+            let glyph = Direction(ligneLue: lignes[rang])
+            guard let image else {
+                if let glyph { return (rang, glyph) }
+                continue
+            }
+            let cadre = cadres[rang]
+            let pixel = DetectionFleche.direction(dans: image, ligne: cadre)
+            // Score élevé en pixels : la forme ne ment pas sur le sens, le glyphe lu si.
+            if let pixel, pixel.score >= 0.8 { return (rang, pixel.direction) }
+            if let glyph { return (rang, glyph) }
+            if let pixel { return (rang, pixel.direction) }
+            // Dernier recours : la flèche peut être au bord gauche de la zone, le
+            // cadre OCR du texte commençant plus à droite.
+            if cadre.minX > 0 {
+                let elargi = CGRect(x: 0, y: cadre.minY, width: cadre.maxX, height: cadre.height)
+                if let p = DetectionFleche.direction(dans: image, ligne: elargi, texte: cadre.minX) {
+                    return (rang, p.direction)
+                }
             }
         }
         return nil
