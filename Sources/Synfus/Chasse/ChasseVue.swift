@@ -13,9 +13,9 @@ struct ChasseRacine: View {
 
 /// Le panneau de chasse, au style du panneau de quêtes : transparent, un
 /// en-tête par lequel on le déplace. Une seule colonne, aussi étroite que la
-/// boussole le permet, pour masquer le moins de jeu possible : la boussole —
-/// départ à gauche de la flèche du haut, « Lire » au centre —, puis l'indice
-/// et le résultat dessous.
+/// boussole le permet, pour masquer le moins de jeu possible : le départ en
+/// haut, les quatre directions autour de « Lire » dessous, puis l'indice et
+/// le résultat.
 struct ChasseVue: View {
     @ObservedObject var modele = ChasseModele.shared
     @ObservedObject private var previews = WindowPreviewService.shared
@@ -32,7 +32,8 @@ struct ChasseVue: View {
                     indisponibles
                 } else {
                     VStack(alignment: .leading, spacing: Jetons.espace2) {
-                        boussole.frame(maxWidth: .infinity, alignment: .leading)
+                        depart
+                        boussole.frame(maxWidth: .infinity)
                         if !previews.authorized { LigneAutorisation() }
                         indice
                         rienLu
@@ -46,9 +47,7 @@ struct ChasseVue: View {
         }
         .padding([.horizontal, .bottom], Jetons.espace2)
         .padding(.top, Jetons.espace1)
-        // Largeur minimale du panneau de quêtes, mais assez large pour la
-        // boussole complète (départ à gauche de la flèche du haut + 2 colonnes).
-        .frame(minWidth: Jetons.largeurPanneauChasse, alignment: .leading)
+        .frame(width: Jetons.largeurPanneauChasse, alignment: .leading)
         .font(Jetons.typoMeta.font)
         .surfaceFlottante()
         // Le trajet copié tout seul à la validation d'une étape : la coche
@@ -122,35 +121,41 @@ struct ChasseVue: View {
 
     // MARK: - Départ
 
-    /// Le départ, **à gauche de la flèche du haut** de la boussole : le menu
-    /// horloge, puis x et y. Chaque champ est **encadré très légèrement selon
-    /// son axe** : accent quand la position lue du perso y est, danger sinon.
+    // MARK: - Départ
+
+    /// Les coordonnées de départ, **centrées** pour tomber sous la colonne du
+    /// milieu de la boussole (les flèches nord/sud et « Lire ») ; le menu
+    /// horloge à gauche, la reprise de position et le trajet vers le départ
+    /// (`/zaap` / `/travel`) au bord droit.
+    /// Chaque champ est **encadré très légèrement selon son axe** : accent quand
+    /// la position lue du perso y est, danger sinon — on voit quel axe cloche.
     private var depart: some View {
         let position = lecteur.positionDuPersoDevant
         let bonX = modele.departX.flatMap { x in position.map { $0.x == x } }
         let bonY = modele.departY.flatMap { y in position.map { $0.y == y } }
-        return HStack(spacing: Jetons.espace1) {
-            menuHorloge
-            champCoordonnee(valeur: $modele.departX, prompt: "x", bon: bonX)
-            champCoordonnee(valeur: $modele.departY, prompt: "y", bon: bonY)
+        return ZStack {
+            HStack(spacing: Jetons.espace1) {
+                champCoordonnee(valeur: $modele.departX, prompt: "x", bon: bonX)
+                champCoordonnee(valeur: $modele.departY, prompt: "y", bon: bonY)
+            }
+            .frame(maxWidth: .infinity)
+            HStack(spacing: Jetons.espace1) {
+                menuHorloge
+                Spacer(minLength: 0)
+                Button { modele.reprendrePositionSiInconnue(); modele.reprendrePosition() } label: { Image(systemName: "location") }
+                    .buttonStyle(BoutonTertiaire())
+                    .disabled(lecteur.positionDuPersoDevant == nil)
+                    .aide(L("chasse.depart.reprendre"))
+                Button { modele.copierTrajetDepart() } label: { Image(systemName: "paperplane") }
+                    .boutonIcone()
+                    .disabled(!modele.departConnu)
+                    .aide(L("chasse.depart.trajet"))
+            }
+            .frame(maxWidth: .infinity)
         }
+        .frame(maxWidth: .infinity)
         .textFieldStyle(.roundedBorder)
-    }
-
-    /// La reprise de la position du perso devant, en haut à droite de la boussole.
-    private var boutonPosition: some View {
-        Button { modele.reprendrePositionSiInconnue(); modele.reprendrePosition() } label: { Image(systemName: "location") }
-            .boutonIcone()
-            .disabled(lecteur.positionDuPersoDevant == nil)
-            .aide(L("chasse.depart.reprendre"))
-    }
-
-    /// Le trajet vers le départ (`/zaap` / `/travel`), en bas à droite de la boussole.
-    private var boutonTrajetDepart: some View {
-        Button { modele.copierTrajetDepart() } label: { Image(systemName: "paperplane") }
-            .boutonIcone()
-            .disabled(!modele.departConnu)
-            .aide(L("chasse.depart.trajet"))
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     /// Un champ x ou y, encadré très légèrement quand la position lue dit si cet axe est bon.
@@ -169,17 +174,16 @@ struct ChasseVue: View {
 
     // MARK: - Boussole
 
+    // MARK: - Boussole
+
     /// Nord en haut, ouest à gauche… et « Lire » au centre : l'indice lu à
     /// l'écran, grisé tant que l'autorisation manque.
-    /// Nord en haut, ouest à gauche… et « Lire » au centre. Le départ occupe la
-    /// cellule à gauche de la flèche du haut, la reprise de position celle de
-    /// droite ; le trajet vers le départ celle du bas à droite.
     private var boussole: some View {
-        Grid(alignment: .leading, horizontalSpacing: Jetons.espace1, verticalSpacing: Jetons.espace1) {
+        Grid(horizontalSpacing: Jetons.espace1, verticalSpacing: Jetons.espace1) {
             GridRow {
-                depart
+                Color.clear.frame(width: Jetons.hauteurRangee, height: Jetons.hauteurRangee)
                 fleche(.nord)
-                boutonPosition
+                Color.clear.frame(width: Jetons.hauteurRangee, height: Jetons.hauteurRangee)
             }
             GridRow {
                 fleche(.ouest)
@@ -187,9 +191,9 @@ struct ChasseVue: View {
                 fleche(.est)
             }
             GridRow {
-                Color.clear
+                Color.clear.frame(width: Jetons.hauteurRangee, height: Jetons.hauteurRangee)
                 fleche(.sud)
-                boutonTrajetDepart
+                Color.clear.frame(width: Jetons.hauteurRangee, height: Jetons.hauteurRangee)
             }
         }
     }
