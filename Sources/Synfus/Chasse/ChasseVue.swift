@@ -84,48 +84,111 @@ struct ChasseVue: View {
         .fixedSize(horizontal: false, vertical: true)
     }
 
-    // MARK: - Phase et historique
+    // MARK: - Phase, historique et analyse
 
-    /// Où en est la chasse et par où elle est passée : la phase en cours
-    /// (« allez en [5,18] — trajet copié », « vous y êtes — validez »), et la
-    /// chaîne des positions, du départ à la dernière carte trouvée.
+    /// En haut du panneau : l'icône de la phase en cours — avec son explication
+    /// en infobulle, pas de libellé — et le bouton horloge de l'historique.
     private var phaseEtHistorique: some View {
         VStack(alignment: .leading, spacing: Jetons.espace1) {
             HStack(spacing: Jetons.espace1) {
                 Image(systemName: modele.phase.symbole)
                     .foregroundStyle(Color.jeton(\.accentTexte))
-                Text(modele.phase.libelle)
-                    .font(Jetons.typoMeta.font)
-                    .foregroundStyle(Color.jeton(\.encre2))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            if !modele.positions.isEmpty {
-                HStack(spacing: Jetons.espace1) {
-                    if let dx = modele.departX, let dy = modele.departY {
-                        pastille(Coordonnees.texte(dx, dy), courant: false)
-                    }
-                    ForEach(Array(modele.positions.enumerated()), id: \.offset) { i, pos in
-                        Image(systemName: "arrow.right")
-                            .font(Jetons.typoMicro.font)
-                            .foregroundStyle(Color.jeton(\.encre2))
-                        pastille(Coordonnees.texte(pos.x, pos.y), courant: i == modele.positions.count - 1)
-                    }
+                    .help(modele.phase.libelle)
+                Spacer(minLength: 0)
+                Button { modele.historiqueVisible.toggle() } label: {
+                    Image(systemName: "clock.arrow.circlepath")
+                        .foregroundStyle(modele.historiqueVisible ? Color.jeton(\.accentTexte) : Color.jeton(\.encre2))
                 }
+                .buttonStyle(BoutonTertiaire())
+                .aide(L("chasse.historique"))
             }
+            if modele.historiqueVisible { historique }
+            analyseScan
         }
     }
 
-    /// Une position de l'historique, en petite pastille ; la dernière en accent.
-    private func pastille(_ texte: String, courant: Bool) -> some View {
-        Text(texte)
-            .font(Jetons.typoMicro.font)
-            .foregroundStyle(courant ? Color.jeton(\.accentTexte) : Color.jeton(\.encre2))
-            .padding(.horizontal, Jetons.espace1)
-            .padding(.vertical, Jetons.espace1)
-            .background(
-                RoundedRectangle(cornerRadius: Jetons.rayon1, style: .circular)
-                    .fill(courant ? Color.jeton(\.accent).opacity(0.25) : Color.jeton(\.plaque).opacity(0.6))
-            )
+    /// L'historique des étapes : les validées (avec la carte atteinte), puis
+    /// celle en cours — rien d'autre, pas les « ??? » du panneau du jeu.
+    private var historique: some View {
+        VStack(alignment: .leading, spacing: Jetons.espace1) {
+            ForEach(Array(modele.etapesValidees.reversed().enumerated()), id: \.offset) { i, reprise in
+                HStack(spacing: Jetons.espace1) {
+                    Image(systemName: "checkmark.circle")
+                        .font(Jetons.typoMicro.font)
+                        .foregroundStyle(Color.jeton(\.encre2))
+                    Image(systemName: reprise.direction.symbole)
+                        .font(Jetons.typoMicro.font)
+                        .foregroundStyle(Color.jeton(\.encre2))
+                    Text(reprise.cible.nom(en: modele.langue))
+                        .font(Jetons.typoMicro.font)
+                        .foregroundStyle(Color.jeton(\.encre2))
+                        .lineLimit(1)
+                    if let atteinte = reprise.cibleAtteinte {
+                        Text(Coordonnees.texte(atteinte.x, atteinte.y))
+                            .font(Jetons.typoMicro.font)
+                            .foregroundStyle(Color.jeton(\.accentTexte))
+                    }
+                    Spacer(minLength: 0)
+                    // La dernière étape validée se rouvre avec le bouton ↩ du résultat.
+                    if i == 0 { boutonEtapePrecedente }
+                }
+            }
+            if let courant = modele.constat {
+                HStack(spacing: Jetons.espace1) {
+                    Image(systemName: "circle")
+                        .font(Jetons.typoMicro.font)
+                        .foregroundStyle(Color.jeton(\.accentTexte))
+                    Image(systemName: courant.direction.symbole)
+                        .font(Jetons.typoMicro.font)
+                        .foregroundStyle(Color.jeton(\.accentTexte))
+                    Text(courant.cible.nom(en: modele.langue))
+                        .font(Jetons.typoMicro.font)
+                        .foregroundStyle(Color.jeton(\.accentTexte))
+                        .lineLimit(1)
+                    if case .trouve(let x, let y, _) = courant.resultat {
+                        Text(Coordonnees.texte(x, y))
+                            .font(Jetons.typoMicro.font)
+                            .foregroundStyle(Color.jeton(\.accentTexte))
+                    }
+                }
+                .help(L("chasse.historique.encours"))
+            }
+        }
+        .padding(Jetons.espace1)
+        .carte(marge: Jetons.espace1)
+    }
+
+    /// Ce que le dernier scan a lu, ligne à ligne : le texte OCR, la flèche
+    /// détectée (lue ou en pixels avec son score), le badge du jeu.
+    private var analyseScan: some View {
+        Group {
+            if !modele.analyse.isEmpty {
+                DisclosureGroup(L("chasse.analyse")) {
+                    VStack(alignment: .leading, spacing: Jetons.espace1) {
+                        ForEach(Array(modele.analyse.enumerated()), id: \.offset) { _, ligne in
+                            HStack(spacing: Jetons.espace1) {
+                                if let retenue = ligne.retenue {
+                                    Image(systemName: retenue.symbole)
+                                        .font(Jetons.typoMicro.font)
+                                        .foregroundStyle(Color.jeton(\.accentTexte))
+                                }
+                                Text(ligne.texte)
+                                    .font(Jetons.typoMicro.font)
+                                    .foregroundStyle(Color.jeton(\.encre2))
+                                    .lineLimit(1)
+                                Spacer(minLength: 0)
+                                if ligne.enCours {
+                                    Text("EN COURS").font(Jetons.typoMicro.font).foregroundStyle(Color.jeton(\.accentTexte))
+                                } else if ligne.validee {
+                                    Text("VALIDÉ").font(Jetons.typoMicro.font).foregroundStyle(Color.jeton(\.encre2))
+                                }
+                            }
+                        }
+                    }
+                }
+                .font(Jetons.typoMeta.font)
+            }
+        }
     }
 
     // MARK: - Départ
@@ -323,7 +386,15 @@ struct ChasseVue: View {
                 Group {
                     switch constat.resultat {
                     case .trouve(let x, let y, let distance):
-                        Text(L("chasse.trouve", nombre: distance, Coordonnees.texte(x, y), distance)).font(Jetons.typoTitreCarte.font)
+                        HStack(spacing: Jetons.espace1) {
+                            // Sur la carte visée : la coche « arrivé » — validez dans le jeu.
+                            if let p = lecteur.positionDuPersoDevant, p.x == x, p.y == y {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(Color.jeton(\.accentTexte))
+                                    .help(L("chasse.arrive"))
+                            }
+                            Text(L("chasse.trouve", nombre: distance, Coordonnees.texte(x, y), distance)).font(Jetons.typoTitreCarte.font)
+                        }
                     case .introuvable:
                         Text(L("chasse.introuvable", EtapeChasse.portee)).foregroundStyle(Color.jeton(\.danger))
                     case .phorreur:

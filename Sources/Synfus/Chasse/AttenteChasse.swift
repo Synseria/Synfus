@@ -49,7 +49,7 @@ enum PhaseChasse: Equatable {
         case .depart: return "location"
         case .lire: return "text.viewfinder"
         case .aller: return "arrow.up.right"
-        case .valider: return "checkmark.seal"
+        case .valider: return "checkmark.circle.fill"
         }
     }
 
@@ -58,7 +58,7 @@ enum PhaseChasse: Equatable {
         case .depart: return L("chasse.depart.reprendre")
         case .lire: return L("chasse.phase.lire")
         case .aller(let x, let y): return L("chasse.phase.aller", Coordonnees.texte(x, y))
-        case .valider: return L("chasse.phase.valider")
+        case .valider: return L("chasse.arrive")
         }
     }
 }
