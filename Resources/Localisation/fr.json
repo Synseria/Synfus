@@ -197,6 +197,7 @@
   "chasse.copier": "Copier le trajet à nouveau",
   "chasse.depart.reprendre": "Reprendre la position du personnage devant",
   "chasse.depart.saisir": "Départ à saisir",
+  "chasse.depart.trajet": "Copier le trajet vers le départ (/zaap ou /travel)",
   "chasse.direction.choisir": "Choisir une direction",
   "chasse.direction.est": "Est",
   "chasse.direction.lue": "%@ — lu à l'écran",

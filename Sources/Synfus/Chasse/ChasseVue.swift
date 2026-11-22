@@ -98,13 +98,19 @@ struct ChasseVue: View {
                     Label {
                         Text("\(reprise.direction.libelle) — \(reprise.cible.nom(en: modele.langue))\(reprise.cibleAtteinte.map { " \(Coordonnees.texte($0.x, $0.y))" } ?? "")")
                     } icon: {
-                        Image(systemName: "checkmark.circle")
+                        // Jalon validé : une couleur, comme le pin jaune du jeu — jamais blanc.
+                        Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.jeton(\.accent))
                     }
                 }
             }
             if let courant = modele.constat {
                 Divider()
-                Text("\(L("chasse.historique.encours")) : \(courant.direction.libelle) — \(courant.cible.nom(en: modele.langue))")
+                Label {
+                    Text("\(L("chasse.historique.encours")) : \(courant.direction.libelle) — \(courant.cible.nom(en: modele.langue))")
+                } icon: {
+                    // Jalon pas encore saisi : le pin blanc du jeu.
+                    Image(systemName: "mappin").foregroundStyle(Color.jeton(\.encre))
+                }
             }
         } label: {
             Image(systemName: "clock.arrow.circlepath")
@@ -117,7 +123,8 @@ struct ChasseVue: View {
 
     /// Les coordonnées de départ, **centrées** pour tomber sous la colonne du
     /// milieu de la boussole (les flèches nord/sud et « Lire ») ; le menu
-    /// horloge à gauche, le bouton de reprise de position au bord droit.
+    /// horloge à gauche, la reprise de position et le trajet vers le départ
+    /// (`/zaap` / `/travel`) au bord droit.
     /// Chaque champ est **encadré très légèrement selon son axe** : accent quand
     /// la position lue du perso y est, danger sinon — on voit quel axe cloche.
     private var depart: some View {
@@ -137,6 +144,10 @@ struct ChasseVue: View {
                     .buttonStyle(BoutonTertiaire())
                     .disabled(lecteur.positionDuPersoDevant == nil)
                     .aide(L("chasse.depart.reprendre"))
+                Button { modele.copierTrajetDepart() } label: { Image(systemName: "paperplane") }
+                    .boutonIcone()
+                    .disabled(!modele.departConnu)
+                    .aide(L("chasse.depart.trajet"))
             }
             .frame(maxWidth: .infinity)
         }
