@@ -1,0 +1,116 @@
+import SwiftUI
+import AppKit
+
+/// Le champ nombre d'un axe du départ (X ou Y) : étiquette d'axe + champ entier
+/// (nombre seul accepté) + stepper (flèches haut/bas) et roulette de la souris
+/// pour incrémenter / décrémenter facilement.
+struct ChampNombre: View {
+    let axe: String
+    @Binding var valeur: Int?
+    /// Encadrement de l'axe : accent si la position lue du perso y est, danger sinon.
+    var bon: Bool? = nil
+
+    var body: some View {
+        HStack(spacing: Jetons.espace1) {
+            Text(axe)
+                .font(Jetons.typoMeta.font)
+                .foregroundStyle(Color.jeton(\.encre2))
+            ChampNombreNS(valeur: $valeur)
+                .frame(width: 44, height: Jetons.hauteurControle)
+                .overlay {
+                    if let bon {
+                        RoundedRectangle(cornerRadius: Jetons.rayon1, style: .circular)
+                            .strokeBorder(bon ? Color.jeton(\.accent) : Color.jeton(\.danger),
+                                          lineWidth: Jetons.epaisseurFilet)
+                            .opacity(0.7)
+                    }
+                }
+        }
+    }
+}
+
+/// Le champ entier + son stepper, en NSView (la roulette de la souris n'a pas
+/// d'équivalent SwiftUI sur macOS).
+private struct ChampNombreNS: NSViewRepresentable {
+    @Binding var valeur: Int?
+
+    func makeNSView(context: Context) -> NSView {
+        let coord = context.coordinator
+        coord.parent = self
+        let champ = NSTextField()
+        champ.delegate = coord
+        let formateur = NumberFormatter()
+        formateur.numberStyle = .none
+        formateur.allowsFloats = false
+        champ.formatter = formateur
+        champ.bezelStyle = .roundedBezel
+        champ.alignment = .right
+        let stepper = NSStepper()
+        stepper.minValue = -999
+        stepper.maxValue = 999
+        stepper.increment = 1
+        stepper.target = coord
+        stepper.action = #selector(Coordinator.stepperChange(_:))
+        coord.champ = champ
+        coord.stepper = stepper
+        let ligne = NSStackView()
+        ligne.orientation = .horizontal
+        ligne.spacing = 4
+        ligne.addArrangedSubview(champ)
+        ligne.addArrangedSubview(stepper)
+        champ.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        let zone = ZoneRoulette()
+        zone.onDelta = { coord.roulette($0) }
+        zone.addSubview(ligne)
+        ligne.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            ligne.leadingAnchor.constraint(equalTo: zone.leadingAnchor),
+            ligne.trailingAnchor.constraint(equalTo: zone.trailingAnchor),
+            ligne.centerYAnchor.constraint(equalTo: zone.centerYAnchor),
+        ])
+        coord.synchroniser(valeur)
+        return zone
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        context.coordinator.synchroniser(valeur)
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    /// Relie le champ, le stepper et la roulette au binding.
+    final class Coordinator: NSObject, NSTextFieldDelegate {
+        var parent: ChampNombreNS!
+        weak var champ: NSTextField?
+        weak var stepper: NSStepper?
+
+        func synchroniser(_ valeur: Int?) {
+            guard let champ, let stepper else { return }
+            let n = valeur ?? 0
+            if champ.integerValue != n { champ.integerValue = n }
+            if Int(stepper.doubleValue) != n { stepper.doubleValue = Double(n) }
+        }
+
+        func controlTextDidChange(_ notification: Notification) {
+            guard let champ = notification.object as? NSTextField else { return }
+            parent.valeur = champ.stringValue.isEmpty ? nil : champ.integerValue
+        }
+
+        @objc func stepperChange(_ stepper: NSStepper) {
+            parent.valeur = Int(stepper.integerValue)
+        }
+
+        func roulette(_ delta: Int) {
+            parent.valeur = (parent.valeur ?? 0) + delta
+        }
+    }
+}
+
+/// Une zone qui attrape la roulette de la souris (molette haut = +1, bas = -1).
+private final class ZoneRoulette: NSView {
+    var onDelta: ((Int) -> Void)?
+    override func scrollWheel(with event: NSEvent) {
+        guard let onDelta else { return super.scrollWheel(with: event) }
+        onDelta(event.scrollingDeltaY >= 0 ? 1 : -1)
+    }
+}

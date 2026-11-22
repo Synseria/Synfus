@@ -13,9 +13,9 @@ struct ChasseRacine: View {
 
 /// Le panneau de chasse, au style du panneau de quêtes : transparent, un
 /// en-tête par lequel on le déplace. Une seule colonne, aussi étroite que la
-/// boussole le permet, pour masquer le moins de jeu possible : le départ en
-/// haut, les quatre directions autour de « Lire » dessous, puis l'indice et
-/// le résultat.
+/// boussole le permet, pour masquer le moins de jeu possible : la boussole 3×3
+/// (X et Y en haut, « Lire » au centre, horloge et maison en bas), puis
+/// l'indice et le résultat dessous.
 struct ChasseVue: View {
     @ObservedObject var modele = ChasseModele.shared
     @ObservedObject private var previews = WindowPreviewService.shared
@@ -32,7 +32,6 @@ struct ChasseVue: View {
                     indisponibles
                 } else {
                     VStack(alignment: .leading, spacing: Jetons.espace2) {
-                        depart
                         boussole.frame(maxWidth: .infinity)
                         if !previews.authorized { LigneAutorisation() }
                         indice
@@ -114,60 +113,11 @@ struct ChasseVue: View {
             }
         } label: {
             Image(systemName: "clock.arrow.circlepath")
+                .font(Jetons.typoSection.font)
         }
         .menuIcone()
+        .frame(width: Jetons.hauteurRangee, height: Jetons.hauteurRangee)
         .help(L("chasse.historique"))
-    }
-
-    // MARK: - Départ
-
-    /// Les coordonnées de départ, **centrées** pour tomber sous la colonne du
-    /// milieu de la boussole (les flèches nord/sud et « Lire ») ; le menu
-    /// horloge à gauche, la reprise de position et le trajet vers le départ
-    /// (`/zaap` / `/travel`) au bord droit.
-    /// Chaque champ est **encadré très légèrement selon son axe** : accent quand
-    /// la position lue du perso y est, danger sinon — on voit quel axe cloche.
-    private var depart: some View {
-        let position = lecteur.positionDuPersoDevant
-        let bonX = modele.departX.flatMap { x in position.map { $0.x == x } }
-        let bonY = modele.departY.flatMap { y in position.map { $0.y == y } }
-        return ZStack {
-            HStack(spacing: Jetons.espace1) {
-                champCoordonnee(valeur: $modele.departX, prompt: "x", bon: bonX)
-                champCoordonnee(valeur: $modele.departY, prompt: "y", bon: bonY)
-            }
-            .frame(maxWidth: .infinity)
-            HStack(spacing: Jetons.espace1) {
-                menuHorloge
-                Spacer(minLength: 0)
-                Button { modele.reprendrePositionSiInconnue(); modele.reprendrePosition() } label: { Image(systemName: "location.circle") }
-                    .boutonIcone()
-                    .disabled(lecteur.positionDuPersoDevant == nil)
-                    .aide(L("chasse.depart.reprendre"))
-                Button { modele.copierTrajetDepart() } label: { Image(systemName: "paperplane") }
-                    .boutonIcone()
-                    .disabled(!modele.departConnu)
-                    .aide(L("chasse.depart.trajet"))
-            }
-            .frame(maxWidth: .infinity)
-        }
-        .frame(maxWidth: .infinity)
-        .textFieldStyle(.roundedBorder)
-        .fixedSize(horizontal: false, vertical: true)
-    }
-
-    /// Un champ x ou y, encadré très légèrement quand la position lue dit si cet axe est bon.
-    private func champCoordonnee(valeur: Binding<Int?>, prompt: String, bon: Bool?) -> some View {
-        TextField(prompt, value: valeur, format: .number.grouping(.never), prompt: Text(prompt))
-            .frame(width: 52)
-            .overlay {
-                if let bon {
-                    RoundedRectangle(cornerRadius: Jetons.rayon1, style: .circular)
-                        .strokeBorder(bon ? Color.jeton(\.accent) : Color.jeton(\.danger),
-                                      lineWidth: Jetons.epaisseurFilet)
-                        .opacity(0.7)
-                }
-            }
     }
 
     // MARK: - Boussole
@@ -176,12 +126,18 @@ struct ChasseVue: View {
 
     /// Nord en haut, ouest à gauche… et « Lire » au centre : l'indice lu à
     /// l'écran, grisé tant que l'autorisation manque.
+    /// La boussole 3×3 : **X en haut à gauche, Y en haut à droite**, « Lire » au
+    /// centre, l'**historique (horloge) en bas à gauche** et le **trajet vers le
+    /// départ (maison) en bas à droite** — chaque bouton du même format que les flèches.
     private var boussole: some View {
-        Grid(horizontalSpacing: Jetons.espace1, verticalSpacing: Jetons.espace1) {
+        let position = lecteur.positionDuPersoDevant
+        let bonX = modele.departX.flatMap { x in position.map { $0.x == x } }
+        let bonY = modele.departY.flatMap { y in position.map { $0.y == y } }
+        return Grid(horizontalSpacing: Jetons.espace1, verticalSpacing: Jetons.espace1) {
             GridRow {
-                Color.clear.frame(width: Jetons.hauteurRangee, height: Jetons.hauteurRangee)
+                ChampNombre(axe: "X", valeur: $modele.departX, bon: bonX)
                 fleche(.nord)
-                Color.clear.frame(width: Jetons.hauteurRangee, height: Jetons.hauteurRangee)
+                ChampNombre(axe: "Y", valeur: $modele.departY, bon: bonY)
             }
             GridRow {
                 fleche(.ouest)
@@ -189,11 +145,24 @@ struct ChasseVue: View {
                 fleche(.est)
             }
             GridRow {
-                Color.clear.frame(width: Jetons.hauteurRangee, height: Jetons.hauteurRangee)
+                menuHorloge
                 fleche(.sud)
-                Color.clear.frame(width: Jetons.hauteurRangee, height: Jetons.hauteurRangee)
+                boutonMaison
             }
         }
+    }
+
+    /// La maison, en bas à droite de la boussole : copie le trajet
+    /// (`/zaap` / `/travel`) vers la zone de départ — même format que les flèches.
+    private var boutonMaison: some View {
+        Button { modele.copierTrajetDepart() } label: {
+            Image(systemName: "house")
+                .font(Jetons.typoSection.font)
+                .frame(width: Jetons.hauteurRangee, height: Jetons.hauteurRangee)
+        }
+        .buttonStyle(.etat(choisi: false))
+        .disabled(!modele.departConnu)
+        .aide(L("chasse.depart.trajet"))
     }
 
     private func fleche(_ direction: Direction) -> some View {
