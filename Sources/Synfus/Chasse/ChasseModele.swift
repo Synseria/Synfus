@@ -83,20 +83,6 @@ final class ChasseModele: ObservableObject {
     /// Les étapes déjà conclues (validées), pour l'historique du panneau.
     var etapesValidees: [HistoriqueChasse.Reprise] { historique.toutes }
 
-    /// La chaîne des positions en haut du panneau : le départ, puis chaque
-    /// carte atteinte — sans doublon consécutif.
-    var chainePositions: [(x: Int, y: Int)] {
-        var chaine: [(x: Int, y: Int)] = []
-        if let dx = departX, let dy = departY { chaine.append((dx, dy)) }
-        for reprise in historique.toutes {
-            guard let atteinte = reprise.cibleAtteinte else { continue }
-            if chaine.last?.x != atteinte.x || chaine.last?.y != atteinte.y {
-                chaine.append((atteinte.x, atteinte.y))
-            }
-        }
-        return chaine
-    }
-
     /// Rouvre une étape passée choisie dans le menu horloge : les étapes
     /// suivantes sont retirées de l'historique, celle-ci est rouverte.
     func rouvrir(_ reprise: HistoriqueChasse.Reprise) {
@@ -222,6 +208,8 @@ final class ChasseModele: ObservableObject {
                 let lues = EtapeChasse.ciblesLues(dans: lu.lignes, parmi: indices)
                 let etape = EtapeChasse.etapeLue(dans: lu.lignes, cadres: lu.cadres,
                                                  image: image, parmi: indices)
+                Self.journaliserScan(lignes: lu.lignes, cadres: lu.cadres, image: image,
+                                    indices: indices, etape: etape)
                 return (lues, etape)
             }.value
             self.lues = lues
@@ -237,6 +225,29 @@ final class ChasseModele: ObservableObject {
                 choisir(cible, lue: true)
             }
         }
+    }
+
+    /// Journalise chaque scan de chasse (lignes lues, flèches détectées, étape
+    /// retenue) dans `~/Library/Logs/Synfus/chasse.log` — pour régler la
+    /// détection sur de vraies captures en résolution native.
+    private nonisolated static func journaliserScan(lignes: [String], cadres: [CGRect], image: LumaBitmap?,
+                                        indices: [Indice], etape: (direction: Direction?, cible: EtapeChasse.Cible?, rang: Int?)) {
+        let analyse = EtapeChasse.analyser(dans: lignes, cadres: cadres, image: image)
+        var texte = "=== \(Date()) | étape: dir=\(etape.direction.map { "\($0)" } ?? "-") cible=\(etape.cible.map { "\($0)" } ?? "-") rang=\(etape.rang.map { "\($0)" } ?? "-")\n"
+        for a in analyse {
+            let badge = a.enCours ? "EN COURS" : a.validee ? "VALIDÉ" : "-"
+            let pixel = a.pixel.map { "\($0.direction):\(String(format: "%.2f", $0.score))" } ?? "-"
+            texte += "  [\(badge)] glyphe=\(a.glyphe.map { "\($0)" } ?? "-") pixel=\(pixel) retenue=\(a.retenue.map { "\($0)" } ?? "-") | \(a.texte)\n"
+        }
+        guard let dossier = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first?
+            .appendingPathComponent("Logs/Synfus", isDirectory: true) else { return }
+        try? FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)
+        let url = dossier.appendingPathComponent("chasse.log")
+        var ancien = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
+        let blocs = ancien.components(separatedBy: "=== ").filter { !$0.isEmpty }.map { "=== " + $0 }
+        var tous = blocs + [texte]
+        while tous.count > 50 { tous.removeFirst() }
+        try? tous.joined().write(to: url, atomically: true, encoding: .utf8)
     }
 
     // MARK: - Étape

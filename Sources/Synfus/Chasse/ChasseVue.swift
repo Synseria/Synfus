@@ -32,7 +32,6 @@ struct ChasseVue: View {
                     indisponibles
                 } else {
                     VStack(alignment: .leading, spacing: Jetons.espace2) {
-                        haut
                         depart
                         boussole.frame(maxWidth: .infinity)
                         if !previews.authorized { LigneAutorisation() }
@@ -84,74 +83,47 @@ struct ChasseVue: View {
         .fixedSize(horizontal: false, vertical: true)
     }
 
-    // MARK: - Historique (horloge) et positions
+    // MARK: - Historique (horloge)
 
-    /// En haut du panneau : le bouton horloge à gauche, qui ouvre un menu des
-    /// étapes — validées avec leur carte atteinte, et celle en cours — puis la
-    /// chaîne des positions. Rien d'autre en haut : le panneau reste compact.
-    private var haut: some View {
-        HStack(spacing: Jetons.espace1) {
-            Menu {
-                ForEach(Array(modele.etapesValidees.reversed().enumerated()), id: \.offset) { _, reprise in
-                    Button {
-                        modele.rouvrir(reprise)
-                    } label: {
-                        Label {
-                            Text("\(reprise.direction.libelle) — \(reprise.cible.nom(en: modele.langue))\(reprise.cibleAtteinte.map { " \(Coordonnees.texte($0.x, $0.y))" } ?? "")")
-                        } icon: {
-                            Image(systemName: "checkmark.circle")
-                        }
+    /// Le bouton horloge, à gauche des coordonnées de départ : un menu popup
+    /// des étapes — validées avec leur carte atteinte, et celle en cours.
+    /// Rien d'autre en haut du panneau.
+    private var menuHorloge: some View {
+        Menu {
+            ForEach(Array(modele.etapesValidees.reversed().enumerated()), id: \.offset) { _, reprise in
+                Button {
+                    modele.rouvrir(reprise)
+                } label: {
+                    Label {
+                        Text("\(reprise.direction.libelle) — \(reprise.cible.nom(en: modele.langue))\(reprise.cibleAtteinte.map { " \(Coordonnees.texte($0.x, $0.y))" } ?? "")")
+                    } icon: {
+                        Image(systemName: "checkmark.circle")
                     }
                 }
-                if let courant = modele.constat {
-                    Divider()
-                    Text("\(L("chasse.historique.encours")) : \(courant.direction.libelle) — \(courant.cible.nom(en: modele.langue))")
-                }
-            } label: {
-                Image(systemName: "clock.arrow.circlepath")
-                    .foregroundStyle(Color.jeton(\.encre2))
             }
-            .menuStyle(.borderlessButton)
-            .help(L("chasse.historique"))
-            if !modele.chainePositions.isEmpty {
-                ForEach(Array(modele.chainePositions.enumerated()), id: \.offset) { i, pos in
-                    if i > 0 {
-                        Image(systemName: "arrow.right")
-                            .font(Jetons.typoMicro.font)
-                            .foregroundStyle(Color.jeton(\.encre2))
-                    }
-                    pastille(Coordonnees.texte(pos.x, pos.y), courant: i == modele.chainePositions.count - 1)
-                }
+            if let courant = modele.constat {
+                Divider()
+                Text("\(L("chasse.historique.encours")) : \(courant.direction.libelle) — \(courant.cible.nom(en: modele.langue))")
             }
+        } label: {
+            Image(systemName: "clock.arrow.circlepath")
+                .foregroundStyle(Color.jeton(\.encre2))
         }
-    }
-
-    /// Une position de la chaîne, en petite pastille ; la dernière en accent.
-    private func pastille(_ texte: String, courant: Bool) -> some View {
-        Text(texte)
-            .font(Jetons.typoMicro.font)
-            .foregroundStyle(courant ? Color.jeton(\.accentTexte) : Color.jeton(\.encre2))
-            .padding(.horizontal, Jetons.espace1)
-            .padding(.vertical, Jetons.espace1)
-            .background(
-                RoundedRectangle(cornerRadius: Jetons.rayon1, style: .circular)
-                    .fill(courant ? Color.jeton(\.accent).opacity(0.25) : Color.jeton(\.plaque).opacity(0.6))
-            )
+        .menuStyle(.borderlessButton)
+        .help(L("chasse.historique"))
     }
 
     // MARK: - Départ
 
     /// Les coordonnées de départ, **centrées** pour tomber sous la colonne du
-    /// milieu de la boussole (les flèches nord/sud et « Lire ») ; le bouton de
-    /// reprise de position reste au bord droit, en surimpression.
+    /// milieu de la boussole (les flèches nord/sud et « Lire ») ; le menu
+    /// horloge à gauche, le bouton de reprise de position au bord droit.
     /// Chaque champ est **encadré très légèrement selon son axe** : accent quand
     /// la position lue du perso y est, danger sinon — on voit quel axe cloche.
-    /// Sur la bonne position : une coche « arrivé » à gauche.
     private var depart: some View {
         let position = lecteur.positionDuPersoDevant
         let bonX = modele.departX.flatMap { x in position.map { $0.x == x } }
         let bonY = modele.departY.flatMap { y in position.map { $0.y == y } }
-        let arrivé = bonX == true && bonY == true
         return ZStack {
             HStack(spacing: Jetons.espace1) {
                 champCoordonnee(valeur: $modele.departX, prompt: "x", bon: bonX)
@@ -159,12 +131,7 @@ struct ChasseVue: View {
             }
             .frame(maxWidth: .infinity)
             HStack(spacing: Jetons.espace1) {
-                if arrivé {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(Color.jeton(\.accentTexte))
-                        .transition(.opacity)
-                        .help(L("chasse.arrive"))
-                }
+                menuHorloge
                 Spacer(minLength: 0)
                 Button { modele.reprendrePositionSiInconnue(); modele.reprendrePosition() } label: { Image(systemName: "location") }
                     .buttonStyle(BoutonTertiaire())
