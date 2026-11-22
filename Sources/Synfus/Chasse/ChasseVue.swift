@@ -121,8 +121,6 @@ struct ChasseVue: View {
 
     // MARK: - Départ
 
-    // MARK: - Départ
-
     /// Les coordonnées de départ, **centrées** pour tomber sous la colonne du
     /// milieu de la boussole (les flèches nord/sud et « Lire ») ; le menu
     /// horloge à gauche, la reprise de position et le trajet vers le départ
@@ -142,8 +140,8 @@ struct ChasseVue: View {
             HStack(spacing: Jetons.espace1) {
                 menuHorloge
                 Spacer(minLength: 0)
-                Button { modele.reprendrePositionSiInconnue(); modele.reprendrePosition() } label: { Image(systemName: "location") }
-                    .buttonStyle(BoutonTertiaire())
+                Button { modele.reprendrePositionSiInconnue(); modele.reprendrePosition() } label: { Image(systemName: "location.circle") }
+                    .boutonIcone()
                     .disabled(lecteur.positionDuPersoDevant == nil)
                     .aide(L("chasse.depart.reprendre"))
                 Button { modele.copierTrajetDepart() } label: { Image(systemName: "paperplane") }
