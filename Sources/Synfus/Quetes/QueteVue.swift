@@ -26,6 +26,10 @@ struct QueteVue: View {
     @State private var deplies: Set<OuTrouver.Sujet> = []
     /// Incrémenté pour ramener la fiche en haut (« Étape suivante » en pied).
     @State private var remontees = 0
+    /// Les objectifs faits de l'étape, repliés d'office sous une ligne qui les compte (`RepliObjectifs`).
+    @State private var faitsMontres = false
+    /// Ceux que le suivi du jeu ne montre pas encore, repliés de même.
+    @State private var aVenirMontres = false
     /// Une fiche donnée (captures de la documentation) ; `nil` : celles du panneau.
     var ficheImposee: FicheQuete?
     /// L'étape montrée et les objectifs cochés de la fiche donnée.
@@ -96,21 +100,15 @@ struct QueteVue: View {
         }
         .frame(minWidth: QuetePanel.tailleMinimale.width, maxWidth: .infinity,
                minHeight: QuetePanel.tailleMinimale.height, maxHeight: .infinity, alignment: .top)
-        .bordsRedimensionnables(coin: poignee)
-    }
-
-    /// La marque du coin bas droit, à saisir pour agrandir le panneau.
-    private var poignee: some View {
-        Image(systemName: "arrow.down.right")
-            .font(Jetons.typoMicro.font)
-            .foregroundStyle(Color.jeton(\.encre3))
+        .bordsRedimensionnables()
     }
 
     // MARK: - En-tête du panneau
 
     /// Le nom de la quête montrée : un clic met la liste des quêtes à la place de la fiche, un
     /// second y revient ; plié, il déplie. Tout l'en-tête déplace le panneau (`EnTetePanneau`) ;
-    /// « − » le plie, « ⋯ » cherche une quête, règle l'affichage et le ferme.
+    /// le livre ouvre le guide de la quête, « − » le plie, « ⋯ » cherche une quête, règle l'affichage
+    /// et le ferme.
     private var enTete: some View {
         let enFiche = fiche != nil
         let titre = enFiche ? (ficheImposee?.nom ?? panneau.idMontre.flatMap { store.nom($0) } ?? L("quete.menu.titre"))
@@ -121,6 +119,8 @@ struct QueteVue: View {
             titreQuetes(titre, enFiche: enFiche, bascule: !plie && (basculer != nil || ficheImposee != nil))
             if lecture.etat == .enCours { ProgressView().controlSize(.mini).padding(.leading, Jetons.espace1) }
         } boutons: {
+            // Le guide de la quête montrée, en tête comme celui des boss.
+            if let fiche, !plie { boutonGuide(fiche) }
             if ficheImposee == nil {
                 BoutonPliage(plie: plie) { QuetePanel.shared.basculerPliage() }
             }
@@ -205,7 +205,7 @@ struct QueteVue: View {
                 .buttonStyle(BoutonBorde())
                 .help(L("quete.terminee.aide"))
             }
-            if fiche.etapes.isEmpty { ligneQuete(fiche) }
+            if fiche.etapes.isEmpty, fiche.groupe || fiche.donjon { ligneQuete(fiche) }
         }
     }
 
@@ -217,14 +217,13 @@ struct QueteVue: View {
 
     /// Sans rien à dire, pas d'en-tête : vide, il prendrait encore l'écart d'une section.
     private func aUnEntete(_ fiche: FicheQuete) -> Bool {
-        !fiche.exigences.isEmpty || terminee(fiche) || fiche.etapes.isEmpty
+        !fiche.exigences.isEmpty || terminee(fiche) || (fiche.etapes.isEmpty && (fiche.groupe || fiche.donjon))
     }
 
-    /// Niveau, « en groupe », « donjon » : ce qui ne change pas d'une étape à l'autre, en tête de sa ligne.
+    /// « En groupe », « donjon » : ce qui ne change pas d'une étape à l'autre, en tête de sa ligne. Pas
+    /// le niveau : les exigences et les récompenses le disent déjà.
     @ViewBuilder
     private func reperes(_ fiche: FicheQuete) -> some View {
-        Text(L("quete.niveauCourt", fiche.niveau))
-            .font(metriques.detail.font).foregroundStyle(Color.jeton(\.encre2)).fixedSize()
         if fiche.groupe { repere("person.3", L("quete.groupe")) }
         if fiche.donjon { repere("building.columns", L("quete.donjon")) }
     }
@@ -237,13 +236,9 @@ struct QueteVue: View {
             .accessibilityLabel(aide)
     }
 
-    /// Une quête sans étape connue : ses repères et son guide.
+    /// Une quête sans étape connue : ses repères.
     private func ligneQuete(_ fiche: FicheQuete) -> some View {
-        HStack(spacing: Jetons.espace1) {
-            reperes(fiche)
-            Spacer(minLength: 0)
-            boutonGuide(fiche)
-        }
+        HStack(spacing: Jetons.espace1) { reperes(fiche) }
     }
 
     private func boutonGuide(_ fiche: FicheQuete) -> some View {
@@ -279,16 +274,18 @@ struct QueteVue: View {
         let cochees = ficheImposee == nil ? Set(prefs.quetesRessourcesCochees[String(quete)] ?? []) : ressourcesImposees
         let restantes = ressources.filter { !cochees.contains($0.objet) }
         return VStack(alignment: .leading, spacing: metriques.ecartLignes) {
-            HStack {
-                titreSection(L("quete.ressources"))
-                Spacer()
-                if !restantes.isEmpty {
-                    BoutonEnTete(icone: "doc.on.doc", aide: L("quete.toutCopier"), copie: copie.affiche("ressources"), discret: true) {
-                        copier(restantes.map { L("quete.ressource", $0.nom, $0.quantite) }.joined(separator: ", "),
-                               ligne: "ressources")
+            // Le bouton par-dessus la ligne du titre, pas dans sa hauteur : sa cible de 24 pt écartait
+            // la section de la précédente. Il tient la colonne des boutons de dépliage, dessous.
+            titreSection(L("quete.ressources"))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .overlay(alignment: .trailing) {
+                    if !restantes.isEmpty {
+                        BoutonEnTete(icone: "doc.on.doc", aide: L("quete.toutCopier"), copie: copie.affiche("ressources"), discret: true) {
+                            copier(restantes.map { L("quete.ressource", $0.nom, $0.quantite) }.joined(separator: ", "),
+                                   ligne: "ressources")
+                        }
                     }
                 }
-            }
             ForEach(Array(ressources.enumerated()), id: \.offset) { indice, ressource in
                 let id = "ressource:\(indice)"
                 let cochee = cochees.contains(ressource.objet)
@@ -331,21 +328,17 @@ struct QueteVue: View {
 
     // MARK: - Où trouver
 
-    /// Le chevron qui déplie, sous la ligne, où trouver l'objet ou le monstre.
+    /// Le bouton qui déplie, sous la ligne, où trouver l'objet ou le monstre : un bouton d'en-tête,
+    /// dans la colonne de « Tout copier », qui pointe vers le bas, là où le détail s'ouvre.
     private func deplier(_ sujet: OuTrouver.Sujet) -> some View {
         let deplie = deplies.contains(sujet)
-        return Button {
+        return BoutonEnTete(icone: deplie ? "chevron.up" : "chevron.down",
+                            aide: sujet.estUnMonstre ? L("ouTrouver.aide.monstre") : L("ouTrouver.aide.objet"), discret: true) {
             if deplie { deplies.remove(sujet) } else { deplies.insert(sujet) }
-        } label: {
-            Image(systemName: deplie ? "chevron.down" : "chevron.right")
-                .font(metriques.icone.font)
-                .foregroundStyle(Color.jeton(\.encre2))
-                .frame(width: Jetons.espace4)
-                .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
-        .curseurDeClic(true)
-        .aide(sujet.estUnMonstre ? L("ouTrouver.aide.monstre") : L("ouTrouver.aide.objet"))
+        // Sans hauteur, centré sur le milieu des minuscules : la ligne garde celle de son texte.
+        .frame(height: 0)
+        .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 4 }
     }
 
     /// `retrait` : sous le texte de la ligne, pas sous son icône ; `nom` : celui de l'objet, quand la
@@ -393,13 +386,26 @@ struct QueteVue: View {
                     .foregroundStyle(Color.jeton(\.encre2))
                     .fixedSize(horizontal: false, vertical: true)
             }
-            let repliees = Set(etape.objectifs.filter { coches.contains($0.id) && !copie.affiche(Self.idLigne($0)) }.map(\.id))
-            let coordonnees = CoordonneesObjectifs.affichees(etape.objectifs, repliees: repliees)
-            ForEach(etape.objectifs, id: \.id) { objectif in
+            // Un objectif qu'on vient de cocher reste à sa place le temps du signal de copie.
+            let faits = Set(etape.objectifs.filter { coches.contains($0.id) && !copie.affiche(Self.idLigne($0)) }.map(\.id))
+            let repli = RepliObjectifs.replier(etape.objectifs.map(\.id), faits: faits, aVenir: nonOuverts,
+                                               montrerFaits: faitsMontres, montrerAVenir: aVenirMontres)
+            let montres = Set(repli.montres)
+            let caches = Set(etape.objectifs.map(\.id)).subtracting(montres)
+            let coordonnees = CoordonneesObjectifs.affichees(etape.objectifs, repliees: faits.union(caches))
+            if !repli.faits.isEmpty {
+                ligneRepli(L("quete.faits", nombre: repli.faits.count, repli.faits.count), icone: "checkmark.circle.fill",
+                           teinte: Color.jeton(\.accent), ouvert: $faitsMontres)
+            }
+            ForEach(etape.objectifs.filter { montres.contains($0.id) }, id: \.id) { objectif in
                 ligneObjectif(objectif, quete: fiche.id, coordonnee: coordonnees.contains(objectif.id),
                               etat: .init(valide: coches.contains(objectif.id), suggere: suggeres.contains(objectif.id),
                                           enCours: enCours == objectif.id, aFaire: aFaire.contains(objectif.id),
                                           nonOuvert: nonOuverts.contains(objectif.id), numero: numeros[objectif.id]))
+            }
+            if !repli.aVenir.isEmpty {
+                ligneRepli(L("quete.aVenir", nombre: repli.aVenir.count, repli.aVenir.count), icone: "circle.dashed",
+                           teinte: Color.jeton(\.encre2), ouvert: $aVenirMontres, aide: L("quete.nonOuvert.aide"))
             }
             if let premier = etape.objectifs.first(where: { $0.id == tournee.first }) {
                 Button { copierTrajet(premier, quete: fiche.id) } label: {
@@ -409,11 +415,7 @@ struct QueteVue: View {
                 .help(L("quete.tournee.aide"))
             }
             if !etape.recompenses.vides {
-                Text(L("quete.recompenses", Self.recompenses(etape.recompenses)))
-                    .font(metriques.detail.font)
-                    .foregroundStyle(Color.jeton(\.encre2))
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, metriques.ecartLignes)
+                recompenses(etape.recompenses).padding(.top, metriques.ecartSections)
             }
             if plusieurs, rang < fiche.etapes.count - 1 {
                 etapeSuivante(fiche, rang: rang, achevee: etape.objectifs.allSatisfy { coches.contains($0.id) })
@@ -445,10 +447,7 @@ struct QueteVue: View {
                 titreSection(L("quete.objectifs")).fixedSize()
             }
         }
-        let fin = HStack(spacing: Jetons.espace1) {
-            avancement(etape, valides: valides)
-            boutonGuide(fiche)
-        }
+        let fin = avancement(etape, valides: valides)
         return ViewThatFits(in: .horizontal) {
             HStack(spacing: Jetons.espace1) {
                 reperes(fiche)
@@ -578,17 +577,34 @@ struct QueteVue: View {
         return L("quete.persos.luHeures", lue.perso, minutes / 60)
     }
 
-    /// « 4 377 903 XP (niveau 177) · 1 200 kamas · Vaccin × 1 · émote Pierre ».
-    static func recompenses(_ recompenses: FicheQuete.Recompenses) -> String {
-        var parties: [String] = []
-        if recompenses.experience > 0 {
-            parties.append(L("quete.recompense.xp", recompenses.experience.formatted(), recompenses.niveau))
+    /// Ce que l'étape rapporte, une ligne par gain : l'expérience au niveau où elle est comptée, les
+    /// kamas, chaque objet, émote et titre.
+    private func recompenses(_ recompenses: FicheQuete.Recompenses) -> some View {
+        VStack(alignment: .leading, spacing: metriques.ecartLignes) {
+            titreSection(L("quete.recompenses"))
+            if recompenses.experience > 0 {
+                ligneRecompense("sparkles", L("quete.recompense.xp", recompenses.experience.formatted(), recompenses.niveau))
+            }
+            if recompenses.kamas > 0 { ligneRecompense("banknote", L("quete.recompense.kamas", recompenses.kamas.formatted())) }
+            ForEach(Array(recompenses.objets.enumerated()), id: \.offset) { _, objet in
+                ligneRecompense("gift", L("quete.ressource", objet.nom, objet.quantite))
+            }
+            ForEach(recompenses.emotes, id: \.self) { ligneRecompense("face.smiling", L("quete.recompense.emote", $0)) }
+            ForEach(recompenses.titres, id: \.self) { ligneRecompense("rosette", L("quete.recompense.titre", $0)) }
         }
-        if recompenses.kamas > 0 { parties.append(L("quete.recompense.kamas", recompenses.kamas.formatted())) }
-        parties += recompenses.objets.map { L("quete.ressource", $0.nom, $0.quantite) }
-        parties += recompenses.emotes.map { L("quete.recompense.emote", $0) }
-        parties += recompenses.titres.map { L("quete.recompense.titre", $0) }
-        return parties.joined(separator: " · ")
+    }
+
+    private func ligneRecompense(_ icone: String, _ texte: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: Jetons.espace1) {
+            Image(systemName: icone)
+                .font(metriques.icone.font)
+                .foregroundStyle(Color.jeton(\.encre2))
+                .frame(width: Self.colonneCoche)
+            Text(texte)
+                .font(metriques.texte.font)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, metriques.ligneHorizontale)
     }
 
     private static func idLigne(_ objectif: FicheQuete.Objectif) -> String { "objectif:\(objectif.id)" }
@@ -751,6 +767,29 @@ struct QueteVue: View {
         }
     }
 
+    /// La ligne qui compte des objectifs repliés, à la place de leur coche : un clic les déplie.
+    private func ligneRepli(_ texte: String, icone: String, teinte: Color, ouvert: Binding<Bool>, aide: String? = nil) -> some View {
+        Button { ouvert.wrappedValue.toggle() } label: {
+            HStack(alignment: .firstTextBaseline, spacing: Jetons.espace1) {
+                Image(systemName: icone)
+                    .font(metriques.coche.font)
+                    .foregroundStyle(teinte)
+                    .frame(width: Self.colonneCoche)
+                Text(texte)
+                    .font(metriques.texte.font)
+                    .foregroundStyle(Color.jeton(\.encre2))
+                Image(systemName: ouvert.wrappedValue ? "chevron.up" : "chevron.down")
+                    .font(metriques.icone.font)
+                    .foregroundStyle(Color.jeton(\.encre2))
+                Spacer(minLength: 0)
+            }
+            .padding(.vertical, metriques.ligneVerticale)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.etat(nue: true))
+        .help(aide ?? "")
+    }
+
     /// Le texte d'un objectif : grisé une fois fait, appuyé quand il est en cours.
     @ViewBuilder
     private func texteObjectif(_ objectif: FicheQuete.Objectif, etat: EtatObjectif, replie: Bool) -> some View {
@@ -804,10 +843,12 @@ struct QueteVue: View {
 
     // MARK: - Lignes
 
+    /// Le titre d'une section, dans la teinte de l'en-tête et à la taille du texte : plus petit et gris,
+    /// il se fondait dans le corps.
     private func titreSection(_ texte: String) -> some View {
         Text(texte)
-            .font(metriques.detailFort.font)
-            .foregroundStyle(Color.jeton(\.encre2))
+            .font(metriques.texte.font.weight(.semibold))
+            .foregroundStyle(Color.jeton(\.accentTexte))
     }
 
     /// Le détail d'une ligne, en petit et en gris. Sur une ligne, il se tronque avant le texte principal.

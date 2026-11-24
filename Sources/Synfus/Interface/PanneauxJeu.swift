@@ -93,22 +93,13 @@ enum PanneauxJeu {
     /// il reste là jusqu'au prochain changement d'app plutôt que de ne pas
     /// paraître. Construit à sa première apparition, rattrapé s'il paraît hors
     /// de tout écran ; `cache` suit le masquage d'un panneau qui était à
-    /// l'écran. Rend s'il est montré. Comme la barre, il reçoit les mouvements
-    /// de la souris et peut poser le curseur depuis une app inactive : sans
-    /// quoi la main des boutons (`curseurDeClic`) ne paraît jamais au-dessus du jeu.
+    /// l'écran. Rend s'il est montré.
     @discardableResult
     static func appliquer(_ panel: inout NSPanel?, ouvert: Bool, impose: Bool, force: Bool,
                           parDefaut: PlaceParDefaut, construire: () -> NSPanel, cache: () -> Void = {}) -> Bool {
         let montre = visible(ouvert: ouvert) || (ouvert && impose)
         if montre {
-            let affiche: NSPanel
-            if let panel {
-                affiche = panel
-            } else {
-                affiche = construire()
-                affiche.acceptsMouseMovedEvents = true
-                CurseurArrierePlan.autoriser()
-            }
+            let affiche = panel ?? construire()
             panel = affiche
             if force || !affiche.isVisible {
                 rattraper(affiche, parDefaut: parDefaut)
@@ -149,6 +140,17 @@ class PanneauDeJeu: NSPanel {
     override func zoom(_: Any?) {}
     override func performZoom(_: Any?) {}
 
+    private let suiviCurseur = SuiviCurseur()
+
+    /// Le contenu posé — directement ou par son contrôleur —, le curseur le suit.
+    override var contentView: NSView? {
+        didSet { suiviCurseur.suivre(contentView) }
+    }
+
+    override var contentViewController: NSViewController? {
+        didSet { suiviCurseur.suivre(contentView) }
+    }
+
     override func setFrame(_ cadre: NSRect, display: Bool) {
         var cadre = cadre
         // Seul un changement de hauteur sur place (la taille du contenu) garde le haut ; un
@@ -181,6 +183,54 @@ struct BoutonEnTete: View {
         .buttonStyle(.etat(nue: true))
         .onHover { survole = $0 }
         .aide(aide)
+    }
+}
+
+/// Le curseur d'un panneau posé sur le jeu, que macOS ne pose pas pour une app inactive : la main
+/// des boutons de SwiftUI (`curseurDeClic`) n'y paraît jamais. Sur chaque mouvement, toujours suivi
+/// (`.activeAlways`), il prend celui de ce qui est sous la souris : le sien pour une zone qui en a un
+/// (`VueACurseur` : en-tête, poignées), la main pour ce que l'accessibilité dit cliquable, le trait
+/// d'un champ, la flèche ailleurs.
+@MainActor
+private final class SuiviCurseur: NSObject {
+    private weak var vue: NSView?
+    private var zone: NSTrackingArea?
+
+    func suivre(_ vue: NSView?) {
+        if let ancienne = self.vue, let zone { ancienne.removeTrackingArea(zone) }
+        self.vue = vue
+        guard let vue else { return }
+        CurseurArrierePlan.autoriser()
+        let zone = NSTrackingArea(rect: .zero, options: [.mouseMoved, .mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+                                  owner: self, userInfo: nil)
+        vue.addTrackingArea(zone)
+        self.zone = zone
+    }
+
+    @objc func mouseEntered(with event: NSEvent) { poser(event) }
+    @objc func mouseMoved(with event: NSEvent) { poser(event) }
+    @objc func mouseExited(with _: NSEvent) { NSCursor.arrow.set() }
+
+    private static let cliquables: Set<NSAccessibility.Role> = [
+        .button, .link, .checkBox, .radioButton, .popUpButton, .menuButton, .disclosureTriangle, .incrementor,
+    ]
+    private static let champs: Set<NSAccessibility.Role> = [.textField, .textArea, .comboBox]
+
+    private func poser(_ event: NSEvent) {
+        guard let vue, let fenetre = vue.window,
+              let touche = vue.hitTest(vue.convert(event.locationInWindow, from: nil)) else { return }
+        // Une zone à curseur pose le sien à chaque pas : ne pas le lui reprendre.
+        if touche is VueACurseur { return }
+        let element = vue.accessibilityHitTest(fenetre.convertPoint(toScreen: event.locationInWindow))
+        let accessible = element as? NSAccessibilityProtocol
+        let role = accessible?.accessibilityRole()
+        if let role, Self.cliquables.contains(role), accessible?.isAccessibilityEnabled() ?? true {
+            NSCursor.pointingHand.set()
+        } else if let role, Self.champs.contains(role) {
+            NSCursor.iBeam.set()
+        } else {
+            NSCursor.arrow.set()
+        }
     }
 }
 
