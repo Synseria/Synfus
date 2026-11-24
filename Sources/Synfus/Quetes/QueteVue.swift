@@ -51,7 +51,7 @@ struct QueteVue: View {
     private static let traitAFaire: CGFloat = 3
 
     /// Plié sur son bandeau ; jamais pour une fiche donnée (captures).
-    private var plie: Bool { ficheImposee == nil && prefs.quetesHauteurDepliee != nil }
+    private var plie: Bool { ficheImposee == nil && PanneauxJeu.plie(.quetes) }
 
     var body: some View {
         if plie {
@@ -122,8 +122,7 @@ struct QueteVue: View {
             if lecture.etat == .enCours { ProgressView().controlSize(.mini).padding(.leading, Jetons.espace1) }
         } boutons: {
             if ficheImposee == nil {
-                BoutonEnTete(icone: plie ? "chevron.down" : "minus", aide: plie ? L("quete.deplier") : L("quete.plier"),
-                             discret: true) { QuetePanel.shared.basculerPliage() }
+                BoutonPliage(plie: plie) { QuetePanel.shared.basculerPliage() }
             }
             BoutonEnTete(icone: "ellipsis", aide: L("quete.menu.affichage"), discret: true) {
                 QuetePanel.shared.menu().popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)

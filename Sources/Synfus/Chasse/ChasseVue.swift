@@ -22,10 +22,12 @@ struct ChasseVue: View {
     @ObservedObject private var previews = WindowPreviewService.shared
     // periphery:ignore - observé : la position du perso devant, pour le cadre de la position
     @ObservedObject private var lecteur = LecteurEcran.shared
+    // periphery:ignore - observé : le pliage du panneau (`PanneauxJeu.plie`)
+    @ObservedObject private var prefs = Preferences.shared
     @StateObject private var copie = SignalCopie()
 
     var body: some View {
-        CadrePanneau {
+        CadrePanneau(plie: PanneauxJeu.plie(.chasse)) {
             entete
         } corps: {
             Group {
@@ -57,6 +59,7 @@ struct ChasseVue: View {
                 .padding(.vertical, Jetons.espace1)
             if modele.rechercheEnCours || modele.lectureEnCours || modele.enAttenteDesIndices { ProgressView().controlSize(.mini) }
         } boutons: {
+            BoutonPliage(plie: PanneauxJeu.plie(.chasse)) { ChassePanel.shared.basculerPliage() }
             BoutonEnTete(icone: "xmark", aide: L("quete.fermer.simple")) { ChassePanel.shared.fermer() }
         }
     }

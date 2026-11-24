@@ -327,9 +327,9 @@ struct CapturesTests {
         defer { QuetePanel.shared.enListe = false }
         try ecrire(vue, vers: dossier.appending(path: "quete-liste.png"))
         // Plié : le bandeau seul.
-        let hauteur = prefs.quetesHauteurDepliee
-        defer { prefs.quetesHauteurDepliee = hauteur }
-        prefs.quetesHauteurDepliee = 480
+        let plies = prefs.panneauxPlies
+        defer { prefs.panneauxPlies = plies }
+        prefs.panneauxPlies = [PanneauJeu.quetes.rawValue: 480]
         try ecrire(QueteVue().frame(width: minimale.width).padding(24)
             .background(Self.fondCapture).environment(\.colorScheme, Self.schema),
                    vers: dossier.appending(path: "quete-pliee.png"))

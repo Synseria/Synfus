@@ -30,12 +30,19 @@ final class BossPanel: NSObject, ObservableObject {
         // Abonné aux combats dès maintenant : le tour en cours compte.
         let aide = AideBoss.shared
         if let boss, boss != aide.boss { aide.choisir(boss) }
+        // Ouvert pour s'en servir : il se montre déplié.
+        if PanneauxJeu.plie(.boss) { basculerPliage() }
         // Les compteurs sont une liste fermée, partagée avec le collecteur :
         // seuls les boss à mécanique en ont un.
         if !ouvert, let special = aide.boss.special { UsageStore.shared.compter(.boss(special)) }
         ouvert = true
         impose = true
         appliquer(force: true)
+    }
+
+    /// Le panneau suit sa vue, bandeau seul ou entière ; `PanneauDeJeu` en garde le haut.
+    func basculerPliage() {
+        PanneauxJeu.basculerPliage(.boss, hauteur: panel?.frame.height ?? 0)
     }
 
     func fermer() {

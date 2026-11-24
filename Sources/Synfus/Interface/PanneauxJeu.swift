@@ -25,6 +25,25 @@ enum PanneauxJeu {
         RecettePanel.shared.recentrer()
     }
 
+    // MARK: - Pliage
+
+    /// Le panneau est-il plié sur son en-tête ?
+    static func plie(_ panneau: PanneauJeu, dans prefs: Preferences = .shared) -> Bool {
+        prefs.panneauxPlies[panneau.rawValue] != nil
+    }
+
+    /// Plie le panneau, en gardant `hauteur` (celle de son cadre déplié), ou le déplie : rend alors
+    /// la hauteur gardée. Un panneau à la taille de son contenu n'en fait rien : il suit sa vue.
+    @discardableResult
+    static func basculerPliage(_ panneau: PanneauJeu, hauteur: CGFloat, dans prefs: Preferences = .shared) -> CGFloat? {
+        if let avant = prefs.panneauxPlies[panneau.rawValue] {
+            prefs.panneauxPlies[panneau.rawValue] = nil
+            return CGFloat(avant)
+        }
+        prefs.panneauxPlies[panneau.rawValue] = Double(hauteur)
+        return nil
+    }
+
     // MARK: - Place d'un panneau
 
     /// Où paraît un panneau qui n'a pas de place gardée, ou que son écran a quittée : le coin haut
@@ -114,11 +133,17 @@ enum PanneauxJeu {
     }
 }
 
+/// Les panneaux posés sur le jeu, nommés : la clé de leur pliage dans les préférences.
+enum PanneauJeu: String, Sendable {
+    case quetes, chasse, boss, recette
+}
+
 /// Un panneau posé sur le jeu, à la taille de son contenu, jamais clé : la frappe reste au jeu, un
 /// clic dessus ne la lui retire pas. Il se tient par son en-tête : quand son contenu change de
 /// hauteur, le haut reste où on l'a posé — AppKit garderait le bas, et l'en-tête sauterait. Jamais
-/// zoomé : un double-clic sur l'en-tête ne l'agrandit pas.
-final class PanneauDeJeu: NSPanel {
+/// zoomé : un double-clic sur l'en-tête ne l'agrandit pas. Ouvert à l'héritage pour la chasse, seule
+/// à prendre le clavier.
+class PanneauDeJeu: NSPanel {
     override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }
     override func zoom(_: Any?) {}
@@ -156,6 +181,18 @@ struct BoutonEnTete: View {
         .buttonStyle(.etat(nue: true))
         .onHover { survole = $0 }
         .aide(aide)
+    }
+}
+
+/// « − » qui plie un panneau sur son en-tête, « ⌄ » qui le déplie : le même dans chaque panneau,
+/// juste avant son dernier bouton (« × » ou « ⋯ »).
+struct BoutonPliage: View {
+    let plie: Bool
+    let action: () -> Void
+
+    var body: some View {
+        BoutonEnTete(icone: plie ? "chevron.down" : "minus", aide: plie ? L("panneau.deplier") : L("panneau.plier"),
+                     discret: true, action: action)
     }
 }
 
