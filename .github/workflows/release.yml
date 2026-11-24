@@ -24,9 +24,35 @@ jobs:
     runs-on: xcode-27
 
     steps:
+      # Avant tout checkout : l'input est du texte libre. Il passe par
+      # l'environnement (jamais interpolé dans le script), doit avoir la forme
+      # d'un tag de version, nommer un tag existant (pas une branche
+      # homonyme) et pointer un commit de main : seul ce code-là s'exécute
+      # ensuite avec les secrets.
+      - name: Déterminer la version
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$ ]]; then
+            echo "::error::Tag « $TAG » mal formé — attendu vX.Y.Z ou vX.Y.Z-rc.N (ex. v0.1.0)."
+            exit 1
+          fi
+          SHA="$(gh api "repos/$GITHUB_REPOSITORY/commits/refs/tags/$TAG" --jq .sha)" || {
+            echo "::error::Le tag « $TAG » n'existe pas."; exit 1; }
+          STATUT="$(gh api "repos/$GITHUB_REPOSITORY/compare/main...$SHA" --jq .status)"
+          if [[ "$STATUT" != "identical" && "$STATUT" != "behind" ]]; then
+            echo "::error::Le tag « $TAG » ($SHA) n'est pas un commit de main."
+            exit 1
+          fi
+          echo "tag=$TAG"             >> "$GITHUB_OUTPUT"
+          echo "sha=$SHA"             >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}"     >> "$GITHUB_OUTPUT"
+
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.tag || github.ref }}
+          ref: ${{ steps.version.outputs.sha }}
 
       - name: Sélectionner Xcode
         run: |
@@ -49,20 +75,6 @@ jobs:
           swift --version
           xcrun --show-sdk-version
 
-      - name: Déterminer la version
-        id: version
-        run: |
-          TAG="${{ github.event.inputs.tag || github.ref_name }}"
-          # Le filtre de déclenchement ne couvre pas workflow_dispatch, dont le
-          # tag est saisi à la main : on revérifie ici plutôt que de produire une
-          # release au nom cassé.
-          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$ ]]; then
-            echo "::error::Tag « $TAG » mal formé — attendu vX.Y.Z ou vX.Y.Z-rc.N (ex. v0.1.0)."
-            exit 1
-          fi
-          echo "tag=$TAG"             >> "$GITHUB_OUTPUT"
-          echo "version=${TAG#v}"     >> "$GITHUB_OUTPUT"
-
       - name: Tests
         run: bash test.sh
 
@@ -73,4 +85,5 @@ jobs:
           # du dépôt, publier-release.sh refuse de construire.
           TELEMETRIE_URL: ${{ secrets.TELEMETRIE_URL }}
           TELEMETRIE_JETON: ${{ secrets.TELEMETRIE_JETON }}
-        run: bash Tools/publier-release.sh "${{ steps.version.outputs.version }}"
+          VERSION: ${{ steps.version.outputs.version }}
+        run: bash Tools/publier-release.sh "$VERSION"
