@@ -1,5 +1,6 @@
 import AppKit
 import ApplicationServices
+import Security
 
 /// Poignée d'un élément Accessibilité, faite pour traverser les frontières
 /// d'isolation.
@@ -230,6 +231,75 @@ enum DofusProcesses {
     /// Les clients lancés, dans l'ordre de `runningApplications` — c'est cet
     /// ordre qui suffixe les homonymes, il ne doit pas changer d'un tour à l'autre.
     @MainActor static func running() -> [NSRunningApplication] {
-        NSWorkspace.shared.runningApplications.filter { isDofusBundle($0.bundleIdentifier) }
+        NSWorkspace.shared.runningApplications.filter { estUnClient($0) }
+    }
+
+    /// Un client Dofus : le bundle ID le dit, la signature le prouve. Le
+    /// bundle ID n'est qu'une déclaration de l'Info.plist, n'importe quel
+    /// processus peut se dire « com.evil.dofus » — et Synfus lit ses titres,
+    /// lui envoie des gestes AX, peut le terminer.
+    @MainActor static func estUnClient(_ app: NSRunningApplication) -> Bool {
+        isDofusBundle(app.bundleIdentifier) && SignatureAnkama.verifie(app)
+    }
+
+    /// Même verdict, depuis les deux valeurs qu'une notification laisse passer.
+    @MainActor static func estUnClient(pid: pid_t, bundleID: String?) -> Bool {
+        guard isDofusBundle(bundleID),
+              let app = NSRunningApplication(processIdentifier: pid) else { return false }
+        return SignatureAnkama.verifie(app)
+    }
+}
+
+/// Signature « Developer ID Application: Ankama » d'un processus en cours.
+///
+/// Le client (com.Ankama.Dofus) et le lanceur (com.ankama.zaap) sont signés
+/// par l'équipe Ankama `L4YZ8TZY95`, notarisés, en runtime renforcé. On exige
+/// un certificat Developer ID d'Apple dont la feuille porte cette équipe : un
+/// processus non signé, ad hoc ou signé par un tiers n'est pas un client.
+///
+/// Le verdict est gardé par processus (pid + date de lancement, contre la
+/// réutilisation d'un pid) : la vérification touche l'exécutable sur disque,
+/// elle ne se refait pas à chaque tour de timer.
+@MainActor enum SignatureAnkama {
+    nonisolated static let equipe = "L4YZ8TZY95"
+
+    /// `anchor apple generic` + Developer ID (1.2.840.113635.100.6.2.6 sur
+    /// l'intermédiaire, …6.1.13 sur la feuille), équipe dans l'OU de la feuille.
+    nonisolated static let exigence = """
+        anchor apple generic \
+        and certificate 1[field.1.2.840.113635.100.6.2.6] exists \
+        and certificate leaf[field.1.2.840.113635.100.6.1.13] exists \
+        and certificate leaf[subject.OU] = "\(equipe)"
+        """
+
+    private struct Cle: Hashable {
+        let pid: pid_t
+        let lancement: Date?
+    }
+
+    private static var verdicts: [Cle: Bool] = [:]
+
+    static func verifie(_ app: NSRunningApplication) -> Bool {
+        let cle = Cle(pid: app.processIdentifier, lancement: app.launchDate)
+        if let connu = verdicts[cle] { return connu }
+        // Les processus terminés quittent la table : elle suit les lancés.
+        if verdicts.count > 64 {
+            let vivants = Set(NSWorkspace.shared.runningApplications.map(\.processIdentifier))
+            verdicts = verdicts.filter { vivants.contains($0.key.pid) }
+        }
+        let verdict = Self.signe(pid: app.processIdentifier)
+        verdicts[cle] = verdict
+        return verdict
+    }
+
+    nonisolated static func signe(pid: pid_t) -> Bool {
+        var code: SecCode?
+        let attributs = [kSecGuestAttributePid as String: NSNumber(value: pid)] as CFDictionary
+        guard SecCodeCopyGuestWithAttributes(nil, attributs, [], &code) == errSecSuccess,
+              let code else { return false }
+        var requirement: SecRequirement?
+        guard SecRequirementCreateWithString(exigence as CFString, [], &requirement) == errSecSuccess,
+              let requirement else { return false }
+        return SecCodeCheckValidity(code, [], requirement) == errSecSuccess
     }
 }
