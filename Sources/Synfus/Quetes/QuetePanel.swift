@@ -357,19 +357,16 @@ struct BordsPanneau: OptionSet, Sendable {
 }
 
 extension View {
-    /// Les bords gauche, droit et bas et les coins du bas, à saisir pour
-    /// agrandir le panneau ; `coin` est la marque du coin bas droit, de la
-    /// taille de celui de gauche — posée sur le contenu, sans bande réservée. Les coins passent par-dessus les
-    /// bords : saisi près d'un coin, le panneau s'agrandit dans les deux sens.
-    func bordsRedimensionnables(coin: some View) -> some View {
+    /// Les bords gauche, droit et bas et les coins du bas, à saisir pour agrandir le panneau, sans
+    /// marque : tout panneau posé sur le jeu s'agrandit, le curseur le dit au survol. Les coins passent
+    /// par-dessus les bords : saisi près d'un coin, le panneau s'agrandit dans les deux sens.
+    func bordsRedimensionnables() -> some View {
         let epaisseur: CGFloat = 6, cote: CGFloat = 14
         return overlay(alignment: .leading) { PoigneeRedimension(bords: .gauche).frame(width: epaisseur) }
             .overlay(alignment: .trailing) { PoigneeRedimension(bords: .droite).frame(width: epaisseur) }
             .overlay(alignment: .bottom) { PoigneeRedimension(bords: .bas).frame(height: epaisseur) }
             .overlay(alignment: .bottomLeading) { PoigneeRedimension(bords: [.gauche, .bas]).frame(width: cote, height: cote) }
-            .overlay(alignment: .bottomTrailing) {
-                coin.frame(width: cote, height: cote).overlay(PoigneeRedimension(bords: [.droite, .bas]))
-            }
+            .overlay(alignment: .bottomTrailing) { PoigneeRedimension(bords: [.droite, .bas]).frame(width: cote, height: cote) }
     }
 }
 

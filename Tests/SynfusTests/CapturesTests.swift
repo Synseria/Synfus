@@ -282,6 +282,19 @@ struct CapturesTests {
             .background(Self.fondCapture)
             .environment(\.colorScheme, Self.schema)
         try ecrire(etroite, vers: dossier.appending(path: "quete-etroite.png"))
+        // Une quête courte en entier, si elle est sur la machine : exigences, objectifs faits
+        // repliés, récompenses, suite.
+        if let courte = gardees.flatMap({ quetes in
+            quetes.quetes.first { $0.noms["fr"] == "On se calme" }.map { quetes.fiche($0, en: .fr) }
+        }).map(Self.sansCartes) {
+            let faits = Set(courte.etapes.first?.objectifs.prefix(4).map(\.id) ?? [])
+            let vue = QueteVue(ficheImposee: courte, etapeImposee: 0, validesImposes: faits, lusImposes: [])
+                .frame(width: 360, height: 520)
+                .padding(24)
+                .background(Self.fondCapture)
+                .environment(\.colorScheme, Self.schema)
+            try ecrire(vue, vers: dossier.appending(path: "quete-courte.png"))
+        }
     }
 
     @Test("Capture du panneau de quête sans quête épinglée, au suivi long", .enabled(if: dossier != nil))
