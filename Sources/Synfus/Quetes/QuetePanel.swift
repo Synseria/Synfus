@@ -183,18 +183,12 @@ final class QuetePanel: NSObject, ObservableObject {
     // MARK: - Pliage
 
     /// Plié sur son bandeau, le panneau laisse voir le jeu sans perdre sa place.
-    var plie: Bool { Preferences.shared.quetesHauteurDepliee != nil }
+    var plie: Bool { PanneauxJeu.plie(.quetes) }
 
     /// Plie le panneau sur son bandeau, ou lui rend sa hauteur d'avant ; le haut ne bouge pas.
     func basculerPliage() {
-        let prefs = Preferences.shared
-        if let hauteur = prefs.quetesHauteurDepliee {
-            prefs.quetesHauteurDepliee = nil
-            if let panel { poserHauteur(max(hauteur, Self.tailleMinimale.height), de: panel) }
-        } else {
-            prefs.quetesHauteurDepliee = panel.map { Double($0.frame.height) } ?? Double(Self.tailleMinimale.height)
-            if let panel { poserHauteur(hauteurPliee, de: panel) }
-        }
+        let depliee = PanneauxJeu.basculerPliage(.quetes, hauteur: panel?.frame.height ?? Self.tailleMinimale.height)
+        if let panel { poserHauteur(depliee.map { max($0, Self.tailleMinimale.height) } ?? hauteurPliee, de: panel) }
         appliquer(force: false)
     }
 

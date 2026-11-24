@@ -5,13 +5,13 @@ import SwiftUI
 /// et le jeu reste l'app active — un clic dans le jeu lui rend la frappe.
 /// Les flèches du clavier y choisissent la direction, jusque dans le champ
 /// de l'indice (une ligne courte, le curseur n'y sert guère) ; Échap ferme.
-private final class PanneauChasse: NSPanel {
+/// Plié, les flèches ne choisissent plus rien : la direction changerait sans se voir.
+private final class PanneauChasse: PanneauDeJeu {
     override var canBecomeKey: Bool { true }
-    override var canBecomeMain: Bool { false }
 
     override func sendEvent(_ event: NSEvent) {
         if event.type == .keyDown, event.modifierFlags.intersection([.command, .option, .control]).isEmpty {
-            if let direction = Direction(toucheFleche: event.keyCode) {
+            if !PanneauxJeu.plie(.chasse), let direction = Direction(toucheFleche: event.keyCode) {
                 Chasses.shared.courant.choisir(direction)
                 return
             }
@@ -40,13 +40,20 @@ final class ChassePanel: NSObject, ObservableObject, NSWindowDelegate {
         ouvert ? fermer() : ouvrir()
     }
 
+    /// Ouvert, il se montre déplié : on l'ouvre pour s'en servir.
     func ouvrir() {
+        if PanneauxJeu.plie(.chasse) { basculerPliage() }
         let panel = panel ?? construire()
         PanneauxJeu.rattraper(panel, parDefaut: Self.placeParDefaut)
         panel.makeKeyAndOrderFront(nil)
         if !ouvert { UsageStore.shared.compter(.chasse) }
         ouvert = true
         Chasses.shared.ouvrir()
+    }
+
+    /// Le panneau suit sa vue, bandeau seul ou entière ; `PanneauDeJeu` en garde le haut.
+    func basculerPliage() {
+        PanneauxJeu.basculerPliage(.chasse, hauteur: panel?.frame.height ?? 0)
     }
 
     func fermer() {

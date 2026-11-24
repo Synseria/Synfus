@@ -19,8 +19,15 @@ final class RecettePanel: NSObject, ObservableObject {
 
     func epingler(_ recette: RecetteEpinglee) {
         self.recette = recette
+        // La recette qu'on vient d'épingler se voit : plié, le panneau se déplie.
+        if PanneauxJeu.plie(.recette) { basculerPliage() }
         impose = true
         appliquer(force: true)
+    }
+
+    /// Le panneau suit sa vue, bandeau seul ou entière ; `PanneauDeJeu` en garde le haut.
+    func basculerPliage() {
+        PanneauxJeu.basculerPliage(.recette, hauteur: panel?.frame.height ?? 0)
     }
 
     func fermer() {
@@ -88,16 +95,19 @@ struct RecetteVue: View {
 /// quantité ; un clic copie le nom, coché le temps du signal.
 struct FicheRecette: View {
     let recette: RecetteEpinglee?
+    // periphery:ignore - observé : le pliage du panneau (`PanneauxJeu.plie`)
+    @ObservedObject private var prefs = Preferences.shared
     @StateObject private var copie = SignalCopie()
 
     var body: some View {
-        CadrePanneau(plie: recette == nil) {
+        CadrePanneau(plie: recette == nil || PanneauxJeu.plie(.recette)) {
             EnTetePanneau(icone: "hammer", teinte: Color.jeton(\.accentTexte)) {
                 Text(recette?.objet ?? L("recette.titre"))
                     .font(Jetons.typoTitreCarte.font)
                     .lineLimit(1)
                     .padding(.leading, Jetons.espace1)
             } boutons: {
+                BoutonPliage(plie: PanneauxJeu.plie(.recette)) { RecettePanel.shared.basculerPliage() }
                 BoutonEnTete(icone: "xmark", aide: L("quete.fermer.simple")) { RecettePanel.shared.fermer() }
             }
         } corps: {

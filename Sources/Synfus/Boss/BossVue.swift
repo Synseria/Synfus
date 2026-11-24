@@ -20,7 +20,8 @@ struct BossVue: View {
     @StateObject private var copie = SignalCopie()
 
     var body: some View {
-        CadrePanneau {
+        // Plié, la lecture et le tour continuent : seul le corps se cache.
+        CadrePanneau(plie: PanneauxJeu.plie(.boss)) {
             entete
         } corps: {
             VStack(alignment: .leading, spacing: Jetons.espace2) {
@@ -76,6 +77,7 @@ struct BossVue: View {
             if let nom = aide.donjon?.nomFrancais {
                 BoutonEnTete(icone: "book", aide: L("boss.guide")) { Task { await DofusPourLesNoobs.ouvrir(nom) } }
             }
+            BoutonPliage(plie: PanneauxJeu.plie(.boss)) { BossPanel.shared.basculerPliage() }
             BoutonEnTete(icone: "xmark", aide: L("quete.fermer.simple")) { BossPanel.shared.fermer() }
         }
     }
