@@ -56,7 +56,7 @@ struct PanneauQuetesTests {
     @Test("La liste : les quêtes du panneau, la montrée marquée, puis du suivi celles qu'il n'a pas, à leur étape")
     func liste() {
         let reconnues = [SuiviQuetes.Reconnue(id: 7, etape: 2), SuiviQuetes.Reconnue(id: 18, etape: nil)]
-        let elements = MenuQuetes.liste(epinglees: [18, 42], montree: 42, reconnues: reconnues, etat: .lu, coches: 3, nom: nom)
+        let elements = MenuQuetes.liste(epinglees: [18, 42], montree: 42, reconnues: reconnues, etat: .lu, nom: nom)
         #expect(elements == [
             .epinglee(id: 18, nom: "Q18", montree: false),
             .epinglee(id: 42, nom: "Q42", montree: true),
@@ -64,7 +64,6 @@ struct PanneauQuetesTests {
             .lireSuivi(enCours: false),
             // La 18 est déjà au panneau : une seule ligne pour elle, en tête.
             .reconnue(reconnues[0], titre: L("quete.menu.reconnueEtape", "Q7", 3)),
-            .message(L("quete.suivi.coches", nombre: 3, 3)),
         ])
         #expect(MenuQuetes.nouvelles(reconnues, epinglees: [18, 42]) == 1)
     }
@@ -103,17 +102,6 @@ struct PanneauQuetesTests {
         #expect([P.sansAutorisation, .captureImpossible, .zone, .indisponible].map(\.geste) == [.autoriser, .relire, .calibrer, .reessayer])
     }
 
-    @Test("« Tout épingler » : sous « Lire le suivi » dès deux quêtes à épingler, jamais pour une seule")
-    func listeToutEpingler() {
-        let reconnues = [SuiviQuetes.Reconnue(id: 7, etape: 2), SuiviQuetes.Reconnue(id: 9, etape: nil),
-                         SuiviQuetes.Reconnue(id: 18, etape: nil)]
-        #expect(MenuQuetes.aEpingler(reconnues, epinglees: [9]).map(\.id) == [7, 18])
-        let deux = MenuQuetes.liste(epinglees: [9], montree: 9, reconnues: reconnues, etat: .lu, coches: 0, nom: nom)
-        #expect(Array(deux.drop { $0 != .titre(L("quete.menu.suivi")) }.dropFirst().prefix(2)) == [.lireSuivi(enCours: false), .toutEpingler])
-        let une = MenuQuetes.liste(epinglees: [9, 18], montree: 9, reconnues: reconnues, etat: .lu, coches: 0, nom: nom)
-        #expect(!une.contains(.toutEpingler))
-    }
-
     @Test("Ce que l'en-tête redemande à chaque rendu ne se refait que si la case, les quêtes, la langue ou la carte changent")
     func cleIci() {
         let date = Date(timeIntervalSince1970: 1_000_000)
@@ -127,14 +115,14 @@ struct PanneauQuetesTests {
 
     @Test("La liste dit pourquoi le suivi ne propose rien")
     func listeSansQuete() {
-        let vide = MenuQuetes.liste(epinglees: [], montree: nil, reconnues: [], etat: .lu, coches: 0, nom: nom)
+        let vide = MenuQuetes.liste(epinglees: [], montree: nil, reconnues: [], etat: .lu, nom: nom)
         #expect(vide.first == .message(L("quete.menu.aucune")))
         #expect(vide.last == .message(L("quete.suivi.rien")))
-        let enCours = MenuQuetes.liste(epinglees: [1], montree: 1, reconnues: [], etat: .enCours, coches: 2, nom: nom)
+        let enCours = MenuQuetes.liste(epinglees: [1], montree: 1, reconnues: [], etat: .enCours, nom: nom)
         // Pendant la lecture, rien n'est dit de la précédente.
         #expect(Array(enCours.suffix(2)) == [.titre(L("quete.menu.suivi")), .lireSuivi(enCours: true)])
         // Sans l'autorisation d'écran, même avant toute lecture : le geste qui la donne, pas de lecture à lancer.
-        let sansEcran = MenuQuetes.liste(epinglees: [1], montree: 1, reconnues: [], etat: .jamaisLu, coches: 0, autorise: false, nom: nom)
+        let sansEcran = MenuQuetes.liste(epinglees: [1], montree: 1, reconnues: [], etat: .jamaisLu, autorise: false, nom: nom)
         #expect(Array(sansEcran.suffix(3)) == [.titre(L("quete.menu.suivi")), .message(L("quete.suivi.sansAutorisation")), .geste(.autoriser)])
     }
 
@@ -142,7 +130,7 @@ struct PanneauQuetesTests {
     func listeIci() {
         let ici = MenuQuetes.Ici(coordonnees: "[1,2]", quetes: [.init(id: 5, nom: "Q5", niveau: 10),
                                                                .init(id: 18, nom: "Q18", niveau: 70)], pnjs: ["Wogew", "Otomaï"])
-        let elements = MenuQuetes.liste(epinglees: [18], montree: 18, reconnues: [], etat: .jamaisLu, coches: 0, ici: ici, nom: nom)
+        let elements = MenuQuetes.liste(epinglees: [18], montree: 18, reconnues: [], etat: .jamaisLu, ici: ici, nom: nom)
         // L'en-tête « Ici » ferme la liste, avec le nombre de quêtes à épingler ; son contenu suit.
         #expect(elements == [
             .epinglee(id: 18, nom: "Q18", montree: true),
@@ -153,7 +141,7 @@ struct PanneauQuetesTests {
             .message(L("quete.menu.iciPNJ", "Wogew, Otomaï")),
         ])
         #expect(ici.aEpingler([5, 18]).isEmpty)
-        let rien = MenuQuetes.liste(epinglees: [18], montree: 18, reconnues: [], etat: .jamaisLu, coches: 0,
+        let rien = MenuQuetes.liste(epinglees: [18], montree: 18, reconnues: [], etat: .jamaisLu,
                                     ici: MenuQuetes.Ici(coordonnees: "[1,2]", quetes: [], pnjs: []), nom: nom)
         #expect(!rien.contains { if case .iciEnTete = $0 { return true } else { return false } })
     }

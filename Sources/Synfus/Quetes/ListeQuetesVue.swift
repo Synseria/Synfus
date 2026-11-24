@@ -2,7 +2,8 @@ import SwiftUI
 
 /// La liste des quêtes, à la place de la fiche (`MenuQuetes.liste`) : celles du
 /// panneau — un clic montre, la croix retire —, puis celles qui commencent sur
-/// la case du perso et celles du suivi du jeu, à ajouter d'un clic.
+/// la case du perso et celles du suivi du jeu, à ajouter d'un clic — leur
+/// guide s'ouvre du livre au bout de la ligne.
 struct ListeQuetesVue: View {
     let metriques: MetriquesQuete
 
@@ -16,6 +17,8 @@ struct ListeQuetesVue: View {
     @ObservedObject private var previews = WindowPreviewService.shared
     /// La section « Ici », en dernier, est repliée d'office.
     @State private var iciDeplie = false
+    /// La quête dont le guide se cherche : son livre attend.
+    @State private var guideEnCours: Int?
 
     /// La colonne des marques, à gauche des noms.
     private static let colonneMarque: CGFloat = 14
@@ -49,8 +52,7 @@ struct ListeQuetesVue: View {
                         } else if let rangIci, rang > rangIci, !iciDeplie {
                             EmptyView()
                         } else {
-                            ligne(element, toutEpingler: elements.contains(.toutEpingler),
-                                  lecture: elements.contains { if case .lireSuivi = $0 { true } else { false } })
+                            ligne(element)
                         }
                     }
                 }
@@ -62,7 +64,7 @@ struct ListeQuetesVue: View {
     }
 
     @ViewBuilder
-    private func ligne(_ element: MenuQuetes.Element, toutEpingler: Bool, lecture lisible: Bool) -> some View {
+    private func ligne(_ element: MenuQuetes.Element) -> some View {
         switch element {
         case .titre(let titre):
             Text(titre)
@@ -75,28 +77,25 @@ struct ListeQuetesVue: View {
                 BoutonEnTete(icone: "xmark", aide: L("quete.desepingler"), discret: true) { panneau.desepingler(id) }
             }
         case .ici(let id, let titre):
-            quete(titre, marque: "exclamationmark.bubble", detail: nil) { panneau.ouvrir(id) }
-        case .reconnue(let reconnue, let titre):
-            quete(titre, marque: "plus", detail: nil) { lecture.choisir(reconnue) }
-        case .lireSuivi(let enCours):
-            HStack(spacing: Jetons.espace1) {
-                Button { lecture.lire() } label: {
-                    Label(enCours ? L("quete.suivi.enCours") : L("quete.suivi.lire"), systemImage: "text.viewfinder")
-                }
-                .disabled(enCours)
-                Spacer(minLength: 0)
-                if toutEpingler { Button(L("quete.toutEpingler")) { lecture.toutEpingler() } }
+            HStack(spacing: 0) {
+                quete(titre, marque: "exclamationmark.bubble", detail: nil) { panneau.ouvrir(id) }
+                guide(id)
             }
+        case .reconnue(let reconnue, let titre):
+            HStack(spacing: 0) {
+                quete(titre, marque: "plus", detail: nil) { lecture.choisir(reconnue) }
+                guide(reconnue.id)
+            }
+        case .lireSuivi(let enCours):
+            Button { lecture.lire() } label: {
+                Label(enCours ? L("quete.suivi.enCours") : L("quete.suivi.lire"), systemImage: "text.viewfinder")
+            }
+            .disabled(enCours)
             .buttonStyle(BoutonTertiaire())
         case .message(let texte):
             note(texte)
         case .geste(let geste):
             self.geste(geste)
-        // Sur la ligne de « Lire le suivi » quand elle est là.
-        case .toutEpingler:
-            if !lisible {
-                Button(L("quete.toutEpingler")) { lecture.toutEpingler() }.buttonStyle(BoutonTertiaire())
-            }
         // Le menu « ⋯ ».
         case .toutDesepingler, .option, .affichage, .fermer, .separateur, .iciEnTete:
             EmptyView()
@@ -160,6 +159,19 @@ struct ListeQuetesVue: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .buttonStyle(.etat(nue: true))
+    }
+
+    /// Le livre au bout d'une quête à ajouter : son guide (`DofusPourLesNoobs`), sans l'épingler.
+    private func guide(_ id: Int) -> some View {
+        BoutonEnTete(icone: "book", aide: L("quete.guide"), discret: true) {
+            guard let nom = store.fiche(id)?.nomFrancais, !nom.isEmpty else { return NSSound.beep() }
+            guideEnCours = id
+            Task {
+                await DofusPourLesNoobs.ouvrir(nom)
+                if guideEnCours == id { guideEnCours = nil }
+            }
+        }
+        .disabled(guideEnCours == id)
     }
 
     /// « ét. 3/19 » : où le panneau en est d'une quête à plusieurs étapes.

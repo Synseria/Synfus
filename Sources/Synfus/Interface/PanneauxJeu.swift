@@ -74,13 +74,22 @@ enum PanneauxJeu {
     /// il reste là jusqu'au prochain changement d'app plutôt que de ne pas
     /// paraître. Construit à sa première apparition, rattrapé s'il paraît hors
     /// de tout écran ; `cache` suit le masquage d'un panneau qui était à
-    /// l'écran. Rend s'il est montré.
+    /// l'écran. Rend s'il est montré. Comme la barre, il reçoit les mouvements
+    /// de la souris et peut poser le curseur depuis une app inactive : sans
+    /// quoi la main des boutons (`curseurDeClic`) ne paraît jamais au-dessus du jeu.
     @discardableResult
     static func appliquer(_ panel: inout NSPanel?, ouvert: Bool, impose: Bool, force: Bool,
                           parDefaut: PlaceParDefaut, construire: () -> NSPanel, cache: () -> Void = {}) -> Bool {
         let montre = visible(ouvert: ouvert) || (ouvert && impose)
         if montre {
-            let affiche = panel ?? construire()
+            let affiche: NSPanel
+            if let panel {
+                affiche = panel
+            } else {
+                affiche = construire()
+                affiche.acceptsMouseMovedEvents = true
+                CurseurArrierePlan.autoriser()
+            }
             panel = affiche
             if force || !affiche.isVisible {
                 rattraper(affiche, parDefaut: parDefaut)

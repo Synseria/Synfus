@@ -16,8 +16,6 @@ enum MenuQuetes {
         /// L'en-tête replié de la section « Ici », toujours en dernier : le
         /// nombre de quêtes à épingler tient à droite de la ligne.
         case iciEnTete(coordonnees: String, nombre: Int)
-        /// Ajouter d'un coup les quêtes du suivi que le panneau n'a pas.
-        case toutEpingler
         case lireSuivi(enCours: Bool)
         /// Une quête du suivi que le panneau n'a pas : la choisir l'ajoute et la montre à l'étape lue.
         case reconnue(SuiviQuetes.Reconnue, titre: String)
@@ -119,11 +117,10 @@ enum MenuQuetes {
     }
 
     /// La liste du panneau. Une quête déjà au panneau n'y paraît qu'une fois, en tête : « Ici » et le
-    /// suivi ne proposent que celles qu'il n'a pas. `coches` : les objectifs que la dernière lecture
-    /// du suivi a cochés ; `ici` : en dernier, replié d'office — l'en-tête compte les quêtes, un clic
+    /// suivi ne proposent que celles qu'il n'a pas. `ici` : en dernier, replié d'office — l'en-tête compte les quêtes, un clic
     /// déplie ; rien quand rien ne commence sur la case, ou qu'elle est inconnue.
     static func liste(epinglees: [Int], montree: Int?, reconnues: [SuiviQuetes.Reconnue],
-                      etat: LectureSuivi.Etat, coches: Int, ici: Ici? = nil,
+                      etat: LectureSuivi.Etat, ici: Ici? = nil,
                       autorise: Bool = true, nom: (Int) -> String) -> [Element] {
         var elements: [Element] = epinglees.isEmpty
             ? [.message(L("quete.menu.aucune"))]
@@ -132,7 +129,6 @@ enum MenuQuetes {
         elements.append(.titre(L("quete.menu.suivi")))
         // Sans l'autorisation d'écran, rien à lire : le geste qui la donne, pas un bouton qui échoue.
         if autorise { elements.append(.lireSuivi(enCours: etat == .enCours)) }
-        if nouvelles.count > 1 { elements.append(.toutEpingler) }
         elements += nouvelles.map { reconnue in
             .reconnue(reconnue, titre: reconnue.etape.map { L("quete.menu.reconnueEtape", nom(reconnue.id), $0 + 1) } ?? nom(reconnue.id))
         }
@@ -142,7 +138,6 @@ enum MenuQuetes {
         } else if etat == .lu, reconnues.isEmpty {
             elements.append(.message(L("quete.suivi.rien")))
         }
-        if etat == .lu, coches > 0 { elements.append(.message(L("quete.suivi.coches", nombre: coches, coches))) }
         // « Ici » en dernier, replié : la section n'encombre plus le haut de la liste.
         if let ici { elements += sectionIci(ici, epinglees: epinglees) }
         return elements
