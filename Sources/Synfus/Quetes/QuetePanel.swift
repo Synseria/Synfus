@@ -1,21 +1,6 @@
 import AppKit
 import SwiftUI
 
-/// Sans bordure ni barre de titre : une barre de titre, même transparente,
-/// garde pour elle les clics de la première ligne et zoome au double-clic.
-/// Jamais clé (un clic ne retire pas la frappe à Dofus), jamais zoomé : on
-/// le déplace par son en-tête (`WindowDragArea`) et on l'agrandit par ses
-/// bords et ses coins du bas (`PoigneeRedimension`). Pas `.resizable` : les
-/// bords du système, invisibles et sans curseur pour une app inactive,
-/// chevaucheraient nos poignées et le haut de l'en-tête — un glisser pensé
-/// pour déplacer agrandirait.
-private final class PanneauQuetes: NSPanel {
-    override var canBecomeKey: Bool { false }
-    override var canBecomeMain: Bool { false }
-    override func zoom(_: Any?) {}
-    override func performZoom(_: Any?) {}
-}
-
 /// Le panneau des quêtes épinglées : transparent, au-dessus du jeu — on le
 /// garde ouvert en jouant. Plusieurs quêtes, une montrée à la fois ; on le
 /// déplace par son en-tête et on le redimensionne par ses bords ou sa
@@ -55,6 +40,8 @@ final class QuetePanel: NSObject, ObservableObject {
     }
 
     private var iciGarde = DernierCalcul<CleIci, MenuQuetes.Ici?>()
+    /// La hauteur du bandeau, mesurée par la vue : celle du panneau plié.
+    private var hauteurPliee: CGFloat = 40
 
     private override init() { super.init() }
 
@@ -81,6 +68,7 @@ final class QuetePanel: NSObject, ObservableObject {
         let prefs = Preferences.shared
         if !prefs.quetesEpinglees.contains(id) { prefs.quetesEpinglees.append(id) }
         montrer(id)
+        if plie { basculerPliage() }
         ouvrir()
     }
 
@@ -94,6 +82,8 @@ final class QuetePanel: NSObject, ObservableObject {
             LectureSuivi.shared.oublier(avant.filter { !apres.contains($0) })
         }
         montrer(id)
+        // La quête demandée se voit : plié, le panneau se déplie.
+        if plie { basculerPliage() }
         ouvrir()
     }
 
@@ -155,18 +145,22 @@ final class QuetePanel: NSObject, ObservableObject {
     private func appliquer(force: Bool) {
         let montre = PanneauxJeu.appliquer(&panel, ouvert: ouvert, impose: impose, force: force, parDefaut: Self.placeParDefaut,
                                            construire: construire, cache: { ApercuCarte.shared.cacher() })
-        LecteurEcran.shared.suivreQuetes(montre && WindowPreviewService.shared.authorized)
+        // Plié, rien ne se montre du suivi : on ne le lit plus.
+        LecteurEcran.shared.suivreQuetes(montre && !plie && WindowPreviewService.shared.authorized)
     }
 
     private func construire() -> NSPanel {
-        let panel = PanneauQuetes(
+        // Sans bordure ni barre de titre : une barre de titre, même transparente, garde pour elle les
+        // clics de la première ligne. On le déplace par son en-tête (`WindowDragArea`), on l'agrandit
+        // par ses bords et ses coins du bas (`PoigneeRedimension`). Pas `.resizable` : les bords du
+        // système, invisibles et sans curseur pour une app inactive, chevaucheraient nos poignées.
+        let panel = PanneauDeJeu(
             contentRect: NSRect(x: 0, y: 0, width: 360, height: 480),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
         panel.contentView = NSHostingView(rootView: QueteVue().racineSynfus())
-        panel.minSize = Self.tailleMinimale
         panel.isFloatingPanel = true
         panel.level = .statusBar
         panel.hidesOnDeactivate = false
@@ -180,7 +174,42 @@ final class QuetePanel: NSObject, ObservableObject {
         if !panel.setFrameAutosaveName(Self.nomDuCadre) || !panel.setFrameUsingName(Self.nomDuCadre, force: true) {
             PanneauxJeu.placer(panel, parDefaut: Self.placeParDefaut)
         }
+        // Le cadre gardé est celui du panneau plié ou déplié ; un cadre plié sans le réglage (effacé)
+        // reprend la hauteur minimale.
+        poserHauteur(plie ? hauteurPliee : max(panel.frame.height, Self.tailleMinimale.height), de: panel)
         return panel
+    }
+
+    // MARK: - Pliage
+
+    /// Plié sur son bandeau, le panneau laisse voir le jeu sans perdre sa place.
+    var plie: Bool { Preferences.shared.quetesHauteurDepliee != nil }
+
+    /// Plie le panneau sur son bandeau, ou lui rend sa hauteur d'avant ; le haut ne bouge pas.
+    func basculerPliage() {
+        let prefs = Preferences.shared
+        if let hauteur = prefs.quetesHauteurDepliee {
+            prefs.quetesHauteurDepliee = nil
+            if let panel { poserHauteur(max(hauteur, Self.tailleMinimale.height), de: panel) }
+        } else {
+            prefs.quetesHauteurDepliee = panel.map { Double($0.frame.height) } ?? Double(Self.tailleMinimale.height)
+            if let panel { poserHauteur(hauteurPliee, de: panel) }
+        }
+        appliquer(force: false)
+    }
+
+    /// La hauteur du bandeau a changé (titre sur deux lignes, autre quête) : le panneau plié la suit.
+    func bandeauMesure(_ hauteur: CGFloat) {
+        guard hauteur > 0 else { return }
+        hauteurPliee = hauteur
+        if plie, let panel, panel.frame.height != hauteur { poserHauteur(hauteur, de: panel) }
+    }
+
+    /// La hauteur, et le minimum qui va avec : plié, le bandeau ; sinon `tailleMinimale`.
+    private func poserHauteur(_ hauteur: CGFloat, de panel: NSPanel) {
+        panel.minSize = NSSize(width: Self.tailleMinimale.width, height: plie ? hauteur : Self.tailleMinimale.height)
+        // Même origine, autre hauteur : `PanneauDeJeu` garde le haut.
+        panel.setFrame(NSRect(origin: panel.frame.origin, size: NSSize(width: panel.frame.width, height: hauteur)), display: true)
     }
 
     /// En haut à droite de l'écran.
@@ -223,6 +252,8 @@ extension QuetePanel {
     private static func ajouter(_ element: MenuQuetes.Element, a menu: NSMenu) {
         let prefs = Preferences.shared
         switch element {
+        case .chercher:
+            menu.addItem(CibleMenu.shared.element(L("quete.chercher")) { QuetePanel.chercher() })
         case .toutDesepingler:
             menu.addItem(CibleMenu.shared.element(L("quete.menu.toutDesepingler")) { QuetePanel.shared.confirmerToutDesepingler() })
         case .affichage(let options):

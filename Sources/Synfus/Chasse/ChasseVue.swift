@@ -25,9 +25,9 @@ struct ChasseVue: View {
     @StateObject private var copie = SignalCopie()
 
     var body: some View {
-        // L'en-tête sur le verre, le contenu sur une plaque pleine.
-        VStack(alignment: .leading, spacing: Jetons.espace1) {
+        CadrePanneau {
             entete
+        } corps: {
             Group {
                 if indicesIndisponibles {
                     indisponibles
@@ -43,14 +43,8 @@ struct ChasseVue: View {
                     .padding(Jetons.espace1)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .plaquePleine()
         }
-        .padding([.horizontal, .bottom], Jetons.espace2)
-        .padding(.top, Jetons.espace1)
         .frame(width: Jetons.largeurPanneauChasse, alignment: .leading)
-        .font(Jetons.typoMeta.font)
-        .surfaceFlottante()
         // Le trajet copié tout seul à la validation d'une étape : la coche
         // verte du bouton un instant, puis il redevient le bouton copier.
         .onChange(of: modele.trajetCopie) { _, oui in if oui { copie.signaler("trajet") } }

@@ -116,10 +116,13 @@ enum PanneauxJeu {
 
 /// Un panneau posé sur le jeu, à la taille de son contenu, jamais clé : la frappe reste au jeu, un
 /// clic dessus ne la lui retire pas. Il se tient par son en-tête : quand son contenu change de
-/// hauteur, le haut reste où on l'a posé — AppKit garderait le bas, et l'en-tête sauterait.
+/// hauteur, le haut reste où on l'a posé — AppKit garderait le bas, et l'en-tête sauterait. Jamais
+/// zoomé : un double-clic sur l'en-tête ne l'agrandit pas.
 final class PanneauDeJeu: NSPanel {
     override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }
+    override func zoom(_: Any?) {}
+    override func performZoom(_: Any?) {}
 
     override func setFrame(_ cadre: NSRect, display: Bool) {
         var cadre = cadre
@@ -197,6 +200,39 @@ struct EnTetePanneau<Titre: View, Boutons: View>: View {
         // Les zones de glisser prennent la hauteur des boutons, sans tirer
         // l'en-tête vers le bas.
         .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+/// La forme des panneaux posés sur le jeu (le bandeau `.sw .bar` du SDS) : l'en-tête dans un bandeau
+/// d'un bord à l'autre, voilé de la page (`UsageDuVerre.clavier`) et fermé d'un filet, puis le corps
+/// sur une plaque pleine à `espace2` du verre. `plie` : le bandeau seul. Le corps ne pousse jamais
+/// le panneau : plus large que la place, il est rogné à sa plaque — sinon tout le contenu
+/// s'élargissait et la fenêtre en rognait le verre et la fin de l'en-tête.
+struct CadrePanneau<EnTete: View, Corps: View>: View {
+    var plie = false
+    @ViewBuilder let enTete: EnTete
+    @ViewBuilder let corps: Corps
+    @Environment(\.couleursSynseria) private var c
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            enTete
+                .padding(.vertical, Jetons.espace1)
+                .background(UsageDuVerre.clavier.teinte(c).couleur)
+                .overlay(alignment: .bottom) {
+                    if !plie { Color.jeton(\.filet).frame(height: Jetons.epaisseurFilet) }
+                }
+            if !plie {
+                corps
+                    .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+                    .clipShape(RoundedRectangle(cornerRadius: Jetons.rayon2, style: .circular))
+                    .plaquePleine()
+                    .padding(Jetons.espace2)
+            }
+        }
+        .font(Jetons.typoMeta.font)
+        .clipShape(RoundedRectangle(cornerRadius: Jetons.rayon3, style: .continuous))
+        .surfaceFlottante()
     }
 }
 

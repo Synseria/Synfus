@@ -91,7 +91,7 @@ struct FicheRecette: View {
     @StateObject private var copie = SignalCopie()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Jetons.espace1) {
+        CadrePanneau(plie: recette == nil) {
             EnTetePanneau(icone: "hammer", teinte: Color.jeton(\.accentTexte)) {
                 Text(recette?.objet ?? L("recette.titre"))
                     .font(Jetons.typoTitreCarte.font)
@@ -100,6 +100,7 @@ struct FicheRecette: View {
             } boutons: {
                 BoutonEnTete(icone: "xmark", aide: L("quete.fermer.simple")) { RecettePanel.shared.fermer() }
             }
+        } corps: {
             if let recette {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(L("ouTrouver.recette", recette.metier, recette.niveau))
@@ -112,15 +113,9 @@ struct FicheRecette: View {
                     }
                 }
                 .padding(.vertical, Jetons.espace2)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .plaquePleine()
             }
         }
-        .padding([.horizontal, .bottom], Jetons.espace2)
-        .padding(.top, Jetons.espace1)
         .frame(width: RecetteVue.largeur, alignment: .leading)
-        .font(Jetons.typoMeta.font)
-        .surfaceFlottante()
     }
 
     private func ligne(_ ingredient: RecetteEpinglee.Ingredient, id: String) -> some View {

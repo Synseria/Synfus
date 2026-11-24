@@ -60,6 +60,7 @@ struct PanneauQuetesTests {
         #expect(elements == [
             .epinglee(id: 18, nom: "Q18", montree: false),
             .epinglee(id: 42, nom: "Q42", montree: true),
+            .chercher,
             .titre(L("quete.menu.suivi")),
             .lireSuivi(enCours: false),
             // La 18 est déjà au panneau : une seule ligne pour elle, en tête.
@@ -68,11 +69,11 @@ struct PanneauQuetesTests {
         #expect(MenuQuetes.nouvelles(reconnues, epinglees: [18, 42]) == 1)
     }
 
-    @Test("Le menu « ⋯ » : l'affichage, tout retirer dès deux quêtes, fermer")
+    @Test("Le menu « ⋯ » : chercher, l'affichage, tout retirer dès deux quêtes, fermer")
     func reglages() {
         let options: [MenuQuetes.Element] = [.option(.cocherSuivi, actif: false), .option(.compact, actif: false),
                                              .option(.consigne, actif: false), .option(.masquerObjets, actif: true)]
-        #expect(MenuQuetes.reglages(epinglees: 2, actives: [.masquerObjets]) == [.affichage(options), .toutDesepingler, .separateur, .fermer])
+        #expect(MenuQuetes.reglages(epinglees: 2, actives: [.masquerObjets]) == [.chercher, .separateur, .affichage(options), .toutDesepingler, .separateur, .fermer])
         // Une seule quête : sa croix suffit.
         #expect(!MenuQuetes.reglages(epinglees: 1, actives: []).contains(.toutDesepingler))
     }
@@ -116,7 +117,8 @@ struct PanneauQuetesTests {
     @Test("La liste dit pourquoi le suivi ne propose rien")
     func listeSansQuete() {
         let vide = MenuQuetes.liste(epinglees: [], montree: nil, reconnues: [], etat: .lu, nom: nom)
-        #expect(vide.first == .message(L("quete.menu.aucune")))
+        // Rien au panneau : le dire, et de quoi en chercher une, sur deux lignes.
+        #expect(Array(vide.prefix(2)) == [.message(L("quete.menu.aucune")), .chercher])
         #expect(vide.last == .message(L("quete.suivi.rien")))
         let enCours = MenuQuetes.liste(epinglees: [1], montree: 1, reconnues: [], etat: .enCours, nom: nom)
         // Pendant la lecture, rien n'est dit de la précédente.
@@ -134,6 +136,7 @@ struct PanneauQuetesTests {
         // L'en-tête « Ici » ferme la liste, avec le nombre de quêtes à épingler ; son contenu suit.
         #expect(elements == [
             .epinglee(id: 18, nom: "Q18", montree: true),
+            .chercher,
             .titre(L("quete.menu.suivi")),
             .lireSuivi(enCours: false),
             .iciEnTete(coordonnees: "[1,2]", nombre: 1),
