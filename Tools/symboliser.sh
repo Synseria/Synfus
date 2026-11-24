@@ -8,6 +8,9 @@ RAPPORT="$(cd "$(dirname "${1:?usage : symboliser.sh <diagnostic.json>}")" && pw
 cd "$(dirname "$0")/.."
 
 VERSION="$(/usr/bin/python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["diagnosticMetaData"]["appVersion"])' "$RAPPORT")"
+# Le rapport vient d'ailleurs (Grafana) : sa version nomme un dossier du cache,
+# elle doit avoir la forme d'une version et rien d'autre (pas de « ../ »).
+[[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$ ]] || { echo "appVersion invalide : $VERSION" >&2; exit 1; }
 ARCH="$(/usr/bin/python3 -c 'import json,sys; a=json.load(open(sys.argv[1]))["diagnosticMetaData"].get("platformArchitecture","arm64"); print("x86_64" if "x86" in a else "arm64")' "$RAPPORT")"
 CACHE="$HOME/Library/Caches/Synfus-dSYM/$VERSION"
 if [ ! -d "$CACHE/Synfus-$VERSION-$ARCH.dSYM" ]; then
