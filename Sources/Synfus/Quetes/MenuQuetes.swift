@@ -16,6 +16,8 @@ enum MenuQuetes {
         /// L'en-tête replié de la section « Ici », toujours en dernier : le
         /// nombre de quêtes à épingler tient à droite de la ligne.
         case iciEnTete(coordonnees: String, nombre: Int)
+        /// Chercher une quête à ajouter (la palette, sur `/quete`).
+        case chercher
         case lireSuivi(enCours: Bool)
         /// Une quête du suivi que le panneau n'a pas : la choisir l'ajoute et la montre à l'étape lue.
         case reconnue(SuiviQuetes.Reconnue, titre: String)
@@ -125,6 +127,7 @@ enum MenuQuetes {
         var elements: [Element] = epinglees.isEmpty
             ? [.message(L("quete.menu.aucune"))]
             : epinglees.map { .epinglee(id: $0, nom: nom($0), montree: $0 == montree) }
+        elements.append(.chercher)
         let nouvelles = aEpingler(reconnues, epinglees: epinglees)
         elements.append(.titre(L("quete.menu.suivi")))
         // Sans l'autorisation d'écran, rien à lire : le geste qui la donne, pas un bouton qui échoue.
@@ -143,11 +146,11 @@ enum MenuQuetes {
         return elements
     }
 
-    /// Le menu « ⋯ » de l'en-tête : l'affichage, tout retirer, cacher le panneau.
+    /// Le menu « ⋯ » de l'en-tête : chercher une quête, l'affichage, tout retirer, cacher le panneau.
     /// `actives` : les options allumées.
     static func reglages(epinglees: Int, actives: Set<Option>) -> [Element] {
         let options = Option.affichage.map { Element.option($0, actif: actives.contains($0)) }
-        return [.affichage(options)] + (epinglees > 1 ? [.toutDesepingler] : []) + [.separateur, .fermer]
+        return [.chercher, .separateur, .affichage(options)] + (epinglees > 1 ? [.toutDesepingler] : []) + [.separateur, .fermer]
     }
 
     /// « Ici, en [x,y] », en dernier et replié d'office : l'en-tête avec le

@@ -313,6 +313,11 @@ struct CapturesTests {
             .background(Self.fondCapture)
             .environment(\.colorScheme, Self.schema)
         try ecrire(vue, vers: dossier.appending(path: "quete-vide.png"))
+        // À sa taille minimale, rien ne déborde : le verre garde sa marge, « ⋯ » son coin.
+        let minimale = QuetePanel.tailleMinimale
+        try ecrire(QueteVue().frame(width: minimale.width, height: minimale.height).padding(24)
+            .background(Self.fondCapture).environment(\.colorScheme, Self.schema),
+                   vers: dossier.appending(path: "quete-vide-etroite.png"))
         // La liste avec des quêtes au panneau : le suivi ne propose plus que les autres.
         let prefs = Preferences.shared
         let avant = prefs.quetesEpinglees
@@ -321,6 +326,13 @@ struct CapturesTests {
         QuetePanel.shared.enListe = true
         defer { QuetePanel.shared.enListe = false }
         try ecrire(vue, vers: dossier.appending(path: "quete-liste.png"))
+        // Plié : le bandeau seul.
+        let hauteur = prefs.quetesHauteurDepliee
+        defer { prefs.quetesHauteurDepliee = hauteur }
+        prefs.quetesHauteurDepliee = 480
+        try ecrire(QueteVue().frame(width: minimale.width).padding(24)
+            .background(Self.fondCapture).environment(\.colorScheme, Self.schema),
+                   vers: dossier.appending(path: "quete-pliee.png"))
     }
 
     /// Sans la vue des cartes : elle viendrait de DofusDB, et une capture du

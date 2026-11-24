@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Le panneau des quêtes : un en-tête d'une ligne (le nom de la quête montrée,
-/// la recherche, « ⋯ »), puis sa fiche — étape en cours sur une ligne,
+/// « − » qui le plie, « ⋯ »), puis sa fiche — étape en cours sur une ligne,
 /// ressources à réunir, consigne, objectifs, récompenses, quêtes qui s'ouvrent
 /// ensuite. Un clic sur le nom met la liste des quêtes à la place de la fiche
 /// (`ListeQuetesVue`) : en choisir une y revient. Un
@@ -50,10 +50,24 @@ struct QueteVue: View {
     /// Le trait au bord d'un objectif que le suivi du jeu montre à faire.
     private static let traitAFaire: CGFloat = 3
 
+    /// Plié sur son bandeau ; jamais pour une fiche donnée (captures).
+    private var plie: Bool { ficheImposee == nil && prefs.quetesHauteurDepliee != nil }
+
     var body: some View {
-        // L'en-tête sur le verre, la fiche ou la liste sur une plaque pleine.
-        VStack(alignment: .leading, spacing: Jetons.espace1) {
+        if plie {
+            CadrePanneau(plie: true) { enTete } corps: { EmptyView() }
+                .fixedSize(horizontal: false, vertical: true)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { QuetePanel.shared.bandeauMesure($0) }
+                .frame(minWidth: QuetePanel.tailleMinimale.width, maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        } else {
+            deplie
+        }
+    }
+
+    private var deplie: some View {
+        CadrePanneau {
             enTete
+        } corps: {
             Group {
             if let fiche {
                 // Une autre quête, ou l'étape suivante prise en pied : la fiche
@@ -78,15 +92,10 @@ struct QueteVue: View {
                 ListeQuetesVue(metriques: metriques)
             }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .clipShape(RoundedRectangle(cornerRadius: Jetons.rayon2, style: .circular))
-            .plaquePleine()
+            .frame(maxHeight: .infinity, alignment: .top)
         }
-        .padding([.horizontal, .bottom], Jetons.espace2)
-        .padding(.top, Jetons.espace1)
         .frame(minWidth: QuetePanel.tailleMinimale.width, maxWidth: .infinity,
                minHeight: QuetePanel.tailleMinimale.height, maxHeight: .infinity, alignment: .top)
-        .surfaceFlottante()
         .bordsRedimensionnables(coin: poignee)
     }
 
@@ -100,18 +109,22 @@ struct QueteVue: View {
     // MARK: - En-tête du panneau
 
     /// Le nom de la quête montrée : un clic met la liste des quêtes à la place de la fiche, un
-    /// second y revient. Tout l'en-tête déplace le panneau (`EnTetePanneau`) ; il se ferme par « ⋯ ».
+    /// second y revient ; plié, il déplie. Tout l'en-tête déplace le panneau (`EnTetePanneau`) ;
+    /// « − » le plie, « ⋯ » cherche une quête, règle l'affichage et le ferme.
     private var enTete: some View {
         let enFiche = fiche != nil
         let titre = enFiche ? (ficheImposee?.nom ?? panneau.idMontre.flatMap { store.nom($0) } ?? L("quete.menu.titre"))
                             : L("quete.menu.titre")
-        let basculer: (@MainActor () -> Void)? = ficheImposee == nil && panneau.idMontre != nil
-            ? { @MainActor in QuetePanel.shared.enListe.toggle() } : nil
+        let basculer: (@MainActor () -> Void)? = plie ? { @MainActor in QuetePanel.shared.basculerPliage() }
+            : ficheImposee == nil && panneau.idMontre != nil ? { @MainActor in QuetePanel.shared.enListe.toggle() } : nil
         return EnTetePanneau(icone: BoutonBarre.quetes.symbole, teinte: Color.jeton(\.accentTexte), clic: basculer) {
-            titreQuetes(titre, enFiche: enFiche, bascule: basculer != nil || ficheImposee != nil)
+            titreQuetes(titre, enFiche: enFiche, bascule: !plie && (basculer != nil || ficheImposee != nil))
             if lecture.etat == .enCours { ProgressView().controlSize(.mini).padding(.leading, Jetons.espace1) }
         } boutons: {
-            BoutonEnTete(icone: "magnifyingglass", aide: L("quete.chercher"), discret: true) { QuetePanel.chercher() }
+            if ficheImposee == nil {
+                BoutonEnTete(icone: plie ? "chevron.down" : "minus", aide: plie ? L("quete.deplier") : L("quete.plier"),
+                             discret: true) { QuetePanel.shared.basculerPliage() }
+            }
             BoutonEnTete(icone: "ellipsis", aide: L("quete.menu.affichage"), discret: true) {
                 QuetePanel.shared.menu().popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
             }
@@ -295,7 +308,7 @@ struct QueteVue: View {
                     .accessibilityAddTraits(cochee ? .isSelected : [])
                     ligneCopiable(id: id, aide: L("quete.copierNom"), action: { copier(ressource.nom, ligne: id) }) {
                         HStack(alignment: .firstTextBaseline, spacing: Jetons.espace1) {
-                            // Le nom d'abord : à l'étroit, c'est la catégorie qui se tronque.
+                            // Le nom d'abord : à l'étroit, c'est la catégorie qui s'efface, jamais rognée.
                             Text(L("quete.ressource", ressource.nom, ressource.quantite))
                                 .font(metriques.texte.font)
                                 .foregroundStyle(cochee ? Color.jeton(\.encre2) : Color.jeton(\.encre))
@@ -304,7 +317,10 @@ struct QueteVue: View {
                             IconeCopie(icone: nil, copie: copie.affiche(id))
                                 .font(metriques.detail.font)
                                 .accessibilityHidden(true)
-                            detail(ressource.categorie, monospace: false)
+                            ViewThatFits(in: .horizontal) {
+                                detail(ressource.categorie, monospace: false)
+                                Color.clear.frame(width: 0, height: 0)
+                            }
                         }
                     }
                     deplier(.objet(ressource.objet))

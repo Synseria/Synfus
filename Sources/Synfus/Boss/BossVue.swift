@@ -20,9 +20,9 @@ struct BossVue: View {
     @StateObject private var copie = SignalCopie()
 
     var body: some View {
-        // L'en-tête sur le verre, le contenu sur une plaque pleine.
-        VStack(alignment: .leading, spacing: Jetons.espace1) {
+        CadrePanneau {
             entete
+        } corps: {
             VStack(alignment: .leading, spacing: Jetons.espace2) {
                 if let fiche = aide.fiches[prefs.bossChoisi.monstre] { FicheCombatVue(fiche: fiche) }
                 switch prefs.bossChoisi.special {
@@ -39,14 +39,8 @@ struct BossVue: View {
             }
             .padding(.vertical, Jetons.espace2)
             .padding(.horizontal, Jetons.espace2)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .plaquePleine()
         }
-        .padding([.horizontal, .bottom], Jetons.espace2)
-        .padding(.top, Jetons.espace1)
         .frame(width: Self.largeur, alignment: .leading)
-        .font(Jetons.typoMeta.font)
-        .surfaceFlottante()
         // L'autorisation donnée, la lecture démarre sans attendre un
         // changement d'app.
         .onChange(of: previews.authorized) { BossPanel.shared.revoirVisibilite(force: false) }

@@ -498,7 +498,7 @@ struct PreferencesTests {
      "paletteHotKey":{"keyCode":47,"modifiers":256},"paletteRecents":["/zaap 5,7"],"paletteTri":"type",
      "paletteFrequentation":{"lieu:2738":{"dernier":12,"fois":3}},"quetesEpinglees":[18,42],"quetesEtape":{"18":2},
      "quetesValides":{"18":[102,104]},"quetesMasquerObjets":true,
-     "quetesCompact":false,"quetesConsigne":false,"quetesVignettes":true,
+     "quetesCompact":false,"quetesHauteurDepliee":312,"quetesConsigne":false,"quetesVignettes":true,
      "quetesEnCours":{"18":104},"quetesCocherSuivi":false,"quetesDecoches":{"18":[103]},"quetesCochesLues":{"18":[104]},"quetesRessourcesCochees":{"18":[1747]},
      "equipes":[{"membres":["Aeryn"]},{"membres":["Nova"]}],
      "hotKeys":[{"keyCode":18,"modifiers":256},null,{"keyCode":20,"modifiers":2048},null,null,null,null,null,null,null],
@@ -592,6 +592,7 @@ struct PreferencesTests {
         #expect(prefs.quetesValides == ["18": [102, 104]])
         #expect(prefs.quetesMasquerObjets == true)
         #expect(prefs.quetesCompact == false)
+        #expect(prefs.quetesHauteurDepliee == 312)
         #expect(prefs.quetesConsigne == false)
         #expect(prefs.quetesVignettes == true)
         #expect(prefs.quetesEnCours == ["18": 104])
@@ -674,6 +675,7 @@ struct PreferencesTests {
         prefs.quetesValides = ["18": [102, 104]]
         prefs.quetesMasquerObjets = true
         prefs.quetesCompact = false
+        prefs.quetesHauteurDepliee = 312
         prefs.quetesConsigne = false
         prefs.quetesVignettes = true
         prefs.quetesEnCours = ["18": 104]

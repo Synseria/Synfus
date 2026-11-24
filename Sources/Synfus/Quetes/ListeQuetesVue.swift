@@ -29,21 +29,10 @@ struct ListeQuetesVue: View {
                 if store.quetes == nil, store.chargement {
                     note(L("palette.quetes.chargement"))
                 } else if store.quetes == nil, store.echec != nil {
-                    EtatVide(L("quete.indisponible"), symbole: "exclamationmark.circle", ton: .danger) {
-                        Button { QuetePanel.faire(.reessayer) } label: { Label(L("commun.reessayer"), systemImage: "arrow.clockwise") }
-                    }
-                    .frame(height: Jetons.hauteurRangee * 4 + Jetons.espace4)
+                    note(L("quete.indisponible"))
+                    geste(.reessayer)
                 } else {
-                    let toutes = panneau.liste()
-                    let sansQuete = !toutes.contains(where: \.estUneQuete)
-                    // L'état vide dit déjà « Aucune quête » : la ligne de la liste ne le répète pas.
-                    let elements = sansQuete ? toutes.filter { $0 != .message(L("quete.menu.aucune")) } : toutes
-                    if sansQuete {
-                        EtatVide(L("quete.aucune"), symbole: BoutonBarre.quetes.symbole) {
-                            Button { QuetePanel.chercher() } label: { Label(L("quete.chercher"), systemImage: "magnifyingglass") }
-                        }
-                        .frame(height: Jetons.hauteurRangee * 4 + Jetons.espace4)
-                    }
+                    let elements = panneau.liste()
                     // « Ici » est la dernière section : repliée, seul son en-tête se montre.
                     let rangIci = elements.firstIndex { if case .iciEnTete = $0 { return true } else { return false } }
                     ForEach(Array(elements.enumerated()), id: \.offset) { rang, element in
@@ -76,6 +65,8 @@ struct ListeQuetesVue: View {
                 quete(nom, marque: montree ? "circle.fill" : nil, detail: etape(id), forte: montree) { panneau.montrer(id) }
                 BoutonEnTete(icone: "xmark", aide: L("quete.desepingler"), discret: true) { panneau.desepingler(id) }
             }
+        case .chercher:
+            quete(L("quete.chercher"), marque: "magnifyingglass", detail: nil) { QuetePanel.chercher() }
         case .ici(let id, let titre):
             HStack(spacing: 0) {
                 quete(titre, marque: "exclamationmark.bubble", detail: nil) { panneau.ouvrir(id) }
@@ -192,15 +183,5 @@ struct ListeQuetesVue: View {
         Button(geste.titre) { QuetePanel.faire(geste) }
             .buttonStyle(BoutonBorde())
             .padding(.horizontal, metriques.ligneHorizontale)
-    }
-}
-
-private extension MenuQuetes.Element {
-    /// Une quête de la liste (du panneau, d'ici ou du suivi) : sans aucune, la liste est un état vide.
-    var estUneQuete: Bool {
-        switch self {
-        case .epinglee, .ici, .reconnue: true
-        default: false
-        }
     }
 }
