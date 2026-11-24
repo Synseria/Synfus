@@ -20,7 +20,8 @@ extensions `+PremierPlan`, `+Effectif`, `+Focus`, `+Fermeture`.
   `TitreDeFenetreTests`). Un client au login (titre « Dofus » seul) n'est pas un perso :
   l'inclure décalerait les slots, donc les raccourcis.
 - L'icône du Dock ne distingue rien : tous les clients partagent `Dofus.app`. Un processus
-  Dofus se reconnaît par `DofusProcesses` (`AccessibilityReader.swift`).
+  Dofus se reconnaît par `DofusProcesses` (`AccessibilityReader.swift`) : bundle ID **et**
+  signature Developer ID d'Ankama (`SignatureAnkama`, équipe `L4YZ8TZY95`, verdict gardé par pid).
 - Identité : `slotKey` = `"<pid>#<index de fenêtre>"`. Tri selon `Preferences.characterOrder`
   (des noms) ; un perso absent est sauté, les slots restent stables. `resort()` retrie sans
   inventaire, avec le même comparateur (`ClientOrderTests`).
