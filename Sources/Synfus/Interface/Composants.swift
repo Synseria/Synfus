@@ -126,6 +126,8 @@ struct StyleEtat: ButtonStyle {
                 // Une puce nue désactivée n'a pas de tuile : l'encre tertiaire suffit.
                 .fondEtat(style.nue && etat == .desactive ? .repos : etat, rayon: style.rayon)
                 .onHover { survole = $0 }
+                // Ce qui se clique le montre, comme les boutons de la trousse.
+                .curseurDeClic(actif)
         }
     }
 }

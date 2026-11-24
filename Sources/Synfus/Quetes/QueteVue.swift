@@ -137,27 +137,42 @@ struct QueteVue: View {
                     .font(Jetons.typoMicro.font).foregroundStyle(Color.jeton(\.encre2))
                     .help(L("quete.liste.retour"))
             }
-            let ici = ficheImposee == nil && enFiche ? (QuetePanel.shared.ici()?.aEpingler(prefs.quetesEpinglees).count ?? 0) : 0
-            if ici > 0 {
-                Image(systemName: "exclamationmark.bubble")
-                    .font(Jetons.typoMeta.font)
-                    .foregroundStyle(Color.jeton(\.accentTexte))
-                    .help(L("quete.ici.aide", nombre: ici, ici))
-            }
-            if nouvelles > 0, ficheImposee == nil, enFiche {
-                Text("\(nouvelles)")
-                    .font(Jetons.typoMicro.font)
-                    .foregroundStyle(Color.jeton(\.texteSurAccent))
-                    .padding(.horizontal, Jetons.espace1)
-                    .background(Capsule().fill(Color.jeton(\.accent)))
-                    .help(L("quete.menu.nouvelles"))
+            if ficheImposee == nil, enFiche {
+                let ici = QuetePanel.shared.ici()?.aEpingler(prefs.quetesEpinglees).count ?? 0
+                aAjouter(suivi: nouvelles, ici: ici)
             }
         }
         .padding(.horizontal, Jetons.espace1)
         .padding(.vertical, Jetons.espace1)
     }
 
-    // MARK: - En-tête
+    /// Une seule pastille pour ce que la liste propose d'ajouter — quêtes du suivi et quêtes qui
+    /// commencent sur la case —, le détail au survol. « +3 » ; en compact, un point.
+    @ViewBuilder
+    private func aAjouter(suivi: Int, ici: Int) -> some View {
+        let total = suivi + ici
+        if total > 0 {
+            let aide = [suivi > 0 ? L("quete.menu.nouvelles", nombre: suivi, suivi) : nil,
+                        ici > 0 ? L("quete.ici.aide", nombre: ici, ici) : nil]
+                .compactMap { $0 }.joined(separator: "\n")
+            Group {
+                if prefs.quetesCompact {
+                    Circle().fill(Color.jeton(\.accent)).frame(width: 6, height: 6)
+                } else {
+                    Text(L("quete.aAjouter", total))
+                        .font(Jetons.typoMicro.font.monospacedDigit())
+                        .foregroundStyle(Color.jeton(\.texteSurAccent))
+                        .padding(.horizontal, Jetons.espace1)
+                        .background(Capsule().fill(Color.jeton(\.accent)))
+                }
+            }
+            .fixedSize()
+            .help(aide)
+            .accessibilityElement()
+            .accessibilityLabel(aide)
+        }
+    }
+
     // MARK: - En-tête
 
     /// Ce que la quête exige, et le geste qui la retire une fois finie ; rien le plus souvent.

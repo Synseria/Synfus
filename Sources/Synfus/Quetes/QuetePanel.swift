@@ -215,7 +215,7 @@ extension QuetePanel {
         let store = QuetesStore.shared
         return MenuQuetes.liste(
             epinglees: Preferences.shared.quetesEpinglees, montree: idMontre, reconnues: lecture.reconnues,
-            etat: lecture.etat, coches: lecture.cochesLues, ici: ici(),
+            etat: lecture.etat, ici: ici(),
             autorise: WindowPreviewService.shared.authorized, nom: { store.nom($0) ?? "…" })
     }
 
@@ -240,7 +240,7 @@ extension QuetePanel {
             menu.addItem(CibleMenu.shared.element(L("panneau.fermer"), raccourci: prefs.quetesHotKey) { QuetePanel.shared.fermer() })
         case .separateur:
             menu.addItem(.separator())
-        case .titre, .epinglee, .ici, .iciEnTete, .toutEpingler, .lireSuivi, .reconnue, .message, .geste:
+        case .titre, .epinglee, .ici, .iciEnTete, .lireSuivi, .reconnue, .message, .geste:
             break
         }
     }
