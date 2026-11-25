@@ -92,13 +92,7 @@ struct FicheDonjonVue: View {
     }
 
     private func ligne(_ monstre: DetailDonjon.Monstre) -> some View {
-        VStack(alignment: .leading, spacing: Jetons.espace1) {
-            HStack(spacing: Jetons.espace1) {
-                Image(systemName: "crown").foregroundStyle(Color.jeton(\.accentTexte))
-                Text(Lieu.traduit(monstre.noms, langue) ?? "?").font(Jetons.typoMicro.font)
-            }
-            FicheCombatVue(fiche: monstre.fiche)
-        }
+        FicheCombatVue(fiche: monstre.fiche, nom: Lieu.traduit(monstre.noms, langue) ?? "?")
     }
 }
 

@@ -5,9 +5,10 @@ import SwiftUI
 /// le boss choisi au titre (un clic en change), sa fiche, sa mécanique, puis
 /// rappels et conseils, qui défilent chez eux (`SectionBoss`).
 struct BossVue: View {
-    static let largeur = Jetons.largeurPanneauBoss
+    /// La largeur du SDS plus la place du bouton de pliage, sans quoi « Comte Harebourg » se coupait.
+    static let largeur = Jetons.largeurPanneauBoss + Jetons.hauteurCase + Jetons.espace1
     /// Pas plus étroit que la ligne des résistances, assez large pour lire les conseils d'une traite.
-    static let largeurs: ClosedRange<CGFloat> = Jetons.largeurPanneauBoss...520
+    static let largeurs: ClosedRange<CGFloat> = largeur...520
 
     @ObservedObject private var aide = AideBoss.shared
     @ObservedObject private var lecteur = LecteurEcran.shared
