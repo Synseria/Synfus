@@ -176,6 +176,8 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
     /// Ce qu'une étiquette ou un favori désigne (`Zaap.cle`, `Lieu.cle`) ;
     /// `nil` pour ce qui ne s'étiquette pas.
     var cle: String?
+    /// ⌘E et ⌘D ont prise sur elle : le pied, le menu et les gestes en décident ici seulement.
+    var etiquetable: Bool { cle != nil }
     /// La carte du jeu de l'entrée, dont la liste montre la vue.
     var carte: Int?
     /// Le pictogramme d'un lieu (`Lieu.gfx`), à la place du symbole.

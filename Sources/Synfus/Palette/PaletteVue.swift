@@ -292,7 +292,7 @@ struct PaletteVue: View {
 
     @ViewBuilder
     private func menu(_ entree: EntreePalette) -> some View {
-        if entree.cle != nil {
+        if entree.etiquetable {
             Button(entree.favori ? L("palette.favori.retirer") : L("palette.favori.ajouter")) {
                 modele.basculerFavori(entree)
             }
@@ -343,7 +343,7 @@ struct PaletteVue: View {
                             .truncationMode(.middle)
                             .help(texte)
                     }
-                    if !modele.surAlmanax {
+                    if modele.selectionEtiquetable {
                         aide("⌘E", L("palette.touche.etiquette"))
                             .layoutPriority(1)
                         aide("⌘D", L("palette.touche.favori"))
