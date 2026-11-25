@@ -14,6 +14,8 @@ struct PaletteVue: View {
     private enum Champ { case recherche, etiquette }
 
     /// Trois rangées de cartes entières et la moitié d'une quatrième : la grille dit qu'elle défile.
+    /// Le retrait de ce qui se déplie sous une ligne : sous son titre, après son icône.
+    static let retraitSousTitre = Jetons.espace7
     static let hauteurCartes = 3.5 * CarteZaap<Never>.hauteur() + 3 * Jetons.espace2
 
     var body: some View {
@@ -289,6 +291,7 @@ struct PaletteVue: View {
                     .accessibilityAddTraits(.isButton)
                     .contextMenu { menu(entree) }
                 if deplie {
+                    let estUnDonjon = if case .donjon = entree.effet { true } else { false }
                     Group {
                         switch entree.effet {
                         case .ouTrouver(let sujet): OuTrouverVue(sujet: sujet, metriques: .confort, nom: entree.titre)
@@ -297,7 +300,10 @@ struct PaletteVue: View {
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.leading, Jetons.espace7)
+                    // Les onglets d'un donjon prennent toute la largeur de sa ligne (la fiche retire
+                    // elle-même son contenu sous le titre) ; le reste se retire sous le titre.
+                    .padding(.leading, estUnDonjon ? Jetons.espace2 : PaletteVue.retraitSousTitre)
+                    .padding(.trailing, estUnDonjon ? Jetons.espace2 : 0)
                     .padding(.bottom, Jetons.espace1)
                 }
             }
