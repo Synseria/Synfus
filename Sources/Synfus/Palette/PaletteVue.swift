@@ -504,6 +504,7 @@ struct CarteZaap<Corps: View>: View {
                     .opacity(survole ? 1 : 0)
                     .allowsHitTesting(survole)
             }
+            if let compte = entree.compte { EtiquetteFilet(texte: compte, taille: Jetons.typoMicro, surImage: surImage) }
             Text(entree.detail ?? "")
                 .font(Jetons.typoCode.font)
                 .foregroundStyle(encre(\.encre2))
@@ -521,13 +522,13 @@ extension CarteZaap where Corps == Never {
 }
 
 /// Ce qu'une grille de cartes montre, pour que toutes ses cartes aient la même hauteur : le pied dès
-/// qu'une carte a de quoi l'emplir (étiquette, intérieur, coordonnées) — une grille de quêtes n'en a
+/// qu'une carte a de quoi l'emplir (étiquette, intérieur, compte, coordonnées) — une grille de quêtes n'en a
 /// pas et s'en passe.
 struct DispositionCartes: Equatable {
     var avecPied = true
 
     static func de(_ entrees: [EntreePalette]) -> DispositionCartes {
-        DispositionCartes(avecPied: entrees.contains { $0.etiquette != nil || $0.interieur || $0.detail != nil })
+        DispositionCartes(avecPied: entrees.contains { $0.etiquette != nil || $0.interieur || $0.detail != nil || $0.compte != nil })
     }
 }
 
@@ -581,6 +582,7 @@ struct LigneResultat: View {
                 }
             }
             Spacer(minLength: Jetons.espace2)
+            if let compte = entree.compte { EtiquetteFilet(texte: compte, taille: Jetons.typoMeta) }
             if let detail = entree.detail {
                 Text(detail)
                     .font(Jetons.typoMeta.font.monospaced())
@@ -642,12 +644,25 @@ struct EtiquetteInterieur: View {
     var surImage = false
 
     var body: some View {
-        Text(L("carte.interieur"))
+        EtiquetteFilet(texte: L("carte.interieur"), taille: taille, surImage: surImage)
+            .help(L("carte.interieur.aide"))
+    }
+}
+
+/// Un mot qui renseigne sans se copier (« intérieur », « 3 positions ») : la police du texte, une
+/// pastille au filet fin. Les coordonnées, elles, gardent la chasse fixe.
+struct EtiquetteFilet: View {
+    let texte: String
+    let taille: Jetons.Typo
+    var surImage = false
+
+    var body: some View {
+        Text(texte)
             .font(taille.font)
             .foregroundStyle(Color.jeton(\.encre2, surImage: surImage))
             .padding(.horizontal, Jetons.espace1)
             .overlay(Capsule().strokeBorder(Color.jeton(\.filet, surImage: surImage), lineWidth: Jetons.epaisseurFilet))
             .lineLimit(1)
-            .help(L("carte.interieur.aide"))
+            .fixedSize()
     }
 }

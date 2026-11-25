@@ -48,7 +48,7 @@ struct RecherchePaletteTests {
         #expect(favoris.compactMap(\.distance) == favoris.compactMap(\.distance).sorted())
         // Le PNJ n'y paraît qu'une fois, avec son étiquette et le nombre de ses positions.
         let amayiro = try #require(favoris.first { $0.genre == .pnj })
-        #expect(amayiro.detail == L("palette.pnj.positions", nombre: 2, 2) && amayiro.etiquette == "Ama")
+        #expect(amayiro.compte == L("palette.pnj.positions", nombre: 2, 2) && amayiro.detail == nil && amayiro.etiquette == "Ama")
         #expect(entrees.dropFirst(favoris.count).allSatisfy { $0.genre == .zaap && !$0.favori })
         // Chercher son nom le trouve une fois, étoilé.
         #expect(RecherchePalette.entrees("amayiro", avecQuetes).filter(\.favori).count == 1)
@@ -70,10 +70,10 @@ struct RecherchePaletteTests {
         #expect(pnjs.map(\.titre) == ["Voyageur", "Sédentaire"] && pnjs.map(\.cle) == ["pnj:1", "pnj:2"])
         let (voyageur, sedentaire) = (pnjs[0], pnjs[1])
         // Plusieurs positions : ni coordonnées, ni trajet, ni vignette — aucun ne vaudrait pour toutes.
-        #expect(voyageur.detail == L("palette.pnj.positions", nombre: 3, 3) && voyageur.pnj == 1)
+        #expect(voyageur.compte == L("palette.pnj.positions", nombre: 3, 3) && voyageur.detail == nil && voyageur.pnj == 1)
         #expect(voyageur.itineraire == nil && voyageur.carte == nil && voyageur.effet == .positions(1))
         // Une seule : la ligne d'avant, qui copie.
-        #expect(sedentaire.detail == Coordonnees.texte(-2, 6) && sedentaire.carte == 7)
+        #expect(sedentaire.detail == Coordonnees.texte(-2, 6) && sedentaire.compte == nil && sedentaire.carte == 7)
         #expect(sedentaire.effet != .positions(2) && sedentaire.pnj == 2)
         // Le rang suit la position la plus proche (-2,1), pas l'habituelle, lointaine.
         let proche = try #require(voyageur.distance)
