@@ -848,6 +848,7 @@
   "rangement.toutPleinEcran": "All in full screen",
   "rangement.toutSortirPleinEcran": "All out of full screen",
   "recette.epingler": "Pin",
+  "recette.ingredient": "%lld × %@",
   "recette.quantite": "× %lld",
   "recette.titre": "Recipe",
   "reglages.aides": "Helpers",

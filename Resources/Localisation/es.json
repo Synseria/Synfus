@@ -848,6 +848,7 @@
   "rangement.toutPleinEcran": "Todo a pantalla completa",
   "rangement.toutSortirPleinEcran": "Todo fuera de pantalla completa",
   "recette.epingler": "Fijar",
+  "recette.ingredient": "%lld × %@",
   "recette.quantite": "× %lld",
   "recette.titre": "Receta",
   "reglages.aides": "Ayudas",
