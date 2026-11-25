@@ -69,8 +69,9 @@ extension View {
 }
 
 extension Color {
-    /// Le filet de ce qui est posé sur le verre (plaque, bandeau d'un panneau) : purement esthétique,
-    /// aucun texte n'y est posé, il est donc à la seule opacité `opaciteFilet` du SDS.
+    /// Le filet des surfaces — bordures et séparations des fenêtres, plaques, panneaux, infobulles — à
+    /// l'opacité `opaciteFilet` du SDS, la même partout : purement esthétique, aucun texte n'y est posé.
+    /// Un trait qui porte un sens (séparateur de la barre, contour d'un contrôle) garde le filet plein.
     @MainActor static var traitSurVerre: Color { Color.jeton(\.filet).opacity(Jetons.opaciteFilet) }
 }
 
