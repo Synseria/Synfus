@@ -125,8 +125,8 @@ extension RecherchePalette {
                 titre: lieu.flatMap { Lieu.traduit($0.noms, contexte.langue) } ?? coordonnees,
                 sousTitre: lieu.flatMap { Lieu.traduit($0.zone, contexte.langue) },
                 etiquette: candidat.rang == habituelle ? L("palette.pnj.habituelle") : nil,
-                detail: coordonnees, itineraire: itineraire(trajets[candidat.rang].trajet, contexte.langue),
-                carte: passage.carte, interieur: contexte.interieurs.contient(passage.carte),
+                detail: coordonnees, itineraire: trajets[candidat.rang].itineraire(contexte.langue),
+                carte: passage.carte, interieur: contexte.interieurs.contient(passage.carte), ici: trajets[candidat.rang].ici,
                 effet: trajets[candidat.rang].effet)
             return PositionPNJ(position: position, entree: entree,
                                quetes: passage.quetes.compactMap { noms[$0] }

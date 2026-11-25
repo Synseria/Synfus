@@ -410,6 +410,20 @@ struct RecherchePaletteTests {
         #expect(!champs.nomRepond(["bonta"]))
     }
 
+    @Test("Sur la case du perso : la ligne le dit par un repère, le trajet se tait ; ailleurs, rien")
+    func ici() throws {
+        let village = try #require(RecherchePalette.entrees("/travel village d'amakna", contexte()).first { $0.detail == Coordonnees.texte(-2, 0) })
+        #expect(village.ici && village.itineraire == nil)
+        let loin = try #require(RecherchePalette.entrees("/travel", contexte()).first { $0.detail != Coordonnees.texte(-2, 0) })
+        #expect(!loin.ici)
+        #expect(RecherchePalette.zaaps(contexte()).filter(\.ici).map(\.detail) == [Coordonnees.texte(-2, 0)])
+        // Hors du Monde des Douze, sans trajet : le repère seul le dit.
+        let nidas = RecherchePalette.entrees("nidas", try ContexteNidas.contexte())
+        #expect(nidas.first { $0.titre == "Léonard" }?.ici == true)
+        #expect(nidas.first { $0.titre == "Richard le Trésorier" }?.ici == false)
+        #expect(nidas.first(where: \.estBoss)?.ici == true)
+    }
+
     @Test("Les premiers d'une liste : ceux du tri complet, ex aequo dans leur ordre d'arrivée")
     func premiers() {
         var generateur = SystemRandomNumberGenerator()

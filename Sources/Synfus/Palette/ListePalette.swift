@@ -60,5 +60,6 @@ private extension EntreePalette {
         distance = distance ?? donjon.distance
         itineraire = itineraire ?? donjon.itineraire
         interieur = interieur || donjon.interieur
+        ici = ici || donjon.ici
     }
 }

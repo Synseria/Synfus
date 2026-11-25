@@ -227,6 +227,8 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
     var classe: String?
     /// Le raccourci du geste de la ligne, dit au bout de la ligne.
     var touche: String?
+    /// Sur la case du perso devant : un repère devant ses coordonnées.
+    var ici = false
     let effet: Effet
 
     /// Un donjon de la carte, ou l'un de ses boss : la fiche qu'ils ouvrent est la même.
@@ -386,7 +388,8 @@ enum RecherchePalette {
                 sousTitre: zaap.zone(en: contexte.langue), etiquette: contexte.etiquettes[zaap.cle],
                 detail: Coordonnees.texte(zaap.x, zaap.y), favori: contexte.favoris.contains(zaap.cle),
                 distance: CatalogueZaaps.distance(de: zaap, depuis: contexte.position), cle: zaap.cle,
-                carte: zaap.idCarte, effet: .copier(ItineraireZaap.zaap(zaap)))
+                carte: zaap.idCarte, ici: estIci((zaap.x, zaap.y), sousZone: contexte.reseau.sousZone(du: zaap), contexte),
+                effet: .copier(ItineraireZaap.zaap(zaap)))
         }
     }
 
@@ -400,8 +403,8 @@ enum RecherchePalette {
                 id: "travel:" + zaap.cle, genre: .lieu, titre: L("palette.zaap", zaap.nom(en: contexte.langue)),
                 sousTitre: zaap.zone(en: contexte.langue), etiquette: contexte.etiquettes[zaap.cle],
                 detail: Coordonnees.texte(zaap.x, zaap.y), favori: contexte.favoris.contains(zaap.cle),
-                distance: vers.distance, itineraire: itineraire(vers.trajet, contexte.langue), cle: zaap.cle,
-                carte: zaap.idCarte, effet: vers.effet)
+                distance: vers.distance, itineraire: vers.itineraire(contexte.langue), cle: zaap.cle,
+                carte: zaap.idCarte, ici: vers.ici, effet: vers.effet)
         }
     }
 
@@ -434,9 +437,10 @@ enum RecherchePalette {
                 id: lieu.cle, genre: .lieu, titre: lieu.nom(en: contexte.langue), sousTitre: lieuDit,
                 etiquette: contexte.etiquettes[lieu.cle], detail: Coordonnees.texte(lieu.x, lieu.y),
                 favori: contexte.favoris.contains(lieu.cle), distance: vers.distance,
-                itineraire: itineraire(vers.trajet, contexte.langue), categorie: lieu.categorie, cle: lieu.cle,
+                itineraire: vers.itineraire(contexte.langue), categorie: lieu.categorie, cle: lieu.cle,
                 carte: lieu.idCarte, pictogramme: lieu.gfx,
-                interieur: contexte.interieurs.contient(lieu.idCarte), effet: donjon.map { .donjon($0.id) } ?? vers.effet)
+                interieur: contexte.interieurs.contient(lieu.idCarte), ici: vers.ici,
+                effet: donjon.map { .donjon($0.id) } ?? vers.effet)
         }
     }
 
@@ -585,8 +589,9 @@ enum RecherchePalette {
                                  etiquette: etiquette,
                                  detail: Coordonnees.texte(habituel.position.x, habituel.position.y),
                                  favori: favori, distance: vers.distance,
-                                 itineraire: itineraire(vers.trajet, contexte.langue), cle: cle, carte: habituel.carte,
-                                 interieur: contexte.interieurs.contient(habituel.carte), pnj: pnj.id, effet: vers.effet)
+                                 itineraire: vers.itineraire(contexte.langue), cle: cle, carte: habituel.carte,
+                                 interieur: contexte.interieurs.contient(habituel.carte), pnj: pnj.id, ici: vers.ici,
+                                 effet: vers.effet)
         }
     }
 
@@ -600,7 +605,7 @@ enum RecherchePalette {
 
     /// Ce qu'une entrée qui mène à ce passage de PNJ montre et fait.
     static func versCase(_ passage: PNJ.Passage, _ contexte: ContextePalette)
-        -> (trajet: ItineraireZaap.Trajet?, distance: Int?, effet: EntreePalette.Effet) {
+        -> VersCase {
         versCase((passage.position.x, passage.position.y), sousZone: passage.sousZone,
                  dansLesDouze: passage.dansLesDouze(contexte.reseau), contexte)
     }
@@ -640,13 +645,14 @@ enum RecherchePalette {
         let vers = versCase(cible, sousZone: nil, dansLesDouze: true, contexte)
         return EntreePalette(id: "case:\(cible.x),\(cible.y)", genre: .lieu,
                              titre: L("palette.allerEn", Coordonnees.texte(cible.x, cible.y)),
-                             distance: vers.distance, itineraire: itineraire(vers.trajet, contexte.langue), effet: vers.effet)
+                             distance: vers.distance, itineraire: vers.itineraire(contexte.langue), ici: vers.ici,
+                             effet: vers.effet)
     }
 
     /// Ce qu'une entrée vers ce lieu montre et fait : sa ligne, et l'entrée
     /// d'un donjon dans sa fiche.
     static func versLieu(_ lieu: Lieu, _ contexte: ContextePalette)
-        -> (trajet: ItineraireZaap.Trajet?, distance: Int?, effet: EntreePalette.Effet) {
+        -> VersCase {
         versCase((lieu.x, lieu.y), sousZone: lieu.idSousZone, dansLesDouze: !contexte.reseau.horsDesDouze(lieu.idSousZone),
                  contexte)
     }
@@ -657,11 +663,29 @@ enum RecherchePalette {
     /// coordonnées recoupent celles d'Amakna, un zaap d'Amakna y mènerait à tort.
     private static func versCase(_ cible: (x: Int, y: Int), sousZone: Int?, dansLesDouze: Bool,
                                  _ contexte: ContextePalette)
-        -> (trajet: ItineraireZaap.Trajet?, distance: Int?, effet: EntreePalette.Effet) {
-        guard dansLesDouze else { return (nil, nil, .copier(ItineraireZaap.travel(vers: cible))) }
-        return (trajetVers(cible, sousZone: sousZone, contexte),
-                ItineraireZaap.aPied(depuis: contexte.position, vers: cible, dansLesDouze: true),
-                .trajet(x: cible.x, y: cible.y, sousZone: sousZone))
+        -> VersCase {
+        let ici = estIci(cible, sousZone: sousZone, contexte)
+        guard dansLesDouze else { return VersCase(trajet: nil, distance: nil, effet: .copier(ItineraireZaap.travel(vers: cible)), ici: ici) }
+        return VersCase(trajet: trajetVers(cible, sousZone: sousZone, contexte),
+                        distance: ItineraireZaap.aPied(depuis: contexte.position, vers: cible, dansLesDouze: true),
+                        effet: .trajet(x: cible.x, y: cible.y, sousZone: sousZone), ici: ici)
+    }
+
+    /// La case est celle du perso devant, dans le même monde (`QuetesIci.ici`).
+    static func estIci(_ cible: (x: Int, y: Int), sousZone: Int?, _ contexte: ContextePalette) -> Bool {
+        guard let perso = contexte.position else { return false }
+        return QuetesIci.ici(PNJ.Position(x: cible.x, y: cible.y), sousZone: sousZone, perso: perso, reseau: contexte.reseau)
+    }
+
+    /// Ce qu'une entrée qui mène à une case montre et fait.
+    struct VersCase {
+        let trajet: ItineraireZaap.Trajet?
+        let distance: Int?
+        let effet: EntreePalette.Effet
+        /// La case du perso : le repère de la ligne le dit (`EntreePalette.ici`), le trajet se tait.
+        let ici: Bool
+
+        func itineraire(_ langue: Langue) -> String? { ici ? nil : RecherchePalette.itineraire(trajet, langue) }
     }
 
     static func itineraire(_ trajet: ItineraireZaap.Trajet?, _ langue: Langue) -> String? {
