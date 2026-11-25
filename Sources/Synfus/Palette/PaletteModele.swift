@@ -24,17 +24,14 @@ final class PaletteModele: ObservableObject {
     @Published private(set) var deplie: String? {
         didSet {
             guard deplie != oldValue else { return }
-            carte = nil
+            onglet = nil
             position = nil
-            ouvertes = []
         }
     }
-    /// La carte de la fiche dépliée où est le clavier ; `nil` : sur la ligne.
-    @Published private(set) var carte: ActionFiche?
+    /// L'onglet voulu de la fiche dépliée ; celui qui se montre est `ongletCourant`.
+    @Published private(set) var onglet: OngletFiche?
     /// La position du PNJ déplié où est le clavier ; `nil` : sur la ligne.
     @Published private(set) var position: PNJ.Position?
-    /// Les cartes de la fiche dépliée ouvertes (clef, monstres, succès).
-    @Published private(set) var ouvertes: Set<ActionFiche> = []
     @Published private(set) var entrees: [EntreePalette] = []
     /// La famille montrée, que Tab fait défiler.
     @Published private(set) var filtre: FiltrePalette = .tout {
@@ -247,29 +244,24 @@ final class PaletteModele: ObservableObject {
     // MARK: - Clavier
 
     /// Flèches : de carte en carte dans la grille, de ligne en ligne sinon —
-    /// en passant par la rangée de cartes de la fiche dépliée.
+    /// en passant par la rangée des positions du PNJ déplié. La fiche d'un
+    /// donjon ne retient pas ↑/↓ : ses onglets sont à ←/→.
     func deplacer(colonne: Int = 0, ligne: Int = 0) {
         if surAlmanax { return deplacerAlmanax(colonne: colonne, ligne: ligne) }
         guard !entrees.isEmpty else { return }
         if !enGrille, surLaFiche {
-            if ligne > 0, carte == nil, position == nil {
-                carte = cartes.premiere
+            if ligne > 0, position == nil {
                 position = cartesPositions.premiere
-                if carte != nil || position != nil { return }
+                if position != nil { return }
             }
             if ligne < 0, position != nil { deplie = nil; return }
-            if ligne < 0, carte != nil { carte = nil; return }
         }
         let pas = colonne + ligne * (enGrille ? Self.colonnes : 1)
         let avant = selection
-        carte = nil
         position = nil
         selection = min(max(selection + pas, 0), entrees.count - 1)
-        // En remontant sur une fiche dépliée, on arrive par ses cartes.
-        if ligne < 0, selection != avant, surLaFiche {
-            carte = cartes.premiere
-            position = cartesPositions.premiere
-        }
+        // En remontant sur un PNJ déplié, on arrive par ses positions.
+        if ligne < 0, selection != avant, surLaFiche { position = cartesPositions.premiere }
     }
 
     /// Une flèche dans la semaine de l'almanax. → au bout d'une ligne déplie « Localiser » ; ← le replie.
@@ -298,8 +290,9 @@ final class PaletteModele: ObservableObject {
         copier(nom)
     }
 
-    /// ← et → hors de la grille : de carte en carte dans la fiche ; ← sur
-    /// une ligne dépliée la replie, → sur celle d'un PNJ la déplie. `false` : la flèche reste au champ.
+    /// ← et → hors de la grille : d'onglet en onglet dans la fiche d'un donjon, de position en position
+    /// sous un PNJ ; ← sur une ligne dépliée la replie, → sur celle d'un PNJ la déplie. `false` : la
+    /// flèche reste au champ.
     func lateral(_ pas: Int) -> Bool {
         guard !enGrille, edition == nil, entrees.indices.contains(selection) else { return false }
         guard surLaFiche else {
@@ -314,8 +307,13 @@ final class PaletteModele: ObservableObject {
             }
             return true
         }
-        if let carte {
-            self.carte = cartes.laterale(carte, pas)
+        let fiche = self.fiche
+        if fiche != .vide {
+            switch fiche.lateral(depuis: onglet, pas) {
+            case .onglet(let suivant): onglet = suivant
+            case .replier: deplie = nil
+            case nil: return false
+            }
             return true
         }
         guard pas < 0 else { return false }
@@ -323,14 +321,14 @@ final class PaletteModele: ObservableObject {
         return true
     }
 
-    /// ↵ : la carte choisie de la fiche ; sur la ligne, la déplie (le clavier
-    /// arrive sur sa première carte, l'entrée d'un donjon) ou la replie.
+    /// ↵ : la position choisie du PNJ déplié, l'action principale de la fiche ouverte d'un donjon (le
+    /// trajet jusqu'à son entrée) ; sinon l'effet de la ligne, qui déplie ou replie la sienne.
     func valider() {
         if edition != nil { return validerEtiquette() }
         if surAlmanax { return copierOffrande(selection) }
         guard entrees.indices.contains(selection) else { return validerVide() }
-        if surLaFiche, let action = cartes.valide(carte) { return agir(action) }
         if surLaFiche, let cible = cartesPositions.valide(position) { return copier(positionDe: cible) }
+        if surLaFiche, let action = fiche.principale { return agir(action) }
         executer(entrees[selection])
     }
 
@@ -428,6 +426,7 @@ final class PaletteModele: ObservableObject {
         }
         guard entrees.indices.contains(selection) else { return nil }
         if entrees[selection].id == deplie {
+            if case .entree(let lieu) = fiche.principale { return trajet(vers: lieu) }
             guard let position = cartesPositions.valide(position) else { return nil }
             return positionsDeplie.first { $0.position == position }.flatMap { RecherchePalette.texte(de: $0.entree.effet, contexte) }
         }
@@ -457,7 +456,7 @@ final class PaletteModele: ObservableObject {
     private func effectuer(_ entree: EntreePalette) {
         if let index = entrees.firstIndex(where: { $0.id == entree.id }) {
             selection = index
-            carte = nil
+            position = nil
         }
         switch entree.effet {
         case .copier, .trajet:
@@ -484,11 +483,10 @@ final class PaletteModele: ObservableObject {
 
     // MARK: - Fiche dépliée
 
-    /// Déplie la fiche de la ligne, le clavier sur sa première carte, ou la replie.
+    /// Déplie la fiche de la ligne, le clavier sur sa première position (un PNJ), ou la replie.
     func deplier(_ entree: EntreePalette) {
         if let index = entrees.firstIndex(where: { $0.id == entree.id }) { selection = index }
         deplie = deplie == entree.id ? nil : entree.id
-        carte = cartes.premiere
         position = cartesPositions.premiere
     }
 
@@ -497,16 +495,23 @@ final class PaletteModele: ObservableObject {
         entrees.indices.contains(selection) && entrees[selection].id == deplie
     }
 
-    /// Les cartes de la fiche dépliée, refaites à chaque lecture : le détail
-    /// du donjon arrive après l'ouverture.
-    var cartes: CartesFiche {
+    /// Les actions et les onglets de la fiche dépliée d'un donjon, refaits à chaque lecture : le détail
+    /// et les conseils arrivent après l'ouverture.
+    var fiche: OngletsFiche {
         guard let deplie, let entree = entrees.first(where: { $0.id == deplie }),
               case .donjon(let id) = entree.effet, let donjon = DonjonsStore.shared.donjons?.donjon(id: id)
         else { return .vide }
+        let store = DonjonsStore.shared
         return .donjon(entree: Self.entree(de: donjon), boss: donjon.boss.map { CibleBoss.boss($0, donjon: donjon.id) },
-                       guide: donjon.nomFrancais,
-                       detail: DonjonsStore.shared.details[id])
+                       guide: donjon.nomFrancais, conseils: !(store.conseils[id]?.isEmpty ?? true),
+                       detail: store.details[id])
     }
+
+    /// L'onglet montré de la fiche dépliée.
+    var ongletCourant: OngletFiche? { fiche.courant(onglet) }
+
+    /// La sélection est sur la ligne d'une fiche à onglets : ←/→ les changent.
+    var surOnglets: Bool { surLaFiche && position == nil && !fiche.onglets.isEmpty }
 
     /// Les cartes de la rangée des positions, dans l'ordre où elles se montrent.
     var cartesPositions: CartesPositions { CartesPositions(positions: positionsDeplie.map(\.position)) }
@@ -525,11 +530,17 @@ final class PaletteModele: ObservableObject {
         return donjon.entree.flatMap(reperes.donjon(carte:)) ?? donjon.nomFrancais.flatMap(reperes.donjon(nom:))
     }
 
-    /// La carte de la fiche dépliée, à la souris : choisie, puis faite.
+    /// Un bouton de la ligne dépliée, à la souris.
     func cliquer(_ action: ActionFiche) {
         if let index = entrees.firstIndex(where: { $0.id == deplie }) { selection = index }
-        carte = action
         agir(action)
+    }
+
+    /// Un onglet de la fiche dépliée, à la souris : le clavier revient sur sa ligne.
+    func choisir(onglet: OngletFiche) {
+        if let index = entrees.firstIndex(where: { $0.id == deplie }) { selection = index }
+        position = nil
+        self.onglet = onglet
     }
 
     /// Une position du PNJ déplié, à la souris : choisie, puis copiée.
@@ -546,8 +557,6 @@ final class PaletteModele: ObservableObject {
         case .aide(let boss):
             BossPanel.shared.ouvrir(boss)
             PalettePanel.shared.fermer()
-        case .clef, .monstres, .succes:
-            if ouvertes.remove(action) == nil { ouvertes.insert(action) }
         }
     }
 
