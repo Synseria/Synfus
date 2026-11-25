@@ -30,8 +30,7 @@ struct FicheCombatVue: View {
                 .foregroundStyle(element.teinte)
             Text(L("combat.fiche.pourcentage", resistance))
                 .font(Jetons.typoTitreCarte.font.monospacedDigit())
-                .foregroundStyle(role == .frapper ? Color.jeton(\.accentTexte)
-                                 : role == .eviter ? Color.jeton(\.encre3) : Color.jeton(\.encre))
+                .foregroundStyle(role.encre)
         }
         .lineLimit(1)
         .padding(.vertical, Jetons.espace1)
@@ -39,7 +38,7 @@ struct FicheCombatVue: View {
         .background {
             if role == .frapper { RoundedRectangle(cornerRadius: Jetons.rayon1).fill(Color.jeton(\.selection)) }
         }
-        .opacity(role == .eviter ? 0.6 : 1)
+        .opacity(role.opacite)
         .help(L("combat.fiche.resistance", Self.nom(element), resistance))
         .accessibilityElement(children: .combine)
     }
@@ -51,12 +50,12 @@ struct FicheCombatVue: View {
         return L("combat.fiche.elements", Self.noms(elements.frapper), Self.noms(elements.eviter))
     }
 
-    private static func noms(_ elements: [FicheCombat.Element]) -> String {
+    static func noms(_ elements: [FicheCombat.Element]) -> String {
         elements.map(nom).joined(separator: ", ")
     }
 
     /// Au survol d'une colonne : la majuscule d'un titre.
-    private static func nom(_ element: FicheCombat.Element) -> String {
+    static func nom(_ element: FicheCombat.Element) -> String {
         let nom: String
         switch element {
         case .neutre: nom = L("element.neutre")
@@ -67,6 +66,19 @@ struct FicheCombatVue: View {
         }
         return nom.prefix(1).uppercased() + nom.dropFirst()
     }
+}
+
+extension FicheCombat.Role {
+    /// L'encre d'une résistance : à frapper à l'accent, à éviter effacée.
+    @MainActor var encre: Color {
+        switch self {
+        case .frapper: Color.jeton(\.accentTexte)
+        case .eviter: Color.jeton(\.encre3)
+        case .neutre: Color.jeton(\.encre)
+        }
+    }
+
+    var opacite: Double { self == .eviter ? 0.6 : 1 }
 }
 
 extension FicheCombat.Element {

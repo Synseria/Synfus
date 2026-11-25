@@ -140,7 +140,7 @@ struct FicheDonjonVue: View {
         case .conseils:
             VStack(alignment: .leading, spacing: Jetons.espace1) { ConseilsVue(conseils: store.conseils[id] ?? []) }
         case .monstres:
-            ForEach(detail?.monstres.filter { !$0.boss } ?? [], id: \.id) { monstre in ligne(monstre) }
+            TableauMonstresVue(monstres: detail?.monstres.filter { !$0.boss } ?? [])
         case .succes:
             SuccesVue(succes: detail?.succes ?? [])
         case .entree, .guide, .aide: EmptyView()
