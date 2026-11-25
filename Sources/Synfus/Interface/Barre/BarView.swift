@@ -29,8 +29,9 @@ struct BarView: View {
     private static let opaciteGlisse = 0.35
     private static let echelleGlisse = 1.06
 
-    /// Repère commun aux cadres des pastilles et au geste de réordonnancement.
-    private static let barSpace = "synfusBar"
+    /// Repère commun aux cadres des pastilles, au geste de réordonnancement et
+    /// aux cadres des boutons pour leurs infobulles.
+    static let barSpace = "synfusBar"
 
     var body: some View {
         VStack(spacing: Jetons.espace1) {
@@ -93,7 +94,7 @@ struct BarView: View {
         .menuIndicator(.hidden)
         .buttonStyle(BoutonBorde())
         .fixedSize()
-        .aide(L("barre.equipe.changer"))
+        .infobulleBarre(nom: L("barre.equipe.changer"), touche: nil)
     }
 
     /// Les cibles du dépôt d'une pastille : « Tous », une case par équipe, et « + » tant qu'on peut en
@@ -158,7 +159,7 @@ struct BarView: View {
         }
         .frame(width: Jetons.espace4, height: Jetons.hauteurControle)
         .overlay(WindowDragArea())
-        .help(L("barre.glisser"))
+        .infobulleBarre(nom: L("barre.glisser"), touche: nil)
     }
 
     /// Trait qui sépare le territoire des persos de celui des modes : sans lui,
@@ -176,6 +177,7 @@ struct BarView: View {
     /// rien ne marche qu'on cherche les réglages.
     private var settingsButton: some View {
         GearButton()
+            .infobulleBarre(nom: L("barre.reglagesAide"), touche: nil)
     }
 
     @ViewBuilder
@@ -216,15 +218,31 @@ struct BarView: View {
 
     @ViewBuilder
     private func vue(de bouton: BoutonBarre) -> some View {
-        switch bouton {
-        case .quetes: quetesButton.contextMenu { MasquerBouton(bouton: bouton) }
-        case .boss: bossButton.contextMenu { MasquerBouton(bouton: bouton) }
-        case .chasse: chasseButton.contextMenu { MasquerBouton(bouton: bouton) }
-        case .almanax: almanaxButton.contextMenu { MasquerBouton(bouton: bouton) }
-        case .rangement: ArrangeMenuButton()
-        case .palette: zaapButton
-        case .passageAuto: autoFocusToggle.contextMenu { MasquerBouton(bouton: bouton) }
+        let parties = partiesInfobulle(bouton)
+        Group {
+            switch bouton {
+            case .quetes: quetesButton.contextMenu { MasquerBouton(bouton: bouton) }
+            case .boss: bossButton.contextMenu { MasquerBouton(bouton: bouton) }
+            case .chasse: chasseButton.contextMenu { MasquerBouton(bouton: bouton) }
+            case .almanax: almanaxButton.contextMenu { MasquerBouton(bouton: bouton) }
+            case .rangement: ArrangeMenuButton()
+            case .palette: zaapButton
+            case .passageAuto: autoFocusToggle.contextMenu { MasquerBouton(bouton: bouton) }
+            }
         }
+        .infobulleBarre(nom: parties.nom, touche: parties.touche)
+    }
+
+    /// Les deux parties de l'infobulle d'un bouton : son nom (son état pour le
+    /// passage automatique), et son raccourci quand il en a un.
+    private func partiesInfobulle(_ bouton: BoutonBarre) -> (nom: String, touche: String?) {
+        let nom: String
+        if bouton == .passageAuto {
+            nom = prefs.passageAuto ? L("barre.passageAuto.actif") : L("barre.passageAuto.inactif")
+        } else {
+            nom = bouton.libelle
+        }
+        return (nom, bouton.raccourci(prefs)?.displayString)
     }
 
     /// La palette : zaaps, lieux, commandes. Elle prend le clavier sans
@@ -347,6 +365,7 @@ struct BarView: View {
                 }
         }
         .buttonStyle(.plain)
+        .curseurDeClic(!closing)
         .disabled(closing)
         // Fermer depuis la barre : le client gèle souvent quand on le quitte
         // par sa propre fenêtre, et il fallait alors « Forcer à quitter » à la
@@ -377,9 +396,6 @@ struct BarView: View {
             }
         }
         .overlay { if invitations.copiesRecentes.contains(client.slotKey) { CopiedBadge() } }
-        .help(tooltip(index: index, client: client))
-        // Un perso sur un autre espace reste cliquable, mais on ne le donne pas
-        // pour présent : sa vignette et son titre datent de sa dernière visite.
         .opacity(dragging == client.name ? Self.opaciteGlisse : 1)
         .scaleEffect(dragging == client.name ? Self.echelleGlisse : 1)
         .background(chipFrameReader(for: client.name))
@@ -585,20 +601,6 @@ struct BarView: View {
     nonisolated static func toucheDuPerso(index: Int, raccourcis: [HotKey?]) -> String {
         if index < raccourcis.count, let raccourci = raccourcis[index] { return raccourci.displayString }
         return "\(index + 1)"
-    }
-
-    private func tooltip(index: Int, client: DofusClient) -> String {
-        var lines = [client.name]
-        if client.dormant {
-            lines.append(L("barre.autreBureau"))
-        }
-        if index < prefs.hotKeys.count, let hotKey = prefs.hotKeys[index] {
-            lines.append(L("barre.raccourci", hotKey.displayString))
-        }
-        if !client.rawTitle.isEmpty, client.rawTitle != client.name {
-            lines.append(L("barre.fenetre", client.rawTitle))
-        }
-        return lines.joined(separator: "\n")
     }
 
     @ViewBuilder

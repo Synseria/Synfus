@@ -27,6 +27,7 @@ struct PositionsPNJVue: View {
                         .frame(width: largeur)
                         .id(Self.ancre(position.position))
                         .onTapGesture { modele.cliquer(position.position) }
+                        .curseurDeClic(true)
                         .help(([position.entree.titre, position.entree.sousTitre, position.entree.itineraire].compactMap(\.self)
                                + position.quetes).joined(separator: "\n"))
                         .accessibilityElement(children: .combine)

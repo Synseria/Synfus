@@ -6,11 +6,14 @@ import SwiftUI
 /// rappels et conseils, qui défilent chez eux (`SectionBoss`).
 struct BossVue: View {
     static let largeur = Jetons.largeurPanneauBoss
+    /// Pas plus étroit que la ligne des résistances, assez large pour lire les conseils d'une traite.
+    static let largeurs: ClosedRange<CGFloat> = Jetons.largeurPanneauBoss...520
 
     @ObservedObject private var aide = AideBoss.shared
     @ObservedObject private var lecteur = LecteurEcran.shared
     @ObservedObject private var previews = WindowPreviewService.shared
     @ObservedObject private var prefs = Preferences.shared
+    @Environment(\.largeurPanneau) private var largeurPanneau
     /// La liste des donjons (nom d'un boss, guide) et leurs conseils arrivent après.
     @ObservedObject private var donjons = DonjonsStore.shared
     @State private var rappels = false
@@ -20,9 +23,10 @@ struct BossVue: View {
     @StateObject private var copie = SignalCopie()
 
     var body: some View {
-        // L'en-tête sur le verre, le contenu sur une plaque pleine.
-        VStack(alignment: .leading, spacing: Jetons.espace1) {
+        // Plié, la lecture et le tour continuent : seul le corps se cache.
+        CadrePanneau(plie: PanneauxJeu.plie(.boss)) {
             entete
+        } corps: {
             VStack(alignment: .leading, spacing: Jetons.espace2) {
                 if let fiche = aide.fiches[prefs.bossChoisi.monstre] { FicheCombatVue(fiche: fiche) }
                 switch prefs.bossChoisi.special {
@@ -39,14 +43,9 @@ struct BossVue: View {
             }
             .padding(.vertical, Jetons.espace2)
             .padding(.horizontal, Jetons.espace2)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .plaquePleine()
         }
-        .padding([.horizontal, .bottom], Jetons.espace2)
-        .padding(.top, Jetons.espace1)
-        .frame(width: Self.largeur, alignment: .leading)
-        .font(Jetons.typoMeta.font)
-        .surfaceFlottante()
+        .frame(width: largeurPanneau ?? Self.largeur, alignment: .leading)
+        .bordsRedimensionnables(.cotes)
         // L'autorisation donnée, la lecture démarre sans attendre un
         // changement d'app.
         .onChange(of: previews.authorized) { BossPanel.shared.revoirVisibilite(force: false) }
@@ -60,8 +59,12 @@ struct BossVue: View {
 
     private var entete: some View {
         EnTetePanneau(icone: BoutonBarre.boss.symbole, teinte: Color.jeton(\.accentTexte), menu: Self.menu) {
+            // Une seule ligne, même long : le nom du boss ne passe pas à la ligne
+            // (le perso suivi à côté a la sienne).
             Text(Self.nom(prefs.bossChoisi, donjons: donjons.donjons, garde: prefs.nomsBossChoisi))
                 .font(Jetons.typoTitreCarte.font)
+                .lineLimit(1)
+                .truncationMode(.tail)
                 .padding(.leading, Jetons.espace1)
             if donjons.enCours, prefs.bossChoisi.special == nil, prefs.nomsBossChoisi == nil {
                 ProgressView().controlSize(.mini).padding(.leading, Jetons.espace1)
@@ -78,6 +81,7 @@ struct BossVue: View {
             if let nom = aide.donjon?.nomFrancais {
                 BoutonEnTete(icone: "book", aide: L("boss.guide")) { Task { await DofusPourLesNoobs.ouvrir(nom) } }
             }
+            BoutonPliage(plie: PanneauxJeu.plie(.boss)) { BossPanel.shared.basculerPliage() }
             BoutonEnTete(icone: "xmark", aide: L("quete.fermer.simple")) { BossPanel.shared.fermer() }
         }
     }
@@ -136,6 +140,7 @@ struct BossVue: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .curseurDeClic(true)
                 .aide(L("boss.rappel.copier"))
             }
         }
@@ -146,13 +151,25 @@ struct BossVue: View {
         copie.signaler(signal)
     }
 
-    /// Les conseils de Dofus pour les noobs pour ce combat.
+    /// Les conseils de Dofus pour les noobs pour ce combat — conseils tactiques,
+    /// stratégie globale et principe : tous se copient d'un clic, un par un ou
+    /// d'un coup par l'icône du titre.
     @ViewBuilder
     private var conseilsVue: some View {
         if let liste = aide.donjon.flatMap({ donjons.conseils[$0.id] }), !liste.isEmpty {
             let depliee = Binding { conseils ?? (prefs.bossChoisi.special == nil) } set: { conseils = $0 }
             SectionBoss(titre: L("donjon.conseils", nombre: liste.count, liste.count), aide: L("donjon.conseils.aide"),
-                        depliee: depliee) {} contenu: {
+                        depliee: depliee) {
+                if depliee.wrappedValue {
+                    Button { copier(liste.map(\.titre).joined(separator: " "), signal: "") } label: {
+                        IconeCopie(icone: "doc.on.doc", copie: copie.affiche(""))
+                            .font(Jetons.typoMeta.font)
+                            .foregroundStyle(Color.jeton(\.encre2))
+                    }
+                    .buttonStyle(BoutonTertiaire())
+                    .aide(L("boss.rappels.copier"))
+                }
+            } contenu: {
                 ConseilsVue(conseils: liste).foregroundStyle(Color.jeton(\.encre2))
             }
         }

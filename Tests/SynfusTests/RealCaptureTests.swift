@@ -48,7 +48,7 @@ struct RealCaptureTests {
         let image = try zoneLue(.positionParDefaut)
         let moteur = MoteurOCR()
         await moteur.prechauffer()
-        guard case .lue(let signature, let lignes, let duree, _) = await moteur.lire(image: image, precedente: nil, mesure: .zone)
+        guard case .lue(let signature, let lignes, let duree, _, _) = await moteur.lire(image: image, precedente: nil, mesure: .zone)
         else { Issue.record("rien lu"); return }
         Sortie.dire("OCR \(Int(duree * 1000)) ms : \(lignes)")
         let position = PositionCarte.lire(lignes)
@@ -65,7 +65,7 @@ struct RealCaptureTests {
         let image = try zoneLue(.combatParDefaut)
         let moteur = MoteurOCR()
         await moteur.prechauffer()
-        guard case .lue(let signature, let lignes, let duree, let bouton) = await moteur.lire(image: image, precedente: nil, mesure: .bouton)
+        guard case .lue(let signature, let lignes, let duree, let bouton, _) = await moteur.lire(image: image, precedente: nil, mesure: .bouton)
         else { Issue.record("rien lu"); return }
         let constat = LectureCombat.classer(lignes: lignes, couleur: bouton ?? signature.couleur ?? 0)
         Sortie.dire("OCR \(Int(duree * 1000)) ms : \(lignes) — zone colorée \(Int((signature.couleur ?? 0) * 100)) %, bouton \(bouton.map { "\(Int($0 * 100)) %" } ?? "—") → \(constat)")
@@ -83,7 +83,7 @@ struct RealCaptureTests {
         let quetes = try #require(QuetesDofusDB.gardees(), "aucune quête gardée : ouvrir une fois la palette de l'app")
         let moteur = MoteurOCR()
         await moteur.prechauffer()
-        guard case .lue(let signature, let lignes, let duree, _) = await moteur.lire(image: image, precedente: nil, mesure: .lignes)
+        guard case .lue(let signature, let lignes, let duree, _, _) = await moteur.lire(image: image, precedente: nil, mesure: .lignes)
         else { Issue.record("rien lu"); return }
         Sortie.dire("OCR \(Int(duree * 1000)) ms : \(lignes) — cadre \(signature.cadre.map { "\($0)" } ?? "—")"
               + "\(signature.auBord ? ", au bord" : ""), \(signature.empreinte.cases.count(where: \.self)) cases allumées")

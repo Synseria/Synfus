@@ -3,6 +3,27 @@
 Une section par version, `## X.Y.Z — AAAA-MM-JJ` : la release GitHub de `vX.Y.Z` en reprend le
 contenu (`Tools/notes-de-version.sh`), et `sh build.sh --publish` refuse une version absente d'ici.
 
+## 0.15.0-rc.2 — 2026-11-22
+
+Préversion : elle ne se propose pas d'elle-même, elle s'installe par son DMG.
+
+### Améliorations
+
+- **Chasse au trésor** : détection des flèches des étapes fiabilisée sur de vraies captures
+  (gabarits à la forme de la flèche du jeu, vrai début du texte estimé quand l'OCR englobe la
+  flèche) ; si la flèche n'est pas lue sûrement, aucune direction n'est posée — on clique sur
+  la boussole, et re-cliquer la débloque. Direction et indice toujours lus sur la même ligne
+  « EN COURS ».
+- **Panneau de chasse** redessiné et compact : départ (x, y) centré en haut — champs nombre
+  bornés à [-100, 100], stepper et roulette de souris —, boussole 3×3 (« Lire » au centre,
+  position actuelle en haut à droite, horloge en bas à gauche, maison en bas à droite). La
+  maison copie le `/zaap` ou `/travel` vers le départ ; l'horloge ouvre l'historique des étapes
+  de la chasse en cours, jalons validés en couleur. Chaque scan est journalisé
+  (`~/Library/Logs/Synfus/chasse.log`) avec sa capture PNG.
+- **Barre** : infobulle en fenêtre dédiée, curseur de clic fiable, onglet Données.
+- **Quêtes** : liste ouverte avec bouton retour, suivi couvert, « Ici » replié en bas compté.
+- **Boss** : schéma déplaçable, conseils copiables, consignes tactiques.
+
 ## 0.15.0-rc.1 — 2026-11-19
 
 Préversion : elle ne se propose pas d'elle-même, elle s'installe par son DMG.

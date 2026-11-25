@@ -261,6 +261,10 @@ final class Preferences: ObservableObject {
     /// cacher trop (`MetriquesQuete`).
     @Published var quetesCompact: Bool = true { didSet { save() } }
 
+    /// Les panneaux posés sur le jeu pliés sur leur en-tête (`PanneauJeu`), avec la hauteur que
+    /// chacun retrouve déplié : le cadre gardé par AppKit est alors celui du panneau plié.
+    @Published var panneauxPlies: [String: Double] = [:] { didSet { save() } }
+
     /// La consigne de l'étape, au-dessus de ses objectifs : souvent redite par
     /// les objectifs eux-mêmes.
     @Published var quetesConsigne: Bool = true { didSet { save() } }
@@ -622,6 +626,7 @@ final class Preferences: ObservableObject {
         .facultatif("quetesValides", \.quetesValides),
         .facultatif("quetesMasquerObjets", \.quetesMasquerObjets),
         .facultatif("quetesCompact", \.quetesCompact),
+        .facultatif("panneauxPlies", \.panneauxPlies),
         .facultatif("quetesConsigne", \.quetesConsigne),
         .facultatif("quetesVignettes", \.quetesVignettes),
         .facultatif("quetesEnCours", \.quetesEnCours),

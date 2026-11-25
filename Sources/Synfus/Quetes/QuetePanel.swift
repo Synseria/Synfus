@@ -1,21 +1,6 @@
 import AppKit
 import SwiftUI
 
-/// Sans bordure ni barre de titre : une barre de titre, même transparente,
-/// garde pour elle les clics de la première ligne et zoome au double-clic.
-/// Jamais clé (un clic ne retire pas la frappe à Dofus), jamais zoomé : on
-/// le déplace par son en-tête (`WindowDragArea`) et on l'agrandit par ses
-/// bords et ses coins du bas (`PoigneeRedimension`). Pas `.resizable` : les
-/// bords du système, invisibles et sans curseur pour une app inactive,
-/// chevaucheraient nos poignées et le haut de l'en-tête — un glisser pensé
-/// pour déplacer agrandirait.
-private final class PanneauQuetes: NSPanel {
-    override var canBecomeKey: Bool { false }
-    override var canBecomeMain: Bool { false }
-    override func zoom(_: Any?) {}
-    override func performZoom(_: Any?) {}
-}
-
 /// Le panneau des quêtes épinglées : transparent, au-dessus du jeu — on le
 /// garde ouvert en jouant. Plusieurs quêtes, une montrée à la fois ; on le
 /// déplace par son en-tête et on le redimensionne par ses bords ou sa
@@ -28,6 +13,8 @@ final class QuetePanel: NSObject, ObservableObject {
     /// Assez étroit pour ne masquer qu'un coin du jeu : la fiche passe ses
     /// étiquettes à la ligne plutôt que de déborder.
     static let tailleMinimale = NSSize(width: 220, height: 200)
+    /// Au-delà, les lignes s'allongent sans rien dire de plus ; en hauteur, l'écran borne.
+    static let largeurMaximale: CGFloat = 640
     /// Le cadre gardé par AppKit dans les préférences.
     private static let nomDuCadre = "QuetePanel"
 
@@ -55,6 +42,8 @@ final class QuetePanel: NSObject, ObservableObject {
     }
 
     private var iciGarde = DernierCalcul<CleIci, MenuQuetes.Ici?>()
+    /// La hauteur du bandeau, mesurée par la vue : celle du panneau plié.
+    private var hauteurPliee: CGFloat = 40
 
     private override init() { super.init() }
 
@@ -81,6 +70,7 @@ final class QuetePanel: NSObject, ObservableObject {
         let prefs = Preferences.shared
         if !prefs.quetesEpinglees.contains(id) { prefs.quetesEpinglees.append(id) }
         montrer(id)
+        if plie { basculerPliage() }
         ouvrir()
     }
 
@@ -94,6 +84,8 @@ final class QuetePanel: NSObject, ObservableObject {
             LectureSuivi.shared.oublier(avant.filter { !apres.contains($0) })
         }
         montrer(id)
+        // La quête demandée se voit : plié, le panneau se déplie.
+        if plie { basculerPliage() }
         ouvrir()
     }
 
@@ -109,13 +101,13 @@ final class QuetePanel: NSObject, ObservableObject {
         return montree.flatMap { epinglees.contains($0) ? $0 : nil } ?? epinglees.last
     }
 
-    /// Retire la quête ; le panneau se ferme avec la dernière.
+    /// Retire la quête ; la dernière retirée laisse le panneau ouvert sur la liste.
     func desepingler(_ id: Int) {
         let prefs = Preferences.shared
         prefs.quetesEpinglees.removeAll { $0 == id }
         LectureSuivi.shared.oublier([id])
         if montree == id { montree = prefs.quetesEpinglees.last }
-        if prefs.quetesEpinglees.isEmpty { fermer() }
+        if prefs.quetesEpinglees.isEmpty { enListe = true }
     }
 
     /// Un dernier mot avant : le panneau se vide d'un coup.
@@ -127,12 +119,13 @@ final class QuetePanel: NSObject, ObservableObject {
         }
     }
 
-    /// Retire toutes les quêtes et cache le panneau.
+    /// Retire toutes les quêtes ; le panneau reste ouvert sur la liste, qui
+    /// invite à en chercher une — fermer se fait par « ⋯ ».
     func toutDesepingler() {
         LectureSuivi.shared.oublier(Preferences.shared.quetesEpinglees)
         Preferences.shared.quetesEpinglees = []
         montree = nil
-        fermer()
+        enListe = true
     }
 
     /// Cache le panneau ; les quêtes restent épinglées pour la prochaine fois.
@@ -154,18 +147,22 @@ final class QuetePanel: NSObject, ObservableObject {
     private func appliquer(force: Bool) {
         let montre = PanneauxJeu.appliquer(&panel, ouvert: ouvert, impose: impose, force: force, parDefaut: Self.placeParDefaut,
                                            construire: construire, cache: { ApercuCarte.shared.cacher() })
-        LecteurEcran.shared.suivreQuetes(montre && WindowPreviewService.shared.authorized)
+        // Plié, rien ne se montre du suivi : on ne le lit plus.
+        LecteurEcran.shared.suivreQuetes(montre && !plie && WindowPreviewService.shared.authorized)
     }
 
     private func construire() -> NSPanel {
-        let panel = PanneauQuetes(
+        // Sans bordure ni barre de titre : une barre de titre, même transparente, garde pour elle les
+        // clics de la première ligne. On le déplace par son en-tête (`WindowDragArea`), on l'agrandit
+        // par ses bords et ses coins du bas (`PoigneeRedimension`). Pas `.resizable` : les bords du
+        // système, invisibles et sans curseur pour une app inactive, chevaucheraient nos poignées.
+        let panel = PanneauDeJeu(
             contentRect: NSRect(x: 0, y: 0, width: 360, height: 480),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
         panel.contentView = NSHostingView(rootView: QueteVue().racineSynfus())
-        panel.minSize = Self.tailleMinimale
         panel.isFloatingPanel = true
         panel.level = .statusBar
         panel.hidesOnDeactivate = false
@@ -179,7 +176,38 @@ final class QuetePanel: NSObject, ObservableObject {
         if !panel.setFrameAutosaveName(Self.nomDuCadre) || !panel.setFrameUsingName(Self.nomDuCadre, force: true) {
             PanneauxJeu.placer(panel, parDefaut: Self.placeParDefaut)
         }
+        // Le cadre gardé est celui du panneau plié ou déplié ; un cadre plié sans le réglage (effacé)
+        // reprend la hauteur minimale.
+        poserHauteur(plie ? hauteurPliee : max(panel.frame.height, Self.tailleMinimale.height), de: panel)
         return panel
+    }
+
+    // MARK: - Pliage
+
+    /// Plié sur son bandeau, le panneau laisse voir le jeu sans perdre sa place.
+    var plie: Bool { PanneauxJeu.plie(.quetes) }
+
+    /// Plie le panneau sur son bandeau, ou lui rend sa hauteur d'avant ; le haut ne bouge pas.
+    func basculerPliage() {
+        let depliee = PanneauxJeu.basculerPliage(.quetes, hauteur: panel?.frame.height ?? Self.tailleMinimale.height)
+        if let panel { poserHauteur(depliee.map { max($0, Self.tailleMinimale.height) } ?? hauteurPliee, de: panel) }
+        appliquer(force: false)
+    }
+
+    /// La hauteur du bandeau a changé (titre sur deux lignes, autre quête) : le panneau plié la suit.
+    func bandeauMesure(_ hauteur: CGFloat) {
+        guard hauteur > 0 else { return }
+        hauteurPliee = hauteur
+        if plie, let panel, panel.frame.height != hauteur { poserHauteur(hauteur, de: panel) }
+    }
+
+    /// La hauteur, et le minimum qui va avec : plié, le bandeau ; sinon `tailleMinimale`.
+    private func poserHauteur(_ hauteur: CGFloat, de panel: NSPanel) {
+        panel.minSize = NSSize(width: Self.tailleMinimale.width, height: plie ? hauteur : Self.tailleMinimale.height)
+        panel.maxSize = NSSize(width: Self.largeurMaximale, height: plie ? hauteur : .greatestFiniteMagnitude)
+        // Même origine, autre hauteur : `PanneauDeJeu` garde le haut.
+        let largeur = min(max(panel.frame.width, Self.tailleMinimale.width), Self.largeurMaximale)
+        panel.setFrame(NSRect(origin: panel.frame.origin, size: NSSize(width: largeur, height: hauteur)), display: true)
     }
 
     /// En haut à droite de l'écran.
@@ -214,7 +242,7 @@ extension QuetePanel {
         let store = QuetesStore.shared
         return MenuQuetes.liste(
             epinglees: Preferences.shared.quetesEpinglees, montree: idMontre, reconnues: lecture.reconnues,
-            etat: lecture.etat, coches: lecture.cochesLues, ici: ici(),
+            etat: lecture.etat, ici: ici(),
             autorise: WindowPreviewService.shared.authorized, nom: { store.nom($0) ?? "…" })
     }
 
@@ -222,6 +250,8 @@ extension QuetePanel {
     private static func ajouter(_ element: MenuQuetes.Element, a menu: NSMenu) {
         let prefs = Preferences.shared
         switch element {
+        case .chercher:
+            menu.addItem(CibleMenu.shared.element(L("quete.chercher")) { QuetePanel.chercher() })
         case .toutDesepingler:
             menu.addItem(CibleMenu.shared.element(L("quete.menu.toutDesepingler")) { QuetePanel.shared.confirmerToutDesepingler() })
         case .affichage(let options):
@@ -239,7 +269,7 @@ extension QuetePanel {
             menu.addItem(CibleMenu.shared.element(L("panneau.fermer"), raccourci: prefs.quetesHotKey) { QuetePanel.shared.fermer() })
         case .separateur:
             menu.addItem(.separator())
-        case .titre, .epinglee, .ici, .toutEpingler, .lireSuivi, .reconnue, .message, .geste:
+        case .titre, .epinglee, .ici, .iciEnTete, .lireSuivi, .reconnue, .message, .geste:
             break
         }
     }
@@ -302,97 +332,6 @@ extension QuetePanel {
         case .consigne: \.quetesConsigne
         case .masquerObjets: \.quetesMasquerObjets
         case .cocherSuivi: \.quetesCocherSuivi
-        }
-    }
-}
-
-/// Les bords qu'une poignée déplace. Le haut n'en est pas : c'est l'en-tête,
-/// qui déplace le panneau.
-struct BordsPanneau: OptionSet, Sendable {
-    let rawValue: Int
-
-    static let gauche = BordsPanneau(rawValue: 1)
-    static let droite = BordsPanneau(rawValue: 2)
-    static let bas = BordsPanneau(rawValue: 4)
-
-    /// Le cadre après un glisser de `decalage` (repère de l'écran, y vers le
-    /// haut) : le bord haut ne bouge jamais, ni le bord opposé à celui qu'on
-    /// tire, et la taille ne passe pas sous `minimum`.
-    func cadre(_ depart: NSRect, decalage: CGVector, minimum: NSSize) -> NSRect {
-        var largeur = depart.width, hauteur = depart.height, x = depart.minX
-        if contains(.droite) { largeur = max(minimum.width, depart.width + decalage.dx) }
-        if contains(.gauche) {
-            largeur = max(minimum.width, depart.width - decalage.dx)
-            x = depart.maxX - largeur
-        }
-        if contains(.bas) { hauteur = max(minimum.height, depart.height - decalage.dy) }
-        return NSRect(x: x, y: depart.maxY - hauteur, width: largeur, height: hauteur)
-    }
-}
-
-extension View {
-    /// Les bords gauche, droit et bas et les coins du bas, à saisir pour
-    /// agrandir le panneau ; `coin` est la marque du coin bas droit, de la
-    /// taille de celui de gauche — posée sur le contenu, sans bande réservée. Les coins passent par-dessus les
-    /// bords : saisi près d'un coin, le panneau s'agrandit dans les deux sens.
-    func bordsRedimensionnables(coin: some View) -> some View {
-        let epaisseur: CGFloat = 6, cote: CGFloat = 14
-        return overlay(alignment: .leading) { PoigneeRedimension(bords: .gauche).frame(width: epaisseur) }
-            .overlay(alignment: .trailing) { PoigneeRedimension(bords: .droite).frame(width: epaisseur) }
-            .overlay(alignment: .bottom) { PoigneeRedimension(bords: .bas).frame(height: epaisseur) }
-            .overlay(alignment: .bottomLeading) { PoigneeRedimension(bords: [.gauche, .bas]).frame(width: cote, height: cote) }
-            .overlay(alignment: .bottomTrailing) {
-                coin.frame(width: cote, height: cote).overlay(PoigneeRedimension(bords: [.droite, .bas]))
-            }
-    }
-}
-
-/// Une poignée de redimensionnement : un glisser déplace les bords donnés, le
-/// bord haut ne bouge pas. Une boucle d'évènements à soi plutôt que les bords
-/// du système (le panneau n'est pas `.resizable`) : minces sans bordure, et
-/// sans curseur dans une app inactive. Le sien est posé à l'entrée, à l'appui
-/// et à chaque pas du glisser — le jeu, devant, réimpose le sien.
-struct PoigneeRedimension: NSViewRepresentable {
-    let bords: BordsPanneau
-
-    func makeNSView(context _: Context) -> NSView { Poignee(bords: bords) }
-    func updateNSView(_: NSView, context _: Context) {}
-
-    private final class Poignee: VueACurseur {
-        private let bords: BordsPanneau
-
-        init(bords: BordsPanneau) {
-            self.bords = bords
-            super.init(frame: .zero)
-        }
-
-        @available(*, unavailable)
-        required init?(coder _: NSCoder) { nil }
-
-        override var curseur: NSCursor {
-            let position: NSCursor.FrameResizePosition = switch bords {
-            case .gauche: .left
-            case .droite: .right
-            case .bas: .bottom
-            case [.gauche, .bas]: .bottomLeft
-            default: .bottomRight
-            }
-            return .frameResize(position: position, directions: .all)
-        }
-
-        override func mouseDown(with _: NSEvent) {
-            guard let window else { return }
-            curseur.set()
-            let depart = NSEvent.mouseLocation
-            let cadre = window.frame
-            while let suivant = window.nextEvent(matching: [.leftMouseDragged, .leftMouseUp]),
-                  suivant.type == .leftMouseDragged {
-                let point = NSEvent.mouseLocation
-                window.setFrame(bords.cadre(cadre, decalage: CGVector(dx: point.x - depart.x, dy: point.y - depart.y),
-                                            minimum: window.minSize),
-                                display: true)
-                curseur.set()
-            }
         }
     }
 }

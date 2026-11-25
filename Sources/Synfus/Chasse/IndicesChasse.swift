@@ -24,11 +24,15 @@ enum IndicesChasse {
     // MARK: - Autocomplétion
 
     /// Les indices dont le nom, dans `langue`, répond à `saisie` : ceux qui
-    /// commencent par elle, puis ceux qui la contiennent, puis — pour une
-    /// faute de frappe — ceux qui en sont à peu d'éditions.
+    /// commencent par elle, puis ceux qui la contiennent, puis — mot à mot —
+    /// ceux dont chaque mot de la saisie reconnaît un mot du nom (« cra ren »
+    /// trouve « Crâne de renne », « arbre coupé » trouve « Arbre à moitié
+    /// coupé »), puis — pour une faute de frappe — ceux qui en sont à peu
+    /// d'éditions.
     static func rechercher(_ saisie: String, parmi indices: [Indice], langue: Langue, limite: Int = 8) -> [Indice] {
         let motif = Ressemblance.normaliser(saisie)
         guard !motif.isEmpty else { return [] }
+        let jetons = motif.split(separator: " ").map(String.init)
         var classes: [(rang: Int, nom: String, indice: Indice)] = []
         for indice in indices {
             let nom = indice.nom(en: langue)
@@ -38,11 +42,13 @@ enum IndicesChasse {
                 rang = 0
             } else if cible.contains(motif) {
                 rang = 1
+            } else if rangParMots(jetons, dans: cible) != nil {
+                rang = 2
             } else {
                 let tolerance = max(1, motif.count / 4)
                 let ecart = Ressemblance.distanceDansTexte(motif, cible)
                 guard ecart <= tolerance else { continue }
-                rang = 1 + ecart
+                rang = 3 + ecart
             }
             classes.append((rang, nom, indice))
         }
@@ -50,6 +56,21 @@ enum IndicesChasse {
             .sorted { ($0.rang, $0.nom.count, $0.nom) < ($1.rang, $1.nom.count, $1.nom) }
             .prefix(limite)
             .map(\.indice)
+    }
+
+    /// Chaque mot de la saisie reconnaît un mot de la cible : préfixe dans un
+    /// sens ou l'autre, ou une édition près quand le mot tapé est assez long.
+    private static func rangParMots(_ jetons: [String], dans cible: String) -> Int? {
+        guard !jetons.isEmpty else { return nil }
+        let mots = cible.split(separator: " ").map(String.init)
+        for jeton in jetons {
+            let reconnu = mots.contains { mot in
+                mot.hasPrefix(jeton) || jeton.hasPrefix(mot)
+                    || (jeton.count >= 4 && Ressemblance.distanceDansTexte(jeton, mot) <= 1)
+            }
+            guard reconnu else { return nil }
+        }
+        return 2
     }
 
     // MARK: - OCR
