@@ -653,10 +653,13 @@ enum RecherchePalette {
     private struct Retenue {
         let rang: Int
         let score: ScorePalette
+        /// Aucun mot tapé ne répond au nom : seulement au lieu (`Champs.nomRepond`).
+        let parLieu: Bool
     }
 
     /// Garde les entrées dont chaque mot tapé trouve un écho, puis les range :
-    /// les monstres et objets en dernier (`enDernier`), puis « Auto »
+    /// celles trouvées par leur seul lieu après toutes celles dont le nom répond
+    /// (`parLieu`), les monstres et objets en dernier (`enDernier`), puis « Auto »
     /// (`ScorePalette`), ou les zaaps devant, les favoris en tête de chaque
     /// famille et le tri explicite, à égalité la meilleure correspondance.
     /// Trop peu d'échos exacts : les échos à une faute près (`approchees`)
@@ -665,10 +668,10 @@ enum RecherchePalette {
     private static func classer(_ fiches: [Fiche], _ mots: [String], tri: TriPalette,
                                 frequentation: FrequentationPalette) -> [EntreePalette] {
         let habitudes = tri == .auto ? frequentation : FrequentationPalette()
-        func retenue(_ rang: Int, _ points: Int) -> Retenue {
+        func retenue(_ rang: Int, _ points: Int, parLieu: Bool = false) -> Retenue {
             let entree = fiches[rang].entree
             return Retenue(rang: rang, score: ScorePalette(entree, correspondance: mots.isEmpty ? nil : points,
-                                                           compte: habitudes.compte(de: entree)))
+                                                           compte: habitudes.compte(de: entree)), parLieu: parLieu)
         }
         var exactes: [Retenue] = []
         exactes.reserveCapacity(fiches.count)
@@ -679,11 +682,12 @@ enum RecherchePalette {
                 points += echo
                 return echo > 0
             }
-            if garde { exactes.append(retenue(rang, points)) }
+            if garde { exactes.append(retenue(rang, points, parLieu: !mots.isEmpty && !fiche.champs.nomRepond(mots))) }
         }
         let avant = { (a: Retenue, b: Retenue) -> Bool in
             let (fa, fb) = (fiches[a.rang], fiches[b.rang])
             let (ea, eb) = (fa.entree, fb.entree)
+            if a.parLieu != b.parLieu { return b.parLieu }
             if ea.enDernier != eb.enDernier { return eb.enDernier }
             if tri == .auto { return ScorePalette.avant(a.score, b.score) ?? (a.rang < b.rang) }
             if (ea.genre == .zaap) != (eb.genre == .zaap) { return ea.genre == .zaap }
@@ -810,6 +814,8 @@ enum RecherchePalette {
         /// qu'aucun mot tapé ne contient : un seul passage pour un mot cherché
         /// au milieu d'un autre.
         private let interieur: String
+        /// Les mots du titre seuls, bout à bout : un mot cherché au milieu du nom.
+        private let interieurDuNom: String
         /// Les mots du titre et de l'étiquette, prêts pour la borne basse de
         /// `Ressemblance` : une fiche trop loin d'un mot approché s'écarte sans
         /// calculer de distance.
@@ -837,6 +843,7 @@ enum RecherchePalette {
                 + (categorie.flatMap { RecherchePalette.motsDeCategorie[$0] } ?? [])
             cleAlphabetique = Self.cleAlphabetique(nom)
             interieur = (self.titre + self.lieu).joined(separator: "\u{1F}")
+            interieurDuNom = self.titre.joined(separator: "\u{1F}")
             forme = Ressemblance.Forme((self.titre + self.etiquette).joined(separator: " "))
         }
 
@@ -870,6 +877,14 @@ enum RecherchePalette {
             if lieu.contains(where: { $0.hasPrefix(mot) }) { return 40 }
             if mot.count >= 3, interieur.contains(mot) { return 20 }
             return 0
+        }
+
+        /// Un mot tapé au moins répond à l'étiquette, au titre ou à un surnom — pas seulement au lieu.
+        func nomRepond(_ mots: [String]) -> Bool {
+            mots.contains { mot in
+                etiquette.contains { $0.hasPrefix(mot) } || titre.contains { $0.hasPrefix(mot) } || surnoms.contains(mot)
+                    || (mot.count >= 3 && interieurDuNom.contains(mot))
+            }
         }
 
         /// Moins que tout écho exact.
