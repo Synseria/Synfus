@@ -5,12 +5,22 @@ import SwiftUI
 /// le panneau d'aide aux boss et la fiche d'un donjon.
 struct FicheCombatVue: View {
     let fiche: FicheCombat
+    /// Le nom du boss, couronné, en tête de la ligne ; les chiffres passent alors à droite. Sans nom
+    /// (le panneau des boss le porte déjà dans son en-tête), les chiffres seuls.
+    var nom: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: Jetons.espace1) {
-            Text(L("combat.fiche", fiche.niveau, fiche.vie.formatted(), fiche.pa, fiche.pm))
-                .font(Jetons.typoMeta.font.weight(.semibold))
-                .foregroundStyle(Color.jeton(\.encre))
+            HStack(alignment: .firstTextBaseline, spacing: Jetons.espace1) {
+                if let nom {
+                    Image(systemName: "crown").foregroundStyle(Color.jeton(\.accentTexte))
+                    Text(nom).font(Jetons.typoMicro.font)
+                    Spacer(minLength: Jetons.espace2)
+                }
+                Text(L("combat.fiche", fiche.niveau, fiche.vie.formatted(), fiche.pa, fiche.pm))
+                    .font(Jetons.typoMeta.font)
+                    .foregroundStyle(Color.jeton(nom == nil ? \.encre : \.encre2))
+            }
             HStack(spacing: Jetons.espace1) {
                 ForEach(FicheCombat.Element.allCases, id: \.self) { colonne($0) }
             }
