@@ -115,24 +115,27 @@ struct PaletteVue: View {
 
     /// Les familles que Tab fait défiler, en puces, jamais tronquées : toute la largeur leur revient.
     private var filtres: some View {
-        HStack(spacing: Jetons.espace2) {
+        let vides = modele.filtresVides
+        return HStack(spacing: Jetons.espace2) {
             HStack(spacing: Jetons.espace2) {
                 ForEach(FiltrePalette.allCases, id: \.self) { filtre in
                     let choisi = modele.filtre == filtre
+                    // Pendant une recherche, une capsule où elle ne trouverait rien s'efface.
+                    let vide = vides.contains(filtre) && !choisi
                     // Tab et ⇧Tab parcourent les filtres (le panneau) : aucun d'eux ne prend le focus.
                     Button { modele.choisir(filtre) } label: {
                         Puce(libelle: filtre.titre, choisie: choisi)
+                            .opacity(vide ? Jetons.opaciteDesactive : 1)
                     }
                     .buttonStyle(.plain)
                     .curseurDeClic(true)
                     .focusable(false)
-                    .curseurDeClic(true)
                     .elementDeGroupe()
                     .accessibilityAddTraits(choisi ? .isSelected : [])
+                    .help(vide ? L("palette.vide.filtre", filtre.titre) : L("palette.touche.filtre"))
                 }
             }
             .fixedSize(horizontal: true, vertical: false)
-            .help(L("palette.touche.filtre"))
             Spacer(minLength: 0)
         }
         .padding(.horizontal, Jetons.espace1)

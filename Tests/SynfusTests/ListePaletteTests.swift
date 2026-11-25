@@ -76,4 +76,20 @@ struct ListePaletteTests {
         modele.valider()
         #expect(modele.filtre == .objets && modele.requete == "nidas" && modele.entrees.count == 5)
     }
+
+    @Test("Une capsule s'efface exactement quand la recherche n'y trouverait rien ; l'Accueil jamais, rien sans texte",
+          arguments: ["nidas", "nidsa", "roi", "zzzz", "/zaap", "/", "%", "%pos", "-5,-5", "  ", ""])
+    func capsulesVides(requete: String) throws {
+        let index = IndexPalette(try ContexteNidas.contexte())
+        let attendues = requete.trimmingCharacters(in: .whitespaces).isEmpty ? [] : Set(FiltrePalette.allCases.filter {
+            $0 != .tout && RecherchePalette.entrees(requete, index, filtre: $0).isEmpty
+        })
+        #expect(RecherchePalette.filtresVides(requete, index) == attendues)
+    }
+
+    @Test("« nidas » : Zaaps, Quêtes, Créatures et Almanax s'effacent ; Lieux garde le palais")
+    func capsulesVidesNidas() throws {
+        let vides = RecherchePalette.filtresVides("nidas", IndexPalette(try ContexteNidas.contexte()))
+        #expect(vides == [.zaaps, .quetes, .creatures, .almanax])
+    }
 }

@@ -344,6 +344,25 @@ enum RecherchePalette {
         }
     }
 
+    /// Les capsules où `requete` ne trouverait rien : exactement celles dont `entrees(_:filtre:)` serait
+    /// vide, l'Accueil jamais ; aucune sans texte. Une seule passe exacte sur toutes les fiches ; seules
+    /// les familles qu'elle n'a pas trouvées refont leur recherche, fautes de frappe comprises.
+    static func filtresVides(_ requete: String, _ index: IndexPalette) -> Set<FiltrePalette> {
+        let texte = requete.trimmingCharacters(in: .whitespaces)
+        guard !texte.isEmpty else { return [] }
+        var restants = Set(FiltrePalette.allCases.filter { $0 != .tout })
+        // Préfixes et coordonnées : des modes à part, peu coûteux, qui ignorent ou non le filtre.
+        let simple = !texte.hasPrefix("/") && !texte.hasPrefix("%") && ItineraireZaap.caseTapee(texte) == nil
+        if simple {
+            let mots = mots(texte)
+            for fiche in index.tout where fiche.champs.garde(mots) {
+                restants = restants.filter { !$0.garde(fiche.entree, enRecherche: true) }
+                if restants.isEmpty { break }
+            }
+        }
+        return restants.filter { entrees(texte, index, filtre: $0).isEmpty }
+    }
+
     /// Le texte qu'Entrée copiera — `nil` pour ce qui ne copie rien.
     static func texte(de effet: EntreePalette.Effet, _ contexte: ContextePalette) -> String? {
         switch effet {

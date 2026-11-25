@@ -53,6 +53,22 @@ final class PaletteModele: ObservableObject {
 
     private var positionsGardees = DernierCalcul<ClePositions, [PositionPNJ]>()
 
+    private var videsGardes = DernierCalcul<CleVides, Set<FiltrePalette>>()
+
+    private struct CleVides: Equatable {
+        // periphery:ignore - lu par l'Equatable synthétisé
+        let requete: String
+        // periphery:ignore - lu par l'Equatable synthétisé
+        let index: ObjectIdentifier
+    }
+
+    /// Pendant une recherche, les capsules où elle ne trouverait rien : la rangée les efface.
+    var filtresVides: Set<FiltrePalette> {
+        videsGardes.valeur(pour: CleVides(requete: requete, index: ObjectIdentifier(index))) {
+            RecherchePalette.filtresVides(requete, index)
+        }
+    }
+
     private struct ClePositions: Equatable {
         // periphery:ignore - lu par l'Equatable synthétisé
         let pnj: Int
