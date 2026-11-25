@@ -10,6 +10,8 @@ struct OuTrouverVue: View {
     let metriques: MetriquesQuete
     /// Le nom de l'objet, quand l'appelant le sait : le titre de sa recette épinglée.
     var nom: String?
+    /// Écrire ce nom en tête de la recette, copiable : là où rien d'autre ne le dit (la clef d'un donjon).
+    var nommer = false
     @ObservedObject private var store = OuTrouverStore.shared
     /// La position du perso range les repaires.
     @ObservedObject private var lecteur = LecteurEcran.shared
@@ -83,8 +85,14 @@ struct OuTrouverVue: View {
     /// copient d'un clic, le temps des courses.
     private func recette(_ recette: SourcesObjet.Recette) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: Jetons.espace1) {
+            HStack(alignment: .firstTextBaseline, spacing: Jetons.espace1) {
+                if nommer, let nom {
+                    nomCopiable(nom)
+                    Spacer(minLength: Jetons.espace1)
+                }
                 Label(L("ouTrouver.recette", Lieu.traduit(recette.metier, langue) ?? "?", recette.niveau), systemImage: "hammer")
+                    .lineLimit(1)
+                    .fixedSize()
                 Button {
                     RecettePanel.shared.epingler(RecetteEpinglee(recette, objet: nom, langue: langue))
                 } label: {
@@ -103,6 +111,27 @@ struct OuTrouverVue: View {
                 .padding(.leading, Jetons.espace4)
         }
         .padding(.bottom, Jetons.espace1)
+    }
+
+    /// Le nom de l'objet, qu'on copie d'un clic pour le chercher à l'hôtel de vente.
+    private func nomCopiable(_ nom: String) -> some View {
+        Button {
+            PressePapiers.copier(nom)
+            copie.signaler("nom")
+        } label: {
+            HStack(spacing: Jetons.espace1) {
+                IconeCopie(icone: "key", copie: copie.affiche("nom"))
+                    .frame(width: Jetons.espace3)
+                Text(nom)
+                    .foregroundStyle(Color.jeton(\.encre))
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.horizontal, Jetons.espace1)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.etat(nue: true))
+        .aide(L("quete.copierNom"))
     }
 
     /// Le monstre et son taux, puis ses repaires les plus proches.
