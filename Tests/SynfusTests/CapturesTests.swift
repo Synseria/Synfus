@@ -452,6 +452,16 @@ struct CapturesTests {
         try ecrire(vue, vers: dossier.appending(path: "boss-fiche.png"))
     }
 
+    @Test("Capture du tableau des combinaisons de l'Huppermage", .enabled(if: dossier != nil))
+    func huppermage() throws {
+        let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
+        let vue = TableauHuppermage()
+            .padding(24)
+            .background(Self.fondCapture)
+            .environment(\.colorScheme, Self.schema)
+        try ecrire(vue, vers: dossier.appending(path: "huppermage.png"))
+    }
+
     @Test("Capture de la recette épinglée", .enabled(if: dossier != nil))
     func recette() throws {
         let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
