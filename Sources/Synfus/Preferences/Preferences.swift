@@ -105,6 +105,8 @@ final class Preferences: ObservableObject {
     /// Détecter le combat — bouton « Fin de tour » rose, gris ou absent — par
     /// la même lecture de l'écran. Désactivé par défaut, pour la même raison.
     @Published var lireCombat: Bool = false { didSet { save() } }
+    /// Le tableau des combinaisons élémentaires sur le jeu, en combat avec un Huppermage.
+    @Published var aideHuppermage: Bool = true { didSet { save() } }
     /// Lire aussi le combat des persos qui ne sont pas devant (fenêtrés).
     @Published var lireCombatDerriere: Bool = false { didSet { save() } }
 
@@ -578,6 +580,7 @@ final class Preferences: ObservableObject {
         .facultatif("signalerBascule", \.signalerBascule),
         .facultatif("lirePosition", \.lirePosition),
         .facultatif("lireCombat", \.lireCombat),
+        .facultatif("aideHuppermage", \.aideHuppermage),
         .facultatif("lireCombatDerriere", \.lireCombatDerriere),
         .optionnel("zonePosition", \.zonePosition),
         .optionnel("zoneCombat", \.zoneCombat),

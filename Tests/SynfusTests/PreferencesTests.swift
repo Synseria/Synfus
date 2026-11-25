@@ -504,7 +504,7 @@ struct PreferencesTests {
      "hotKeys":[{"keyCode":18,"modifiers":256},null,{"keyCode":20,"modifiers":2048},null,null,null,null,null,null,null],
      "inviteFormat":"/w %nom go","inviteGroupee":true,
      "inviteHotKey":{"keyCode":34,"modifiers":256},
-     "killFrozenClients":false,"lastArrangement":"principale","lireCombat":true,"lireCombatDerriere":true,
+     "killFrozenClients":false,"lastArrangement":"principale","lireCombat":true,"aideHuppermage":false,"lireCombatDerriere":true,
      "lirePosition":true,"menuBarIcon":"symbole","iconeApp":{"motif":"couvee","fond":"aube"},"themeDeLApp":"personnalise:3FA9D8","nuanceDeLApp":"penombre",
      "previewHotKey":{"keyCode":49,"modifiers":2048},
      "sessionHotKey":{"keyCode":1,"modifiers":256},"reduirePersosInactifs":false,"showClasses":false,
@@ -554,6 +554,7 @@ struct PreferencesTests {
         #expect(prefs.signalerBascule == false)
         #expect(prefs.lirePosition == true)
         #expect(prefs.lireCombat == true)
+        #expect(prefs.aideHuppermage == false)
         #expect(prefs.zonePosition == ZoneEcran(x: 0.5, y: 0.25, largeur: 0.25, hauteur: 0.0625))
         #expect(prefs.zoneCombat == ZoneEcran(x: 0.125, y: 0.75, largeur: 0.25, hauteur: 0.125))
         #expect(prefs.zoneChasse == ZoneEcran(x: 0, y: 0.125, largeur: 0.25, hauteur: 0.5))
@@ -636,6 +637,7 @@ struct PreferencesTests {
         prefs.signalerBascule = false
         prefs.lirePosition = true
         prefs.lireCombat = true
+        prefs.aideHuppermage = false
         prefs.zonePosition = ZoneEcran(x: 0.5, y: 0.25, largeur: 0.25, hauteur: 0.0625)
         prefs.zoneCombat = ZoneEcran(x: 0.125, y: 0.75, largeur: 0.25, hauteur: 0.125)
         prefs.zoneChasse = ZoneEcran(x: 0, y: 0.125, largeur: 0.25, hauteur: 0.5)
@@ -716,7 +718,7 @@ struct PreferencesTests {
          "autoCenterBar":true,"barOnlyWithDofus":false,"panneauxSeulementDofus":true,"panneauxPlies":{},"barVisible":true,"bossChoisi":"harebourg",
          "boutonsMasques":[],"characterOrder":[],
          "defaultsVersion":9,"equipes":[],"etiquettes":{},"hotKeys":[null],"inviteFormat":"/invite %nom","inviteGroupee":false,
-         "killFrozenClients":true,"lireCombat":false,"lireCombatDerriere":false,"lirePosition":false,"menuBarIcon":"logo","iconeApp":{"motif":"oeuf","fond":"transparent"},"themeDeLApp":"lagon","nuanceDeLApp":"systeme",
+         "killFrozenClients":true,"lireCombat":false,"aideHuppermage":true,"lireCombatDerriere":false,"lirePosition":false,"menuBarIcon":"logo","iconeApp":{"motif":"oeuf","fond":"transparent"},"themeDeLApp":"lagon","nuanceDeLApp":"systeme",
          "reduirePersosInactifs":false,"showClasses":true,"showNumbers":true,"showPreviewOnHover":false,
          "signalerBascule":true,"zaapAuto":false,
          "zaapGainMinimal":5,"zaapDuJeu":true,"zaapIntercalees":"/a","verifierMisesAJour":true,"canalDeMiseAJour":"stable","partagerStatistiques":true,"zaapsAjoutes":[],"zaapsChoix":{},"zaapsFavoris":[],"zaapsVueCarte":true,
