@@ -2,13 +2,15 @@ import SwiftUI
 
 /// La fiche d'un donjon, dépliée sous lui ou sous l'un de ses boss dans la
 /// palette : niveau, une rangée de cartes que le clavier parcourt
-/// (`CartesFiche`) — position, aide au combat, guide, conseils, monstres, succès, clef —, ce
-/// qu'elles déplient, puis les boss à leur plus haut grade. Le détail et les
-/// conseils se téléchargent à l'ouverture ; entrée et guide n'attendent pas.
+/// (`CartesFiche`) — position, aide au combat, guide, monstres, succès, clef —, ce
+/// qu'elles déplient, puis les boss à leur plus haut grade et, dessous, les
+/// conseils du combat, dépliés d'office. Le détail et les conseils se
+/// téléchargent à l'ouverture ; entrée et guide n'attendent pas.
 struct FicheDonjonVue: View {
     let id: Int
     @ObservedObject var modele: PaletteModele
     @ObservedObject private var store = DonjonsStore.shared
+    @State private var conseilsDeplies = true
 
     private var langue: Langue { L10n.courante.langue }
 
@@ -39,8 +41,19 @@ struct FicheDonjonVue: View {
                 } else {
                     attente(donjon)
                 }
+                conseils
             }
             .onAppear { store.demander(donjon) }
+        }
+    }
+
+    /// Les conseils du combat, sous le boss qu'ils concernent ; leur source est l'infobulle du titre.
+    @ViewBuilder
+    private var conseils: some View {
+        if let liste = store.conseils[id], !liste.isEmpty {
+            SectionBoss(titre: L("donjon.conseils"), aide: L("donjon.conseils.aide"), depliee: $conseilsDeplies) {} contenu: {
+                ConseilsVue(conseils: liste)
+            }
         }
     }
 
@@ -87,7 +100,6 @@ struct FicheDonjonVue: View {
         case .aide: return BoutonBarre.boss.symbole
         case .guide: return "book"
         case .clef: return "key"
-        case .conseils: return "lightbulb"
         case .monstres: return "pawprint"
         case .succes: return "trophy"
         }
@@ -103,9 +115,6 @@ struct FicheDonjonVue: View {
             return L("donjon.aide.boss", BossVue.nom(boss, donjons: donjons, garde: nil))
         case .guide: return L("donjon.guide")
         case .clef: return L("donjon.clef")
-        case .conseils:
-            let nombre = store.conseils[id]?.count ?? 0
-            return L("donjon.conseils", nombre: nombre, nombre)
         case .monstres:
             let nombre = detail?.monstres.filter { !$0.boss }.count ?? 0
             return L("donjon.monstres", nombre: nombre, nombre)
@@ -124,7 +133,6 @@ struct FicheDonjonVue: View {
         case .clef(let objet):
             let clef = detail?.clefs.first { $0.objet == objet }
             return L("donjon.clef.aide", clef?.quantite ?? 1, clef.flatMap { Lieu.traduit($0.noms, langue) } ?? "?")
-        case .conseils: return L("donjon.conseils.aide")
         case .aide: return L("donjon.aide.aide")
         case .monstres, .succes: return nil
         }
@@ -137,8 +145,6 @@ struct FicheDonjonVue: View {
             OuTrouverVue(sujet: .objet(objet), metriques: .compact,
                          nom: detail?.clefs.first { $0.objet == objet }.flatMap { Lieu.traduit($0.noms, langue) },
                          nommer: true)
-        case .conseils:
-            VStack(alignment: .leading, spacing: Jetons.espace1) { ConseilsVue(conseils: store.conseils[id] ?? []) }
         case .monstres:
             TableauMonstresVue(monstres: detail?.monstres.filter { !$0.boss } ?? [])
         case .succes:
