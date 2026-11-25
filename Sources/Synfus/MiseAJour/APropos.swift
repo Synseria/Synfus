@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import SynseriaDesign
 
 /// « À propos de Synfus » : le gabarit de la trousse — l'icône de l'app, son nom, « by » et le signe
 /// Synseria —, puis la version et l'état de la mise à jour avec son geste.

@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 /// Onglet Données : d'où vient la carte du jeu, comment un trajet se copie, les repères qu'elle
 /// porte (zaaps, lieux), puis le panneau des quêtes, la liste des quêtes et les PNJ situés — tout

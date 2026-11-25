@@ -1,6 +1,7 @@
 import AppKit
 import ImageIO
 import SwiftUI
+import SynseriaDesign
 
 /// Les images que DofusDB héberge (vues des cartes, pictogrammes des repères,
 /// emblèmes de classe), téléchargées à la demande et gardées dans les caches

@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 /// Les conseils de Dofus pour les noobs pour un combat : une phrase par
 /// conseil, l'explication du site en infobulle ; la source est celle du titre

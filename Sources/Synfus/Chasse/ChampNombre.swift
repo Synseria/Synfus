@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import SynseriaDesign
 
 /// Le champ nombre d'un axe du départ (X ou Y) : étiquette d'axe + champ entier
 /// (nombre seul accepté) + stepper (flèches haut/bas) et roulette de la souris

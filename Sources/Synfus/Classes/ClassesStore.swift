@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import SynseriaDesign
 
 /// Les classes en vigueur et leurs emblèmes, pour tout Synfus.
 ///

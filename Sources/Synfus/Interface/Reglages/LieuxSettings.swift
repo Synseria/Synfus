@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 /// Les lieux : les repères du jeu — banques, hôtels de vente, ateliers, temples, donjons, transports —,
 /// à étiqueter, mettre en favori, rejoindre.

@@ -1,6 +1,7 @@
 import AppKit
 import Combine
 import SwiftUI
+import SynseriaDesign
 
 /// Le tableau des combinaisons élémentaires, posé sur le jeu pendant le combat d'un Huppermage
 /// (`CombinaisonsHuppermage.montree`) : presque transparent, il laisse passer les clics — il ne

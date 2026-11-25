@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 /// Onglet Palette : son raccourci, son tri, et les invitations qu'elle copie.
 struct PaletteSettings: View {

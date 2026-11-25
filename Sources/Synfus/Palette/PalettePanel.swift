@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import SynseriaDesign
 
 /// Où est le caret du champ de recherche. Pur.
 enum CaretPalette {

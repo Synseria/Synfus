@@ -2,6 +2,7 @@ import Testing
 import Foundation
 import Carbon.HIToolbox
 @testable import Synfus
+import SynseriaDesign
 
 @MainActor
 struct PreferencesTests {
@@ -263,7 +264,7 @@ struct PreferencesTests {
         #expect(prefs.barOnlyWithDofus == false)
         #expect(prefs.menuBarIcon == .logo)
         #expect(prefs.iconeApp == .parDefaut)
-        #expect(prefs.themeDeLApp == Jetons.themeParDefaut && prefs.nuanceDeLApp == Jetons.nuanceParDefaut)
+        #expect(prefs.themeDeLApp == Jetons.themeParDefaut)
         // Masquer la barre reste sans défaut : on ne confisque aucune
         // combinaison réservée par le système sans qu'elle ait été demandée.
         #expect(prefs.toggleBar == nil)
@@ -285,22 +286,22 @@ struct PreferencesTests {
         #expect(prefs.inviteFormat == "/invite %nom")
     }
 
-    /// Le fond est apparu après le thème : sans sa clé, le thème garde le fond de son coloris, et
-    /// la réécriture n'en invente pas.
-    @Test("Un thème sauvegardé avant le fond se relit sur le fond de son thème")
-    func themeDAvantLeFond() throws {
+    /// Le thème d'avant le continu (coloris, nuance) se convertit une fois ; la réécriture ne garde
+    /// que la nouvelle clé.
+    @Test("Un thème d'avant le continu se relit, puis s'écrit sous sa nouvelle clé")
+    func themeDAvantLeContinu() throws {
         let ancien = """
         {"characterOrder":["Amarine"],"hotKeys":[],"barVisible":true,"showNumbers":true,
          "themeDeLApp":"sauge","nuanceDeLApp":"nuit"}
         """
         let store = StockageMemoire([Preferences.key: Data(ancien.utf8)])
         let prefs = Preferences.forTesting(store: store)
-        #expect(prefs.themeDeLApp == .coloris(.sauge) && prefs.nuanceDeLApp == .nuit)
-        #expect(prefs.themeDeLApp.fond == nil && prefs.themeDeLApp.fondApplique == .nomme(Jetons.Coloris.sauge.fond))
+        #expect(prefs.themeDeLApp.teinte == 154 && prefs.themeDeLApp.fond == .accorde)
+        #expect(prefs.themeDeLApp.sombreImpose == true && prefs.themeDeLApp.clarte == Jetons.CranDeClarte.nuit.position)
         prefs.barVisible = prefs.barVisible
         let donnees = try #require(store.donnees(pour: Preferences.key))
         let reecrit = try #require(try JSONSerialization.jsonObject(with: donnees) as? [String: Any])
-        #expect(reecrit["themeDeLApp"] as? String == "sauge" && reecrit["fondDeLApp"] == nil)
+        #expect(reecrit["theme"] != nil && reecrit["themeDeLApp"] == nil && reecrit["nuanceDeLApp"] == nil)
     }
 
     @Test("Une invitation effacée exprès reste effacée à la reprise")
@@ -503,6 +504,8 @@ struct PreferencesTests {
     /// Chaque réglage à une valeur autre que son défaut, écrit tel qu'une
     /// sauvegarde le porte. Les raccourcis sont des keycodes explicites : les
     /// défauts dépendent du type de clavier de la machine.
+    private static let themeEmpreinte = Jetons.Theme(teinte: 200, fond: .teinte(34), suivreLeSysteme: false, clarte: 600)
+
     private static let empreinte = """
     {"advanceModifier":"option","advanceOnClick":true,
      "arrangeHotKey":{"keyCode":40,"modifiers":256},"attentionAction":"focus",
@@ -523,7 +526,7 @@ struct PreferencesTests {
      "inviteFormat":"/w %nom go","inviteGroupee":true,
      "inviteHotKey":{"keyCode":34,"modifiers":256},
      "killFrozenClients":false,"lastArrangement":"principale","lireCombat":true,"aideHuppermage":false,"lireCombatDerriere":true,
-     "lirePosition":true,"menuBarIcon":"symbole","iconeApp":{"motif":"couvee","fond":"aube"},"themeDeLApp":"personnalise:3FA9D8","fondDeLApp":"brique","nuanceDeLApp":"penombre",
+     "lirePosition":true,"menuBarIcon":"symbole","iconeApp":{"motif":"couvee","fond":"aube"},"theme":{"teinte":200,"fond":{"teinte":{"_0":34}},"suivreLeSysteme":false,"clarte":600,"clarteClaire":200,"clarteSombre":800},
      "previewHotKey":{"keyCode":49,"modifiers":2048},
      "sessionHotKey":{"keyCode":1,"modifiers":256},"reduirePersosInactifs":false,"showClasses":false,
      "showNumbers":false,"showPreviewOnHover":true,"signalerBascule":false,
@@ -564,7 +567,7 @@ struct PreferencesTests {
         #expect(prefs.autoCenterBar == false)
         #expect(prefs.menuBarIcon == .symbole)
         #expect(prefs.iconeApp == IconeApp(motif: .couvee, fond: .aube))
-        #expect(prefs.themeDeLApp == .personnalise(0x3FA9D8, fond: .nomme(.brique)) && prefs.nuanceDeLApp == .penombre)
+        #expect(prefs.themeDeLApp == Self.themeEmpreinte)
         #expect(prefs.showPreviewOnHover == true)
         #expect(prefs.previewHotKey == HotKey(keyCode: 49, modifiers: 2048))
         #expect(prefs.advanceOnClick == true)
@@ -646,8 +649,7 @@ struct PreferencesTests {
         prefs.autoCenterBar = false
         prefs.menuBarIcon = .symbole
         prefs.iconeApp = IconeApp(motif: .couvee, fond: .aube)
-        prefs.themeDeLApp = .personnalise(0x3FA9D8, fond: .nomme(.brique))
-        prefs.nuanceDeLApp = .penombre
+        prefs.themeDeLApp = Self.themeEmpreinte
         prefs.showPreviewOnHover = true
         prefs.previewHotKey = HotKey(keyCode: 49, modifiers: 2048)
         prefs.advanceOnClick = true
@@ -736,7 +738,7 @@ struct PreferencesTests {
          "autoCenterBar":true,"barOnlyWithDofus":false,"panneauxSeulementDofus":true,"panneauxPlies":{},"barVisible":true,"bossChoisi":"harebourg",
          "boutonsMasques":[],"characterOrder":[],
          "defaultsVersion":9,"equipes":[],"etiquettes":{},"hotKeys":[null],"inviteFormat":"/invite %nom","inviteGroupee":false,
-         "killFrozenClients":true,"lireCombat":false,"aideHuppermage":true,"lireCombatDerriere":false,"lirePosition":false,"menuBarIcon":"logo","iconeApp":{"motif":"oeuf","fond":"transparent"},"themeDeLApp":"lagon","nuanceDeLApp":"systeme",
+         "killFrozenClients":true,"lireCombat":false,"aideHuppermage":true,"lireCombatDerriere":false,"lirePosition":false,"menuBarIcon":"logo","iconeApp":{"motif":"oeuf","fond":"transparent"},"theme":{"teinte":260,"fond":{"accorde":{}},"suivreLeSysteme":true,"clarte":200,"clarteClaire":200,"clarteSombre":800},
          "reduirePersosInactifs":false,"showClasses":true,"showNumbers":true,"showPreviewOnHover":false,
          "signalerBascule":true,"zaapAuto":false,
          "zaapGainMinimal":5,"zaapDuJeu":true,"zaapIntercalees":"/a","verifierMisesAJour":true,"canalDeMiseAJour":"stable","partagerStatistiques":true,"zaapsAjoutes":[],"zaapsChoix":{},"zaapsFavoris":[],"zaapsVueCarte":true,
@@ -1187,7 +1189,7 @@ struct PreferencesPartageesTests {
         let prefs = Preferences.shared
         let theme = prefs.themeDeLApp
         defer { prefs.themeDeLApp = theme }
-        prefs.themeDeLApp = theme == .coloris(.cerise) ? .coloris(.lagon) : .coloris(.cerise)
+        prefs.themeDeLApp.teinte = (theme.teinte + 180) % 360
         #expect(UserDefaults.standard.data(forKey: Preferences.key) == avant)
     }
 }

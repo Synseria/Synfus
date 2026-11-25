@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 /// Poignée de déplacement adossée à AppKit — et, avec `menu`, bouton de menu
 /// qu'on peut aussi glisser (le titre des quêtes).

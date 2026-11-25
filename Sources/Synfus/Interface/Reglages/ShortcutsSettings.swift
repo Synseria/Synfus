@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 /// Onglet Raccourcis : toute combinaison globale s'y règle, une ligne par geste, puis l'enchaînement au clic et la réaction à l'attention.
 struct ShortcutsSettings: View {

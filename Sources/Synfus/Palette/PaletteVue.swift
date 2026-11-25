@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 /// La palette : un champ, puis les cartes de la vue (rien de tapé) ou la liste
 /// des résultats, et la ligne des touches. Le clavier est géré par le panneau

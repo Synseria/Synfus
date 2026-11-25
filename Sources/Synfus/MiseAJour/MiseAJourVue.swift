@@ -1,6 +1,7 @@
 import AppKit
 import MiseAJour
 import SwiftUI
+import SynseriaDesign
 
 extension SuiviDeMiseAJour.Etat {
     /// Ce que dit l'état à côté de la version ; rien tant qu'on n'a rien cherché.

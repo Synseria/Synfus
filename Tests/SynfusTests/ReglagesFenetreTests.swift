@@ -2,6 +2,7 @@ import AppKit
 import SwiftUI
 import Testing
 @testable import Synfus
+import SynseriaDesign
 
 /// La fenêtre des réglages telle que bâtie : une taille commune, que la vue remplit jusqu'en bas.
 @MainActor

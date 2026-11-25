@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import SynseriaDesign
 
 /// Les onglets des réglages, dans l'ordre de leur barre : neuf pages, chacune une suite de sections
 /// (Statistiques dans Général, Classes dans Personnages, Enchaîner et Attention dans Raccourcis,

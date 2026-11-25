@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import SynseriaDesign
 
 // Les images de la carte du jeu dans l'interface : la vue d'une carte en
 // vignette, agrandie au survol, et le pictogramme d'un repère. Toutes viennent
@@ -239,7 +240,7 @@ struct LoupeCarte: View {
         }
         .buttonStyle(BoutonIcone())
         .focusable(false)
-        .themeSynseria(ThemeCourant.reglage.theme, nuance: surImage ? .nuit : ThemeCourant.reglage.nuance)
+        .themeSynseria(surImage ? ThemeCourant.theme(en: .nuit) : ThemeCourant.theme)
         .accessibilityLabel(L("palette.carte.agrandir"))
         .onHover { dedans in
             attente?.cancel()

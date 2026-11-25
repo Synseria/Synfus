@@ -2,6 +2,7 @@ import Foundation
 import SwiftUI
 import Testing
 @testable import Synfus
+import SynseriaDesign
 
 /// Les jetons d'interface. Une couleur ou une police hors des jetons compile très
 /// bien : seul ce relevé des sources l'arrête.

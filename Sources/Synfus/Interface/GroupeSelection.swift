@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 // Au clavier, la sélection suit : le seul dessin de ce comportement, pour tout groupe à choix unique.
 

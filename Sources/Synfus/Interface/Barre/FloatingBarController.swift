@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import SynseriaDesign
 
 /// Panneau qui reste au-dessus du jeu sans jamais lui prendre le focus.
 private final class BarPanel: NSPanel {

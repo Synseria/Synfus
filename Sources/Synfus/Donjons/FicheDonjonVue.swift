@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 /// La fiche d'un donjon, dépliée sous lui ou sous l'un de ses boss dans la
 /// palette : des onglets (`OngletsFiche`) — boss, conseils, monstres, succès,

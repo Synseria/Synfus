@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 /// Les classes du jeu : leurs noms, leur couleur, leur emblème.
 ///

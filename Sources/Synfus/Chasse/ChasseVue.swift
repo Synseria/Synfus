@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 /// La racine du panneau de chasse : la vue de l'instance du perso devant —
 /// chaque perso a la sienne (`Chasses`), refaite quand le perso devant change.

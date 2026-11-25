@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 /// Les zaaps : une ligne chacun — activé ou non, étiqueté, favori —, un ajout à la main, et la vue de
 /// leur carte du jeu.

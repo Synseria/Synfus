@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 /// Les monstres d'un donjon en tableau, une ligne chacun : nom, niveau, vie, puis les cinq résistances
 /// sous le signe de leur élément, celle à frapper sur le fond de sélection, celles à éviter effacées.

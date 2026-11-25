@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import SynseriaDesign
 
 /// La recette épinglée, posée sur le jeu le temps des courses : une seule, que la suivante remplace
 /// — on achète pour un objet à la fois, et une pile de panneaux couvrirait le jeu. Elle survit à la

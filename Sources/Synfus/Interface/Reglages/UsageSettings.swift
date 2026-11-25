@@ -1,5 +1,6 @@
 import SwiftUI
 import Telemetrie
+import SynseriaDesign
 
 /// Les statistiques, dans la page Général : l'interrupteur du partage, puis ce que Synfus a compté et le
 /// JSON exact de ce qui part. Compteurs montrés au seul partage : c'est ce qui donne envie de le laisser

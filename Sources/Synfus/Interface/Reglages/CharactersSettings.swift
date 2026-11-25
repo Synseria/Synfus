@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 /// Onglet Personnages : leur ordre et leurs équipes, la fermeture des clients gelés, les icônes de classe.
 struct CharactersSettings: View {
