@@ -515,7 +515,7 @@ struct CarteZaap<Corps: View>: View {
                     .opacity(survole ? 1 : 0)
                     .allowsHitTesting(survole)
             }
-            if let compte = entree.compte { EtiquetteFilet(texte: compte, taille: Jetons.typoMicro, surImage: surImage) }
+            if let compte = entree.compte { EtiquetteFilet(texte: compte, taille: Jetons.typoMicro, surImage: surImage).fixedSize() }
             if entree.ici { RepereIci(taille: Jetons.typoMicro, surImage: surImage) }
             Text(entree.detail ?? "")
                 .font(Jetons.typoCode.font)
@@ -594,7 +594,7 @@ struct LigneResultat: View {
                 }
             }
             Spacer(minLength: Jetons.espace2)
-            if let compte = entree.compte { EtiquetteFilet(texte: compte, taille: Jetons.typoMeta) }
+            if let compte = entree.compte { EtiquetteFilet(texte: compte, taille: Jetons.typoMeta).fixedSize() }
             if entree.ici { RepereIci(taille: Jetons.typoMeta) }
             if let detail = entree.detail {
                 Text(detail)
@@ -718,6 +718,5 @@ struct EtiquetteFilet: View {
             .padding(.horizontal, Jetons.espace1)
             .overlay(Capsule().strokeBorder(Color.jeton(\.filet, surImage: surImage), lineWidth: Jetons.epaisseurFilet))
             .lineLimit(1)
-            .fixedSize()
     }
 }

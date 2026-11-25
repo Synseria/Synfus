@@ -219,8 +219,14 @@ struct CapturesTests {
     func rechercheNidas() throws {
         let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
         try FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)
-        for (nom, requete) in [("palette-nidas", "nidas"), ("palette-nidas-palais", "palais")] {
-            let vue = PaletteVue(modele: PaletteModele(contexte: try ContexteNidas.contexte(), requete: requete))
+        for (nom, requete, suite) in [("palette-nidas", "nidas", false), ("palette-nidas-palais", "palais", false),
+                                      ("palette-nidas-suite", "nidas", true)] {
+            let modele = PaletteModele(contexte: try ContexteNidas.contexte(), requete: requete)
+            // La ligne « de plus » choisie : son pied.
+            if suite, let rang = modele.entrees.firstIndex(where: { if case .famille = $0.effet { true } else { false } }) {
+                modele.selection = rang
+            }
+            let vue = PaletteVue(modele: modele)
                 .padding(24)
                 .background(Self.fondCapture)
                 .environment(\.colorScheme, Self.schema)
