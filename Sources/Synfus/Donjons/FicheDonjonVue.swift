@@ -1,11 +1,12 @@
 import SwiftUI
 
 /// La fiche d'un donjon, dépliée sous lui ou sous l'un de ses boss dans la
-/// palette : une rangée de cartes que le clavier parcourt
-/// (`CartesFiche`) — position, aide au combat, guide, monstres, succès, clef —, ce
-/// qu'elles déplient, puis les boss à leur plus haut grade et, dessous, les
-/// conseils du combat, dépliés d'office. Le détail et les conseils se
-/// téléchargent à l'ouverture ; entrée et guide n'attendent pas.
+/// palette : les boss à leur plus haut grade et, dessous, les conseils du
+/// combat, dépliés d'office — l'information de combat ne quitte pas l'écran —,
+/// puis une rangée de cartes que le clavier parcourt (`CartesFiche`) —
+/// position, aide au combat, guide, monstres, succès, clef — et ce qu'elles
+/// déplient. Le détail et les conseils se téléchargent à l'ouverture ;
+/// entrée et guide n'attendent pas.
 struct FicheDonjonVue: View {
     let id: Int
     @ObservedObject var modele: PaletteModele
@@ -22,6 +23,12 @@ struct FicheDonjonVue: View {
             let detail = store.details[id]
             let actions = modele.cartes.actions
             VStack(alignment: .leading, spacing: Jetons.espace2) {
+                if let detail {
+                    ForEach(detail.monstres.filter(\.boss), id: \.id) { monstre in ligne(monstre) }
+                } else {
+                    attente(donjon)
+                }
+                conseils
                 // Sur une ligne : faute de place (beaucoup de clefs), elle défile.
                 ViewThatFits(in: .horizontal) {
                     rangee(actions, detail)
@@ -33,12 +40,6 @@ struct FicheDonjonVue: View {
                 ForEach(actions.filter { modele.ouvertes.contains($0) }, id: \.self) { action in
                     ouverte(action, detail).padding(.leading, Jetons.espace3)
                 }
-                if let detail {
-                    ForEach(detail.monstres.filter(\.boss), id: \.id) { monstre in ligne(monstre) }
-                } else {
-                    attente(donjon)
-                }
-                conseils
             }
             .onAppear { store.demander(donjon) }
         }
