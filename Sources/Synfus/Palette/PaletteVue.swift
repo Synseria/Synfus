@@ -272,6 +272,9 @@ struct PaletteVue: View {
                 let deplie = modele.deplie == entree.id
                 // Le clavier sur une position du PNJ : la ligne ne se dit plus choisie, la position l'est.
                 let choisie = index == modele.selection && modele.position == nil
+                // La ligne dépliée et ce qu'elle déplie forment un bloc, sur un fond de survol arrondi :
+                // la ligne suivante se lit hors de la fiche.
+                VStack(spacing: 0) {
                 Group {
                     if case .famille = entree.effet {
                         LigneSuite(titre: entree.titre, choisie: choisie)
@@ -300,11 +303,15 @@ struct PaletteVue: View {
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    // Les onglets d'un donjon prennent toute la largeur de sa ligne (la fiche retire
-                    // elle-même son contenu sous le titre) ; le reste se retire sous le titre.
+                    // Une fiche de donjon, rangée par ses onglets, prend toute la largeur de sa ligne ;
+                    // le reste se retire sous le titre.
                     .padding(.leading, estUnDonjon ? Jetons.espace2 : PaletteVue.retraitSousTitre)
                     .padding(.trailing, estUnDonjon ? Jetons.espace2 : 0)
-                    .padding(.bottom, Jetons.espace1)
+                    .padding(.bottom, Jetons.espace2)
+                }
+                }
+                .background {
+                    if deplie { RoundedRectangle(cornerRadius: Jetons.rayon2, style: .continuous).fill(Color.jeton(\.survol)) }
                 }
             }
         }
