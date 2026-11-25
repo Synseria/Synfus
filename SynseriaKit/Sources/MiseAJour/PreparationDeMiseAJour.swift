@@ -1,11 +1,11 @@
 // Copié de SynseriaKit (Synseria-Design) — ne pas retoucher : changer le paquet dans Synseria-Design, puis sh propager.sh.
-// SynseriaKit 25f4236349ad81d5 · contenu 229a6d43433a2bff
+// SynseriaKit 82592cc8aa023014 · contenu 258ac86e55e81282
 // Le travail bloquant d'une mise à jour, hors du main actor : télécharger, vérifier, extraire l'app du
 // DMG et la contrôler ; la recontrôler avant de la poser ; ce que l'app fait après la pose.
 
 import Foundation
 
-/// Sort d'une release une app prête à poser. Un acteur à exécuteur dédié : `hdiutil` et `ditto`
+/// Sort d'une release une app prête à poser. Un acteur à exécuteur dédié : `diskutil image` et `ditto`
 /// durent, et ne doivent pas affamer le pool coopératif. Réentrant à chaque `await` : une seule
 /// préparation à la fois, c'est `SuiviDeMiseAJour` qui la garantit par son état.
 actor PreparationDeMiseAJour {
@@ -30,7 +30,7 @@ actor PreparationDeMiseAJour {
     func preparer(_ release: ReleasePubliee) async throws -> URL {
         try PoseDeMiseAJour.verifierEcriture(installee)
         // Un DMG resté monté (préparation interrompue) ferait échouer le vidage, puis chaque montage.
-        _ = Self.lancer("/usr/bin/hdiutil", ["detach", montage.path, "-force"])
+        _ = Self.lancer("/usr/sbin/diskutil", ["eject", "force", montage.path])
         try? FileManager.default.removeItem(at: dossier)
         try FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)
         let image = try await fournisseur.telecharger(release, dans: dossier)
@@ -59,10 +59,10 @@ actor PreparationDeMiseAJour {
     /// recopiée hors du DMG, démonté quoi qu'il arrive. Un lien symbolique n'est pas une app : recopié
     /// tel quel, il ferait poser un lien à la place de l'app.
     private func extraire(_ image: URL) throws -> URL {
-        guard Self.lancer("/usr/bin/hdiutil", ["attach", image.path, "-nobrowse", "-readonly", "-noverify", "-noautoopen",
-                                               "-mountpoint", montage.path])
+        // `diskutil image` remplace `hdiutil`, déprécié depuis macOS 26 ; il lit aussi les DMG HFS+ d'avant.
+        guard Self.lancer("/usr/sbin/diskutil", ["image", "attach", "--readOnly", "--nobrowse", "--mountPoint", montage.path, image.path])
         else { throw EchecDeMiseAJour.image }
-        defer { _ = Self.lancer("/usr/bin/hdiutil", ["detach", montage.path, "-force"]) }
+        defer { _ = Self.lancer("/usr/sbin/diskutil", ["eject", "force", montage.path]) }
         let apps = ((try? FileManager.default.contentsOfDirectory(at: montage, includingPropertiesForKeys: nil)) ?? [])
             .filter { $0.pathExtension == "app" && Self.estUnDossier($0) }
         guard let source = apps.first(where: { $0.lastPathComponent == installee.lastPathComponent })

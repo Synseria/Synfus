@@ -1,5 +1,5 @@
 // Engendré par Synseria-Design — ne pas retoucher : changer jetons.json ou apps/Synfus.json, puis sh propager.sh.
-// jetons.json c5f3400ce23232ce · contenu 1b3e6aba655f80c8
+// jetons.json 0bdf7022746769dd · contenu df7a239b7ba3f9ff
 import SwiftUI
 
 // Réglages ▸ Thème : l'affiche des douze thèmes, le bandeau des nuances et le verre (`K.fenetreTheme`
@@ -74,24 +74,30 @@ struct LibellesDuTheme {
 /// « Verre ». Un seul arrêt de Tab par groupe ; les flèches déplacent le choix lui-même.
 ///
 /// `coloris` nil : Personnalisé, à la couleur `personnalise`, gardée quand un coloris est choisi.
-/// `nuance` nil : la nuance suit le système. Sans `verre`, pas d'interrupteur du verre.
+/// `nuance` nil : la nuance suit le système. `fond` : celui que l'app a choisi, nil celui de chaque
+/// thème. Sans `verre`, pas d'interrupteur du verre.
 struct AfficheDuTheme: View {
     @Binding var coloris: Jetons.Coloris?
     @Binding var personnalise: UInt32
     @Binding var nuance: Jetons.Nuance?
+    let fond: Jetons.Fond?
     var verre: Binding<Bool>?
     let libelles: LibellesDuTheme
     @Environment(\.colorScheme) private var schema
 
     init(coloris: Binding<Jetons.Coloris?>, personnalise: Binding<UInt32>, nuance: Binding<Jetons.Nuance?>,
-         verre: Binding<Bool>? = nil, libelles: LibellesDuTheme) {
-        (_coloris, _personnalise, _nuance, self.verre, self.libelles) = (coloris, personnalise, nuance, verre, libelles)
+         fond: Jetons.Fond? = nil, verre: Binding<Bool>? = nil, libelles: LibellesDuTheme) {
+        (_coloris, _personnalise, _nuance, self.fond, self.verre, self.libelles) = (coloris, personnalise, nuance, fond, verre, libelles)
     }
 
     static let colonnes = 4
 
-    /// Le thème choisi : un coloris, ou Personnalisé à sa couleur.
-    var theme: Jetons.Theme { coloris.map(Jetons.Theme.coloris) ?? .personnalise(personnalise) }
+    /// Le thème choisi : un coloris, ou Personnalisé à sa couleur, sur le fond de l'app.
+    var theme: Jetons.Theme { theme(de: coloris) }
+
+    private func theme(de carte: Jetons.Coloris?) -> Jetons.Theme {
+        carte.map { .coloris($0, fond: fond) } ?? .personnalise(personnalise, fond: fond)
+    }
 
     /// La nuance que l'app dessine en ce moment : la choisie, sinon celle du système.
     private var affichee: Jetons.Nuance { nuance ?? .duSysteme(sombre: schema == .dark) }
@@ -121,7 +127,7 @@ struct AfficheDuTheme: View {
             // L'identité d'une carte est son coloris, pas sa valeur : la couleur de Personnalisé change
             // sous le curseur, et une carte refaite à chaque pas lâchait le curseur en plein geste.
             ForEach(Self.ordre, id: \.self) { carte in
-                CarteDApercu(theme: carte.map(Jetons.Theme.coloris) ?? .personnalise(personnalise), nuance: affichee,
+                CarteDApercu(theme: theme(de: carte), nuance: affichee,
                              choisie: carte == coloris, libelles: libelles,
                              choisir: { if coloris != carte { coloris = carte } },
                              poser: poser)
@@ -212,7 +218,7 @@ private struct CarteDApercu: View {
         // Les couleurs du thème de la carte, jamais celles de l'app : chacune montre le sien.
         let c = Jetons.Nuancier.couleurs(theme, nuance)
         VStack(alignment: .leading, spacing: 0) {
-            if case .personnalise(let couleur) = theme {
+            if case .personnalise(let couleur) = theme.primaire {
                 LigneDuPersonnalise(couleur: couleur, c: c, libelles: libelles, poser: poser)
             } else {
                 Button(action: choisir) { BarreDApercu(c: c).contentShape(.rect) }
@@ -257,11 +263,11 @@ private struct CarteDApercu: View {
     }
 
     private var estPersonnalise: Bool {
-        if case .personnalise = theme { true } else { false }
+        if case .personnalise = theme.primaire { true } else { false }
     }
 
     private var nom: String {
-        if case .coloris(let coloris) = theme { libelles.nomDuColoris(coloris) } else { libelles.personnalise }
+        if case .coloris(let coloris) = theme.primaire { libelles.nomDuColoris(coloris) } else { libelles.personnalise }
     }
 }
 

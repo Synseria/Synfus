@@ -1,5 +1,5 @@
 // Engendré par Synseria-Design — ne pas retoucher : changer jetons.json ou apps/Synfus.json, puis sh propager.sh.
-// jetons.json c5f3400ce23232ce · contenu 29894f4de41090a5
+// jetons.json 0bdf7022746769dd · contenu b0ab993d48af46c8
 import SwiftUI
 
 /// Les valeurs de design Synseria telles que Synfus les reçoit : toute couleur, taille ou durée
@@ -139,10 +139,14 @@ enum Jetons {
     static let courbeEntree = Courbe(x1: 0.4, y1: 0, x2: 1, y2: 1)
 
     // MARK: Verre et états
-    /// part du fond de fenêtre dans le verre de ce qui prend le clavier (fenêtre, palette, overlay, panneau, bloc-notes), focus ou pas : franc, le bureau flouté se voit ; une teinte sous le verre — valeur d'essai, à fixer par les essais de l'utilisateur
-    static let verreOpaciteFocus: Double = 0.41
-    /// verre de ce qui ne prend jamais le clavier (carte de réunion) — valeur d'essai, à fixer par les essais de l'utilisateur
-    static let verreOpaciteFlottant: Double = 0.45
+    /// part du fond de fenêtre dans le verre de ce qui prend le clavier (fenêtre, palette, overlay, panneau, bloc-notes), focus ou pas : le bureau flouté se voit presque en clair — valeur d'essai fixée à .05 d'après les essais de l'utilisateur (dans l'app, aucun texte ne se pose sur le verre)
+    static let verreOpaciteFocus: Double = 0.05
+    /// verre de ce qui ne prend jamais le clavier (carte de réunion) — valeur d'essai fixée à .05 d'après les essais de l'utilisateur
+    static let verreOpaciteFlottant: Double = 0.05
+    /// part du fond de fenêtre dans la barre d'une fenêtre (feux, onglets, recherche) : elle porte du texte, plus couvrante que le menu latéral — valeur d'essai
+    static let verreOpaciteBarre: Double = 0.4
+    /// part du fond de fenêtre derrière la plaque, à droite du menu latéral (qui reste à verre-opacite-focus) — valeur d'essai
+    static let verreOpacitePage: Double = 0.2
     /// flou derrière le verre
     static let verreFlou: CGFloat = 28
     /// contrôle désactivé
@@ -159,6 +163,10 @@ enum Jetons {
     static let pisteRepos: Double = 0.22
     /// piste d'un interrupteur éteint survolé
     static let pisteSurvol: Double = 0.32
+    /// opacité des plaques, cartes et blocs pleins posés sur le verre (1 = plein) — valeur choisie par l'utilisateur après essais
+    static let opacitePlaque: Double = 0.9
+    /// opacité de tous les filets et bordures (fenêtres, overlay, palette, panneau), pilotée par cette seule variable globale ; purement esthétique : aucun texte n'est jamais posé sur une bordure
+    static let opaciteFilet: Double = 0.1
     /// filet d'un champ survolé : l'encre mêlée au filet
     static let filetSurvol: Double = 0.35
 
@@ -201,20 +209,20 @@ extension Jetons {
             case .graphite: "Graphite"
             }
         }
-        /// Le Jour écrit du thème, dans l'ordre de `Nuancier.Valeurs`.
+        /// L'accent écrit du thème en Jour : accent, texte sur l'accent, accent en texte.
         var jour: [UInt32] {
             switch self {
-            case .cerise: [0xF8EEF0, 0xFFFFFF, 0xE9D0D5, 0x26171A, 0x744E54, 0x9F898D, 0xE63754, 0x220B0F, 0xA1273B, 0xF3E5E7]
-            case .terracotta: [0xF9EFEA, 0xFFFFFF, 0xEBD3C8, 0x2D1D18, 0x735A51, 0xA08980, 0xD9694A, 0xFFF7F3, 0xA8402A, 0xF6E5DC]
-            case .abricot: [0xFBF3EC, 0xFFFFFF, 0xEFDDCD, 0x2B2119, 0x6E5E52, 0x9C8C80, 0xEC9A6C, 0x2B1608, 0xA24B1E, 0xF9EDE2]
-            case .ambre: [0xFBF3E0, 0xFFFFFF, 0xEFDDB5, 0x2B2110, 0x6B5A38, 0x9A8A64, 0xE09A1C, 0x2B1700, 0x8F5600, 0xF8EACA]
-            case .miel: [0xFBF8DE, 0xFFFFFF, 0xEEE8B2, 0x29260A, 0x656030, 0x948F5C, 0xF0D030, 0x2B2600, 0x7A6C00, 0xF8F2C6]
-            case .sauge: [0xF3F5EC, 0xFFFFFF, 0xE0E6D3, 0x1F2619, 0x566150, 0x868F7F, 0x7DA689, 0x12210F, 0x3F6B4D, 0xEAEFE0]
-            case .lagon: [0xEDF6F3, 0xFFFFFF, 0xD2E6E0, 0x15262A, 0x4E6568, 0x7F9598, 0x3FB0A4, 0x04201D, 0x0E766C, 0xE1F0EC]
-            case .bleuet: [0xEFF4FA, 0xFFFFFF, 0xD5E1F0, 0x14202E, 0x4D6078, 0x8095AD, 0x6E9FDC, 0x07182E, 0x2F66AE, 0xE3EDF8]
-            case .lilas: [0xF5F1FA, 0xFFFFFF, 0xE0D8EE, 0x221B2E, 0x5E5470, 0x8F86A1, 0x9C84D6, 0x140A2B, 0x6B4FB0, 0xEEE7F8]
-            case .prune: [0xFAF0F4, 0xFFFFFF, 0xEDD5DF, 0x2A1822, 0x6E5663, 0x9C8591, 0xC0608F, 0xFFFFFF, 0x9A3A69, 0xF6E4EC]
-            case .graphite: [0xF2F3F4, 0xFFFFFF, 0xDADCDF, 0x171D26, 0x525E6F, 0x89929F, 0x6B7480, 0xFFFFFF, 0x4B515A, 0xEBECED]
+            case .cerise: [0xE63754, 0x220B0F, 0xA1273B]
+            case .terracotta: [0xD9694A, 0xFFF7F3, 0xA8402A]
+            case .abricot: [0xEC9A6C, 0x2B1608, 0xA24B1E]
+            case .ambre: [0xE09A1C, 0x2B1700, 0x8F5600]
+            case .miel: [0xF0D030, 0x2B2600, 0x7A6C00]
+            case .sauge: [0x7DA689, 0x12210F, 0x3F6B4D]
+            case .lagon: [0x3FB0A4, 0x04201D, 0x0E766C]
+            case .bleuet: [0x6E9FDC, 0x07182E, 0x2F66AE]
+            case .lilas: [0x9C84D6, 0x140A2B, 0x6B4FB0]
+            case .prune: [0xC0608F, 0xFFFFFF, 0x9A3A69]
+            case .graphite: [0x6B7480, 0xFFFFFF, 0x4B515A]
             }
         }
         /// L'accent des nuances sombres.
@@ -231,6 +239,46 @@ extension Jetons {
             case .lilas: 0xB8A2EC
             case .prune: 0xE58CB5
             case .graphite: 0x979EA6
+            }
+        }
+        /// Son fond quand aucun n'est choisi : de température opposée à son accent.
+        var fond: FondNomme {
+            switch self {
+            case .cerise: .ardoise
+            case .terracotta: .ardoise
+            case .abricot: .ardoise
+            case .ambre: .ardoise
+            case .miel: .ardoise
+            case .sauge: .sable
+            case .lagon: .sable
+            case .bleuet: .sable
+            case .lilas: .sable
+            case .prune: .ardoise
+            case .graphite: .graphite
+            }
+        }
+    }
+
+    /// Les fonds nommés : la seconde couleur du thème, d'où se tirent ses surfaces et ses encres.
+    enum FondNomme: String, CaseIterable, Sendable, Identifiable {
+        case ardoise, lagune, sable, brique, graphite
+        var id: String { rawValue }
+        var nom: String {
+            switch self {
+            case .ardoise: "Ardoise"
+            case .lagune: "Lagune"
+            case .sable: "Sable"
+            case .brique: "Brique"
+            case .graphite: "Graphite"
+            }
+        }
+        var couleur: UInt32 {
+            switch self {
+            case .ardoise: 0x566A88
+            case .lagune: 0x3F7A80
+            case .sable: 0xA8916E
+            case .brique: 0x9A5646
+            case .graphite: 0x6B7078
             }
         }
     }
@@ -261,22 +309,18 @@ extension Jetons {
     /// Les réglages du calcul des couleurs (`couleur.calcul` de jetons.json).
     enum Parametres {
         static let nomPersonnalise = "Personnalisé"
+        static let fondDuPersonnalise = FondNomme.graphite
         enum Personnalise {
             static let couleur = Octets(0x3FA9D8)
             static let saturation: [Double] = [8, 85]
             static let clarte: [Double] = [44, 66]
             static let saturationCurseurMin: Double = 40
+            static let texteSurAccentFonce: [Double] = [50, 9]
+            static let accentTexteVersNoir: Double = 0.3
+            static let accentSombreVersBlanc: Double = 0.3
         }
         static let tauxSelection: Double = 18
         enum Choix {
-            static func part(_ nuance: Nuance) -> Double {
-                switch nuance {
-                case .jour: 18
-                case .crepuscule: 18
-                case .penombre: 18
-                case .nuit: 16
-                }
-            }
             static let partSurvol: Double = 40
             static let pas: Double = 2
             static let max: Double = 40
@@ -293,6 +337,10 @@ extension Jetons {
             static let texteSurAccentPlancher: Double = 4.5
             static let texteSurEtat: Double = 4.5
             static let texteSurVerre: Double = 3
+            enum Temperature {
+                static let chaud: [Double] = [290, 90]
+                static let neutreSaturation: Double = 12
+            }
         }
         static let pasRenfort: Double = 0.05
         static let pasTexteSurAccent: Double = 0.06
@@ -312,54 +360,30 @@ extension Jetons {
                 static let info: [Double] = [212, 85, 72]
             }
         }
-        enum Chroma {
-            static let diviseur: Double = 62
-            static let min: Double = 0.12
-        }
         static let texteSurAccentSombre: [Double] = [60, 8]
-        enum JourEngendre {
-            enum SaturationFond {
-                static let facteur: Double = 0.5
-                static let min: Double = 7
-                static let max: Double = 42
+        static let saturationFond: [Double] = [6, 28]
+        /// Un cran de lumière : finie vers le noir (`clair`) ou le blanc, la part de départ du choix,
+        /// celle du fond mêlée à l'accent, et chaque surface et encre [facteur de la saturation du fond,
+        /// clarté, part de l'accent].
+        struct Cran: Sendable {
+            let clair: Bool
+            let choix: Double
+            let accent: Double
+            let fondFenetre: [Double]
+            let plaque: [Double]
+            let filet: [Double]
+            let fondTeinte: [Double]
+            let encre: [Double]
+            let encre2: [Double]
+            let encre3: [Double]
+        }
+        static func cran(_ nuance: Nuance) -> Cran {
+            switch nuance {
+            case .jour: Cran(clair: true, choix: 18, accent: 0, fondFenetre: [2.4, 95.3, 0], plaque: [0, 100, 0], filet: [1.9, 86.5, 0], fondTeinte: [2.4, 92.6, 0], encre: [1.1, 12, 0], encre2: [0.75, 38, 0], encre3: [0.45, 58, 0])
+            case .crepuscule: Cran(clair: true, choix: 18, accent: 0, fondFenetre: [1, 82, 0.05], plaque: [1.2, 88.5, 0.03], filet: [0.8, 70, 0.12], fondTeinte: [1, 82, 0.14], encre: [1.2, 7, 0.08], encre2: [0.9, 25, 0.1], encre3: [0.7, 40, 0.1])
+            case .penombre: Cran(clair: false, choix: 18, accent: 0.08, fondFenetre: [0.55, 19, 0.04], plaque: [0.6, 23.5, 0.04], filet: [0.6, 35, 0], fondTeinte: [0.55, 19, 0.04], encre: [1.6, 90, 0], encre2: [1.1, 73, 0], encre3: [0.6, 58, 0])
+            case .nuit: Cran(clair: false, choix: 16, accent: 0, fondFenetre: [0.9, 10.5, 0], plaque: [0.9, 14, 0], filet: [0.81, 24, 0], fondTeinte: [0.9, 10.5, 0], encre: [0.36, 92, 0], encre2: [0.32, 73, 0], encre3: [0.27, 55, 0])
             }
-            static let clarteFondFenetre: Double = 95.3
-            static let clarteFondTeinte: Double = 92.6
-            static let plaque = Octets(0xFFFFFF)
-            static let filet: [Double] = [0.9, 86.5]
-            static let encre: [Double] = [24, 12]
-            static let encre2: [Double] = [14, 0.15, 38]
-            static let encre3: [Double] = [10, 58]
-            static let texteSurAccentFonce: [Double] = [50, 9]
-            static let accentTexteVersNoir: Double = 0.3
-            static let accentSombreVersBlanc: Double = 0.3
-        }
-        enum Crepuscule {
-            static let fondFenetre = Melange(de: Octets(0xD9D3C9), part: 0.05)
-            static let plaque = Melange(de: Octets(0xE7E2D9), part: 0.03)
-            static let filet = Melange(de: Octets(0xBDB5A7), part: 0.12)
-            static let encre = Melange(de: Octets(0x16130F), part: 0.08)
-            static let encre2 = Melange(de: Octets(0x4A4339), part: 0.1)
-            static let encre3 = Melange(de: Octets(0x70685B), part: 0.1)
-            static let fondTeinte: Double = 0.14
-        }
-        enum Penombre {
-            static let fondFenetre = Melange(de: Octets(0x34302D), part: 0.04)
-            static let plaque = Melange(de: Octets(0x3F3A36), part: 0.04)
-            static let filet = Octets(0x5C554E)
-            static let encre = Octets(0xEFE8DC)
-            static let encre2 = Octets(0xC6BDB0)
-            static let encre3 = Octets(0x9A9185)
-            static let accent = Melange(de: Octets(0x34302D), part: 0.08)
-        }
-        enum Nuit {
-            static let saturation: [Double] = [6, 22]
-            static let fondFenetre: [Double] = [1, 0, 10.5]
-            static let plaque: [Double] = [1, 0, 14]
-            static let filet: [Double] = [0.9, 0, 24]
-            static let encre: [Double] = [0.4, 6, 92]
-            static let encre2: [Double] = [0.35, 4, 73]
-            static let encre3: [Double] = [0.3, 4, 55]
         }
         enum Graphiques {
             static let seuil: Double = 3
@@ -394,15 +418,53 @@ extension Jetons {
 // `Parametres` (jetons.json). outils/test_swift.py compare ce calcul à la page, rôle par rôle.
 
 extension Jetons {
-    /// Le thème de l'app : un des thèmes nommés, ou Personnalisé, engendré d'une seule couleur.
-    enum Theme: Hashable, Sendable {
-        case coloris(Coloris)
-        case personnalise(UInt32)
+    /// Le thème de l'app : une primaire (un coloris nommé, ou Personnalisé, engendré d'une seule
+    /// couleur) et un fond choisi à part, la seconde couleur d'où se tirent surfaces et encres.
+    struct Theme: Hashable, Sendable {
+        enum Primaire: Hashable, Sendable {
+            case coloris(Coloris)
+            case personnalise(UInt32)
+        }
+
+        var primaire: Primaire
+        /// nil : le fond du thème (`fondParDefaut`), de température opposée à son accent.
+        var fond: Fond?
+
+        init(_ primaire: Primaire, fond: Fond? = nil) {
+            (self.primaire, self.fond) = (primaire, fond)
+        }
+
+        static func coloris(_ coloris: Coloris, fond: Fond? = nil) -> Theme { Theme(.coloris(coloris), fond: fond) }
+        static func personnalise(_ couleur: UInt32, fond: Fond? = nil) -> Theme { Theme(.personnalise(couleur), fond: fond) }
 
         var nom: String {
-            switch self {
+            switch primaire {
             case .coloris(let c): c.nom
             case .personnalise: Parametres.nomPersonnalise
+            }
+        }
+
+        var fondParDefaut: FondNomme {
+            switch primaire {
+            case .coloris(let c): c.fond
+            case .personnalise: Parametres.fondDuPersonnalise
+            }
+        }
+
+        /// La couleur du fond appliqué : le choisi, sinon celui du thème.
+        var couleurDuFond: UInt32 { (fond ?? .nomme(fondParDefaut)).couleur }
+    }
+
+    /// Le fond choisi : un fond nommé, ou Personnalisé à sa couleur (sa saturation est bornée, sa
+    /// clarté ne compte pas : les crans la fixent).
+    enum Fond: Hashable, Sendable {
+        case nomme(FondNomme)
+        case personnalise(UInt32)
+
+        var couleur: UInt32 {
+            switch self {
+            case .nomme(let f): f.couleur
+            case .personnalise(let c): c
             }
         }
     }
@@ -450,7 +512,7 @@ extension Jetons {
 
         // MARK: - Les formules de la page
 
-        /// Les rôles en cours de calcul ; les dix premiers dans l'ordre où un thème écrit son Jour.
+        /// Les rôles en cours de calcul.
         struct Valeurs {
             var fondFenetre, plaque, filet, encre, encre2, encre3, accent, texteSurAccent, accentTexte, fondTeinte: Octets
             var danger = Octets.noir, succes = Octets.noir, avertissement = Octets.noir, info = Octets.noir
@@ -458,9 +520,10 @@ extension Jetons {
             var accentSurvol = Octets.noir, accentPresse = Octets.noir, dangerSurvol = Octets.noir, dangerPresse = Octets.noir
             var partChoix = 0.0, partSurvol = 0.0
 
-            init(_ v: [Octets]) {
-                (fondFenetre, plaque, filet, encre, encre2) = (v[0], v[1], v[2], v[3], v[4])
-                (encre3, accent, texteSurAccent, accentTexte, fondTeinte) = (v[5], v[6], v[7], v[8], v[9])
+            init(fondFenetre: Octets, plaque: Octets, filet: Octets, encre: Octets, encre2: Octets, encre3: Octets,
+                 accent: Octets, texteSurAccent: Octets, accentTexte: Octets, fondTeinte: Octets) {
+                (self.fondFenetre, self.plaque, self.filet, self.encre, self.encre2) = (fondFenetre, plaque, filet, encre, encre2)
+                (self.encre3, self.accent, self.texteSurAccent, self.accentTexte, self.fondTeinte) = (encre3, accent, texteSurAccent, accentTexte, fondTeinte)
             }
 
             var surfaces: [Octets] { [fondFenetre, plaque, fondTeinte] }
@@ -473,7 +536,7 @@ extension Jetons {
 
         /// Le choix : en clair l'accent foncé (un accent clair teint sans assombrir), en sombre l'accent ;
         /// sa part monte par pas jusqu'à ce que choix et survol se distinguent, et le survol du fond.
-        static func doserChoix(_ v: inout Valeurs, clair: Bool, nuance: Nuance) {
+        static func doserChoix(_ v: inout Valeurs, clair: Bool, depart: Double) {
             typealias X = Parametres.Choix
             let t = clair ? v.accentTexte : v.accent
             func distincts(_ p: Double) -> Bool {
@@ -482,16 +545,16 @@ extension Jetons {
                     return Octets.contraste(choix, survol) >= X.contrasteChoixSurvol && Octets.contraste(survol, f) >= X.contrasteSurvolFond
                 }
             }
-            var p = X.part(nuance)
+            var p = depart
             while !distincts(p), p < X.max { p += X.pas }
             (v.teinteChoix, v.partChoix, v.partSurvol) = (t, p, p * X.partSurvol / 100)
         }
 
         /// `finir` : chaque encre va vers le noir (clair) ou le blanc (sombre) jusqu'à son seuil.
-        static func finir(_ depart: Valeurs, clair: Bool, nuance: Nuance) -> Valeurs {
+        static func finir(_ depart: Valeurs, clair: Bool, choix: Double) -> Valeurs {
             typealias S = Parametres.Seuils
             var v = depart
-            doserChoix(&v, clair: clair, nuance: nuance)
+            doserChoix(&v, clair: clair, depart: choix)
             (v.danger, v.succes, v.avertissement, v.info) = semantiques(clair: clair)
             let vers = clair ? Octets.noir : Octets.blanc
             let fonds = v.surfaces, tous = fonds + v.selections
@@ -543,65 +606,45 @@ extension Jetons {
                 : (Octets.tsl(F.danger), Octets.tsl(F.succes), Octets.tsl(F.avertissement), Octets.tsl(F.info))
         }
 
-        /// Une nuance d'un thème : le Jour écrit (ou engendré), les trois autres calculées.
+        /// Une nuance d'un thème : chaque surface et encre à la teinte du fond, sa saturation bornée ×
+        /// le facteur du cran, la clarté du cran, puis une part de l'accent de la nuance.
         static func valeurs(_ theme: Theme, _ nuance: Nuance) -> Valeurs {
-            let (jour, sombre) = source(theme)
-            let a = jour.accent
-            let (h, saturation, _) = a.tsl
-            typealias Ch = Parametres.Chroma
-            let k = max(Ch.min, min(1, saturation / Ch.diviseur))
-            let surAccentSombre = Octets.tsl(h, Parametres.texteSurAccentSombre[0], Parametres.texteSurAccentSombre[1])
-            switch nuance {
-            case .jour:
-                return finir(jour, clair: true, nuance: nuance)
-            case .crepuscule:
-                typealias K = Parametres.Crepuscule
-                func m(_ x: Melange) -> Octets { Octets.melange(x.de, a, x.part) }
-                let fond = m(K.fondFenetre)
-                return finir(Valeurs([fond, m(K.plaque), m(K.filet), m(K.encre), m(K.encre2), m(K.encre3), a,
-                                      jour.texteSurAccent, jour.accentTexte, Octets.melange(fond, a, K.fondTeinte)]), clair: true, nuance: nuance)
-            case .penombre:
-                typealias P = Parametres.Penombre
-                let fond = Octets.melange(P.fondFenetre.de, sombre, P.fondFenetre.part)
-                return finir(Valeurs([fond, Octets.melange(P.plaque.de, sombre, P.plaque.part), P.filet, P.encre, P.encre2,
-                                      P.encre3, Octets.melange(sombre, P.accent.de, P.accent.part), surAccentSombre, sombre,
-                                      fond]), clair: false, nuance: nuance)
-            case .nuit:
-                typealias N = Parametres.Nuit
-                let s = N.saturation[0] + N.saturation[1] * k
-                func n(_ r: [Double]) -> Octets { Octets.tsl(h, s * r[0] + r[1], r[2]) }
-                return finir(Valeurs([n(N.fondFenetre), n(N.plaque), n(N.filet), n(N.encre), n(N.encre2), n(N.encre3),
-                                      sombre, surAccentSombre, sombre, n(N.fondFenetre)]), clair: false, nuance: nuance)
-            }
+            let (jour, sombre) = accents(theme.primaire)
+            let K = Parametres.cran(nuance)
+            let (h, s0, _) = Octets(theme.couleurDuFond).tsl
+            let s = max(Parametres.saturationFond[0], min(Parametres.saturationFond[1], s0))
+            let a = K.clair ? jour.accent : sombre
+            func r(_ x: [Double]) -> Octets { Octets.melange(Octets.tsl(h, s * x[0], x[1]), a, x[2]) }
+            let surAccentSombre = Octets.tsl(jour.accent.tsl.0, Parametres.texteSurAccentSombre[0], Parametres.texteSurAccentSombre[1])
+            let fond = r(K.fondFenetre)
+            let v = Valeurs(
+                fondFenetre: fond, plaque: r(K.plaque), filet: r(K.filet), encre: r(K.encre), encre2: r(K.encre2), encre3: r(K.encre3),
+                accent: Octets.melange(a, fond, K.accent), texteSurAccent: K.clair ? jour.texteSurAccent : surAccentSombre,
+                accentTexte: K.clair ? jour.accentTexte : sombre, fondTeinte: r(K.fondTeinte))
+            return finir(v, clair: K.clair, choix: K.choix)
         }
 
-        /// Le Jour brut d'un thème et son accent sombre.
-        static func source(_ theme: Theme) -> (Valeurs, Octets) {
-            switch theme {
+        /// L'accent écrit en Jour (accent, texte sur l'accent, accent en texte) et l'accent sombre.
+        static func accents(_ primaire: Theme.Primaire) -> ((accent: Octets, texteSurAccent: Octets, accentTexte: Octets), Octets) {
+            switch primaire {
             case .coloris(let c):
-                return (Valeurs(c.jour.map(Octets.init)), Octets(c.accentSombre))
+                let j = c.jour.map(Octets.init)
+                return ((j[0], j[1], j[2]), Octets(c.accentSombre))
             case .personnalise(let couleur):
                 return personnalise(Octets(couleur))
             }
         }
 
-        /// Personnalisé : un Jour engendré d'une seule couleur (teinte, saturation, clarté bornées).
-        static func personnalise(_ couleur: Octets) -> (Valeurs, Octets) {
+        /// Personnalisé : un accent engendré d'une seule couleur (teinte, saturation, clarté bornées).
+        static func personnalise(_ couleur: Octets) -> ((accent: Octets, texteSurAccent: Octets, accentTexte: Octets), Octets) {
             typealias P = Parametres.Personnalise
-            typealias G = Parametres.JourEngendre
             let (h, s0, l0) = couleur.tsl
             let s = max(P.saturation[0], min(P.saturation[1], s0)), l = max(P.clarte[0], min(P.clarte[1], l0))
-            let bs = max(G.SaturationFond.min, min(s * G.SaturationFond.facteur, G.SaturationFond.max))
             let accent = Octets.tsl(h, s, l)
             let surAccent = Octets.contraste(.noir, accent) > Octets.contraste(.blanc, accent)
-                ? Octets.tsl(h, G.texteSurAccentFonce[0], G.texteSurAccentFonce[1]) : Octets.blanc
-            let jour = Valeurs([
-                Octets.tsl(h, bs, G.clarteFondFenetre), G.plaque, Octets.tsl(h, bs * G.filet[0], G.filet[1]),
-                Octets.tsl(h, G.encre[0], G.encre[1]), Octets.tsl(h, G.encre2[0] + bs * G.encre2[1], G.encre2[2]),
-                Octets.tsl(h, G.encre3[0], G.encre3[1]), accent, surAccent,
-                Octets.melange(accent, .noir, G.accentTexteVersNoir), Octets.tsl(h, bs, G.clarteFondTeinte),
-            ])
-            return (jour, Octets.melange(accent, .blanc, G.accentSombreVersBlanc))
+                ? Octets.tsl(h, P.texteSurAccentFonce[0], P.texteSurAccentFonce[1]) : Octets.blanc
+            return ((accent, surAccent, Octets.melange(accent, .noir, P.accentTexteVersNoir)),
+                    Octets.melange(accent, .blanc, P.accentSombreVersBlanc))
         }
 
         // MARK: - Graphiques
@@ -749,11 +792,5 @@ extension Jetons {
         }
 
         static func tsl(_ v: [Double]) -> Octets { tsl(v[0], v[1], v[2]) }
-    }
-
-    /// Une couleur fixe mêlée d'une part de l'accent du thème (`[#RRGGBB, part]` dans jetons.json).
-    struct Melange: Sendable {
-        let de: Octets
-        let part: Double
     }
 }

@@ -1,5 +1,5 @@
 // Copié de SynseriaKit (Synseria-Design) — ne pas retoucher : changer le paquet dans Synseria-Design, puis sh propager.sh.
-// SynseriaKit 25f4236349ad81d5 · contenu 02f3b5c5283ab0c0
+// SynseriaKit 82592cc8aa023014 · contenu 02f3b5c5283ab0c0
 // Poser une app à la place de celle qui tourne, et relancer l'app.
 
 import AppKit

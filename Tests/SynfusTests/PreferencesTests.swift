@@ -285,6 +285,24 @@ struct PreferencesTests {
         #expect(prefs.inviteFormat == "/invite %nom")
     }
 
+    /// Le fond est apparu après le thème : sans sa clé, le thème garde le fond de son coloris, et
+    /// la réécriture n'en invente pas.
+    @Test("Un thème sauvegardé avant le fond se relit sur le fond de son thème")
+    func themeDAvantLeFond() throws {
+        let ancien = """
+        {"characterOrder":["Amarine"],"hotKeys":[],"barVisible":true,"showNumbers":true,
+         "themeDeLApp":"sauge","nuanceDeLApp":"nuit"}
+        """
+        let store = StockageMemoire([Preferences.key: Data(ancien.utf8)])
+        let prefs = Preferences.forTesting(store: store)
+        #expect(prefs.themeDeLApp == .coloris(.sauge) && prefs.nuanceDeLApp == .nuit)
+        #expect(prefs.themeDeLApp.fond == nil && prefs.themeDeLApp.fondApplique == .nomme(Jetons.Coloris.sauge.fond))
+        prefs.barVisible = prefs.barVisible
+        let donnees = try #require(store.donnees(pour: Preferences.key))
+        let reecrit = try #require(try JSONSerialization.jsonObject(with: donnees) as? [String: Any])
+        #expect(reecrit["themeDeLApp"] as? String == "sauge" && reecrit["fondDeLApp"] == nil)
+    }
+
     @Test("Une invitation effacée exprès reste effacée à la reprise")
     func invitationEffacee() {
         let (prefs, store) = neuves()
@@ -505,7 +523,7 @@ struct PreferencesTests {
      "inviteFormat":"/w %nom go","inviteGroupee":true,
      "inviteHotKey":{"keyCode":34,"modifiers":256},
      "killFrozenClients":false,"lastArrangement":"principale","lireCombat":true,"aideHuppermage":false,"lireCombatDerriere":true,
-     "lirePosition":true,"menuBarIcon":"symbole","iconeApp":{"motif":"couvee","fond":"aube"},"themeDeLApp":"personnalise:3FA9D8","nuanceDeLApp":"penombre",
+     "lirePosition":true,"menuBarIcon":"symbole","iconeApp":{"motif":"couvee","fond":"aube"},"themeDeLApp":"personnalise:3FA9D8","fondDeLApp":"brique","nuanceDeLApp":"penombre",
      "previewHotKey":{"keyCode":49,"modifiers":2048},
      "sessionHotKey":{"keyCode":1,"modifiers":256},"reduirePersosInactifs":false,"showClasses":false,
      "showNumbers":false,"showPreviewOnHover":true,"signalerBascule":false,
@@ -546,7 +564,7 @@ struct PreferencesTests {
         #expect(prefs.autoCenterBar == false)
         #expect(prefs.menuBarIcon == .symbole)
         #expect(prefs.iconeApp == IconeApp(motif: .couvee, fond: .aube))
-        #expect(prefs.themeDeLApp == .personnalise(0x3FA9D8) && prefs.nuanceDeLApp == .penombre)
+        #expect(prefs.themeDeLApp == .personnalise(0x3FA9D8, fond: .nomme(.brique)) && prefs.nuanceDeLApp == .penombre)
         #expect(prefs.showPreviewOnHover == true)
         #expect(prefs.previewHotKey == HotKey(keyCode: 49, modifiers: 2048))
         #expect(prefs.advanceOnClick == true)
@@ -628,7 +646,7 @@ struct PreferencesTests {
         prefs.autoCenterBar = false
         prefs.menuBarIcon = .symbole
         prefs.iconeApp = IconeApp(motif: .couvee, fond: .aube)
-        prefs.themeDeLApp = .personnalise(0x3FA9D8)
+        prefs.themeDeLApp = .personnalise(0x3FA9D8, fond: .nomme(.brique))
         prefs.nuanceDeLApp = .penombre
         prefs.showPreviewOnHover = true
         prefs.previewHotKey = HotKey(keyCode: 49, modifiers: 2048)
