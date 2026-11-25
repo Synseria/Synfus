@@ -99,10 +99,12 @@ extension PNJ {
 }
 
 extension RecherchePalette {
-    /// Les positions d'un PNJ en cartes, dans l'ordre de `OrdrePositions`. La carte « habituelle » n'est
+    /// Les positions d'un PNJ en cartes, celles de ses homonymes comprises (`HomonymesPNJ`), dans l'ordre
+    /// de `OrdrePositions`. La carte « habituelle » n'est
     /// dite que s'il y en a plusieurs.
     static func positions(de pnj: Int, _ contexte: ContextePalette) -> [PositionPNJ] {
-        guard let quetes = contexte.quetes, let pnj = quetes.pnjs.first(where: { $0.id == pnj }) else { return [] }
+        guard let quetes = contexte.quetes,
+              let pnj = HomonymesPNJ.fusionne(de: pnj, parmi: quetes.pnjs, langue: contexte.langue)?.pnj else { return [] }
         let citees = Set(pnj.passages.flatMap(\.quetes))
         let noms = Dictionary(quetes.quetes.lazy.filter { citees.contains($0.id) }
             .map { ($0.id, Lieu.traduit($0.noms, contexte.langue) ?? "?") }, uniquingKeysWith: { a, _ in a })

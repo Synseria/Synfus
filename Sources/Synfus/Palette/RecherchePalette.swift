@@ -496,35 +496,41 @@ enum RecherchePalette {
         .alphabetiques()
     }
 
-    /// Un PNJ par ligne, quel que soit le nombre de cases où les quêtes le placent. Sa ligne dit sa
-    /// position habituelle (celle que le plus de quêtes citent), stable quand le perso bouge ; le
-    /// rang suit la plus proche de ses positions. Plusieurs positions : ↵ les déplie en cartes
-    /// (`positions(de:)`). `seulement` : ces PNJ (`PNJ.cle`).
+    /// Un PNJ par ligne, quel que soit le nombre de cases où les quêtes le placent, ses homonymes de la
+    /// même sous-zone réunis (`HomonymesPNJ`). Sa ligne dit sa position habituelle (celle que le plus de
+    /// quêtes citent), stable quand le perso bouge ; le rang suit la plus proche de ses positions.
+    /// Plusieurs positions : ↵ les déplie en cartes (`positions(de:)`). `seulement` : ces PNJ (`PNJ.cle`).
     static func pnjs(_ contexte: ContextePalette, seulement: Set<String>? = nil) -> [EntreePalette] {
         guard let quetes = contexte.quetes else { return [] }
-        let choisis = seulement.map { cles in quetes.pnjs.filter { cles.contains($0.cle) } } ?? quetes.pnjs
-        return choisis.compactMap { pnj in
+        let fusionnes = HomonymesPNJ.fusionner(quetes.pnjs, langue: contexte.langue)
+        let choisis = seulement.map { cles in fusionnes.filter { !cles.isDisjoint(with: $0.cles) } } ?? fusionnes
+        return choisis.compactMap { fusionne in
+            let pnj = fusionne.pnj
             guard let habituel = pnj.passages.first else { return nil }
             let titre = Lieu.traduit(pnj.noms, contexte.langue) ?? "?"
             let lieu = lieuDit(habituel, quetes, contexte) ?? L("palette.pnj")
             let trajets = pnj.passages.map { versCase($0, contexte) }
+            // La clé d'un homonyme déjà favori ou étiqueté : ⌘D et ⌘E le retrouvent.
+            let cle = fusionne.cles.first { contexte.favoris.contains($0) || contexte.etiquettes[$0] != nil } ?? pnj.cle
+            let etiquette = contexte.etiquettes[cle]
+            let favori = contexte.favoris.contains(cle)
             if pnj.passages.count > 1 {
                 return EntreePalette(id: pnj.cle, genre: .pnj, titre: titre, sousTitre: lieu,
                                      autresLieux: pnj.passages.dropFirst().compactMap { lieuDit($0, quetes, contexte) }
                                          .joined(separator: " "),
-                                     etiquette: contexte.etiquettes[pnj.cle],
+                                     etiquette: etiquette,
                                      compte: L("palette.pnj.positions", nombre: pnj.passages.count, pnj.passages.count),
-                                     favori: contexte.favoris.contains(pnj.cle), distance: trajets.compactMap(\.distance).min(),
-                                     cle: pnj.cle, pnj: pnj.id, effet: .positions(pnj.id))
+                                     favori: favori, distance: trajets.compactMap(\.distance).min(),
+                                     cle: cle, pnj: pnj.id, effet: .positions(pnj.id))
             }
             let vers = trajets[0]
             let nombre = habituel.quetes.count
             return EntreePalette(id: pnj.cle, genre: .pnj, titre: titre,
                                  sousTitre: L("palette.pnj.cite", nombre: nombre, lieu, nombre),
-                                 etiquette: contexte.etiquettes[pnj.cle],
+                                 etiquette: etiquette,
                                  detail: Coordonnees.texte(habituel.position.x, habituel.position.y),
-                                 favori: contexte.favoris.contains(pnj.cle), distance: vers.distance,
-                                 itineraire: itineraire(vers.trajet, contexte.langue), cle: pnj.cle, carte: habituel.carte,
+                                 favori: favori, distance: vers.distance,
+                                 itineraire: itineraire(vers.trajet, contexte.langue), cle: cle, carte: habituel.carte,
                                  interieur: contexte.interieurs.contient(habituel.carte), pnj: pnj.id, effet: vers.effet)
         }
     }
