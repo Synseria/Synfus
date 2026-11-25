@@ -71,6 +71,13 @@ final class DonjonsStore: ObservableObject {
         }
     }
 
+    /// Les captures de la documentation : une fiche prête, sans réseau.
+    func poserPourCaptures(_ liste: Donjons, details: [Int: DetailDonjon], conseils: [Int: [ConseilCombat]]) {
+        donjons = liste
+        self.details = details
+        self.conseils = conseils
+    }
+
     // MARK: - Réseau
 
     private struct Nomme: Decodable, Sendable {
