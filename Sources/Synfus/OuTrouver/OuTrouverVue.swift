@@ -89,9 +89,12 @@ struct OuTrouverVue: View {
                     RecettePanel.shared.epingler(RecetteEpinglee(recette, objet: nom, langue: langue))
                 } label: {
                     Label(L("recette.epingler"), systemImage: "pin")
+                        .labelStyle(.iconOnly)
                 }
                 .buttonStyle(BoutonTertiaire())
                 .focusable(false)
+                // Le geste se dit au survol : le mot à côté de l'épingle n'apprenait rien.
+                .aide(L("recette.epingler"))
             }
             Text(recette.ingredients.map { L("quete.ressource", Lieu.traduit($0.noms, langue) ?? "?", $0.quantite) }
                 .joined(separator: " · "))

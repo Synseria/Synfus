@@ -501,7 +501,7 @@
   "ouTrouver.introuvable": "not on the map",
   "ouTrouver.plus": "%lld more",
   "ouTrouver.plus.un": "%lld more",
-  "ouTrouver.recette": "Crafted: %@, level %lld",
+  "ouTrouver.recette": "%@, level %lld",
   "ouTrouver.reessayer": "Retry",
   "ouTrouver.rien": "Neither dropped by a monster nor crafted.",
   "palette.action.chasse": "Treasure hunt",

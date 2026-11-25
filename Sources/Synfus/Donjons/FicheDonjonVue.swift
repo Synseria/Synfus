@@ -26,7 +26,10 @@ struct FicheDonjonVue: View {
                 // Sur une ligne : faute de place (beaucoup de clefs), elle défile.
                 ViewThatFits(in: .horizontal) {
                     rangee(actions, detail)
-                    ScrollView(.horizontal, showsIndicators: false) { rangee(actions, detail) }
+                    // Une marge autour : sans elle, le cadre de la dernière carte choisie était rogné.
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        rangee(actions, detail).padding(.horizontal, Jetons.epaisseurFocus)
+                    }
                 }
                 ForEach(actions.filter { modele.ouvertes.contains($0) }, id: \.self) { action in
                     ouverte(action, detail).padding(.leading, Jetons.espace3)
@@ -175,9 +178,12 @@ private struct CarteAction: View {
                 .foregroundStyle(ouverte == true && !choisie ? Color.jeton(\.accentTexte) : Color.jeton(\.encre))
                 .lineLimit(1)
             if let ouverte {
+                // Une largeur fixe : ouvrir une carte ne l'élargit pas, la rangée ne bascule pas
+                // dans sa version qui défile et ne se décale pas.
                 Image(systemName: ouverte ? "chevron.down" : "chevron.right")
                     .font(Jetons.typoMicro.font)
                     .foregroundStyle(Color.jeton(\.encre2))
+                    .frame(width: Jetons.espace3)
             }
         }
         .font(Jetons.typoMeta.font)

@@ -501,7 +501,7 @@
   "ouTrouver.introuvable": "no está en el mapa",
   "ouTrouver.plus": "%lld más",
   "ouTrouver.plus.un": "%lld más",
-  "ouTrouver.recette": "Se fabrica: %@, nivel %lld",
+  "ouTrouver.recette": "%@, nivel %lld",
   "ouTrouver.reessayer": "Reintentar",
   "ouTrouver.rien": "Ni lo suelta un monstruo ni se fabrica.",
   "palette.action.chasse": "Búsqueda del tesoro",
