@@ -20,6 +20,8 @@ struct FicheDonjonVue: View {
                     SegmenteIcones(titre: L("donjon.onglets"),
                                    options: onglets.map { option($0, detail) },
                                    selection: modele.ongletCourant) { modele.choisir(onglet: $0) }
+                        // Un peu d'air sous la ligne : collé, le sélecteur se lisait comme sa suite.
+                        .padding(.top, Jetons.espace1)
                 }
                 contenu(modele.ongletCourant, donjon, detail)
             }

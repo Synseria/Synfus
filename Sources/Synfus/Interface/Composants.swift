@@ -136,6 +136,7 @@ struct StyleEtat: ButtonStyle {
         @Environment(\.isEnabled) private var actif
         @Environment(\.groupeAuClavier) private var auClavier
         @State private var survole = false
+        private static let debord = Jetons.espace1 / 2
 
         var body: some View {
             let etat: EtatVisuel = !actif ? .desactive : style.courant ? .courant : style.choisi ? .choix(auClavier: auClavier)
@@ -147,8 +148,12 @@ struct StyleEtat: ButtonStyle {
                         RoundedRectangle(cornerRadius: style.rayon, style: .continuous).fill(Color.jeton(\.creux))
                     }
                 }
+                // Nue, le fond déborde un peu au-dessus et au-dessous du texte, sans déplacer la mise en
+                // page : collé aux lettres, le survol d'une ligne de texte paraissait étriqué.
+                .padding(.vertical, style.nue ? Self.debord : 0)
                 // Une puce nue désactivée n'a pas de tuile : l'encre tertiaire suffit.
                 .fondEtat(style.nue && etat == .desactive ? .repos : etat, rayon: style.rayon)
+                .padding(.vertical, style.nue ? -Self.debord : 0)
                 .onHover { survole = $0 }
                 // Ce qui se clique le montre, comme les boutons de la trousse.
                 .curseurDeClic(actif)
