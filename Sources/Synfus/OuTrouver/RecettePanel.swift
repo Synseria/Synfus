@@ -51,27 +51,8 @@ final class RecettePanel: NSObject, ObservableObject {
     }
 
     private func construire() -> NSPanel {
-        let hosting = NSHostingController(rootView: RecetteVue().racineSynfus())
-        hosting.sizingOptions = [.preferredContentSize]
-        let panel = PanneauDeJeu(
-            contentRect: NSRect(x: 0, y: 0, width: RecetteVue.largeur, height: 200),
-            styleMask: [.borderless, .nonactivatingPanel],
-            backing: .buffered,
-            defer: false
-        )
-        panel.contentViewController = hosting
-        panel.isFloatingPanel = true
-        panel.level = .statusBar
-        panel.hidesOnDeactivate = false
-        panel.isReleasedWhenClosed = false
-        panel.backgroundColor = .clear
-        panel.isOpaque = false
-        panel.hasShadow = false
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        if !panel.setFrameAutosaveName("RecettePanel") || panel.frame.origin == .zero {
-            PanneauxJeu.placer(panel, parDefaut: Self.placeParDefaut)
-        }
-        return panel
+        PanneauxJeu.construire(nom: "RecettePanel", largeur: RecetteVue.largeur, largeurs: RecetteVue.largeurs,
+                               vue: RecetteVue(), parDefaut: Self.placeParDefaut)
     }
 
     /// En haut, à gauche du centre de l'écran, en miroir de l'aide aux boss : l'hôtel de vente du jeu
@@ -85,6 +66,8 @@ final class RecettePanel: NSObject, ObservableObject {
 struct RecetteVue: View {
     /// Celle des quêtes : un nom d'objet du jeu tient sur une ligne.
     static let largeur = Jetons.largeurPanneauQuetes
+    /// Assez étroit pour une ligne « Se fabrique : métier, niveau », assez large pour un long nom d'objet.
+    static let largeurs: ClosedRange<CGFloat> = 260...560
 
     @ObservedObject private var panneau = RecettePanel.shared
 
@@ -95,6 +78,7 @@ struct RecetteVue: View {
 /// quantité ; un clic copie le nom, coché le temps du signal.
 struct FicheRecette: View {
     let recette: RecetteEpinglee?
+    @Environment(\.largeurPanneau) private var largeurPanneau
     // periphery:ignore - observé : le pliage du panneau (`PanneauxJeu.plie`)
     @ObservedObject private var prefs = Preferences.shared
     @StateObject private var copie = SignalCopie()
@@ -102,9 +86,11 @@ struct FicheRecette: View {
     var body: some View {
         CadrePanneau(plie: recette == nil || PanneauxJeu.plie(.recette)) {
             EnTetePanneau(icone: "hammer", teinte: Color.jeton(\.accentTexte)) {
+                // Étroit, un long nom d'objet passe à la ligne plutôt que d'être coupé.
                 Text(recette?.objet ?? L("recette.titre"))
                     .font(Jetons.typoTitreCarte.font)
-                    .lineLimit(1)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.leading, Jetons.espace1)
             } boutons: {
                 BoutonPliage(plie: PanneauxJeu.plie(.recette)) { RecettePanel.shared.basculerPliage() }
@@ -125,7 +111,8 @@ struct FicheRecette: View {
                 .padding(.vertical, Jetons.espace2)
             }
         }
-        .frame(width: RecetteVue.largeur, alignment: .leading)
+        .frame(width: largeurPanneau ?? RecetteVue.largeur, alignment: .leading)
+        .bordsRedimensionnables(.cotes)
     }
 
     private func ligne(_ ingredient: RecetteEpinglee.Ingredient, id: String) -> some View {

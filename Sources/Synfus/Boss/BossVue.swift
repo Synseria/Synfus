@@ -6,11 +6,14 @@ import SwiftUI
 /// rappels et conseils, qui défilent chez eux (`SectionBoss`).
 struct BossVue: View {
     static let largeur = Jetons.largeurPanneauBoss
+    /// Pas plus étroit que la ligne des résistances, assez large pour lire les conseils d'une traite.
+    static let largeurs: ClosedRange<CGFloat> = Jetons.largeurPanneauBoss...520
 
     @ObservedObject private var aide = AideBoss.shared
     @ObservedObject private var lecteur = LecteurEcran.shared
     @ObservedObject private var previews = WindowPreviewService.shared
     @ObservedObject private var prefs = Preferences.shared
+    @Environment(\.largeurPanneau) private var largeurPanneau
     /// La liste des donjons (nom d'un boss, guide) et leurs conseils arrivent après.
     @ObservedObject private var donjons = DonjonsStore.shared
     @State private var rappels = false
@@ -41,7 +44,8 @@ struct BossVue: View {
             .padding(.vertical, Jetons.espace2)
             .padding(.horizontal, Jetons.espace2)
         }
-        .frame(width: Self.largeur, alignment: .leading)
+        .frame(width: largeurPanneau ?? Self.largeur, alignment: .leading)
+        .bordsRedimensionnables(.cotes)
         // L'autorisation donnée, la lecture démarre sans attendre un
         // changement d'app.
         .onChange(of: previews.authorized) { BossPanel.shared.revoirVisibilite(force: false) }

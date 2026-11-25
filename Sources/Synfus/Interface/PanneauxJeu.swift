@@ -32,6 +32,9 @@ enum PanneauxJeu {
         prefs.panneauxPlies[panneau.rawValue] != nil
     }
 
+    /// Un panneau rouvert garde son pliage ; ouvert sur quelque chose de précis (une quête, un boss,
+    /// une recette), il le montre et se déplie.
+    ///
     /// Plie le panneau, en gardant `hauteur` (celle de son cadre déplié), ou le déplie : rend alors
     /// la hauteur gardée. Un panneau à la taille de son contenu n'en fait rien : il suit sa vue.
     @discardableResult
@@ -42,6 +45,38 @@ enum PanneauxJeu {
         }
         prefs.panneauxPlies[panneau.rawValue] = Double(hauteur)
         return nil
+    }
+
+    // MARK: - Construction
+
+    /// Un panneau à la hauteur de son contenu et à la largeur réglable entre `largeurs`, `largeur`
+    /// d'abord : sans
+    /// bordure, au niveau de la barre, sur tous les espaces, sa place et sa largeur gardées par
+    /// AppKit sous `nom` — relues de force, un panneau non `.resizable` ne reprend pas sa taille sinon.
+    static func construire<Vue: View>(_ type: PanneauDeJeu.Type = PanneauDeJeu.self, nom: String,
+                                      largeur: CGFloat, largeurs: ClosedRange<CGFloat>, vue: Vue,
+                                      parDefaut: PlaceParDefaut) -> PanneauDeJeu {
+        let panel = type.init()
+        panel.minSize = NSSize(width: largeurs.lowerBound, height: 0)
+        panel.maxSize = NSSize(width: largeurs.upperBound, height: .greatestFiniteMagnitude)
+        let suivie = LargeurPanneau(largeur)
+        panel.largeurSuivie = suivie
+        panel.setFrame(NSRect(x: 0, y: 0, width: largeur, height: 200), display: false)
+        let hosting = NSHostingController(rootView: AvecLargeurPanneau(largeur: suivie, contenu: vue).racineSynfus())
+        hosting.sizingOptions = [.preferredContentSize]
+        panel.contentViewController = hosting
+        panel.isFloatingPanel = true
+        panel.level = .statusBar
+        panel.hidesOnDeactivate = false
+        panel.isReleasedWhenClosed = false
+        panel.backgroundColor = .clear
+        panel.isOpaque = false
+        panel.hasShadow = false
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        if !panel.setFrameAutosaveName(nom) || !panel.setFrameUsingName(nom, force: true) {
+            placer(panel, parDefaut: parDefaut)
+        }
+        return panel
     }
 
     // MARK: - Place d'un panneau
@@ -151,6 +186,15 @@ class PanneauDeJeu: NSPanel {
         didSet { suiviCurseur.suivre(contentView) }
     }
 
+    /// Sans bordure ni activation : ce que tous les panneaux posés sur le jeu sont.
+    required convenience init() {
+        self.init(contentRect: NSRect(x: 0, y: 0, width: 320, height: 200),
+                  styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+    }
+
+    /// À la hauteur de son contenu, sa largeur réglée : la vue la reprend (`AvecLargeurPanneau`).
+    var largeurSuivie: LargeurPanneau?
+
     override func setFrame(_ cadre: NSRect, display: Bool) {
         var cadre = cadre
         // Seul un changement de hauteur sur place (la taille du contenu) garde le haut ; un
@@ -158,7 +202,10 @@ class PanneauDeJeu: NSPanel {
         if cadre.origin == frame.origin, cadre.height != frame.height {
             cadre.origin.y = frame.maxY - cadre.height
         }
+        // Une largeur restaurée ou venue de la vue reste entre les bornes, d'où qu'elle vienne.
+        if largeurSuivie != nil { cadre.size.width = min(max(cadre.width, minSize.width), maxSize.width) }
         super.setFrame(cadre, display: display)
+        if let largeurSuivie, largeurSuivie.valeur != frame.width { largeurSuivie.valeur = frame.width }
     }
 }
 

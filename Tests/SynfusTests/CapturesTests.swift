@@ -372,6 +372,7 @@ struct CapturesTests {
             .background(Self.fondCapture)
             .environment(\.colorScheme, Self.schema)
         try ecrire(vue, vers: dossier.appending(path: "chasse.png"))
+        try ecrire(vue.environment(\.largeurPanneau, ChasseVue.largeurs.upperBound), vers: dossier.appending(path: "chasse-max.png"))
         let indice = Indice(id: 993, noms: ["fr": "Poupée koalak"])
         let longue = Indice(id: 1, noms: ["fr": "Crâne de likrone dans la glace, près du vieux pont"])
         ChasseModele.shared.poserResultatPourCaptures(cible: .indice(indice), lues: [.indice(longue), .indice(indice)])
@@ -390,6 +391,9 @@ struct CapturesTests {
             .background(Self.fondCapture)
             .environment(\.colorScheme, Self.schema)
         try ecrire(vue, vers: dossier.appending(path: "boss.png"))
+        for (nom, largeur) in [("min", BossVue.largeurs.lowerBound), ("max", BossVue.largeurs.upperBound)] {
+            try ecrire(vue.environment(\.largeurPanneau, largeur), vers: dossier.appending(path: "boss-\(nom).png"))
+        }
     }
 
     /// Les vues de chaque boss, posées sur la carte du panneau, avec ce que l'aide
@@ -461,6 +465,10 @@ struct CapturesTests {
             .background(Self.fondCapture)
             .environment(\.colorScheme, Self.schema)
         try ecrire(vue, vers: dossier.appending(path: "recette.png"))
+        // Aux bornes de leur largeur, rien ne se coupe ni ne déborde.
+        for (nom, largeur) in [("min", RecetteVue.largeurs.lowerBound), ("max", RecetteVue.largeurs.upperBound)] {
+            try ecrire(vue.environment(\.largeurPanneau, largeur), vers: dossier.appending(path: "recette-\(nom).png"))
+        }
     }
 
     @Test("Captures des réglages", .enabled(if: dossier != nil))
