@@ -481,6 +481,66 @@ struct CapturesTests {
         }
     }
 
+    /// Une fiche de donjon aux données factices : sections ouvertes à la main, une capture par état.
+    @Test("Capture de la fiche d'un donjon", .enabled(if: dossier != nil))
+    func ficheDonjon() throws {
+        let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
+        try FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)
+        let api = """
+        [{"id":71,"name":{"fr":"Palais du roi Nidas"},"optimalPlayerLevel":200,"entranceMapId":112460048,
+          "requiredObjects":[{"id":14047,"quantity":1}],"bosses":[3416],"monsters":[3384,3416],"achievements":[892,893]}]
+        """
+        let liste = Donjons(try JSONDecoder().decode([Donjon.API].self, from: Data(api.utf8)).map(Donjon.init),
+                            nomsBoss: [3416: ["fr": "Roi Nidas"]])
+        func fiche(_ niveau: Int, _ vie: Int, _ pa: Int, _ pm: Int, _ resistances: [Int]) throws -> FicheCombat {
+            let json = """
+            {"grades":[{"grade":5,"level":\(niveau),"lifePoints":\(vie),"actionPoints":\(pa),"movementPoints":\(pm),
+             "reductionNeutral":\(resistances[0]),"reductionEarth":\(resistances[1]),"reductionFire":\(resistances[2]),
+             "reductionWater":\(resistances[3]),"reductionAir":\(resistances[4])}]}
+            """
+            return try #require(FicheCombat(try JSONDecoder().decode(FicheCombat.MonstreAPI.self, from: Data(json.utf8))))
+        }
+        let monstres: [DetailDonjon.Monstre] = [
+            .init(id: 3416, noms: ["fr": "Roi Nidas"], boss: true, fiche: try fiche(220, 22_000, 20, 5, [20, 35, -10, 15, 40])),
+            .init(id: 1, noms: ["fr": "Kamasterisk"], boss: false, fiche: try fiche(212, 6_600, 12, 5, [10, -10, 30, 25, 5])),
+            .init(id: 2, noms: ["fr": "Tournesol Affamé"], boss: false, fiche: try fiche(200, 4_200, 10, 4, [0, 15, 20, -15, 30])),
+            .init(id: 3, noms: ["fr": "Bouftou Royal"], boss: false, fiche: try fiche(190, 3_000, 9, 4, [5, 5, 5, 5, 5]))]
+        let succes: [DetailDonjon.Succes] = [
+            .init(noms: ["fr": "Roi Nidas (Spécial)"], description: ["fr": "Vaincre le Roi Nidas sans perdre un seul allié."]),
+            .init(noms: ["fr": "Roi Nidas (Statue)"], description: ["fr": "Détruire les statues avant la fin du troisième tour."]),
+            .init(noms: ["fr": "Roi Nidas (Rapide)"], description: ["fr": "Vaincre le Roi Nidas en moins de dix tours."])]
+        let clef = DetailDonjon.Clef(objet: 14047, noms: ["fr": "Clef du Palais du roi Nidas"], quantite: 1)
+        let detail = DetailDonjon(monstres: monstres, clefs: [clef], succes: succes)
+        let conseils = ["Dommage à distance.", "Entrave (PM, PO).", "Placement."].map { ConseilCombat(titre: $0, detail: "") }
+        DonjonsStore.shared.poserPourCaptures(liste, details: [71: detail], conseils: [71: conseils])
+        let ingredients = ["Sourcil de Barbétoal", "Dent de Lévitrof", "Écaille de Frostiz", "Griffe de Dragoune",
+                           "Plume de Corbac", "Peau de Bouftou", "Laine de Mouton", "Œil de Vampyre"]
+        OuTrouverStore.shared.poserPourCaptures(objet: 14047, SourcesObjet(
+            lacheurs: [], recette: .init(metier: ["fr": "Bricoleur"], niveau: 200,
+                                         ingredients: ingredients.map { .init(noms: ["fr": $0], quantite: 2) })))
+        var contexte = ContextePalette()
+        contexte.donjons = liste
+        let reperes = Lieu(id: 1, x: -67, y: -75, monde: 1, idCarte: 112460048, idSousZone: 794,
+                           categorie: CategorieLieu.donjon.rawValue, gfx: nil, noms: ["fr": "Palais du roi Nidas"], zone: [:], sousZone: [:])
+        contexte.lieux = [reperes]
+        let modele = PaletteModele(contexte: contexte, filtre: .donjons)
+        let entree = try #require(modele.entrees.first { $0.effet == .donjon(71) })
+        modele.executer(entree)
+        func ecrireFiche(_ nom: String) throws {
+            let vue = FicheDonjonVue(id: 71, modele: modele)
+                .padding(Jetons.espace3)
+                .frame(width: Jetons.largeurPalette, alignment: .leading)
+                .font(Jetons.typoMeta.font)
+                .surfaceFlottante()
+                .padding(24)
+                .environment(\.colorScheme, Self.schema)
+            try ecrire(vue, vers: dossier.appending(path: "fiche-\(nom).png"))
+        }
+        try ecrireFiche("repos")
+        for action in modele.cartes.actions where action.sePlie { modele.agir(action) }
+        try ecrireFiche("ouverte")
+    }
+
     @Test("Captures des réglages", .enabled(if: dossier != nil))
     func reglages() throws {
         let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
