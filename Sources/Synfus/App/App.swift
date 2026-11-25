@@ -26,6 +26,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         LecteurEcran.shared.start()
         CarteStore.shared.start()
         ClassesStore.shared.rafraichir()
+        AideHuppermage.shared.start()
         QuetesStore.shared.preparer()
         DonneesDuJeu.start()
         // Abonnée à la carte et aux quêtes, lues en tâche de fond : elle en

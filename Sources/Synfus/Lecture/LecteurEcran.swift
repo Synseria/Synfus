@@ -172,6 +172,8 @@ final class LecteurEcran: ObservableObject {
     /// Le panneau d'aide aux boss est à l'écran : le combat est lu au tour,
     /// et pendant un combat ce que le boss choisi demande (vie, tchat).
     private var bossMontre = false
+    /// Un Huppermage devant, son aide allumée (`AideHuppermage`) : son combat se lit.
+    private var aideClasse = false
     private var genresBoss: [GenreLecture] = []
     private var prechauffe = false
     private var prechauffage: Task<Void, Never>?
@@ -192,7 +194,7 @@ final class LecteurEcran: ObservableObject {
         return GenreLecture.allCases.filter {
             switch $0 {
             case .position: return prefs.lirePosition
-            case .combat: return prefs.lireCombat || bossMontre
+            case .combat: return prefs.lireCombat || bossMontre || aideClasse
             case .chasse, .quetes, .vie, .tchat: return false
             }
         }
@@ -253,8 +255,16 @@ final class LecteurEcran: ObservableObject {
         revoirArmement()
     }
 
+    /// Un perso dont la classe a une aide en combat passe devant, ou n'y est plus : son combat entre
+    /// au tour ou en sort. Jamais l'enregistrement de l'écran demandé.
+    func suivreAideClasse(_ actif: Bool) {
+        guard actif != aideClasse else { return }
+        aideClasse = actif
+        revoirArmement()
+    }
+
     private func revoirArmement() {
-        lectureReglee || suiviMontre || bossMontre ? armer() : desarmer()
+        lectureReglee || suiviMontre || bossMontre || aideClasse ? armer() : desarmer()
     }
 
     private func armer() {

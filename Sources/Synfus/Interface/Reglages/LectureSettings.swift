@@ -31,6 +31,10 @@ struct LectureSettings: View {
                         LigneInterrupteur(titre: L("lecture.combatDerriere"), aide: L("lecture.combatDerriere.aide"),
                                      isOn: $prefs.lireCombatDerriere)
                     }
+                    if genre == .combat {
+                        LigneInterrupteur(titre: L("lecture.aideHuppermage"), aide: L("lecture.aideHuppermage.aide"),
+                                          isOn: $prefs.aideHuppermage)
+                    }
                 }
             } entete: {
                 HStack(spacing: Jetons.espace2) {
