@@ -107,13 +107,13 @@ struct DonjonsTests {
         #expect(RecherchePalette.avecNiveau("", try #require(try Self.donjons().donjon(id: 71))) == niveau)
     }
 
-    @Test("Vue Donjons au repos : les donjons de la carte seuls ; en recherche, leurs boss aussi — et plus parmi les créatures")
+    @Test("Vue Donjons au repos : les donjons de la carte seuls ; en recherche, leurs boss, sur la ligne du donjon — et plus parmi les créatures")
     func vuesDonjons() throws {
         let contexte = try Self.contexteDonjons()
         let repos = RecherchePalette.entrees("", contexte, filtre: .donjons).map(\.titre)
         #expect(Set(repos) == ["Donjon du Comte Harebourg", "Canopée du Kimbo"])
         let recherche = RecherchePalette.entrees("kimbo", contexte, filtre: .donjons)
-        #expect(Set(recherche.map(\.titre)) == ["Canopée du Kimbo", "Kimbo"])
+        #expect(recherche.map(\.titre) == ["Kimbo"])
         #expect(recherche.allSatisfy { $0.effet == .donjon(28) })
         #expect(!RecherchePalette.entrees("kimbo", contexte, filtre: .creatures).contains { $0.titre == "Kimbo" })
     }
