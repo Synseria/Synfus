@@ -60,12 +60,36 @@ extension View {
         modifier(SurfaceFlottante())
     }
 
-    /// Le contenu d'un flottant (résultats de la palette, corps d'un panneau) : la plaque pleine, son
-    /// filet, `rayon2` — jamais de texte long sur le verre.
+    /// Le contenu d'un flottant (résultats de la palette, corps d'un panneau) : la plaque, à
+    /// `opacitePlaque` sur le verre (pleine s'il est refusé), son filet, `rayon2` — jamais de texte
+    /// long sur le verre.
     func plaquePleine() -> some View {
+        modifier(PlaquePleine())
+    }
+}
+
+extension Color {
+    /// Le filet de ce qui est posé sur le verre (plaque, bandeau d'un panneau) : purement esthétique,
+    /// aucun texte n'y est posé, il est donc à la seule opacité `opaciteFilet` du SDS.
+    @MainActor static var traitSurVerre: Color { Color.jeton(\.filet).opacity(Jetons.opaciteFilet) }
+}
+
+/// « Réduire la transparence » et « Augmenter le contraste » refusent le verre : les fonds sont pleins.
+/// `cacheDisplay` (captures) ne dessine pas le verre, qui échantillonne l'écran.
+private func verreRefuse(transparenceReduite: Bool, contraste: ColorSchemeContrast) -> Bool {
+    UsageDuVerre.refuse(transparenceReduite: transparenceReduite, contraste: contraste) || Ressources.captureDocumentation
+}
+
+private struct PlaquePleine: ViewModifier {
+    @Environment(\.accessibilityReduceTransparency) private var transparenceReduite
+    @Environment(\.colorSchemeContrast) private var contraste
+
+    func body(content: Content) -> some View {
         let forme = RoundedRectangle(cornerRadius: Jetons.rayon2, style: .circular)
-        return background(Color.jeton(\.plaque), in: forme)
-            .overlay { forme.strokeBorder(Color.jeton(\.filet), lineWidth: Jetons.epaisseurFilet) }
+        let refuse = verreRefuse(transparenceReduite: transparenceReduite, contraste: contraste)
+        return content
+            .background(Color.jeton(\.plaque).opacity(refuse ? 1 : Jetons.opacitePlaque), in: forme)
+            .overlay { forme.strokeBorder(Color.traitSurVerre, lineWidth: Jetons.epaisseurFilet) }
     }
 }
 
@@ -76,9 +100,8 @@ private struct SurfaceFlottante: ViewModifier {
 
     func body(content: Content) -> some View {
         let forme = RoundedRectangle(cornerRadius: Jetons.rayon3, style: .continuous)
-        // « Réduire la transparence » et « Augmenter le contraste » refusent le verre : le fond plein
-        // reprend son filet. `cacheDisplay` (captures) ne dessine pas le verre, qui échantillonne l'écran.
-        if transparenceReduite || contraste == .increased || Ressources.captureDocumentation {
+        // Verre refusé : le fond plein reprend son filet.
+        if verreRefuse(transparenceReduite: transparenceReduite, contraste: contraste) {
             content
                 .background(Color.jeton(\.fondFenetre), in: forme)
                 .overlay(forme.strokeBorder(Color.jeton(\.filet), lineWidth: Jetons.epaisseurFilet))

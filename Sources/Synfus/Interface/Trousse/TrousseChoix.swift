@@ -1,5 +1,5 @@
 // Engendré par Synseria-Design — ne pas retoucher : changer jetons.json ou apps/Synfus.json, puis sh propager.sh.
-// jetons.json c5f3400ce23232ce · contenu d4eb838d050ab382
+// jetons.json 0bdf7022746769dd · contenu 983c803c2635f8b2
 import SwiftUI
 
 // Les choix de la trousse : interrupteur, case ronde et radio, segmentés, onglets ronds, puces, barre
@@ -565,6 +565,15 @@ struct Puce: View {
 /// Les onglets d'une fenêtre de réglages (`.stab`) : l'icône et le nom en micro dessous, sans cadre,
 /// le choisi sur le fond du choix et l'accent en texte. Pas de titre de page : les onglets disent où
 /// l'on est. Un seul arrêt de Tab, ←→ changent d'onglet.
+///
+/// Dans la fenêtre, cette barre est le bandeau du haut (`.sw .bar`) : la fenêtre hôte est en
+/// `fullSizeContentView` + `titlebarAppearsTransparent`, titre caché, et cette barre est ancrée au
+/// sommet du contenu, d'un bord à l'autre, en ignorant la safe-area du titre (`safeAreaRegions = []`) —
+/// jamais poussée sous la rangée des feux. Son propre fond couvre la bande de la barre de titre
+/// comprise ; rien n'est posé dans la barre de titre au-dessus du contenu. Le volet commence au bas
+/// du bandeau, à `espace-2` comme autour de la plaque, et le déplacement de la fenêtre se fait par le
+/// bandeau, hors onglets. Règle complète : « La fenêtre Réglages (.sw) monte sous la barre de titre »,
+/// section 7 de la référence.
 struct BarreDesOnglets<Valeur: Hashable>: View {
     struct Onglet {
         let valeur: Valeur

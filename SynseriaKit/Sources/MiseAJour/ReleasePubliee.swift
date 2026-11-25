@@ -1,5 +1,5 @@
 // Copié de SynseriaKit (Synseria-Design) — ne pas retoucher : changer le paquet dans Synseria-Design, puis sh propager.sh.
-// SynseriaKit 25f4236349ad81d5 · contenu 24f1dc07f0cc60eb
+// SynseriaKit 82592cc8aa023014 · contenu 24f1dc07f0cc60eb
 // Ce qu'une release publiée dit d'elle, le canal qui la choisit, et le macOS qu'elle exige (pur).
 
 import Foundation

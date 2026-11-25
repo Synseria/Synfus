@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Onglet Thème : la nuance et le thème de l'app, appliqués en direct dans les réglages comme dans
+/// Onglet Thème : la nuance, la couleur et le fond de l'app, appliqués en direct dans les réglages comme dans
 /// la barre et les panneaux (`ThemeCourant`).
 struct ThemeSettings: View {
     var body: some View {
@@ -8,6 +8,7 @@ struct ThemeSettings: View {
             Bloc {
                 ChoixDeNuance()
                 ChoixDuTheme()
+                ChoixDuFond()
             }
             Bloc(L("theme.apercu")) {
                 ApercuTheme().rangee()
@@ -60,27 +61,27 @@ private struct ChoixDuTheme: View {
             .groupeSelection(L("theme.couleur"), selection: Binding(get: { choix }, set: choisir),
                              parmi: Jetons.Coloris.allCases.map(Choix.coloris) + [.personnalise])
         }
-        if case .personnalise(let couleur) = prefs.themeDeLApp {
+        if case .personnalise(let couleur) = prefs.themeDeLApp.primaire {
             CurseurDeTeinte(teinte: ConversionDuTheme.teinte(couleur)) {
-                prefs.themeDeLApp = .personnalise(ConversionDuTheme.aLaTeinte(couleur, $0))
+                prefs.themeDeLApp = prefs.themeDeLApp.avecLaPrimaire(.personnalise(ConversionDuTheme.aLaTeinte(couleur, $0)))
             }
         }
     }
 
     private func choisir(_ nouveau: Choix) {
         switch nouveau {
-        case .coloris(let coloris): prefs.themeDeLApp = .coloris(coloris)
+        case .coloris(let coloris): prefs.themeDeLApp = prefs.themeDeLApp.avecLaPrimaire(.coloris(coloris))
         case .personnalise:
-            guard case .coloris = prefs.themeDeLApp else { return }
-            prefs.themeDeLApp = .personnalise(Jetons.personnaliseParDefaut)
+            guard case .coloris = prefs.themeDeLApp.primaire else { return }
+            prefs.themeDeLApp = prefs.themeDeLApp.avecLaPrimaire(.personnalise(Jetons.personnaliseParDefaut))
         }
     }
 
     private func pastille(_ coloris: Jetons.Coloris) -> some View {
         let choisie = choix == .coloris(coloris)
         let nuance = ThemeCourant.reglage.nuance(sombre: schema == .dark)
-        let plein = ThemeCourant.couleurs(.coloris(coloris), nuance).accent.couleur
-        return Button { prefs.themeDeLApp = .coloris(coloris) } label: {
+        let plein = ThemeCourant.couleurs(prefs.themeDeLApp.avecLaPrimaire(.coloris(coloris)), nuance).accent.couleur
+        return Button { choisir(.coloris(coloris)) } label: {
             Circle().fill(plein)
                 .frame(width: Jetons.diametreRond, height: Jetons.diametreRond)
                 .padding(Jetons.decalageFocus)
@@ -92,6 +93,62 @@ private struct ChoixDuTheme: View {
         .elementDeGroupe()
         .aide(coloris.libelle)
         .accessibilityAddTraits(choisie ? .isSelected : [])
+    }
+}
+
+/// Les fonds nommés en pastilles, à leur couleur ; celui du thème porte un point d'accent. Le choisir
+/// revient à suivre le thème : changer de couleur changera aussi le fond.
+private struct ChoixDuFond: View {
+    @ObservedObject private var prefs = Preferences.shared
+
+    var body: some View {
+        let theme = prefs.themeDeLApp
+        Ligne(titre: L("theme.fond")) {
+            HStack(spacing: Jetons.espace2) {
+                ForEach(Jetons.FondNomme.allCases) { pastille($0, theme: theme) }
+            }
+            .groupeSelection(L("theme.fond"), selection: Binding(get: { theme.fondApplique }, set: choisir),
+                             parmi: Jetons.FondNomme.allCases.map { .nomme($0) })
+        }
+    }
+
+    private func choisir(_ fond: Jetons.Fond) {
+        prefs.themeDeLApp = prefs.themeDeLApp.avecLeFond(fond)
+    }
+
+    private func pastille(_ fond: Jetons.FondNomme, theme: Jetons.Theme) -> some View {
+        let choisie = theme.fondApplique == .nomme(fond)
+        let duTheme = fond == theme.fondParDefaut
+        return Button { choisir(.nomme(fond)) } label: {
+            Circle().fill(Jetons.RVB(fond.couleur).couleur)
+                .frame(width: Jetons.diametreRond, height: Jetons.diametreRond)
+                .overlay {
+                    if duTheme {
+                        Circle().fill(Color.jeton(\.accent))
+                            .overlay { Circle().strokeBorder(Color.jeton(\.texteSurAccent), lineWidth: Jetons.epaisseurFilet) }
+                            .frame(width: Jetons.diametreMini / 2, height: Jetons.diametreMini / 2)
+                    }
+                }
+                .padding(Jetons.decalageFocus)
+                .overlay { if choisie { Circle().strokeBorder(Color.jeton(\.encre), lineWidth: Jetons.epaisseurFocus) } }
+        }
+        .buttonStyle(.plain)
+        .curseurDeClic(true)
+        .elementDeGroupe()
+        .aide(duTheme ? L("theme.fond.duTheme", fond.libelle) : fond.libelle)
+        .accessibilityAddTraits(choisie ? .isSelected : [])
+    }
+}
+
+extension Jetons.FondNomme {
+    var libelle: String {
+        switch self {
+        case .ardoise: L("theme.fond.ardoise")
+        case .lagune: L("theme.fond.lagune")
+        case .sable: L("theme.fond.sable")
+        case .brique: L("theme.fond.brique")
+        case .graphite: L("theme.fond.graphite")
+        }
     }
 }
 

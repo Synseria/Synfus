@@ -1,5 +1,5 @@
 // Copié de SynseriaKit (Synseria-Design) — ne pas retoucher : changer le paquet dans Synseria-Design, puis sh propager.sh.
-// SynseriaKit 25f4236349ad81d5 · contenu 30a002ba5ff71252
+// SynseriaKit 82592cc8aa023014 · contenu 30a002ba5ff71252
 // Le déroulé d'une mise à jour, commun aux apps : chercher la release du canal, la préparer, la poser
 // sur un geste. L'app fournit sa source, ses vérifications et ses mots.
 

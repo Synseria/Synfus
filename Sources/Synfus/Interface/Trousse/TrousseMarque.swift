@@ -1,5 +1,5 @@
 // Engendré par Synseria-Design — ne pas retoucher : changer jetons.json ou apps/Synfus.json, puis sh propager.sh.
-// jetons.json c5f3400ce23232ce · contenu 5e6f3a378d9cee3d
+// jetons.json 0bdf7022746769dd · contenu 5e6f3a378d9cee3d
 import SwiftUI
 
 // La marque et le verre : le signe Synseria, le gabarit d'À propos, le verre et sa teinte dessous.

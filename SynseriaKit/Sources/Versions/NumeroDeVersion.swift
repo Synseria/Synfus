@@ -1,5 +1,5 @@
 // Copié de SynseriaKit (Synseria-Design) — ne pas retoucher : changer le paquet dans Synseria-Design, puis sh propager.sh.
-// SynseriaKit 25f4236349ad81d5 · contenu b1d91877e29ef7ed
+// SynseriaKit 82592cc8aa023014 · contenu b1d91877e29ef7ed
 // Le numéro de version des apps : `X.Y.Z` ou `X.Y.Z-rc.N`, la seule source de sa lecture et de son ordre
 // (mises à jour, télémétrie).
 

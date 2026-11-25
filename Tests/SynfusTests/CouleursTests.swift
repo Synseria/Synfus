@@ -55,14 +55,37 @@ struct CouleursTests {
         }
     }
 
-    @Test("Le thème s'écrit et se relit, Personnalisé compris ; une valeur illisible n'est pas un choix")
+    @Test("Le thème et son fond s'écrivent et se relisent, Personnalisé compris ; une valeur illisible n'est pas un choix")
     func texteDuTheme() {
-        for theme in Jetons.Coloris.allCases.map(Jetons.Theme.coloris) + [.personnalise(0x3FA9D8), .personnalise(0x00000A)] {
-            #expect(Jetons.Theme(ecrit: theme.ecrit) == theme)
+        let primaires = Jetons.Coloris.allCases.map { Jetons.Theme.Primaire.coloris($0) } + [.personnalise(0x3FA9D8), .personnalise(0x00000A)]
+        for primaire in primaires {
+            #expect(Jetons.Theme.Primaire(ecrit: primaire.ecrit) == primaire)
         }
-        #expect(Jetons.Theme.personnalise(0x0E766C).ecrit == "personnalise:0E766C")
-        #expect(Jetons.Theme(ecrit: "jade") == nil)
-        #expect(Jetons.Theme(ecrit: "personnalise:FFFFFFF") == nil)
+        #expect(Jetons.Theme.Primaire.personnalise(0x0E766C).ecrit == "personnalise:0E766C")
+        #expect(Jetons.Theme.Primaire(ecrit: "jade") == nil)
+        #expect(Jetons.Theme.Primaire(ecrit: "personnalise:FFFFFFF") == nil)
+        for fond in Jetons.FondNomme.allCases.map { Jetons.Fond.nomme($0) } + [.personnalise(0x3F7A80)] {
+            #expect(Jetons.Fond(ecrit: fond.ecrit) == fond)
+        }
+        #expect(Jetons.Fond.personnalise(0x00A0FF).ecrit == "#00A0FF")
+        for illisible in ["aube", "#", "#GGGGGG", "#1000000", "3F7A80"] {
+            #expect(Jetons.Fond(ecrit: illisible) == nil, "\(illisible)")
+        }
+    }
+
+    @Test("Changer de couleur garde le fond choisi ; choisir le fond du thème revient à le suivre")
+    func fondChoisi() {
+        let surBrique = Jetons.Theme.coloris(.lagon).avecLeFond(.nomme(.brique))
+        #expect(surBrique.fond == .nomme(.brique))
+        #expect(surBrique.avecLaPrimaire(.coloris(.cerise)) == .coloris(.cerise, fond: .nomme(.brique)))
+        #expect(surBrique.avecLaPrimaire(.personnalise(0x3FA9D8)).fondApplique == .nomme(.brique))
+        let suivi = surBrique.avecLeFond(.nomme(Jetons.Coloris.lagon.fond))
+        #expect(suivi.fond == nil)
+        #expect(suivi.avecLaPrimaire(.coloris(.cerise)).fondApplique == .nomme(Jetons.Coloris.cerise.fond))
+        #expect(Jetons.Theme.coloris(.lagon).estNomme && !Jetons.Theme.personnalise(0x3FA9D8).estNomme)
+        #expect(!Jetons.Theme.coloris(.lagon, fond: .personnalise(0x3F7A80)).estNomme)
+        // Le fond change les surfaces : sinon le choisir ne servirait à rien.
+        #expect(Jetons.Nuancier.couleurs(surBrique, .nuit).fondFenetre != Jetons.Nuancier.couleurs(.coloris(.lagon), .nuit).fondFenetre)
     }
 
     @Test("Le thème et la nuance se relisent ; Système s'écrit, et une nuance illisible laisse le défaut")
@@ -77,6 +100,8 @@ struct CouleursTests {
         prefs.nuanceDeLApp = nil
         let encore = Preferences.forTesting(store: store)
         #expect(encore.themeDeLApp == .coloris(.sauge) && encore.nuanceDeLApp == nil)
+        prefs.themeDeLApp = prefs.themeDeLApp.avecLeFond(.nomme(.lagune))
+        #expect(Preferences.forTesting(store: store).themeDeLApp == .coloris(.sauge, fond: .nomme(.lagune)))
         store.enregistrer(Data(#"{"characterOrder":["A"],"hotKeys":[],"barVisible":true,"showNumbers":true,"themeDeLApp":"nimporte","nuanceDeLApp":"aube"}"#.utf8),
                           pour: Preferences.key)
         let illisible = Preferences.forTesting(store: store)
@@ -122,7 +147,7 @@ struct CouleursTests {
     @Test("« teinte:N » devient Personnalisé à l'angle OKLCH N, pas à la teinte TSL N")
     func conversionDUneTeinte() throws {
         let relu = ConversionDuTheme.relire(couleur: "teinte:240", apparence: nil)
-        guard case .personnalise(let couleur) = relu.theme else { Issue.record("pas Personnalisé"); return }
+        guard case .personnalise(let couleur) = relu.theme.primaire else { Issue.record("pas Personnalisé"); return }
         let lab = Jetons.Oklab.lab(Jetons.Octets(couleur), nil)
         let angle = (atan2(lab[2], lab[1]) * 180 / .pi + 360).truncatingRemainder(dividingBy: 360)
         #expect(abs(angle - 240) < 3, "\(angle)")

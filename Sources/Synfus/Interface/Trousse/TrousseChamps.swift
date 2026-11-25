@@ -1,5 +1,5 @@
 // Engendré par Synseria-Design — ne pas retoucher : changer jetons.json ou apps/Synfus.json, puis sh propager.sh.
-// jetons.json c5f3400ce23232ce · contenu 17aba7ad5030c6d1
+// jetons.json 0bdf7022746769dd · contenu 17aba7ad5030c6d1
 import SwiftUI
 
 // Les champs de la trousse : le cadre (`.f`), le champ à suggestions, le sélecteur en liste et leur

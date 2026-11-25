@@ -572,7 +572,7 @@ final class Preferences: ObservableObject {
         .facultatif("autoCenterBar", \.autoCenterBar),
         .facultatif("menuBarIcon", \.menuBarIcon),
         .facultatif("iconeApp", \.iconeApp),
-        .theme(theme: "themeDeLApp", nuance: "nuanceDeLApp"),
+        .theme(theme: "themeDeLApp", nuance: "nuanceDeLApp", fond: "fondDeLApp"),
         .facultatif("showPreviewOnHover", \.showPreviewOnHover),
         .optionnel("previewHotKey", \.previewHotKey),
         .facultatif("advanceOnClick", \.advanceOnClick),
@@ -778,19 +778,23 @@ final class Preferences: ObservableObject {
                     })
         }
 
-        /// Le thème et la nuance. Sans la clé du thème, une sauvegarde d'avant le nuancier : sa
-        /// couleur et son apparence se convertissent (`ConversionDuTheme`, les fonds sans équivalent), relues en texte
-        /// pour qu'une valeur inattendue laisse le défaut au lieu de rendre la sauvegarde illisible.
-        static func theme(theme cleTheme: Cle, nuance cleNuance: Cle) -> Reglage {
+        /// Le thème, son fond et la nuance. Sans la clé du thème, une sauvegarde d'avant le nuancier :
+        /// sa couleur et son apparence se convertissent (`ConversionDuTheme`). Le fond n'est écrit que
+        /// s'il est choisi : absent (sauvegarde d'avant le fond comprise), c'est celui du thème. Tout
+        /// se relit en texte, pour qu'une valeur inattendue laisse le défaut au lieu de rendre la
+        /// sauvegarde illisible.
+        static func theme(theme cleTheme: Cle, nuance cleNuance: Cle, fond cleFond: Cle) -> Reglage {
             Reglage(ecrire: { prefs, conteneur in
-                        try conteneur.encode(prefs.themeDeLApp.ecrit, forKey: cleTheme)
+                        try conteneur.encode(prefs.themeDeLApp.primaire.ecrit, forKey: cleTheme)
+                        try conteneur.encodeIfPresent(prefs.themeDeLApp.fond?.ecrit, forKey: cleFond)
                         try conteneur.encode(prefs.nuanceDeLApp?.rawValue ?? ConversionDuTheme.systeme, forKey: cleNuance)
                     },
                     lire: { conteneur in
                         func texte(_ cle: Cle) -> String? { try? conteneur.decodeIfPresent(String.self, forKey: cle) }
                         let relu: ConversionDuTheme.Relu
                         if let ecrit = texte(cleTheme) {
-                            relu = ConversionDuTheme.Relu(theme: Jetons.Theme(ecrit: ecrit) ?? Jetons.themeParDefaut,
+                            let primaire = Jetons.Theme.Primaire(ecrit: ecrit) ?? Jetons.themeParDefaut.primaire
+                            relu = ConversionDuTheme.Relu(theme: Jetons.Theme(primaire, fond: texte(cleFond).flatMap(Jetons.Fond.init(ecrit:))),
                                                           nuance: ConversionDuTheme.nuance(ecrite: texte(cleNuance)))
                         } else {
                             relu = ConversionDuTheme.relire(couleur: texte("couleurDeLApp"), apparence: texte("apparence"))
