@@ -1,6 +1,7 @@
 // « Fermer » un ou plusieurs clients : la confirmation précède le geste.
 
 import AppKit
+import SynseriaDesign
 
 @MainActor
 enum ConfirmationFermeture {

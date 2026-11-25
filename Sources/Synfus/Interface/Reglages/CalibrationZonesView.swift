@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 extension GenreLecture: Identifiable {
     var id: String { rawValue }

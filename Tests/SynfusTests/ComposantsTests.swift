@@ -2,6 +2,7 @@ import AppKit
 import Foundation
 import Testing
 @testable import Synfus
+import SynseriaDesign
 
 /// Les vues s'écrivent sur les jetons : aucune valeur de décor en dur, et le langage d'état tient.
 @MainActor

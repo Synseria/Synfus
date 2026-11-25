@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 /// Les briques des onglets de données (Zaaps, Lieux, Quêtes, PNJ, Classes) : d'où
 /// vient la liste et le bouton qui la met à jour, l'étiquette, le favori.

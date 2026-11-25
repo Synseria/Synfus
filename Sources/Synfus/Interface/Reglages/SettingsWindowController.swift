@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import SynseriaDesign
 
 @MainActor
 final class SettingsWindowController: NSObject {

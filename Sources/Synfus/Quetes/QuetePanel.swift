@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import SynseriaDesign
 
 /// Le panneau des quêtes épinglées : transparent, au-dessus du jeu — on le
 /// garde ouvert en jouant. Plusieurs quêtes, une montrée à la fois ; on le

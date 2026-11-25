@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 /// Le diagnostic, au bas de Lecture de l'écran : ce que Synfus voit, et les hypothèses qu'il fait.
 struct BlocsDiagnostic: View {

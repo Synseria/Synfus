@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 /// La liste des quêtes, à la place de la fiche (`MenuQuetes.liste`) : celles du
 /// panneau — un clic montre, la croix retire —, puis celles qui commencent sur

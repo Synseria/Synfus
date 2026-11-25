@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 /// Une consigne du panneau d'aide : une icône et un texte qui passe à la ligne ; celle qui presse est
 /// une alerte de la trousse (`avertissement`).

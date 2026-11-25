@@ -1,4 +1,5 @@
 import CoreGraphics
+import SynseriaDesign
 
 /// Les tailles de la fiche d'une quête, en un seul endroit : le confort, ou le
 /// mode compact qui laisse voir plus de jeu (`Preferences.quetesCompact`).

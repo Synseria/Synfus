@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 struct BarView: View {
     @ObservedObject private var manager = WindowManager.shared

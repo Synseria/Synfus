@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 /// Le repère de classe d'un perso : l'icône choisie dans les réglages, à défaut une pastille teintée
 /// à l'abréviation. L'icône du Dock ne servirait à rien ici : tous les clients partagent le même bundle.

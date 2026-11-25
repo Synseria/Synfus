@@ -1,5 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import SynseriaDesign
 
 /// Les classes, dans la page des personnages : la liste tirée de DofusDB et l'icône de chaque classe —
 /// l'emblème de DofusDB, ou celle de l'utilisateur, qui prime.

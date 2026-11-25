@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 /// Dépliée sous une ressource ou un objectif du panneau des quêtes : où
 /// trouver le monstre (ses repaires, le plus proche d'abord) ou l'objet (sa

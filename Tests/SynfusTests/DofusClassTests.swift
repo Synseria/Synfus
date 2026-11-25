@@ -1,6 +1,7 @@
 import Testing
 import SwiftUI
 @testable import Synfus
+import SynseriaDesign
 
 struct DofusClassTests {
     private let catalogue = DofusClass.Catalogue.integre

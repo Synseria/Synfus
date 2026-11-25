@@ -2,6 +2,7 @@ import AppKit
 import SwiftUI
 import Testing
 @testable import Synfus
+import SynseriaDesign
 
 /// Les captures de la documentation et des notes de version : les vues de
 /// Synfus rendues hors écran, sur des données d'exemple — jamais un visuel du
@@ -622,7 +623,7 @@ struct CapturesTests {
         let toutes = ProcessInfo.processInfo.environment["SYNFUS_CAPTURES_TOUT"] != nil
         // `SYNFUS_CAPTURES_HAUTEUR` : la fenêtre plus haute, pour voir une page longue en entier.
         let hauteur = ProcessInfo.processInfo.environment["SYNFUS_CAPTURES_HAUTEUR"].flatMap(Double.init) ?? 680
-        let sections: [SettingsSection] = toutes ? SettingsSection.allCases : [.barre, .donnees, .raccourcis, .lecture]
+        let sections: [SettingsSection] = toutes ? SettingsSection.allCases : [.theme, .barre, .donnees, .raccourcis, .lecture]
         for (nom, section) in sections.map({ ("reglages-" + $0.rawValue, $0) }) {
             let vue = SettingsView(onglet: OngletReglages(section), hauteur: CGFloat(hauteur))
                 .background(Color(nsColor: .windowBackgroundColor))

@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import SynseriaDesign
 
 /// Le panneau d'aide aux boss, au style des panneaux de quêtes et de chasse :
 /// le boss choisi au titre (un clic en change), sa fiche, sa mécanique, puis

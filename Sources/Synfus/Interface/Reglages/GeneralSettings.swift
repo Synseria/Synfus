@@ -1,5 +1,6 @@
 import MiseAJour
 import SwiftUI
+import SynseriaDesign
 
 /// Onglet Général : ce qui conditionne tout le reste — les deux autorisations système —, puis le
 /// système (démarrage, langue), les mises à jour, les icônes et les statistiques.

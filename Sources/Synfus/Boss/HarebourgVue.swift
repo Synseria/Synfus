@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 /// Contre le Comte Harebourg : où viser en gros, la grille qui le montre,
 /// d'où vient la confusion, les coups au corps à corps, le choix à la main, et

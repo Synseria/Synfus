@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 /// Le panneau des quêtes : un en-tête d'une ligne (le nom de la quête montrée,
 /// « − » qui le plie, « ⋯ »), puis sa fiche — étape en cours sur une ligne,
