@@ -249,6 +249,7 @@
   "combat.fiche.aide": "Le plus haut grade, d'après DofusDB.",
   "combat.fiche.elements": "Frapper : %@ · éviter : %@",
   "combat.fiche.pourcentage": "%lld %%",
+  "combat.fiche.resistance": "%@ : %lld %% de résistance",
   "combat.horsCombat": "hors combat",
   "combat.monTour": "à son tour",
   "combat.monTourSecondes": "à son tour — %lld s",

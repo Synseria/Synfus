@@ -249,6 +249,7 @@
   "combat.fiche.aide": "The highest grade, from DofusDB.",
   "combat.fiche.elements": "Hit with: %@ · avoid: %@",
   "combat.fiche.pourcentage": "%lld%%",
+  "combat.fiche.resistance": "%@: %lld%% resistance",
   "combat.horsCombat": "out of combat",
   "combat.monTour": "their turn",
   "combat.monTourSecondes": "their turn — %lld s",

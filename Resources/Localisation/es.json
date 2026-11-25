@@ -249,6 +249,7 @@
   "combat.fiche.aide": "El grado más alto, según DofusDB.",
   "combat.fiche.elements": "Golpear con: %@ · evitar: %@",
   "combat.fiche.pourcentage": "%lld %%",
+  "combat.fiche.resistance": "%@: %lld %% de resistencia",
   "combat.horsCombat": "fuera de combate",
   "combat.monTour": "su turno",
   "combat.monTourSecondes": "su turno — %lld s",
