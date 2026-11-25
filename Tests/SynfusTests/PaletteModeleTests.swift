@@ -142,4 +142,20 @@ struct PaletteModeleTests {
         modele.ouvrir(vue: .donjons)
         #expect(modele.requete.isEmpty && modele.filtre == .donjons)
     }
+
+    @Test("Le pied ne propose ⌘E et ⌘D que sur une ligne qui s'étiquette : pas sur un boss ni un objet")
+    func gestesDuPied() throws {
+        let modele = PaletteModele(contexte: try ContexteNidas.contexte(), requete: "nidas")
+        let lignes = modele.entrees
+        func etiquetable(_ entree: EntreePalette) -> Bool {
+            modele.selection = lignes.firstIndex(of: entree) ?? -1
+            return modele.selectionEtiquetable
+        }
+        let boss = try #require(lignes.first { $0.estBoss })
+        let objet = try #require(lignes.first { $0.genre == .objet })
+        let pnj = try #require(lignes.first { $0.genre == .pnj })
+        #expect(!etiquetable(boss) && !etiquetable(objet))
+        #expect(etiquetable(pnj))
+        #expect(!PaletteModele(contexte: ContextePalette(), filtre: .almanax).selectionEtiquetable)
+    }
 }

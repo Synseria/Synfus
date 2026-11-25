@@ -213,6 +213,21 @@ struct CapturesTests {
         }
     }
 
+    /// Une recherche à doublons sur données factices (`ContexteNidas`) : boss et donjon, PNJ homonymes,
+    /// PNJ trouvés par leur seul lieu, objets au nom du roi.
+    @Test("Capture d'une recherche à doublons", .enabled(if: dossier != nil))
+    func rechercheNidas() throws {
+        let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
+        try FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)
+        for (nom, requete) in [("palette-nidas", "nidas"), ("palette-nidas-palais", "palais")] {
+            let vue = PaletteVue(modele: PaletteModele(contexte: try ContexteNidas.contexte(), requete: requete))
+                .padding(24)
+                .background(Self.fondCapture)
+                .environment(\.colorScheme, Self.schema)
+            try ecrire(vue, vers: dossier.appending(path: nom + ".png"))
+        }
+    }
+
     /// Les états de la palette que la doc ne montre pas : coordonnées, perso, variables, listes vides.
     @Test("Captures des états de la palette", .enabled(if: dossier != nil && ProcessInfo.processInfo.environment["SYNFUS_CAPTURES_ETATS"] != nil))
     func etatsDeLaPalette() throws {

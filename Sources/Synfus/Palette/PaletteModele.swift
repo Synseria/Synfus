@@ -369,6 +369,12 @@ final class PaletteModele: ObservableObject {
         recalculer()
     }
 
+    /// ⌘E et ⌘D ont prise sur la ligne choisie : le pied ne les propose que là.
+    var selectionEtiquetable: Bool {
+        guard !surAlmanax, vide == nil, entrees.indices.contains(selection) else { return false }
+        return entrees[selection].etiquetable
+    }
+
     /// ⌘E : l'étiquette de la sélection.
     func etiqueterSelection() {
         guard entrees.indices.contains(selection) else { return NSSound.beep() }
@@ -586,7 +592,7 @@ final class PaletteModele: ObservableObject {
     }
 
     func commencerEtiquette(_ entree: EntreePalette) {
-        guard entree.cle != nil else { return NSSound.beep() }
+        guard entree.etiquetable else { return NSSound.beep() }
         edition = entree
         texteEtiquette = entree.etiquette ?? ""
     }
