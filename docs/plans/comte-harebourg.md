@@ -4,6 +4,22 @@ Plan prêt à exécuter (« implémente le plan docs/plans/comte-harebourg.md »
 skills `aide-boss` et `lecture-ocr`. Synfus lit l'écran et affiche : aucun clic ni touche émis,
 aucune lecture de la mémoire du jeu.
 
+## Précisions de l'utilisateur (25/11/2026)
+
+« Je vise cette position (centre du carré rouge) et si j'ai π, ½π, tu affiches la position qui
+sera affectée par rapport au centre du personnage sur l'écran. » D'où, pour la question 6 : on
+montre la case **d'arrivée** de la case visée, tournée autour du **centre du personnage à l'écran**.
+
+Ce que montre sa capture de combat (mode tactique, damier bleu et clair) :
+- la case visée est la **croix de visée** au centre d'une zone rouge (la portée du sort) — elle se
+  repère sans le pointeur ;
+- chaque combattant porte son **numéro** au-dessus de lui (1 à 7) et dans la timeline en bas,
+  le perso actif encadré (n° 1 ici) : piste sérieuse pour le pivot automatique (V2) ;
+- le **mode tactique** (cases unies, sans décor sur la grille) rend le damier très contrasté : le
+  recalage automatique de la grille (A3) y est le plus sûr — à recommander en combat contre le Comte ;
+- le cœur affiche les PV courants (« 4162 ») ; le panneau du combattant survolé, en bas à gauche,
+  donne nom, « 4000 ♥ », PA, PM : c'est le cadre fixe de la question 2 (lecture fixe, option a).
+
 ## 0. Point de départ
 
 ### Code en place

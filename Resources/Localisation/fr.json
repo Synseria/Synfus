@@ -501,7 +501,7 @@
   "ouTrouver.introuvable": "introuvable sur la carte",
   "ouTrouver.plus": "%lld de plus",
   "ouTrouver.plus.un": "%lld de plus",
-  "ouTrouver.recette": "Se fabrique : %@, niveau %lld",
+  "ouTrouver.recette": "%@, niveau %lld",
   "ouTrouver.reessayer": "Réessayer",
   "ouTrouver.rien": "Ni lâché par un monstre, ni fabriqué.",
   "palette.action.chasse": "Chasse au trésor",
