@@ -516,6 +516,7 @@ struct CarteZaap<Corps: View>: View {
                     .allowsHitTesting(survole)
             }
             if let compte = entree.compte { EtiquetteFilet(texte: compte, taille: Jetons.typoMicro, surImage: surImage) }
+            if entree.ici { RepereIci(taille: Jetons.typoMicro, surImage: surImage) }
             Text(entree.detail ?? "")
                 .font(Jetons.typoCode.font)
                 .foregroundStyle(encre(\.encre2))
@@ -594,6 +595,7 @@ struct LigneResultat: View {
             }
             Spacer(minLength: Jetons.espace2)
             if let compte = entree.compte { EtiquetteFilet(texte: compte, taille: Jetons.typoMeta) }
+            if entree.ici { RepereIci(taille: Jetons.typoMeta) }
             if let detail = entree.detail {
                 Text(detail)
                     .font(Jetons.typoMeta.font.monospaced())
@@ -685,6 +687,20 @@ struct EtiquetteInterieur: View {
     var body: some View {
         EtiquetteFilet(texte: L("carte.interieur"), taille: taille, surImage: surImage)
             .help(L("carte.interieur.aide"))
+    }
+}
+
+/// Devant les coordonnées d'une case qui est celle du perso devant : on y est.
+struct RepereIci: View {
+    let taille: Jetons.Typo
+    var surImage = false
+
+    var body: some View {
+        Image(systemName: "location.fill")
+            .font(taille.font)
+            .foregroundStyle(Color.jeton(\.accentTexte, surImage: surImage))
+            .help(L("palette.ici"))
+            .accessibilityLabel(L("palette.ici"))
     }
 }
 
