@@ -10,6 +10,8 @@ struct HarebourgVue: View {
     @State private var regleDepliee = false
     // periphery:ignore - lu par son `$` (le dépliable), que Periphery ne voit pas
     @State private var attenteDepliee = false
+    /// La cible du schéma, déplaçable au doigt pour éprouver une autre case que celle d'en face.
+    @State private var cibleSchema = (x: 0, y: -2)
     private static let hauteurSchema: CGFloat = 48
 
     /// Les contrôles gardent leur place d'un tour à l'autre : la réponse au-dessus a
@@ -44,8 +46,9 @@ struct HarebourgVue: View {
 
     private func visee(_ estimation: SuiviConfusion.Estimation) -> some View {
         HStack(spacing: Jetons.espace2) {
-            SchemaVisee(confusion: estimation.confusion)
+            SchemaVisee(confusion: estimation.confusion, cible: $cibleSchema)
                 .frame(width: 96, height: Self.hauteurSchema)
+                .help(L("boss.schema.aide"))
             VStack(alignment: .leading, spacing: Jetons.espace1) {
                 Text(Self.titre(estimation.confusion.visee))
                     .font(Jetons.typoSection.font)
@@ -184,48 +187,80 @@ struct HarebourgVue: View {
 }
 
 /// La visée dessinée sur une grille du jeu : le lanceur au centre, la cible
-/// devant lui à deux cases, et la case à viser pour qu'une fois tourné, le
-/// sort retombe sur elle.
+/// au bord rouge — **déplaçable au doigt** pour éprouver une autre case —, et
+/// la case à viser en accent pour qu'une fois tourné, le sort retombe sur elle.
 struct SchemaVisee: View {
     let confusion: Harebourg.Confusion
+    @Binding var cible: (x: Int, y: Int)
 
-    private static let cible = (x: 0, y: -2)
     private static let rayon = 2
 
     var body: some View {
-        Canvas { contexte, taille in
-            // Une case en losange : demi-largeur a, demi-hauteur a/2, comme le jeu.
-            let a = min(taille.width / CGFloat(4 * Self.rayon + 2), taille.height / CGFloat(2 * Self.rayon + 1))
-            let centre = CGPoint(x: taille.width / 2, y: taille.height / 2)
-            func point(_ x: Int, _ y: Int) -> CGPoint {
-                CGPoint(x: centre.x + CGFloat(x - y) * a, y: centre.y + CGFloat(x + y) * a / 2)
+        GeometryReader { geo in
+            let taille = geo.size
+            Canvas { contexte, _ in
+                Self.dessiner(contexte, taille: taille, cible: cible, confusion: confusion)
             }
-            func losange(_ x: Int, _ y: Int) -> Path {
-                let p = point(x, y)
-                var chemin = Path()
-                chemin.move(to: CGPoint(x: p.x, y: p.y - a / 2))
-                chemin.addLine(to: CGPoint(x: p.x + a, y: p.y))
-                chemin.addLine(to: CGPoint(x: p.x, y: p.y + a / 2))
-                chemin.addLine(to: CGPoint(x: p.x - a, y: p.y))
-                chemin.closeSubpath()
-                return chemin
-            }
-            for x in -Self.rayon...Self.rayon {
-                for y in -Self.rayon...Self.rayon {
-                    contexte.stroke(losange(x, y), with: .color(Color.jeton(\.filet)), lineWidth: Jetons.epaisseurFilet)
-                }
-            }
-            let visee = confusion.caseVisee(cible: Self.cible)
-            contexte.fill(losange(0, 0), with: .color(Color.jeton(\.encre2)))
-            contexte.fill(losange(visee.x, visee.y), with: .color(Color.jeton(\.accent)))
-            contexte.stroke(losange(Self.cible.x, Self.cible.y), with: .color(Color.jeton(\.danger)), lineWidth: Jetons.epaisseurFocus)
-            if visee != Self.cible {
-                var trait = Path()
-                trait.move(to: point(visee.x, visee.y))
-                trait.addLine(to: point(Self.cible.x, Self.cible.y))
-                contexte.stroke(trait, with: .color(Color.jeton(\.encre2)), style: StrokeStyle(lineWidth: Jetons.epaisseurFilet, dash: [Jetons.epaisseurFocus, Jetons.epaisseurFocus]))
-            }
+            .gesture(DragGesture(minimumDistance: 4)
+                .onChanged { geste in cible = Self.cellule(de: geste.location, taille: taille) }
+                .onEnded { geste in cible = Self.cellule(de: geste.location, taille: taille) })
+            .curseurDeClic(true)
         }
         .accessibilityHidden(true)
+    }
+
+    /// La géométrie de la grille : une case en losange de demi-largeur `a`,
+    /// demi-hauteur `a/2`, comme le jeu.
+    private static func geometrie(_ taille: CGSize) -> (a: CGFloat, centre: CGPoint) {
+        let a = min(taille.width / CGFloat(4 * Self.rayon + 2), taille.height / CGFloat(2 * Self.rayon + 1))
+        return (a, CGPoint(x: taille.width / 2, y: taille.height / 2))
+    }
+
+    private static func point(_ x: Int, _ y: Int, a: CGFloat, centre: CGPoint) -> CGPoint {
+        CGPoint(x: centre.x + CGFloat(x - y) * a, y: centre.y + CGFloat(x + y) * a / 2)
+    }
+
+    private static func losange(_ x: Int, _ y: Int, a: CGFloat, centre: CGPoint) -> Path {
+        let p = Self.point(x, y, a: a, centre: centre)
+        var chemin = Path()
+        chemin.move(to: CGPoint(x: p.x, y: p.y - a / 2))
+        chemin.addLine(to: CGPoint(x: p.x + a, y: p.y))
+        chemin.addLine(to: CGPoint(x: p.x, y: p.y + a / 2))
+        chemin.addLine(to: CGPoint(x: p.x - a, y: p.y))
+        chemin.closeSubpath()
+        return chemin
+    }
+
+    /// La case sous un point de la grille, bornée au rayon dessiné.
+    private static func cellule(de localisation: CGPoint, taille: CGSize) -> (x: Int, y: Int) {
+        let (a, centre) = Self.geometrie(taille)
+        let u = (localisation.x - centre.x) / a        // x − y
+        let v = (localisation.y - centre.y) / (a / 2)  // x + y
+        let x = Int(((u + v) / 2).rounded())
+        let y = Int(((v - u) / 2).rounded())
+        return (max(-Self.rayon, min(Self.rayon, x)), max(-Self.rayon, min(Self.rayon, y)))
+    }
+
+    private static func dessiner(_ contexte: GraphicsContext, taille: CGSize,
+                                cible: (x: Int, y: Int), confusion: Harebourg.Confusion) {
+        let (a, centre) = Self.geometrie(taille)
+        for x in -Self.rayon...Self.rayon {
+            for y in -Self.rayon...Self.rayon {
+                contexte.stroke(Self.losange(x, y, a: a, centre: centre),
+                                with: .color(Color.jeton(\.filet)), lineWidth: Jetons.epaisseurFilet)
+            }
+        }
+        let visee = confusion.caseVisee(cible: cible)
+        contexte.fill(Self.losange(0, 0, a: a, centre: centre), with: .color(Color.jeton(\.encre2)))
+        contexte.fill(Self.losange(visee.x, visee.y, a: a, centre: centre), with: .color(Color.jeton(\.accent)))
+        contexte.stroke(Self.losange(cible.x, cible.y, a: a, centre: centre),
+                        with: .color(Color.jeton(\.danger)), lineWidth: Jetons.epaisseurFocus)
+        if visee != cible {
+            var trait = Path()
+            trait.move(to: Self.point(visee.x, visee.y, a: a, centre: centre))
+            trait.addLine(to: Self.point(cible.x, cible.y, a: a, centre: centre))
+            contexte.stroke(trait, with: .color(Color.jeton(\.encre2)),
+                            style: StrokeStyle(lineWidth: Jetons.epaisseurFilet, dash: [Jetons.epaisseurFocus, Jetons.epaisseurFocus]))
+        }
     }
 }

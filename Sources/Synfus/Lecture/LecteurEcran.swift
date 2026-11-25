@@ -427,7 +427,7 @@ final class LecteurEcran: ObservableObject {
             diagnostic.sautes += 1
             diagnostic.etat = .actif
             if genre == .quetes { LectureSuivi.shared.confirmer(nom) }
-        case .lue(let signature, let lignes, let duree, let couleurBouton):
+        case .lue(let signature, let lignes, let duree, let couleurBouton, _):
             signatures[cle] = signature
             vuLe[cle] = Date()
             diagnostic.lectures += 1
@@ -505,7 +505,15 @@ final class LecteurEcran: ObservableObject {
 
     /// La position du perso devant, lue maintenant sans attendre le prochain tour.
     func lirePositionDevant() async {
-        guard Preferences.shared.lirePosition, WindowPreviewService.shared.authorized, let client = clientDevant,
+        guard Preferences.shared.lirePosition else { return }
+        await lirePositionDevantUneFois()
+    }
+
+    /// Idem, même si la lecture régulière de la position est éteinte : le panneau
+    /// de chasse s'ouvre sur la position du perso devant. Sans l'autorisation
+    /// d'enregistrement de l'écran, rien.
+    func lirePositionDevantUneFois() async {
+        guard WindowPreviewService.shared.authorized, let client = clientDevant,
               let image = await capturer(client, [.position])[.position] else { return }
         if clientAuPremierPlan != nil, persoDevant != client.name { persoDevant = client.name }
         await lire(image, .position, nom: client.name)
@@ -517,7 +525,7 @@ final class LecteurEcran: ObservableObject {
         guard WindowPreviewService.shared.authorized else { return .failure(.sansAutorisation) }
         guard let client = clientDevant else { return .failure(.sansPerso) }
         guard let image = await capturer(client, [genre])[genre] else { return .failure(.captureImpossible) }
-        guard case .lue(let signature, let lignes, _, _) = await moteur.lire(image: image, precedente: nil, mesure: genre.mesure)
+        guard case .lue(let signature, let lignes, _, _, _) = await moteur.lire(image: image, precedente: nil, mesure: genre.mesure)
         else { return .failure(.texteIllisible) }
         if devant != nil, persoDevant != client.name { persoDevant = client.name }
         signatures[cle(genre, client.name)] = signature
@@ -536,10 +544,39 @@ final class LecteurEcran: ObservableObject {
     /// gardée : même moteur, même encadrement que le tour. La couleur est
     /// celle du bouton de combat, sinon de la zone (cf. `pomper`).
     func lire(image: CGImage, genre: GenreLecture) async -> (lignes: [String], couleur: Double)? {
-        guard case .lue(let signature, let lignes, _, let bouton)
+        guard case .lue(let signature, let lignes, _, let bouton, _)
                 = await moteur.lire(image: image, precedente: nil, mesure: genre.mesure)
         else { return nil }
         return (lignes, bouton ?? signature.couleur ?? 0)
+    }
+
+    /// La zone de chasse du perso devant, lue d'un coup : les lignes de l'OCR,
+    /// le cadre de chaque ligne en pixels de l'image, et l'image elle-même —
+    /// la chasse y cherche les flèches en pixels quand l'OCR n'a pas lu le
+    /// glyphe. `nil` : pas de perso ou capture impossible ; l'OCR peut échouer,
+    /// l'image est alors rendue avec des lignes vides.
+    func lireChasseUneFois() async -> (perso: String, lignes: [String], cadres: [CGRect], image: CGImage, coupe: Bool)? {
+        guard WindowPreviewService.shared.authorized else { return nil }
+        guard let client = clientDevant else { return nil }
+        guard let image = await capturer(client, [.chasse])[.chasse] else { return nil }
+        let lignes: [String]
+        let cadres: [CGRect]
+        let coupe: Bool
+        switch await moteur.lire(image: image, precedente: nil, mesure: .lignes) {
+        case .lue(let signature, let l, _, _, let c):
+            lignes = l
+            cadres = c
+            coupe = signature.auBord
+            signatures[cle(.chasse, client.name)] = signature
+        case .illisible, .inchangee:
+            lignes = []
+            cadres = []
+            coupe = false
+        }
+        vuLe[cle(.chasse, client.name)] = Date()
+        if clientAuPremierPlan != nil, persoDevant != client.name { persoDevant = client.name }
+        diagnostic.lignes[.chasse] = lignes
+        return (client.name, lignes, cadres, image, coupe)
     }
 
     private func appliquerPosition(_ lignes: [String], nom: String) {
@@ -609,9 +646,12 @@ actor MoteurOCR {
     enum Resultat: Sendable {
         case illisible
         case inchangee(SignatureZone)
-        /// Les lignes, la durée de l'OCR, et pour le combat la part colorée
-        /// du corps du bouton — `nil` si aucun bouton n'a été lu.
-        case lue(SignatureZone, [String], TimeInterval, couleurBouton: Double?)
+        /// Les lignes, la durée de l'OCR, pour le combat la part colorée
+        /// du corps du bouton — `nil` si aucun bouton n'a été lu —, et le
+        /// cadre de chaque ligne en pixels de l'image (origine en haut à
+        /// gauche), aligné sur les lignes : la chasse y cherche les flèches
+        /// en pixels quand l'OCR n'a pas lu le glyphe.
+        case lue(SignatureZone, [String], TimeInterval, couleurBouton: Double?, cadres: [CGRect])
     }
 
     /// Charge le modèle de reconnaissance sur une image vide : le premier
@@ -653,7 +693,6 @@ actor MoteurOCR {
         // De haut en bas : le nom de la zone précède les coordonnées, le
         // décompte précède le bouton. Le repère de Vision a son origine en bas.
         let observations = (requete.results ?? []).sorted { $0.boundingBox.midY > $1.boundingBox.midY }
-        let lignes = observations.compactMap { $0.topCandidates(1).first?.string }
 
         // Les boîtes de Vision, normalisées, origine en bas, dans l'image
         // encadrée de sa marge → pixels de l'image d'origine, origine en haut.
@@ -663,6 +702,13 @@ actor MoteurOCR {
         func pixels(_ boite: CGRect) -> CGRect {
             CGRect(x: boite.minX * lp - marge, y: (1 - boite.maxY) * hp - marge,
                    width: boite.width * lp, height: boite.height * hp)
+        }
+        var lignes: [String] = []
+        var cadres: [CGRect] = []
+        for observation in observations {
+            guard let texte = observation.topCandidates(1).first?.string else { continue }
+            lignes.append(texte)
+            cadres.append(pixels(observation.boundingBox))
         }
         var couleurBouton: Double?, cadre: CGRect?, auBord = false
         switch mesure {
@@ -682,7 +728,7 @@ actor MoteurOCR {
             }
         }
         let lue = SignatureZone(luma, mesure: mesure, cadre: cadre, couleur: couleur, auBord: auBord)
-        return .lue(lue, lignes, Date().timeIntervalSince(debut), couleurBouton: couleurBouton)
+        return .lue(lue, lignes, Date().timeIntervalSince(debut), couleurBouton: couleurBouton, cadres: cadres)
     }
 
     /// Chaque texte du contenu entier et son cadre, en fractions de l'image,

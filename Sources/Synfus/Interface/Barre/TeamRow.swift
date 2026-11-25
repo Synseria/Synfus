@@ -61,6 +61,7 @@ struct TeamSectorView: View {
             .fondEtat(etat)
         }
         .buttonStyle(.plain)
+        .curseurDeClic(secteur != .nouvelle)
         // Le « + » ne fait rien au clic : il attend qu'on y dépose un perso.
         .disabled(secteur == .nouvelle)
         .onHover { survole = $0 }

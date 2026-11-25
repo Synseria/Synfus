@@ -37,4 +37,16 @@ struct PanneauxJeuTests {
         #expect(!PanneauxJeu.bandeauAtteignable(de: CGRect(x: -350, y: 300, width: 360, height: 400), ecrans: [principal]))
         #expect(PanneauxJeu.bandeauAtteignable(de: CGRect(x: 1300, y: 300, width: 360, height: 400), ecrans: [principal, second]))
     }
+
+    @Test("Plier garde la hauteur dépliée, déplier la rend ; chaque panneau a son pliage")
+    @MainActor
+    func pliage() {
+        let prefs = Preferences.forTesting(store: StockageEnMemoire())
+        #expect(PanneauxJeu.basculerPliage(.quetes, hauteur: 480, dans: prefs) == nil)
+        #expect(PanneauxJeu.plie(.quetes, dans: prefs))
+        #expect(!PanneauxJeu.plie(.chasse, dans: prefs))
+        #expect(PanneauxJeu.basculerPliage(.quetes, hauteur: 40, dans: prefs) == 480)
+        #expect(!PanneauxJeu.plie(.quetes, dans: prefs))
+        #expect(prefs.panneauxPlies.isEmpty)
+    }
 }

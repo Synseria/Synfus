@@ -5,6 +5,12 @@ struct CharactersSettings: View {
     @ObservedObject private var prefs = Preferences.shared
     @ObservedObject private var manager = WindowManager.shared
     @State private var confirmation: Confirmation?
+    /// Le personnage qu'on tient par le grip, pour le réordonnancement au glisser.
+    @State private var dragging: String?
+    /// Cadres des lignes, dans le repère de la liste : le geste de glisser y vise la ligne d'arrivée.
+    @State private var rowFrames: [String: CGRect] = [:]
+    /// Le repère des cadres des lignes.
+    private static let listeSpace = "synfusPersos"
 
     /// Les personnages connus qu'aucun client ne porte en ce moment.
     private var horsLigne: [String] {
@@ -35,9 +41,12 @@ struct CharactersSettings: View {
         PageReglages {
             Bloc(L("persos.ordre"), aide: L("persos.ordre.aide") + "\n\n" + L("persos.equipes.aide")) {
                 if !prefs.characterOrder.isEmpty { enTetes }
-                ForEach(Array(prefs.characterOrder.enumerated()), id: \.element) { index, name in
-                    characterRow(index: index, name: name)
+                VStack(spacing: 0) {
+                    ForEach(Array(prefs.characterOrder.enumerated()), id: \.element) { index, name in
+                        characterRow(index: index, name: name)
+                    }
                 }
+                .coordinateSpace(name: Self.listeSpace)
                 Ligne(titre: L("persos.connectes")) {
                     HStack(spacing: Jetons.espace2) {
                         Text(L("persos.connectesSurConnus", connectes, prefs.characterOrder.count))
@@ -61,7 +70,7 @@ struct CharactersSettings: View {
 
     private static let largeurEquipe = Jetons.largeurNav * 0.9
     private static let largeurTouche: CGFloat = 88
-    private static let largeurFleches = Jetons.hauteurCase * 2 + Jetons.espace1
+    private static let largeurFleches = Jetons.hauteurCase * 3 + 2 * Jetons.espace1
 
     /// Les colonnes de la liste, nommées : le menu est l'équipe, la touche mène au personnage.
     private var enTetes: some View {
@@ -76,13 +85,17 @@ struct CharactersSettings: View {
         .rangee()
     }
 
-    /// Une ligne de la liste. Un glisser sur une autre ligne y place le personnage ; les flèches offrent le
-    /// même déplacement au clic.
+    /// Une ligne de la liste. Le grip se prend au doigt pour déplacer le
+    /// personnage (un `DragGesture`, pas le drag & drop système : celui-ci
+    /// ouvrait les sélecteurs d'équipe un à un au passage) ; les flèches
+    /// offrent le même déplacement au clic ; la corbeille le retire de la liste.
     private func characterRow(index: Int, name: String) -> some View {
         HStack(spacing: Jetons.espace2) {
             Image(systemName: "line.3.horizontal")
                 .font(Jetons.typoMicro.font)
                 .foregroundStyle(Color.jeton(\.encre3))
+                .curseurDeClic(true)
+                .simultaneousGesture(deplacerGeste(name: name))
             Circle()
                 .fill(isOnline(name) ? Color.jeton(\.succes) : Color.jeton(\.encre3))
                 .frame(width: Jetons.espace2, height: Jetons.espace2)
@@ -118,35 +131,76 @@ struct CharactersSettings: View {
                 }
                 .disabled(index == prefs.characterOrder.count - 1)
                 .aide(L("persos.descendre"))
+
+                Button { confirmerRetrait(name) } label: {
+                    Image(systemName: "trash")
+                }
+                .aide(L("persos.retirer"))
             }
             .buttonStyle(BoutonTertiaire())
             .font(Jetons.typoMicro.font)
             .frame(width: Self.largeurFleches)
         }
         .rangee()
-        .draggable(name)
-        .dropDestination(for: String.self) { noms, _ in
-            guard let source = noms.first.flatMap(prefs.characterOrder.firstIndex(of:)) else { return false }
-            prefs.move(fromOffsets: IndexSet(integer: source), toOffset: source < index ? index + 1 : index)
-            manager.resort()
-            return true
-        }
-        .contextMenu {
-            Button(L("persos.retirer")) { confirmerRetrait(name) }
-        }
+        .background(GeometryReader { geo in
+            let frame = geo.frame(in: .named(Self.listeSpace))
+            Color.clear
+                .onAppear { rowFrames[name] = frame }
+                .onChange(of: frame) { _, new in rowFrames[name] = new }
+        })
+    }
+
+    /// Le geste du grip : dès que le curseur entre dans une autre ligne, le
+    /// personnage y est déplacé. Un clic sans mouvement ne fait rien.
+    private func deplacerGeste(name: String) -> some Gesture {
+        DragGesture(minimumDistance: 6, coordinateSpace: .named(Self.listeSpace))
+            .onChanged { value in
+                if dragging == nil { dragging = name }
+                guard let cible = rowFrames.first(where: { $0.key != name && $0.value.contains(value.location) })?.key,
+                      let source = prefs.characterOrder.firstIndex(of: name),
+                      let arrivee = prefs.characterOrder.firstIndex(of: cible) else { return }
+                // `toOffset` désigne un interstice, pas une case.
+                prefs.move(fromOffsets: IndexSet(integer: source),
+                           toOffset: source < arrivee ? arrivee + 1 : arrivee)
+                manager.resort()
+            }
+            .onEnded { _ in dragging = nil }
     }
 
     /// « Aucune » ou le numéro de l'équipe ; une entrée de plus tant qu'une équipe
-    /// peut encore être créée. Tag 0 = aucune, n = équipe n.
+    /// peut encore être créée. Un `Menu`, pas le sélecteur de la trousse : sa
+    /// liste, posée sur toute la fenêtre, prenait les clics des boutons voisins
+    /// (la corbeille ouvrait le sélecteur au lieu de confirmer). Tag 0 = aucune,
+    /// n = équipe n.
     private func teamPicker(for name: String) -> some View {
-        let count = prefs.equipes.count
-        let choix = count < Equipes.maximum ? count + 1 : count
-        return SelecteurEnListe(L("persos.equipe"),
-                                selection: Binding(get: { (Equipes.indexEquipe(de: name, dans: prefs.equipes) ?? -1) + 1 },
-                                                   set: { prefs.affecter(name, aEquipe: $0 == 0 ? nil : $0 - 1) }),
-                                options: [(0, L("barre.equipe.aucune"))] + (1...max(choix, 1)).map { ($0, L("persos.equipeN", $0)) })
-            .frame(width: Self.largeurEquipe, alignment: .leading)
-            .help(L("persos.equipeDuPerso"))
+        let nombre = prefs.equipes.count
+        let rang = (Equipes.indexEquipe(de: name, dans: prefs.equipes) ?? -1) + 1
+        return Menu {
+            Picker(L("persos.equipe"), selection: Binding(
+                get: { rang },
+                set: { prefs.affecter(name, aEquipe: $0 == 0 ? nil : $0 - 1) }
+            )) {
+                Text(L("barre.equipe.aucune")).tag(0)
+                ForEach(0..<nombre, id: \.self) { Text(L("persos.equipeN", $0 + 1)).tag($0 + 1) }
+            }
+            .pickerStyle(.inline)
+            .labelsHidden()
+            if nombre < Equipes.maximum {
+                Divider()
+                Button(L("barre.equipe.nouvelle")) { prefs.affecter(name, aEquipe: nombre) }
+            }
+        } label: {
+            HStack(spacing: Jetons.espace1) {
+                Text(rang == 0 ? L("barre.equipe.aucune") : L("persos.equipeN", rang))
+                    .lineLimit(1)
+                Image(systemName: "chevron.down").imageScale(.small)
+            }
+        }
+        .menuStyle(.button)
+        .menuIndicator(.hidden)
+        .buttonStyle(BoutonBorde())
+        .frame(width: Self.largeurEquipe, alignment: .leading)
+        .help(L("persos.equipeDuPerso"))
     }
 
     private func moveCharacter(at index: Int, by delta: Int) {

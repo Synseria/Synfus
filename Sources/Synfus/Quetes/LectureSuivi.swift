@@ -25,9 +25,6 @@ final class LectureSuivi: ObservableObject {
     /// Les quêtes du suivi du perso devant, à sa dernière lecture.
     @Published private(set) var reconnues: [SuiviQuetes.Reconnue] = []
     @Published private(set) var etat: Etat = .jamaisLu
-    /// Les objectifs qu'a cochés (`quetesCocherSuivi`) la dernière lecture
-    /// demandée, ou la dernière du tour qui en a coché.
-    @Published private(set) var cochesLues = 0
     /// L'écran a montré la lecture du perso devant il y a moins de
     /// `fraicheur` : au-delà — panneau caché, perso pas revu —, le joueur a
     /// sans doute avancé, ses « à faire » ne se montrent plus.
@@ -135,18 +132,22 @@ final class LectureSuivi: ObservableObject {
 
     private func noter(_ lu: SuiviQuetes.Lu, perso: String, demandee: Bool) {
         let prefs = Preferences.shared
-        let coches = prefs.appliquer(lu.reconnues)
-        if demandee || coches > 0, cochesLues != coches { cochesLues = coches }
+        prefs.appliquer(lu.reconnues)
         // Un client pas encore connecté n'a pas de nom de perso à qui
         // rapporter son suivi.
         if WindowTitle.isPersistableName(perso) {
             vusLe[perso] = Date()
-            // Une relecture identique ne change rien : rien à redessiner.
-            var historique = self.historique
-            let disparues = historique.noter(lu, perso: perso, date: Date())
-            if historique != self.historique { self.historique = historique }
-            let restent = terminees.union(disparues).subtracting(lu.reconnues.map(\.id))
-            if restent != terminees { terminees = restent }
+            // Une lecture du tour qui ne voit pas le suivi — map ouverte,
+            // fenêtre du jeu posée dessus — ne dit rien des quêtes : la
+            // dernière lecture qui le voyait tient (pas d'effet boomerang).
+            // Une lecture demandée, si, même vide : elle dit « rien ».
+            if demandee || !lu.reconnues.isEmpty {
+                var historique = self.historique
+                let disparues = historique.noter(lu, perso: perso, date: Date())
+                if historique != self.historique { self.historique = historique }
+                let restent = terminees.union(disparues).subtracting(lu.reconnues.map(\.id))
+                if restent != terminees { terminees = restent }
+            }
         }
         if etat != .lu, demandee || etat != .enCours { etat = .lu }
         revoir()
@@ -191,21 +192,6 @@ final class LectureSuivi: ObservableObject {
     func choisir(_ reconnue: SuiviQuetes.Reconnue) {
         retenirEtape(reconnue)
         QuetePanel.shared.ouvrir(reconnue.id)
-    }
-
-    /// Épingle les quêtes du suivi que le panneau n'a pas encore, chacune à
-    /// son étape lue, et montre la première.
-    func toutEpingler() {
-        let prefs = Preferences.shared
-        let nouvelles = MenuQuetes.aEpingler(reconnues, epinglees: prefs.quetesEpinglees)
-        guard let premiere = nouvelles.first else { return }
-        prefs.enUneEcriture {
-            for reconnue in nouvelles {
-                retenirEtape(reconnue)
-                prefs.quetesEpinglees.append(reconnue.id)
-            }
-        }
-        QuetePanel.shared.ouvrir(premiere.id)
     }
 
     private func retenirEtape(_ reconnue: SuiviQuetes.Reconnue) {

@@ -28,7 +28,14 @@ struct PaletteVue: View {
         .surfaceFlottante()
         .onAppear { champ = .recherche }
         .onChange(of: modele.ouverture) { _, _ in champ = .recherche }
-        .onChange(of: modele.edition) { _, edition in champ = edition == nil ? .recherche : .etiquette }
+        .onChange(of: modele.edition) { _, edition in
+            // Le focus ne suit que si la valeur change une fois le champ monté :
+            // on repasse par nil, puis on pose la cible au tour suivant — poser
+            // .etiquette tout de suite (champ déjà à .etiquette via l'apparition)
+            // ne changerait rien et le clavier resterait à la recherche.
+            champ = nil
+            DispatchQueue.main.async { champ = edition == nil ? .recherche : .etiquette }
+        }
     }
 
     // MARK: - Champ
@@ -117,6 +124,7 @@ struct PaletteVue: View {
                         Puce(libelle: filtre.titre, choisie: choisi)
                     }
                     .buttonStyle(.plain)
+                    .curseurDeClic(true)
                     .focusable(false)
                     .curseurDeClic(true)
                     .elementDeGroupe()
@@ -243,6 +251,7 @@ struct PaletteVue: View {
                 CarteZaap(entree: entree, choisie: index == modele.selection, disposition: disposition)
                     .id(entree.id)
                     .onTapGesture { modele.executer(entree) }
+                    .curseurDeClic(true)
                     .help(entree.complet)
                     .accessibilityElement(children: .combine)
                     .accessibilityAddTraits(.isButton)
@@ -260,6 +269,7 @@ struct PaletteVue: View {
                               deplier: entree.pnj == nil ? nil : { modele.deplier(entree) })
                     .id(entree.id)
                     .onTapGesture { modele.executer(entree) }
+                    .curseurDeClic(true)
                     .help(entree.complet)
                     .accessibilityElement(children: .combine)
                     .accessibilityAddTraits(.isButton)
@@ -310,6 +320,9 @@ struct PaletteVue: View {
                 ToucheDeClavier(touche: "↵")
                 ToucheDeClavier(touche: "esc")
             }
+            // ⌘E ouvre cette ligne : le clavier y va, même si le champ de
+            // recherche le tenait (le focus posé à l'apparition est le seul sûr).
+            .onAppear { champ = .etiquette }
             .padding(.horizontal, Jetons.espace2)
             .frame(height: Jetons.hauteurRangee)
         } else {
@@ -584,6 +597,7 @@ struct LigneResultat: View {
                 if let deplier {
                     Button(action: deplier) { chevron.contentShape(Rectangle()) }
                         .buttonStyle(.plain)
+                        .curseurDeClic(true)
                         .focusable(false)
                 } else {
                     chevron

@@ -25,6 +25,60 @@ enum PanneauxJeu {
         RecettePanel.shared.recentrer()
     }
 
+    // MARK: - Pliage
+
+    /// Le panneau est-il plié sur son en-tête ?
+    static func plie(_ panneau: PanneauJeu, dans prefs: Preferences = .shared) -> Bool {
+        prefs.panneauxPlies[panneau.rawValue] != nil
+    }
+
+    /// Un panneau rouvert garde son pliage ; ouvert sur quelque chose de précis (une quête, un boss,
+    /// une recette), il le montre et se déplie.
+    ///
+    /// Plie le panneau, en gardant `hauteur` (celle de son cadre déplié), ou le déplie : rend alors
+    /// la hauteur gardée. Un panneau à la taille de son contenu n'en fait rien : il suit sa vue.
+    @discardableResult
+    static func basculerPliage(_ panneau: PanneauJeu, hauteur: CGFloat, dans prefs: Preferences = .shared) -> CGFloat? {
+        if let avant = prefs.panneauxPlies[panneau.rawValue] {
+            prefs.panneauxPlies[panneau.rawValue] = nil
+            return CGFloat(avant)
+        }
+        prefs.panneauxPlies[panneau.rawValue] = Double(hauteur)
+        return nil
+    }
+
+    // MARK: - Construction
+
+    /// Un panneau à la hauteur de son contenu et à la largeur réglable entre `largeurs`, `largeur`
+    /// d'abord : sans
+    /// bordure, au niveau de la barre, sur tous les espaces, sa place et sa largeur gardées par
+    /// AppKit sous `nom` — relues de force, un panneau non `.resizable` ne reprend pas sa taille sinon.
+    static func construire<Vue: View>(_ type: PanneauDeJeu.Type = PanneauDeJeu.self, nom: String,
+                                      largeur: CGFloat, largeurs: ClosedRange<CGFloat>, vue: Vue,
+                                      parDefaut: PlaceParDefaut) -> PanneauDeJeu {
+        let panel = type.init()
+        panel.minSize = NSSize(width: largeurs.lowerBound, height: 0)
+        panel.maxSize = NSSize(width: largeurs.upperBound, height: .greatestFiniteMagnitude)
+        let suivie = LargeurPanneau(largeur)
+        panel.largeurSuivie = suivie
+        panel.setFrame(NSRect(x: 0, y: 0, width: largeur, height: 200), display: false)
+        let hosting = NSHostingController(rootView: AvecLargeurPanneau(largeur: suivie, contenu: vue).racineSynfus())
+        hosting.sizingOptions = [.preferredContentSize]
+        panel.contentViewController = hosting
+        panel.isFloatingPanel = true
+        panel.level = .statusBar
+        panel.hidesOnDeactivate = false
+        panel.isReleasedWhenClosed = false
+        panel.backgroundColor = .clear
+        panel.isOpaque = false
+        panel.hasShadow = false
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        if !panel.setFrameAutosaveName(nom) || !panel.setFrameUsingName(nom, force: true) {
+            placer(panel, parDefaut: parDefaut)
+        }
+        return panel
+    }
+
     // MARK: - Place d'un panneau
 
     /// Où paraît un panneau qui n'a pas de place gardée, ou que son écran a quittée : le coin haut
@@ -105,12 +159,41 @@ enum PanneauxJeu {
     }
 }
 
+/// Les panneaux posés sur le jeu, nommés : la clé de leur pliage dans les préférences.
+enum PanneauJeu: String, Sendable {
+    case quetes, chasse, boss, recette
+}
+
 /// Un panneau posé sur le jeu, à la taille de son contenu, jamais clé : la frappe reste au jeu, un
 /// clic dessus ne la lui retire pas. Il se tient par son en-tête : quand son contenu change de
-/// hauteur, le haut reste où on l'a posé — AppKit garderait le bas, et l'en-tête sauterait.
-final class PanneauDeJeu: NSPanel {
+/// hauteur, le haut reste où on l'a posé — AppKit garderait le bas, et l'en-tête sauterait. Jamais
+/// zoomé : un double-clic sur l'en-tête ne l'agrandit pas. Ouvert à l'héritage pour la chasse, seule
+/// à prendre le clavier.
+class PanneauDeJeu: NSPanel {
     override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }
+    override func zoom(_: Any?) {}
+    override func performZoom(_: Any?) {}
+
+    private let suiviCurseur = SuiviCurseur()
+
+    /// Le contenu posé — directement ou par son contrôleur —, le curseur le suit.
+    override var contentView: NSView? {
+        didSet { suiviCurseur.suivre(contentView) }
+    }
+
+    override var contentViewController: NSViewController? {
+        didSet { suiviCurseur.suivre(contentView) }
+    }
+
+    /// Sans bordure ni activation : ce que tous les panneaux posés sur le jeu sont.
+    required convenience init() {
+        self.init(contentRect: NSRect(x: 0, y: 0, width: 320, height: 200),
+                  styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+    }
+
+    /// À la hauteur de son contenu, sa largeur réglée : la vue la reprend (`AvecLargeurPanneau`).
+    var largeurSuivie: LargeurPanneau?
 
     override func setFrame(_ cadre: NSRect, display: Bool) {
         var cadre = cadre
@@ -119,7 +202,10 @@ final class PanneauDeJeu: NSPanel {
         if cadre.origin == frame.origin, cadre.height != frame.height {
             cadre.origin.y = frame.maxY - cadre.height
         }
+        // Une largeur restaurée ou venue de la vue reste entre les bornes, d'où qu'elle vienne.
+        if largeurSuivie != nil { cadre.size.width = min(max(cadre.width, minSize.width), maxSize.width) }
         super.setFrame(cadre, display: display)
+        if let largeurSuivie, largeurSuivie.valeur != frame.width { largeurSuivie.valeur = frame.width }
     }
 }
 
@@ -144,6 +230,66 @@ struct BoutonEnTete: View {
         .buttonStyle(.etat(nue: true))
         .onHover { survole = $0 }
         .aide(aide)
+    }
+}
+
+/// Le curseur d'un panneau posé sur le jeu, que macOS ne pose pas pour une app inactive : la main
+/// des boutons de SwiftUI (`curseurDeClic`) n'y paraît jamais. Sur chaque mouvement, toujours suivi
+/// (`.activeAlways`), il prend celui de ce qui est sous la souris : le sien pour une zone qui en a un
+/// (`VueACurseur` : en-tête, poignées), la main pour ce que l'accessibilité dit cliquable, le trait
+/// d'un champ, la flèche ailleurs.
+@MainActor
+private final class SuiviCurseur: NSObject {
+    private weak var vue: NSView?
+    private var zone: NSTrackingArea?
+
+    func suivre(_ vue: NSView?) {
+        if let ancienne = self.vue, let zone { ancienne.removeTrackingArea(zone) }
+        self.vue = vue
+        guard let vue else { return }
+        CurseurArrierePlan.autoriser()
+        let zone = NSTrackingArea(rect: .zero, options: [.mouseMoved, .mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+                                  owner: self, userInfo: nil)
+        vue.addTrackingArea(zone)
+        self.zone = zone
+    }
+
+    @objc func mouseEntered(with event: NSEvent) { poser(event) }
+    @objc func mouseMoved(with event: NSEvent) { poser(event) }
+    @objc func mouseExited(with _: NSEvent) { NSCursor.arrow.set() }
+
+    private static let cliquables: Set<NSAccessibility.Role> = [
+        .button, .link, .checkBox, .radioButton, .popUpButton, .menuButton, .disclosureTriangle, .incrementor,
+    ]
+    private static let champs: Set<NSAccessibility.Role> = [.textField, .textArea, .comboBox]
+
+    private func poser(_ event: NSEvent) {
+        guard let vue, let fenetre = vue.window,
+              let touche = vue.hitTest(vue.convert(event.locationInWindow, from: nil)) else { return }
+        // Une zone à curseur pose le sien à chaque pas : ne pas le lui reprendre.
+        if touche is VueACurseur { return }
+        let element = vue.accessibilityHitTest(fenetre.convertPoint(toScreen: event.locationInWindow))
+        let accessible = element as? NSAccessibilityProtocol
+        let role = accessible?.accessibilityRole()
+        if let role, Self.cliquables.contains(role), accessible?.isAccessibilityEnabled() ?? true {
+            NSCursor.pointingHand.set()
+        } else if let role, Self.champs.contains(role) {
+            NSCursor.iBeam.set()
+        } else {
+            NSCursor.arrow.set()
+        }
+    }
+}
+
+/// « − » qui plie un panneau sur son en-tête, « ⌄ » qui le déplie : le même dans chaque panneau,
+/// juste avant son dernier bouton (« × » ou « ⋯ »).
+struct BoutonPliage: View {
+    let plie: Bool
+    let action: () -> Void
+
+    var body: some View {
+        BoutonEnTete(icone: plie ? "chevron.down" : "minus", aide: plie ? L("panneau.deplier") : L("panneau.plier"),
+                     discret: true, action: action)
     }
 }
 
@@ -188,6 +334,39 @@ struct EnTetePanneau<Titre: View, Boutons: View>: View {
         // Les zones de glisser prennent la hauteur des boutons, sans tirer
         // l'en-tête vers le bas.
         .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+/// La forme des panneaux posés sur le jeu (le bandeau `.sw .bar` du SDS) : l'en-tête dans un bandeau
+/// d'un bord à l'autre, voilé de la page (`UsageDuVerre.clavier`) et fermé d'un filet, puis le corps
+/// sur une plaque pleine à `espace2` du verre. `plie` : le bandeau seul. Le corps ne pousse jamais
+/// le panneau : plus large que la place, il est rogné à sa plaque — sinon tout le contenu
+/// s'élargissait et la fenêtre en rognait le verre et la fin de l'en-tête.
+struct CadrePanneau<EnTete: View, Corps: View>: View {
+    var plie = false
+    @ViewBuilder let enTete: EnTete
+    @ViewBuilder let corps: Corps
+    @Environment(\.couleursSynseria) private var c
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            enTete
+                .padding(.vertical, Jetons.espace1)
+                .background(UsageDuVerre.clavier.teinte(c).couleur)
+                .overlay(alignment: .bottom) {
+                    if !plie { Color.jeton(\.filet).frame(height: Jetons.epaisseurFilet) }
+                }
+            if !plie {
+                corps
+                    .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+                    .clipShape(RoundedRectangle(cornerRadius: Jetons.rayon2, style: .circular))
+                    .plaquePleine()
+                    .padding(Jetons.espace2)
+            }
+        }
+        .font(Jetons.typoMeta.font)
+        .clipShape(RoundedRectangle(cornerRadius: Jetons.rayon3, style: .continuous))
+        .surfaceFlottante()
     }
 }
 

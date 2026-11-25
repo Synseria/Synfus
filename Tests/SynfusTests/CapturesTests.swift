@@ -282,6 +282,19 @@ struct CapturesTests {
             .background(Self.fondCapture)
             .environment(\.colorScheme, Self.schema)
         try ecrire(etroite, vers: dossier.appending(path: "quete-etroite.png"))
+        // Une quête courte en entier, si elle est sur la machine : exigences, objectifs faits
+        // repliés, récompenses, suite.
+        if let courte = gardees.flatMap({ quetes in
+            quetes.quetes.first { $0.noms["fr"] == "On se calme" }.map { quetes.fiche($0, en: .fr) }
+        }).map(Self.sansCartes) {
+            let faits = Set(courte.etapes.first?.objectifs.prefix(4).map(\.id) ?? [])
+            let vue = QueteVue(ficheImposee: courte, etapeImposee: 0, validesImposes: faits, lusImposes: [])
+                .frame(width: 360, height: 520)
+                .padding(24)
+                .background(Self.fondCapture)
+                .environment(\.colorScheme, Self.schema)
+            try ecrire(vue, vers: dossier.appending(path: "quete-courte.png"))
+        }
     }
 
     @Test("Capture du panneau de quête sans quête épinglée, au suivi long", .enabled(if: dossier != nil))
@@ -313,6 +326,11 @@ struct CapturesTests {
             .background(Self.fondCapture)
             .environment(\.colorScheme, Self.schema)
         try ecrire(vue, vers: dossier.appending(path: "quete-vide.png"))
+        // À sa taille minimale, rien ne déborde : le verre garde sa marge, « ⋯ » son coin.
+        let minimale = QuetePanel.tailleMinimale
+        try ecrire(QueteVue().frame(width: minimale.width, height: minimale.height).padding(24)
+            .background(Self.fondCapture).environment(\.colorScheme, Self.schema),
+                   vers: dossier.appending(path: "quete-vide-etroite.png"))
         // La liste avec des quêtes au panneau : le suivi ne propose plus que les autres.
         let prefs = Preferences.shared
         let avant = prefs.quetesEpinglees
@@ -321,6 +339,13 @@ struct CapturesTests {
         QuetePanel.shared.enListe = true
         defer { QuetePanel.shared.enListe = false }
         try ecrire(vue, vers: dossier.appending(path: "quete-liste.png"))
+        // Plié : le bandeau seul.
+        let plies = prefs.panneauxPlies
+        defer { prefs.panneauxPlies = plies }
+        prefs.panneauxPlies = [PanneauJeu.quetes.rawValue: 480]
+        try ecrire(QueteVue().frame(width: minimale.width).padding(24)
+            .background(Self.fondCapture).environment(\.colorScheme, Self.schema),
+                   vers: dossier.appending(path: "quete-pliee.png"))
     }
 
     /// Sans la vue des cartes : elle viendrait de DofusDB, et une capture du
@@ -347,6 +372,7 @@ struct CapturesTests {
             .background(Self.fondCapture)
             .environment(\.colorScheme, Self.schema)
         try ecrire(vue, vers: dossier.appending(path: "chasse.png"))
+        try ecrire(vue.environment(\.largeurPanneau, ChasseVue.largeurs.upperBound), vers: dossier.appending(path: "chasse-max.png"))
         let indice = Indice(id: 993, noms: ["fr": "Poupée koalak"])
         let longue = Indice(id: 1, noms: ["fr": "Crâne de likrone dans la glace, près du vieux pont"])
         ChasseModele.shared.poserResultatPourCaptures(cible: .indice(indice), lues: [.indice(longue), .indice(indice)])
@@ -365,6 +391,9 @@ struct CapturesTests {
             .background(Self.fondCapture)
             .environment(\.colorScheme, Self.schema)
         try ecrire(vue, vers: dossier.appending(path: "boss.png"))
+        for (nom, largeur) in [("min", BossVue.largeurs.lowerBound), ("max", BossVue.largeurs.upperBound)] {
+            try ecrire(vue.environment(\.largeurPanneau, largeur), vers: dossier.appending(path: "boss-\(nom).png"))
+        }
     }
 
     /// Les vues de chaque boss, posées sur la carte du panneau, avec ce que l'aide
@@ -436,6 +465,10 @@ struct CapturesTests {
             .background(Self.fondCapture)
             .environment(\.colorScheme, Self.schema)
         try ecrire(vue, vers: dossier.appending(path: "recette.png"))
+        // Aux bornes de leur largeur, rien ne se coupe ni ne déborde.
+        for (nom, largeur) in [("min", RecetteVue.largeurs.lowerBound), ("max", RecetteVue.largeurs.upperBound)] {
+            try ecrire(vue.environment(\.largeurPanneau, largeur), vers: dossier.appending(path: "recette-\(nom).png"))
+        }
     }
 
     @Test("Captures des réglages", .enabled(if: dossier != nil))
@@ -448,7 +481,7 @@ struct CapturesTests {
         let toutes = ProcessInfo.processInfo.environment["SYNFUS_CAPTURES_TOUT"] != nil
         // `SYNFUS_CAPTURES_HAUTEUR` : la fenêtre plus haute, pour voir une page longue en entier.
         let hauteur = ProcessInfo.processInfo.environment["SYNFUS_CAPTURES_HAUTEUR"].flatMap(Double.init) ?? 680
-        let sections: [SettingsSection] = toutes ? SettingsSection.allCases : [.barre, .carte, .raccourcis, .lecture]
+        let sections: [SettingsSection] = toutes ? SettingsSection.allCases : [.barre, .donnees, .raccourcis, .lecture]
         for (nom, section) in sections.map({ ("reglages-" + $0.rawValue, $0) }) {
             let vue = SettingsView(onglet: OngletReglages(section), hauteur: CGFloat(hauteur))
                 .background(Color(nsColor: .windowBackgroundColor))
@@ -457,7 +490,7 @@ struct CapturesTests {
         }
         // L'échec du téléchargement des quêtes : l'état occupe le bloc entier.
         QuetesStore.shared.poserPourCaptures(nil, echec: "hors ligne")
-        let vue = SettingsView(onglet: OngletReglages(.quetes), hauteur: CGFloat(hauteur))
+        let vue = SettingsView(onglet: OngletReglages(.donnees), hauteur: CGFloat(hauteur))
             .background(Color(nsColor: .windowBackgroundColor))
             .environment(\.colorScheme, Self.schema)
         try ecrire(vue, vers: dossier.appending(path: "reglages-quetes-indisponibles.png"))

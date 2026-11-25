@@ -7,24 +7,34 @@ import Testing
 struct PanneauQuetesTests {
     private let depart = NSRect(x: 100, y: 200, width: 360, height: 480)
     private let minimum = NSSize(width: 280, height: 200)
+    private let maximum = NSSize(width: 520, height: 700)
 
     @Test("Un bord tiré ne déplace que lui : le haut et le bord opposé restent")
     func bords() {
-        let droite = BordsPanneau.droite.cadre(depart, decalage: CGVector(dx: 40, dy: 30), minimum: minimum)
+        let droite = BordsPanneau.droite.cadre(depart, decalage: CGVector(dx: 40, dy: 30), minimum: minimum, maximum: maximum)
         #expect(droite == NSRect(x: 100, y: 200, width: 400, height: 480))
-        let gauche = BordsPanneau.gauche.cadre(depart, decalage: CGVector(dx: -40, dy: 0), minimum: minimum)
+        let gauche = BordsPanneau.gauche.cadre(depart, decalage: CGVector(dx: -40, dy: 0), minimum: minimum, maximum: maximum)
         #expect(gauche == NSRect(x: 60, y: 200, width: 400, height: 480))
         // Vers le bas, y diminue : le panneau grandit, son haut (680) reste.
-        let coin = BordsPanneau([.gauche, .bas]).cadre(depart, decalage: CGVector(dx: 20, dy: -50), minimum: minimum)
+        let coin = BordsPanneau([.gauche, .bas]).cadre(depart, decalage: CGVector(dx: 20, dy: -50), minimum: minimum, maximum: maximum)
         #expect(coin == NSRect(x: 120, y: 150, width: 340, height: 530))
         #expect(coin.maxY == depart.maxY)
     }
 
     @Test("Le panneau ne passe pas sous sa taille minimale, le bord opposé tient")
     func tailleMinimale() {
-        let cadre = BordsPanneau([.gauche, .bas]).cadre(depart, decalage: CGVector(dx: 500, dy: 500), minimum: minimum)
+        let cadre = BordsPanneau([.gauche, .bas]).cadre(depart, decalage: CGVector(dx: 500, dy: 500), minimum: minimum, maximum: maximum)
         #expect(cadre.size == minimum)
         #expect(cadre.maxX == depart.maxX && cadre.maxY == depart.maxY)
+    }
+
+    @Test("Le panneau ne dépasse pas sa taille maximale ; sans le bas, la hauteur ne bouge pas")
+    func tailleMaximale() {
+        let cadre = BordsPanneau([.droite, .bas]).cadre(depart, decalage: CGVector(dx: 900, dy: -900), minimum: minimum, maximum: maximum)
+        #expect(cadre.size == maximum)
+        #expect(cadre.minX == depart.minX && cadre.maxY == depart.maxY)
+        let cotes = BordsPanneau.cotes.cadre(depart, decalage: CGVector(dx: 30, dy: -200), minimum: minimum, maximum: maximum)
+        #expect(cotes.height == depart.height && cotes.maxY == depart.maxY)
     }
 
     @Test("Sur le titre de l'en-tête, un appui qui tremble reste un clic, un mouvement franc déplace")
@@ -56,24 +66,24 @@ struct PanneauQuetesTests {
     @Test("La liste : les quêtes du panneau, la montrée marquée, puis du suivi celles qu'il n'a pas, à leur étape")
     func liste() {
         let reconnues = [SuiviQuetes.Reconnue(id: 7, etape: 2), SuiviQuetes.Reconnue(id: 18, etape: nil)]
-        let elements = MenuQuetes.liste(epinglees: [18, 42], montree: 42, reconnues: reconnues, etat: .lu, coches: 3, nom: nom)
+        let elements = MenuQuetes.liste(epinglees: [18, 42], montree: 42, reconnues: reconnues, etat: .lu, nom: nom)
         #expect(elements == [
             .epinglee(id: 18, nom: "Q18", montree: false),
             .epinglee(id: 42, nom: "Q42", montree: true),
+            .chercher,
             .titre(L("quete.menu.suivi")),
             .lireSuivi(enCours: false),
             // La 18 est déjà au panneau : une seule ligne pour elle, en tête.
             .reconnue(reconnues[0], titre: L("quete.menu.reconnueEtape", "Q7", 3)),
-            .message(L("quete.suivi.coches", nombre: 3, 3)),
         ])
         #expect(MenuQuetes.nouvelles(reconnues, epinglees: [18, 42]) == 1)
     }
 
-    @Test("Le menu « ⋯ » : l'affichage, tout retirer dès deux quêtes, fermer")
+    @Test("Le menu « ⋯ » : chercher, l'affichage, tout retirer dès deux quêtes, fermer")
     func reglages() {
         let options: [MenuQuetes.Element] = [.option(.cocherSuivi, actif: false), .option(.compact, actif: false),
                                              .option(.consigne, actif: false), .option(.masquerObjets, actif: true)]
-        #expect(MenuQuetes.reglages(epinglees: 2, actives: [.masquerObjets]) == [.affichage(options), .toutDesepingler, .separateur, .fermer])
+        #expect(MenuQuetes.reglages(epinglees: 2, actives: [.masquerObjets]) == [.chercher, .separateur, .affichage(options), .toutDesepingler, .separateur, .fermer])
         // Une seule quête : sa croix suffit.
         #expect(!MenuQuetes.reglages(epinglees: 1, actives: []).contains(.toutDesepingler))
     }
@@ -103,17 +113,6 @@ struct PanneauQuetesTests {
         #expect([P.sansAutorisation, .captureImpossible, .zone, .indisponible].map(\.geste) == [.autoriser, .relire, .calibrer, .reessayer])
     }
 
-    @Test("« Tout épingler » : sous « Lire le suivi » dès deux quêtes à épingler, jamais pour une seule")
-    func listeToutEpingler() {
-        let reconnues = [SuiviQuetes.Reconnue(id: 7, etape: 2), SuiviQuetes.Reconnue(id: 9, etape: nil),
-                         SuiviQuetes.Reconnue(id: 18, etape: nil)]
-        #expect(MenuQuetes.aEpingler(reconnues, epinglees: [9]).map(\.id) == [7, 18])
-        let deux = MenuQuetes.liste(epinglees: [9], montree: 9, reconnues: reconnues, etat: .lu, coches: 0, nom: nom)
-        #expect(Array(deux.drop { $0 != .titre(L("quete.menu.suivi")) }.dropFirst().prefix(2)) == [.lireSuivi(enCours: false), .toutEpingler])
-        let une = MenuQuetes.liste(epinglees: [9, 18], montree: 9, reconnues: reconnues, etat: .lu, coches: 0, nom: nom)
-        #expect(!une.contains(.toutEpingler))
-    }
-
     @Test("Ce que l'en-tête redemande à chaque rendu ne se refait que si la case, les quêtes, la langue ou la carte changent")
     func cleIci() {
         let date = Date(timeIntervalSince1970: 1_000_000)
@@ -127,32 +126,37 @@ struct PanneauQuetesTests {
 
     @Test("La liste dit pourquoi le suivi ne propose rien")
     func listeSansQuete() {
-        let vide = MenuQuetes.liste(epinglees: [], montree: nil, reconnues: [], etat: .lu, coches: 0, nom: nom)
-        #expect(vide.first == .message(L("quete.menu.aucune")))
+        let vide = MenuQuetes.liste(epinglees: [], montree: nil, reconnues: [], etat: .lu, nom: nom)
+        // Rien au panneau : le dire, et de quoi en chercher une, sur deux lignes.
+        #expect(Array(vide.prefix(2)) == [.message(L("quete.menu.aucune")), .chercher])
         #expect(vide.last == .message(L("quete.suivi.rien")))
-        let enCours = MenuQuetes.liste(epinglees: [1], montree: 1, reconnues: [], etat: .enCours, coches: 2, nom: nom)
+        let enCours = MenuQuetes.liste(epinglees: [1], montree: 1, reconnues: [], etat: .enCours, nom: nom)
         // Pendant la lecture, rien n'est dit de la précédente.
         #expect(Array(enCours.suffix(2)) == [.titre(L("quete.menu.suivi")), .lireSuivi(enCours: true)])
         // Sans l'autorisation d'écran, même avant toute lecture : le geste qui la donne, pas de lecture à lancer.
-        let sansEcran = MenuQuetes.liste(epinglees: [1], montree: 1, reconnues: [], etat: .jamaisLu, coches: 0, autorise: false, nom: nom)
+        let sansEcran = MenuQuetes.liste(epinglees: [1], montree: 1, reconnues: [], etat: .jamaisLu, autorise: false, nom: nom)
         #expect(Array(sansEcran.suffix(3)) == [.titre(L("quete.menu.suivi")), .message(L("quete.suivi.sansAutorisation")), .geste(.autoriser)])
     }
 
-    @Test("La liste dit ce qui commence sur la case du perso : les quêtes que le panneau n'a pas, et les PNJ")
+    @Test("La liste dit ce qui commence sur la case du perso : « Ici » en dernier, replié, compté")
     func listeIci() {
         let ici = MenuQuetes.Ici(coordonnees: "[1,2]", quetes: [.init(id: 5, nom: "Q5", niveau: 10),
                                                                .init(id: 18, nom: "Q18", niveau: 70)], pnjs: ["Wogew", "Otomaï"])
-        let elements = MenuQuetes.liste(epinglees: [18], montree: 18, reconnues: [], etat: .jamaisLu, coches: 0, ici: ici, nom: nom)
-        #expect(Array(elements.prefix(4)) == [
+        let elements = MenuQuetes.liste(epinglees: [18], montree: 18, reconnues: [], etat: .jamaisLu, ici: ici, nom: nom)
+        // L'en-tête « Ici » ferme la liste, avec le nombre de quêtes à épingler ; son contenu suit.
+        #expect(elements == [
             .epinglee(id: 18, nom: "Q18", montree: true),
-            .titre(L("quete.menu.ici", "[1,2]")),
+            .chercher,
+            .titre(L("quete.menu.suivi")),
+            .lireSuivi(enCours: false),
+            .iciEnTete(coordonnees: "[1,2]", nombre: 1),
             .ici(id: 5, titre: L("quete.menu.iciQuete", "Q5", 10)),
             .message(L("quete.menu.iciPNJ", "Wogew, Otomaï")),
         ])
         #expect(ici.aEpingler([5, 18]).isEmpty)
-        let rien = MenuQuetes.liste(epinglees: [18], montree: 18, reconnues: [], etat: .jamaisLu, coches: 0,
+        let rien = MenuQuetes.liste(epinglees: [18], montree: 18, reconnues: [], etat: .jamaisLu,
                                     ici: MenuQuetes.Ici(coordonnees: "[1,2]", quetes: [], pnjs: []), nom: nom)
-        #expect(!rien.contains(.titre(L("quete.menu.ici", "[1,2]"))))
+        #expect(!rien.contains { if case .iciEnTete = $0 { return true } else { return false } })
     }
 
     @Test("Le mode compact ne grandit aucune mesure de la fiche")

@@ -9,12 +9,15 @@ enum MenuQuetes {
         case titre(String)
         /// Une quête du panneau : la choisir la montre, sa croix la retire.
         case epinglee(id: Int, nom: String, montree: Bool)
-        /// Retirer toutes les quêtes du panneau, le panneau avec.
+        /// Retirer toutes les quêtes du panneau ; la liste reste ouverte.
         case toutDesepingler
         /// Une quête qui commence sur la case du perso : la choisir l'ajoute.
         case ici(id: Int, titre: String)
-        /// Ajouter d'un coup les quêtes du suivi que le panneau n'a pas.
-        case toutEpingler
+        /// L'en-tête replié de la section « Ici », toujours en dernier : le
+        /// nombre de quêtes à épingler tient à droite de la ligne.
+        case iciEnTete(coordonnees: String, nombre: Int)
+        /// Chercher une quête à ajouter (la palette, sur `/quete`).
+        case chercher
         case lireSuivi(enCours: Bool)
         /// Une quête du suivi que le panneau n'a pas : la choisir l'ajoute et la montre à l'étape lue.
         case reconnue(SuiviQuetes.Reconnue, titre: String)
@@ -116,20 +119,19 @@ enum MenuQuetes {
     }
 
     /// La liste du panneau. Une quête déjà au panneau n'y paraît qu'une fois, en tête : « Ici » et le
-    /// suivi ne proposent que celles qu'il n'a pas. `coches` : les objectifs que la dernière lecture
-    /// du suivi a cochés ; `ici` : rien quand rien ne commence sur la case, ou qu'elle est inconnue.
+    /// suivi ne proposent que celles qu'il n'a pas. `ici` : en dernier, replié d'office — l'en-tête compte les quêtes, un clic
+    /// déplie ; rien quand rien ne commence sur la case, ou qu'elle est inconnue.
     static func liste(epinglees: [Int], montree: Int?, reconnues: [SuiviQuetes.Reconnue],
-                      etat: LectureSuivi.Etat, coches: Int, ici: Ici? = nil,
+                      etat: LectureSuivi.Etat, ici: Ici? = nil,
                       autorise: Bool = true, nom: (Int) -> String) -> [Element] {
         var elements: [Element] = epinglees.isEmpty
             ? [.message(L("quete.menu.aucune"))]
             : epinglees.map { .epinglee(id: $0, nom: nom($0), montree: $0 == montree) }
-        if let ici { elements += section(ici, epinglees: epinglees) }
+        elements.append(.chercher)
         let nouvelles = aEpingler(reconnues, epinglees: epinglees)
         elements.append(.titre(L("quete.menu.suivi")))
         // Sans l'autorisation d'écran, rien à lire : le geste qui la donne, pas un bouton qui échoue.
         if autorise { elements.append(.lireSuivi(enCours: etat == .enCours)) }
-        if nouvelles.count > 1 { elements.append(.toutEpingler) }
         elements += nouvelles.map { reconnue in
             .reconnue(reconnue, titre: reconnue.etape.map { L("quete.menu.reconnueEtape", nom(reconnue.id), $0 + 1) } ?? nom(reconnue.id))
         }
@@ -139,23 +141,25 @@ enum MenuQuetes {
         } else if etat == .lu, reconnues.isEmpty {
             elements.append(.message(L("quete.suivi.rien")))
         }
-        if etat == .lu, coches > 0 { elements.append(.message(L("quete.suivi.coches", nombre: coches, coches))) }
+        // « Ici » en dernier, replié : la section n'encombre plus le haut de la liste.
+        if let ici { elements += sectionIci(ici, epinglees: epinglees) }
         return elements
     }
 
-    /// Le menu « ⋯ » de l'en-tête : l'affichage, tout retirer, cacher le panneau.
+    /// Le menu « ⋯ » de l'en-tête : chercher une quête, l'affichage, tout retirer, cacher le panneau.
     /// `actives` : les options allumées.
     static func reglages(epinglees: Int, actives: Set<Option>) -> [Element] {
         let options = Option.affichage.map { Element.option($0, actif: actives.contains($0)) }
-        return [.affichage(options)] + (epinglees > 1 ? [.toutDesepingler] : []) + [.separateur, .fermer]
+        return [.chercher, .separateur, .affichage(options)] + (epinglees > 1 ? [.toutDesepingler] : []) + [.separateur, .fermer]
     }
 
-    /// « Ici, en [x,y] » : les quêtes qui commencent sur la case et que le panneau n'a pas, et les
-    /// PNJ qui s'y tiennent ; vide sans l'un ni l'autre.
-    private static func section(_ ici: Ici, epinglees: [Int]) -> [Element] {
+    /// « Ici, en [x,y] », en dernier et replié d'office : l'en-tête avec le
+    /// nombre de quêtes à épingler, puis — déplié — les quêtes qui commencent
+    /// sur la case et les PNJ qui s'y tiennent ; vide sans l'un ni l'autre.
+    private static func sectionIci(_ ici: Ici, epinglees: [Int]) -> [Element] {
         let quetes = ici.aEpingler(epinglees)
         guard !quetes.isEmpty || !ici.pnjs.isEmpty else { return [] }
-        var elements: [Element] = [.titre(L("quete.menu.ici", ici.coordonnees))]
+        var elements: [Element] = [.iciEnTete(coordonnees: ici.coordonnees, nombre: quetes.count)]
         elements += quetes.map { .ici(id: $0.id, titre: L("quete.menu.iciQuete", $0.nom, $0.niveau)) }
         if !ici.pnjs.isEmpty { elements.append(.message(L("quete.menu.iciPNJ", ici.pnjs.joined(separator: ", ")))) }
         return elements

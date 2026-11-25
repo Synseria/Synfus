@@ -40,9 +40,10 @@ struct ZoneEcran: Codable, Equatable, Sendable {
     /// défaut : en bas à droite, contre la barre de sorts.
     static let combatParDefaut = ZoneEcran(x: 0.79, y: 0.85, largeur: 0.12, hauteur: 0.12)
     /// Le suivi de chasse au trésor, à sa place par défaut : à gauche, sous
-    /// la position, assez haut pour une chasse de dix étapes. Estimé, pas
-    /// mesuré : le tracé du Diagnostic est là pour le corriger.
-    static let chasseParDefaut = ZoneEcran(x: 0, y: 0.10, largeur: 0.26, hauteur: 0.55)
+    /// la position, assez haut pour une chasse de dix étapes et son pied
+    /// (« essais restants », « Valider ») — au-delà, les lignes du bas seraient
+    /// coupées. Estimé, pas mesuré : le tracé du Diagnostic est là pour le corriger.
+    static let chasseParDefaut = ZoneEcran(x: 0, y: 0.10, largeur: 0.26, hauteur: 0.78)
     /// Le suivi de quêtes, à la même place que celui de chasse (le jeu les
     /// range dans la même colonne), un peu plus large pour ses titres en
     /// gras et plus haut pour cinq quêtes et leurs objectifs. Estimé.

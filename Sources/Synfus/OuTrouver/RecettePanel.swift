@@ -19,8 +19,15 @@ final class RecettePanel: NSObject, ObservableObject {
 
     func epingler(_ recette: RecetteEpinglee) {
         self.recette = recette
+        // La recette qu'on vient d'épingler se voit : plié, le panneau se déplie.
+        if PanneauxJeu.plie(.recette) { basculerPliage() }
         impose = true
         appliquer(force: true)
+    }
+
+    /// Le panneau suit sa vue, bandeau seul ou entière ; `PanneauDeJeu` en garde le haut.
+    func basculerPliage() {
+        PanneauxJeu.basculerPliage(.recette, hauteur: panel?.frame.height ?? 0)
     }
 
     func fermer() {
@@ -44,27 +51,8 @@ final class RecettePanel: NSObject, ObservableObject {
     }
 
     private func construire() -> NSPanel {
-        let hosting = NSHostingController(rootView: RecetteVue().racineSynfus())
-        hosting.sizingOptions = [.preferredContentSize]
-        let panel = PanneauDeJeu(
-            contentRect: NSRect(x: 0, y: 0, width: RecetteVue.largeur, height: 200),
-            styleMask: [.borderless, .nonactivatingPanel],
-            backing: .buffered,
-            defer: false
-        )
-        panel.contentViewController = hosting
-        panel.isFloatingPanel = true
-        panel.level = .statusBar
-        panel.hidesOnDeactivate = false
-        panel.isReleasedWhenClosed = false
-        panel.backgroundColor = .clear
-        panel.isOpaque = false
-        panel.hasShadow = false
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        if !panel.setFrameAutosaveName("RecettePanel") || panel.frame.origin == .zero {
-            PanneauxJeu.placer(panel, parDefaut: Self.placeParDefaut)
-        }
-        return panel
+        PanneauxJeu.construire(nom: "RecettePanel", largeur: RecetteVue.largeur, largeurs: RecetteVue.largeurs,
+                               vue: RecetteVue(), parDefaut: Self.placeParDefaut)
     }
 
     /// En haut, à gauche du centre de l'écran, en miroir de l'aide aux boss : l'hôtel de vente du jeu
@@ -78,6 +66,8 @@ final class RecettePanel: NSObject, ObservableObject {
 struct RecetteVue: View {
     /// Celle des quêtes : un nom d'objet du jeu tient sur une ligne.
     static let largeur = Jetons.largeurPanneauQuetes
+    /// Assez étroit pour une ligne « Se fabrique : métier, niveau », assez large pour un long nom d'objet.
+    static let largeurs: ClosedRange<CGFloat> = 260...560
 
     @ObservedObject private var panneau = RecettePanel.shared
 
@@ -88,18 +78,25 @@ struct RecetteVue: View {
 /// quantité ; un clic copie le nom, coché le temps du signal.
 struct FicheRecette: View {
     let recette: RecetteEpinglee?
+    @Environment(\.largeurPanneau) private var largeurPanneau
+    // periphery:ignore - observé : le pliage du panneau (`PanneauxJeu.plie`)
+    @ObservedObject private var prefs = Preferences.shared
     @StateObject private var copie = SignalCopie()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Jetons.espace1) {
+        CadrePanneau(plie: recette == nil || PanneauxJeu.plie(.recette)) {
             EnTetePanneau(icone: "hammer", teinte: Color.jeton(\.accentTexte)) {
+                // Étroit, un long nom d'objet passe à la ligne plutôt que d'être coupé.
                 Text(recette?.objet ?? L("recette.titre"))
                     .font(Jetons.typoTitreCarte.font)
-                    .lineLimit(1)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.leading, Jetons.espace1)
             } boutons: {
+                BoutonPliage(plie: PanneauxJeu.plie(.recette)) { RecettePanel.shared.basculerPliage() }
                 BoutonEnTete(icone: "xmark", aide: L("quete.fermer.simple")) { RecettePanel.shared.fermer() }
             }
+        } corps: {
             if let recette {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(L("ouTrouver.recette", recette.metier, recette.niveau))
@@ -112,15 +109,10 @@ struct FicheRecette: View {
                     }
                 }
                 .padding(.vertical, Jetons.espace2)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .plaquePleine()
             }
         }
-        .padding([.horizontal, .bottom], Jetons.espace2)
-        .padding(.top, Jetons.espace1)
-        .frame(width: RecetteVue.largeur, alignment: .leading)
-        .font(Jetons.typoMeta.font)
-        .surfaceFlottante()
+        .frame(width: largeurPanneau ?? RecetteVue.largeur, alignment: .leading)
+        .bordsRedimensionnables(.cotes)
     }
 
     private func ligne(_ ingredient: RecetteEpinglee.Ingredient, id: String) -> some View {

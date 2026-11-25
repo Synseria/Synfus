@@ -2,7 +2,8 @@ import SwiftUI
 
 /// La liste des quêtes, à la place de la fiche (`MenuQuetes.liste`) : celles du
 /// panneau — un clic montre, la croix retire —, puis celles qui commencent sur
-/// la case du perso et celles du suivi du jeu, à ajouter d'un clic.
+/// la case du perso et celles du suivi du jeu, à ajouter d'un clic — leur
+/// guide s'ouvre du livre au bout de la ligne.
 struct ListeQuetesVue: View {
     let metriques: MetriquesQuete
 
@@ -14,6 +15,10 @@ struct ListeQuetesVue: View {
     @ObservedObject private var lecteur = LecteurEcran.shared
     // periphery:ignore - observé : l'autorisation d'écran, dont dépend le suivi (`QuetePanel.liste`)
     @ObservedObject private var previews = WindowPreviewService.shared
+    /// La section « Ici », en dernier, est repliée d'office.
+    @State private var iciDeplie = false
+    /// La quête dont le guide se cherche : son livre attend.
+    @State private var guideEnCours: Int?
 
     /// La colonne des marques, à gauche des noms.
     private static let colonneMarque: CGFloat = 14
@@ -24,24 +29,20 @@ struct ListeQuetesVue: View {
                 if store.quetes == nil, store.chargement {
                     note(L("palette.quetes.chargement"))
                 } else if store.quetes == nil, store.echec != nil {
-                    EtatVide(L("quete.indisponible"), symbole: "exclamationmark.circle", ton: .danger) {
-                        Button { QuetePanel.faire(.reessayer) } label: { Label(L("commun.reessayer"), systemImage: "arrow.clockwise") }
-                    }
-                    .frame(height: Jetons.hauteurRangee * 4 + Jetons.espace4)
+                    note(L("quete.indisponible"))
+                    geste(.reessayer)
                 } else {
-                    let toutes = panneau.liste()
-                    let sansQuete = !toutes.contains(where: \.estUneQuete)
-                    // L'état vide dit déjà « Aucune quête » : la ligne de la liste ne le répète pas.
-                    let elements = sansQuete ? toutes.filter { $0 != .message(L("quete.menu.aucune")) } : toutes
-                    if sansQuete {
-                        EtatVide(L("quete.aucune"), symbole: BoutonBarre.quetes.symbole) {
-                            Button { QuetePanel.chercher() } label: { Label(L("quete.chercher"), systemImage: "magnifyingglass") }
+                    let elements = panneau.liste()
+                    // « Ici » est la dernière section : repliée, seul son en-tête se montre.
+                    let rangIci = elements.firstIndex { if case .iciEnTete = $0 { return true } else { return false } }
+                    ForEach(Array(elements.enumerated()), id: \.offset) { rang, element in
+                        if case .iciEnTete(let coordonnees, let nombre) = element {
+                            boutonIci(coordonnees: coordonnees, nombre: nombre)
+                        } else if let rangIci, rang > rangIci, !iciDeplie {
+                            EmptyView()
+                        } else {
+                            ligne(element)
                         }
-                        .frame(height: Jetons.hauteurRangee * 4 + Jetons.espace4)
-                    }
-                    ForEach(Array(elements.enumerated()), id: \.offset) { _, element in
-                        ligne(element, toutEpingler: elements.contains(.toutEpingler),
-                              lecture: elements.contains { if case .lireSuivi = $0 { true } else { false } })
                     }
                 }
             }
@@ -52,7 +53,7 @@ struct ListeQuetesVue: View {
     }
 
     @ViewBuilder
-    private func ligne(_ element: MenuQuetes.Element, toutEpingler: Bool, lecture lisible: Bool) -> some View {
+    private func ligne(_ element: MenuQuetes.Element) -> some View {
         switch element {
         case .titre(let titre):
             Text(titre)
@@ -64,33 +65,62 @@ struct ListeQuetesVue: View {
                 quete(nom, marque: montree ? "circle.fill" : nil, detail: etape(id), forte: montree) { panneau.montrer(id) }
                 BoutonEnTete(icone: "xmark", aide: L("quete.desepingler"), discret: true) { panneau.desepingler(id) }
             }
+        case .chercher:
+            quete(L("quete.chercher"), marque: "magnifyingglass", detail: nil) { QuetePanel.chercher() }
         case .ici(let id, let titre):
-            quete(titre, marque: "exclamationmark.bubble", detail: nil) { panneau.ouvrir(id) }
-        case .reconnue(let reconnue, let titre):
-            quete(titre, marque: "plus", detail: nil) { lecture.choisir(reconnue) }
-        case .lireSuivi(let enCours):
-            HStack(spacing: Jetons.espace1) {
-                Button { lecture.lire() } label: {
-                    Label(enCours ? L("quete.suivi.enCours") : L("quete.suivi.lire"), systemImage: "text.viewfinder")
-                }
-                .disabled(enCours)
-                Spacer(minLength: 0)
-                if toutEpingler { Button(L("quete.toutEpingler")) { lecture.toutEpingler() } }
+            HStack(spacing: 0) {
+                quete(titre, marque: "exclamationmark.bubble", detail: nil) { panneau.ouvrir(id) }
+                guide(id)
             }
+        case .reconnue(let reconnue, let titre):
+            HStack(spacing: 0) {
+                quete(titre, marque: "plus", detail: nil) { lecture.choisir(reconnue) }
+                guide(reconnue.id)
+            }
+        case .lireSuivi(let enCours):
+            Button { lecture.lire() } label: {
+                Label(enCours ? L("quete.suivi.enCours") : L("quete.suivi.lire"), systemImage: "text.viewfinder")
+            }
+            .disabled(enCours)
             .buttonStyle(BoutonTertiaire())
         case .message(let texte):
             note(texte)
         case .geste(let geste):
             self.geste(geste)
-        // Sur la ligne de « Lire le suivi » quand elle est là.
-        case .toutEpingler:
-            if !lisible {
-                Button(L("quete.toutEpingler")) { lecture.toutEpingler() }.buttonStyle(BoutonTertiaire())
-            }
         // Le menu « ⋯ ».
-        case .toutDesepingler, .option, .affichage, .fermer, .separateur:
+        case .toutDesepingler, .option, .affichage, .fermer, .separateur, .iciEnTete:
             EmptyView()
         }
+    }
+
+    /// L'en-tête de la section « Ici », repliée d'office : un chevron, le titre,
+    /// et le nombre de quêtes à épingler à droite de la ligne.
+    private func boutonIci(coordonnees: String, nombre: Int) -> some View {
+        Button { iciDeplie.toggle() } label: {
+            HStack(alignment: .firstTextBaseline, spacing: Jetons.espace1) {
+                Image(systemName: iciDeplie ? "chevron.down" : "chevron.right")
+                    .font(metriques.icone.font)
+                    .foregroundStyle(Color.jeton(\.encre2))
+                    .frame(width: Jetons.espace4)
+                Text(L("quete.menu.ici", coordonnees))
+                    .font(metriques.detailFort.font)
+                    .foregroundStyle(Color.jeton(\.encre2))
+                Spacer(minLength: Jetons.espace1)
+                if nombre > 0 {
+                    Text("\(nombre)")
+                        .font(metriques.detailFort.font)
+                        .foregroundStyle(Color.jeton(\.texteSurAccent))
+                        .padding(.horizontal, Jetons.espace1)
+                        .background(Capsule().fill(Color.jeton(\.accent)))
+                }
+            }
+            .padding(.horizontal, metriques.ligneHorizontale)
+            .padding(.vertical, metriques.ligneVerticale)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.etat(nue: true))
+        .help(L("quete.ici.aide", nombre: nombre, nombre))
     }
 
     /// Une quête : sa marque, son nom entier, son détail au bout.
@@ -122,6 +152,19 @@ struct ListeQuetesVue: View {
         .buttonStyle(.etat(nue: true))
     }
 
+    /// Le livre au bout d'une quête à ajouter : son guide (`DofusPourLesNoobs`), sans l'épingler.
+    private func guide(_ id: Int) -> some View {
+        BoutonEnTete(icone: "book", aide: L("quete.guide"), discret: true) {
+            guard let nom = store.fiche(id)?.nomFrancais, !nom.isEmpty else { return NSSound.beep() }
+            guideEnCours = id
+            Task {
+                await DofusPourLesNoobs.ouvrir(nom)
+                if guideEnCours == id { guideEnCours = nil }
+            }
+        }
+        .disabled(guideEnCours == id)
+    }
+
     /// « ét. 3/19 » : où le panneau en est d'une quête à plusieurs étapes.
     private func etape(_ id: Int) -> String? {
         guard let etapes = store.fiche(id)?.etapes.count, etapes > 1 else { return nil }
@@ -140,15 +183,5 @@ struct ListeQuetesVue: View {
         Button(geste.titre) { QuetePanel.faire(geste) }
             .buttonStyle(BoutonBorde())
             .padding(.horizontal, metriques.ligneHorizontale)
-    }
-}
-
-private extension MenuQuetes.Element {
-    /// Une quête de la liste (du panneau, d'ici ou du suivi) : sans aucune, la liste est un état vide.
-    var estUneQuete: Bool {
-        switch self {
-        case .epinglee, .ici, .reconnue: true
-        default: false
-        }
     }
 }

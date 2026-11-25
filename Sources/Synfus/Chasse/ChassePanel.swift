@@ -5,14 +5,14 @@ import SwiftUI
 /// et le jeu reste l'app active — un clic dans le jeu lui rend la frappe.
 /// Les flèches du clavier y choisissent la direction, jusque dans le champ
 /// de l'indice (une ligne courte, le curseur n'y sert guère) ; Échap ferme.
-private final class PanneauChasse: NSPanel {
+/// Plié, les flèches ne choisissent plus rien : la direction changerait sans se voir.
+private final class PanneauChasse: PanneauDeJeu {
     override var canBecomeKey: Bool { true }
-    override var canBecomeMain: Bool { false }
 
     override func sendEvent(_ event: NSEvent) {
         if event.type == .keyDown, event.modifierFlags.intersection([.command, .option, .control]).isEmpty {
-            if let direction = Direction(toucheFleche: event.keyCode) {
-                ChasseModele.shared.choisir(direction)
+            if !PanneauxJeu.plie(.chasse), let direction = Direction(toucheFleche: event.keyCode) {
+                Chasses.shared.courant.choisir(direction)
                 return
             }
             if event.keyCode == 53 {
@@ -46,7 +46,12 @@ final class ChassePanel: NSObject, ObservableObject, NSWindowDelegate {
         panel.makeKeyAndOrderFront(nil)
         if !ouvert { UsageStore.shared.compter(.chasse) }
         ouvert = true
-        ChasseModele.shared.ouvrir()
+        Chasses.shared.ouvrir()
+    }
+
+    /// Le panneau suit sa vue, bandeau seul ou entière ; `PanneauDeJeu` en garde le haut.
+    func basculerPliage() {
+        PanneauxJeu.basculerPliage(.chasse, hauteur: panel?.frame.height ?? 0)
     }
 
     func fermer() {
@@ -73,28 +78,11 @@ final class ChassePanel: NSObject, ObservableObject, NSWindowDelegate {
     }
 
     private func construire() -> NSPanel {
-        let hosting = NSHostingController(rootView: ChasseVue().racineSynfus())
-        hosting.sizingOptions = [.preferredContentSize]
-        let panel = PanneauChasse(
-            contentRect: NSRect(x: 0, y: 0, width: 216, height: 360),
-            styleMask: [.borderless, .nonactivatingPanel],
-            backing: .buffered,
-            defer: false
-        )
-        panel.contentViewController = hosting
-        panel.isFloatingPanel = true
+        let panel = PanneauxJeu.construire(PanneauChasse.self, nom: "ChassePanel", largeur: Jetons.largeurPanneauChasse,
+                                           largeurs: ChasseVue.largeurs, vue: ChasseRacine(),
+                                           parDefaut: Self.placeParDefaut)
         panel.becomesKeyOnlyIfNeeded = false
-        panel.level = .statusBar
-        panel.hidesOnDeactivate = false
-        panel.isReleasedWhenClosed = false
-        panel.backgroundColor = .clear
-        panel.isOpaque = false
-        panel.hasShadow = false
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.delegate = self
-        if !panel.setFrameAutosaveName("ChassePanel") || panel.frame.origin == .zero {
-            PanneauxJeu.placer(panel, parDefaut: Self.placeParDefaut)
-        }
         self.panel = panel
         return panel
     }

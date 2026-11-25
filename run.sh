@@ -5,6 +5,10 @@
 #                                   cours est quittée : une seule à la fois)
 #   sh run.sh --install [--start] → build Release (build.sh) puis installe
 #                                   dans /Applications ; --start la relance
+#   sh run.sh --install --stats    → idem, avec les clés de télémétrie du
+#                                   coffre (secret/Touch ID) : pour un test
+#                                   local on n'en a pas besoin, seules la
+#                                   release et la livraison les exigent
 #   sh run.sh --help
 #
 # Le build de développement est signé avec la même identité que la release
@@ -18,13 +22,14 @@ cd "$(dirname "$0")"
 NAME="Synfus"
 BUNDLE_ID="fr.synseria.Synfus"
 
-aide() { sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; }
+aide() { sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; }
 
-INSTALL=0; START=0
+INSTALL=0; START=0; STATS=0
 for arg in "$@"; do
     case "$arg" in
         --install) INSTALL=1 ;;
         --start) START=1 ;;
+        --stats) STATS=1 ;;
         -h|--help) aide; exit 0 ;;
         *) echo "run.sh : option inconnue « $arg »" >&2; aide >&2; exit 2 ;;
     esac
@@ -49,10 +54,12 @@ else
     MODE_BUILD="Debug"
 fi
 
-# L'app installée envoie ses statistiques comme une release (genre « local ») :
-# adresse et jeton viennent du coffre (Touch ID). Le build Debug n'envoie rien.
+# L'app installée n'envoie ses statistiques que si on le demande (--stats) :
+# adresse et jeton viennent alors du coffre (Touch ID). Un test local n'en a
+# pas besoin — la release et la livraison (publier-release.sh) l'exigent, elles.
+# Le build Debug n'envoie jamais rien.
 SECRET=()
-if [ "$INSTALL" = "1" ]; then
+if [ "$INSTALL" = "1" ] && [ "$STATS" = "1" ]; then
     if command -v secret >/dev/null; then
         SECRET=(secret run TELEMETRIE_URL=domus:telemetrie/prod/URL TELEMETRIE_JETON=domus:telemetrie/prod/SYNFUS --)
     else

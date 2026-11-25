@@ -1,12 +1,20 @@
 import SwiftUI
 
-/// Onglet Quêtes : le panneau, la liste des quêtes à ouvrir, et les PNJ que les quêtes situent.
-struct QuetesSettings: View {
-    @ObservedObject private var store = QuetesStore.shared
+/// Onglet Données : d'où vient la carte du jeu, comment un trajet se copie, les repères qu'elle
+/// porte (zaaps, lieux), puis le panneau des quêtes, la liste des quêtes et les PNJ situés — tout
+/// ce que la palette et les panneaux lisent dans le jeu.
+struct DonneesSettings: View {
     @ObservedObject private var prefs = Preferences.shared
 
     var body: some View {
         PageReglages {
+            Bloc {
+                SourceCarte()
+                InterrupteurVuesCartes()
+            }
+            BlocTrajets()
+            BlocZaaps()
+            BlocLieux()
             Bloc {
                 SourceQuetes()
             }
@@ -21,11 +29,44 @@ struct QuetesSettings: View {
                 InterrupteurVuesCartes()
                 if prefs.vuesCartes {
                     LigneInterrupteur(titre: L("quetes.vignettes"), aide: L("quetes.vignettes.aide"),
-                                 isOn: $prefs.quetesVignettes)
+                             isOn: $prefs.quetesVignettes)
                 }
             }
             ListeQuetes()
             ListePNJ()
+        }
+    }
+}
+
+/// Un `/travel` copié passe par le zaap le plus proche.
+private struct BlocTrajets: View {
+    @ObservedObject private var prefs = Preferences.shared
+
+    var body: some View {
+        Bloc(L("reglages.trajets")) {
+            Ligne(titre: L("zaap.gain"), aide: L("zaap.gain.aide")) {
+                Stepper(L("zaap.gain.valeur", nombre: prefs.zaapGainMinimal, prefs.zaapGainMinimal),
+                        value: $prefs.zaapGainMinimal, in: ItineraireZaap.gainsPossibles)
+            }
+            LigneInterrupteur(titre: L("zaap.duJeu"), aide: L("zaap.duJeu.aide", ItineraireZaap.ecartZaapDuJeu), isOn: $prefs.zaapDuJeu)
+            Ligne(titre: L("zaap.intercalees"), aide: L("zaap.intercalees.aide")) {
+                TextField(L("zaap.intercalees"), text: $prefs.zaapIntercalees, prompt: Text(verbatim: "/a"))
+                    .labelsHidden()
+                    .textFieldStyle(.roundedBorder)
+                    .font(Jetons.typoCode.font)
+                    .frame(width: 180)
+            }
+            if prefs.lirePosition {
+                LigneInterrupteur(titre: L("zaap.auto"), aide: L("zaap.auto.aide"), isOn: $prefs.zaapAuto)
+            } else {
+                // La réécriture a besoin de la position : l'état se dit dans sa ligne, avec le geste qui le lève.
+                Ligne(titre: L("zaap.auto"), etat: L("zaap.sansPosition"), aide: L("zaap.auto.aide")) {
+                    Button(WindowPreviewService.shared.authorized ? L("zaap.lirePosition") : L("autorisation.lectureEcran")) {
+                        prefs.lirePosition = true
+                        if !WindowPreviewService.shared.authorized { WindowPreviewService.shared.requestAuthorization() }
+                    }
+                }
+            }
         }
     }
 }

@@ -85,6 +85,7 @@ struct AlmanaxSemaineVue: View {
         .background(fond(Color.jeton(\.selection), choisie: selection == 0))
         .contentShape(Rectangle())
         .onTapGesture { copier(0) }
+        .curseurDeClic(true)
         .id(Self.ancre(0))
     }
 
@@ -122,6 +123,7 @@ struct AlmanaxSemaineVue: View {
         .background(fond(Color.jeton(jour.almanax == nil ? \.creux : \.plaque), choisie: choisie))
         .contentShape(Rectangle())
         .onTapGesture { if jour.almanax != nil { copier(index) } }
+        .curseurDeClic(jour.almanax != nil)
         .id(Self.ancre(index))
     }
 
