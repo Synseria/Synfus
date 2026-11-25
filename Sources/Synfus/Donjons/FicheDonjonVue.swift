@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// La fiche d'un donjon, dépliée sous lui ou sous l'un de ses boss dans la
-/// palette : niveau, une rangée de cartes que le clavier parcourt
+/// palette : une rangée de cartes que le clavier parcourt
 /// (`CartesFiche`) — position, aide au combat, guide, monstres, succès, clef —, ce
 /// qu'elles déplient, puis les boss à leur plus haut grade et, dessous, les
 /// conseils du combat, dépliés d'office. Le détail et les conseils se
@@ -22,9 +22,6 @@ struct FicheDonjonVue: View {
             let detail = store.details[id]
             let actions = modele.cartes.actions
             VStack(alignment: .leading, spacing: Jetons.espace2) {
-                if let niveau = donjon.niveau {
-                    Text(L("donjon.niveau", niveau)).font(Jetons.typoMicro.font)
-                }
                 // Sur une ligne : faute de place (beaucoup de clefs), elle défile.
                 ViewThatFits(in: .horizontal) {
                     rangee(actions, detail)

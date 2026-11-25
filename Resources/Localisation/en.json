@@ -336,7 +336,7 @@
   "donjon.guide": "Guide",
   "donjon.monstres": "%lld monsters",
   "donjon.monstres.un": "%lld monster",
-  "donjon.niveau": "Level %lld",
+  "donjon.niveau": "level %lld",
   "donjon.succes": "%lld achievements",
   "donjon.succes.un": "%lld achievement",
   "element.air": "air",
