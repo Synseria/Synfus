@@ -108,8 +108,17 @@ final class DonjonsStore: ObservableObject {
         async let succes: [SuccesAPI] = DofusDB.parIdentifiants("achievements", donjon.succes,
                                                                 DofusDB.selection(["id", "name", "description"]))
         let ordre = Dictionary(donjon.succes.enumerated().map { ($1, $0) }, uniquingKeysWith: { a, _ in a })
-        let nommes = try await succes.sorted { (ordre[$0.id] ?? .max) < (ordre[$1.id] ?? .max) }
-            .map { DetailDonjon.Succes(noms: $0.name.parLangue, description: $0.description?.parLangue ?? [:]) }
+        let tries = try await succes.sorted { (ordre[$0.id] ?? .max) < (ordre[$1.id] ?? .max) }
+        // Les descriptions renvoient à des challenges par leur numéro : leurs noms, en plus. Sans eux
+        // (API muette), le renvoi s'efface : la fiche s'affiche quand même.
+        let renvois = tries.reduce(into: Set<Int>()) { $0.formUnion(DetailDonjon.Succes.challenges(dans: $1.description?.parLangue ?? [:])) }
+        let challenges: [Nomme] = renvois.isEmpty ? []
+            : (try? await DofusDB.parIdentifiants("challenges", renvois, DofusDB.selection(["id", "name"]))) ?? []
+        let noms = Dictionary(challenges.map { ($0.id, $0.name.parLangue) }, uniquingKeysWith: { a, _ in a })
+        let nommes = tries.map {
+            DetailDonjon.Succes(noms: $0.name.parLangue,
+                                description: DetailDonjon.Succes.resoudre($0.description?.parLangue ?? [:], challenges: noms))
+        }
         return DetailDonjon.assembler(
             donjon, monstres: try await monstres,
             objets: Dictionary(try await objets.map { ($0.id, $0.name.parLangue) }, uniquingKeysWith: { a, _ in a }),

@@ -250,3 +250,18 @@ struct DonjonsTests {
                                          reductionNeutral: nil, reductionEarth: nil, reductionFire: nil,
                                          reductionWater: nil, reductionAir: nil)]))!
 }
+
+/// Les renvois `[challenge,N]` des descriptions de succès.
+struct DescriptionSuccesTests {
+    @Test("Un renvoi devient le nom du challenge, dans la langue du texte ; inconnu, il s'efface")
+    func renvois() {
+        let description = ["fr": "Vaincre le roi Nidas en validant le challenge [challenge,307].",
+                           "en": "Defeat King Nidas with the [challenge,307] challenge."]
+        #expect(DetailDonjon.Succes.challenges(dans: description) == [307])
+        let noms = [307: ["fr": "Statue", "en": "Statue"]]
+        let lue = DetailDonjon.Succes.resoudre(description, challenges: noms)
+        #expect(lue["fr"] == "Vaincre le roi Nidas en validant le challenge « Statue ».")
+        let muette = DetailDonjon.Succes.resoudre(description, challenges: [:])
+        #expect(muette["fr"] == "Vaincre le roi Nidas en validant le challenge.")
+    }
+}
