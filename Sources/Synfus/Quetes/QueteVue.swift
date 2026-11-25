@@ -338,7 +338,7 @@ struct QueteVue: View {
         }
         // Sans hauteur, centré sur le milieu des minuscules : la ligne garde celle de son texte.
         .frame(height: 0)
-        .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 4 }
+        .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + metriques.texte.taille / 3 }
     }
 
     /// `retrait` : sous le texte de la ligne, pas sous son icône ; `nom` : celui de l'objet, quand la
@@ -388,7 +388,9 @@ struct QueteVue: View {
             }
             // Un objectif qu'on vient de cocher reste à sa place le temps du signal de copie.
             let faits = Set(etape.objectifs.filter { coches.contains($0.id) && !copie.affiche(Self.idLigne($0)) }.map(\.id))
-            let repli = RepliObjectifs.replier(etape.objectifs.map(\.id), faits: faits, aVenir: nonOuverts,
+            // Jamais caché : ce que le jeu montre à faire, ce que le perso fait, ce qui est suggéré ici.
+            let aVenir = nonOuverts.subtracting(aFaire).subtracting(suggeres).subtracting(enCours.map { [$0] } ?? [])
+            let repli = RepliObjectifs.replier(etape.objectifs.map(\.id), faits: faits, aVenir: aVenir,
                                                montrerFaits: faitsMontres, montrerAVenir: aVenirMontres)
             let montres = Set(repli.montres)
             let caches = Set(etape.objectifs.map(\.id)).subtracting(montres)

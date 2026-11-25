@@ -40,9 +40,7 @@ final class ChassePanel: NSObject, ObservableObject, NSWindowDelegate {
         ouvert ? fermer() : ouvrir()
     }
 
-    /// Ouvert, il se montre déplié : on l'ouvre pour s'en servir.
     func ouvrir() {
-        if PanneauxJeu.plie(.chasse) { basculerPliage() }
         let panel = panel ?? construire()
         PanneauxJeu.rattraper(panel, parDefaut: Self.placeParDefaut)
         panel.makeKeyAndOrderFront(nil)
@@ -80,28 +78,11 @@ final class ChassePanel: NSObject, ObservableObject, NSWindowDelegate {
     }
 
     private func construire() -> NSPanel {
-        let hosting = NSHostingController(rootView: ChasseRacine().racineSynfus())
-        hosting.sizingOptions = [.preferredContentSize]
-        let panel = PanneauChasse(
-            contentRect: NSRect(x: 0, y: 0, width: 216, height: 360),
-            styleMask: [.borderless, .nonactivatingPanel],
-            backing: .buffered,
-            defer: false
-        )
-        panel.contentViewController = hosting
-        panel.isFloatingPanel = true
+        let panel = PanneauxJeu.construire(PanneauChasse.self, nom: "ChassePanel", largeur: Jetons.largeurPanneauChasse,
+                                           largeurs: ChasseVue.largeurs, vue: ChasseRacine(),
+                                           parDefaut: Self.placeParDefaut)
         panel.becomesKeyOnlyIfNeeded = false
-        panel.level = .statusBar
-        panel.hidesOnDeactivate = false
-        panel.isReleasedWhenClosed = false
-        panel.backgroundColor = .clear
-        panel.isOpaque = false
-        panel.hasShadow = false
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.delegate = self
-        if !panel.setFrameAutosaveName("ChassePanel") || panel.frame.origin == .zero {
-            PanneauxJeu.placer(panel, parDefaut: Self.placeParDefaut)
-        }
         self.panel = panel
         return panel
     }

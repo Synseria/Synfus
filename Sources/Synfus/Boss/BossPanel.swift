@@ -30,8 +30,8 @@ final class BossPanel: NSObject, ObservableObject {
         // Abonné aux combats dès maintenant : le tour en cours compte.
         let aide = AideBoss.shared
         if let boss, boss != aide.boss { aide.choisir(boss) }
-        // Ouvert pour s'en servir : il se montre déplié.
-        if PanneauxJeu.plie(.boss) { basculerPliage() }
+        // Ouvert sur un boss choisi, il le montre : plié, il se déplie.
+        if boss != nil, PanneauxJeu.plie(.boss) { basculerPliage() }
         // Les compteurs sont une liste fermée, partagée avec le collecteur :
         // seuls les boss à mécanique en ont un.
         if !ouvert, let special = aide.boss.special { UsageStore.shared.compter(.boss(special)) }
@@ -65,27 +65,8 @@ final class BossPanel: NSObject, ObservableObject {
     }
 
     private func construire() -> NSPanel {
-        let hosting = NSHostingController(rootView: BossVue().racineSynfus())
-        hosting.sizingOptions = [.preferredContentSize]
-        let panel = PanneauDeJeu(
-            contentRect: NSRect(x: 0, y: 0, width: BossVue.largeur, height: 300),
-            styleMask: [.borderless, .nonactivatingPanel],
-            backing: .buffered,
-            defer: false
-        )
-        panel.contentViewController = hosting
-        panel.isFloatingPanel = true
-        panel.level = .statusBar
-        panel.hidesOnDeactivate = false
-        panel.isReleasedWhenClosed = false
-        panel.backgroundColor = .clear
-        panel.isOpaque = false
-        panel.hasShadow = false
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        if !panel.setFrameAutosaveName("BossPanel") || panel.frame.origin == .zero {
-            PanneauxJeu.placer(panel, parDefaut: Self.placeParDefaut)
-        }
-        return panel
+        PanneauxJeu.construire(nom: "BossPanel", largeur: BossVue.largeur, largeurs: BossVue.largeurs,
+                               vue: BossVue(), parDefaut: Self.placeParDefaut)
     }
 
     /// En haut, à droite du centre de l'écran.

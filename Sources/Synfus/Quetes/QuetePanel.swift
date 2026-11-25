@@ -13,6 +13,8 @@ final class QuetePanel: NSObject, ObservableObject {
     /// Assez étroit pour ne masquer qu'un coin du jeu : la fiche passe ses
     /// étiquettes à la ligne plutôt que de déborder.
     static let tailleMinimale = NSSize(width: 220, height: 200)
+    /// Au-delà, les lignes s'allongent sans rien dire de plus ; en hauteur, l'écran borne.
+    static let largeurMaximale: CGFloat = 640
     /// Le cadre gardé par AppKit dans les préférences.
     private static let nomDuCadre = "QuetePanel"
 
@@ -202,8 +204,10 @@ final class QuetePanel: NSObject, ObservableObject {
     /// La hauteur, et le minimum qui va avec : plié, le bandeau ; sinon `tailleMinimale`.
     private func poserHauteur(_ hauteur: CGFloat, de panel: NSPanel) {
         panel.minSize = NSSize(width: Self.tailleMinimale.width, height: plie ? hauteur : Self.tailleMinimale.height)
+        panel.maxSize = NSSize(width: Self.largeurMaximale, height: plie ? hauteur : .greatestFiniteMagnitude)
         // Même origine, autre hauteur : `PanneauDeJeu` garde le haut.
-        panel.setFrame(NSRect(origin: panel.frame.origin, size: NSSize(width: panel.frame.width, height: hauteur)), display: true)
+        let largeur = min(max(panel.frame.width, Self.tailleMinimale.width), Self.largeurMaximale)
+        panel.setFrame(NSRect(origin: panel.frame.origin, size: NSSize(width: largeur, height: hauteur)), display: true)
     }
 
     /// En haut à droite de l'écran.
@@ -328,94 +332,6 @@ extension QuetePanel {
         case .consigne: \.quetesConsigne
         case .masquerObjets: \.quetesMasquerObjets
         case .cocherSuivi: \.quetesCocherSuivi
-        }
-    }
-}
-
-/// Les bords qu'une poignée déplace. Le haut n'en est pas : c'est l'en-tête,
-/// qui déplace le panneau.
-struct BordsPanneau: OptionSet, Sendable {
-    let rawValue: Int
-
-    static let gauche = BordsPanneau(rawValue: 1)
-    static let droite = BordsPanneau(rawValue: 2)
-    static let bas = BordsPanneau(rawValue: 4)
-
-    /// Le cadre après un glisser de `decalage` (repère de l'écran, y vers le
-    /// haut) : le bord haut ne bouge jamais, ni le bord opposé à celui qu'on
-    /// tire, et la taille ne passe pas sous `minimum`.
-    func cadre(_ depart: NSRect, decalage: CGVector, minimum: NSSize) -> NSRect {
-        var largeur = depart.width, hauteur = depart.height, x = depart.minX
-        if contains(.droite) { largeur = max(minimum.width, depart.width + decalage.dx) }
-        if contains(.gauche) {
-            largeur = max(minimum.width, depart.width - decalage.dx)
-            x = depart.maxX - largeur
-        }
-        if contains(.bas) { hauteur = max(minimum.height, depart.height - decalage.dy) }
-        return NSRect(x: x, y: depart.maxY - hauteur, width: largeur, height: hauteur)
-    }
-}
-
-extension View {
-    /// Les bords gauche, droit et bas et les coins du bas, à saisir pour agrandir le panneau, sans
-    /// marque : tout panneau posé sur le jeu s'agrandit, le curseur le dit au survol. Les coins passent
-    /// par-dessus les bords : saisi près d'un coin, le panneau s'agrandit dans les deux sens.
-    func bordsRedimensionnables() -> some View {
-        let epaisseur: CGFloat = 6, cote: CGFloat = 14
-        return overlay(alignment: .leading) { PoigneeRedimension(bords: .gauche).frame(width: epaisseur) }
-            .overlay(alignment: .trailing) { PoigneeRedimension(bords: .droite).frame(width: epaisseur) }
-            .overlay(alignment: .bottom) { PoigneeRedimension(bords: .bas).frame(height: epaisseur) }
-            .overlay(alignment: .bottomLeading) { PoigneeRedimension(bords: [.gauche, .bas]).frame(width: cote, height: cote) }
-            .overlay(alignment: .bottomTrailing) { PoigneeRedimension(bords: [.droite, .bas]).frame(width: cote, height: cote) }
-    }
-}
-
-/// Une poignée de redimensionnement : un glisser déplace les bords donnés, le
-/// bord haut ne bouge pas. Une boucle d'évènements à soi plutôt que les bords
-/// du système (le panneau n'est pas `.resizable`) : minces sans bordure, et
-/// sans curseur dans une app inactive. Le sien est posé à l'entrée, à l'appui
-/// et à chaque pas du glisser — le jeu, devant, réimpose le sien.
-struct PoigneeRedimension: NSViewRepresentable {
-    let bords: BordsPanneau
-
-    func makeNSView(context _: Context) -> NSView { Poignee(bords: bords) }
-    func updateNSView(_: NSView, context _: Context) {}
-
-    private final class Poignee: VueACurseur {
-        private let bords: BordsPanneau
-
-        init(bords: BordsPanneau) {
-            self.bords = bords
-            super.init(frame: .zero)
-        }
-
-        @available(*, unavailable)
-        required init?(coder _: NSCoder) { nil }
-
-        override var curseur: NSCursor {
-            let position: NSCursor.FrameResizePosition = switch bords {
-            case .gauche: .left
-            case .droite: .right
-            case .bas: .bottom
-            case [.gauche, .bas]: .bottomLeft
-            default: .bottomRight
-            }
-            return .frameResize(position: position, directions: .all)
-        }
-
-        override func mouseDown(with _: NSEvent) {
-            guard let window else { return }
-            curseur.set()
-            let depart = NSEvent.mouseLocation
-            let cadre = window.frame
-            while let suivant = window.nextEvent(matching: [.leftMouseDragged, .leftMouseUp]),
-                  suivant.type == .leftMouseDragged {
-                let point = NSEvent.mouseLocation
-                window.setFrame(bords.cadre(cadre, decalage: CGVector(dx: point.x - depart.x, dy: point.y - depart.y),
-                                            minimum: window.minSize),
-                                display: true)
-                curseur.set()
-            }
         }
     }
 }

@@ -25,6 +25,10 @@ struct ChasseVue: View {
     // periphery:ignore - observé : le pliage du panneau (`PanneauxJeu.plie`)
     @ObservedObject private var prefs = Preferences.shared
     @StateObject private var copie = SignalCopie()
+    @Environment(\.largeurPanneau) private var largeurPanneau
+
+    /// Jamais sous la largeur de la boussole, qui reste centrée au-delà.
+    static let largeurs: ClosedRange<CGFloat> = Jetons.largeurPanneauChasse...360
 
     var body: some View {
         CadrePanneau(plie: PanneauxJeu.plie(.chasse)) {
@@ -46,7 +50,8 @@ struct ChasseVue: View {
                 }
             }
         }
-        .frame(width: Jetons.largeurPanneauChasse, alignment: .leading)
+        .frame(width: largeurPanneau ?? Jetons.largeurPanneauChasse, alignment: .leading)
+        .bordsRedimensionnables(.cotes)
         // Le trajet copié tout seul à la validation d'une étape : la coche
         // verte du bouton un instant, puis il redevient le bouton copier.
         .onChange(of: modele.trajetCopie) { _, oui in if oui { copie.signaler("trajet") } }
