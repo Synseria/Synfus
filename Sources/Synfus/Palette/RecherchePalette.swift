@@ -369,8 +369,8 @@ enum RecherchePalette {
             let vers = versLieu(lieu, contexte)
             // Un donjon déplie sa fiche, qui copie aussi son trajet.
             let donjon = lieu.categorie == CategorieLieu.donjon.rawValue ? contexte.donjons?.donjon(de: lieu) : nil
-            let lieuDit = [lieu.sousZone(en: contexte.langue), lieu.zone(en: contexte.langue)]
-                .compactMap { $0 }.joined(separator: " · ")
+            let lieuDit = avecNiveau([lieu.sousZone(en: contexte.langue), lieu.zone(en: contexte.langue)]
+                .compactMap { $0 }.joined(separator: " · "), donjon)
             return EntreePalette(
                 id: lieu.cle, genre: .lieu, titre: lieu.nom(en: contexte.langue), sousTitre: lieuDit,
                 etiquette: contexte.etiquettes[lieu.cle], detail: Coordonnees.texte(lieu.x, lieu.y),
@@ -381,6 +381,13 @@ enum RecherchePalette {
         }
     }
 
+    /// Le sous-titre d'un donjon ou de l'un de ses boss, suivi du niveau conseillé du donjon : la fiche ne
+    /// le redit pas, et il se distingue ainsi de celui du boss.
+    static func avecNiveau(_ dit: String, _ donjon: Donjon?) -> String {
+        guard let niveau = donjon?.niveau else { return dit }
+        return [dit, L("donjon.niveau", niveau)].filter { !$0.isEmpty }.joined(separator: " · ")
+    }
+
     /// Les boss de donjon : leur nom déplie la fiche de leur donjon, la même
     /// que le donjon cherché par son nom.
     static func boss(_ contexte: ContextePalette) -> [EntreePalette] {
@@ -388,7 +395,7 @@ enum RecherchePalette {
         return donjons.nomsBoss.compactMap { id, noms in
             guard let nom = Lieu.traduit(noms, contexte.langue), let donjon = donjons.donjon(boss: id) else { return nil }
             let lieu = Lieu.traduit(donjon.noms, contexte.langue) ?? "?"
-            return EntreePalette(id: "boss:\(id)", genre: .monstre, titre: nom, sousTitre: L("palette.boss", lieu),
+            return EntreePalette(id: "boss:\(id)", genre: .monstre, titre: nom, sousTitre: avecNiveau(L("palette.boss", lieu), donjon),
                                  effet: .donjon(donjon.id))
         }
         .alphabetiques()

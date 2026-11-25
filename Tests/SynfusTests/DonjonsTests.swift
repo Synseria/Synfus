@@ -94,6 +94,19 @@ struct DonjonsTests {
         return contexte
     }
 
+    @Test("Le niveau du donjon est dans le sous-titre de sa ligne et de celle de son boss, après le lieu")
+    func niveauDansLeSousTitre() throws {
+        let contexte = try Self.contexteDonjons()
+        let niveau = L("donjon.niveau", 200)
+        let donjon = try #require(RecherchePalette.entrees("", contexte, filtre: .donjons).first { $0.effet == .donjon(71) })
+        #expect(donjon.sousTitre == niveau)
+        let boss = try #require(RecherchePalette.entrees("harebourg", contexte, filtre: .donjons).first { $0.id == "boss:3416" })
+        #expect(boss.sousTitre == "\(L("palette.boss", "Donjon du Comte Harebourg")) · \(niveau)")
+        // Sans niveau connu, le sous-titre ne bouge pas.
+        #expect(RecherchePalette.avecNiveau("Boss · Kimbo", nil) == "Boss · Kimbo")
+        #expect(RecherchePalette.avecNiveau("", try #require(try Self.donjons().donjon(id: 71))) == niveau)
+    }
+
     @Test("Vue Donjons au repos : les donjons de la carte seuls ; en recherche, leurs boss aussi — et plus parmi les créatures")
     func vuesDonjons() throws {
         let contexte = try Self.contexteDonjons()
