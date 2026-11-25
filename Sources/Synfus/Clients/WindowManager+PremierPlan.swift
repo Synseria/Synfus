@@ -9,7 +9,7 @@ extension WindowManager {
     }
 
     func setFrontmost(pid: pid_t?, bundleID: String?) {
-        setFrontmost(pid: pid, isDofus: DofusProcesses.isDofusBundle(bundleID))
+        setFrontmost(pid: pid, isDofus: pid.map { DofusProcesses.estUnClient(pid: $0, bundleID: bundleID) } ?? false)
     }
 
     /// Ne republie que ce qui change : ces deux valeurs sont relues à chaque
