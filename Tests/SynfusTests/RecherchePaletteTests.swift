@@ -134,10 +134,13 @@ struct RecherchePaletteTests {
         let objets = RecherchePalette.entrees("", avecQuetes, filtre: .objets)
         #expect(objets.map(\.sousTitre) == ["Ressource", nil])
         #expect(objets.first?.effet == .ouTrouver(.objet(2179)))
-        // « amakna » : zaaps et lieux d'abord, le monstre après.
+        // « amakna » : parmi ce dont le nom répond, zaaps et lieux d'abord, le monstre après ; puis ce qui
+        // n'est à Amakna que par son lieu.
         let tout = RecherchePalette.entrees("amakna", avecQuetes)
-        let monstre = try #require(tout.firstIndex { $0.genre == .monstre })
-        #expect(tout[..<monstre].allSatisfy { !$0.enDernier } && tout[monstre...].allSatisfy(\.enDernier))
+        let parNom = tout.filter { RecherchePalette.Champs($0).nomRepond(["amakna"]) }
+        #expect(Array(tout.prefix(parNom.count)) == parNom && parNom.count < tout.count)
+        let monstre = try #require(parNom.firstIndex { $0.genre == .monstre })
+        #expect(parNom[..<monstre].allSatisfy { !$0.enDernier } && parNom[monstre...].allSatisfy(\.enDernier))
     }
 
     @Test("Un PNJ sur une carte intérieure est dit « intérieur » : /travel mène devant")
@@ -346,12 +349,16 @@ struct RecherchePaletteTests {
 
     // MARK: - Filtres et tris
 
-    @Test("Un tri explicite : les zaaps passent devant les lieux")
+    @Test("Un tri explicite : les zaaps passent devant les lieux, parmi les noms comme parmi les lieux seuls")
     func zaapsDevant() {
         let entrees = RecherchePalette.entrees("amakna", contexte(), tri: .proximite)
-        let premierLieu = entrees.firstIndex { $0.genre == .lieu }
-        let dernierZaap = entrees.lastIndex { $0.genre == .zaap }
-        #expect(premierLieu != nil && dernierZaap != nil && dernierZaap! < premierLieu!)
+        let parNom = entrees.filter { RecherchePalette.Champs($0).nomRepond(["amakna"]) }
+        let parLieu = entrees.filter { !RecherchePalette.Champs($0).nomRepond(["amakna"]) }
+        for groupe in [parNom, parLieu] {
+            let premierLieu = groupe.firstIndex { $0.genre == .lieu }
+            let dernierZaap = groupe.lastIndex { $0.genre == .zaap }
+            #expect(premierLieu != nil && dernierZaap != nil && dernierZaap! < premierLieu!)
+        }
     }
 
     @Test("Le filtre ne garde qu'une famille ; vide, il liste la famille entière")
@@ -384,6 +391,23 @@ struct RecherchePaletteTests {
         #expect(titres == titres.sorted { $0.localizedStandardCompare($1) == .orderedAscending })
         let categories = RecherchePalette.entrees("", contexte(), filtre: .lieux, tri: .type).compactMap(\.categorie)
         #expect(categories == categories.sorted())
+    }
+
+    @Test("Ce qui n'est trouvé que par son lieu passe après tout ce dont le nom répond, objets compris",
+          arguments: TriPalette.allCases)
+    func parLieuApresLesNoms(tri: TriPalette) throws {
+        let titres = RecherchePalette.entrees("nidas", try ContexteNidas.contexte(), tri: tri).map(\.titre)
+        let premierParLieu = try #require(titres.firstIndex(of: "Léonard"))
+        let dernierNom = try #require(titres.lastIndex { $0.localizedCaseInsensitiveContains("nidas") })
+        #expect(dernierNom < premierParLieu && titres.firstIndex(of: "Richard le Trésorier")! > dernierNom)
+    }
+
+    @Test("Le nom répond par l'étiquette, le titre, un surnom ou un morceau du titre ; le lieu seul ne suffit pas")
+    func nomRepond() {
+        let champs = RecherchePalette.Champs(titre: "Hôtel de vente des ressources", etiquette: "Mon HDV", lieu: "Bonta")
+        #expect(champs.nomRepond(["hotel"]) && champs.nomRepond(["mon"]) && champs.nomRepond(["res"]))
+        #expect(champs.nomRepond(["vent"]) && champs.nomRepond(["bonta", "hotel"]))
+        #expect(!champs.nomRepond(["bonta"]))
     }
 
     @Test("Les premiers d'une liste : ceux du tri complet, ex aequo dans leur ordre d'arrivée")
