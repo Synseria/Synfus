@@ -104,13 +104,39 @@ struct OuTrouverVue: View {
                 // Le geste se dit au survol : le mot à côté de l'épingle n'apprenait rien.
                 .aide(L("recette.epingler"))
             }
-            Text(recette.ingredients.map { L("quete.ressource", Lieu.traduit($0.noms, langue) ?? "?", $0.quantite) }
-                .joined(separator: " · "))
-                .foregroundStyle(Color.jeton(\.encre3))
-                .fixedSize(horizontal: false, vertical: true)
+            ingredients(recette.ingredients)
                 .padding(.leading, Jetons.espace4)
         }
         .padding(.bottom, Jetons.espace1)
+    }
+
+    /// Les ingrédients sur deux colonnes, la quantité d'abord ; un clic copie le nom, comme dans le panneau épinglé.
+    private func ingredients(_ liste: [SourcesObjet.Ingredient]) -> some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Jetons.espace2, alignment: .topLeading), count: 2),
+                  alignment: .leading, spacing: 0) {
+            ForEach(Array(liste.enumerated()), id: \.offset) { rang, ingredient in
+                let nom = Lieu.traduit(ingredient.noms, langue) ?? "?"
+                let id = "i\(rang)"
+                Button {
+                    PressePapiers.copier(nom)
+                    copie.signaler(id)
+                } label: {
+                    HStack(alignment: .firstTextBaseline, spacing: Jetons.espace1) {
+                        Text(L("recette.ingredient", ingredient.quantite, nom))
+                            .foregroundStyle(Color.jeton(\.encre))
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 0)
+                        IconeCopie(icone: nil, copie: copie.affiche(id)).accessibilityHidden(true)
+                    }
+                    .padding(.horizontal, Jetons.espace1)
+                    .padding(.vertical, Jetons.espace1)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.etat(nue: true))
+                .aide(L("quete.copierNom"))
+            }
+        }
     }
 
     /// Le nom de l'objet, qu'on copie d'un clic pour le chercher à l'hôtel de vente.
