@@ -21,9 +21,7 @@ struct FicheDonjonVue: View {
                                    options: onglets.map { option($0, detail) },
                                    selection: modele.ongletCourant) { modele.choisir(onglet: $0) }
                 }
-                // Les onglets sur toute la largeur, le contenu sous le titre de la ligne.
                 contenu(modele.ongletCourant, donjon, detail)
-                    .padding(.leading, PaletteVue.retraitSousTitre - Jetons.espace2)
             }
             .onAppear { store.demander(donjon) }
         }
