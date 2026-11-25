@@ -265,8 +265,15 @@ struct PaletteVue: View {
             ForEach(Array(modele.entrees.enumerated()), id: \.element.id) { index, entree in
                 let deplie = modele.deplie == entree.id
                 // Le clavier dans la fiche : la ligne ne se dit plus choisie, la carte l'est.
-                LigneResultat(entree: entree, choisie: index == modele.selection && modele.carte == nil && modele.position == nil, deplie: deplie,
-                              deplier: entree.pnj == nil ? nil : { modele.deplier(entree) })
+                let choisie = index == modele.selection && modele.carte == nil && modele.position == nil
+                Group {
+                    if case .famille = entree.effet {
+                        LigneSuite(titre: entree.titre, choisie: choisie)
+                    } else {
+                        LigneResultat(entree: entree, choisie: choisie, deplie: deplie,
+                                      deplier: entree.pnj == nil ? nil : { modele.deplier(entree) })
+                    }
+                }
                     .id(entree.id)
                     .onTapGesture { modele.executer(entree) }
                     .curseurDeClic(true)
@@ -377,6 +384,7 @@ struct PaletteVue: View {
         case .ouvrirQuete: return L("palette.touche.ouvrir")
         case .ouTrouver: return L("palette.touche.ouTrouver")
         case .donjon, .positions: return L("palette.touche.deplier")
+        case .famille(let famille, _): return L("palette.vide.rechercherDans", famille.titre)
         }
     }
 
@@ -633,6 +641,34 @@ struct LigneResultat: View {
         case .monstre: return "pawprint"
         case .objet: return "bag"
         }
+    }
+}
+
+/// La ligne fine qui ferme une famille de l'Accueil (« 5 objets de plus ») : ↵ passe sur sa capsule.
+struct LigneSuite: View {
+    let titre: String
+    let choisie: Bool
+    @State private var survole = false
+
+    var body: some View {
+        HStack(spacing: Jetons.espace2) {
+            Text(titre)
+                .font(Jetons.typoMeta.font)
+                .foregroundStyle(Color.jeton(choisie ? \.accentTexte : \.encre2))
+                .lineLimit(1)
+            Spacer(minLength: Jetons.espace2)
+            Image(systemName: "chevron.right")
+                .font(Jetons.typoMicro.font)
+                .foregroundStyle(Color.jeton(\.encre3))
+                .frame(width: Jetons.tailleIcone)
+        }
+        // Le texte sous les titres des lignes : la place de leur icône.
+        .padding(.leading, Jetons.hauteurControle + Jetons.espace3)
+        .padding(.horizontal, Jetons.espace2)
+        .padding(.vertical, Jetons.espace1)
+        .frame(minHeight: Jetons.hauteurCase)
+        .fondEtat(choisie ? .choisi : EtatVisuel(survole: survole), rayon: Jetons.rayon2)
+        .onHover { survole = $0 }
     }
 }
 

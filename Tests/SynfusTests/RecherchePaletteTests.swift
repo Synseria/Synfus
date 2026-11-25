@@ -136,7 +136,7 @@ struct RecherchePaletteTests {
         #expect(objets.first?.effet == .ouTrouver(.objet(2179)))
         // « amakna » : parmi ce dont le nom répond, zaaps et lieux d'abord, le monstre après ; puis ce qui
         // n'est à Amakna que par son lieu.
-        let tout = RecherchePalette.entrees("amakna", avecQuetes)
+        let tout = RecherchePalette.entrees("amakna", avecQuetes).filter { FiltrePalette.famille(de: $0) != nil }
         let parNom = tout.filter { RecherchePalette.Champs($0).nomRepond(["amakna"]) }
         #expect(Array(tout.prefix(parNom.count)) == parNom && parNom.count < tout.count)
         let monstre = try #require(parNom.firstIndex { $0.genre == .monstre })

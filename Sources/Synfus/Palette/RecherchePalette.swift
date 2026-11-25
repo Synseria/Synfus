@@ -67,6 +67,35 @@ enum FiltrePalette: CaseIterable, Sendable {
         }
     }
 
+    /// La capsule où l'entrée se range : un boss avec son donjon, un zaap à part des lieux ; `nil` pour
+    /// ce qui n'en a pas (perso, geste, copie).
+    static func famille(de entree: EntreePalette) -> FiltrePalette? {
+        if entree.estDonjon { return .donjons }
+        switch entree.genre {
+        case .zaap: return .zaaps
+        case .lieu: return .lieux
+        case .pnj: return .pnj
+        case .quete: return .quetes
+        case .monstre: return .creatures
+        case .objet: return .objets
+        case .commande, .variable, .perso, .action, .recent: return nil
+        }
+    }
+
+    /// « 5 objets de plus » : la ligne de l'Accueil qui mène au reste de la famille.
+    func suite(_ reste: Int) -> String {
+        switch self {
+        case .zaaps: return L("palette.suite.zaaps", nombre: reste, reste)
+        case .lieux: return L("palette.suite.lieux", nombre: reste, reste)
+        case .donjons: return L("palette.suite.donjons", nombre: reste, reste)
+        case .pnj: return L("palette.suite.pnj", nombre: reste, reste)
+        case .quetes: return L("palette.suite.quetes", nombre: reste, reste)
+        case .creatures: return L("palette.suite.creatures", nombre: reste, reste)
+        case .objets: return L("palette.suite.objets", nombre: reste, reste)
+        case .tout, .almanax: return L("palette.vide.ailleurs", nombre: reste, reste, titre)
+        }
+    }
+
     /// Le tri ne range rien sur l'Accueil ni sur l'almanax, au repos : ni les montrer, ni ⌘T.
     func triAgit(enRecherche: Bool) -> Bool {
         enRecherche || (self != .tout && self != .almanax)
@@ -142,12 +171,14 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
         case action(ActionPalette)
         /// Met ce perso devant (`DofusClient.slotKey`), comme un clic sur sa pastille.
         case basculer(String)
+        /// Passe sur la capsule de la famille, la recherche gardée : ses `reste` lignes que l'Accueil tait.
+        case famille(FiltrePalette, reste: Int)
 
         /// Entrée déplie quelque chose sous la ligne plutôt que de copier.
         var sePlie: Bool {
             switch self {
             case .ouTrouver, .donjon, .positions: return true
-            case .copier, .completer, .ouvrirQuete, .trajet, .action, .basculer: return false
+            case .copier, .completer, .ouvrirQuete, .trajet, .action, .basculer, .famille: return false
             }
         }
     }
@@ -289,7 +320,12 @@ enum RecherchePalette {
             return [versUneCase(cible, index.contexte)].filter { filtre.garde($0, enRecherche: true) }
         }
         guard texte.hasPrefix("/") else {
-            return ListePalette.fusionnerDonjons(classer(index.tout.filter { filtre.garde($0.entree, enRecherche: true) }, mots(texte)))
+            let fiches = index.tout.filter { filtre.garde($0.entree, enRecherche: true) }
+            guard filtre == .tout else { return ListePalette.fusionnerDonjons(classer(fiches, mots(texte))) }
+            // L'Accueil : le meilleur de chaque famille, et une ligne vers le reste.
+            let (entrees, restes) = RecherchePalette.classer(fiches, mots(texte), tri: tri, frequentation: index.contexte.frequentation,
+                                            parFamille: ListePalette.parFamille)
+            return ListePalette.avecLesSuites(ListePalette.fusionnerDonjons(entrees), restes: restes)
         }
         let (commande, reste) = separer(texte)
         switch commande {
@@ -313,7 +349,7 @@ enum RecherchePalette {
         switch effet {
         case .copier(let texte): return texte
         case .trajet(let x, let y, let sousZone): return trajet(vers: (x, y), sousZone: sousZone, contexte)
-        case .completer, .action, .ouvrirQuete, .ouTrouver, .donjon, .positions, .basculer: return nil
+        case .completer, .action, .ouvrirQuete, .ouTrouver, .donjon, .positions, .basculer, .famille: return nil
         }
     }
 
@@ -657,6 +693,14 @@ enum RecherchePalette {
         let parLieu: Bool
     }
 
+    /// Les entrées retenues par une recherche, et l'ordre qui les range.
+    private struct Retenues {
+        let exactes: [Retenue]
+        /// Les échos à une faute près, quand les exacts sont trop peu : toujours après eux.
+        let tolerees: [Retenue]
+        let avant: (Retenue, Retenue) -> Bool
+    }
+
     /// Garde les entrées dont chaque mot tapé trouve un écho, puis les range :
     /// celles trouvées par leur seul lieu après toutes celles dont le nom répond
     /// (`parLieu`), les monstres et objets en dernier (`enDernier`), puis « Auto »
@@ -667,6 +711,53 @@ enum RecherchePalette {
     /// (`premiers`) : une lettre en retient des milliers.
     private static func classer(_ fiches: [Fiche], _ mots: [String], tri: TriPalette,
                                 frequentation: FrequentationPalette) -> [EntreePalette] {
+        let retenues = retenir(fiches, mots, tri: tri, frequentation: frequentation)
+        var rangees = premiers(retenues.exactes, limite, avant: retenues.avant)
+        rangees += premiers(retenues.tolerees, limite - rangees.count, avant: retenues.avant)
+        return rangees.map { fiches[$0.rang].entree }
+    }
+
+    /// Comme `classer`, au plus `parFamille` entrées de chaque famille (`FiltrePalette.famille`) — un
+    /// donjon et ses boss n'y comptent qu'une fois, `ListePalette.fusionnerDonjons` les réunit ensuite —
+    /// et ce qui reste de chacune, compté sur toutes ses correspondances.
+    private static func classer(_ fiches: [Fiche], _ mots: [String], tri: TriPalette, frequentation: FrequentationPalette,
+                                parFamille: Int) -> (entrees: [EntreePalette], restes: [FiltrePalette: Int]) {
+        let retenues = retenir(fiches, mots, tri: tri, frequentation: frequentation)
+        let avant = retenues.avant
+        func entree(_ retenue: Retenue) -> EntreePalette { fiches[retenue.rang].entree }
+        // Un donjon et ses boss : une seule clé, la ligne qu'ils deviendront.
+        func cle(_ retenue: Retenue) -> String {
+            if case .donjon(let id) = entree(retenue).effet { return "donjon:\(id)" }
+            return entree(retenue).id
+        }
+        var rangees: [Retenue] = []
+        var montrees: [FiltrePalette: Set<String>] = [:]
+        var restes: [FiltrePalette: Int] = [:]
+        for lot in [retenues.exactes, retenues.tolerees] {
+            var choisies: [Retenue] = []
+            for (famille, groupe) in Dictionary(grouping: lot, by: { FiltrePalette.famille(de: entree($0)) }) {
+                guard let famille else {
+                    choisies += premiers(groupe, limite, avant: avant)
+                    continue
+                }
+                let place = parFamille - montrees[famille, default: []].count
+                // Les donjons sont peu nombreux : triés en entier, pour compter leurs clés.
+                let tries = famille == .donjons ? groupe.sorted(by: avant) : premiers(groupe, max(place, 0), avant: avant)
+                var cles: [String] = []
+                for retenue in tries where !cles.contains(cle(retenue)) { cles.append(cle(retenue)) }
+                let gardees = Set(cles.prefix(max(place, 0)))
+                choisies += tries.filter { gardees.contains(cle($0)) }
+                montrees[famille, default: []].formUnion(gardees)
+                let total = famille == .donjons ? cles.count : groupe.count
+                restes[famille, default: 0] += total - gardees.count
+            }
+            rangees += choisies.sorted(by: avant)
+        }
+        return (rangees.map(entree), restes.filter { $0.value > 0 })
+    }
+
+    private static func retenir(_ fiches: [Fiche], _ mots: [String], tri: TriPalette,
+                                frequentation: FrequentationPalette) -> Retenues {
         let habitudes = tri == .auto ? frequentation : FrequentationPalette()
         func retenue(_ rang: Int, _ points: Int, parLieu: Bool = false) -> Retenue {
             let entree = fiches[rang].entree
@@ -697,13 +788,10 @@ enum RecherchePalette {
             if pa != pb { return pa > pb }
             return a.rang < b.rang
         }
-        var rangees = premiers(exactes, limite, avant: avant)
-        if exactes.count < seuilTolerance {
-            let gardees = Set(exactes.map(\.rang))
-            let tolerees = approchees(fiches, mots, sauf: gardees).map { retenue($0.rang, $0.points) }
-            rangees += premiers(tolerees, limite - rangees.count, avant: avant)
-        }
-        return rangees.map { fiches[$0.rang].entree }
+        guard exactes.count < seuilTolerance else { return Retenues(exactes: exactes, tolerees: [], avant: avant) }
+        let gardees = Set(exactes.map(\.rang))
+        let tolerees = approchees(fiches, mots, sauf: gardees).map { retenue($0.rang, $0.points) }
+        return Retenues(exactes: exactes, tolerees: tolerees, avant: avant)
     }
 
     /// Les fiches dont chaque mot tapé trouve un écho, exact ou à une faute

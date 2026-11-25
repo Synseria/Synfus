@@ -179,7 +179,7 @@ final class PaletteModele: ObservableObject {
         guard entrees.isEmpty, !surAlmanax else { return nil }
         let ailleurs = filtre != .tout && !requete.trimmingCharacters(in: .whitespaces).isEmpty
             ? ailleursGarde.valeur(pour: CleAilleurs(requete: requete, tri: triAffiche, index: ObjectIdentifier(index))) {
-                RecherchePalette.entrees(requete, index, filtre: .tout, tri: triAffiche).count
+                ListePalette.nombre(RecherchePalette.entrees(requete, index, filtre: .tout, tri: triAffiche))
             } : 0
         return VidePalette.de(
             carte: carteImposee ?? CarteStore.shared.etat,
@@ -421,8 +421,11 @@ final class PaletteModele: ObservableObject {
     /// Un clic : la ligne choisie, puis son effet. Ce qui mène au jeu compte
     /// dans les habitudes (`FrequentationPalette`) — pas une fiche qu'on replie.
     func executer(_ entree: EntreePalette) {
-        // Déplier les positions d'un PNJ ne mène nulle part : seule la copie d'une carte compte.
-        if case .positions = entree.effet { return effectuer(entree) }
+        // Déplier les positions d'un PNJ, passer sur une capsule ne mènent nulle part : ne comptent pas.
+        switch entree.effet {
+        case .positions, .famille: return effectuer(entree)
+        default: break
+        }
         UsageStore.shared.compter(.palette(entree.genre))
         guard contexteImpose == nil else { return effectuer(entree) }
         let prefs = Preferences.shared
@@ -454,6 +457,8 @@ final class PaletteModele: ObservableObject {
         case .action(let action):
             PalettePanel.shared.fermer()
             faire(action)
+        case .famille(let famille, _):
+            choisir(famille)
         case .basculer(let slotKey):
             PalettePanel.shared.fermer()
             guard let client = WindowManager.shared.effectif.first(where: { $0.slotKey == slotKey }) else { return }
