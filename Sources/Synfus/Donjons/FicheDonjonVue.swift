@@ -142,11 +142,7 @@ struct FicheDonjonVue: View {
         case .monstres:
             ForEach(detail?.monstres.filter { !$0.boss } ?? [], id: \.id) { monstre in ligne(monstre) }
         case .succes:
-            ForEach(Array((detail?.succes ?? []).enumerated()), id: \.offset) { _, succes in
-                Text("• " + (Lieu.traduit(succes.noms, langue) ?? "?"))
-                    .font(Jetons.typoMeta.font)
-                    .help(Lieu.traduit(succes.description, langue) ?? "")
-            }
+            SuccesVue(succes: detail?.succes ?? [])
         case .entree, .guide, .aide: EmptyView()
         }
     }
