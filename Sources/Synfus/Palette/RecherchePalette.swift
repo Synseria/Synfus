@@ -289,7 +289,7 @@ enum RecherchePalette {
             return [versUneCase(cible, index.contexte)].filter { filtre.garde($0, enRecherche: true) }
         }
         guard texte.hasPrefix("/") else {
-            return classer(index.tout.filter { filtre.garde($0.entree, enRecherche: true) }, mots(texte))
+            return ListePalette.fusionnerDonjons(classer(index.tout.filter { filtre.garde($0.entree, enRecherche: true) }, mots(texte)))
         }
         let (commande, reste) = separer(texte)
         switch commande {
