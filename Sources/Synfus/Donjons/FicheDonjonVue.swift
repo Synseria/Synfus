@@ -135,7 +135,8 @@ struct FicheDonjonVue: View {
         switch action {
         case .clef(let objet):
             OuTrouverVue(sujet: .objet(objet), metriques: .compact,
-                         nom: detail?.clefs.first { $0.objet == objet }.flatMap { Lieu.traduit($0.noms, langue) })
+                         nom: detail?.clefs.first { $0.objet == objet }.flatMap { Lieu.traduit($0.noms, langue) },
+                         nommer: true)
         case .conseils:
             VStack(alignment: .leading, spacing: Jetons.espace1) { ConseilsVue(conseils: store.conseils[id] ?? []) }
         case .monstres:
