@@ -132,7 +132,7 @@ private struct InfobulleVue: View {
         .padding(.horizontal, Jetons.espace2)
         .padding(.vertical, Jetons.espace1)
         .background(Capsule().fill(Color.jeton(\.plaque)))
-        .overlay(Capsule().strokeBorder(Color.jeton(\.filet), lineWidth: Jetons.epaisseurFilet))
+        .overlay(Capsule().strokeBorder(Color.traitSurVerre, lineWidth: Jetons.epaisseurFilet))
         .fixedSize()
     }
 }
