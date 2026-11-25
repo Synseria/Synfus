@@ -284,7 +284,8 @@ struct PaletteVue: View {
                     .onTapGesture { modele.executer(entree) }
                     .curseurDeClic(true)
                     .help(entree.complet)
-                    .accessibilityElement(children: .combine)
+                    // Dépliée, la ligne d'un donjon porte ses boutons : VoiceOver doit les atteindre un à un.
+                    .accessibilityElement(children: deplie && modele.fiche != .vide ? .contain : .combine)
                     .accessibilityAddTraits(.isButton)
                     .contextMenu { menu(entree) }
                 if deplie {

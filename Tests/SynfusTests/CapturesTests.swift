@@ -599,6 +599,17 @@ struct CapturesTests {
         #expect(modele.fiche.onglets == [.boss, .clef(objet: 14048), .clef(objet: 14049)])
         try ecrireFiche("deux-boss", id: 72)
         try ecrirePalette("deux-boss")
+
+        // Une ligne de boss trouvée par recherche, la plus chargée : sous-titre long et trois boutons.
+        let recherche = PaletteModele(contexte: contexte, requete: "nidas", filtre: .donjons)
+        let boss = try #require(recherche.entrees.first { $0.id == "boss:3416" })
+        recherche.executer(boss)
+        #expect(recherche.deplie == boss.id && recherche.fiche.principale != nil)
+        let vue = PaletteVue(modele: recherche)
+            .padding(24)
+            .background(Self.fondCapture)
+            .environment(\.colorScheme, Self.schema)
+        try ecrire(vue, vers: dossier.appending(path: "palette-fiche-recherche.png"))
     }
 
     @Test("Captures des réglages", .enabled(if: dossier != nil))
