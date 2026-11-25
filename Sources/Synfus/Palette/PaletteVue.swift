@@ -200,9 +200,10 @@ struct PaletteVue: View {
                     guard modele.entrees.indices.contains(modele.selection) else { return }
                     defilement.scrollTo(modele.entrees[modele.selection].id)
                 }
-                .onChange(of: modele.carte) { _, carte in
-                    guard let carte else { return }
-                    defilement.scrollTo(FicheDonjonVue.ancre(carte))
+                // Un autre onglet : la ligne et son contenu, depuis le haut.
+                .onChange(of: modele.onglet) { _, _ in
+                    guard let deplie = modele.deplie else { return }
+                    defilement.scrollTo(deplie, anchor: .top)
                 }
                 // Une rangée de positions défile d'elle-même : la liste n'a qu'à montrer la ligne et la rangée.
                 .onChange(of: modele.position) { _, position in
@@ -267,14 +268,16 @@ struct PaletteVue: View {
         LazyVStack(spacing: Jetons.espace1) {
             ForEach(Array(modele.entrees.enumerated()), id: \.element.id) { index, entree in
                 let deplie = modele.deplie == entree.id
-                // Le clavier dans la fiche : la ligne ne se dit plus choisie, la carte l'est.
-                let choisie = index == modele.selection && modele.carte == nil && modele.position == nil
+                // Le clavier sur une position du PNJ : la ligne ne se dit plus choisie, la position l'est.
+                let choisie = index == modele.selection && modele.position == nil
                 Group {
                     if case .famille = entree.effet {
                         LigneSuite(titre: entree.titre, choisie: choisie)
                     } else {
                         LigneResultat(entree: entree, choisie: choisie, deplie: deplie,
-                                      deplier: entree.pnj == nil ? nil : { modele.deplier(entree) })
+                                      deplier: entree.pnj == nil ? nil : { modele.deplier(entree) }) {
+                            if deplie, case .donjon = entree.effet { ActionsFicheDonjon(modele: modele) }
+                        }
                     }
                 }
                     .id(entree.id)
@@ -353,6 +356,10 @@ struct PaletteVue: View {
                             .truncationMode(.middle)
                             .help(texte)
                     }
+                    if modele.surOnglets {
+                        aide("←→", L("palette.touche.onglet"))
+                            .layoutPriority(1)
+                    }
                     if modele.selectionEtiquetable {
                         aide("⌘E", L("palette.touche.etiquette"))
                             .layoutPriority(1)
@@ -376,8 +383,10 @@ struct PaletteVue: View {
         guard modele.entrees.indices.contains(modele.selection) else { return L("palette.touche.copier") }
         let entree = modele.entrees[modele.selection]
         if entree.id == modele.deplie {
-            if modele.cartesPositions.valide(modele.position) != nil { return L("palette.touche.copier") }
-            return modele.cartes.valide(modele.carte).map(aide) ?? L("palette.touche.replier")
+            if modele.cartesPositions.valide(modele.position) != nil || modele.fiche.principale != nil {
+                return L("palette.touche.copier")
+            }
+            return L("palette.touche.replier")
         }
         switch entree.effet {
         case .copier, .trajet: return L("palette.touche.copier")
@@ -388,15 +397,6 @@ struct PaletteVue: View {
         case .ouTrouver: return L("palette.touche.ouTrouver")
         case .donjon, .positions: return L("palette.touche.deplier")
         case .famille(let famille, _): return L("palette.vide.rechercherDans", famille.titre)
-        }
-    }
-
-    private func aide(_ action: ActionFiche) -> String {
-        switch action {
-        case .entree: return L("palette.touche.copier")
-        case .guide, .aide: return L("palette.touche.ouvrir")
-        case .clef, .monstres, .succes:
-            return modele.ouvertes.contains(action) ? L("palette.touche.replier") : L("palette.touche.deplier")
         }
     }
 
@@ -546,13 +546,20 @@ struct DispositionCartes: Equatable {
 
 /// Une ligne de résultat : genre (ou pictogramme du lieu), titre, étiquette,
 /// sous-titre, détail, vue de la carte.
-struct LigneResultat: View {
+struct LigneResultat<Actions: View>: View {
     let entree: EntreePalette
     let choisie: Bool
     var deplie = false
     /// Le clic sur le chevron d'une ligne qui ne se déplie pas d'Entrée (un PNJ à une position).
     var deplier: (() -> Void)?
+    /// Les boutons de la fiche dépliée (un donjon), après la position.
+    let actions: Actions
     @State private var survole = false
+
+    init(entree: EntreePalette, choisie: Bool, deplie: Bool = false, deplier: (() -> Void)? = nil,
+         @ViewBuilder actions: () -> Actions) {
+        (self.entree, self.choisie, self.deplie, self.deplier, self.actions) = (entree, choisie, deplie, deplier, actions())
+    }
 
     var body: some View {
         HStack(spacing: Jetons.espace3) {
@@ -602,6 +609,7 @@ struct LigneResultat: View {
                     .foregroundStyle(Color.jeton(\.encre2))
                     .lineLimit(1)
             }
+            actions
             if let touche = entree.touche { ToucheDeClavier(touche: touche) }
             if let carte = entree.carte { MiniatureCarte(carte: carte, taille: Self.vignette) }
             if entree.effet.sePlie || deplier != nil {
@@ -629,7 +637,7 @@ struct LigneResultat: View {
     private var etat: EtatVisuel { choisie ? .choisi : EtatVisuel(survole: survole) }
 
     /// La vignette d'une carte du jeu, à la hauteur d'une rangée.
-    static let vignette = CGSize(width: Jetons.largeurVignette, height: Jetons.hauteurRangee)
+    static var vignette: CGSize { CGSize(width: Jetons.largeurVignette, height: Jetons.hauteurRangee) }
 
     private var icone: String {
         if let symbole = entree.symbole { return symbole }
@@ -646,6 +654,12 @@ struct LigneResultat: View {
         case .monstre: return "pawprint"
         case .objet: return "bag"
         }
+    }
+}
+
+extension LigneResultat where Actions == EmptyView {
+    init(entree: EntreePalette, choisie: Bool, deplie: Bool = false, deplier: (() -> Void)? = nil) {
+        self.init(entree: entree, choisie: choisie, deplie: deplie, deplier: deplier) { EmptyView() }
     }
 }
 
