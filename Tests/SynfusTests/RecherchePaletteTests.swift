@@ -417,6 +417,13 @@ struct RecherchePaletteTests {
         let loin = try #require(RecherchePalette.entrees("/travel", contexte()).first { $0.detail != Coordonnees.texte(-2, 0) })
         #expect(!loin.ici)
         #expect(RecherchePalette.zaaps(contexte()).filter(\.ici).map(\.detail) == [Coordonnees.texte(-2, 0)])
+        // Un zaap d'Incarnam aux coordonnées du perso, qui est à Amakna : pas ici.
+        let reseau = ReseauSousZones(CarteDuJeu.integree)
+        let incarnam = try #require(CarteDuJeu.integree.zaaps.first { $0.idSousZone != nil && reseau.horsDesDouze($0.idSousZone) })
+        var enFace = contexte(position: PositionCarte(x: incarnam.x, y: incarnam.y, zone: "Amakna"))
+        enFace.zaaps = ZaapsSitues(enFace.zaaps.liste + [incarnam], reseau: reseau)
+        #expect(!RecherchePalette.zaaps(enFace).contains { $0.ici && $0.cle == incarnam.cle })
+        #expect(!RecherchePalette.entrees("/travel", enFace).contains { $0.ici && $0.cle == incarnam.cle })
         // Hors du Monde des Douze, sans trajet : le repère seul le dit.
         let nidas = RecherchePalette.entrees("nidas", try ContexteNidas.contexte())
         #expect(nidas.first { $0.titre == "Léonard" }?.ici == true)

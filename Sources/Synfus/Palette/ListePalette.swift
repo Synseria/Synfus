@@ -4,22 +4,20 @@ enum ListePalette {
     /// Les lignes d'une famille que l'Accueil montre pendant une recherche.
     static let parFamille = 3
 
-    /// Après la dernière ligne montrée de chaque famille, celle qui mène au reste (`.famille`). Une
-    /// famille sans ligne montrée (la `limite` atteinte avant elle) garde la sienne en fin de liste.
+    /// Après la dernière ligne montrée de chaque famille, celle qui mène au reste (`.famille`) : une famille
+    /// qui a un reste a toujours au moins une ligne montrée.
     static func avecLesSuites(_ entrees: [EntreePalette], restes: [FiltrePalette: Int]) -> [EntreePalette] {
         var derniere: [FiltrePalette: Int] = [:]
         for (rang, entree) in entrees.enumerated() {
             if let famille = FiltrePalette.famille(de: entree) { derniere[famille] = rang }
         }
         var suites: [Int: [EntreePalette]] = [:]
-        var enFin: [EntreePalette] = []
         for famille in FiltrePalette.allCases {
-            guard let reste = restes[famille], reste > 0 else { continue }
-            let suite = EntreePalette(id: "suite:\(famille)", genre: .action, titre: famille.suite(reste),
-                                      effet: .famille(famille, reste: reste))
-            if let rang = derniere[famille] { suites[rang, default: []].append(suite) } else { enFin.append(suite) }
+            guard let reste = restes[famille], reste > 0, let rang = derniere[famille] else { continue }
+            suites[rang, default: []].append(EntreePalette(id: "suite:\(famille)", genre: .action, titre: famille.suite(reste),
+                                                           effet: .famille(famille, reste: reste)))
         }
-        return entrees.enumerated().flatMap { [$0.element] + (suites[$0.offset] ?? []) } + enFin
+        return entrees.enumerated().flatMap { [$0.element] + (suites[$0.offset] ?? []) }
     }
 
     /// Combien de résultats la liste représente : une ligne « de plus » compte ceux qu'elle tait.

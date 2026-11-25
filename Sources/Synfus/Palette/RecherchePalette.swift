@@ -121,7 +121,8 @@ enum FiltrePalette: CaseIterable, Sendable {
 }
 
 /// L'ordre des résultats : « Auto » (`ScorePalette`), ou un tri explicite
-/// après les zaaps, qui y passent toujours devant.
+/// après les zaaps, qui y passent devant — parmi ce dont le nom répond, puis
+/// parmi ce qui ne répond que par son lieu.
 enum TriPalette: String, CaseIterable, Sendable {
     case auto, proximite, alphabetique, type
 
@@ -388,7 +389,7 @@ enum RecherchePalette {
                 sousTitre: zaap.zone(en: contexte.langue), etiquette: contexte.etiquettes[zaap.cle],
                 detail: Coordonnees.texte(zaap.x, zaap.y), favori: contexte.favoris.contains(zaap.cle),
                 distance: CatalogueZaaps.distance(de: zaap, depuis: contexte.position), cle: zaap.cle,
-                carte: zaap.idCarte, ici: estIci((zaap.x, zaap.y), sousZone: contexte.reseau.sousZone(du: zaap), contexte),
+                carte: zaap.idCarte, ici: estIci((zaap.x, zaap.y), sousZone: zaap.idSousZone, contexte),
                 effet: .copier(ItineraireZaap.zaap(zaap)))
         }
     }
@@ -397,8 +398,10 @@ enum RecherchePalette {
     static func zaapsCommeLieux(_ contexte: ContextePalette) -> [EntreePalette] {
         zaapsTries(contexte).map { zaap in
             let sousZone = contexte.reseau.sousZone(du: zaap)
-            let vers = versCase((zaap.x, zaap.y), sousZone: sousZone,
+            var vers = versCase((zaap.x, zaap.y), sousZone: sousZone,
                                 dansLesDouze: zaap.monde == Zaap.mondeDesDouze || sousZone != nil, contexte)
+            // Sa sous-zone propre, même hors des Douze : la case homonyme d'Amakna n'est pas ici.
+            vers.ici = estIci((zaap.x, zaap.y), sousZone: zaap.idSousZone, contexte)
             return EntreePalette(
                 id: "travel:" + zaap.cle, genre: .lieu, titre: L("palette.zaap", zaap.nom(en: contexte.langue)),
                 sousTitre: zaap.zone(en: contexte.langue), etiquette: contexte.etiquettes[zaap.cle],
@@ -683,7 +686,7 @@ enum RecherchePalette {
         let distance: Int?
         let effet: EntreePalette.Effet
         /// La case du perso : le repère de la ligne le dit (`EntreePalette.ici`), le trajet se tait.
-        let ici: Bool
+        var ici: Bool
 
         func itineraire(_ langue: Langue) -> String? { ici ? nil : RecherchePalette.itineraire(trajet, langue) }
     }
