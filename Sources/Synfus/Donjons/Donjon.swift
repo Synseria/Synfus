@@ -127,6 +127,29 @@ struct DetailDonjon: Equatable, Sendable {
     struct Succes: Equatable, Sendable {
         let noms: [String: String]
         let description: [String: String]
+
+        /// Les challenges qu'une description renvoie (`[challenge,308]`), dans toutes ses langues.
+        static func challenges(dans description: [String: String]) -> Set<Int> {
+            Set(description.values.flatMap { texte in
+                texte.matches(of: renvoi).compactMap { Int($0.output.1) }
+            })
+        }
+
+        /// La description lisible : chaque renvoi devient le nom du challenge entre guillemets, dans
+        /// la langue du texte ; un challenge inconnu (API muette) s'efface avec l'espace qui le
+        /// précède, plutôt que de laisser le code brut.
+        static func resoudre(_ description: [String: String], challenges: [Int: [String: String]]) -> [String: String] {
+            description.reduce(into: [:]) { resultat, langueTexte in
+                let (langue, texte) = langueTexte
+                resultat[langue] = texte.replacing(renvoiAvecEspace) { trouve in
+                    guard let id = Int(trouve.output.1), let nom = challenges[id]?[langue] ?? challenges[id]?["fr"] else { return "" }
+                    return " « \(nom) »"
+                }
+            }
+        }
+
+        nonisolated(unsafe) private static let renvoi = /\[challenge,(\d+)\]/
+        nonisolated(unsafe) private static let renvoiAvecEspace = /\s?\[challenge,(\d+)\]/
     }
 
     let monstres: [Monstre]
