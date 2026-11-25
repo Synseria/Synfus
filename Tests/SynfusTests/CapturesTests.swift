@@ -429,7 +429,7 @@ struct CapturesTests {
             SectionBoss(titre: L("boss.rappels"), depliee: .constant(true)) {} contenu: {
                 ConseilsVue(conseils: Array(conseils.prefix(2)))
             }
-            SectionBoss(titre: L("donjon.conseils", nombre: conseils.count, conseils.count), depliee: .constant(true)) {} contenu: {
+            SectionBoss(titre: L("donjon.conseils"), depliee: .constant(true)) {} contenu: {
                 ConseilsVue(conseils: conseils)
             }
         }

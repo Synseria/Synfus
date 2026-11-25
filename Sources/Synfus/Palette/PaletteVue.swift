@@ -384,7 +384,7 @@ struct PaletteVue: View {
         switch action {
         case .entree: return L("palette.touche.copier")
         case .guide, .aide: return L("palette.touche.ouvrir")
-        case .clef, .conseils, .monstres, .succes:
+        case .clef, .monstres, .succes:
             return modele.ouvertes.contains(action) ? L("palette.touche.replier") : L("palette.touche.deplier")
         }
     }

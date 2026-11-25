@@ -10,8 +10,6 @@ enum ActionFiche: Hashable, Sendable {
     case aide(CibleBoss)
     /// Déplie où trouver la clef.
     case clef(objet: Int)
-    /// Déplie les conseils tactiques de Dofus pour les noobs.
-    case conseils
     case monstres
     case succes
 
@@ -19,7 +17,7 @@ enum ActionFiche: Hashable, Sendable {
     var sePlie: Bool {
         switch self {
         case .entree, .guide, .aide: return false
-        case .clef, .conseils, .monstres, .succes: return true
+        case .clef, .monstres, .succes: return true
         }
     }
 }
@@ -32,12 +30,11 @@ struct CartesFiche: Equatable, Sendable {
     static let vide = CartesFiche(actions: [])
 
     /// La fiche d'un donjon : l'entrée en tête, où arrive le clavier, l'aide
-    /// au combat de chaque boss, le guide et ses conseils, ce qu'on croise
-    /// dedans, la clef pour finir.
-    static func donjon(entree: Lieu?, boss: [CibleBoss], guide: String?, detail: DetailDonjon?, conseils: Bool) -> CartesFiche {
+    /// au combat de chaque boss, le guide, ce qu'on croise dedans, la clef
+    /// pour finir.
+    static func donjon(entree: Lieu?, boss: [CibleBoss], guide: String?, detail: DetailDonjon?) -> CartesFiche {
         var actions = [entree.map(ActionFiche.entree)].compactMap(\.self) + boss.map(ActionFiche.aide)
             + [guide.map(ActionFiche.guide)].compactMap(\.self)
-        if conseils { actions.append(.conseils) }
         if let detail {
             if detail.monstres.contains(where: { !$0.boss }) { actions.append(.monstres) }
             if !detail.succes.isEmpty { actions.append(.succes) }

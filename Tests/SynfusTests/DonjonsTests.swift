@@ -130,14 +130,14 @@ struct DonjonsTests {
         #expect(modele.filtre == .tout)
     }
 
-    @Test("Fiche au clavier : position en tête, aide au combat de chaque boss, guide, conseils, dépliables, la clef pour finir")
+    @Test("Fiche au clavier : position en tête, aide au combat de chaque boss, guide, dépliables, la clef pour finir")
     func cartes() throws {
         let donjon = try #require(try Self.donjons().donjon(id: 71))
         let entree = Self.lieu("Donjon du Comte Harebourg", carte: 112460048)
         // L'aide n'attend pas le détail ; un boss à mécanique y retrouve la sienne.
         let aides = donjon.boss.map { CibleBoss.boss($0, donjon: donjon.id) }
         #expect(aides == [.special(.harebourg)])
-        let attente = CartesFiche.donjon(entree: entree, boss: aides, guide: donjon.nomFrancais, detail: nil, conseils: false)
+        let attente = CartesFiche.donjon(entree: entree, boss: aides, guide: donjon.nomFrancais, detail: nil)
         #expect(attente.actions == [.entree(entree), .aide(.special(.harebourg)), .guide("Donjon du Comte Harebourg")])
         #expect(!ActionFiche.aide(.special(.harebourg)).sePlie)
         #expect(attente.premiere == .entree(entree))
@@ -146,11 +146,10 @@ struct DonjonsTests {
         let mansot = DetailDonjon.Monstre(id: 3384, noms: [:], boss: false, fiche: Self.fiche)
         let detail = DetailDonjon(monstres: [boss, mansot], clefs: [.init(objet: 14047, noms: [:], quantite: 1)],
                                   succes: [.init(noms: [:], description: [:])])
-        let cartes = CartesFiche.donjon(entree: entree, boss: [], guide: "Guide", detail: detail, conseils: true)
-        #expect(cartes.actions == [.entree(entree), .guide("Guide"), .conseils, .monstres, .succes, .clef(objet: 14047)])
+        let cartes = CartesFiche.donjon(entree: entree, boss: [], guide: "Guide", detail: detail)
+        #expect(cartes.actions == [.entree(entree), .guide("Guide"), .monstres, .succes, .clef(objet: 14047)])
         // Seuls des boss : rien à déplier pour les monstres.
-        #expect(CartesFiche.donjon(entree: nil, boss: [], guide: nil, detail: DetailDonjon(monstres: [boss], clefs: [], succes: []),
-                                   conseils: false) == .vide)
+        #expect(CartesFiche.donjon(entree: nil, boss: [], guide: nil, detail: DetailDonjon(monstres: [boss], clefs: [], succes: [])) == .vide)
     }
 
     @Test("Fiche au clavier : ←/→ restent dans la rangée ; le clavier tient une carte, pas un rang")
@@ -159,8 +158,8 @@ struct DonjonsTests {
         #expect(avant.laterale(.succes, 1) == .succes)
         #expect(avant.laterale(.succes, -1) == .monstres)
         #expect(avant.laterale(.guide("a"), -1) == .guide("a"))
-        // Les conseils arrivent : le clavier reste sur les monstres.
-        let apres = CartesFiche(actions: [.guide("a"), .conseils, .monstres, .succes])
+        // Une carte arrive : le clavier reste sur les monstres.
+        let apres = CartesFiche(actions: [.guide("a"), .clef(objet: 2), .monstres, .succes])
         #expect(apres.valide(.monstres) == .monstres)
         #expect(apres.valide(.clef(objet: 1)) == nil)
         #expect(CartesFiche.vide.premiere == nil)

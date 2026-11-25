@@ -162,7 +162,7 @@ struct BossVue: View {
     private var conseilsVue: some View {
         if let liste = aide.donjon.flatMap({ donjons.conseils[$0.id] }), !liste.isEmpty {
             let depliee = Binding { conseils ?? (prefs.bossChoisi.special == nil) } set: { conseils = $0 }
-            SectionBoss(titre: L("donjon.conseils", nombre: liste.count, liste.count), aide: L("donjon.conseils.aide"),
+            SectionBoss(titre: L("donjon.conseils"), aide: L("donjon.conseils.aide"),
                         depliee: depliee) {
                 if depliee.wrappedValue {
                     Button { copier(liste.map(\.titre).joined(separator: " "), signal: "") } label: {

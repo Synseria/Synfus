@@ -478,7 +478,7 @@ final class PaletteModele: ObservableObject {
         else { return .vide }
         return .donjon(entree: Self.entree(de: donjon), boss: donjon.boss.map { CibleBoss.boss($0, donjon: donjon.id) },
                        guide: donjon.nomFrancais,
-                       detail: DonjonsStore.shared.details[id], conseils: !(DonjonsStore.shared.conseils[id] ?? []).isEmpty)
+                       detail: DonjonsStore.shared.details[id])
     }
 
     /// Les cartes de la rangée des positions, dans l'ordre où elles se montrent.
@@ -519,7 +519,7 @@ final class PaletteModele: ObservableObject {
         case .aide(let boss):
             BossPanel.shared.ouvrir(boss)
             PalettePanel.shared.fermer()
-        case .clef, .conseils, .monstres, .succes:
+        case .clef, .monstres, .succes:
             if ouvertes.remove(action) == nil { ouvertes.insert(action) }
         }
     }
