@@ -24,8 +24,10 @@ struct SectionBoss<Accessoire: View, Contenu: View>: View {
                         Text(titre).multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
                         Spacer(minLength: 0)
                     }
-                    .font((forte ? Jetons.typoTitreCarte : Jetons.typoMeta).font)
-                    .foregroundStyle(forte ? Color.jeton(\.encre) : Color.jeton(\.encre2))
+                    // Un titre de rangement dans la teinte de l'en-tête, comme ceux des quêtes : gris,
+                    // il se fondait dans les consignes.
+                    .font(forte ? Jetons.typoTitreCarte.font : Jetons.typoMeta.font.weight(.semibold))
+                    .foregroundStyle(forte ? Color.jeton(\.encre) : Color.jeton(\.accentTexte))
                 }
                 .help(aide ?? "")
                 accessoire

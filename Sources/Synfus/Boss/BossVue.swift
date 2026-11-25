@@ -130,16 +130,20 @@ struct BossVue: View {
             ForEach(liste, id: \.self) { rappel in
                 Button { copier(rappel, signal: rappel) } label: {
                     HStack(alignment: .firstTextBaseline, spacing: Jetons.espace1) {
-                        Text("• " + rappel)
+                        // La puce à part : une ligne repliée s'aligne sous le texte, pas sous elle.
+                        Text("•")
+                        Text(rappel)
                             .fixedSize(horizontal: false, vertical: true)
                         Spacer(minLength: 0)
                         IconeCopie(icone: nil, copie: copie.affiche(rappel))
                     }
                     .font(Jetons.typoMeta.font)
                     .foregroundStyle(Color.jeton(\.encre2))
+                    .padding(.horizontal, Jetons.espace1)
                     .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                // Le survol éclaire la ligne : elle se clique, elle se copie.
+                .buttonStyle(.etat(choisi: copie.affiche(rappel), nue: true))
                 .curseurDeClic(true)
                 .aide(L("boss.rappel.copier"))
             }

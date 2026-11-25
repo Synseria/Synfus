@@ -82,8 +82,8 @@ struct TableauHuppermage: View {
                     HStack(spacing: Jetons.espace1) {
                         ForEach(CombinaisonsHuppermage.elements.filter(combinaison.paire.contains), id: \.self) {
                             // Mis à la même boîte : la montagne, plus large, débordait sur le nom.
-                            Image(systemName: Self.symbole($0)).resizable().scaledToFit()
-                                .foregroundStyle(Self.teinte($0))
+                            Image(systemName: $0.symbole).resizable().scaledToFit()
+                                .foregroundStyle($0.teinte)
                                 .frame(width: Jetons.tailleIcone, height: Jetons.tailleIcone)
                         }
                     }
@@ -98,27 +98,6 @@ struct TableauHuppermage: View {
         .surfaceFlottante()
         .opacity(Self.opacite)
         .accessibilityElement(children: .combine)
-    }
-
-    static func symbole(_ element: FicheCombat.Element) -> String {
-        switch element {
-        case .feu: "flame.fill"
-        case .eau: "drop.fill"
-        case .terre: "mountain.2.fill"
-        case .air: "wind"
-        case .neutre: "circle"
-        }
-    }
-
-    /// Les éléments dans les teintes d'état du thème, au plus près de celles du jeu.
-    static func teinte(_ element: FicheCombat.Element) -> Color {
-        switch element {
-        case .feu: Color.jeton(\.danger)
-        case .eau: Color.jeton(\.info)
-        case .terre: Color.jeton(\.avertissement)
-        case .air: Color.jeton(\.succes)
-        case .neutre: Color.jeton(\.encre2)
-        }
     }
 
     static func nom(_ combinaison: CombinaisonsHuppermage.Combinaison) -> String {

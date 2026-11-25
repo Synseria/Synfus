@@ -14,7 +14,9 @@ struct ConseilsVue: View {
                 copie.signaler(conseil.titre)
             } label: {
                 HStack(alignment: .firstTextBaseline, spacing: Jetons.espace1) {
-                    Text("• " + conseil.titre)
+                    // La puce à part : une ligne repliée s'aligne sous le texte, pas sous elle.
+                    Text("•").font(Jetons.typoMeta.font)
+                    Text(conseil.titre)
                         .font(Jetons.typoMeta.font)
                         .fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 0)
@@ -22,9 +24,11 @@ struct ConseilsVue: View {
                         .font(Jetons.typoMeta.font)
                         .accessibilityHidden(true)
                 }
+                .padding(.horizontal, Jetons.espace1)
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            // Le survol éclaire la ligne : elle se clique, elle se copie.
+            .buttonStyle(.etat(choisi: copie.affiche(conseil.titre), nue: true))
             .curseurDeClic(true)
             .help(conseil.detail.isEmpty ? L("boss.rappel.copier") : conseil.detail)
         }
