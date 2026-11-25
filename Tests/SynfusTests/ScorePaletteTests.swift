@@ -20,8 +20,9 @@ struct ScorePaletteTests {
         return contexte
     }
 
+    /// Dans la capsule PNJ : l'Accueil n'en montrerait que trois (`ListePalette.parFamille`).
     private func titres(_ requete: String, _ contexte: ContextePalette) -> [String] {
-        RecherchePalette.entrees(requete, contexte).map(\.titre)
+        RecherchePalette.entrees(requete, contexte, filtre: .pnj).map(\.titre)
     }
 
     // MARK: - Fautes de frappe

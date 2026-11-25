@@ -1,5 +1,5 @@
 // Engendré par Synseria-Design — ne pas retoucher : changer jetons.json ou apps/Synfus.json, puis sh propager.sh.
-// jetons.json c5f3400ce23232ce · contenu d81197449411d28a
+// jetons.json 0bdf7022746769dd · contenu d81197449411d28a
 import SwiftUI
 
 // La trousse (`K` de reference/gabarit.html) en SwiftUI, ses fondations : les couleurs posées dans

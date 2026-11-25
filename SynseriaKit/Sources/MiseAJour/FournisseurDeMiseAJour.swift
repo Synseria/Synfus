@@ -1,5 +1,5 @@
 // Copié de SynseriaKit (Synseria-Design) — ne pas retoucher : changer le paquet dans Synseria-Design, puis sh propager.sh.
-// SynseriaKit 25f4236349ad81d5 · contenu 8e8be4e543b80537
+// SynseriaKit 82592cc8aa023014 · contenu 8e8be4e543b80537
 // Ce que chaque app fournit à la mise à jour (sa source de releases, ses assets, sa vérification,
 // ses gestes propres), ses échecs, et les vérifications au choix.
 

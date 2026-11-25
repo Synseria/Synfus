@@ -5,9 +5,10 @@ import SwiftUI
 /// le boss choisi au titre (un clic en change), sa fiche, sa mécanique, puis
 /// rappels et conseils, qui défilent chez eux (`SectionBoss`).
 struct BossVue: View {
-    static let largeur = Jetons.largeurPanneauBoss
+    /// La largeur du SDS plus la place du bouton de pliage, sans quoi « Comte Harebourg » se coupait.
+    static let largeur = Jetons.largeurPanneauBoss + Jetons.hauteurCase + Jetons.espace1
     /// Pas plus étroit que la ligne des résistances, assez large pour lire les conseils d'une traite.
-    static let largeurs: ClosedRange<CGFloat> = Jetons.largeurPanneauBoss...520
+    static let largeurs: ClosedRange<CGFloat> = largeur...520
 
     @ObservedObject private var aide = AideBoss.shared
     @ObservedObject private var lecteur = LecteurEcran.shared
@@ -162,7 +163,7 @@ struct BossVue: View {
     private var conseilsVue: some View {
         if let liste = aide.donjon.flatMap({ donjons.conseils[$0.id] }), !liste.isEmpty {
             let depliee = Binding { conseils ?? (prefs.bossChoisi.special == nil) } set: { conseils = $0 }
-            SectionBoss(titre: L("donjon.conseils", nombre: liste.count, liste.count), aide: L("donjon.conseils.aide"),
+            SectionBoss(titre: L("donjon.conseils"), aide: L("donjon.conseils.aide"),
                         depliee: depliee) {
                 if depliee.wrappedValue {
                     Button { copier(liste.map(\.titre).joined(separator: " "), signal: "") } label: {

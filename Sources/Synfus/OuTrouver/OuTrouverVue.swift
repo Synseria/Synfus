@@ -10,6 +10,8 @@ struct OuTrouverVue: View {
     let metriques: MetriquesQuete
     /// Le nom de l'objet, quand l'appelant le sait : le titre de sa recette épinglée.
     var nom: String?
+    /// Écrire ce nom en tête de la recette, copiable : là où rien d'autre ne le dit (la clef d'un donjon).
+    var nommer = false
     @ObservedObject private var store = OuTrouverStore.shared
     /// La position du perso range les repaires.
     @ObservedObject private var lecteur = LecteurEcran.shared
@@ -83,23 +85,79 @@ struct OuTrouverVue: View {
     /// copient d'un clic, le temps des courses.
     private func recette(_ recette: SourcesObjet.Recette) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: Jetons.espace1) {
+            HStack(alignment: .firstTextBaseline, spacing: Jetons.espace1) {
+                if nommer, let nom {
+                    nomCopiable(nom)
+                    Spacer(minLength: Jetons.espace1)
+                }
                 Label(L("ouTrouver.recette", Lieu.traduit(recette.metier, langue) ?? "?", recette.niveau), systemImage: "hammer")
+                    .lineLimit(1)
+                    .fixedSize()
                 Button {
                     RecettePanel.shared.epingler(RecetteEpinglee(recette, objet: nom, langue: langue))
                 } label: {
                     Label(L("recette.epingler"), systemImage: "pin")
+                        .labelStyle(.iconOnly)
                 }
                 .buttonStyle(BoutonTertiaire())
                 .focusable(false)
+                // Le geste se dit au survol : le mot à côté de l'épingle n'apprenait rien.
+                .aide(L("recette.epingler"))
             }
-            Text(recette.ingredients.map { L("quete.ressource", Lieu.traduit($0.noms, langue) ?? "?", $0.quantite) }
-                .joined(separator: " · "))
-                .foregroundStyle(Color.jeton(\.encre3))
-                .fixedSize(horizontal: false, vertical: true)
+            ingredients(recette.ingredients)
                 .padding(.leading, Jetons.espace4)
         }
         .padding(.bottom, Jetons.espace1)
+    }
+
+    /// Les ingrédients sur deux colonnes, la quantité d'abord ; un clic copie le nom, comme dans le panneau épinglé.
+    private func ingredients(_ liste: [SourcesObjet.Ingredient]) -> some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Jetons.espace2, alignment: .topLeading), count: 2),
+                  alignment: .leading, spacing: 0) {
+            ForEach(Array(liste.enumerated()), id: \.offset) { rang, ingredient in
+                let nom = Lieu.traduit(ingredient.noms, langue) ?? "?"
+                let id = "i\(rang)"
+                Button {
+                    PressePapiers.copier(nom)
+                    copie.signaler(id)
+                } label: {
+                    HStack(alignment: .firstTextBaseline, spacing: Jetons.espace1) {
+                        Text(L("recette.ingredient", ingredient.quantite, nom))
+                            .foregroundStyle(Color.jeton(\.encre))
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 0)
+                        IconeCopie(icone: nil, copie: copie.affiche(id)).accessibilityHidden(true)
+                    }
+                    .padding(.horizontal, Jetons.espace1)
+                    .padding(.vertical, Jetons.espace1)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.etat(nue: true))
+                .aide(L("quete.copierNom"))
+            }
+        }
+    }
+
+    /// Le nom de l'objet, qu'on copie d'un clic pour le chercher à l'hôtel de vente.
+    private func nomCopiable(_ nom: String) -> some View {
+        Button {
+            PressePapiers.copier(nom)
+            copie.signaler("nom")
+        } label: {
+            HStack(spacing: Jetons.espace1) {
+                IconeCopie(icone: "key", copie: copie.affiche("nom"))
+                    .frame(width: Jetons.espace3)
+                Text(nom)
+                    .foregroundStyle(Color.jeton(\.encre))
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.horizontal, Jetons.espace1)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.etat(nue: true))
+        .aide(L("quete.copierNom"))
     }
 
     /// Le monstre et son taux, puis ses repaires les plus proches.

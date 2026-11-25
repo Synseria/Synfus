@@ -1,5 +1,5 @@
 // Copié de SynseriaKit (Synseria-Design) — ne pas retoucher : changer le paquet dans Synseria-Design, puis sh propager.sh.
-// SynseriaKit 25f4236349ad81d5 · contenu 87c65958a91bd6c4
+// SynseriaKit 82592cc8aa023014 · contenu 87c65958a91bd6c4
 // Plantages, blocages et excès que macOS remet à l'app par MetricKit, le lendemain : ils partent
 // avec les statistiques.
 

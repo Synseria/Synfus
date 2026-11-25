@@ -87,7 +87,7 @@ extension View {
             frame(maxWidth: .infinity, minHeight: Jetons.hauteurRangee - Jetons.espace2, alignment: .leading)
                 .padding(.horizontal, Jetons.espace3)
                 .padding(.vertical, Jetons.espace1)
-            Rectangle().fill(Color.jeton(\.filet)).frame(height: Jetons.epaisseurFilet)
+            Rectangle().fill(Color.traitSurVerre).frame(height: Jetons.epaisseurFilet)
         }
     }
 }

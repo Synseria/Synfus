@@ -14,6 +14,8 @@ struct PaletteVue: View {
     private enum Champ { case recherche, etiquette }
 
     /// Trois rangées de cartes entières et la moitié d'une quatrième : la grille dit qu'elle défile.
+    /// Le retrait de ce qui se déplie sous une ligne : sous son titre, après son icône.
+    static let retraitSousTitre = Jetons.espace7
     static let hauteurCartes = 3.5 * CarteZaap<Never>.hauteur() + 3 * Jetons.espace2
 
     var body: some View {
@@ -115,24 +117,27 @@ struct PaletteVue: View {
 
     /// Les familles que Tab fait défiler, en puces, jamais tronquées : toute la largeur leur revient.
     private var filtres: some View {
-        HStack(spacing: Jetons.espace2) {
+        let vides = modele.filtresVides
+        return HStack(spacing: Jetons.espace2) {
             HStack(spacing: Jetons.espace2) {
                 ForEach(FiltrePalette.allCases, id: \.self) { filtre in
                     let choisi = modele.filtre == filtre
+                    // Pendant une recherche, une capsule où elle ne trouverait rien s'efface.
+                    let vide = vides.contains(filtre) && !choisi
                     // Tab et ⇧Tab parcourent les filtres (le panneau) : aucun d'eux ne prend le focus.
                     Button { modele.choisir(filtre) } label: {
                         Puce(libelle: filtre.titre, choisie: choisi)
+                            .opacity(vide ? Jetons.opaciteDesactive : 1)
                     }
                     .buttonStyle(.plain)
                     .curseurDeClic(true)
                     .focusable(false)
-                    .curseurDeClic(true)
                     .elementDeGroupe()
                     .accessibilityAddTraits(choisi ? .isSelected : [])
+                    .help(vide ? L("palette.vide.filtre", filtre.titre) : L("palette.touche.filtre"))
                 }
             }
             .fixedSize(horizontal: true, vertical: false)
-            .help(L("palette.touche.filtre"))
             Spacer(minLength: 0)
         }
         .padding(.horizontal, Jetons.espace1)
@@ -197,9 +202,10 @@ struct PaletteVue: View {
                     guard modele.entrees.indices.contains(modele.selection) else { return }
                     defilement.scrollTo(modele.entrees[modele.selection].id)
                 }
-                .onChange(of: modele.carte) { _, carte in
-                    guard let carte else { return }
-                    defilement.scrollTo(FicheDonjonVue.ancre(carte))
+                // Un autre onglet : la ligne et son contenu, depuis le haut.
+                .onChange(of: modele.onglet) { _, _ in
+                    guard let deplie = modele.deplie else { return }
+                    defilement.scrollTo(deplie, anchor: .top)
                 }
                 // Une rangée de positions défile d'elle-même : la liste n'a qu'à montrer la ligne et la rangée.
                 .onChange(of: modele.position) { _, position in
@@ -264,17 +270,31 @@ struct PaletteVue: View {
         LazyVStack(spacing: Jetons.espace1) {
             ForEach(Array(modele.entrees.enumerated()), id: \.element.id) { index, entree in
                 let deplie = modele.deplie == entree.id
-                // Le clavier dans la fiche : la ligne ne se dit plus choisie, la carte l'est.
-                LigneResultat(entree: entree, choisie: index == modele.selection && modele.carte == nil && modele.position == nil, deplie: deplie,
-                              deplier: entree.pnj == nil ? nil : { modele.deplier(entree) })
+                // Le clavier sur une position du PNJ : la ligne ne se dit plus choisie, la position l'est.
+                let choisie = index == modele.selection && modele.position == nil
+                // La ligne dépliée et ce qu'elle déplie forment un bloc, sur un fond de survol arrondi :
+                // la ligne suivante se lit hors de la fiche.
+                VStack(spacing: 0) {
+                Group {
+                    if case .famille = entree.effet {
+                        LigneSuite(titre: entree.titre, choisie: choisie)
+                    } else {
+                        LigneResultat(entree: entree, choisie: choisie, deplie: deplie,
+                                      deplier: entree.pnj == nil ? nil : { modele.deplier(entree) }) {
+                            if deplie, case .donjon = entree.effet { ActionsFicheDonjon(modele: modele) }
+                        }
+                    }
+                }
                     .id(entree.id)
                     .onTapGesture { modele.executer(entree) }
                     .curseurDeClic(true)
                     .help(entree.complet)
-                    .accessibilityElement(children: .combine)
+                    // Dépliée, la ligne d'un donjon porte ses boutons : VoiceOver doit les atteindre un à un.
+                    .accessibilityElement(children: deplie && modele.fiche != .vide ? .contain : .combine)
                     .accessibilityAddTraits(.isButton)
                     .contextMenu { menu(entree) }
                 if deplie {
+                    let estUnDonjon = if case .donjon = entree.effet { true } else { false }
                     Group {
                         switch entree.effet {
                         case .ouTrouver(let sujet): OuTrouverVue(sujet: sujet, metriques: .confort, nom: entree.titre)
@@ -283,8 +303,15 @@ struct PaletteVue: View {
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.leading, Jetons.espace7)
-                    .padding(.bottom, Jetons.espace1)
+                    // Une fiche de donjon, rangée par ses onglets, prend toute la largeur de sa ligne ;
+                    // le reste se retire sous le titre.
+                    .padding(.leading, estUnDonjon ? Jetons.espace2 : PaletteVue.retraitSousTitre)
+                    .padding(.trailing, estUnDonjon ? Jetons.espace2 : 0)
+                    .padding(.bottom, Jetons.espace2)
+                }
+                }
+                .background {
+                    if deplie { RoundedRectangle(cornerRadius: Jetons.rayon2, style: .continuous).fill(Color.jeton(\.survol)) }
                 }
             }
         }
@@ -292,7 +319,7 @@ struct PaletteVue: View {
 
     @ViewBuilder
     private func menu(_ entree: EntreePalette) -> some View {
-        if entree.cle != nil {
+        if entree.etiquetable {
             Button(entree.favori ? L("palette.favori.retirer") : L("palette.favori.ajouter")) {
                 modele.basculerFavori(entree)
             }
@@ -343,7 +370,11 @@ struct PaletteVue: View {
                             .truncationMode(.middle)
                             .help(texte)
                     }
-                    if !modele.surAlmanax {
+                    if modele.surOnglets {
+                        aide("←→", L("palette.touche.onglet"))
+                            .layoutPriority(1)
+                    }
+                    if modele.selectionEtiquetable {
                         aide("⌘E", L("palette.touche.etiquette"))
                             .layoutPriority(1)
                         aide("⌘D", L("palette.touche.favori"))
@@ -366,8 +397,10 @@ struct PaletteVue: View {
         guard modele.entrees.indices.contains(modele.selection) else { return L("palette.touche.copier") }
         let entree = modele.entrees[modele.selection]
         if entree.id == modele.deplie {
-            if modele.cartesPositions.valide(modele.position) != nil { return L("palette.touche.copier") }
-            return modele.cartes.valide(modele.carte).map(aide) ?? L("palette.touche.replier")
+            if modele.cartesPositions.valide(modele.position) != nil || modele.fiche.principale != nil {
+                return L("palette.touche.copier")
+            }
+            return L("palette.touche.replier")
         }
         switch entree.effet {
         case .copier, .trajet: return L("palette.touche.copier")
@@ -377,15 +410,7 @@ struct PaletteVue: View {
         case .ouvrirQuete: return L("palette.touche.ouvrir")
         case .ouTrouver: return L("palette.touche.ouTrouver")
         case .donjon, .positions: return L("palette.touche.deplier")
-        }
-    }
-
-    private func aide(_ action: ActionFiche) -> String {
-        switch action {
-        case .entree: return L("palette.touche.copier")
-        case .guide, .aide: return L("palette.touche.ouvrir")
-        case .clef, .conseils, .monstres, .succes:
-            return modele.ouvertes.contains(action) ? L("palette.touche.replier") : L("palette.touche.deplier")
+        case .famille(let famille, _): return L("palette.vide.rechercherDans", famille.titre)
         }
     }
 
@@ -504,6 +529,8 @@ struct CarteZaap<Corps: View>: View {
                     .opacity(survole ? 1 : 0)
                     .allowsHitTesting(survole)
             }
+            if let compte = entree.compte { EtiquetteFilet(texte: compte, taille: Jetons.typoMicro, surImage: surImage).fixedSize() }
+            if entree.ici { RepereIci(taille: Jetons.typoMicro, surImage: surImage) }
             Text(entree.detail ?? "")
                 .font(Jetons.typoCode.font)
                 .foregroundStyle(encre(\.encre2))
@@ -521,25 +548,32 @@ extension CarteZaap where Corps == Never {
 }
 
 /// Ce qu'une grille de cartes montre, pour que toutes ses cartes aient la même hauteur : le pied dès
-/// qu'une carte a de quoi l'emplir (étiquette, intérieur, coordonnées) — une grille de quêtes n'en a
+/// qu'une carte a de quoi l'emplir (étiquette, intérieur, compte, coordonnées) — une grille de quêtes n'en a
 /// pas et s'en passe.
 struct DispositionCartes: Equatable {
     var avecPied = true
 
     static func de(_ entrees: [EntreePalette]) -> DispositionCartes {
-        DispositionCartes(avecPied: entrees.contains { $0.etiquette != nil || $0.interieur || $0.detail != nil })
+        DispositionCartes(avecPied: entrees.contains { $0.etiquette != nil || $0.interieur || $0.detail != nil || $0.compte != nil })
     }
 }
 
 /// Une ligne de résultat : genre (ou pictogramme du lieu), titre, étiquette,
 /// sous-titre, détail, vue de la carte.
-struct LigneResultat: View {
+struct LigneResultat<Actions: View>: View {
     let entree: EntreePalette
     let choisie: Bool
     var deplie = false
     /// Le clic sur le chevron d'une ligne qui ne se déplie pas d'Entrée (un PNJ à une position).
     var deplier: (() -> Void)?
+    /// Les boutons de la fiche dépliée (un donjon), après la position.
+    let actions: Actions
     @State private var survole = false
+
+    init(entree: EntreePalette, choisie: Bool, deplie: Bool = false, deplier: (() -> Void)? = nil,
+         @ViewBuilder actions: () -> Actions) {
+        (self.entree, self.choisie, self.deplie, self.deplier, self.actions) = (entree, choisie, deplie, deplier, actions())
+    }
 
     var body: some View {
         HStack(spacing: Jetons.espace3) {
@@ -581,12 +615,15 @@ struct LigneResultat: View {
                 }
             }
             Spacer(minLength: Jetons.espace2)
+            if let compte = entree.compte { EtiquetteFilet(texte: compte, taille: Jetons.typoMeta).fixedSize() }
+            if entree.ici { RepereIci(taille: Jetons.typoMeta) }
             if let detail = entree.detail {
                 Text(detail)
                     .font(Jetons.typoMeta.font.monospaced())
                     .foregroundStyle(Color.jeton(\.encre2))
                     .lineLimit(1)
             }
+            actions
             if let touche = entree.touche { ToucheDeClavier(touche: touche) }
             if let carte = entree.carte { MiniatureCarte(carte: carte, taille: Self.vignette) }
             if entree.effet.sePlie || deplier != nil {
@@ -614,7 +651,7 @@ struct LigneResultat: View {
     private var etat: EtatVisuel { choisie ? .choisi : EtatVisuel(survole: survole) }
 
     /// La vignette d'une carte du jeu, à la hauteur d'une rangée.
-    static let vignette = CGSize(width: Jetons.largeurVignette, height: Jetons.hauteurRangee)
+    static var vignette: CGSize { CGSize(width: Jetons.largeurVignette, height: Jetons.hauteurRangee) }
 
     private var icone: String {
         if let symbole = entree.symbole { return symbole }
@@ -634,6 +671,40 @@ struct LigneResultat: View {
     }
 }
 
+extension LigneResultat where Actions == EmptyView {
+    init(entree: EntreePalette, choisie: Bool, deplie: Bool = false, deplier: (() -> Void)? = nil) {
+        self.init(entree: entree, choisie: choisie, deplie: deplie, deplier: deplier) { EmptyView() }
+    }
+}
+
+/// La ligne fine qui ferme une famille de l'Accueil (« 5 objets de plus ») : ↵ passe sur sa capsule.
+struct LigneSuite: View {
+    let titre: String
+    let choisie: Bool
+    @State private var survole = false
+
+    var body: some View {
+        HStack(spacing: Jetons.espace2) {
+            Text(titre)
+                .font(Jetons.typoMeta.font)
+                .foregroundStyle(Color.jeton(choisie ? \.accentTexte : \.encre2))
+                .lineLimit(1)
+            Spacer(minLength: Jetons.espace2)
+            Image(systemName: "chevron.right")
+                .font(Jetons.typoMicro.font)
+                .foregroundStyle(Color.jeton(\.encre3))
+                .frame(width: Jetons.tailleIcone)
+        }
+        // Le texte sous les titres des lignes : la place de leur icône.
+        .padding(.leading, Jetons.hauteurControle + Jetons.espace3)
+        .padding(.horizontal, Jetons.espace2)
+        .padding(.vertical, Jetons.espace1)
+        .frame(minHeight: Jetons.hauteurCase)
+        .fondEtat(choisie ? .choisi : EtatVisuel(survole: survole), rayon: Jetons.rayon2)
+        .onHover { survole = $0 }
+    }
+}
+
 /// Une carte qui n'est pas en extérieur : `/travel` mène devant, il reste
 /// à entrer. La palette et le panneau des quêtes la disent pareil.
 struct EtiquetteInterieur: View {
@@ -642,12 +713,38 @@ struct EtiquetteInterieur: View {
     var surImage = false
 
     var body: some View {
-        Text(L("carte.interieur"))
+        EtiquetteFilet(texte: L("carte.interieur"), taille: taille, surImage: surImage)
+            .help(L("carte.interieur.aide"))
+    }
+}
+
+/// Devant les coordonnées d'une case qui est celle du perso devant : on y est.
+struct RepereIci: View {
+    let taille: Jetons.Typo
+    var surImage = false
+
+    var body: some View {
+        Image(systemName: "location.fill")
+            .font(taille.font)
+            .foregroundStyle(Color.jeton(\.accentTexte, surImage: surImage))
+            .help(L("palette.ici"))
+            .accessibilityLabel(L("palette.ici"))
+    }
+}
+
+/// Un mot qui renseigne sans se copier (« intérieur », « 3 positions ») : la police du texte, une
+/// pastille au filet fin. Les coordonnées, elles, gardent la chasse fixe.
+struct EtiquetteFilet: View {
+    let texte: String
+    let taille: Jetons.Typo
+    var surImage = false
+
+    var body: some View {
+        Text(texte)
             .font(taille.font)
             .foregroundStyle(Color.jeton(\.encre2, surImage: surImage))
             .padding(.horizontal, Jetons.espace1)
             .overlay(Capsule().strokeBorder(Color.jeton(\.filet, surImage: surImage), lineWidth: Jetons.epaisseurFilet))
             .lineLimit(1)
-            .help(L("carte.interieur.aide"))
     }
 }

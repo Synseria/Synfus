@@ -3,7 +3,7 @@ import Foundation
 /// Ce qui s'enregistre du thème (Réglages ▸ Thème), et la conversion des réglages d'avant le nuancier
 /// (une couleur parmi cinq ou une teinte, une teinte des fonds, une apparence). Une valeur illisible
 /// n'est pas un choix : le réglage retombe sur son défaut sans toucher au reste.
-extension Jetons.Theme {
+extension Jetons.Theme.Primaire {
     private static let prefixePersonnalise = "personnalise:"
 
     /// `graphite`, ou `personnalise:3FA9D8`.
@@ -17,16 +17,56 @@ extension Jetons.Theme {
     init?(ecrit: String) {
         if let coloris = Jetons.Coloris(rawValue: ecrit) {
             self = .coloris(coloris)
-        } else if ecrit.hasPrefix(Self.prefixePersonnalise),
-                  let couleur = UInt32(ecrit.dropFirst(Self.prefixePersonnalise.count), radix: 16), couleur <= 0xFFFFFF {
+        } else if ecrit.hasPrefix(Self.prefixePersonnalise), let couleur = ConversionDuTheme.hex(ecrit.dropFirst(Self.prefixePersonnalise.count)) {
             self = .personnalise(couleur)
         } else {
             return nil
         }
     }
+}
 
+extension Jetons.Fond {
+    /// `ardoise`, ou `#3F7A80` pour une couleur à soi.
+    var ecrit: String {
+        switch self {
+        case .nomme(let nomme): nomme.rawValue
+        case .personnalise(let couleur): String(format: "#%06X", couleur)
+        }
+    }
+
+    init?(ecrit: String) {
+        if let nomme = Jetons.FondNomme(rawValue: ecrit) {
+            self = .nomme(nomme)
+        } else if ecrit.hasPrefix("#"), let couleur = ConversionDuTheme.hex(ecrit.dropFirst()) {
+            self = .personnalise(couleur)
+        } else {
+            return nil
+        }
+    }
+}
+
+extension Jetons.Theme {
     var coloris: Jetons.Coloris? {
-        if case .coloris(let coloris) = self { coloris } else { nil }
+        if case .coloris(let coloris) = primaire { coloris } else { nil }
+    }
+
+    /// Le thème avec cette primaire : un fond choisi reste, celui du thème suit la primaire. Toute
+    /// écriture de la couleur passe par ici : `.coloris(_:)` seul effacerait le fond choisi.
+    func avecLaPrimaire(_ nouvelle: Primaire) -> Jetons.Theme { Jetons.Theme(nouvelle, fond: fond) }
+
+    /// Le thème avec ce fond ; choisir celui de la primaire revient à le suivre (nil) : changer de
+    /// couleur changera alors le fond aussi, ce qu'un fond choisi ne fait jamais.
+    func avecLeFond(_ choisi: Jetons.Fond?) -> Jetons.Theme {
+        Jetons.Theme(primaire, fond: choisi == .nomme(fondParDefaut) ? nil : choisi)
+    }
+
+    /// Le fond appliqué : le choisi, sinon celui du thème.
+    var fondApplique: Jetons.Fond { fond ?? .nomme(fondParDefaut) }
+
+    /// Un coloris sur un fond nommé (ou le sien) : aucune couleur à soi.
+    var estNomme: Bool {
+        if case .personnalise = fond { return false }
+        return coloris != nil
     }
 }
 
@@ -39,14 +79,20 @@ enum ConversionDuTheme {
         var nuance = Jetons.nuanceParDefaut
     }
 
+    /// Une couleur écrite `RRGGBB` ; nil si illisible.
+    static func hex(_ texte: Substring) -> UInt32? {
+        guard let couleur = UInt32(texte, radix: 16), couleur <= 0xFFFFFF else { return nil }
+        return couleur
+    }
+
     static func nuance(ecrite: String?) -> Jetons.Nuance? {
         ecrite == systeme ? nil : ecrite.flatMap(Jetons.Nuance.init(rawValue:)) ?? Jetons.nuanceParDefaut
     }
 
     /// Les réglages d'avant : un préréglage prend le coloris le plus proche (jade, le défaut d'alors,
-    /// devient Lagon, celui d'aujourd'hui) ; une teinte, Personnalisé. Les fonds
-    /// n'ont plus de réglage (la nuance porte le fond) ; Clair et Sombre imposés deviennent Jour et
-    /// Pénombre, Auto suit toujours le système.
+    /// devient Lagon, celui d'aujourd'hui) ; une teinte, Personnalisé. La teinte des fonds d'alors
+    /// (`fondsDeLApp`) n'a pas d'équivalent : le fond du thème la remplace. Clair et Sombre imposés
+    /// deviennent Jour et Pénombre, Auto suit toujours le système.
     static func relire(couleur: String?, apparence: String?) -> Relu {
         var relu = Relu()
         switch apparence {

@@ -22,6 +22,40 @@ rune, n'enchaîne rien (CGU).
    disponibles à un agent IA. **Cela concerne tout Synfus** (quêtes, carte, classes, boss), pas
    seulement la FM. Question 1.
 
+## 0 bis. Ce que montre l'interface de Dofus 3 (captures du 25/11/2026)
+
+Deux captures de l'utilisateur (Forgemager, une arme à deux lignes ; Costumager, une coiffe à
+quinze lignes) corrigent la recherche sur deux points décisifs :
+
+- **Le reliquat est affiché** : « reliquat : 0 », en italique au-dessus de « Fusionner tout »
+  (grisé tant qu'aucune rune n'est posée). La recherche (R§1.4, R§6) le disait caché depuis la
+  2.29 : en Dofus 3 il **se lit** par OCR. Le compte du puits n'est plus qu'un contrôle croisé avec
+  l'historique, plus une reconstruction.
+- **Le stock de runes est affiché** : à droite de chaque ligne, trois pastilles (rune simple, Pa,
+  Ra) portent le **nombre de runes possédées** (ex. Vitalité 550 / 192 / 169 ; Portée 15 en simple
+  seulement ; Résistance Terre : la rune seule, sans nombre lu). L'assistant sait donc ce que le
+  joueur peut poser, sans saisie.
+
+Disposition (à mesurer en F0, deux tailles de fenêtre) :
+
+| Zone | Contenu |
+|---|---|
+| En-tête gauche | perso, métier (FORGEMAGE, COSTUMAGE…), niveau du métier |
+| En-tête centre | « reliquat : N », trois cases (objet, rune, signature), « FUSIONNER TOUT », « FUSIONNER » |
+| Colonne gauche | **Historique**, le plus récent **en bas** : icône de rune, puis « Échec », ou « +N Carac » en vert, ou « −N Carac » en rouge ; « Il n'y a pas d'historique actuellement. » quand vide ; « VIDER L'HISTORIQUE » en pied |
+| Table centrale | colonnes Min, Max, Effets / Carac. (icône d'élément, valeur et nom : « 224 Vitalité », la ligne choisie encadrée), Modif. (dernière variation en pastille verte « +3 » ou rouge), Pa, Ra (stock de runes) ; une ligne d'arme « 9 à 11 dommages Eau » sur fond plein (non modifiable) |
+
+Conséquences sur le plan :
+- `fmEntete` (reliquat), `fmTable` (min, max, actuel, modif, stocks) et `fmHistorique` (dernières
+  entrées, le bas d'abord) sont trois genres de lecture.
+- L'issue d'une fusion se déduit de la **variation de la table** (colonne Modif. comprise) et se
+  recoupe avec la nouvelle entrée de l'historique et le reliquat lu.
+- Le conseil s'appuie sur le stock lu : jamais une rune que le joueur n'a pas, ou l'achat à
+  prévoir s'il en manque (« il te faut 3 Ra Vi de plus »).
+- Le but se dit **par ligne** (« je veux 250 Vitalité, 60 Intelligence, 1 Portée ») et
+  l'assistant donne l'étape suivante : « Pa Vi », « Ra Age », « attendre : le reliquat ne couvre
+  pas cette rune ».
+
 ## 1. Modèle (pur, testable)
 
 Nouveau domaine `Sources/Synfus/Forgemagie/` (ligne à ajouter au tableau d'`AGENTS.md`).
@@ -75,9 +109,9 @@ de l'objet fini, ou > objet neuf + FM depuis zéro.
 
 ## 2. Lecture de l'écran
 
-- **F0. Captures** (geste de l'utilisateur, aucun code) : l'interface de FM de Dofus 3 ouverte, un
-  objet posé, avant et après une fusion de chaque issue (SC, SN, EC), l'historique visible, une rune
-  survolée (densité dans l'infobulle), deux tailles de fenêtre. Décide les zones.
+- **F0. Captures** (geste de l'utilisateur, aucun code) : deux sont faites (§0 bis). Manquent :
+  avant et après une fusion de chaque issue (SC, SN, EC) avec du reliquat non nul, une rune survolée
+  (densité dans l'infobulle), un over et une exo, deux tailles de fenêtre. Elles décident les zones.
 - Nouveaux genres de lecture (table `GenreLecture`, skill `lecture-ocr`) : `fmTable` (nom, min-max,
   actuel de chaque ligne) et `fmHistorique` (dernière entrée : issue, gains, pertes, reliquat).
   Lus **à la demande** tant que le panneau de FM est montré, jamais en continu, comme la chasse.

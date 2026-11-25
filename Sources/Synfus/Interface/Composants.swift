@@ -60,12 +60,37 @@ extension View {
         modifier(SurfaceFlottante())
     }
 
-    /// Le contenu d'un flottant (résultats de la palette, corps d'un panneau) : la plaque pleine, son
-    /// filet, `rayon2` — jamais de texte long sur le verre.
+    /// Le contenu d'un flottant (résultats de la palette, corps d'un panneau) : la plaque, à
+    /// `opacitePlaque` sur le verre (pleine s'il est refusé), son filet, `rayon2` — jamais de texte
+    /// long sur le verre.
     func plaquePleine() -> some View {
+        modifier(PlaquePleine())
+    }
+}
+
+extension Color {
+    /// Le filet des surfaces — bordures et séparations des fenêtres, plaques, panneaux, infobulles — à
+    /// l'opacité `opaciteFilet` du SDS, la même partout : purement esthétique, aucun texte n'y est posé.
+    /// Un trait qui porte un sens (séparateur de la barre, contour d'un contrôle) garde le filet plein.
+    @MainActor static var traitSurVerre: Color { Color.jeton(\.filet).opacity(Jetons.opaciteFilet) }
+}
+
+/// « Réduire la transparence » et « Augmenter le contraste » refusent le verre : les fonds sont pleins.
+/// `cacheDisplay` (captures) ne dessine pas le verre, qui échantillonne l'écran.
+private func verreRefuse(transparenceReduite: Bool, contraste: ColorSchemeContrast) -> Bool {
+    UsageDuVerre.refuse(transparenceReduite: transparenceReduite, contraste: contraste) || Ressources.captureDocumentation
+}
+
+private struct PlaquePleine: ViewModifier {
+    @Environment(\.accessibilityReduceTransparency) private var transparenceReduite
+    @Environment(\.colorSchemeContrast) private var contraste
+
+    func body(content: Content) -> some View {
         let forme = RoundedRectangle(cornerRadius: Jetons.rayon2, style: .circular)
-        return background(Color.jeton(\.plaque), in: forme)
-            .overlay { forme.strokeBorder(Color.jeton(\.filet), lineWidth: Jetons.epaisseurFilet) }
+        let refuse = verreRefuse(transparenceReduite: transparenceReduite, contraste: contraste)
+        return content
+            .background(Color.jeton(\.plaque).opacity(refuse ? 1 : Jetons.opacitePlaque), in: forme)
+            .overlay { forme.strokeBorder(Color.traitSurVerre, lineWidth: Jetons.epaisseurFilet) }
     }
 }
 
@@ -76,9 +101,8 @@ private struct SurfaceFlottante: ViewModifier {
 
     func body(content: Content) -> some View {
         let forme = RoundedRectangle(cornerRadius: Jetons.rayon3, style: .continuous)
-        // « Réduire la transparence » et « Augmenter le contraste » refusent le verre : le fond plein
-        // reprend son filet. `cacheDisplay` (captures) ne dessine pas le verre, qui échantillonne l'écran.
-        if transparenceReduite || contraste == .increased || Ressources.captureDocumentation {
+        // Verre refusé : le fond plein reprend son filet.
+        if verreRefuse(transparenceReduite: transparenceReduite, contraste: contraste) {
             content
                 .background(Color.jeton(\.fondFenetre), in: forme)
                 .overlay(forme.strokeBorder(Color.jeton(\.filet), lineWidth: Jetons.epaisseurFilet))
@@ -112,6 +136,7 @@ struct StyleEtat: ButtonStyle {
         @Environment(\.isEnabled) private var actif
         @Environment(\.groupeAuClavier) private var auClavier
         @State private var survole = false
+        private static let debord = Jetons.espace1 / 2
 
         var body: some View {
             let etat: EtatVisuel = !actif ? .desactive : style.courant ? .courant : style.choisi ? .choix(auClavier: auClavier)
@@ -123,8 +148,12 @@ struct StyleEtat: ButtonStyle {
                         RoundedRectangle(cornerRadius: style.rayon, style: .continuous).fill(Color.jeton(\.creux))
                     }
                 }
+                // Nue, le fond déborde un peu au-dessus et au-dessous du texte, sans déplacer la mise en
+                // page : collé aux lettres, le survol d'une ligne de texte paraissait étriqué.
+                .padding(.vertical, style.nue ? Self.debord : 0)
                 // Une puce nue désactivée n'a pas de tuile : l'encre tertiaire suffit.
                 .fondEtat(style.nue && etat == .desactive ? .repos : etat, rayon: style.rayon)
+                .padding(.vertical, style.nue ? -Self.debord : 0)
                 .onHover { survole = $0 }
                 // Ce qui se clique le montre, comme les boutons de la trousse.
                 .curseurDeClic(actif)

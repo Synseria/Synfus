@@ -95,7 +95,7 @@ struct SettingsView: View {
                 .clipShape(RoundedRectangle(cornerRadius: Jetons.rayon3, style: .continuous))
                 .overlay {
                     RoundedRectangle(cornerRadius: Jetons.rayon3, style: .continuous)
-                        .strokeBorder(Color.jeton(\.filet), lineWidth: Jetons.epaisseurFilet)
+                        .strokeBorder(Color.traitSurVerre, lineWidth: Jetons.epaisseurFilet)
                 }
                 .padding([.horizontal, .bottom], Jetons.espace2)
         }

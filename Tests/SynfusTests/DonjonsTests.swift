@@ -94,13 +94,26 @@ struct DonjonsTests {
         return contexte
     }
 
-    @Test("Vue Donjons au repos : les donjons de la carte seuls ; en recherche, leurs boss aussi — et plus parmi les créatures")
+    @Test("Le niveau du donjon est dans le sous-titre de sa ligne et de celle de son boss, après le lieu")
+    func niveauDansLeSousTitre() throws {
+        let contexte = try Self.contexteDonjons()
+        let niveau = L("donjon.niveau", 200)
+        let donjon = try #require(RecherchePalette.entrees("", contexte, filtre: .donjons).first { $0.effet == .donjon(71) })
+        #expect(donjon.sousTitre == niveau)
+        let boss = try #require(RecherchePalette.entrees("harebourg", contexte, filtre: .donjons).first { $0.id == "boss:3416" })
+        #expect(boss.sousTitre == "\(L("palette.boss", "Donjon du Comte Harebourg")) · \(niveau)")
+        // Sans niveau connu, le sous-titre ne bouge pas.
+        #expect(RecherchePalette.avecNiveau("Boss · Kimbo", nil) == "Boss · Kimbo")
+        #expect(RecherchePalette.avecNiveau("", try #require(try Self.donjons().donjon(id: 71))) == niveau)
+    }
+
+    @Test("Vue Donjons au repos : les donjons de la carte seuls ; en recherche, leurs boss, sur la ligne du donjon — et plus parmi les créatures")
     func vuesDonjons() throws {
         let contexte = try Self.contexteDonjons()
         let repos = RecherchePalette.entrees("", contexte, filtre: .donjons).map(\.titre)
         #expect(Set(repos) == ["Donjon du Comte Harebourg", "Canopée du Kimbo"])
         let recherche = RecherchePalette.entrees("kimbo", contexte, filtre: .donjons)
-        #expect(Set(recherche.map(\.titre)) == ["Canopée du Kimbo", "Kimbo"])
+        #expect(recherche.map(\.titre) == ["Kimbo"])
         #expect(recherche.allSatisfy { $0.effet == .donjon(28) })
         #expect(!RecherchePalette.entrees("kimbo", contexte, filtre: .creatures).contains { $0.titre == "Kimbo" })
     }
@@ -130,40 +143,46 @@ struct DonjonsTests {
         #expect(modele.filtre == .tout)
     }
 
-    @Test("Fiche au clavier : position en tête, aide au combat de chaque boss, guide, conseils, dépliables, la clef pour finir")
-    func cartes() throws {
+    @Test("Fiche : position, aide au combat de chaque boss et guide en actions ; boss, conseils, monstres, succès et chaque clef en onglets")
+    func onglets() throws {
         let donjon = try #require(try Self.donjons().donjon(id: 71))
         let entree = Self.lieu("Donjon du Comte Harebourg", carte: 112460048)
         // L'aide n'attend pas le détail ; un boss à mécanique y retrouve la sienne.
         let aides = donjon.boss.map { CibleBoss.boss($0, donjon: donjon.id) }
         #expect(aides == [.special(.harebourg)])
-        let attente = CartesFiche.donjon(entree: entree, boss: aides, guide: donjon.nomFrancais, detail: nil, conseils: false)
+        let attente = OngletsFiche.donjon(entree: entree, boss: aides, guide: donjon.nomFrancais, conseils: false, detail: nil)
         #expect(attente.actions == [.entree(entree), .aide(.special(.harebourg)), .guide("Donjon du Comte Harebourg")])
-        #expect(!ActionFiche.aide(.special(.harebourg)).sePlie)
-        #expect(attente.premiere == .entree(entree))
+        // Le détail attendu : l'onglet des boss dit l'attente.
+        #expect(attente.onglets == [.boss])
+        #expect(attente.principale == .entree(entree))
 
         let boss = DetailDonjon.Monstre(id: 3416, noms: [:], boss: true, fiche: Self.fiche)
         let mansot = DetailDonjon.Monstre(id: 3384, noms: [:], boss: false, fiche: Self.fiche)
-        let detail = DetailDonjon(monstres: [boss, mansot], clefs: [.init(objet: 14047, noms: [:], quantite: 1)],
+        let detail = DetailDonjon(monstres: [boss, mansot], clefs: [.init(objet: 14047, noms: [:], quantite: 1), .init(objet: 2, noms: [:], quantite: 1)],
                                   succes: [.init(noms: [:], description: [:])])
-        let cartes = CartesFiche.donjon(entree: entree, boss: [], guide: "Guide", detail: detail, conseils: true)
-        #expect(cartes.actions == [.entree(entree), .guide("Guide"), .conseils, .monstres, .succes, .clef(objet: 14047)])
-        // Seuls des boss : rien à déplier pour les monstres.
-        #expect(CartesFiche.donjon(entree: nil, boss: [], guide: nil, detail: DetailDonjon(monstres: [boss], clefs: [], succes: []),
-                                   conseils: false) == .vide)
+        let complete = OngletsFiche.donjon(entree: nil, boss: [], guide: "Guide", conseils: true, detail: detail)
+        #expect(complete.onglets == [.boss, .conseils, .monstres, .succes, .clef(objet: 14047), .clef(objet: 2)])
+        // Sans entrée connue, ↵ replie.
+        #expect(complete.principale == nil)
+        // Un segment n'existe que s'il a du contenu.
+        let seulsMonstres = DetailDonjon(monstres: [mansot], clefs: [], succes: [])
+        #expect(OngletsFiche.donjon(entree: nil, boss: [], guide: nil, conseils: false, detail: seulsMonstres).onglets == [.monstres])
     }
 
-    @Test("Fiche au clavier : ←/→ restent dans la rangée ; le clavier tient une carte, pas un rang")
+    @Test("Onglets au clavier : ←/→ bornés à droite, ← sur le premier replie ; le modèle tient un onglet, pas un rang")
     func navigation() {
-        let avant = CartesFiche(actions: [.guide("a"), .monstres, .succes])
-        #expect(avant.laterale(.succes, 1) == .succes)
-        #expect(avant.laterale(.succes, -1) == .monstres)
-        #expect(avant.laterale(.guide("a"), -1) == .guide("a"))
-        // Les conseils arrivent : le clavier reste sur les monstres.
-        let apres = CartesFiche(actions: [.guide("a"), .conseils, .monstres, .succes])
-        #expect(apres.valide(.monstres) == .monstres)
-        #expect(apres.valide(.clef(objet: 1)) == nil)
-        #expect(CartesFiche.vide.premiere == nil)
+        let avant = OngletsFiche(actions: [], onglets: [.boss, .monstres, .succes])
+        #expect(avant.courant(nil) == .boss)
+        #expect(avant.lateral(depuis: nil, 1) == .onglet(.monstres))
+        #expect(avant.lateral(depuis: .succes, 1) == .onglet(.succes))
+        #expect(avant.lateral(depuis: .succes, -1) == .onglet(.monstres))
+        #expect(avant.lateral(depuis: .boss, -1) == .replier)
+        // Les conseils arrivent : l'onglet voulu reste les monstres ; disparu, on retombe sur le premier.
+        let apres = OngletsFiche(actions: [], onglets: [.boss, .conseils, .monstres, .succes])
+        #expect(apres.courant(.monstres) == .monstres)
+        #expect(apres.courant(.clef(objet: 1)) == .boss)
+        #expect(OngletsFiche.vide.lateral(depuis: nil, 1) == nil)
+        #expect(OngletsFiche.vide.lateral(depuis: nil, -1) == .replier)
     }
 
     @Test("Conseils de Dofus pour les noobs : une phrase par puce de la section, son paragraphe, entités décodées")
@@ -230,4 +249,19 @@ struct DonjonsTests {
         id: 1, name: nil, grades: [.init(grade: 1, level: 1, lifePoints: 1, actionPoints: 1, movementPoints: 1,
                                          reductionNeutral: nil, reductionEarth: nil, reductionFire: nil,
                                          reductionWater: nil, reductionAir: nil)]))!
+}
+
+/// Les renvois `[challenge,N]` des descriptions de succès.
+struct DescriptionSuccesTests {
+    @Test("Un renvoi devient le nom du challenge, dans la langue du texte ; inconnu, il s'efface")
+    func renvois() {
+        let description = ["fr": "Vaincre le roi Nidas en validant le challenge [challenge,307].",
+                           "en": "Defeat King Nidas with the [challenge,307] challenge."]
+        #expect(DetailDonjon.Succes.challenges(dans: description) == [307])
+        let noms = [307: ["fr": "Statue", "en": "Statue"]]
+        let lue = DetailDonjon.Succes.resoudre(description, challenges: noms)
+        #expect(lue["fr"] == "Vaincre le roi Nidas en validant le challenge « Statue ».")
+        let muette = DetailDonjon.Succes.resoudre(description, challenges: [:])
+        #expect(muette["fr"] == "Vaincre le roi Nidas en validant le challenge.")
+    }
 }

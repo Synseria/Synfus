@@ -67,6 +67,35 @@ enum FiltrePalette: CaseIterable, Sendable {
         }
     }
 
+    /// La capsule où l'entrée se range : un boss avec son donjon, un zaap à part des lieux ; `nil` pour
+    /// ce qui n'en a pas (perso, geste, copie).
+    static func famille(de entree: EntreePalette) -> FiltrePalette? {
+        if entree.estDonjon { return .donjons }
+        switch entree.genre {
+        case .zaap: return .zaaps
+        case .lieu: return .lieux
+        case .pnj: return .pnj
+        case .quete: return .quetes
+        case .monstre: return .creatures
+        case .objet: return .objets
+        case .commande, .variable, .perso, .action, .recent: return nil
+        }
+    }
+
+    /// « 5 objets de plus » : la ligne de l'Accueil qui mène au reste de la famille.
+    func suite(_ reste: Int) -> String {
+        switch self {
+        case .zaaps: return L("palette.suite.zaaps", nombre: reste, reste)
+        case .lieux: return L("palette.suite.lieux", nombre: reste, reste)
+        case .donjons: return L("palette.suite.donjons", nombre: reste, reste)
+        case .pnj: return L("palette.suite.pnj", nombre: reste, reste)
+        case .quetes: return L("palette.suite.quetes", nombre: reste, reste)
+        case .creatures: return L("palette.suite.creatures", nombre: reste, reste)
+        case .objets: return L("palette.suite.objets", nombre: reste, reste)
+        case .tout, .almanax: return L("palette.vide.ailleurs", nombre: reste, reste, titre)
+        }
+    }
+
     /// Le tri ne range rien sur l'Accueil ni sur l'almanax, au repos : ni les montrer, ni ⌘T.
     func triAgit(enRecherche: Bool) -> Bool {
         enRecherche || (self != .tout && self != .almanax)
@@ -92,7 +121,8 @@ enum FiltrePalette: CaseIterable, Sendable {
 }
 
 /// L'ordre des résultats : « Auto » (`ScorePalette`), ou un tri explicite
-/// après les zaaps, qui y passent toujours devant.
+/// après les zaaps, qui y passent devant — parmi ce dont le nom répond, puis
+/// parmi ce qui ne répond que par son lieu.
 enum TriPalette: String, CaseIterable, Sendable {
     case auto, proximite, alphabetique, type
 
@@ -142,12 +172,14 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
         case action(ActionPalette)
         /// Met ce perso devant (`DofusClient.slotKey`), comme un clic sur sa pastille.
         case basculer(String)
+        /// Passe sur la capsule de la famille, la recherche gardée : ses `reste` lignes que l'Accueil tait.
+        case famille(FiltrePalette, reste: Int)
 
         /// Entrée déplie quelque chose sous la ligne plutôt que de copier.
         var sePlie: Bool {
             switch self {
             case .ouTrouver, .donjon, .positions: return true
-            case .copier, .completer, .ouvrirQuete, .trajet, .action, .basculer: return false
+            case .copier, .completer, .ouvrirQuete, .trajet, .action, .basculer, .famille: return false
             }
         }
     }
@@ -163,6 +195,8 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
     var etiquette: String?
     /// À droite : coordonnées, commande copiée.
     var detail: String?
+    /// À droite aussi, mais un texte et non des coordonnées : « 3 positions ».
+    var compte: String?
     var favori = false
     /// Les cartes depuis le perso devant, à pied, quand elles veulent dire
     /// quelque chose : départage deux résultats aussi bons. Pas celles du
@@ -176,6 +210,8 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
     /// Ce qu'une étiquette ou un favori désigne (`Zaap.cle`, `Lieu.cle`) ;
     /// `nil` pour ce qui ne s'étiquette pas.
     var cle: String?
+    /// ⌘E et ⌘D ont prise sur elle : le pied, le menu et les gestes en décident ici seulement.
+    var etiquetable: Bool { cle != nil }
     /// La carte du jeu de l'entrée, dont la liste montre la vue.
     var carte: Int?
     /// Le pictogramme d'un lieu (`Lieu.gfx`), à la place du symbole.
@@ -192,6 +228,8 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
     var classe: String?
     /// Le raccourci du geste de la ligne, dit au bout de la ligne.
     var touche: String?
+    /// Sur la case du perso devant : un repère devant ses coordonnées.
+    var ici = false
     let effet: Effet
 
     /// Un donjon de la carte, ou l'un de ses boss : la fiche qu'ils ouvrent est la même.
@@ -285,7 +323,12 @@ enum RecherchePalette {
             return [versUneCase(cible, index.contexte)].filter { filtre.garde($0, enRecherche: true) }
         }
         guard texte.hasPrefix("/") else {
-            return classer(index.tout.filter { filtre.garde($0.entree, enRecherche: true) }, mots(texte))
+            let fiches = index.tout.filter { filtre.garde($0.entree, enRecherche: true) }
+            guard filtre == .tout else { return ListePalette.fusionnerDonjons(classer(fiches, mots(texte))) }
+            // L'Accueil : le meilleur de chaque famille, et une ligne vers le reste.
+            let (entrees, restes) = RecherchePalette.classer(fiches, mots(texte), tri: tri, frequentation: index.contexte.frequentation,
+                                            parFamille: ListePalette.parFamille)
+            return ListePalette.avecLesSuites(ListePalette.fusionnerDonjons(entrees), restes: restes)
         }
         let (commande, reste) = separer(texte)
         switch commande {
@@ -304,12 +347,31 @@ enum RecherchePalette {
         }
     }
 
+    /// Les capsules où `requete` ne trouverait rien : exactement celles dont `entrees(_:filtre:)` serait
+    /// vide, l'Accueil jamais ; aucune sans texte. Une seule passe exacte sur toutes les fiches ; seules
+    /// les familles qu'elle n'a pas trouvées refont leur recherche, fautes de frappe comprises.
+    static func filtresVides(_ requete: String, _ index: IndexPalette) -> Set<FiltrePalette> {
+        let texte = requete.trimmingCharacters(in: .whitespaces)
+        guard !texte.isEmpty else { return [] }
+        var restants = Set(FiltrePalette.allCases.filter { $0 != .tout })
+        // Préfixes et coordonnées : des modes à part, peu coûteux, qui ignorent ou non le filtre.
+        let simple = !texte.hasPrefix("/") && !texte.hasPrefix("%") && ItineraireZaap.caseTapee(texte) == nil
+        if simple {
+            let mots = mots(texte)
+            for fiche in index.tout where fiche.champs.garde(mots) {
+                restants = restants.filter { !$0.garde(fiche.entree, enRecherche: true) }
+                if restants.isEmpty { break }
+            }
+        }
+        return restants.filter { entrees(texte, index, filtre: $0).isEmpty }
+    }
+
     /// Le texte qu'Entrée copiera — `nil` pour ce qui ne copie rien.
     static func texte(de effet: EntreePalette.Effet, _ contexte: ContextePalette) -> String? {
         switch effet {
         case .copier(let texte): return texte
         case .trajet(let x, let y, let sousZone): return trajet(vers: (x, y), sousZone: sousZone, contexte)
-        case .completer, .action, .ouvrirQuete, .ouTrouver, .donjon, .positions, .basculer: return nil
+        case .completer, .action, .ouvrirQuete, .ouTrouver, .donjon, .positions, .basculer, .famille: return nil
         }
     }
 
@@ -327,7 +389,8 @@ enum RecherchePalette {
                 sousTitre: zaap.zone(en: contexte.langue), etiquette: contexte.etiquettes[zaap.cle],
                 detail: Coordonnees.texte(zaap.x, zaap.y), favori: contexte.favoris.contains(zaap.cle),
                 distance: CatalogueZaaps.distance(de: zaap, depuis: contexte.position), cle: zaap.cle,
-                carte: zaap.idCarte, effet: .copier(ItineraireZaap.zaap(zaap)))
+                carte: zaap.idCarte, ici: estIci((zaap.x, zaap.y), sousZone: zaap.idSousZone, contexte),
+                effet: .copier(ItineraireZaap.zaap(zaap)))
         }
     }
 
@@ -335,14 +398,16 @@ enum RecherchePalette {
     static func zaapsCommeLieux(_ contexte: ContextePalette) -> [EntreePalette] {
         zaapsTries(contexte).map { zaap in
             let sousZone = contexte.reseau.sousZone(du: zaap)
-            let vers = versCase((zaap.x, zaap.y), sousZone: sousZone,
+            var vers = versCase((zaap.x, zaap.y), sousZone: sousZone,
                                 dansLesDouze: zaap.monde == Zaap.mondeDesDouze || sousZone != nil, contexte)
+            // Sa sous-zone propre, même hors des Douze : la case homonyme d'Amakna n'est pas ici.
+            vers.ici = estIci((zaap.x, zaap.y), sousZone: zaap.idSousZone, contexte)
             return EntreePalette(
                 id: "travel:" + zaap.cle, genre: .lieu, titre: L("palette.zaap", zaap.nom(en: contexte.langue)),
                 sousTitre: zaap.zone(en: contexte.langue), etiquette: contexte.etiquettes[zaap.cle],
                 detail: Coordonnees.texte(zaap.x, zaap.y), favori: contexte.favoris.contains(zaap.cle),
-                distance: vers.distance, itineraire: itineraire(vers.trajet, contexte.langue), cle: zaap.cle,
-                carte: zaap.idCarte, effet: vers.effet)
+                distance: vers.distance, itineraire: vers.itineraire(contexte.langue), cle: zaap.cle,
+                carte: zaap.idCarte, ici: vers.ici, effet: vers.effet)
         }
     }
 
@@ -369,16 +434,24 @@ enum RecherchePalette {
             let vers = versLieu(lieu, contexte)
             // Un donjon déplie sa fiche, qui copie aussi son trajet.
             let donjon = lieu.categorie == CategorieLieu.donjon.rawValue ? contexte.donjons?.donjon(de: lieu) : nil
-            let lieuDit = [lieu.sousZone(en: contexte.langue), lieu.zone(en: contexte.langue)]
-                .compactMap { $0 }.joined(separator: " · ")
+            let lieuDit = avecNiveau([lieu.sousZone(en: contexte.langue), lieu.zone(en: contexte.langue)]
+                .compactMap { $0 }.joined(separator: " · "), donjon)
             return EntreePalette(
                 id: lieu.cle, genre: .lieu, titre: lieu.nom(en: contexte.langue), sousTitre: lieuDit,
                 etiquette: contexte.etiquettes[lieu.cle], detail: Coordonnees.texte(lieu.x, lieu.y),
                 favori: contexte.favoris.contains(lieu.cle), distance: vers.distance,
-                itineraire: itineraire(vers.trajet, contexte.langue), categorie: lieu.categorie, cle: lieu.cle,
+                itineraire: vers.itineraire(contexte.langue), categorie: lieu.categorie, cle: lieu.cle,
                 carte: lieu.idCarte, pictogramme: lieu.gfx,
-                interieur: contexte.interieurs.contient(lieu.idCarte), effet: donjon.map { .donjon($0.id) } ?? vers.effet)
+                interieur: contexte.interieurs.contient(lieu.idCarte), ici: vers.ici,
+                effet: donjon.map { .donjon($0.id) } ?? vers.effet)
         }
+    }
+
+    /// Le sous-titre d'un donjon ou de l'un de ses boss, suivi du niveau conseillé du donjon : la fiche ne
+    /// le redit pas, et il se distingue ainsi de celui du boss.
+    static func avecNiveau(_ dit: String, _ donjon: Donjon?) -> String {
+        guard let niveau = donjon?.niveau else { return dit }
+        return [dit, L("donjon.niveau", niveau)].filter { !$0.isEmpty }.joined(separator: " · ")
     }
 
     /// Les boss de donjon : leur nom déplie la fiche de leur donjon, la même
@@ -388,7 +461,7 @@ enum RecherchePalette {
         return donjons.nomsBoss.compactMap { id, noms in
             guard let nom = Lieu.traduit(noms, contexte.langue), let donjon = donjons.donjon(boss: id) else { return nil }
             let lieu = Lieu.traduit(donjon.noms, contexte.langue) ?? "?"
-            return EntreePalette(id: "boss:\(id)", genre: .monstre, titre: nom, sousTitre: L("palette.boss", lieu),
+            return EntreePalette(id: "boss:\(id)", genre: .monstre, titre: nom, sousTitre: avecNiveau(L("palette.boss", lieu), donjon),
                                  effet: .donjon(donjon.id))
         }
         .alphabetiques()
@@ -485,36 +558,43 @@ enum RecherchePalette {
         .alphabetiques()
     }
 
-    /// Un PNJ par ligne, quel que soit le nombre de cases où les quêtes le placent. Sa ligne dit sa
-    /// position habituelle (celle que le plus de quêtes citent), stable quand le perso bouge ; le
-    /// rang suit la plus proche de ses positions. Plusieurs positions : ↵ les déplie en cartes
-    /// (`positions(de:)`). `seulement` : ces PNJ (`PNJ.cle`).
+    /// Un PNJ par ligne, quel que soit le nombre de cases où les quêtes le placent, ses homonymes de la
+    /// même sous-zone réunis (`HomonymesPNJ`). Sa ligne dit sa position habituelle (celle que le plus de
+    /// quêtes citent), stable quand le perso bouge ; le rang suit la plus proche de ses positions.
+    /// Plusieurs positions : ↵ les déplie en cartes (`positions(de:)`). `seulement` : ces PNJ (`PNJ.cle`).
     static func pnjs(_ contexte: ContextePalette, seulement: Set<String>? = nil) -> [EntreePalette] {
         guard let quetes = contexte.quetes else { return [] }
-        let choisis = seulement.map { cles in quetes.pnjs.filter { cles.contains($0.cle) } } ?? quetes.pnjs
-        return choisis.compactMap { pnj in
+        let fusionnes = HomonymesPNJ.fusionner(quetes.pnjs, langue: contexte.langue)
+        let choisis = seulement.map { cles in fusionnes.filter { !cles.isDisjoint(with: $0.cles) } } ?? fusionnes
+        return choisis.compactMap { fusionne in
+            let pnj = fusionne.pnj
             guard let habituel = pnj.passages.first else { return nil }
             let titre = Lieu.traduit(pnj.noms, contexte.langue) ?? "?"
             let lieu = lieuDit(habituel, quetes, contexte) ?? L("palette.pnj")
             let trajets = pnj.passages.map { versCase($0, contexte) }
+            // La clé d'un homonyme déjà favori ou étiqueté : ⌘D et ⌘E le retrouvent.
+            let cle = fusionne.cles.first { contexte.favoris.contains($0) || contexte.etiquettes[$0] != nil } ?? pnj.cle
+            let etiquette = contexte.etiquettes[cle]
+            let favori = contexte.favoris.contains(cle)
             if pnj.passages.count > 1 {
                 return EntreePalette(id: pnj.cle, genre: .pnj, titre: titre, sousTitre: lieu,
                                      autresLieux: pnj.passages.dropFirst().compactMap { lieuDit($0, quetes, contexte) }
                                          .joined(separator: " "),
-                                     etiquette: contexte.etiquettes[pnj.cle],
-                                     detail: L("palette.pnj.positions", nombre: pnj.passages.count, pnj.passages.count),
-                                     favori: contexte.favoris.contains(pnj.cle), distance: trajets.compactMap(\.distance).min(),
-                                     cle: pnj.cle, pnj: pnj.id, effet: .positions(pnj.id))
+                                     etiquette: etiquette,
+                                     compte: L("palette.pnj.positions", nombre: pnj.passages.count, pnj.passages.count),
+                                     favori: favori, distance: trajets.compactMap(\.distance).min(),
+                                     cle: cle, pnj: pnj.id, effet: .positions(pnj.id))
             }
             let vers = trajets[0]
             let nombre = habituel.quetes.count
             return EntreePalette(id: pnj.cle, genre: .pnj, titre: titre,
                                  sousTitre: L("palette.pnj.cite", nombre: nombre, lieu, nombre),
-                                 etiquette: contexte.etiquettes[pnj.cle],
+                                 etiquette: etiquette,
                                  detail: Coordonnees.texte(habituel.position.x, habituel.position.y),
-                                 favori: contexte.favoris.contains(pnj.cle), distance: vers.distance,
-                                 itineraire: itineraire(vers.trajet, contexte.langue), cle: pnj.cle, carte: habituel.carte,
-                                 interieur: contexte.interieurs.contient(habituel.carte), pnj: pnj.id, effet: vers.effet)
+                                 favori: favori, distance: vers.distance,
+                                 itineraire: vers.itineraire(contexte.langue), cle: cle, carte: habituel.carte,
+                                 interieur: contexte.interieurs.contient(habituel.carte), pnj: pnj.id, ici: vers.ici,
+                                 effet: vers.effet)
         }
     }
 
@@ -528,7 +608,7 @@ enum RecherchePalette {
 
     /// Ce qu'une entrée qui mène à ce passage de PNJ montre et fait.
     static func versCase(_ passage: PNJ.Passage, _ contexte: ContextePalette)
-        -> (trajet: ItineraireZaap.Trajet?, distance: Int?, effet: EntreePalette.Effet) {
+        -> VersCase {
         versCase((passage.position.x, passage.position.y), sousZone: passage.sousZone,
                  dansLesDouze: passage.dansLesDouze(contexte.reseau), contexte)
     }
@@ -568,13 +648,14 @@ enum RecherchePalette {
         let vers = versCase(cible, sousZone: nil, dansLesDouze: true, contexte)
         return EntreePalette(id: "case:\(cible.x),\(cible.y)", genre: .lieu,
                              titre: L("palette.allerEn", Coordonnees.texte(cible.x, cible.y)),
-                             distance: vers.distance, itineraire: itineraire(vers.trajet, contexte.langue), effet: vers.effet)
+                             distance: vers.distance, itineraire: vers.itineraire(contexte.langue), ici: vers.ici,
+                             effet: vers.effet)
     }
 
     /// Ce qu'une entrée vers ce lieu montre et fait : sa ligne, et l'entrée
     /// d'un donjon dans sa fiche.
     static func versLieu(_ lieu: Lieu, _ contexte: ContextePalette)
-        -> (trajet: ItineraireZaap.Trajet?, distance: Int?, effet: EntreePalette.Effet) {
+        -> VersCase {
         versCase((lieu.x, lieu.y), sousZone: lieu.idSousZone, dansLesDouze: !contexte.reseau.horsDesDouze(lieu.idSousZone),
                  contexte)
     }
@@ -585,11 +666,29 @@ enum RecherchePalette {
     /// coordonnées recoupent celles d'Amakna, un zaap d'Amakna y mènerait à tort.
     private static func versCase(_ cible: (x: Int, y: Int), sousZone: Int?, dansLesDouze: Bool,
                                  _ contexte: ContextePalette)
-        -> (trajet: ItineraireZaap.Trajet?, distance: Int?, effet: EntreePalette.Effet) {
-        guard dansLesDouze else { return (nil, nil, .copier(ItineraireZaap.travel(vers: cible))) }
-        return (trajetVers(cible, sousZone: sousZone, contexte),
-                ItineraireZaap.aPied(depuis: contexte.position, vers: cible, dansLesDouze: true),
-                .trajet(x: cible.x, y: cible.y, sousZone: sousZone))
+        -> VersCase {
+        let ici = estIci(cible, sousZone: sousZone, contexte)
+        guard dansLesDouze else { return VersCase(trajet: nil, distance: nil, effet: .copier(ItineraireZaap.travel(vers: cible)), ici: ici) }
+        return VersCase(trajet: trajetVers(cible, sousZone: sousZone, contexte),
+                        distance: ItineraireZaap.aPied(depuis: contexte.position, vers: cible, dansLesDouze: true),
+                        effet: .trajet(x: cible.x, y: cible.y, sousZone: sousZone), ici: ici)
+    }
+
+    /// La case est celle du perso devant, dans le même monde (`QuetesIci.ici`).
+    static func estIci(_ cible: (x: Int, y: Int), sousZone: Int?, _ contexte: ContextePalette) -> Bool {
+        guard let perso = contexte.position else { return false }
+        return QuetesIci.ici(PNJ.Position(x: cible.x, y: cible.y), sousZone: sousZone, perso: perso, reseau: contexte.reseau)
+    }
+
+    /// Ce qu'une entrée qui mène à une case montre et fait.
+    struct VersCase {
+        let trajet: ItineraireZaap.Trajet?
+        let distance: Int?
+        let effet: EntreePalette.Effet
+        /// La case du perso : le repère de la ligne le dit (`EntreePalette.ici`), le trajet se tait.
+        var ici: Bool
+
+        func itineraire(_ langue: Langue) -> String? { ici ? nil : RecherchePalette.itineraire(trajet, langue) }
     }
 
     static func itineraire(_ trajet: ItineraireZaap.Trajet?, _ langue: Langue) -> String? {
@@ -636,10 +735,21 @@ enum RecherchePalette {
     private struct Retenue {
         let rang: Int
         let score: ScorePalette
+        /// Aucun mot tapé ne répond au nom : seulement au lieu (`Champs.nomRepond`).
+        let parLieu: Bool
+    }
+
+    /// Les entrées retenues par une recherche, et l'ordre qui les range.
+    private struct Retenues {
+        let exactes: [Retenue]
+        /// Les échos à une faute près, quand les exacts sont trop peu : toujours après eux.
+        let tolerees: [Retenue]
+        let avant: (Retenue, Retenue) -> Bool
     }
 
     /// Garde les entrées dont chaque mot tapé trouve un écho, puis les range :
-    /// les monstres et objets en dernier (`enDernier`), puis « Auto »
+    /// celles trouvées par leur seul lieu après toutes celles dont le nom répond
+    /// (`parLieu`), les monstres et objets en dernier (`enDernier`), puis « Auto »
     /// (`ScorePalette`), ou les zaaps devant, les favoris en tête de chaque
     /// famille et le tri explicite, à égalité la meilleure correspondance.
     /// Trop peu d'échos exacts : les échos à une faute près (`approchees`)
@@ -647,11 +757,58 @@ enum RecherchePalette {
     /// (`premiers`) : une lettre en retient des milliers.
     private static func classer(_ fiches: [Fiche], _ mots: [String], tri: TriPalette,
                                 frequentation: FrequentationPalette) -> [EntreePalette] {
+        let retenues = retenir(fiches, mots, tri: tri, frequentation: frequentation)
+        var rangees = premiers(retenues.exactes, limite, avant: retenues.avant)
+        rangees += premiers(retenues.tolerees, limite - rangees.count, avant: retenues.avant)
+        return rangees.map { fiches[$0.rang].entree }
+    }
+
+    /// Comme `classer`, au plus `parFamille` entrées de chaque famille (`FiltrePalette.famille`) — un
+    /// donjon et ses boss n'y comptent qu'une fois, `ListePalette.fusionnerDonjons` les réunit ensuite —
+    /// et ce qui reste de chacune, compté sur toutes ses correspondances.
+    private static func classer(_ fiches: [Fiche], _ mots: [String], tri: TriPalette, frequentation: FrequentationPalette,
+                                parFamille: Int) -> (entrees: [EntreePalette], restes: [FiltrePalette: Int]) {
+        let retenues = retenir(fiches, mots, tri: tri, frequentation: frequentation)
+        let avant = retenues.avant
+        func entree(_ retenue: Retenue) -> EntreePalette { fiches[retenue.rang].entree }
+        // Un donjon et ses boss : une seule clé, la ligne qu'ils deviendront.
+        func cle(_ retenue: Retenue) -> String {
+            if case .donjon(let id) = entree(retenue).effet { return "donjon:\(id)" }
+            return entree(retenue).id
+        }
+        var rangees: [Retenue] = []
+        var montrees: [FiltrePalette: Set<String>] = [:]
+        var restes: [FiltrePalette: Int] = [:]
+        for lot in [retenues.exactes, retenues.tolerees] {
+            var choisies: [Retenue] = []
+            for (famille, groupe) in Dictionary(grouping: lot, by: { FiltrePalette.famille(de: entree($0)) }) {
+                guard let famille else {
+                    choisies += premiers(groupe, limite, avant: avant)
+                    continue
+                }
+                let place = parFamille - montrees[famille, default: []].count
+                // Les donjons sont peu nombreux : triés en entier, pour compter leurs clés.
+                let tries = famille == .donjons ? groupe.sorted(by: avant) : premiers(groupe, max(place, 0), avant: avant)
+                var cles: [String] = []
+                for retenue in tries where !cles.contains(cle(retenue)) { cles.append(cle(retenue)) }
+                let gardees = Set(cles.prefix(max(place, 0)))
+                choisies += tries.filter { gardees.contains(cle($0)) }
+                montrees[famille, default: []].formUnion(gardees)
+                let total = famille == .donjons ? cles.count : groupe.count
+                restes[famille, default: 0] += total - gardees.count
+            }
+            rangees += choisies.sorted(by: avant)
+        }
+        return (rangees.map(entree), restes.filter { $0.value > 0 })
+    }
+
+    private static func retenir(_ fiches: [Fiche], _ mots: [String], tri: TriPalette,
+                                frequentation: FrequentationPalette) -> Retenues {
         let habitudes = tri == .auto ? frequentation : FrequentationPalette()
-        func retenue(_ rang: Int, _ points: Int) -> Retenue {
+        func retenue(_ rang: Int, _ points: Int, parLieu: Bool = false) -> Retenue {
             let entree = fiches[rang].entree
             return Retenue(rang: rang, score: ScorePalette(entree, correspondance: mots.isEmpty ? nil : points,
-                                                           compte: habitudes.compte(de: entree)))
+                                                           compte: habitudes.compte(de: entree)), parLieu: parLieu)
         }
         var exactes: [Retenue] = []
         exactes.reserveCapacity(fiches.count)
@@ -662,11 +819,12 @@ enum RecherchePalette {
                 points += echo
                 return echo > 0
             }
-            if garde { exactes.append(retenue(rang, points)) }
+            if garde { exactes.append(retenue(rang, points, parLieu: !mots.isEmpty && !fiche.champs.nomRepond(mots))) }
         }
         let avant = { (a: Retenue, b: Retenue) -> Bool in
             let (fa, fb) = (fiches[a.rang], fiches[b.rang])
             let (ea, eb) = (fa.entree, fb.entree)
+            if a.parLieu != b.parLieu { return b.parLieu }
             if ea.enDernier != eb.enDernier { return eb.enDernier }
             if tri == .auto { return ScorePalette.avant(a.score, b.score) ?? (a.rang < b.rang) }
             if (ea.genre == .zaap) != (eb.genre == .zaap) { return ea.genre == .zaap }
@@ -676,13 +834,10 @@ enum RecherchePalette {
             if pa != pb { return pa > pb }
             return a.rang < b.rang
         }
-        var rangees = premiers(exactes, limite, avant: avant)
-        if exactes.count < seuilTolerance {
-            let gardees = Set(exactes.map(\.rang))
-            let tolerees = approchees(fiches, mots, sauf: gardees).map { retenue($0.rang, $0.points) }
-            rangees += premiers(tolerees, limite - rangees.count, avant: avant)
-        }
-        return rangees.map { fiches[$0.rang].entree }
+        guard exactes.count < seuilTolerance else { return Retenues(exactes: exactes, tolerees: [], avant: avant) }
+        let gardees = Set(exactes.map(\.rang))
+        let tolerees = approchees(fiches, mots, sauf: gardees).map { retenue($0.rang, $0.points) }
+        return Retenues(exactes: exactes, tolerees: tolerees, avant: avant)
     }
 
     /// Les fiches dont chaque mot tapé trouve un écho, exact ou à une faute
@@ -793,6 +948,8 @@ enum RecherchePalette {
         /// qu'aucun mot tapé ne contient : un seul passage pour un mot cherché
         /// au milieu d'un autre.
         private let interieur: String
+        /// Les mots du titre seuls, bout à bout : un mot cherché au milieu du nom.
+        private let interieurDuNom: String
         /// Les mots du titre et de l'étiquette, prêts pour la borne basse de
         /// `Ressemblance` : une fiche trop loin d'un mot approché s'écarte sans
         /// calculer de distance.
@@ -820,6 +977,7 @@ enum RecherchePalette {
                 + (categorie.flatMap { RecherchePalette.motsDeCategorie[$0] } ?? [])
             cleAlphabetique = Self.cleAlphabetique(nom)
             interieur = (self.titre + self.lieu).joined(separator: "\u{1F}")
+            interieurDuNom = self.titre.joined(separator: "\u{1F}")
             forme = Ressemblance.Forme((self.titre + self.etiquette).joined(separator: " "))
         }
 
@@ -853,6 +1011,14 @@ enum RecherchePalette {
             if lieu.contains(where: { $0.hasPrefix(mot) }) { return 40 }
             if mot.count >= 3, interieur.contains(mot) { return 20 }
             return 0
+        }
+
+        /// Un mot tapé au moins répond à l'étiquette, au titre ou à un surnom — pas seulement au lieu.
+        func nomRepond(_ mots: [String]) -> Bool {
+            mots.contains { mot in
+                etiquette.contains { $0.hasPrefix(mot) } || titre.contains { $0.hasPrefix(mot) } || surnoms.contains(mot)
+                    || (mot.count >= 3 && interieurDuNom.contains(mot))
+            }
         }
 
         /// Moins que tout écho exact.

@@ -213,6 +213,27 @@ struct CapturesTests {
         }
     }
 
+    /// Une recherche à doublons sur données factices (`ContexteNidas`) : boss et donjon, PNJ homonymes,
+    /// PNJ trouvés par leur seul lieu, objets au nom du roi.
+    @Test("Capture d'une recherche à doublons", .enabled(if: dossier != nil))
+    func rechercheNidas() throws {
+        let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
+        try FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)
+        for (nom, requete, suite) in [("palette-nidas", "nidas", false), ("palette-nidas-palais", "palais", false),
+                                      ("palette-nidas-suite", "nidas", true)] {
+            let modele = PaletteModele(contexte: try ContexteNidas.contexte(), requete: requete)
+            // La ligne « de plus » choisie : son pied.
+            if suite, let rang = modele.entrees.firstIndex(where: { if case .famille = $0.effet { true } else { false } }) {
+                modele.selection = rang
+            }
+            let vue = PaletteVue(modele: modele)
+                .padding(24)
+                .background(Self.fondCapture)
+                .environment(\.colorScheme, Self.schema)
+            try ecrire(vue, vers: dossier.appending(path: nom + ".png"))
+        }
+    }
+
     /// Les états de la palette que la doc ne montre pas : coordonnées, perso, variables, listes vides.
     @Test("Captures des états de la palette", .enabled(if: dossier != nil && ProcessInfo.processInfo.environment["SYNFUS_CAPTURES_ETATS"] != nil))
     func etatsDeLaPalette() throws {
@@ -429,7 +450,7 @@ struct CapturesTests {
             SectionBoss(titre: L("boss.rappels"), depliee: .constant(true)) {} contenu: {
                 ConseilsVue(conseils: Array(conseils.prefix(2)))
             }
-            SectionBoss(titre: L("donjon.conseils", nombre: conseils.count, conseils.count), depliee: .constant(true)) {} contenu: {
+            SectionBoss(titre: L("donjon.conseils"), depliee: .constant(true)) {} contenu: {
                 ConseilsVue(conseils: conseils)
             }
         }
@@ -479,6 +500,116 @@ struct CapturesTests {
         for (nom, largeur) in [("min", RecetteVue.largeurs.lowerBound), ("max", RecetteVue.largeurs.upperBound)] {
             try ecrire(vue.environment(\.largeurPanneau, largeur), vers: dossier.appending(path: "recette-\(nom).png"))
         }
+    }
+
+    /// Une fiche de donjon aux données factices : une capture par onglet, la palette la fiche ouverte sous sa
+    /// ligne (sur l'onglet le plus court et le plus long : même hauteur), un donjon à deux boss et deux clefs.
+    @Test("Capture de la fiche d'un donjon", .enabled(if: dossier != nil))
+    func ficheDonjon() throws {
+        let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
+        try FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)
+        let api = """
+        [{"id":71,"name":{"fr":"Palais du roi Nidas"},"optimalPlayerLevel":200,"entranceMapId":112460048,
+          "requiredObjects":[{"id":14047,"quantity":1}],"bosses":[3416],"monsters":[3384,3416],"achievements":[892,893]},
+         {"id":72,"name":{"fr":"Repaire des jumeaux"},"optimalPlayerLevel":190,"entranceMapId":112460049,
+          "requiredObjects":[{"id":14048,"quantity":1},{"id":14049,"quantity":1}],"bosses":[3417,3418],"monsters":[3417,3418],"achievements":[]}]
+        """
+        let liste = Donjons(try JSONDecoder().decode([Donjon.API].self, from: Data(api.utf8)).map(Donjon.init),
+                            nomsBoss: [3416: ["fr": "Roi Nidas"], 3417: ["fr": "Jumeau de gauche"], 3418: ["fr": "Jumeau de droite"]])
+        func fiche(_ niveau: Int, _ vie: Int, _ pa: Int, _ pm: Int, _ resistances: [Int]) throws -> FicheCombat {
+            let json = """
+            {"grades":[{"grade":5,"level":\(niveau),"lifePoints":\(vie),"actionPoints":\(pa),"movementPoints":\(pm),
+             "reductionNeutral":\(resistances[0]),"reductionEarth":\(resistances[1]),"reductionFire":\(resistances[2]),
+             "reductionWater":\(resistances[3]),"reductionAir":\(resistances[4])}]}
+            """
+            return try #require(FicheCombat(try JSONDecoder().decode(FicheCombat.MonstreAPI.self, from: Data(json.utf8))))
+        }
+        let monstres: [DetailDonjon.Monstre] = [
+            .init(id: 3416, noms: ["fr": "Roi Nidas"], boss: true, fiche: try fiche(220, 22_000, 20, 5, [20, 35, -10, 15, 40])),
+            .init(id: 1, noms: ["fr": "Kamasterisk"], boss: false, fiche: try fiche(212, 6_600, 12, 5, [10, -10, 30, 25, 5])),
+            .init(id: 2, noms: ["fr": "Tournesol Affamé"], boss: false, fiche: try fiche(200, 4_200, 10, 4, [0, 15, 20, -15, 30])),
+            .init(id: 3, noms: ["fr": "Bouftou Royal"], boss: false, fiche: try fiche(190, 3_000, 9, 4, [5, 5, 5, 5, 5]))]
+        let succes: [DetailDonjon.Succes] = [
+            .init(noms: ["fr": "Roi Nidas (Spécial)"], description: ["fr": "Vaincre le Roi Nidas sans perdre un seul allié."]),
+            .init(noms: ["fr": "Roi Nidas (Statue)"], description: ["fr": "Détruire les statues avant la fin du troisième tour."]),
+            .init(noms: ["fr": "Roi Nidas (Rapide)"], description: ["fr": "Vaincre le Roi Nidas en moins de dix tours."])]
+        let clef = DetailDonjon.Clef(objet: 14047, noms: ["fr": "Clef du Palais du roi Nidas"], quantite: 1)
+        let detail = DetailDonjon(monstres: monstres, clefs: [clef], succes: succes)
+        let conseils = ["Dommage à distance.", "Entrave (PM, PO).", "Placement."].map { ConseilCombat(titre: $0, detail: "") }
+        let jumeaux = DetailDonjon(
+            monstres: [.init(id: 3417, noms: ["fr": "Jumeau de gauche"], boss: true, fiche: try fiche(190, 9_000, 12, 5, [10, 10, 10, 10, 10])),
+                       .init(id: 3418, noms: ["fr": "Jumeau de droite"], boss: true, fiche: try fiche(190, 9_500, 12, 6, [0, 20, 0, 20, 0]))],
+            clefs: [.init(objet: 14048, noms: ["fr": "Clef de gauche"], quantite: 1), .init(objet: 14049, noms: ["fr": "Clef de droite"], quantite: 1)],
+            succes: [])
+        DonjonsStore.shared.poserPourCaptures(liste, details: [71: detail, 72: jumeaux], conseils: [71: conseils])
+        let ingredients = ["Sourcil de Barbétoal", "Dent de Lévitrof", "Écaille de Frostiz", "Griffe de Dragoune",
+                           "Plume de Corbac", "Peau de Bouftou", "Laine de Mouton", "Œil de Vampyre"]
+        OuTrouverStore.shared.poserPourCaptures(objet: 14047, SourcesObjet(
+            lacheurs: [], recette: .init(metier: ["fr": "Bricoleur"], niveau: 200,
+                                         ingredients: ingredients.map { .init(noms: ["fr": $0], quantite: 2) })))
+        var contexte = ContextePalette()
+        contexte.donjons = liste
+        let reperes = Lieu(id: 1, x: -67, y: -75, monde: 1, idCarte: 112460048, idSousZone: 794,
+                           categorie: CategorieLieu.donjon.rawValue, gfx: nil, noms: ["fr": "Palais du roi Nidas"], zone: [:], sousZone: [:])
+        let repaire = Lieu(id: 2, x: -60, y: -70, monde: 1, idCarte: 112460049, idSousZone: 794,
+                           categorie: CategorieLieu.donjon.rawValue, gfx: nil, noms: ["fr": "Repaire des jumeaux"], zone: [:], sousZone: [:])
+        contexte.lieux = [reperes, repaire]
+        // L'entrée de la fiche (le bouton « Position », ↵) se lit sur les repères de la carte.
+        CarteStore.shared.poserPourCaptures(CarteDuJeu(date: .now, lieux: [reperes, repaire], sousZones: [], cases: [:]))
+        let modele = PaletteModele(contexte: contexte, filtre: .donjons)
+        let entree = try #require(modele.entrees.first { $0.effet == .donjon(71) })
+        modele.executer(entree)
+        func ecrireFiche(_ nom: String, id: Int = 71) throws {
+            let vue = FicheDonjonVue(id: id, modele: modele)
+                .padding(Jetons.espace3)
+                .frame(width: Jetons.largeurPalette, alignment: .leading)
+                .font(Jetons.typoMeta.font)
+                .surfaceFlottante()
+                .padding(24)
+                .environment(\.colorScheme, Self.schema)
+            try ecrire(vue, vers: dossier.appending(path: "fiche-\(nom).png"))
+        }
+        func ecrirePalette(_ nom: String) throws {
+            let vue = PaletteVue(modele: modele)
+                .padding(24)
+                .background(Self.fondCapture)
+                .environment(\.colorScheme, Self.schema)
+            try ecrire(vue, vers: dossier.appending(path: "palette-fiche-\(nom).png"))
+        }
+        #expect(modele.fiche.onglets == [.boss, .conseils, .monstres, .succes, .clef(objet: 14047)])
+        #expect(modele.ongletCourant == .boss && modele.surOnglets)
+        let noms: [OngletFiche: String] = [.boss: "boss", .conseils: "conseils", .monstres: "monstres", .succes: "succes",
+                                          .clef(objet: 14047): "clef"]
+        for onglet in modele.fiche.onglets {
+            try ecrireFiche(try #require(noms[onglet]))
+            // → passe à l'onglet suivant, sans Entrée.
+            #expect(modele.lateral(1))
+        }
+        #expect(modele.ongletCourant == .clef(objet: 14047))
+        modele.choisir(onglet: .boss)
+        try ecrirePalette("boss")
+        modele.choisir(onglet: .monstres)
+        try ecrirePalette("monstres")
+        // ← sur le premier onglet replie la fiche.
+        modele.choisir(onglet: .boss)
+        #expect(modele.lateral(-1) && modele.deplie == nil)
+
+        let deux = try #require(modele.entrees.first { $0.effet == .donjon(72) })
+        modele.executer(deux)
+        #expect(modele.fiche.onglets == [.boss, .clef(objet: 14048), .clef(objet: 14049)])
+        try ecrireFiche("deux-boss", id: 72)
+        try ecrirePalette("deux-boss")
+
+        // Une ligne de boss trouvée par recherche, la plus chargée : sous-titre long et trois boutons.
+        let recherche = PaletteModele(contexte: contexte, requete: "nidas", filtre: .donjons)
+        let boss = try #require(recherche.entrees.first { $0.id == "boss:3416" })
+        recherche.executer(boss)
+        #expect(recherche.deplie == boss.id && recherche.fiche.principale != nil)
+        let vue = PaletteVue(modele: recherche)
+            .padding(24)
+            .background(Self.fondCapture)
+            .environment(\.colorScheme, Self.schema)
+        try ecrire(vue, vers: dossier.appending(path: "palette-fiche-recherche.png"))
     }
 
     @Test("Captures des réglages", .enabled(if: dossier != nil))

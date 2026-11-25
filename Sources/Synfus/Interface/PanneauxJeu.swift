@@ -338,8 +338,9 @@ struct EnTetePanneau<Titre: View, Boutons: View>: View {
 }
 
 /// La forme des panneaux posés sur le jeu (le bandeau `.sw .bar` du SDS) : l'en-tête dans un bandeau
-/// d'un bord à l'autre, voilé de la page (`UsageDuVerre.clavier`) et fermé d'un filet, puis le corps
-/// sur une plaque pleine à `espace2` du verre. `plie` : le bandeau seul. Le corps ne pousse jamais
+/// d'un bord à l'autre — le verre en trois couches du SDS : le bandeau porte du texte, voilé de la
+/// page à `verreOpaciteBarre`, fermé du filet du verre (`Color.traitSurVerre`) —, puis le corps sur
+/// une plaque pleine à `espace2` du verre. `plie` : le bandeau seul. Le corps ne pousse jamais
 /// le panneau : plus large que la place, il est rogné à sa plaque — sinon tout le contenu
 /// s'élargissait et la fenêtre en rognait le verre et la fin de l'en-tête.
 struct CadrePanneau<EnTete: View, Corps: View>: View {
@@ -352,9 +353,9 @@ struct CadrePanneau<EnTete: View, Corps: View>: View {
         VStack(alignment: .leading, spacing: 0) {
             enTete
                 .padding(.vertical, Jetons.espace1)
-                .background(UsageDuVerre.clavier.teinte(c).couleur)
+                .background(c.fondFenetre.voile(Jetons.verreOpaciteBarre).couleur)
                 .overlay(alignment: .bottom) {
-                    if !plie { Color.jeton(\.filet).frame(height: Jetons.epaisseurFilet) }
+                    if !plie { Color.traitSurVerre.frame(height: Jetons.epaisseurFilet) }
                 }
             if !plie {
                 corps

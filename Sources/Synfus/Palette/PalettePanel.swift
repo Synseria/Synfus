@@ -12,9 +12,9 @@ enum CaretPalette {
 /// Un panneau sans cadre qui prend le clavier sans activer Synfus : Dofus
 /// reste l'app active, et le texte copié se colle dès la palette fermée.
 /// Flèches, Entrée, Tab (filtre), Échap, ⌘E (étiquette), ⌘D (favori) et ⌘T
-/// (tri) vont au modèle, le reste au champ — ← et → aussi, hors de la grille ;
-/// → ne va au modèle que le caret au bout du texte, sans sélection ni ⇧ : sinon il
-/// déplace le caret ou étend la sélection.
+/// (tri) vont au modèle, le reste au champ — ← et → aussi, hors de la grille
+/// (onglets d'une fiche, positions d'un PNJ) ; → ne va au modèle que le caret au
+/// bout du texte, sans sélection ni ⇧ : sinon il déplace le caret ou étend la sélection.
 private final class PanneauPalette: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }

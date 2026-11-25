@@ -3,7 +3,7 @@ import Combine
 import Observation
 import SwiftUI
 
-/// Le thème courant (thème × nuance), fourni aux vues SwiftUI et aux panneaux AppKit : le seul code
+/// Le thème courant (thème et son fond × nuance), fourni aux vues SwiftUI et aux panneaux AppKit : le seul code
 /// de couleur hors de `Jetons`. Un rôle se lit par son chemin (`Color.jeton(\.plaque)`), jamais par
 /// une liste recopiée ici. Sans nuance choisie, la couleur est dynamique — Jour ou Pénombre se décide
 /// au dessin — et, lue dans un `body`, abonne la vue au réglage : un changement se redessine partout.
@@ -43,10 +43,9 @@ enum ThemeCourant {
     static func couleurs(_ theme: Jetons.Theme, _ nuance: Jetons.Nuance) -> Jetons.Couleurs {
         let cle = Cle(theme: theme, nuance: nuance)
         if let connues = calculees[cle] { return connues }
-        // Les coloris restent (44 au plus) ; d'une couleur à soi, seule la dernière.
-        if case .personnalise = theme {
-            calculees = calculees.filter { if case .personnalise = $0.key.theme { $0.key.theme == theme } else { true } }
-        }
+        // Les thèmes nommés restent (coloris × fonds × nuances : quelques centaines au plus) ; d'une
+        // couleur à soi, primaire ou fond, seule la dernière : le curseur en fait une à chaque pas.
+        if !theme.estNomme { calculees = calculees.filter { $0.key.theme.estNomme || $0.key.theme == theme } }
         let neuves = Jetons.Nuancier.couleurs(theme, nuance)
         calculees[cle] = neuves
         return neuves

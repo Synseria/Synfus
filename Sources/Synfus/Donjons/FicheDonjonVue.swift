@@ -1,10 +1,9 @@
 import SwiftUI
 
 /// La fiche d'un donjon, dépliée sous lui ou sous l'un de ses boss dans la
-/// palette : niveau, une rangée de cartes que le clavier parcourt
-/// (`CartesFiche`) — position, aide au combat, guide, conseils, monstres, succès, clef —, ce
-/// qu'elles déplient, puis les boss à leur plus haut grade. Le détail et les
-/// conseils se téléchargent à l'ouverture ; entrée et guide n'attendent pas.
+/// palette : des onglets (`OngletsFiche`) — boss, conseils, monstres, succès,
+/// chaque clef — dont un seul se montre, que ←/→ changent. Le détail et les
+/// conseils se téléchargent à l'ouverture ; l'onglet des boss dit l'attente.
 struct FicheDonjonVue: View {
     let id: Int
     @ObservedObject var modele: PaletteModele
@@ -12,44 +11,64 @@ struct FicheDonjonVue: View {
 
     private var langue: Langue { L10n.courante.langue }
 
-    /// L'identifiant d'une carte dans la liste : la palette y fait défiler.
-    static func ancre(_ action: ActionFiche) -> String { "fiche:\(action)" }
-
     var body: some View {
         if let donjon = store.donjons?.donjon(id: id) {
             let detail = store.details[id]
-            let actions = modele.cartes.actions
+            let onglets = modele.fiche.onglets
             VStack(alignment: .leading, spacing: Jetons.espace2) {
-                if let niveau = donjon.niveau {
-                    Text(L("donjon.niveau", niveau)).font(Jetons.typoMicro.font)
+                if !onglets.isEmpty {
+                    SegmenteIcones(titre: L("donjon.onglets"),
+                                   options: onglets.map { option($0, detail) },
+                                   selection: modele.ongletCourant) { modele.choisir(onglet: $0) }
+                        // Un peu d'air sous la ligne : collé, le sélecteur se lisait comme sa suite.
+                        .padding(.top, Jetons.espace1)
                 }
-                // Sur une ligne : faute de place (beaucoup de clefs), elle défile.
-                ViewThatFits(in: .horizontal) {
-                    rangee(actions, detail)
-                    ScrollView(.horizontal, showsIndicators: false) { rangee(actions, detail) }
-                }
-                ForEach(actions.filter { modele.ouvertes.contains($0) }, id: \.self) { action in
-                    ouverte(action, detail).padding(.leading, Jetons.espace3)
-                }
-                if let detail {
-                    ForEach(detail.monstres.filter(\.boss), id: \.id) { monstre in ligne(monstre) }
-                } else {
-                    attente(donjon)
-                }
+                contenu(modele.ongletCourant, donjon, detail)
             }
             .onAppear { store.demander(donjon) }
         }
     }
 
-    private func rangee(_ actions: [ActionFiche], _ detail: DetailDonjon?) -> some View {
-        HStack(spacing: Jetons.espace1) {
-            ForEach(actions, id: \.self) { action in
-                carte(action, detail)
-                    .fixedSize()
-                    .id(Self.ancre(action))
-                    .onTapGesture { modele.cliquer(action) }
-                    .curseurDeClic(true)
+    private func option(_ onglet: OngletFiche, _ detail: DetailDonjon?) -> SegmenteIcones<OngletFiche>.Option {
+        switch onglet {
+        case .boss: return .init(valeur: onglet, titre: L("donjon.boss"), symbole: "crown")
+        case .conseils: return .init(valeur: onglet, titre: L("donjon.conseils"), symbole: "lightbulb", aide: L("donjon.conseils.aide"))
+        case .monstres:
+            let nombre = detail?.monstres.filter { !$0.boss }.count ?? 0
+            return .init(valeur: onglet, titre: L("donjon.monstres", nombre: nombre, nombre), symbole: "pawprint")
+        case .succes:
+            let nombre = detail?.succes.count ?? 0
+            return .init(valeur: onglet, titre: L("donjon.succes", nombre: nombre, nombre), symbole: "trophy")
+        case .clef(let objet):
+            // Plusieurs clefs : numérotées, leur nom en infobulle — un nom de clef ne tient pas dans un cran.
+            let rang = (detail?.clefs.firstIndex { $0.objet == objet } ?? 0) + 1
+            let clef = detail?.clefs.first { $0.objet == objet }
+            return .init(valeur: onglet, titre: (detail?.clefs.count ?? 0) > 1 ? L("donjon.clef.numero", rang) : L("donjon.clef"), symbole: "key",
+                         aide: L("donjon.clef.aide", clef?.quantite ?? 1, clef.flatMap { Lieu.traduit($0.noms, langue) } ?? "?"))
+        }
+    }
+
+    @ViewBuilder
+    private func contenu(_ onglet: OngletFiche?, _ donjon: Donjon, _ detail: DetailDonjon?) -> some View {
+        switch onglet {
+        case .boss:
+            if let detail {
+                ForEach(detail.monstres.filter(\.boss), id: \.id) { monstre in ligne(monstre) }
+            } else {
+                attente(donjon)
             }
+        case .conseils:
+            ConseilsVue(conseils: store.conseils[id] ?? [])
+        case .monstres:
+            TableauMonstresVue(monstres: detail?.monstres.filter { !$0.boss } ?? [])
+        case .succes:
+            SuccesVue(succes: detail?.succes ?? [])
+        case .clef(let objet):
+            OuTrouverVue(sujet: .objet(objet), metriques: .compact,
+                         nom: detail?.clefs.first { $0.objet == objet }.flatMap { Lieu.traduit($0.noms, langue) },
+                         nommer: true)
+        case nil:
+            EmptyView()
         }
     }
 
@@ -72,123 +91,46 @@ struct FicheDonjonVue: View {
         .foregroundStyle(Color.jeton(\.encre2))
     }
 
-    private func carte(_ action: ActionFiche, _ detail: DetailDonjon?) -> some View {
-        CarteAction(icone: icone(action), titre: titre(action, detail),
-                    ouverte: action.sePlie ? modele.ouvertes.contains(action) : nil, choisie: modele.carte == action)
-            .help(aide(action, detail) ?? "")
-    }
-
-    private func icone(_ action: ActionFiche) -> String {
-        switch action {
-        case .entree: return "arrow.triangle.turn.up.right.diamond"
-        case .aide: return BoutonBarre.boss.symbole
-        case .guide: return "book"
-        case .clef: return "key"
-        case .conseils: return "lightbulb"
-        case .monstres: return "pawprint"
-        case .succes: return "trophy"
-        }
-    }
-
-    private func titre(_ action: ActionFiche, _ detail: DetailDonjon?) -> String {
-        switch action {
-        case .entree: return L("donjon.entree")
-        case .aide(let boss):
-            // Plusieurs boss : chacun la sienne, à son nom.
-            let donjons = store.donjons
-            guard (donjons?.donjon(id: id)?.boss.count ?? 1) > 1 else { return L("donjon.aide") }
-            return L("donjon.aide.boss", BossVue.nom(boss, donjons: donjons, garde: nil))
-        case .guide: return L("donjon.guide")
-        case .clef: return L("donjon.clef")
-        case .conseils:
-            let nombre = store.conseils[id]?.count ?? 0
-            return L("donjon.conseils", nombre: nombre, nombre)
-        case .monstres:
-            let nombre = detail?.monstres.filter { !$0.boss }.count ?? 0
-            return L("donjon.monstres", nombre: nombre, nombre)
-        case .succes:
-            let nombre = detail?.succes.count ?? 0
-            return L("donjon.succes", nombre: nombre, nombre)
-        }
-    }
-
-    /// Le détail qui allongerait la carte : le zaap retenu est déjà sur la
-    /// ligne et dans le pied, le nom de la clef dans son « où trouver ».
-    private func aide(_ action: ActionFiche, _ detail: DetailDonjon?) -> String? {
-        switch action {
-        case .entree(let lieu): return L("donjon.entree.aide", Coordonnees.texte(lieu.x, lieu.y))
-        case .guide: return L("boss.guide")
-        case .clef(let objet):
-            let clef = detail?.clefs.first { $0.objet == objet }
-            return L("donjon.clef.aide", clef?.quantite ?? 1, clef.flatMap { Lieu.traduit($0.noms, langue) } ?? "?")
-        case .conseils: return L("donjon.conseils.aide")
-        case .aide: return L("donjon.aide.aide")
-        case .monstres, .succes: return nil
-        }
-    }
-
-    @ViewBuilder
-    private func ouverte(_ action: ActionFiche, _ detail: DetailDonjon?) -> some View {
-        switch action {
-        case .clef(let objet):
-            OuTrouverVue(sujet: .objet(objet), metriques: .compact,
-                         nom: detail?.clefs.first { $0.objet == objet }.flatMap { Lieu.traduit($0.noms, langue) })
-        case .conseils:
-            VStack(alignment: .leading, spacing: Jetons.espace1) { ConseilsVue(conseils: store.conseils[id] ?? []) }
-        case .monstres:
-            ForEach(detail?.monstres.filter { !$0.boss } ?? [], id: \.id) { monstre in ligne(monstre) }
-        case .succes:
-            ForEach(Array((detail?.succes ?? []).enumerated()), id: \.offset) { _, succes in
-                Text("• " + (Lieu.traduit(succes.noms, langue) ?? "?"))
-                    .font(Jetons.typoMeta.font)
-                    .help(Lieu.traduit(succes.description, langue) ?? "")
-            }
-        case .entree, .guide, .aide: EmptyView()
-        }
-    }
-
     private func ligne(_ monstre: DetailDonjon.Monstre) -> some View {
-        VStack(alignment: .leading, spacing: Jetons.espace1) {
-            HStack(spacing: Jetons.espace1) {
-                if monstre.boss { Image(systemName: "crown").foregroundStyle(Color.jeton(\.accentTexte)) }
-                Text(Lieu.traduit(monstre.noms, langue) ?? "?").font((monstre.boss ? Jetons.typoMicro : Jetons.typoMeta).font)
-            }
-            FicheCombatVue(fiche: monstre.fiche)
-        }
+        FicheCombatVue(fiche: monstre.fiche, nom: Lieu.traduit(monstre.noms, langue) ?? "?")
     }
 }
 
-/// Une carte d'action de fiche : symbole, titre, chevron quand elle déplie. Choisie au clavier, elle prend la teinte pleine
-/// de la ligne choisie ; ouverte, seulement un lisere et un titre teintés.
-private struct CarteAction: View {
-    let icone: String
-    let titre: String
-    /// `nil` : elle agit plutôt que de déplier.
-    let ouverte: Bool?
-    let choisie: Bool
+/// Les actions de la fiche d'un donjon, en boutons-icônes sur sa ligne dépliée : la position (ce que ↵
+/// fait), l'aide au combat — un menu quand le donjon a plusieurs boss —, le guide.
+struct ActionsFicheDonjon: View {
+    @ObservedObject var modele: PaletteModele
+    /// Le nom des boss arrive avec la liste des donjons.
+    @ObservedObject private var store = DonjonsStore.shared
 
     var body: some View {
-        HStack(spacing: Jetons.espace1) {
-            Image(systemName: icone)
-                .foregroundStyle(choisie || ouverte == true ? Color.jeton(\.accentTexte) : Color.jeton(\.encre2))
-            Text(titre)
-                .foregroundStyle(ouverte == true && !choisie ? Color.jeton(\.accentTexte) : Color.jeton(\.encre))
-                .lineLimit(1)
-            if let ouverte {
-                Image(systemName: ouverte ? "chevron.down" : "chevron.right")
-                    .font(Jetons.typoMicro.font)
-                    .foregroundStyle(Color.jeton(\.encre2))
+        let actions = modele.fiche.actions
+        let aides = actions.compactMap { action -> CibleBoss? in if case .aide(let boss) = action { boss } else { nil } }
+        HStack(spacing: 0) {
+            ForEach(actions.filter { if case .entree = $0 { true } else { false } }, id: \.self, content: bouton)
+            if aides.count > 1 {
+                MenuIcone(titre: L("donjon.aide"), symbole: BoutonBarre.boss.symbole) {
+                    ForEach(aides, id: \.self) { boss in
+                        Button(BossVue.nom(boss, donjons: store.donjons, garde: nil)) { modele.cliquer(.aide(boss)) }
+                    }
+                }
+                .focusable(false)
+            } else {
+                ForEach(aides, id: \.self) { bouton(.aide($0)) }
             }
+            ForEach(actions.filter { if case .guide = $0 { true } else { false } }, id: \.self, content: bouton)
         }
-        .font(Jetons.typoMeta.font)
-        .padding(.horizontal, Jetons.espace2)
-        .padding(.vertical, Jetons.espace1)
-        .fondEtat(choisie ? .choisi : .repos)
-        .overlay(RoundedRectangle(cornerRadius: Jetons.rayon1, style: .continuous)
-            .strokeBorder(choisie ? Color.jeton(\.accent) : ouverte == true ? Color.jeton(\.accentTexte) : Color.jeton(\.filet),
-                          lineWidth: choisie ? Jetons.epaisseurFocus : Jetons.epaisseurFilet))
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(choisie ? [.isButton, .isSelected] : .isButton)
     }
 
+    private func bouton(_ action: ActionFiche) -> some View {
+        let (titre, symbole): (String, String) = switch action {
+        case .entree: (L("donjon.entree"), "arrow.triangle.turn.up.right.diamond")
+        case .aide: (L("donjon.aide"), BoutonBarre.boss.symbole)
+        case .guide: (L("donjon.guide"), "book")
+        }
+        return Button { modele.cliquer(action) } label: { Label(titre, systemImage: symbole) }
+            .buttonStyle(BoutonIcone())
+            .focusable(false)
+            .aide(titre)
+    }
 }
