@@ -35,6 +35,13 @@ final class OuTrouverStore: ObservableObject {
         cache.objets[String(id)]?.valeur
     }
 
+    /// Les captures de la documentation : un objet connu, sans disque ni réseau.
+    func poserPourCaptures(objet id: Int, _ sources: SourcesObjet) {
+        var nouveau = cache
+        nouveau.ranger(objet: id, sources, le: Date())
+        cache = nouveau
+    }
+
     /// Demande le sujet à DofusDB s'il manque ou a vieilli, une fois le
     /// disque relu.
     func demander(_ sujet: OuTrouver.Sujet) {
