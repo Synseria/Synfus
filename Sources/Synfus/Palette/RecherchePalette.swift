@@ -163,6 +163,8 @@ struct EntreePalette: Equatable, Identifiable, Sendable {
     var etiquette: String?
     /// À droite : coordonnées, commande copiée.
     var detail: String?
+    /// À droite aussi, mais un texte et non des coordonnées : « 3 positions ».
+    var compte: String?
     var favori = false
     /// Les cartes depuis le perso devant, à pied, quand elles veulent dire
     /// quelque chose : départage deux résultats aussi bons. Pas celles du
@@ -511,7 +513,7 @@ enum RecherchePalette {
                                      autresLieux: pnj.passages.dropFirst().compactMap { lieuDit($0, quetes, contexte) }
                                          .joined(separator: " "),
                                      etiquette: contexte.etiquettes[pnj.cle],
-                                     detail: L("palette.pnj.positions", nombre: pnj.passages.count, pnj.passages.count),
+                                     compte: L("palette.pnj.positions", nombre: pnj.passages.count, pnj.passages.count),
                                      favori: contexte.favoris.contains(pnj.cle), distance: trajets.compactMap(\.distance).min(),
                                      cle: pnj.cle, pnj: pnj.id, effet: .positions(pnj.id))
             }
