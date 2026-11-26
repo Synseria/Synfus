@@ -217,28 +217,14 @@ struct SchemaVisee: View {
         return (a, CGPoint(x: taille.width / 2, y: taille.height / 2))
     }
 
-    private static func point(_ x: Int, _ y: Int, a: CGFloat, centre: CGPoint) -> CGPoint {
-        CGPoint(x: centre.x + CGFloat(x - y) * a, y: centre.y + CGFloat(x + y) * a / 2)
-    }
-
     private static func losange(_ x: Int, _ y: Int, a: CGFloat, centre: CGPoint) -> Path {
-        let p = Self.point(x, y, a: a, centre: centre)
-        var chemin = Path()
-        chemin.move(to: CGPoint(x: p.x, y: p.y - a / 2))
-        chemin.addLine(to: CGPoint(x: p.x + a, y: p.y))
-        chemin.addLine(to: CGPoint(x: p.x, y: p.y + a / 2))
-        chemin.addLine(to: CGPoint(x: p.x - a, y: p.y))
-        chemin.closeSubpath()
-        return chemin
+        Path { $0.addLines(GrilleIso.losange(x, y, a: a, centre: centre)); $0.closeSubpath() }
     }
 
     /// La case sous un point de la grille, bornée au rayon dessiné.
     private static func cellule(de localisation: CGPoint, taille: CGSize) -> (x: Int, y: Int) {
         let (a, centre) = Self.geometrie(taille)
-        let u = (localisation.x - centre.x) / a        // x − y
-        let v = (localisation.y - centre.y) / (a / 2)  // x + y
-        let x = Int(((u + v) / 2).rounded())
-        let y = Int(((v - u) / 2).rounded())
+        let (x, y) = GrilleIso.caseSous(localisation, a: a, centre: centre)
         return (max(-Self.rayon, min(Self.rayon, x)), max(-Self.rayon, min(Self.rayon, y)))
     }
 
@@ -258,8 +244,8 @@ struct SchemaVisee: View {
                         with: .color(Color.jeton(\.danger)), lineWidth: Jetons.epaisseurFocus)
         if visee != cible {
             var trait = Path()
-            trait.move(to: Self.point(visee.x, visee.y, a: a, centre: centre))
-            trait.addLine(to: Self.point(cible.x, cible.y, a: a, centre: centre))
+            trait.move(to: GrilleIso.projeter(visee.x, visee.y, a: a, centre: centre))
+            trait.addLine(to: GrilleIso.projeter(cible.x, cible.y, a: a, centre: centre))
             contexte.stroke(trait, with: .color(Color.jeton(\.encre2)),
                             style: StrokeStyle(lineWidth: Jetons.epaisseurFilet, dash: [Jetons.epaisseurFocus, Jetons.epaisseurFocus]))
         }

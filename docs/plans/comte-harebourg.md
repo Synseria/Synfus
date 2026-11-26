@@ -156,8 +156,9 @@ diagonale ↘ » ; grille dessinée par-dessus, réglage fin (décalage, `a`) ; 
 - **A0. Captures** (geste de l'utilisateur) : en combat, son tour, sort préparé, pointeur sur une
   case, en fenêtré 1728 × 1084 ; la même en plein écran ; caméra zoomée ; option « grille » du jeu
   allumée et éteinte. Mesures (`a`, origine) notées dans `aide-boss`.
-- **A1. `GrilleIso` + extraction de `SchemaVisee` + `caseAtteinte`.** Fin : tests verts, schéma
-  du panneau identique.
+- **A1 (fait).** `GrilleIso` (projection, case sous un point, losange), `SchemaVisee` branché
+  dessus. Le reste de la struct (origine, rapport, `depuis`) et `caseAtteinte` arrivent avec leur
+  appelant, en A2.
 - **A2. Pointeur, `ViseeHarebourg`, raccourci, réglages, `ViseePanel`, calibrage à deux clics.**
   Fin en combat réel : pivot marqué, losange qui suit le pointeur, clics qui passent, calque masqué
   hors du tour, hors du contenu ou au changement de rapport ; raison d'inactivité au Diagnostic.
