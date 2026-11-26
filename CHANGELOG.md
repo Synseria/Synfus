@@ -3,6 +3,35 @@
 Une section par version, `## X.Y.Z — AAAA-MM-JJ` : la release GitHub de `vX.Y.Z` en reprend le
 contenu (`Tools/notes-de-version.sh`), et `sh build.sh --publish` refuse une version absente d'ici.
 
+## 0.15.0 — 2026-11-26
+
+### Nouveautés
+
+- **macOS 26 minimum.** Une version qui exige un macOS plus récent que celui du Mac se dit
+  (« nécessite macOS N ») sans se proposer ni s'installer.
+- **Nouvelle apparence**, commune aux apps Synseria : un thème continu — teinte, fond accordé et
+  clarté — dans Réglages → Thème (les réglages d'avant sont repris). Fenêtre de réglages, onglets
+  Général et À propos communs aux apps.
+- **Barre à une rangée** : une pilule d'équipe et son menu, les outils en boutons-icônes.
+- **Palette** : une seule rangée de puces ; zaaps en cartes sur l'image de la carte du jeu ;
+  l'Accueil montre trois lignes par famille, le reste d'une touche ; un donjon et ses boss, ou des
+  PNJ homonymes d'une même sous-zone, tiennent en une ligne.
+- **Fiche d'un donjon** en onglets dans la palette : boss juste sous l'en-tête, monstres en
+  tableau, ingrédients de la clef copiables, chaque succès dit ce qu'il demande.
+- **Panneau Recette** épinglable à côté du jeu ; un clic copie le nom d'un ingrédient.
+- **Chasse au trésor** : flèches des étapes mieux lues (aucune direction posée si elle n'est pas
+  sûre) ; panneau compact avec boussole, historique des étapes et `/travel` vers le départ.
+
+### Améliorations
+
+- **Réglages** en onglets, hauteur bornée à l'écran.
+- Les panneaux de jeu (Recette, boss) gardent leur haut quand leur contenu change.
+- **Boss** : aides repliées sous leur consigne, schéma déplaçable, conseils copiables ; fiche de
+  combat plus lisible.
+- **Quêtes** : liste ouverte avec retour, « Ici » replié en bas et compté.
+- **Statistiques d'utilisation** : la télémétrie commune aux apps Synseria (des compteurs, jamais
+  de contenu).
+
 ## 0.15.0-rc.2 — 2026-11-22
 
 Préversion : elle ne se propose pas d'elle-même, elle s'installe par son DMG.
