@@ -74,6 +74,13 @@ struct SuiviConfusion: Equatable, Sendable {
         }
     }
 
+    /// Les points de vie du Comte, lus au survol, pour ce combat.
+    struct VieComte: Equatable, Sendable {
+        let points: Int
+        let le: Date
+    }
+
+    private(set) var comte: VieComte?
     private var persos: [String: Perso] = [:]
     /// La dernière annonce qui ne nomme aucun perso connu.
     private var anonyme: Annonce?
@@ -109,6 +116,7 @@ struct SuiviConfusion: Equatable, Sendable {
         // instant (une fenêtre du jeu par-dessus) se lit hors combat, et le
         // maximum, que le cœur n'écrit pas d'office, ne reviendrait pas.
         if apres == .placement && avant != .placement {
+            comte = nil
             suivi.vie = nil
             suivi.vieLue = nil
             suivi.maxConnu = nil
@@ -147,6 +155,11 @@ struct SuiviConfusion: Equatable, Sendable {
             }
         }
         persos[perso] = suivi
+    }
+
+    /// Les points du Comte, lus au survol.
+    mutating func vieComte(_ points: Int, le date: Date) {
+        comte = VieComte(points: points, le: date)
     }
 
     /// Le tchat lu dans la fenêtre de `fenetre`, en lignes de haut en bas.

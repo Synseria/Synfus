@@ -12,7 +12,7 @@ enum Boss: String, CaseIterable, Codable, Sendable {
     /// tours.
     var lectures: [GenreLecture] {
         switch self {
-        case .harebourg: return [.vie, .tchat]
+        case .harebourg: return [.vie, .tchat, .survol]
         case .kimbo: return [.tchat]
         case .toxoliath, .ilyzaelle, .talKasha: return []
         }

@@ -261,7 +261,8 @@ même derrière.
   « 3087 » donne un pourcentage dès qu'un max a été lu dans le combat.
 - **B2.** Captures A0 du survol (Comte, son perso, un portrait de la timeline) → (a) ou (b),
   `survolParDefaut` mesuré.
-- **B3.** Genre `.survol` de bout en bout + calibrage. Fin : `RealCaptureTests`
+- **B3 (fait, zone estimée).** Option (a), le cadre fixe en bas à gauche (capture du 26/11) ;
+  la zone par défaut reste à mesurer sur une capture. Genre `.survol` de bout en bout + calibrage. Fin : `RealCaptureTests`
   (`SYNFUS_SOURIS`, `SYNFUS_VIE_ATTENDUE="2604/4200"`, `SYNFUS_NOM_ATTENDU="Harebourg"`) vert ;
   vie du Comte affichée au survol en jeu.
 - **B4 (V2).** Barre de la timeline : `Lecture/BarreVie.swift` (pur, RGBA), part rouge → « ~ % »,

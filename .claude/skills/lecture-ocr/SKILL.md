@@ -46,8 +46,8 @@ demandé que par leur bascule et par la capture du calibrage, jamais par un pann
 Une seule table (`LecteurEcran.swift`) : par genre, `parDefaut` (`ZoneEcran.*ParDefaut`),
 `reglage` (clé `zone…` des préférences, `nil` = défaut, qui suit ses corrections), `zone`.
 Position et combat au tour ; **quêtes** au tour (`GenreLecture.intervalle`, 3 s) tant que le
-panneau est montré et l'écran déjà autorisé (`QuetePanel` → `suivreQuetes`) ; **vie** et
-**tchat** chaque seconde, en combat, tant que le panneau d'aide aux boss est montré (`BossPanel` →
+panneau est montré et l'écran déjà autorisé (`QuetePanel` → `suivreQuetes`) ; **vie**,
+**tchat** et **survol** (cadre du combattant survolé, en bas à gauche : nom et PV) chaque seconde, en combat, tant que le panneau d'aide aux boss est montré (`BossPanel` →
 `suivreBoss`, skill `aide-boss`) ; chasse à la demande (`lireUneFois`, même `capturer` et même
 `MoteurOCR`). La préchauffe est une seule tâche, même réarmée pendant qu'elle dure.
 

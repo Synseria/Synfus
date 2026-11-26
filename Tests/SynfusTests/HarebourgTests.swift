@@ -168,6 +168,22 @@ struct HarebourgTests {
         #expect(estimation == .init(confusion: .contreHoraire, source: .vie(pourcentage: 40), voisine: nil, coups: 0, enTour: false))
     }
 
+    @Test("Le cadre survolé donne les points du Comte, et d'aucun autre")
+    func survolDuComte() {
+        #expect(Harebourg.vieDuComte(survol: ["Comte Harebourg", "2604 ♥ 12 ★", "0 6"]) == 2604)
+        #expect(Harebourg.vieDuComte(survol: ["Count Harebourg", "12 450 ♥"]) == 12450)
+        #expect(Harebourg.vieDuComte(survol: ["Conde Harebourq", "3 087"]) == 3087)
+        #expect(Harebourg.vieDuComte(survol: ["Chevalier d'Astrub", "4000 ♥ 12 ★"]) == nil)
+        #expect(Harebourg.vieDuComte(survol: ["Comte Harebourg"]) == nil)
+        // Lue pour le combat : oubliée au placement du suivant.
+        var suivi = SuiviConfusion()
+        suivi.vieComte(2604, le: t0)
+        suivi.combat("A", avant: .pasMonTour, apres: .horsCombat, le: t0)
+        #expect(suivi.comte?.points == 2604)
+        suivi.combat("A", avant: .horsCombat, apres: .placement, le: t0)
+        #expect(suivi.comte == nil)
+    }
+
     @Test("Des points sans maximum attendent un maximum lu")
     func pointsSansMaximum() {
         var suivi = SuiviConfusion()

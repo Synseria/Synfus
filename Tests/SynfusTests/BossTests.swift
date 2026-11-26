@@ -44,7 +44,7 @@ struct BossTests {
 
     @Test("Chaque boss lit au moins le combat ; seuls le Comte et Kimbo lisent le tchat")
     func lectures() throws {
-        #expect(Boss.harebourg.lectures == [.vie, .tchat])
+        #expect(Boss.harebourg.lectures == [.vie, .tchat, .survol])
         #expect(Boss.kimbo.lectures == [.tchat])
         #expect(Boss.toxoliath.lectures.isEmpty)
     }
@@ -55,7 +55,7 @@ struct BossTests {
         #expect(CibleBoss.boss(232, donjon: 2) == .donjon(monstre: 232, donjon: 2))
         // Sans mécanique : rien à lire, pas même le combat.
         #expect(CibleBoss.donjon(monstre: 232, donjon: 2).lectures == nil)
-        #expect(CibleBoss.special(.harebourg).lectures == [.vie, .tchat])
+        #expect(CibleBoss.special(.harebourg).lectures == [.vie, .tchat, .survol])
         func relu(_ json: String) throws -> CibleBoss { try JSONDecoder().decode(CibleBoss.self, from: Data(json.utf8)) }
         #expect(try relu(#""talKasha""#) == .special(.talKasha))
         for cible in [CibleBoss.special(.kimbo), .donjon(monstre: 232, donjon: 2)] {

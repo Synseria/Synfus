@@ -23,6 +23,9 @@ Synfus lit l'écran et affiche ; viser et lancer restent au joueur (CGU : aucun 
   jamais d'une ligne à l'autre), ou points seuls (pourcentage par un maximum lu **dans ce combat**,
   jamais supposé). Le maximum (`SuiviConfusion`) : le dernier écrit fait foi, un saut de plus de
   30 % attend une seconde lecture, des points au-delà l'invalident, oublié au placement suivant.
+- **Vie du Comte** : lue au survol (genre `survol`, `Harebourg.vieDuComte` : une ligne qui porte
+  « Harebourg », puis le premier nombre dessous), gardée pour le combat (`SuiviConfusion.comte`) ;
+  sa part se dit par rapport au maximum DofusDB du plus haut grade (indicatif, « ≈ »).
 - **Grille** : la conversion case ↔ point est `GrilleIso` (`Lecture/`), seule source.
 - **Canal combat** : `[14:04] Nom : …` ; un angle en degrés ou en Pi (`3Pi/2`, `1/2 pi`, `π`) **et**
   un sens (`horaire`, `contre horaire`, en/es aussi) — sans sens, rien (le jeu l'écrit toujours,

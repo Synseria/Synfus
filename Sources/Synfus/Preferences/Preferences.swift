@@ -114,6 +114,7 @@ final class Preferences: ObservableObject {
     @Published var zoneChasse: ZoneEcran? { didSet { save() } }
     @Published var zoneQuetes: ZoneEcran? { didSet { save() } }
     @Published var zoneVie: ZoneEcran? { didSet { save() } }
+    @Published var zoneSurvol: ZoneEcran? { didSet { save() } }
     @Published var zoneTchat: ZoneEcran? { didSet { save() } }
 
     /// Icône du `NSStatusItem`. Le rafraîchissement est à la charge de l'appelant
@@ -581,6 +582,7 @@ final class Preferences: ObservableObject {
         .optionnel("zoneChasse", \.zoneChasse),
         .optionnel("zoneQuetes", \.zoneQuetes),
         .optionnel("zoneVie", \.zoneVie),
+        .optionnel("zoneSurvol", \.zoneSurvol),
         .optionnel("zoneTchat", \.zoneTchat),
         .facultatif("killFrozenClients", \.killFrozenClients),
         .optionnel("lastArrangement", \.lastArrangement),

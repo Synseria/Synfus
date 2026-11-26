@@ -12,6 +12,7 @@ extension GenreLecture: Identifiable {
         case .quetes: return L("diagnostic.lecture.quetes")
         case .vie: return L("diagnostic.lecture.vie")
         case .tchat: return L("diagnostic.lecture.tchat")
+        case .survol: return L("diagnostic.lecture.survol")
         }
     }
 
@@ -24,6 +25,7 @@ extension GenreLecture: Identifiable {
         case .quetes: return L("calibration.consigne.quetes")
         case .vie: return L("calibration.consigne.vie")
         case .tchat: return L("calibration.consigne.tchat")
+        case .survol: return L("calibration.consigne.survol")
         }
     }
 
@@ -37,6 +39,7 @@ extension GenreLecture: Identifiable {
         case .quetes: return Color.jeton(\.succes)
         case .vie: return Color.jeton(\.danger)
         case .tchat: return Color.suggestionSynfus
+        case .survol: return Color.jeton(\.encre2)
         }
     }
 }
@@ -317,6 +320,9 @@ struct CalibrationZonesView: View {
             guard let lu = Harebourg.dernierConstat(lignes, persos: noms) else { return L("calibration.essai.tchat.rien") }
             let confusion = HarebourgVue.libelle(lu.constat.confusion)
             return lu.constat.perso.map { L("calibration.essai.tchat", $0, confusion) } ?? confusion
+        case .survol:
+            return Harebourg.vieDuComte(survol: lignes).map { L("boss.comte.vie", $0.formatted()) }
+                ?? L("calibration.essai.survol.rien")
         }
     }
 

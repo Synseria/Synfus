@@ -56,6 +56,11 @@ struct ZoneEcran: Codable, Equatable, Sendable {
     /// l'agrandit souvent : le tracé du Diagnostic suit.
     static let tchatParDefaut = ZoneEcran(x: 0.013, y: 0.845, largeur: 0.375, hauteur: 0.13)
 
+    /// Le cadre du combattant survolé, en bas à gauche au-dessus du tchat : son
+    /// nom et la ligne de ses points de vie. Estimé sur une seule capture
+    /// (contenu de 2000 × 1222 px) : le calibrage est là pour le corriger.
+    static let survolParDefaut = ZoneEcran(x: 0.038, y: 0.728, largeur: 0.13, hauteur: 0.046)
+
     /// Le contenu entier : la capture du calibrage, et celle qu'on découpe
     /// quand plusieurs zones sont dues au même tour (`PlanCapture.entiere`).
     static let entiere = ZoneEcran(x: 0, y: 0, largeur: 1, hauteur: 1)

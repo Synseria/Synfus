@@ -22,6 +22,10 @@ enum GenreLecture: String, CaseIterable, Sendable {
     /// Le tchat, en bas à gauche, où le canal combat annonce les effets : comme
     /// la vie, en combat et panneau d'aide montré.
     case tchat
+    /// Le cadre du combattant survolé, en bas à gauche : nom et points de vie
+    /// — ceux du Comte, que le cœur ne montre pas. Comme la vie, en combat et
+    /// panneau d'aide montré.
+    case survol
 
     var parDefaut: ZoneEcran {
         switch self {
@@ -31,6 +35,7 @@ enum GenreLecture: String, CaseIterable, Sendable {
         case .quetes: return .quetesParDefaut
         case .vie: return .vieParDefaut
         case .tchat: return .tchatParDefaut
+        case .survol: return .survolParDefaut
         }
     }
 
@@ -43,6 +48,7 @@ enum GenreLecture: String, CaseIterable, Sendable {
         case .quetes: return \.zoneQuetes
         case .vie: return \.zoneVie
         case .tchat: return \.zoneTchat
+        case .survol: return \.zoneSurvol
         }
     }
 
@@ -57,7 +63,7 @@ enum GenreLecture: String, CaseIterable, Sendable {
     /// (`EtatCombat.monTour(fin:)`).
     func intervalle(combat: EtatCombat?, devant: Bool) -> TimeInterval {
         switch self {
-        case .position, .chasse, .vie, .tchat: return 1
+        case .position, .chasse, .vie, .tchat, .survol: return 1
         case .quetes: return 3
         case .combat: return combat?.enCombat == true ? (devant ? 1 : 2) : 3
         }
@@ -73,7 +79,7 @@ enum GenreLecture: String, CaseIterable, Sendable {
     /// Ce que la signature regarde pour relancer l'OCR.
     var mesure: MesureSignature {
         switch self {
-        case .position, .vie: return .zone
+        case .position, .vie, .survol: return .zone
         case .combat: return .bouton
         case .chasse, .quetes, .tchat: return .lignes
         }
@@ -195,7 +201,7 @@ final class LecteurEcran: ObservableObject {
             switch $0 {
             case .position: return prefs.lirePosition
             case .combat: return prefs.lireCombat || bossMontre || aideClasse
-            case .chasse, .quetes, .vie, .tchat: return false
+            case .chasse, .quetes, .vie, .tchat, .survol: return false
             }
         }
     }
@@ -216,7 +222,7 @@ final class LecteurEcran: ObservableObject {
             .store(in: &subscriptions)
         // Une zone recalibrée : l'ancienne signature ne dit plus rien.
         let prefs = Preferences.shared
-        let zones = [prefs.$zonePosition, prefs.$zoneCombat, prefs.$zoneQuetes, prefs.$zoneVie, prefs.$zoneTchat]
+        let zones = [prefs.$zonePosition, prefs.$zoneCombat, prefs.$zoneQuetes, prefs.$zoneVie, prefs.$zoneTchat, prefs.$zoneSurvol]
         Publishers.MergeMany(zones)
             .dropFirst(zones.count)
             .sink { [weak self] _ in MainActor.assumeIsolated { self?.signatures = [:] } }
@@ -449,6 +455,7 @@ final class LecteurEcran: ObservableObject {
             case .quetes: LectureSuivi.shared.recevoir(lignes, coupe: signature.auBord, perso: nom)
             case .vie: AideBoss.shared.recevoirVie(lignes, perso: nom)
             case .tchat: AideBoss.shared.recevoirTchat(lignes, perso: nom)
+            case .survol: AideBoss.shared.recevoirSurvol(lignes)
             case .chasse: break
             }
         }

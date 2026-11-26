@@ -189,7 +189,7 @@ private extension GenreLecture {
         switch self {
         case .position: \.lirePosition
         case .combat: \.lireCombat
-        case .chasse, .quetes, .vie, .tchat: nil
+        case .chasse, .quetes, .vie, .tchat, .survol: nil
         }
     }
 }

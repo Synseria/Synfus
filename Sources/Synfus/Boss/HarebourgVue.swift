@@ -22,6 +22,7 @@ struct HarebourgVue: View {
         if previews.authorized || aide.estimation != nil {
             reponse.frame(minHeight: Self.hauteurSchema, alignment: .leading)
         }
+        if let comte = aide.suivi.comte { vieDuComte(comte) }
         coups
         aLaMain
         if let estimation = aide.estimation { details(estimation) }
@@ -42,6 +43,30 @@ struct HarebourgVue: View {
             TexteDeDetail(texte: impair ? L("boss.harebourg.impair") : L("boss.harebourg.pair"))
         }
     }
+
+    /// Les points du Comte lus au survol, et leur part du maximum que DofusDB
+    /// lui donne au plus haut grade — indicatif, d'où le « ≈ ». Pâlie quand la
+    /// lecture vieillit : il a pu perdre des points depuis.
+    private func vieDuComte(_ comte: SuiviConfusion.VieComte) -> some View {
+        TimelineView(.periodic(from: .now, by: 5)) { contexte in
+            let ancienne = contexte.date.timeIntervalSince(comte.le) > Self.fraicheurComte
+            let max = aide.fiches[Boss.harebourg.monstre]?.vie
+            Group {
+                if let max, max > 0, comte.points <= max {
+                    Text(L("boss.comte.vie.part", comte.points.formatted(), Int((Double(comte.points) / Double(max) * 100).rounded())))
+                } else {
+                    Text(L("boss.comte.vie", comte.points.formatted()))
+                }
+            }
+            .font(Jetons.typoMeta.font)
+            .monospacedDigit()
+            .foregroundStyle(Color.jeton(ancienne ? \.encre3 : \.encre2))
+            .help(L("boss.comte.vie.aide"))
+        }
+    }
+
+    /// Au-delà, la vie du Comte lue au survol se montre pâlie.
+    private static let fraicheurComte: TimeInterval = 10
 
     // MARK: - Où viser
 
