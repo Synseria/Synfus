@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 /// Ce que dit une pastille de perso — emblème, nom, classe, touche — sur son fond d'état : la barre la
 /// pose dans son bouton, l'aperçu du thème la montre telle quelle.

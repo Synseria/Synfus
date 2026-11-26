@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 /// Les deux icônes : celle de l'app (Finder, alertes) et celle de la barre de menus.
 struct IconesReglables: View {

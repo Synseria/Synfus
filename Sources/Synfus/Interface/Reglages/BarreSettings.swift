@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 /// Onglet Barre : la barre flottante, ce qu'elle montre — ses boutons
 /// compris —, et l'aperçu au survol.

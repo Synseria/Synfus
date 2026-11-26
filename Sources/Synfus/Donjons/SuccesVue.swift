@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 /// Les succès d'un donjon : leur nom en encre pleine, ce qu'ils demandent en gris à côté, alignés d'un
 /// succès à l'autre ; un clic copie la description pour la dire à l'équipe.

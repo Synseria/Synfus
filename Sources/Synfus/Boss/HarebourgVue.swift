@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 /// Contre le Comte Harebourg : où viser en gros, la grille qui le montre,
 /// d'où vient la confusion, les coups au corps à corps, le choix à la main, et
@@ -146,7 +147,7 @@ struct HarebourgVue: View {
     @ViewBuilder
     private var attenteLecture: some View {
         if lecteur.persoDevant.flatMap({ lecteur.combats[$0] })?.enCombat == true, aide.vieLue == nil {
-            Button(L("lecture.ouvrir")) { SettingsWindowController.shared.show(section: .lecture) }
+            Button(L("lecture.ouvrir")) { SettingsWindowController.shared.show(onglet: .propre(.lecture)) }
                 .buttonStyle(BoutonBorde())
         }
     }

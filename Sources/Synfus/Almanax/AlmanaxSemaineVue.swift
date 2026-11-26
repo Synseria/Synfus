@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 /// La vue « Almanax » de la palette : l'offrande du jour en grand, avec le trajet jusqu'au
 /// Sanctuaire, puis les six jours suivants en cartes pour préparer l'achat groupé.

@@ -7,19 +7,19 @@ let package = Package(
     name: "Synfus",
     platforms: [.macOS(.v26)],
     dependencies: [
-        // Le socle commun des apps Synseria : la copie que pose `propager.sh` du SDS (privé),
-        // versionnée ici, jamais retouchée.
-        .package(path: "SynseriaKit"),
+        // Le socle commun des apps Synseria (jetons, trousse, télémétrie, mises à jour) : le dépôt
+        // public engendré par le SDS, épinglé à une version.
+        .package(url: "https://github.com/Synseria/SynseriaKit", exact: "2.2.1"),
     ],
     targets: [
         .executableTarget(
             name: "Synfus",
-            dependencies: [.product(name: "Telemetrie", package: "SynseriaKit"), .product(name: "MiseAJour", package: "SynseriaKit")],
+            dependencies: [.product(name: "SynseriaDesign", package: "SynseriaKit"), .product(name: "Telemetrie", package: "SynseriaKit"), .product(name: "MiseAJour", package: "SynseriaKit")],
             path: "Sources/Synfus"
         ),
         .testTarget(
             name: "SynfusTests",
-            dependencies: ["Synfus", .product(name: "Telemetrie", package: "SynseriaKit"), .product(name: "MiseAJour", package: "SynseriaKit")],
+            dependencies: ["Synfus", .product(name: "SynseriaDesign", package: "SynseriaKit"), .product(name: "Telemetrie", package: "SynseriaKit"), .product(name: "MiseAJour", package: "SynseriaKit")],
             path: "Tests/SynfusTests"
         ),
     ]

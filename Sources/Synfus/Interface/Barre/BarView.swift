@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 struct BarView: View {
     @ObservedObject private var manager = WindowManager.shared
@@ -80,7 +81,7 @@ struct BarView: View {
             }
             if prefs.equipes.count < Equipes.maximum {
                 Divider()
-                Button { SettingsWindowController.shared.show(section: .personnages) } label: {
+                Button { SettingsWindowController.shared.show(onglet: .propre(.personnages)) } label: {
                     Label(L("barre.equipe.creer"), systemImage: "plus")
                 }
             }

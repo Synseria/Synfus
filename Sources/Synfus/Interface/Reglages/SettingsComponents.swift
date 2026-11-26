@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 /// Les briques communes des réglages. La règle d'interface : **un réglage par ligne, le libellé à
 /// gauche, le contrôle à droite** (`Ligne`), une valeur ou un état en méta juste avant le contrôle

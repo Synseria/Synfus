@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import SynseriaDesign
 
 /// Panneau d'aperçu : passif, au-dessus du jeu, jamais dans le chemin du clavier
 /// ni de la souris.

@@ -1,9 +1,11 @@
 import AppKit
 import SwiftUI
+import SynseriaDesign
 
 /// « À propos de Synfus » : le gabarit de la trousse — l'icône de l'app, son nom, « by » et le signe
-/// Synseria —, puis la version et l'état de la mise à jour avec son geste.
+/// Synseria —, puis la ligne de mise à jour commune, en colonne.
 struct AProposVue: View {
+    /// La version montrée : celle du bundle ; les captures fixent la leur.
     var version = AppIntegrity.version
     private let miseAJour = MiseAJour.shared
     @ObservedObject private var prefs = Preferences.shared
@@ -17,31 +19,26 @@ struct AProposVue: View {
     }()
 
     var body: some View {
-        GabaritAPropos(icone: Image(nsImage: icone), nom: AppIntegrity.displayName,
-                       embleme: Self.embleme) {
-            // L'état et son geste sur une ligne ; trop longs (une erreur), l'un sous l'autre.
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: Jetons.espace2) { etat; ActionMiseAJour(rechercher: L("maj.rechercherUne")) }
-                VStack(spacing: Jetons.espace2) { etat; ActionMiseAJour(rechercher: L("maj.rechercherUne")) }
-            }
+        GabaritAPropos(icone: Image(nsImage: icone), nom: AppIntegrity.displayName, embleme: Self.embleme) {
+            LigneDeMiseAJour(miseAJour: ligne, libelles: SettingsView.libelles, disposition: .colonne)
         }
         .background(Color.jeton(\.fondFenetre))
+    }
+
+    private var ligne: MiseAJourDesReglages {
+        var ligne = miseAJour.reglages
+        ligne.version = version ?? ligne.version
+        return ligne
     }
 
     /// L'icône choisie (Réglages ▸ Général), celle du Finder et des alertes.
     private var icone: NSImage {
         prefs.iconeApp == .duBundle ? NSApp.applicationIconImage : IconeAppliquee.vignette(prefs.iconeApp, cote: Jetons.espace7 * 2)
     }
-
-    @ViewBuilder
-    private var etat: some View {
-        if let etat = MiseAJour.resume(version: version, etat: miseAJour.etat, verifiee: prefs.derniereVerificationMaj) {
-            LigneDeVersion(texte: etat)
-        }
-    }
 }
 
-/// La fenêtre unique de « À propos » : rouverte, elle revient devant au lieu de se doubler.
+/// La fenêtre unique de « À propos » : rouverte, elle revient devant au lieu de se doubler. Le haut
+/// laisse la rangée des feux, le contenu monte sous la barre de titre.
 @MainActor
 final class AProposController {
     static let shared = AProposController()
@@ -50,8 +47,10 @@ final class AProposController {
     func afficher() {
         if fenetre == nil {
             let nouvelle = NSWindow(contentViewController: NSHostingController(rootView: AProposVue().racineSynfus()))
-            nouvelle.styleMask = [.titled, .closable]
-            nouvelle.title = L("apropos.titre")
+            nouvelle.styleMask = [.titled, .closable, .fullSizeContentView]
+            nouvelle.titlebarAppearsTransparent = true
+            nouvelle.titleVisibility = .hidden
+            nouvelle.title = SettingsView.libelles.aPropos.replacingOccurrences(of: "%@", with: AppIntegrity.displayName)
             nouvelle.isReleasedWhenClosed = false
             nouvelle.center()
             fenetre = nouvelle

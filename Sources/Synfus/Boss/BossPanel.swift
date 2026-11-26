@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import SynseriaDesign
 
 /// Le panneau d'aide aux boss, posé sur le jeu : la mécanique du boss choisi
 /// et le tour du combat. Montré, il fait lire au tour le combat, et en combat

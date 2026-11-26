@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 /// La palette : un champ, puis les cartes de la vue (rien de tapé) ou la liste
 /// des résultats, et la ligne des touches. Le clavier est géré par le panneau
@@ -92,7 +93,7 @@ struct PaletteVue: View {
                 .help(L("palette.depuis.aide"))
         case .lectureEteinte:
             boutonOrigine(L("palette.origine.lire"), aide: L("palette.origine.lire.aide")) {
-                SettingsWindowController.shared.show(section: .lecture)
+                SettingsWindowController.shared.show(onglet: .propre(.lecture))
             }
         case .sansAutorisation:
             boutonOrigine(L("autorisation.lectureEcran"), aide: L("palette.origine.autoriser.aide")) {

@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import SynseriaDesign
 
 /// Un panneau qui prend le clavier sans activer Synfus : on y tape l'indice
 /// et le jeu reste l'app active — un clic dans le jeu lui rend la frappe.

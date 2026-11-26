@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 /// Des onglets en segmenté pleine largeur, chacun une icône et un libellé (`SegmenteTexte` n'a que du
 /// texte et prend le focus) : la pilule et le filet du segmenté, le choisi sur le fond du choix.

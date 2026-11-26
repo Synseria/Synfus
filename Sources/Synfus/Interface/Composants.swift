@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 // Les briques de dessin propres à Synfus, écrites sur les jetons : voix d'état, surface qui flotte,
 // retour de copie. Boutons, segmenté, touche et carte viennent de la trousse (`Interface/Trousse`).

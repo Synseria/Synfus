@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 /// Onglet Lecture de l'écran : lire la position et le combat par OCR, le calibrage de chaque zone, les
 /// zones lues, ce que ça coûte, puis le diagnostic de ce que Synfus voit.

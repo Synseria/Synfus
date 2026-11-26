@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import SynseriaDesign
 
 /// L'infobulle de la barre, dans sa **propre fenêtre** : un panneau de jeu rogne
 /// ce qu'il rend au-delà de ses bords (celle sous une pastille y était coupée),

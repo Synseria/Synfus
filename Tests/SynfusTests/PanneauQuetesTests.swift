@@ -1,6 +1,7 @@
 import AppKit
 import Testing
 @testable import Synfus
+import SynseriaDesign
 
 /// Le panneau des quêtes : ses poignées de redimensionnement, le menu de son
 /// en-tête (clic ou glisser), le repli des objectifs faits et le mode compact.

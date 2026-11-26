@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import SynseriaDesign
 
 // Le redimensionnement des panneaux posés sur le jeu : bords à saisir, tailles minimale et
 // maximale, largeur suivie par la vue de ceux qui prennent la hauteur de leur contenu.

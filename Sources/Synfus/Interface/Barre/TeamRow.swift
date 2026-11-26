@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 /// Identité d'un secteur de la rangée des équipes — la clé de ses cadres
 /// pour le geste de dépôt.

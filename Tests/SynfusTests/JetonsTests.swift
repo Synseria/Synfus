@@ -2,6 +2,7 @@ import Foundation
 import SwiftUI
 import Testing
 @testable import Synfus
+import SynseriaDesign
 
 /// Les jetons d'interface. Une couleur ou une police hors des jetons compile très
 /// bien : seul ce relevé des sources l'arrête.
@@ -86,12 +87,9 @@ struct JetonsTests {
 
     @Test("Un bouton prend un rang de la trousse, un segment le segmenté commun")
     func boutonsEtSegments() throws {
-        // Les réglages héritent du rang secondaire posé sur leur volet (`SettingsView`) ; les barres d'icônes
-        // et le menu contextuel de la palette sont hors rangs.
+        // Les réglages héritent du rang secondaire que la fenêtre commune pose sur leur volet
+        // (`CadreDesReglages`) ; les barres d'icônes et le menu contextuel de la palette sont hors rangs.
         let heritent: Set<String> = ["Reglages", "Barre", "PaletteVue.swift"]
-        let racine = try String(contentsOf: SourcesDuDepot.dossier.appendingPathComponent("Interface/Reglages/SettingsView.swift"),
-                                encoding: .utf8)
-        #expect(racine.contains(".buttonStyle(BoutonBorde())"))
         for url in try fichiers(sauf: []) {
             let texte = try code(url).joined(separator: "\n")
             #expect(!texte.contains(".pickerStyle(.segmented)"), "\(url.lastPathComponent) : utiliser `SegmenteTexte`")

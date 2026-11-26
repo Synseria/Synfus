@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 /// Une section du panneau d'aide, repliée sous son titre. Dépliée, elle défile
 /// chez elle au-delà de `SectionBoss.plafond` : le panneau ne s'allonge pas

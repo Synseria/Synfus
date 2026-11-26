@@ -1,5 +1,7 @@
 import AppKit
+import Combine
 import SwiftUI
+import SynseriaDesign
 
 @MainActor
 final class SettingsWindowController: NSObject {
@@ -14,18 +16,24 @@ final class SettingsWindowController: NSObject {
     }
 
     /// Sur cet onglet, s'il est donné.
-    func show(section: SettingsSection? = nil) {
+    func show(onglet: OngletSynfus? = nil) {
         UsageStore.shared.compter(.reglages)
-        if let section { OngletReglages.shared.section = section }
+        if let onglet { OngletReglages.shared.onglet = onglet }
         if window == nil {
+            let window = Self.batir(SettingsView())
             // La taille commune, bornée à la place utile de l'écran (sans le Dock ni la barre des menus).
-            let utile = (FloatingBarController.shared.visibleBarFrame.flatMap { barre in
-                NSScreen.screens.first { $0.frame.intersects(barre) } } ?? NSScreen.main)?.visibleFrame.height
-            let hauteur = min(SettingsView.taille.height, (utile ?? SettingsView.taille.height) - Self.gap * 2)
-            let window = Self.batir(SettingsView(), hauteur: hauteur)
+            if let utile = ecran?.visibleFrame {
+                window.setContentSize(FenetreDeReglages.taille(de: window, dans: utile))
+            }
             self.window = window
             NotificationCenter.default.addObserver(self, selector: #selector(windowWillClose),
                                                    name: NSWindow.willCloseNotification, object: window)
+            // Le verre prend la teinte du thème : à reposer quand il change.
+            themeSuivi = Preferences.shared.$themeDeLApp.dropFirst().sink { [weak window] _ in
+                MainActor.assumeIsolated {
+                    DispatchQueue.main.async { window.map(Self.poserLeVerre) }
+                }
+            }
         }
         guard let window else { return }
 
@@ -42,26 +50,30 @@ final class SettingsWindowController: NSObject {
         window.makeKeyAndOrderFront(nil)
     }
 
+    private var themeSuivi: AnyCancellable?
+
     /// La fenêtre autour de `contenu`, l'unique façon de la bâtir : les captures jugent celle que
-    /// l'utilisateur voit. Sans titre affiché : les onglets disent où l'on est ; le nom reste pour le
-    /// menu Fenêtre et VoiceOver. Le fond monte sous la barre de titre, la fenêtre n'a pas le sien. La
-    /// fenêtre a la taille commune, barre de titre comprise, et la vue la remplit : jamais l'inverse,
-    /// la taille idéale de la vue poussait la fenêtre de la hauteur de sa barre de titre.
-    static func batir(_ contenu: some View, hauteur: CGFloat = SettingsView.taille.height) -> NSWindow {
+    /// l'utilisateur voit. La fenêtre commune (`FenetreDeReglages`), le volet suit sa taille, jamais
+    /// l'inverse ; son verre unique dessous.
+    static func batir(_ contenu: some View) -> NSWindow {
         let hote = NSHostingController(rootView: contenu.racineSynfus())
         hote.sizingOptions = []
-        let window = NSWindow(contentRect: NSRect(origin: .zero, size: CGSize(width: SettingsView.taille.width, height: hauteur)),
-                              styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
-                              backing: .buffered, defer: true)
-        window.contentViewController = hote
-        window.setContentSize(CGSize(width: SettingsView.taille.width, height: hauteur))
-        window.title = L("reglages.titre")
-        window.titleVisibility = .hidden
-        window.titlebarAppearsTransparent = true
+        let window = FenetreDeReglages.batir(hote, titre: SettingsView.libelles.reglages)
         window.isOpaque = false
         window.backgroundColor = .clear
         window.isReleasedWhenClosed = false
+        poserLeVerre(window)
         return window
+    }
+
+    private static func poserLeVerre(_ window: NSWindow) {
+        VerreDeLaFenetre.poser(dans: window, teinte: ThemeCourant.teinteDuVerre)
+    }
+
+    /// L'écran de la barre flottante, sinon le principal.
+    private var ecran: NSScreen? {
+        FloatingBarController.shared.visibleBarFrame.flatMap { barre in NSScreen.screens.first { $0.frame.intersects(barre) } }
+            ?? NSScreen.main
     }
 
     /// La sonde d'attention se démarre à la main depuis l'onglet Diagnostic et

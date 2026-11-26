@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 /// Onglet Aides : les panneaux posés sur le jeu — la chasse au trésor et les boss.
 struct AidesSettings: View {

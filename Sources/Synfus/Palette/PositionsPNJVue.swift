@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 /// Les positions d'un PNJ, dépliées sous sa ligne : une rangée de cartes au format de celles des
 /// zaaps, la mieux placée d'abord. Une carte prend toute la largeur, deux la moitié, trois le tiers ;

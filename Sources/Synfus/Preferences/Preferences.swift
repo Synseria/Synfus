@@ -1,6 +1,7 @@
 import AppKit
 import Carbon.HIToolbox
 import MiseAJour
+import SynseriaDesign
 
 /// Réglages persistés dans les UserDefaults, sérialisés en JSON sous une seule clé.
 ///
@@ -79,17 +80,12 @@ final class Preferences: ObservableObject {
     /// défaut — rien à autoriser, et c'est ce qui manquait pour ne pas se
     /// perdre en enchaînant au clic.
     @Published var signalerBascule: Bool = true { didSet { save() } }
-
-    /// Chercher chaque jour une version plus récente sur GitHub (`MiseAJour`).
-    @Published var verifierMisesAJour: Bool = true { didSet { save() } }
     /// Stable, ou Bêta qui propose aussi les préversions (`-rc.N`).
     @Published var canalDeMiseAJour: CanalDeMiseAJour = .stable { didSet { save() } }
     /// La version du lancement précédent (`MiseAJour.apresMiseAJour`).
     @Published var derniereVersionLancee: String? { didSet { save() } }
     /// La dernière version annoncée par une notification : chacune ne l'est qu'une fois.
     @Published var derniereVersionNotifiee: String? { didSet { save() } }
-    /// Quand GitHub a répondu pour la dernière fois ; la ligne « Version installée » le dit.
-    @Published var derniereVerificationMaj: Date? { didSet { save() } }
     /// Aucune sauvegarde à la lecture : rien n'a encore été réglé.
     private(set) var premierLancement = false
     /// Envoyer chaque jour les statistiques d'utilisation (`UsageStore`).
@@ -128,11 +124,9 @@ final class Preferences: ObservableObject {
     /// à la charge de l'appelant comme `menuBarIcon`.
     @Published var iconeApp: IconeApp = .parDefaut { didSet { save() } }
 
-    /// Le thème de l'app (Réglages ▸ Thème) : tout le reste des couleurs vient du nuancier, par
-    /// `ThemeCourant`.
+    /// Le thème de l'app (Réglages ▸ Thème : teinte, fond, clarté) : toutes les couleurs en viennent,
+    /// par `ThemeCourant`, et l'apparence qu'il impose aux fenêtres.
     @Published var themeDeLApp: Jetons.Theme = Jetons.themeParDefaut { didSet { save() } }
-    /// `nil` : l'app suit macOS, Jour en clair, Pénombre en sombre ; une nuance impose son apparence.
-    @Published var nuanceDeLApp: Jetons.Nuance? = Jetons.nuanceParDefaut { didSet { save() } }
 
     /// Achever les clients gelés à la fermeture (voir `FreezeWatcher`). Activé
     /// par défaut : la règle d'abattage est assez stricte pour ne viser que des
@@ -572,7 +566,7 @@ final class Preferences: ObservableObject {
         .facultatif("autoCenterBar", \.autoCenterBar),
         .facultatif("menuBarIcon", \.menuBarIcon),
         .facultatif("iconeApp", \.iconeApp),
-        .theme(theme: "themeDeLApp", nuance: "nuanceDeLApp", fond: "fondDeLApp"),
+        .theme("theme"),
         .facultatif("showPreviewOnHover", \.showPreviewOnHover),
         .optionnel("previewHotKey", \.previewHotKey),
         .facultatif("advanceOnClick", \.advanceOnClick),
@@ -602,11 +596,9 @@ final class Preferences: ObservableObject {
         .facultatif("zaapGainMinimal", \.zaapGainMinimal),
         .facultatif("zaapDuJeu", \.zaapDuJeu),
         .facultatif("zaapIntercalees", \.zaapIntercalees),
-        .facultatif("verifierMisesAJour", \.verifierMisesAJour),
         .enTexte("canalDeMiseAJour", \.canalDeMiseAJour, ecrit: \.rawValue, lu: CanalDeMiseAJour.init(rawValue:)),
         .optionnel("derniereVersionLancee", \.derniereVersionLancee),
         .optionnel("derniereVersionNotifiee", \.derniereVersionNotifiee),
-        .optionnel("derniereVerificationMaj", \.derniereVerificationMaj),
         .facultatif("partagerStatistiques", \.partagerStatistiques),
         .facultatif("zaapsAjoutes", \.zaapsAjoutes),
         .facultatif("zaapsChoix", \.zaapsChoix),
@@ -778,31 +770,24 @@ final class Preferences: ObservableObject {
                     })
         }
 
-        /// Le thème, son fond et la nuance. Sans la clé du thème, une sauvegarde d'avant le nuancier :
-        /// sa couleur et son apparence se convertissent (`ConversionDuTheme`). Le fond n'est écrit que
-        /// s'il est choisi : absent (sauvegarde d'avant le fond comprise), c'est celui du thème. Tout
-        /// se relit en texte, pour qu'une valeur inattendue laisse le défaut au lieu de rendre la
-        /// sauvegarde illisible.
-        static func theme(theme cleTheme: Cle, nuance cleNuance: Cle, fond cleFond: Cle) -> Reglage {
-            Reglage(ecrire: { prefs, conteneur in
-                        try conteneur.encode(prefs.themeDeLApp.primaire.ecrit, forKey: cleTheme)
-                        try conteneur.encodeIfPresent(prefs.themeDeLApp.fond?.ecrit, forKey: cleFond)
-                        try conteneur.encode(prefs.nuanceDeLApp?.rawValue ?? ConversionDuTheme.systeme, forKey: cleNuance)
-                    },
+        /// Le thème, d'un bloc. Sans lui, une sauvegarde d'avant le thème continu : ses clés en texte
+        /// (`themeDeLApp`, `nuanceDeLApp`, `fondDeLApp`, ou plus anciennes `couleurDeLApp` et
+        /// `apparence`) se convertissent une fois (`ConversionDuTheme`) et ne s'écrivent plus. Un
+        /// thème illisible (version plus récente) laisse le défaut sans rendre la sauvegarde illisible.
+        static func theme(_ cle: Cle) -> Reglage {
+            Reglage(ecrire: { try $1.encode($0.themeDeLApp, forKey: cle) },
                     lire: { conteneur in
+                        if conteneur.contains(cle) {
+                            guard let theme = try? conteneur.decode(Jetons.Theme.self, forKey: cle) else { return nil }
+                            return { $0.themeDeLApp = theme }
+                        }
                         func texte(_ cle: Cle) -> String? { try? conteneur.decodeIfPresent(String.self, forKey: cle) }
-                        let relu: ConversionDuTheme.Relu
-                        if let ecrit = texte(cleTheme) {
-                            let primaire = Jetons.Theme.Primaire(ecrit: ecrit) ?? Jetons.themeParDefaut.primaire
-                            relu = ConversionDuTheme.Relu(theme: Jetons.Theme(primaire, fond: texte(cleFond).flatMap(Jetons.Fond.init(ecrit:))),
-                                                          nuance: ConversionDuTheme.nuance(ecrite: texte(cleNuance)))
-                        } else {
-                            relu = ConversionDuTheme.relire(couleur: texte("couleurDeLApp"), apparence: texte("apparence"))
-                        }
-                        return { prefs in
-                            prefs.themeDeLApp = relu.theme
-                            prefs.nuanceDeLApp = relu.nuance
-                        }
+                        let ancien = ConversionDuTheme.Ancien(theme: texte("themeDeLApp"), nuance: texte("nuanceDeLApp"),
+                                                              fond: texte("fondDeLApp"), couleurDeLApp: texte("couleurDeLApp"),
+                                                              apparence: texte("apparence"))
+                        guard ancien != ConversionDuTheme.Ancien() else { return nil }
+                        let theme = ConversionDuTheme.relire(ancien)
+                        return { $0.themeDeLApp = theme }
                     })
         }
 

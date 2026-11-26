@@ -1,10 +1,9 @@
 import AppKit
-import Combine
 import MiseAJour
 
 /// Les mises à jour depuis les releases GitHub (le déroulé de SynseriaKit) : vérifiées au lancement
-/// puis chaque jour (`Preferences.verifierMisesAJour`), sur le canal choisi, proposées dans le menu et
-/// l'onglet Général, installées sur demande — Synfus se remplace et se relance.
+/// puis chaque jour, sur le canal choisi, proposées dans le menu et l'onglet Général, installées sur
+/// demande — Synfus se remplace et se relance.
 @MainActor
 final class MiseAJour {
     static let shared = MiseAJour()
@@ -35,11 +34,9 @@ final class MiseAJour {
     }
 
     private var nouveautesOuvertes = false
-    private var subscriptions: Set<AnyCancellable> = []
 
     private init() {
         suivi.quandProposee = { NotificationMiseAJour.shared.annoncerSiNouvelle($0) }
-        suivi.apresReponse = { Preferences.shared.derniereVerificationMaj = Date() }
     }
 
     func start() {
@@ -48,14 +45,7 @@ final class MiseAJour {
         apresMiseAJour = VersionInstallee.apresMiseAJour(derniere: prefs.derniereVersionLancee, courante: AppIntegrity.version,
                                                          premierLancement: prefs.premierLancement)
         if let courante = AppIntegrity.version { prefs.derniereVersionLancee = courante }
-        // `--simuler-version` vérifie même si la recherche est éteinte.
-        if VersionInstallee.simulee(CommandLine.arguments) != nil { verifier() }
-        prefs.$verifierMisesAJour
-            .removeDuplicates()
-            .sink { [weak self] actif in
-                MainActor.assumeIsolated { actif ? self?.suivi.suivre(apres: .zero) : self?.suivi.arreter() }
-            }
-            .store(in: &subscriptions)
+        suivi.suivre(apres: .zero)
     }
 
     /// Un binaire nu (`swift build`) n'a pas de version : rien à comparer.
@@ -68,7 +58,7 @@ final class MiseAJour {
         Task { await suivi.canalChange() }
     }
 
-    /// Le menu et l'onglet Général : confirmer, puis installer.
+    /// Le menu : confirmer, puis installer.
     func proposer() {
         guard let version = proposee else { return }
         switch etat {
@@ -76,6 +66,11 @@ final class MiseAJour {
         default: break
         }
         guard Self.confirmer(version) else { return }
+        installer()
+    }
+
+    /// Réglages ▸ Général et À propos : le bouton dit déjà « Installer X et relancer », sans alerte.
+    func installer() {
         UsageStore.shared.compter(.miseAJour)
         suivi.installer()
     }

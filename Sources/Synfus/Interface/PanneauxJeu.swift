@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import SynseriaDesign
 
 /// Ce que partagent les panneaux posés sur le jeu — quêtes, chasse, aide aux
 /// boss, recette : quand ils se montrent, et les boutons de leur en-tête.

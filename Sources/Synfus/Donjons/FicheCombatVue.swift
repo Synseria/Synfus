@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 /// Niveau, vie, PA et PM d'un monstre à son plus haut grade, puis ses
 /// résistances en cinq colonnes, les éléments à frapper et à éviter marqués :

@@ -1,4 +1,5 @@
 import SwiftUI
+import SynseriaDesign
 
 /// La racine du panneau de chasse : la vue de l'instance du perso devant —
 /// chaque perso a la sienne (`Chasses`), refaite quand le perso devant change.
@@ -257,7 +258,7 @@ struct ChasseVue: View {
         if modele.rienLu {
             HStack(spacing: Jetons.espace1) {
                 Text(L("chasse.rienLu")).font(Jetons.typoMeta.font).foregroundStyle(Color.jeton(\.encre2))
-                Button(L("lecture.ouvrir")) { SettingsWindowController.shared.show(section: .lecture) }
+                Button(L("lecture.ouvrir")) { SettingsWindowController.shared.show(onglet: .propre(.lecture)) }
                     .buttonStyle(BoutonBorde())
                     .help(L("chasse.lire.aide"))
             }
