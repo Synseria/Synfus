@@ -48,6 +48,7 @@ Disposition (à mesurer en F0, deux tailles de fenêtre) :
 Conséquences sur le plan :
 - `fmEntete` (reliquat), `fmTable` (min, max, actuel, modif, stocks) et `fmHistorique` (dernières
   entrées, le bas d'abord) sont trois genres de lecture.
+- Un gain s'écrit **sans « + »** dans l'historique (« 3 Chance » en vert), une perte « -10 Chance ».
 - L'issue d'une fusion se déduit de la **variation de la table** (colonne Modif. comprise) et se
   recoupe avec la nouvelle entrée de l'historique et le reliquat lu.
 - Le conseil s'appuie sur le stock lu : jamais une rune que le joueur n'a pas, ou l'achat à
@@ -135,12 +136,12 @@ de l'objet fini, ou > objet neuf + FM depuis zéro.
 | Lot | Contenu | Fin |
 |---|---|---|
 | F0 | Captures de l'interface Dofus 3 (utilisateur) | Zones connues, notées dans un skill `forgemagie` |
-| F1 | `Effets`, `Rune`, `ObjetFM`, `Issue` (puits) + tests | Puits recompté juste sur des historiques écrits à la main |
+| F1 (fait) | `CatalogueFM` (effets, runes), `ObjetFM`, `FusionFM` (issue, puits), `TexteFM` (historique, reliquat) + tests ; téléchargement et cache de DofusDB avec leur appelant (F3) | Puits recompté juste sur des historiques écrits à la main |
 | F2 | Genres `fmTable`, `fmHistorique`, appariement aux effets, `RealCaptureTests` | Table lue sur les captures F0 à l'identique |
 | F3 | `Conseil` heuristique + `ForgemagiePanel` | En jeu : rune conseillée, puits suivi au fil des fusions |
-| F4 | `CoutSession` (runes, exo PA/PM/PO), prix saisis à la main | Coût affiché avec son intervalle |
+| F4 | `CoutSession` (runes, exo PA/PM/PO), prix estimé lu au survol d'une rune (OCR de l'infobulle) | Coût affiché avec son intervalle |
 | F5 | `Probabilites` apprises + affichage des taux observés | Comptes persistés, a priori respecté sans données |
-| F6 (V2) | Décision par espérance de coût ; prix lus en OCR à l'HDV des runes ; Dracorunes (3.8) | Sur mesures |
+| F6 (V2) | Décision par espérance de coût  ; Dracorunes (3.8) | Sur mesures |
 
 Tests (Swift Testing, logique pure) : poids d'une rune par rang ; puits sur des séquences SC/SN/EC
 écrites à la main (jamais < 0, décimales) ; issue déduite de deux tables ; palier de rune ; plafonds ;
@@ -155,8 +156,8 @@ ouvertes, zones) ; `lecture-ocr` (deux genres) ; `AGENTS.md` (domaine `Forgemagi
 1. **Licence DofusDB (LPNC-IA 1.0)** : continuer à s'en servir pour tout Synfus, demander une
    autorisation à DofusDB, ou passer à d'autres données (fichiers du client, saisie) ? C'est le
    préalable de tout le reste.
-2. **Prix des runes** : saisie à la main, lecture OCR de l'HDV quand tu l'ouvres, ou coût en runes
-   seulement ?
+2. ~~Prix des runes~~ : tranché (26/11/2026) — le **prix estimé** que le jeu affiche dans
+   l'infobulle d'un objet survolé, lu par OCR ; il suffit. Ni saisie ni HDV.
 3. **Plafond de 101** : par ligne ou par objet ? Les sources se contredisent (R§1.5) : à vérifier
    en jeu (une exo PM + un over sur un même objet).
 4. **Ordre des pertes** et cas où le puits se perd (HDV, échange, équipement) : à constater en jeu,
