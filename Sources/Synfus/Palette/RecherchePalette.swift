@@ -2,9 +2,10 @@ import Foundation
 
 /// Les gestes de Synfus que la palette sait faire, tapés en toutes lettres.
 enum ActionPalette: Equatable, Sendable {
-    case rangerFenetres, lancerSession, equipeSuivante, inviterEquipe, quetes, chasse, reglages
+    case rangerFenetres, lancerSession, equipeSuivante, inviterEquipe, quetes, chasse, forgemagie, reglages
 
-    static let toutes: [ActionPalette] = [.rangerFenetres, .lancerSession, .equipeSuivante, .inviterEquipe, .quetes, .chasse, .reglages]
+    static let toutes: [ActionPalette] = [.rangerFenetres, .lancerSession, .equipeSuivante, .inviterEquipe, .quetes, .chasse,
+                                          .forgemagie, .reglages]
 
     var titre: String {
         switch self {
@@ -14,6 +15,7 @@ enum ActionPalette: Equatable, Sendable {
         case .inviterEquipe: return L("palette.action.inviter")
         case .quetes: return L("palette.action.quetes")
         case .chasse: return L("palette.action.chasse")
+        case .forgemagie: return L("palette.action.forgemagie")
         case .reglages: return L("palette.action.reglages")
         }
     }

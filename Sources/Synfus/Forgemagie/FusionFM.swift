@@ -1,12 +1,11 @@
 import Foundation
 
 /// L'issue d'une rune, déduite de deux lectures de la table des effets — la
-/// couleur de l'historique est moins sûre — et le puits (« reliquat ») qui
-/// s'en déduit. L'ordre dans lequel le jeu choisit les lignes perdues n'est
-/// pas publié et les sources se contredisent : il se constate, jamais ne se
-/// suppose. Pur.
+/// couleur de l'historique est moins sûre, et la rune posée ne se lit pas.
+/// L'ordre dans lequel le jeu choisit les lignes perdues n'est pas publié :
+/// il se constate. Pur.
 struct FusionFM: Equatable, Sendable {
-    enum Issue: Equatable, Sendable {
+    enum Issue: Hashable, Sendable {
         /// La rune passe, rien n'est perdu.
         case succesCritique
         /// La rune passe, l'objet (ou le puits) perd environ son poids.
@@ -16,43 +15,42 @@ struct FusionFM: Equatable, Sendable {
     }
 
     let issue: Issue
-    /// Les points gagnés par la ligne visée.
-    let gain: Int
-    /// Les points perdus par ligne, la ligne visée comprise si elle a baissé.
+    /// Les points gagnés, par effet : la ligne visée, ou l'exo ajoutée.
+    let gains: [Int: Int]
+    /// Les points perdus, par effet.
     let pertes: [Int: Int]
     /// Le poids des pertes sur les lignes.
     let poidsPerdu: Double
 
-    /// Compare les valeurs par effet avant et après la rune. Le reliquat lu de
-    /// part et d'autre départage un succès qui ne baisse aucune ligne : le
-    /// puits a payé, c'est un succès neutre.
-    static func constater(avant: [Int: Int], apres: [Int: Int], rune: CatalogueFM.Rune, catalogue: CatalogueFM,
-                          reliquatAvant: Double? = nil, reliquatApres: Double? = nil) -> FusionFM {
-        let gain = (apres[rune.effet] ?? 0) - (avant[rune.effet] ?? 0)
+    /// Compare deux lectures de la table. La table défile : seules comptent
+    /// les lignes vues dans les deux, plus une ligne apparue quand aucune n'a
+    /// disparu (une exo). Le reliquat qui baisse sans ligne perdue : le puits
+    /// a payé, c'est un succès neutre — ou un échec, si rien ne monte. `nil` :
+    /// rien n'a changé.
+    static func constater(avant: [Int: Int], apres: [Int: Int], catalogue: CatalogueFM,
+                          reliquatAvant: Double? = nil, reliquatApres: Double? = nil) -> FusionFM? {
+        var gains: [Int: Int] = [:]
         var pertes: [Int: Int] = [:]
-        for effet in Set(avant.keys).union(apres.keys) {
-            let baisse = (avant[effet] ?? 0) - (apres[effet] ?? 0)
-            if baisse > 0 { pertes[effet] = baisse }
+        for effet in Set(avant.keys).intersection(apres.keys) {
+            let ecart = (apres[effet] ?? 0) - (avant[effet] ?? 0)
+            if ecart > 0 { gains[effet] = ecart }
+            if ecart < 0 { pertes[effet] = -ecart }
+        }
+        if Set(avant.keys).isSubset(of: apres.keys) {
+            for effet in Set(apres.keys).subtracting(avant.keys) where (apres[effet] ?? 0) > 0 {
+                gains[effet] = apres[effet]
+            }
         }
         let poidsPerdu = pertes.reduce(0.0) { $0 + Double($1.value) * (catalogue.effets[$1.key]?.poids ?? 0) }
         let puitsEntame = reliquatAvant.flatMap { avant in reliquatApres.map { $0 < avant } } ?? false
         let issue: Issue
-        if gain <= 0 {
-            issue = .echec
+        if !gains.isEmpty {
+            issue = poidsPerdu > 0 || puitsEntame ? .succesNeutre : .succesCritique
         } else if poidsPerdu > 0 || puitsEntame {
-            issue = .succesNeutre
+            issue = .echec
         } else {
-            issue = .succesCritique
+            return nil
         }
-        return FusionFM(issue: issue, gain: gain, pertes: pertes, poidsPerdu: poidsPerdu)
-    }
-
-    /// Le puits après la rune : un succès critique n'y touche pas ; sinon la
-    /// perte due vaut le poids de la rune, payée d'abord par le puits, et ce
-    /// que les lignes ont perdu au-delà s'y ajoute. Jamais sous zéro,
-    /// décimales gardées.
-    func puits(apres puits: Double, rune: CatalogueFM.Rune) -> Double {
-        guard issue != .succesCritique else { return puits }
-        return Swift.max(0, puits + poidsPerdu - rune.poids)
+        return FusionFM(issue: issue, gains: gains, pertes: pertes, poidsPerdu: poidsPerdu)
     }
 }

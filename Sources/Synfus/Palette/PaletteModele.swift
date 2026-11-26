@@ -608,6 +608,7 @@ final class PaletteModele: ObservableObject {
         case .equipeSuivante: WindowManager.shared.equipeSuivante()
         case .inviterEquipe: InvitationClipboard.shared.copierEquipe()
         case .chasse: ChassePanel.shared.ouvrir()
+        case .forgemagie: ForgemagiePanel.shared.ouvrir()
         case .quetes: QuetePanel.shared.ouvrir()
         case .reglages: SettingsWindowController.shared.show()
         }

@@ -14,6 +14,7 @@ enum PanneauxJeu {
         ChassePanel.shared.revoirVisibilite(force: force)
         BossPanel.shared.revoirVisibilite(force: force)
         RecettePanel.shared.revoirVisibilite(force: force)
+        ForgemagiePanel.shared.revoirVisibilite(force: force)
     }
 
     /// Remet à leur place d'origine les panneaux ouverts, avec la barre : le geste du menu pour un
@@ -24,6 +25,7 @@ enum PanneauxJeu {
         ChassePanel.shared.recentrer()
         BossPanel.shared.recentrer()
         RecettePanel.shared.recentrer()
+        ForgemagiePanel.shared.recentrer()
     }
 
     // MARK: - Pliage
@@ -162,7 +164,7 @@ enum PanneauxJeu {
 
 /// Les panneaux posés sur le jeu, nommés : la clé de leur pliage dans les préférences.
 enum PanneauJeu: String, Sendable {
-    case quetes, chasse, boss, recette
+    case quetes, chasse, boss, recette, forgemagie
 }
 
 /// Un panneau posé sur le jeu, à la taille de son contenu, jamais clé : la frappe reste au jeu, un

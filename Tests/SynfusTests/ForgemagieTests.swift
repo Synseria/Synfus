@@ -143,62 +143,40 @@ struct ForgemagieTests {
         #expect(plein.depasseraitPlafond(try rune(118, .ra), catalogue))
         // Une exo PA pèse 100 : une seconde la dépasserait.
         #expect(!ObjetFM(lignes: []).depasseraitPlafond(try rune(111, .simple), catalogue))
-        #expect(ObjetFM(lignes: [.init(effet: 111, valeur: 1, max: nil)])
+        #expect(ObjetFM(lignes: [.init(effet: 111, valeur: 1, max: nil, exo: true)])
             .depasseraitPlafond(try rune(111, .simple), catalogue))
         // La dernière rune légale passe, au poids flottant près : 505 Vitalité, 1010 Initiative.
         let vi = try rune(125, .simple)
         #expect(!ObjetFM(lignes: [.init(effet: 125, valeur: 750, max: 250)]).depasseraitPlafond(vi, catalogue))
         #expect(ObjetFM(lignes: [.init(effet: 125, valeur: 755, max: 250)]).depasseraitPlafond(vi, catalogue))
         let ini = try rune(174, .simple)
-        #expect(!ObjetFM(lignes: [.init(effet: 174, valeur: 1000, max: nil)]).depasseraitPlafond(ini, catalogue))
-        #expect(ObjetFM(lignes: [.init(effet: 174, valeur: 1010, max: nil)]).depasseraitPlafond(ini, catalogue))
+        #expect(!ObjetFM(lignes: [.init(effet: 174, valeur: 1000, max: nil, exo: true)]).depasseraitPlafond(ini, catalogue))
+        #expect(ObjetFM(lignes: [.init(effet: 174, valeur: 1010, max: nil, exo: true)]).depasseraitPlafond(ini, catalogue))
     }
 
-    // MARK: - Issue et puits
+    // MARK: - Issue d'une fusion
 
     @Test("L'issue se lit dans la différence de deux tables")
     func issues() throws {
-        let paCha = try rune(123, .pa)
         let avant = [123: 13, 125: 224]
-        let sc = FusionFM.constater(avant: avant, apres: [123: 16, 125: 224], rune: paCha, catalogue: catalogue)
-        #expect(sc.issue == .succesCritique && sc.gain == 3 && sc.pertes.isEmpty)
-        let sn = FusionFM.constater(avant: avant, apres: [123: 16, 125: 209], rune: paCha, catalogue: catalogue)
+        func constat(_ apres: [Int: Int], _ ra: Double? = nil, _ rb: Double? = nil) -> FusionFM? {
+            FusionFM.constater(avant: avant, apres: apres, catalogue: catalogue, reliquatAvant: ra, reliquatApres: rb)
+        }
+        let sc = try #require(constat([123: 16, 125: 224]))
+        #expect(sc.issue == .succesCritique && sc.gains == [123: 3] && sc.pertes.isEmpty)
+        let sn = try #require(constat([123: 16, 125: 209]))
         #expect(sn.issue == .succesNeutre && sn.pertes == [125: 15])
         #expect(abs(sn.poidsPerdu - 3) < 0.01)
-        let ec = FusionFM.constater(avant: avant, apres: [123: 3, 125: 224], rune: paCha, catalogue: catalogue)
-        #expect(ec.issue == .echec && ec.pertes == [123: 10])
+        #expect(try #require(constat([123: 3, 125: 224])).issue == .echec)
         // Le puits a payé : aucune ligne ne baisse, le reliquat si.
-        let payeParLePuits = FusionFM.constater(avant: avant, apres: [123: 16, 125: 224], rune: paCha, catalogue: catalogue,
-                                                reliquatAvant: 12, reliquatApres: 9)
-        #expect(payeParLePuits.issue == .succesNeutre)
-        // Une exo : la ligne apparaît.
-        let exo = FusionFM.constater(avant: avant, apres: [123: 13, 125: 224, 111: 1], rune: try rune(111, .simple),
-                                     catalogue: catalogue)
-        #expect(exo.issue == .succesCritique && exo.gain == 1)
-    }
-
-    @Test("Le puits se recompte au fil des fusions, jamais sous zéro")
-    func puits() throws {
-        let fo = try rune(118, .simple)
-        let raVi = try rune(125, .ra)
-        var puits = 0.0
-        // Une Ra Vi (poids 10) qui arrache 30 Force : 20 de puits.
-        var fusion = FusionFM.constater(avant: [125: 100, 118: 60], apres: [125: 150, 118: 30], rune: raVi, catalogue: catalogue)
-        puits = fusion.puits(apres: puits, rune: raVi)
-        #expect(abs(puits - 20) < 0.001)
-        // Un succès critique n'y touche pas.
-        fusion = FusionFM.constater(avant: [118: 30], apres: [118: 31], rune: fo, catalogue: catalogue)
-        puits = fusion.puits(apres: puits, rune: fo)
-        #expect(abs(puits - 20) < 0.001)
-        // Un échec sans perte de ligne : le puits paie le poids de la rune.
-        fusion = FusionFM.constater(avant: [118: 31], apres: [118: 31], rune: fo, catalogue: catalogue)
-        puits = fusion.puits(apres: puits, rune: fo)
-        #expect(abs(puits - 19) < 0.001)
-        // Plus de rune que de puits : zéro, pas moins.
-        #expect(FusionFM(issue: .succesNeutre, gain: 1, pertes: [:], poidsPerdu: 0).puits(apres: 4, rune: raVi) == 0)
-        // Les décimales sont gardées : une Rune Fo (1) qui coûte 4 Vitalité (0,8).
-        fusion = FusionFM.constater(avant: [125: 100, 118: 30], apres: [125: 96, 118: 31], rune: fo, catalogue: catalogue)
-        #expect(abs(fusion.puits(apres: 5.5, rune: fo) - 5.3) < 0.001)
+        #expect(try #require(constat([123: 16, 125: 224], 12, 9)).issue == .succesNeutre)
+        #expect(try #require(constat([123: 13, 125: 224], 12, 9)).issue == .echec)
+        #expect(constat([123: 13, 125: 224]) == nil)
+        // Une exo : une ligne apparaît, aucune ne disparaît.
+        let exo = try #require(constat([123: 13, 125: 224, 111: 1]))
+        #expect(exo.issue == .succesCritique && exo.gains == [111: 1])
+        // La table a défilé : une ligne sortie de la vue n'est pas une perte.
+        #expect(constat([125: 224, 111: 1]) == nil)
     }
 
     // MARK: - Texte lu

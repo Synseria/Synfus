@@ -37,14 +37,16 @@ struct CatalogueFM: Equatable, Sendable {
 
     // MARK: - Réponses de DofusDB
 
-    struct EffetDofusDB: Decodable, Sendable {
+    struct EffetDofusDB: Codable, Sendable {
+        static let champs = ["id", "effectPowerRate", "description"]
         let id: Int
         let effectPowerRate: Double?
         let description: [String: String]?
     }
 
-    struct ObjetDofusDB: Decodable, Sendable {
-        struct EffetObjet: Decodable, Sendable { let effectId: Int; let from: Int }
+    struct ObjetDofusDB: Codable, Sendable {
+        static let champs = ["effects"]
+        struct EffetObjet: Codable, Sendable { let effectId: Int; let from: Int }
         let effects: [EffetObjet]?
     }
 
