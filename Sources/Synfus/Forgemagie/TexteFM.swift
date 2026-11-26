@@ -7,8 +7,9 @@ enum TexteFM {
     /// Une entrée de l'historique, la plus récente en bas.
     enum Entree: Equatable, Sendable {
         case echec
-        /// Une ligne qui a changé de `points` (négatif : une perte).
-        case ligne(points: Int, nom: String)
+        /// Une ligne qui a changé de `points` (négatif : une perte), en
+        /// pourcentage pour « 2% Résistance Feu ».
+        case ligne(points: Int, nom: String, pourcent: Bool)
         /// Du puits gagné ou consommé.
         case reliquat(Double)
     }
@@ -31,15 +32,15 @@ enum TexteFM {
         let plie = texte.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil)
         if plie.wholeMatch(of: /e?chec|failure|fracaso/) != nil { return .echec }
         // L'OCR lit le signe moins en tiret long, ou le colle au nombre.
-        guard let match = texte.wholeMatch(of: /([+\-−–]?)\s*(\d+(?:[.,]\d+)?)\s+(\p{L}[\p{L}\s'%.-]*)/) else { return nil }
+        guard let match = texte.wholeMatch(of: /([+\-−–]?)\s*(\d+(?:[.,]\d+)?)\s*(%?)\s*(\p{L}[\p{L}\s'.-]*)/) else { return nil }
         let negatif = !match.1.isEmpty && match.1 != "+"
-        let nom = String(match.3).trimmingCharacters(in: .whitespaces)
+        let nom = String(match.4).trimmingCharacters(in: .whitespaces)
         if nom.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil) == "reliquat",
            let valeur = Double(match.2.replacing(",", with: ".")) {
             return .reliquat(negatif ? -valeur : valeur)
         }
         guard let points = Int(match.2) else { return nil }
-        return .ligne(points: negatif ? -points : points, nom: nom)
+        return .ligne(points: negatif ? -points : points, nom: nom, pourcent: !match.3.isEmpty)
     }
 
     /// Les entrées lisibles d'une colonne d'historique, de haut en bas.

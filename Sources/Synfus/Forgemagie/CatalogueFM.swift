@@ -11,6 +11,9 @@ struct CatalogueFM: Equatable, Sendable {
         let poids: Double
         /// Le nom tel que le jeu l'écrit après la valeur : « Force », « Dommages Terre ».
         let nom: String
+        /// La valeur est un pourcentage (« 5% Résistance Terre ») : un autre effet
+        /// que la résistance fixe du même nom.
+        let pourcent: Bool
     }
 
     /// Le rang d'une rune : trois d'un rang se fusionnent en une du suivant.
@@ -54,7 +57,10 @@ struct CatalogueFM: Equatable, Sendable {
         for effet in reponseEffets {
             guard let poids = effet.effectPowerRate, poids > 0 else { continue }
             let gabarit = effet.description?[langue] ?? effet.description?["fr"] ?? ""
-            effets[effet.id] = Effet(id: effet.id, poids: poids, nom: Self.nom(gabarit: gabarit))
+            // `effectPowerRate` est un flottant simple (0,2 lu 0,20000000298) : au
+            // millième, 505 Vitalité pèsent 101 tout rond, le plafond.
+            effets[effet.id] = Effet(id: effet.id, poids: (poids * 1000).rounded() / 1000, nom: Self.nom(gabarit: gabarit),
+                                     pourcent: gabarit.contains("#2%"))
         }
         var parEffet: [Int: [Int]] = [:]
         for objet in reponseRunes {
@@ -87,14 +93,18 @@ struct CatalogueFM: Equatable, Sendable {
     /// Les fautes de lecture tolérées sur un nom : une, deux à partir de dix lettres.
     static func fautesTolerees(_ nom: String) -> Int { nom.count >= 10 ? 2 : 1 }
 
-    /// L'effet dont le nom ressemble le plus au texte lu, à `fautesTolerees` près.
-    func effet(nomme lu: String) -> Effet? {
+    /// L'effet dont le nom ressemble le plus au texte lu, à `fautesTolerees`
+    /// près ; `nil` si deux effets ressemblent autant (« PA » et « PM » à une
+    /// faute) : mieux vaut ne rien lire que lire faux.
+    func effet(nomme lu: String, pourcent: Bool) -> Effet? {
         let cherche = Ressemblance.normaliser(lu)
         guard !cherche.isEmpty else { return nil }
-        let candidats = effets.values.map { ($0, Ressemblance.distanceDansTexte(Ressemblance.normaliser($0.nom), cherche)
-            + abs(Ressemblance.normaliser($0.nom).count - cherche.count)) }
-        guard let meilleur = candidats.min(by: { ($0.1, $0.0.id) < ($1.1, $1.0.id) }),
-              meilleur.1 <= Self.fautesTolerees(cherche) else { return nil }
+        let candidats = effets.values.filter { $0.pourcent == pourcent }.map { effet in
+            let nom = Ressemblance.normaliser(effet.nom)
+            return (effet, Ressemblance.distanceDansTexte(nom, cherche) + abs(nom.count - cherche.count))
+        }.sorted { $0.1 < $1.1 }
+        guard let meilleur = candidats.first, meilleur.1 <= Self.fautesTolerees(cherche),
+              candidats.count < 2 || candidats[1].1 > meilleur.1 else { return nil }
         return meilleur.0
     }
 }
