@@ -281,7 +281,7 @@ extension QuetePanel {
     static func faire(_ geste: MenuQuetes.Geste) {
         switch geste {
         case .autoriser: WindowPreviewService.shared.requestAuthorization()
-        case .calibrer: SettingsWindowController.shared.show(section: .lecture)
+        case .calibrer: SettingsWindowController.shared.show(onglet: .propre(.lecture))
         case .reessayer: Task { try? await QuetesStore.shared.mettreAJour() }
         case .relire: LectureSuivi.shared.lire()
         }

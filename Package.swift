@@ -9,7 +9,7 @@ let package = Package(
     dependencies: [
         // Le socle commun des apps Synseria (jetons, trousse, télémétrie, mises à jour) : le dépôt
         // public engendré par le SDS, épinglé à une version.
-        .package(url: "https://github.com/Synseria/SynseriaKit", exact: "2.1.0"),
+        .package(url: "https://github.com/Synseria/SynseriaKit", exact: "2.2.1"),
     ],
     targets: [
         .executableTarget(

@@ -329,7 +329,7 @@ struct UsageTests {
         }
         let prefs = Preferences.forTesting(store: StockageEnMemoire())
         let reglages = UsageStore.reglages(prefs, demarrageAuto: false)
-        #expect(reglages.count == 20)
+        #expect(reglages.count == 19)
         for cle in reglages.keys {
             #expect("reglage.\(cle.texte)".wholeMatch(of: Self.clesAcceptees) != nil, "\(cle)")
         }

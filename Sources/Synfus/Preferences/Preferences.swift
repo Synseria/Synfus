@@ -80,17 +80,12 @@ final class Preferences: ObservableObject {
     /// défaut — rien à autoriser, et c'est ce qui manquait pour ne pas se
     /// perdre en enchaînant au clic.
     @Published var signalerBascule: Bool = true { didSet { save() } }
-
-    /// Chercher chaque jour une version plus récente sur GitHub (`MiseAJour`).
-    @Published var verifierMisesAJour: Bool = true { didSet { save() } }
     /// Stable, ou Bêta qui propose aussi les préversions (`-rc.N`).
     @Published var canalDeMiseAJour: CanalDeMiseAJour = .stable { didSet { save() } }
     /// La version du lancement précédent (`MiseAJour.apresMiseAJour`).
     @Published var derniereVersionLancee: String? { didSet { save() } }
     /// La dernière version annoncée par une notification : chacune ne l'est qu'une fois.
     @Published var derniereVersionNotifiee: String? { didSet { save() } }
-    /// Quand GitHub a répondu pour la dernière fois ; la ligne « Version installée » le dit.
-    @Published var derniereVerificationMaj: Date? { didSet { save() } }
     /// Aucune sauvegarde à la lecture : rien n'a encore été réglé.
     private(set) var premierLancement = false
     /// Envoyer chaque jour les statistiques d'utilisation (`UsageStore`).
@@ -601,11 +596,9 @@ final class Preferences: ObservableObject {
         .facultatif("zaapGainMinimal", \.zaapGainMinimal),
         .facultatif("zaapDuJeu", \.zaapDuJeu),
         .facultatif("zaapIntercalees", \.zaapIntercalees),
-        .facultatif("verifierMisesAJour", \.verifierMisesAJour),
         .enTexte("canalDeMiseAJour", \.canalDeMiseAJour, ecrit: \.rawValue, lu: CanalDeMiseAJour.init(rawValue:)),
         .optionnel("derniereVersionLancee", \.derniereVersionLancee),
         .optionnel("derniereVersionNotifiee", \.derniereVersionNotifiee),
-        .optionnel("derniereVerificationMaj", \.derniereVerificationMaj),
         .facultatif("partagerStatistiques", \.partagerStatistiques),
         .facultatif("zaapsAjoutes", \.zaapsAjoutes),
         .facultatif("zaapsChoix", \.zaapsChoix),

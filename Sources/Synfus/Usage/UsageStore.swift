@@ -3,6 +3,8 @@
 
 import Combine
 import Foundation
+import ServiceManagement
+import SynseriaDesign
 import Telemetrie
 
 /// Le seul foyer des statistiques : chaque geste compté passe par `compter`, l'onglet Usage lit
@@ -128,7 +130,7 @@ final class UsageStore: ObservableObject, SourceDeTelemetrie {
         if persosModifies, let fichierPersos {
             persosModifies = !Self.ecrire(persos, dans: fichierPersos)
         }
-        return ReleveDeLApp(reglages: Self.reglages(preferences, demarrageAuto: LaunchAtLogin.isEnabled),
+        return ReleveDeLApp(reglages: Self.reglages(preferences, demarrageAuto: OuvertureALaSession.etat(SMAppService.mainApp.status) != .inactive),
                             langue: L10n.courante.langue.rawValue)
     }
 
@@ -161,7 +163,6 @@ final class UsageStore: ObservableObject, SourceDeTelemetrie {
             "lire_position": prefs.lirePosition,
             "lire_combat": prefs.lireCombat,
             "lire_combat_derriere": prefs.lireCombatDerriere,
-            "maj_auto": prefs.verifierMisesAJour,
             "canal_beta": prefs.canalDeMiseAJour == .beta,
             "demarrage_auto": demarrageAuto,
         ]

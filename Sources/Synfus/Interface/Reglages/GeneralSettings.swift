@@ -2,19 +2,29 @@ import MiseAJour
 import SwiftUI
 import SynseriaDesign
 
-/// Onglet Général : ce qui conditionne tout le reste — les deux autorisations système —, puis le
-/// système (démarrage, langue), les mises à jour, les icônes et les statistiques.
+/// Réglages ▸ Général, commun (`ReglagesGeneraux`) : Ouvrir avec la session et Ma langue, puis ce qui
+/// est propre à Synfus — les deux autorisations système, qui conditionnent tout le reste, et les
+/// icônes —, puis Statistiques d'utilisation et Mise à jour.
 struct GeneralSettings: View {
     @ObservedObject private var prefs = Preferences.shared
+    @ObservedObject private var usage = UsageStore.shared
     @ObservedObject private var manager = WindowManager.shared
     @ObservedObject private var previews = WindowPreviewService.shared
     private let miseAJour = MiseAJour.shared
-    @State private var launchAtLogin = LaunchAtLogin.isEnabled
-    /// `""` = suivre le système, sinon le code de la langue imposée.
-    @State private var langue = LangueReglage.choisie?.rawValue ?? ""
+    /// nil : la langue du système ; relue une fois, le réglage s'écrit dans le domaine de l'app.
+    @State private var langue = LangueReglage.choisie?.rawValue
 
     var body: some View {
-        PageReglages {
+        ReglagesGeneraux(nomDeLApp: AppIntegrity.displayName, libelles: SettingsView.libelles,
+                         langue: LangueDesReglages(langue: Binding(get: { langue }, set: choisirLangue),
+                                                   langues: Langue.allCases.map { ($0.rawValue, $0.nom) },
+                                                   aide: L("general.langue.aide")),
+                         statistiques: StatistiquesDesReglages(partager: $prefs.partagerStatistiques,
+                                                               dernierEnvoi: usage.registre.historique.dernierEnvoi,
+                                                               aide: L("stats.partager.aide"),
+                                                               dernierRapport: usage.registre.historique.dernierRapport,
+                                                               prochainEnvoi: { usage.registre.apercuProchainEnvoi() }),
+                         miseAJour: miseAJour.reglages) {
             Bloc(L("general.autorisations")) {
                 PermissionRow(
                     name: L("general.accessibilite"),
@@ -35,33 +45,15 @@ struct GeneralSettings: View {
                 }
             }
 
-            Bloc(L("general.systeme")) {
-                LigneInterrupteur(titre: L("general.demarrerAvecSession"), isOn: $launchAtLogin)
-                    .onChange(of: launchAtLogin) { _, value in LaunchAtLogin.set(value) }
-                languageRow
-            }
-
-            Bloc(L("maj.titre")) {
-                Ligne(titre: L("maj.versionInstallee"),
-                      etat: MiseAJour.resume(version: AppIntegrity.version, etat: miseAJour.etat,
-                                             verifiee: prefs.derniereVerificationMaj)) {
-                    ActionMiseAJour()
-                }
-                LigneInterrupteur(titre: L("maj.verifier"), aide: L("maj.verifier.aide"), isOn: $prefs.verifierMisesAJour)
-                Ligne(titre: L("maj.canal"), aide: L("maj.canal.aide")) {
-                    SelecteurEnListe(L("maj.canal"), selection: $prefs.canalDeMiseAJour,
-                                     options: CanalDeMiseAJour.allCases.map { ($0, $0.libelle) })
-                        .fixedSize()
-                        .onChange(of: prefs.canalDeMiseAJour) { miseAJour.canalChange() }
-                }
-            }
-
             Bloc(L("general.icones")) {
                 IconesReglables()
             }
-
-            BlocsStatistiques()
         }
+    }
+
+    private func choisirLangue(_ code: String?) {
+        langue = code
+        LangueReglage.choisie = code.flatMap(Langue.init(rawValue:))
     }
 
     /// Après une mise à jour (versions ad hoc), une autorisation manquante se redonne : la ligne le dit.
@@ -71,23 +63,6 @@ struct GeneralSettings: View {
 
     private func aideAutorisation(_ aide: String) -> String {
         miseAJour.apresMiseAJour ? aide + "\n\n" + L("maj.autorisations.aide") : aide
-    }
-
-    /// La langue de l'interface. La table est chargée au lancement : le choix
-    /// ne prend effet qu'en relançant, et le bouton n'apparaît que si le
-    /// prochain lancement parlerait une autre langue que celui-ci.
-    private var languageRow: some View {
-        Ligne(titre: L("general.langue"), aide: L("general.langue.aide")) {
-            HStack(spacing: Jetons.espace2) {
-                if LangueReglage.auProchainLancement != L10n.courante.langue {
-                    Button(L("general.langue.relancer")) { LangueReglage.relancer() }
-                }
-                SelecteurEnListe(L("general.langue"), selection: $langue,
-                                 options: [("", L("general.langue.systeme"))] + Langue.allCases.map { ($0.rawValue, $0.nom) })
-                    .fixedSize()
-                .onChange(of: langue) { _, value in LangueReglage.choisie = Langue(rawValue: value) }
-            }
-        }
     }
 
     /// Sans cet avertissement, l'utilisateur coche la case dans les Réglages, voit Synfus continuer à

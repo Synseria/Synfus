@@ -1,6 +1,7 @@
 import Foundation
 import MiseAJour
 @testable import Synfus
+import SynseriaDesign
 import Testing
 
 @Suite("Mise à jour : release GitHub, version, empreinte")
@@ -17,24 +18,13 @@ struct MiseAJourTests {
         ReleasesDeSynfus.lire(Data(texte.utf8), canal: canal, architecture: architecture)
     }
 
-    @Test("La ligne de version dit de quand date la réponse de GitHub, ou seulement l'état")
-    func resume() {
-        var calendrier = Calendar(identifier: .gregorian)
-        calendrier.timeZone = TimeZone(identifier: "UTC") ?? .gmt
-        let maintenant = Date(timeIntervalSinceReferenceDate: 800_000_000)
-        let hier = maintenant.addingTimeInterval(-86_400)
-        func texte(_ etat: SuiviDeMiseAJour.Etat, _ date: Date?) -> String? {
-            MiseAJour.resume(version: "1.4.2", etat: etat, verifiee: date, maintenant: maintenant, calendrier: calendrier)
-        }
-        #expect(texte(.aJour, maintenant) == "v1.4.2 · " + L("maj.etat.aJourVerifiee", L("maj.quand.aujourdhui")))
-        #expect(texte(.aJour, hier) == "v1.4.2 · " + L("maj.etat.aJourVerifiee", L("maj.quand.hier")))
-        #expect(texte(.aJour, nil) == "v1.4.2 · " + L("maj.aJour"))
-        #expect(texte(.repos, maintenant) == "v1.4.2 · " + L("maj.etat.verifiee", L("maj.quand.aujourdhui")))
-        #expect(texte(.repos, nil) == "v1.4.2")
-        #expect(texte(.recherche, maintenant) == L("maj.verification"))
-        #expect(MiseAJour.resume(version: nil, etat: .repos, verifiee: nil) == nil)
-        #expect(MiseAJour.quand(maintenant.addingTimeInterval(-5 * 86_400), maintenant, calendrier)
-                == L("maj.quand.le", maintenant.addingTimeInterval(-5 * 86_400).formatted(.dateTime.day().month(.abbreviated))))
+    @Test("L'état se traduit pour la ligne commune : une version trouvée est prête à installer")
+    func pourLaLigne() throws {
+        let version = try #require(Self.lire())
+        #expect(SuiviDeMiseAJour.Etat.repos.pourLaLigne == .repos)
+        #expect(SuiviDeMiseAJour.Etat.aJour.pourLaLigne == .aJour)
+        #expect(SuiviDeMiseAJour.Etat.disponible(version).pourLaLigne == .prete(version: "0.11.0", notes: "Notes"))
+        #expect(SuiviDeMiseAJour.Etat.telechargement(version).pourLaLigne == .telechargement(version: "0.11.0"))
     }
 
     @Test("Une version n'est annoncée par notification qu'une fois")
@@ -100,9 +90,9 @@ struct MiseAJourTests {
     @Test("Une version pour un macOS plus récent se dit avec le macOS qu'elle exige")
     func incompatible() throws {
         let version = try #require(Self.lire())
-        #expect(SuiviDeMiseAJour.Etat.incompatible(version).libelle == L("maj.incompatible", "0.11.0", "26"))
-        #expect(SuiviDeMiseAJour.Etat.echec(.ecriture("refus"), version).libelle == L("maj.echec.ecriture"))
-        #expect(SuiviDeMiseAJour.Etat.echec(.reseau, nil).libelle == L("maj.echec.reseau"))
+        #expect(SuiviDeMiseAJour.Etat.incompatible(version).pourLaLigne == .echec(L("maj.incompatible", "0.11.0", "26")))
+        #expect(SuiviDeMiseAJour.Etat.echec(.ecriture("refus"), version).pourLaLigne == .echec(L("maj.echec.ecriture")))
+        #expect(SuiviDeMiseAJour.Etat.echec(.reseau, nil).pourLaLigne == .echec(L("maj.echec.reseau")))
     }
 
     /// Les deux dernières releases telles que l'API les donnait au passage au canal : la 0.14.0, au nom

@@ -46,22 +46,6 @@ enum EvenementUsage: String, CaseIterable, Codable, Sendable {
     case reglages
     case miseAJour = "mise_a_jour"
 
-    /// Les rubriques de l'onglet Usage.
-    enum Famille: CaseIterable, Sendable { case bascules, palette, outils }
-
-    var famille: Famille {
-        switch self {
-        case .basculeRaccourci, .basculeBarre, .basculeMenu, .basculeAttention, .rotationRaccourci,
-             .rotationClic, .session, .equipeSuivante, .rangement:
-            return .bascules
-        case .palette, .paletteZaap, .paletteLieu, .paletteCommande, .paletteVariable, .palettePerso,
-             .paletteAction, .paletteRecent, .paletteQuete, .palettePNJ, .paletteMonstre, .paletteObjet:
-            return .palette
-        default:
-            return .outils
-        }
-    }
-
     /// Le choix d'une entrée de la palette, selon son genre.
     static func palette(_ genre: EntreePalette.Genre) -> EvenementUsage {
         switch genre {
