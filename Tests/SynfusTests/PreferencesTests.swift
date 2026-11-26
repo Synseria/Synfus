@@ -531,7 +531,7 @@ struct PreferencesTests {
      "sessionHotKey":{"keyCode":1,"modifiers":256},"reduirePersosInactifs":false,"showClasses":false,
      "showNumbers":false,"showPreviewOnHover":true,"signalerBascule":false,
      "toggleAutoFocus":{"keyCode":99,"modifiers":0},
-     "zaapAuto":true,"zaapGainMinimal":8,"zaapDuJeu":false,"zaapIntercalees":"/a ; /b","verifierMisesAJour":false,"canalDeMiseAJour":"beta","derniereVersionLancee":"0.11.0","derniereVersionNotifiee":"0.12.0","derniereVerificationMaj":800000000,"partagerStatistiques":false,
+     "zaapAuto":true,"zaapGainMinimal":8,"zaapDuJeu":false,"zaapIntercalees":"/a ; /b","canalDeMiseAJour":"beta","derniereVersionLancee":"0.11.0","derniereVersionNotifiee":"0.12.0","partagerStatistiques":false,
      "zaapHotKey":{"keyCode":17,"modifiers":2048},
      "zaapsAjoutes":[{"monde":1,"noms":{"fr":"Mon zaap"},"x":50,"y":-50,"zone":{}}],
      "zaapsChoix":{"1:-2,0":false},
@@ -594,7 +594,6 @@ struct PreferencesTests {
         #expect(prefs.zaapGainMinimal == 8)
         #expect(prefs.zaapDuJeu == false)
         #expect(prefs.zaapIntercalees == "/a ; /b")
-        #expect(prefs.verifierMisesAJour == false)
         #expect(prefs.canalDeMiseAJour == .beta)
         #expect(prefs.partagerStatistiques == false)
         #expect(prefs.derniereVersionLancee == "0.11.0")
@@ -676,12 +675,10 @@ struct PreferencesTests {
         prefs.zaapGainMinimal = 8
         prefs.zaapDuJeu = false
         prefs.zaapIntercalees = "/a ; /b"
-        prefs.verifierMisesAJour = false
         prefs.canalDeMiseAJour = .beta
         prefs.partagerStatistiques = false
         prefs.derniereVersionLancee = "0.11.0"
         prefs.derniereVersionNotifiee = "0.12.0"
-        prefs.derniereVerificationMaj = Date(timeIntervalSinceReferenceDate: 800_000_000)
         prefs.zaapsAjoutes = [Zaap(50, -50, noms: ["fr": "Mon zaap"])]
         prefs.zaapsChoix = ["1:-2,0": false]
         prefs.zaapsFavoris = ["1:5,-18", "1:-2,0"]
@@ -741,7 +738,7 @@ struct PreferencesTests {
          "killFrozenClients":true,"lireCombat":false,"aideHuppermage":true,"lireCombatDerriere":false,"lirePosition":false,"menuBarIcon":"logo","iconeApp":{"motif":"oeuf","fond":"transparent"},"theme":{"teinte":260,"fond":{"accorde":{}},"suivreLeSysteme":true,"clarte":200,"clarteClaire":200,"clarteSombre":800},
          "reduirePersosInactifs":false,"showClasses":true,"showNumbers":true,"showPreviewOnHover":false,
          "signalerBascule":true,"zaapAuto":false,
-         "zaapGainMinimal":5,"zaapDuJeu":true,"zaapIntercalees":"/a","verifierMisesAJour":true,"canalDeMiseAJour":"stable","partagerStatistiques":true,"zaapsAjoutes":[],"zaapsChoix":{},"zaapsFavoris":[],"zaapsVueCarte":true,
+         "zaapGainMinimal":5,"zaapDuJeu":true,"zaapIntercalees":"/a","canalDeMiseAJour":"stable","partagerStatistiques":true,"zaapsAjoutes":[],"zaapsChoix":{},"zaapsFavoris":[],"zaapsVueCarte":true,
          "lieuxFavoris":[],"pnjsFavoris":[],"paletteRecents":[],"paletteTri":"auto","paletteFrequentation":{},"quetesEpinglees":[],"quetesEtape":{},
          "quetesValides":{},"quetesMasquerObjets":false,
          "quetesCompact":true,"quetesConsigne":true,"quetesVignettes":false,

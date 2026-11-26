@@ -1,19 +1,11 @@
 import SwiftUI
 import SynseriaDesign
 
-/// Onglet Thème : l'écran commun du SDS (`ReglagesDuTheme`), lié au thème des préférences ; tout
-/// s'applique en direct, dans les réglages comme dans la barre et les panneaux (`ThemeCourant`).
-/// L'app n'y met que ses mots.
-struct ThemeSettings: View {
-    // `ObservableObject` : sans lui, un réglage qui ne change aucune couleur (Système) ne redessinerait pas l'écran.
-    @ObservedObject private var prefs = Preferences.shared
-
-    var body: some View {
-        ReglagesDuTheme(theme: $prefs.themeDeLApp, libelles: Self.libelles)
-    }
-
+/// Réglages ▸ Thème est l'onglet commun (`ReglagesDuTheme`, posé par `CadreDesReglages`) : Synfus n'y
+/// met que ses mots.
+extension LibellesDuTheme {
     /// Les mots de l'écran et de son aperçu, traduits.
-    private static var libelles: LibellesDuTheme {
+    static var synfus: LibellesDuTheme {
         var l = LibellesDuTheme()
         l.systeme = L("theme.systeme")
         l.clarte = L("theme.clarte")

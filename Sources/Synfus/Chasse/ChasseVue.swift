@@ -258,7 +258,7 @@ struct ChasseVue: View {
         if modele.rienLu {
             HStack(spacing: Jetons.espace1) {
                 Text(L("chasse.rienLu")).font(Jetons.typoMeta.font).foregroundStyle(Color.jeton(\.encre2))
-                Button(L("lecture.ouvrir")) { SettingsWindowController.shared.show(section: .lecture) }
+                Button(L("lecture.ouvrir")) { SettingsWindowController.shared.show(onglet: .propre(.lecture)) }
                     .buttonStyle(BoutonBorde())
                     .help(L("chasse.lire.aide"))
             }

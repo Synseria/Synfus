@@ -41,7 +41,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if !accordee { WindowManager.shared.requestAccessibility() }
         if SettingsWindowController.ouvreAuLancement(premierLancement: Preferences.shared.premierLancement,
                                                      accessibiliteAccordee: accordee) {
-            SettingsWindowController.shared.show(section: .general)
+            SettingsWindowController.shared.show(onglet: .general)
         }
     }
 

@@ -93,7 +93,7 @@ struct PaletteVue: View {
                 .help(L("palette.depuis.aide"))
         case .lectureEteinte:
             boutonOrigine(L("palette.origine.lire"), aide: L("palette.origine.lire.aide")) {
-                SettingsWindowController.shared.show(section: .lecture)
+                SettingsWindowController.shared.show(onglet: .propre(.lecture))
             }
         case .sansAutorisation:
             boutonOrigine(L("autorisation.lectureEcran"), aide: L("palette.origine.autoriser.aide")) {

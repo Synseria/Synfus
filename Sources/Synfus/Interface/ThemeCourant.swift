@@ -49,6 +49,12 @@ enum ThemeCourant {
         return neuves
     }
 
+    /// La teinte sous le verre d'une fenêtre qui prend le clavier (`UsageDuVerre.clavier`), claire ou
+    /// sombre au dessin ; pleine quand le Mac refuse le verre.
+    static var teinteDuVerre: NSColor {
+        nsColor(theme) { couleurs, _ in UsageDuVerre.clavier.teinte(couleurs, verreRefuse: LisibiliteDuSysteme.shared.verreRefuse) }
+    }
+
     private struct Cle: Hashable {
         let theme: Jetons.Theme
         // periphery:ignore - lue par le Hashable synthétisé : c'est la moitié de la clé

@@ -1,5 +1,5 @@
 // Engendré par Synseria-Design — ne pas retoucher : changer jetons.json ou apps/Synfus.json, puis sh propager.sh.
-// apps/Synfus.json 9a033559a9784ae0 · contenu 6365418f1b15f98e
+// apps/Synfus.json 93aa6f01516de043 · contenu c76a7b38bd172ece
 import SwiftUI
 import SynseriaDesign
 
@@ -16,8 +16,6 @@ extension Jetons {
     static let largeurPanneauChasse: CGFloat = 216
     /// panneau d'aide aux boss
     static let largeurPanneauBoss: CGFloat = 252
-    /// fenêtre des réglages
-    static let largeurReglages: CGFloat = 1120
     /// colonne d'une page de réglages
     static let largeurColonne: CGFloat = 640
     /// vignette d'une carte du jeu ; sa hauteur est hauteur-rangee
