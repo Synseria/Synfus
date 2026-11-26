@@ -38,6 +38,10 @@ sa bascule). Toute nouvelle option suit la règle.
   Avec `menu` (titre des quêtes) : un clic ouvre un `NSMenu` en `popUp`, un glisser de plus de
   3 pt (`estUnGlisser`) remet l'appui d'origine à `performDrag`.
   Tailles de la fiche : `MetriquesQuete` (confort ou compact), aucune taille en dur dans `QueteVue`.
+- Calque de visée du Comte (`Boss/ViseePanel`) : **pas** un `PanneauDeJeu` — `NSPanel` nu, sans
+  place gardée, au cadre du contenu de Dofus, `ignoresMouseEvents`, caché dès que le pointeur est
+  sur une fenêtre de Synfus. Revu par `PanneauxJeu.revoir`. Sa grille se calibre à deux clics dans
+  Réglages ▸ Aides (`CalibrationGrilleView`, ses lignes seulement visée allumée).
 - Niveau `.statusBar`, pas `.floating` (qui disparaît sous un espace plein écran) ;
   `.stationary` volontairement absent du `collectionBehavior`.
 - Déplacement par `performDrag(with:)` (`WindowDragArea`), pas par `DragGesture` (en retard sur

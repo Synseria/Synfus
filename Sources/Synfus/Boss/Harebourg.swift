@@ -44,6 +44,15 @@ enum Harebourg {
             for _ in 0..<quarts { point = (point.y, -point.x) }
             return point
         }
+
+        /// Où tombe le sort visé sur `visee`, en cases depuis le lanceur : la
+        /// visée tournée de la confusion. L'inverse exact de `caseVisee`.
+        func caseAtteinte(visee: (x: Int, y: Int)) -> (x: Int, y: Int) {
+            var point = visee
+            // Un quart de tour horaire, y vers le bas : (x, y) → (−y, x).
+            for _ in 0..<quarts { point = (-point.y, point.x) }
+            return point
+        }
     }
 
     /// Où viser, par rapport à la cible vue du lanceur.

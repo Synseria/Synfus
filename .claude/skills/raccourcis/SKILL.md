@@ -19,7 +19,9 @@ user-invocable: false
   change de taille (`republierEffectif`) : l'accès direct n'enregistre qu'un emplacement par
   perso de l'effectif — ⌘6 reste aux autres apps tant qu'il n'y a pas de sixième perso. Les
   autres raccourcis sont une table (`gestes`, un geste par ligne) : un nouveau raccourci s'y
-  ajoute, et dans `Preferences.raccourcisGlobaux` et `resetShortcuts`.
+  ajoute, et dans `Preferences.raccourcisGlobaux` et `resetShortcuts`. « Marquer ma case (Comte
+  Harebourg) » (`marquerLanceurHotKey`) est sans défaut, ne se montre
+  ni ne s'enregistre que visée allumée (`ViseePanel` réenregistre à sa bascule).
 - `HotKey` stocke des **keycodes de position**, pas des caractères.
 - Deux territoires, règle du jeu par défaut : la rangée de chiffres (`digitRow`) est à
   l'accès direct (⌘1…⌘0) ; toute la navigation est sur la touche sous Échap

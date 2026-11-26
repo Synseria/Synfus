@@ -136,7 +136,7 @@ struct CalibrationZonesView: View {
         if let capture {
             GeometryReader { geo in
                 let taille = CGSize(width: capture.image.width, height: capture.image.height)
-                let cadre = ajuste(taille, dans: geo.size)
+                let cadre = Self.ajuste(taille, dans: geo.size)
                 let zone = versEcran(trace ?? genre.zone.rect, dans: cadre)
                 ZStack(alignment: .topLeading) {
                     Image(decorative: capture.image, scale: 1)
@@ -332,8 +332,8 @@ struct CalibrationZonesView: View {
 
     // MARK: - Géométrie de l'affichage
 
-    /// L'image ajustée dans la vue, centrée, proportions gardées.
-    private func ajuste(_ taille: CGSize, dans vue: CGSize) -> CGRect {
+    /// L'image ajustée dans la vue, centrée, proportions gardées (aussi la grille, `CalibrationGrilleView`).
+    static func ajuste(_ taille: CGSize, dans vue: CGSize) -> CGRect {
         guard taille.width > 0, taille.height > 0 else { return .zero }
         let echelle = min(vue.width / taille.width, vue.height / taille.height)
         let l = taille.width * echelle, h = taille.height * echelle

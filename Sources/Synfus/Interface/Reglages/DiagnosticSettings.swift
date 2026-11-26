@@ -13,9 +13,15 @@ struct BlocsDiagnostic: View {
     @ObservedObject private var lecteur = LecteurEcran.shared
     @ObservedObject private var lecture = DiagnosticLecture.shared
     @ObservedObject private var prefs = Preferences.shared
+    @ObservedObject private var visee = ViseePanel.shared
 
     var body: some View {
         fenetres
+        if prefs.harebourgVisee {
+            Bloc(L("boss.visee")) {
+                Ligne(titre: L("boss.visee.etat"), etat: ViseePanel.libelle(visee.inactive)) { EmptyView() }
+            }
+        }
         arrangementSection
         if !freezes.journal.isEmpty { gelesAcheves }
         attentionProbeSection

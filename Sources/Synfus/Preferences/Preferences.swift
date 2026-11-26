@@ -285,6 +285,16 @@ final class Preferences: ObservableObject {
     /// Raccourci du panneau d'aide aux boss. ⌥⌘B par défaut (génération 9).
     @Published var bossHotKey: HotKey? { didSet { save() } }
 
+    /// Raccourci « Marquer ma case » contre le Comte Harebourg : la case sous le
+    /// pointeur devient le pivot de la visée. Sans défaut.
+    @Published var marquerLanceurHotKey: HotKey? { didSet { save() } }
+
+    /// Le calque de visée contre le Comte Harebourg (`ViseePanel`). Éteint par défaut.
+    @Published var harebourgVisee: Bool = false { didSet { save() } }
+
+    /// La grille du plateau de combat, calibrée à deux clics ; `nil` : jamais calibrée.
+    @Published var grilleCombat: GrilleIso? { didSet { save() } }
+
     /// Le boss que montre le panneau d'aide.
     @Published var bossChoisi: CibleBoss = .special(.harebourg) { didSet { save() } }
     /// Le nom du boss de donjon choisi en toutes langues, tel que DofusDB l'a rendu : il
@@ -499,7 +509,7 @@ final class Preferences: ObservableObject {
         hotKeys + [
             cycleNext, cyclePrevious, toggleBar, previewHotKey, arrangeHotKey, sessionHotKey,
             equipeSuivanteHotKey, inviteHotKey, zaapHotKey, chasseHotKey, quetesHotKey, bossHotKey, paletteHotKey,
-            almanaxHotKey, toggleAutoFocus,
+            almanaxHotKey, toggleAutoFocus, marquerLanceurHotKey,
         ]
     }
 
@@ -519,6 +529,7 @@ final class Preferences: ObservableObject {
         equipeSuivanteHotKey = nil
         zaapHotKey = nil
         almanaxHotKey = nil
+        marquerLanceurHotKey = nil
         chasseHotKey = .defaultChasse
         quetesHotKey = .defaultQuetes
         bossHotKey = .defaultBoss
@@ -609,6 +620,9 @@ final class Preferences: ObservableObject {
         .optionnel("bossHotKey", \.bossHotKey),
         .optionnel("quetesHotKey", \.quetesHotKey),
         .optionnel("almanaxHotKey", \.almanaxHotKey),
+        .optionnel("marquerLanceurHotKey", \.marquerLanceurHotKey),
+        .facultatif("harebourgVisee", \.harebourgVisee),
+        .optionnel("grilleCombat", \.grilleCombat),
         .facultatif("bossChoisi", \.bossChoisi),
         .optionnel("nomsBossChoisi", \.nomsBossChoisi),
         .facultatif("lieuxFavoris", \.lieuxFavoris),

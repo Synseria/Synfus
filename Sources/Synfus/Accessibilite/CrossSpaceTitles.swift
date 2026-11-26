@@ -43,21 +43,30 @@ enum CrossSpaceTitles {
     /// Accessibilité : c'est le serveur de fenêtres qui répond, pas le client
     /// — un client gelé ne peut pas faire attendre cette lecture.
     static func affiches(parmi pids: Set<pid_t>) -> Set<pid_t> {
+        Set(fenetresAffichees(parmi: pids).map(\.pid))
+    }
+
+    /// Le cadre de la plus grande fenêtre de jeu à l'écran du processus, en
+    /// coordonnées globales AX (origine en haut à gauche de l'écran
+    /// principal) : le serveur de fenêtres répond, pas le client.
+    static func cadreAffiche(pid: pid_t) -> CGRect? {
+        fenetresAffichees(parmi: [pid]).map(\.cadre).max { $0.width * $0.height < $1.width * $1.height }
+    }
+
+    private static func fenetresAffichees(parmi pids: Set<pid_t>) -> [(pid: pid_t, cadre: CGRect)] {
         guard !pids.isEmpty,
               let infos = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements],
                                                      kCGNullWindowID) as? [[String: Any]]
         else { return [] }
-        var vus: Set<pid_t> = []
-        for info in infos {
+        return infos.compactMap { info in
             guard let owner = (info[kCGWindowOwnerPID as String] as? NSNumber)?.int32Value,
                   pids.contains(owner),
                   (info[kCGWindowLayer as String] as? NSNumber)?.intValue == 0,
                   let boundsDict = info[kCGWindowBounds as String] as? NSDictionary,
                   let bounds = CGRect(dictionaryRepresentation: boundsDict),
                   AccessibilityReader.isGameWindow(subrole: nil, size: bounds.size)
-            else { continue }
-            vus.insert(owner)
+            else { return nil }
+            return (owner, bounds)
         }
-        return vus
     }
 }

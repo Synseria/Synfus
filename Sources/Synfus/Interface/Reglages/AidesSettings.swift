@@ -5,6 +5,8 @@ import SynseriaDesign
 struct AidesSettings: View {
     @ObservedObject private var modele = ChasseModele.shared
     @ObservedObject private var previews = WindowPreviewService.shared
+    @ObservedObject private var prefs = Preferences.shared
+    @State private var calibrerGrille = false
 
     var body: some View {
         PageReglages {
@@ -16,6 +18,16 @@ struct AidesSettings: View {
                     Ligne(titre: BossVue.nom(boss), aide: Self.resume(boss)) {
                         Button(L("boss.ouvrir")) { BossPanel.shared.ouvrir(.special(boss)) }
                     }
+                    if boss == .harebourg {
+                        LigneInterrupteur(titre: L("boss.visee"), aide: L("boss.visee.aide"), isOn: $prefs.harebourgVisee)
+                        if prefs.harebourgVisee {
+                            Ligne(titre: L("boss.visee.grille"),
+                                  etat: prefs.grilleCombat == nil ? L("boss.visee.grille.aucune") : L("lecture.zone.calibree"),
+                                  aide: L("boss.visee.grille.aide")) {
+                                Button(L("lecture.calibrer")) { calibrerGrille = true }
+                            }
+                        }
+                    }
                 }
                 if !previews.authorized {
                     Ligne(titre: L("boss.lecture"), aide: L("boss.lecture.aide")) {
@@ -24,6 +36,7 @@ struct AidesSettings: View {
                 }
             }
         }
+        .sheet(isPresented: $calibrerGrille) { CalibrationGrilleView().racineSynfus() }
     }
 
     /// La liste des indices de DofusDB : sa date, ou son échec — le nom et le geste, sans la cause.

@@ -474,6 +474,76 @@ struct CapturesTests {
         try ecrire(vue, vers: dossier.appending(path: "boss-fiche.png"))
     }
 
+    /// Le calque de visée du Comte sur un damier synthétique (jamais une capture du jeu), la
+    /// voisine comprise ; le réglage dans l'onglet Aides et la feuille de calibrage de la grille.
+    @Test("Captures de la visée du Comte", .enabled(if: dossier != nil))
+    func viseeHarebourg() throws {
+        let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
+        try FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)
+        let taille = CGSize(width: 1000, height: 617)
+        let grille = GrilleIso(origine: CGPoint(x: 0.5, y: 0.5), demiLargeur: 0.043, rapport: taille.width / taille.height)
+        let damier = try #require(Self.damier(grille, taille: taille))
+        let dessin = ViseePanel.Dessin(grille: grille, lanceur: GrilleIso.Case(0, 0), survolee: GrilleIso.Case(-1, -3),
+                                       arrivees: [.init(position: GrilleIso.Case(3, -1), principale: true),
+                                                  .init(position: GrilleIso.Case(-3, 1), principale: false)])
+        let calque = ZStack {
+            Image(decorative: damier, scale: 1)
+            CalqueVisee(dessin: dessin)
+        }
+        .frame(width: taille.width, height: taille.height)
+        .environment(\.colorScheme, Self.schema)
+        try ecrire(calque, vers: dossier.appending(path: "visee-calque.png"))
+
+        let prefs = Preferences.shared
+        let (avant, grilleAvant) = (prefs.harebourgVisee, prefs.grilleCombat)
+        defer { prefs.harebourgVisee = avant; prefs.grilleCombat = grilleAvant }
+        prefs.harebourgVisee = true
+        prefs.grilleCombat = nil
+        let aides = SettingsView(onglet: OngletReglages(.propre(.aides)), hauteur: 680)
+            .background(Color(nsColor: .windowBackgroundColor))
+            .environment(\.colorScheme, Self.schema)
+        try ecrire(aides, vers: dossier.appending(path: "visee-reglages.png"))
+        for (section, nom) in [(SettingsSection.raccourcis, "visee-raccourcis"), (.lecture, "visee-diagnostic")] {
+            let page = SettingsView(onglet: OngletReglages(.propre(section)), hauteur: 1400)
+                .background(Color(nsColor: .windowBackgroundColor))
+                .environment(\.colorScheme, Self.schema)
+            try ecrire(page, vers: dossier.appending(path: nom + ".png"))
+        }
+        prefs.grilleCombat = grille
+        let feuille = CalibrationGrilleView(capture: CapturesCalibrage.Capture(image: damier, date: Date()))
+            .environment(\.colorScheme, Self.schema)
+        try ecrire(feuille, vers: dossier.appending(path: "visee-calibrage.png"))
+    }
+
+    // swiftlint:disable:next couleur_en_dur - le sol d'un plateau synthétique, une image du jeu imitée hors des jetons
+    nonisolated private static let solDamier = CGColor(red: 0.93, green: 0.85, blue: 0.66, alpha: 1)
+    // swiftlint:disable:next couleur_en_dur - une case du plateau synthétique, hors des jetons
+    nonisolated private static let caseClaire = CGColor(red: 0.36, green: 0.42, blue: 0.68, alpha: 1)
+    // swiftlint:disable:next couleur_en_dur - une case du plateau synthétique, hors des jetons
+    nonisolated private static let caseSombre = CGColor(red: 0.27, green: 0.31, blue: 0.58, alpha: 1)
+
+    /// Un plateau en damier de deux bleus, dessiné par la grille elle-même.
+    private static func damier(_ grille: GrilleIso, taille: CGSize) -> CGImage? {
+        guard let contexte = CGContext(data: nil, width: Int(taille.width), height: Int(taille.height), bitsPerComponent: 8,
+                                       bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
+                                       bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+        contexte.setFillColor(Self.solDamier)
+        contexte.fill(CGRect(origin: .zero, size: taille))
+        // CoreGraphics compte y vers le haut : on retourne le repère pour dessiner comme à l'écran.
+        contexte.translateBy(x: 0, y: taille.height)
+        contexte.scaleBy(x: 1, y: -1)
+        for x in -14...14 {
+            for y in -14...14 where abs(x - y) <= 12 && abs(x + y) <= 9 {
+                let clair = (x + y).isMultiple(of: 2)
+                contexte.setFillColor(clair ? Self.caseClaire : Self.caseSombre)
+                contexte.addLines(between: grille.losange(GrilleIso.Case(x, y), contenu: taille))
+                contexte.closePath()
+                contexte.fillPath()
+            }
+        }
+        return contexte.makeImage()
+    }
+
     @Test("Capture du tableau des combinaisons de l'Huppermage", .enabled(if: dossier != nil))
     func huppermage() throws {
         let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
