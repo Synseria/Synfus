@@ -57,7 +57,11 @@ struct SuiviConfusion: Equatable, Sendable {
         /// La dernière vie lue, telle quelle — des points sans maximum ne
         /// donnent pas de pourcentage.
         var vieLue: Harebourg.Vie?
+        /// Le dernier maximum de points de vie écrit par le jeu, pour ce combat
+        /// seulement (oublié au placement du suivant) : l'équipement change entre deux.
         var maxConnu: Int?
+        /// Un maximum trop loin du connu, en attente d'une seconde lecture.
+        var maxDouteux: Int?
         var coups = 0
         var manuelle: Harebourg.Confusion?
         var annonce: Annonce?
@@ -101,13 +105,40 @@ struct SuiviConfusion: Equatable, Sendable {
             suivi.oublierLeTour()
             if apres == .horsCombat { anonyme = nil }
         }
+        // Un nouveau combat : son placement. Pas la sortie — un bouton masqué un
+        // instant (une fenêtre du jeu par-dessus) se lit hors combat, et le
+        // maximum, que le cœur n'écrit pas d'office, ne reviendrait pas.
+        if apres == .placement && avant != .placement {
+            suivi.vie = nil
+            suivi.vieLue = nil
+            suivi.maxConnu = nil
+            suivi.maxDouteux = nil
+        }
         persos[perso] = suivi
     }
+
+    /// Un maximum qui s'écarte du connu de plus de cette part doit être lu
+    /// deux fois de suite : une lecture ratée ne fausse pas tout le combat.
+    static let ecartMaxDouteux = 0.3
 
     /// Le cœur de vie lu chez `perso`.
     mutating func vie(_ lue: Harebourg.Vie, perso: String, le date: Date) {
         var suivi = persos[perso] ?? Perso()
-        if case .points(_, let max?) = lue { suivi.maxConnu = max }
+        switch lue {
+        case .points(_, let max?):
+            if let connu = suivi.maxConnu, abs(Double(max - connu)) > Double(connu) * Self.ecartMaxDouteux,
+               suivi.maxDouteux != max {
+                suivi.maxDouteux = max
+            } else {
+                suivi.maxConnu = max
+                suivi.maxDouteux = nil
+            }
+        case .points(let actuels, nil):
+            // Plus de points que le maximum retenu : il ne vaut plus.
+            if let connu = suivi.maxConnu, actuels > connu { suivi.maxConnu = nil }
+        case .pourcentage:
+            break
+        }
         suivi.vieLue = lue
         if let pourcentage = lue.pourcentage(maxConnu: suivi.maxConnu) {
             suivi.vie = pourcentage

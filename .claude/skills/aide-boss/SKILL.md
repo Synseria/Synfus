@@ -18,7 +18,12 @@ Synfus lit l'écran et affiche ; viser et lancer restent au joueur (CGU : aucun 
 - **Vie** : tranches relevées par les joueurs (Papycha, Dofus pour les noobs) — 100–91 horaire,
   90–75 contre-horaire, 74–46 demi-tour, 45–31 contre-horaire, 30–1 horaire ; à moins d'un point
   d'un plancher (`margeFrontiere`), la voisine est signalée (`ParVie.voisine`). Cœur lu :
-  `57%`, `3 450 / 4 200`, ou points seuls (pourcentage par un maximum déjà lu, jamais supposé).
+  `57%`, `3 450 / 4 200` (ou à cheval sur deux lignes), courant puis maximum sur deux lignes
+  (maximum ≥ `maxPlancher` : les PA et PM sous le cœur n'en sont pas ; les milliers ne passent
+  jamais d'une ligne à l'autre), ou points seuls (pourcentage par un maximum lu **dans ce combat**,
+  jamais supposé). Le maximum (`SuiviConfusion`) : le dernier écrit fait foi, un saut de plus de
+  30 % attend une seconde lecture, des points au-delà l'invalident, oublié au placement suivant.
+- **Grille** : la conversion case ↔ point est `GrilleIso` (`Lecture/`), seule source.
 - **Canal combat** : `[14:04] Nom : …` ; un angle en degrés ou en Pi (`3Pi/2`, `1/2 pi`, `π`) **et**
   un sens (`horaire`, `contre horaire`, en/es aussi) — sans sens, rien (le jeu l'écrit toujours,
   demi-tour compris). Une ligne repliée se recolle à celle du dessus (sans heure). Le nom avant

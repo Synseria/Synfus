@@ -69,6 +69,14 @@ struct HarebourgTests {
         #expect(Harebourg.vie(["3\u{202F}450/4\u{202F}200"]) == .points(actuels: 3450, max: 4200))
         #expect(Harebourg.vie(["2.394", "12", "5"]) == .points(actuels: 2394, max: nil))
         #expect(Harebourg.vie(["3450"]) == .points(actuels: 3450, max: nil))
+        // Deux lignes : courant puis maximum, jamais un seul nombre de milliers.
+        #expect(Harebourg.vie(["950", "4200"]) == .points(actuels: 950, max: 4200))
+        #expect(Harebourg.vie(["2 604", "4 200", "12", "5"]) == .points(actuels: 2604, max: 4200))
+        #expect(Harebourg.vie(["3450 /", "4200"]) == .points(actuels: 3450, max: 4200))
+        // Les PA et les PM sous le cœur ne sont pas un maximum.
+        #expect(Harebourg.vie(["8", "12", "5"]) == .points(actuels: 8, max: nil))
+        #expect(Harebourg.vie(["4162", "12", "5"]) == .points(actuels: 4162, max: nil))
+        #expect(Harebourg.vie(["4200", "950"]) == .points(actuels: 4200, max: nil))
         #expect(Harebourg.vie([]) == nil)
         #expect(Harebourg.vie(["PV"]) == nil)
         #expect(Harebourg.Vie.points(actuels: 2100, max: 4200).pourcentage(maxConnu: nil) == 50)
@@ -169,6 +177,36 @@ struct HarebourgTests {
         suivi.vie(.points(actuels: 3000, max: 4000), perso: "A", le: t0)
         suivi.vie(.points(actuels: 2000, max: nil), perso: "A", le: t0)
         #expect(suivi.estimation("A")?.source == .vie(pourcentage: 50))
+    }
+
+    @Test("Le maximum lu ne vaut que pour le combat, et se méfie d'un saut")
+    func maximumDuCombat() {
+        var suivi = SuiviConfusion()
+        suivi.vie(.points(actuels: 3000, max: 4000), perso: "A", le: t0)
+        // Un saut de plus de 30 % attend une seconde lecture.
+        suivi.vie(.points(actuels: 3000, max: 9000), perso: "A", le: t0)
+        suivi.vie(.points(actuels: 2000, max: nil), perso: "A", le: t0)
+        #expect(suivi.estimation("A")?.source == .vie(pourcentage: 50))
+        suivi.vie(.points(actuels: 3000, max: 9000), perso: "A", le: t0)
+        suivi.vie(.points(actuels: 4500, max: nil), perso: "A", le: t0)
+        #expect(suivi.estimation("A")?.source == .vie(pourcentage: 50))
+        // Plus de points que le maximum : il ne vaut plus.
+        suivi.vie(.points(actuels: 9500, max: nil), perso: "A", le: t0)
+        suivi.vie(.points(actuels: 2250, max: nil), perso: "A", le: t0)
+        #expect(suivi.estimation("A")?.source == .vie(pourcentage: 50))
+        // Un bouton masqué un instant ne fait pas oublier le maximum.
+        suivi.vie(.points(actuels: 3000, max: 4000), perso: "A", le: t0)
+        suivi.combat("A", avant: .pasMonTour, apres: .horsCombat, le: t0)
+        suivi.combat("A", avant: .horsCombat, apres: .pasMonTour, le: t0)
+        suivi.vie(.points(actuels: 1000, max: nil), perso: "A", le: t0)
+        #expect(suivi.estimation("A")?.source == .vie(pourcentage: 25))
+        // Le combat suivant, à son placement, maximum et vie s'oublient.
+        suivi.combat("A", avant: .horsCombat, apres: .placement, le: t0)
+        suivi.vie(.points(actuels: 1000, max: nil), perso: "A", le: t0)
+        #expect(suivi.estimation("A") == nil)
+        suivi.vie(.points(actuels: 1000, max: 2000), perso: "A", le: t0)
+        suivi.vie(.points(actuels: 1500, max: nil), perso: "A", le: t0)
+        #expect(suivi.estimation("A")?.source == .vie(pourcentage: 75))
     }
 
     @Test("L'annonce du tchat prime sur la vie, pour le seul tour qu'elle annonce")

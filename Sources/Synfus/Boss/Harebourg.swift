@@ -107,21 +107,40 @@ enum Harebourg {
         }
     }
 
-    /// Le cœur lu par l'OCR : « 57% », « 57 % », « 3 450 / 4 200 », « 3450 ».
+    /// Le cœur lu par l'OCR : « 57% », « 57 % », « 3 450 / 4 200 » (sur une
+    /// ligne ou à cheval), « 3450 » puis « 4200 » sur deux lignes, « 3450 ».
     /// Les milliers peuvent être séparés d'une espace (fine ou non) ou d'un
-    /// point. `nil` : rien de lisible.
+    /// point, jamais d'un saut de ligne : « 950 » puis « 4200 » ne font pas
+    /// 950 420. `nil` : rien de lisible.
     static func vie(_ lignes: [String]) -> Vie? {
-        let texte = lignes.joined(separator: " ")
+        let texte = lignes.joined(separator: "\n")
         if let match = texte.firstMatch(of: /(\d{1,3})\s*%/), let valeur = Double(match.1), valeur <= 100 {
             return .pourcentage(valeur)
         }
-        let nombres = texte.matches(of: /\d{1,3}(?:[ \u{00A0}\u{202F}.,]\d{3})+|\d+/).compactMap { entier($0.output) }
         if let barre = texte.firstMatch(of: /(\d[\d \u{00A0}\u{202F}.,]*)\s*\/\s*(\d[\d \u{00A0}\u{202F}.,]*)/),
            let actuels = entier(barre.1), let max = entier(barre.2), max > 0 {
             return .points(actuels: actuels, max: max)
         }
+        let seuls = lignes.map(nombreSeul)
+        if let premier = seuls.firstIndex(where: { $0 != nil }), let actuels = seuls[premier], premier + 1 < seuls.count,
+           let max = seuls[premier + 1], max >= maxPlancher, actuels <= max {
+            return .points(actuels: actuels, max: max)
+        }
+        let nombres = texte.matches(of: /\d{1,3}(?:[ \u{00A0}\u{202F}.,]\d{3})+|\d+/).compactMap { entier($0.output) }
         guard let actuels = nombres.first, actuels > 0 else { return nil }
         return .points(actuels: actuels, max: nil)
+    }
+
+    /// Sous le cœur, le jeu écrit les PA et les PM (« 12 », « 5 ») : une ligne
+    /// qui suit les points de vie n'en est le maximum qu'à partir de ce plancher,
+    /// qu'aucun perso de taille à combattre le Comte ne manque.
+    static let maxPlancher = 100
+
+    /// Une ligne qui n'est qu'un nombre, milliers séparés ou non.
+    private static func nombreSeul(_ ligne: String) -> Int? {
+        let nette = ligne.trimmingCharacters(in: .whitespaces)
+        guard nette.wholeMatch(of: /\d{1,3}(?:[ \u{00A0}\u{202F}.,]\d{3})+|\d+/) != nil else { return nil }
+        return entier(Substring(nette))
     }
 
     private static func entier(_ texte: Substring) -> Int? {
