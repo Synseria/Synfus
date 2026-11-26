@@ -217,7 +217,8 @@ max, gardées si courant ≤ max) ; un nombre seul (courant) ; une ligne sans ch
 - Le **dernier max écrit par le jeu fait foi**, pas le plus grand vu.
 - Un max qui s'écarte de plus de 30 % du connu doit être lu **deux fois de suite**.
 - `actuels > max connu` : max périmé, oublié.
-- Pas de borne basse. Max et vie s'oublient à la sortie du combat et au placement.
+- Pas de borne basse. Max et vie s'oublient au placement du combat suivant (pas à la sortie : un
+  bouton masqué un instant se lit hors combat).
 - Deux lignes de nombres = courant puis max, seulement si le max vaut ≥ 100 : sous le cœur, les PA
   et les PM (« 12 », « 5 ») ne sont pas un max.
 

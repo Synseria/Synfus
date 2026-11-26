@@ -194,9 +194,13 @@ struct HarebourgTests {
         suivi.vie(.points(actuels: 9500, max: nil), perso: "A", le: t0)
         suivi.vie(.points(actuels: 2250, max: nil), perso: "A", le: t0)
         #expect(suivi.estimation("A")?.source == .vie(pourcentage: 50))
-        // Le combat fini, maximum et vie s'oublient.
+        // Un bouton masqué un instant ne fait pas oublier le maximum.
         suivi.vie(.points(actuels: 3000, max: 4000), perso: "A", le: t0)
         suivi.combat("A", avant: .pasMonTour, apres: .horsCombat, le: t0)
+        suivi.combat("A", avant: .horsCombat, apres: .pasMonTour, le: t0)
+        suivi.vie(.points(actuels: 1000, max: nil), perso: "A", le: t0)
+        #expect(suivi.estimation("A")?.source == .vie(pourcentage: 25))
+        // Le combat suivant, à son placement, maximum et vie s'oublient.
         suivi.combat("A", avant: .horsCombat, apres: .placement, le: t0)
         suivi.vie(.points(actuels: 1000, max: nil), perso: "A", le: t0)
         #expect(suivi.estimation("A") == nil)

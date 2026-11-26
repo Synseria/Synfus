@@ -58,7 +58,7 @@ struct SuiviConfusion: Equatable, Sendable {
         /// donnent pas de pourcentage.
         var vieLue: Harebourg.Vie?
         /// Le dernier maximum de points de vie écrit par le jeu, pour ce combat
-        /// seulement : l'équipement change entre deux.
+        /// seulement (oublié au placement du suivant) : l'équipement change entre deux.
         var maxConnu: Int?
         /// Un maximum trop loin du connu, en attente d'une seconde lecture.
         var maxDouteux: Int?
@@ -105,7 +105,10 @@ struct SuiviConfusion: Equatable, Sendable {
             suivi.oublierLeTour()
             if apres == .horsCombat { anonyme = nil }
         }
-        if apres == .horsCombat || (apres == .placement && avant != .placement) {
+        // Un nouveau combat : son placement. Pas la sortie — un bouton masqué un
+        // instant (une fenêtre du jeu par-dessus) se lit hors combat, et le
+        // maximum, que le cœur n'écrit pas d'office, ne reviendrait pas.
+        if apres == .placement && avant != .placement {
             suivi.vie = nil
             suivi.vieLue = nil
             suivi.maxConnu = nil
