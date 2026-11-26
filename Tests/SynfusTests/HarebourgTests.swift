@@ -38,6 +38,23 @@ struct HarebourgTests {
         #expect(Confusion.contreHoraire.caseVisee(cible: cible) == (2, 0))
     }
 
+    @Test("La case atteinte est l'inverse exact de la case visée")
+    func caseAtteinte() {
+        for quarts in 0..<4 {
+            let confusion = Confusion(quarts: quarts)
+            for x in -5...5 {
+                for y in -5...5 {
+                    #expect(confusion.caseAtteinte(visee: confusion.caseVisee(cible: (x, y))) == (x, y))
+                    #expect(confusion.caseVisee(cible: confusion.caseAtteinte(visee: (x, y))) == (x, y))
+                }
+            }
+        }
+        // Un quart horaire : visée en haut à droite, le sort tombe en bas à droite.
+        #expect(Confusion.horaire.caseAtteinte(visee: (0, -2)) == (2, 0))
+        #expect(Confusion.demiTour.caseAtteinte(visee: (0, -2)) == (0, 2))
+        #expect(Confusion.contreHoraire.caseAtteinte(visee: (0, -2)) == (-2, 0))
+    }
+
     // MARK: - Par la vie
 
     @Test("Les tranches de vie", arguments: [

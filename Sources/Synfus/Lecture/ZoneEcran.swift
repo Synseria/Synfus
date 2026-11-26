@@ -106,6 +106,34 @@ struct ZoneEcran: Codable, Equatable, Sendable {
                height: zone.height * contenu.height)
     }
 
+    /// Le contenu en coordonnées globales AX (origine en haut à gauche de
+    /// l'écran principal, y vers le bas), d'après le cadre de la fenêtre.
+    static func contenuAX(fenetreAX: CGRect, barreTitre: CGFloat, pleinEcran: Bool) -> CGRect {
+        contenu(fenetre: fenetreAX.size, barreTitre: barreTitre, pleinEcran: pleinEcran)
+            .offsetBy(dx: fenetreAX.minX, dy: fenetreAX.minY)
+    }
+
+    /// Un point de l'écran tel qu'AppKit le donne (`NSEvent.mouseLocation` :
+    /// origine en bas de l'écran principal, y vers le haut) en fraction du
+    /// contenu ; `nil` hors du contenu.
+    static func fraction(pointEcran: CGPoint, fenetreAX: CGRect, hauteurPrincipale: CGFloat,
+                         barreTitre: CGFloat, pleinEcran: Bool) -> CGPoint? {
+        let contenu = contenuAX(fenetreAX: fenetreAX, barreTitre: barreTitre, pleinEcran: pleinEcran)
+        let ax = CGPoint(x: pointEcran.x, y: LayoutComputer.flipY(pointEcran.y, hauteurPrincipale: hauteurPrincipale))
+        let f = CGPoint(x: (ax.x - contenu.minX) / contenu.width, y: (ax.y - contenu.minY) / contenu.height)
+        guard (0..<1).contains(f.x), (0..<1).contains(f.y) else { return nil }
+        return f
+    }
+
+    /// Le cadre AppKit du contenu (origine en bas à gauche) : là où poser une
+    /// fenêtre qui le recouvre exactement.
+    static func cadreAppKit(fenetreAX: CGRect, hauteurPrincipale: CGFloat,
+                            barreTitre: CGFloat, pleinEcran: Bool) -> CGRect {
+        let contenu = contenuAX(fenetreAX: fenetreAX, barreTitre: barreTitre, pleinEcran: pleinEcran)
+        return CGRect(x: contenu.minX, y: LayoutComputer.flipY(contenu.maxY, hauteurPrincipale: hauteurPrincipale),
+                      width: contenu.width, height: contenu.height)
+    }
+
     /// Pixels par point pour ramener le contenu à `reference`, sans dépasser
     /// la résolution native (`plafond`) : agrandir au-delà n'invente rien.
     static func echelle(hauteurContenu: CGFloat, reference: CGFloat = hauteurReference,
