@@ -1,3 +1,4 @@
+import AppKit
 import Combine
 import Foundation
 
@@ -12,6 +13,8 @@ final class AideBoss: ObservableObject {
     @Published private(set) var suivi = SuiviConfusion()
     @Published private(set) var tours = ToursCombat()
     @Published private(set) var session = SessionBoss()
+    /// La case de chaque lanceur contre le Comte, pivot de la visée (`ViseePanel`).
+    @Published private(set) var visee = ViseeHarebourg()
     /// La fiche DofusDB de chaque boss déjà demandée, par monstre (`chargerFiche`).
     @Published private(set) var fiches: [Int: FicheCombat] = [:]
 
@@ -150,7 +153,11 @@ final class AideBoss: ObservableObject {
             let avant = combatsVus[perso]
             // Un placement ouvre un combat. Pas une première lecture en combat :
             // chaque perso est lu quand il passe devant, souvent bien après.
-            if etat == .placement, avant != .placement { session = SessionBoss() }
+            if etat == .placement, avant != .placement {
+                // Tous les pivots : un perso jamais vu en placement garderait celui d'avant.
+                session = SessionBoss()
+                visee = ViseeHarebourg()
+            }
             suivi.combat(perso, avant: avant, apres: etat, le: maintenant)
             tours.combat(perso, avant: avant, apres: etat)
         }
@@ -167,6 +174,15 @@ final class AideBoss: ObservableObject {
     func coup(_ pas: Int) { pourLePersoDevant { suivi.coup(pas, perso: $0) } }
 
     func choisir(_ confusion: Harebourg.Confusion?) { pourLePersoDevant { suivi.choisir(confusion, perso: $0) } }
+
+    /// Le raccourci « Marquer ma case » : la case sous le pointeur devient le
+    /// pivot de la visée du perso devant. Rien à marquer (pas de grille, pointeur
+    /// hors du jeu) : le bip du système, la raison est au Diagnostic.
+    func marquerLanceur() {
+        guard let (perso, position) = ViseePanel.shared.caseSousLePointeur() else { return NSSound.beep() }
+        visee.marquer(position, perso: perso)
+        ViseePanel.shared.revoir()
+    }
 
     func corrigerTour(_ pas: Int) { pourLePersoDevant { tours.corriger(pas, perso: $0) } }
 

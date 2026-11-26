@@ -14,6 +14,7 @@ enum PanneauxJeu {
         ChassePanel.shared.revoirVisibilite(force: force)
         BossPanel.shared.revoirVisibilite(force: force)
         RecettePanel.shared.revoirVisibilite(force: force)
+        ViseePanel.shared.revoirVisibilite(force: force)
     }
 
     /// Remet à leur place d'origine les panneaux ouverts, avec la barre : le geste du menu pour un

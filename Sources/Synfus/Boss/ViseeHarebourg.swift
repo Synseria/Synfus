@@ -1,27 +1,16 @@
 import CoreGraphics
-import Foundation
 
 /// La visée contre le Comte Harebourg : la case du lanceur (le pivot), marquée
 /// par perso, et où retombe le sort visé sur la case survolée. Le calque
 /// (`ViseePanel`) ne fait que dessiner ce que ceci décide. Pur.
 struct ViseeHarebourg: Equatable, Sendable {
-    struct Marque: Equatable, Sendable {
-        let position: GrilleIso.Case
-        let le: Date
+    private var lanceurs: [String: GrilleIso.Case] = [:]
+
+    mutating func marquer(_ position: GrilleIso.Case, perso: String) {
+        lanceurs[perso] = position
     }
 
-    private var lanceurs: [String: Marque] = [:]
-
-    mutating func marquer(_ position: GrilleIso.Case, perso: String, le: Date) {
-        lanceurs[perso] = Marque(position: position, le: le)
-    }
-
-    /// Au placement d'un combat : la case d'avant ne vaut plus.
-    mutating func oublier(perso: String) {
-        lanceurs[perso] = nil
-    }
-
-    func lanceur(_ perso: String) -> Marque? { lanceurs[perso] }
+    func lanceur(_ perso: String) -> GrilleIso.Case? { lanceurs[perso] }
 
     // MARK: - Arrivée
 
@@ -69,6 +58,13 @@ struct ViseeHarebourg: Equatable, Sendable {
         var confusion = false
         /// Le pointeur est sur le contenu du jeu, pas sur un panneau de Synfus.
         var pointeurSurLeJeu = false
+    }
+
+    /// La raison à dire au Diagnostic : celle d'à l'instant si Dofus est devant
+    /// ou si elle se juge hors du jeu ; sinon la dernière relevée en jeu —
+    /// réglages devant, Dofus n'est pas au premier plan, ce n'est pas la cause.
+    static func raisonAffichee(_ raison: Inactive?, avant: Inactive?, dofusDevant: Bool) -> Inactive? {
+        dofusDevant || [.reglage, .pasHarebourg, .grilleAbsente].contains(raison) ? raison : avant
     }
 
     /// `nil` : le calque dessine.

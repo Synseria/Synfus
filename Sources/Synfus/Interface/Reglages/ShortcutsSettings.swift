@@ -59,6 +59,10 @@ struct ShortcutsSettings: View {
                 RaccourciReglable(label: L("almanax.raccourci"), chemin: \.almanaxHotKey)
                 RaccourciReglable(label: L("boss.raccourci"), chemin: \.bossHotKey)
                     .help(L("boss.aide"))
+                if prefs.harebourgVisee {
+                    RaccourciReglable(label: L("raccourcis.marquerLanceur"), help: L("raccourcis.marquerLanceur.aide"),
+                                      chemin: \.marquerLanceurHotKey)
+                }
                 RaccourciReglable(label: L("zaap.raccourci"), help: L("zaap.raccourci.aide"), chemin: \.zaapHotKey)
                     .help(L("zaap.reecriture.aide", ItineraireZaap.ecartZaapDuJeu))
                 RaccourciReglable(

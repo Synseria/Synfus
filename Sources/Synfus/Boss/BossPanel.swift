@@ -15,6 +15,8 @@ final class BossPanel: NSObject, ObservableObject {
 
     /// Voulu ouvert, qu'il soit à l'écran ou caché derrière une autre app.
     @Published private(set) var ouvert = false
+    /// À l'écran en ce moment (devant Dofus, ou imposé) : le calque de visée en dépend.
+    private(set) var montre = false
     /// Ouvert depuis une autre app que Dofus (menu, réglages) : il reste là
     /// jusqu'au prochain changement d'app.
     private var impose = false
@@ -62,6 +64,7 @@ final class BossPanel: NSObject, ObservableObject {
     private func appliquer(force: Bool) {
         let montre = PanneauxJeu.appliquer(&panel, ouvert: ouvert, impose: impose, force: force,
                                            parDefaut: Self.placeParDefaut, construire: construire)
+        self.montre = montre
         LecteurEcran.shared.suivreBoss(montre ? AideBoss.shared.boss.lectures : nil)
     }
 

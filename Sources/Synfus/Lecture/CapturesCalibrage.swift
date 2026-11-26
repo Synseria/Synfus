@@ -21,16 +21,21 @@ enum CapturesCalibrage {
     static let dossier = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
         .appending(path: "Synfus/Calibrage", directoryHint: .isDirectory)
 
-    static func fichier(_ genre: GenreLecture) -> URL {
-        dossier.appending(path: "\(genre.rawValue).png", directoryHint: .notDirectory)
+    /// Un genre de lecture, ou la grille du combat (`grille`).
+    static func fichier(nom: String) -> URL {
+        dossier.appending(path: "\(nom).png", directoryHint: .notDirectory)
     }
 
     /// Le seul PNG de la lecture : la capture qui reste sur disque. Le tour
     /// passe la sienne à l'OCR telle quelle.
-    static func garder(_ image: CGImage, pour genre: GenreLecture) throws {
+    static func garder(_ image: CGImage, nom: String) throws {
         guard let donnees = png(image) else { throw CocoaError(.fileWriteUnknown) }
         try FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)
-        try donnees.write(to: fichier(genre), options: .atomic)
+        try donnees.write(to: fichier(nom: nom), options: .atomic)
+    }
+
+    static func garder(_ image: CGImage, pour genre: GenreLecture) throws {
+        try garder(image, nom: genre.rawValue)
     }
 
     static func png(_ image: CGImage) -> Data? {
@@ -41,8 +46,10 @@ enum CapturesCalibrage {
         return CGImageDestinationFinalize(destination) ? donnees as Data : nil
     }
 
-    static func gardee(_ genre: GenreLecture) -> Capture? {
-        let url = fichier(genre)
+    static func gardee(_ genre: GenreLecture) -> Capture? { gardee(nom: genre.rawValue) }
+
+    static func gardee(nom: String) -> Capture? {
+        let url = fichier(nom: nom)
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
               let image = CGImageSourceCreateImageAtIndex(source, 0, nil)
         else { return nil }

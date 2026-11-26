@@ -74,6 +74,8 @@ final class HotKeyManager: ObservableObject {
             (prefs.chasseHotKey, { ChassePanel.shared.basculer() }),
             (prefs.quetesHotKey, { QuetePanel.shared.basculer() }),
             (prefs.bossHotKey, { BossPanel.shared.basculer() }),
+            // Visée éteinte, la combinaison reste au jeu.
+            (prefs.harebourgVisee ? prefs.marquerLanceurHotKey : nil, { AideBoss.shared.marquerLanceur() }),
             (prefs.almanaxHotKey, { PalettePanel.shared.basculerAlmanax() }),
         ]
         for (hotKey, geste) in gestes {

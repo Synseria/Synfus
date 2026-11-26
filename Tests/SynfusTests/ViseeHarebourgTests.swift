@@ -1,5 +1,4 @@
 import CoreGraphics
-import Foundation
 import Testing
 @testable import Synfus
 
@@ -49,16 +48,15 @@ struct ViseeHarebourgTests {
         }
     }
 
-    @Test("Marquer, relire, oublier au placement — perso par perso")
+    @Test("Marquer et relire, perso par perso")
     func marques() {
         var visee = ViseeHarebourg()
-        let le = Date(timeIntervalSince1970: 1000)
-        visee.marquer(Case(2, 3), perso: "Syl-Ami", le: le)
-        visee.marquer(Case(0, 0), perso: "Cob", le: le)
-        #expect(visee.lanceur("Syl-Ami") == .init(position: Case(2, 3), le: le))
-        visee.oublier(perso: "Syl-Ami")
-        #expect(visee.lanceur("Syl-Ami") == nil)
-        #expect(visee.lanceur("Cob")?.position == Case(0, 0))
+        visee.marquer(Case(2, 3), perso: "Syl-Ami")
+        visee.marquer(Case(0, 0), perso: "Cob")
+        visee.marquer(Case(1, 3), perso: "Syl-Ami")
+        #expect(visee.lanceur("Syl-Ami") == Case(1, 3))
+        #expect(visee.lanceur("Cob") == Case(0, 0))
+        #expect(visee.lanceur("Bram") == nil)
     }
 
     // MARK: - Quand dessiner
@@ -103,5 +101,17 @@ struct ViseeHarebourgTests {
         // Une cause plus haute dans la chaîne passe devant.
         e.lanceur = nil
         #expect(ViseeHarebourg.inactive(e) == .sansLanceur)
+    }
+
+    @Test("Le Diagnostic garde la raison vue en jeu quand Dofus passe derrière")
+    func raisonAffichee() {
+        // Réglages devant : « hors du jeu » ne remplace pas « pivot à marquer ».
+        #expect(ViseeHarebourg.raisonAffichee(.horsDuJeu, avant: .sansLanceur, dofusDevant: false) == .sansLanceur)
+        #expect(ViseeHarebourg.raisonAffichee(.panneauCache, avant: nil, dofusDevant: false) == nil)
+        // Ce qui se juge hors du jeu se dit tout de suite.
+        #expect(ViseeHarebourg.raisonAffichee(.reglage, avant: .sansLanceur, dofusDevant: false) == .reglage)
+        #expect(ViseeHarebourg.raisonAffichee(.grilleAbsente, avant: nil, dofusDevant: false) == .grilleAbsente)
+        // Dofus devant : la raison d'à l'instant.
+        #expect(ViseeHarebourg.raisonAffichee(.pasSonTour, avant: .sansLanceur, dofusDevant: true) == .pasSonTour)
     }
 }
