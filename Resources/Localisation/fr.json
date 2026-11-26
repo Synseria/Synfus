@@ -173,7 +173,7 @@
   "calibration.consigne.combat": "Le bouton « Fin de tour » n'existe qu'en combat : lance la capture, reviens au jeu pendant un combat, elle part au bout de 5 secondes.",
   "calibration.consigne.position": "Le nom de la zone et les coordonnées, en haut à gauche du jeu. Lance la capture, reviens au jeu : elle part au bout de 5 secondes.",
   "calibration.consigne.quetes": "Ouvre le suivi de quêtes du jeu, à gauche : lance la capture, reviens au jeu, elle part au bout de 5 secondes. La zone doit couvrir les titres et leurs objectifs.",
-  "calibration.consigne.survol": "Le cadre du combattant survolé, en bas à gauche en combat : lance la capture, reviens au jeu et survole le Comte, elle part au bout de 5 secondes. La zone doit couvrir son nom et la ligne de ses points de vie.",
+  "calibration.consigne.survol": "Le panneau du combattant survolé, à la place de la barre de sorts : lance la capture, reviens au jeu et survole le Comte, elle part au bout de 5 secondes. La zone doit couvrir son nom et ses points de vie.",
   "calibration.consigne.tchat": "Le tchat, en bas à gauche, avec le canal combat : lance la capture, reviens au jeu, elle part au bout de 5 secondes. La zone doit couvrir les dernières lignes, sans la ligne de saisie.",
   "calibration.consigne.vie": "Le cœur de vie, au centre de la barre du bas : lance la capture, reviens au jeu, elle part au bout de 5 secondes. La zone doit couvrir le nombre du cœur, sans les PA ni les PM.",
   "calibration.decompte": "Capture dans %lld s… (annuler)",

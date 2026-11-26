@@ -173,7 +173,7 @@
   "calibration.consigne.combat": "The “End turn” button only exists in combat: start the capture, go back to the game during a fight, it is taken after 5 seconds.",
   "calibration.consigne.position": "The area name and coordinates, top left of the game. Start the capture and go back to the game: it is taken after 5 seconds.",
   "calibration.consigne.quetes": "Open the game's quest tracker, on the left: start the capture, go back to the game, it is taken after 5 seconds. The area must cover the titles and their objectives.",
-  "calibration.consigne.survol": "The hovered fighter's frame, bottom left in combat: start the capture, go back to the game and hover over the Count, it is taken after 5 seconds. The zone must cover his name and his health line.",
+  "calibration.consigne.survol": "The hovered fighter's panel, in place of the spell bar: start the capture, go back to the game and hover over the Count, it is taken after 5 seconds. The zone must cover his name and his health.",
   "calibration.consigne.tchat": "The chat, bottom left, with the fight channel: start the capture, go back to the game, it is taken after 5 seconds. The zone must cover the last lines, without the input line.",
   "calibration.consigne.vie": "The health heart, in the middle of the bottom bar: start the capture, go back to the game, it is taken after 5 seconds. The zone must cover the heart's number, without AP or MP.",
   "calibration.decompte": "Capturing in %lld s… (cancel)",

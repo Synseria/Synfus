@@ -173,8 +173,14 @@ struct HarebourgTests {
         #expect(Harebourg.vieDuComte(survol: ["Comte Harebourg", "2604 ♥ 12 ★", "0 6"]) == .points(actuels: 2604, max: nil))
         #expect(Harebourg.vieDuComte(survol: ["Count Harebourg", "12 450 ♥"]) == .points(actuels: 12450, max: nil))
         #expect(Harebourg.vieDuComte(survol: ["Conde Harebourq", "3 087"]) == .points(actuels: 3087, max: nil))
-        // Le cadre détaillé écrit le maximum et le pourcentage.
-        #expect(Harebourg.vieDuComte(survol: ["Comte Harebourg", "2 604 / 4 200 (62%)"]) == .pourcentage(62))
+        // Le panneau survolé tel que l'OCR le rend (capture du 26/11/2026), le
+        // nom remplacé : d'autres pourcentages, dans le désordre.
+        let panneau = ["Comte Harebourg", "→ 0%", "1 15", "0%", "2 359", "Oméga 79", "2 604 / 4 200 (62%)", "30", ") 0%)",
+                       "® 14%", "29%", "12", "10%"]
+        #expect(Harebourg.vieDuComte(survol: panneau) == .points(actuels: 2604, max: 4200))
+        #expect(Harebourg.vieDuComte(survol: ["Comte Harebourg", "(62%)", "10%"]) == .pourcentage(62))
+        // Le cœur réel : courant au-dessus du maximum.
+        #expect(Harebourg.vie(["4162", "4162"]) == .points(actuels: 4162, max: 4162))
         #expect(Harebourg.vieDuComte(survol: ["Chevalier d'Astrub", "4000 ♥ 12 ★"]) == nil)
         #expect(Harebourg.vieDuComte(survol: ["Comte Harebourg"]) == nil)
         // Lue pour le combat : oubliée au placement du suivant.

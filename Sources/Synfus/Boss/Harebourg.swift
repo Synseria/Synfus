@@ -143,16 +143,34 @@ enum Harebourg {
         return entier(Substring(nette))
     }
 
-    /// Le cadre du combattant survolé : son nom, puis ses points de vie
-    /// (« 4000 ♥ », ou « 4 162 / 4 162 (100%) » selon le cadre), ses PA et PM.
-    /// La vie du Comte si c'est lui qu'on survole, lue comme le cœur ; `nil`
-    /// pour tout autre combattant. Son nom porte « Harebourg » dans les trois
-    /// langues du jeu.
+    /// Le panneau du combattant survolé, à la place de la barre de sorts :
+    /// son nom, « 4 162 / 4 162 (100%) », et d'autres pourcentages
+    /// (résistances, « 10% ») que l'OCR rend dans le désordre. La vie du Comte
+    /// si c'est lui qu'on survole — `a / b` d'abord, puis le pourcentage entre
+    /// parenthèses, puis un nombre de points seul ; `nil` pour tout autre
+    /// combattant. Son nom porte « Harebourg » dans les trois langues du jeu.
     static func vieDuComte(survol lignes: [String]) -> Vie? {
-        guard let nom = lignes.firstIndex(where: {
+        guard lignes.contains(where: {
             Ressemblance.distanceDansTexte("harebourg", Ressemblance.normaliser($0)) <= 1
         }) else { return nil }
-        return vie(Array(lignes[(nom + 1)...]))
+        for ligne in lignes {
+            if let barre = ligne.firstMatch(of: /(\d[\d \u{00A0}\u{202F}.,]*)\s*\/\s*(\d[\d \u{00A0}\u{202F}.,]*)/),
+               let actuels = entier(barre.1), let max = entier(barre.2), max > 0 {
+                return .points(actuels: actuels, max: max)
+            }
+        }
+        for ligne in lignes {
+            if let match = ligne.firstMatch(of: /\(\s*(\d{1,3})\s*%\s*\)/), let valeur = Double(match.1), valeur <= 100 {
+                return .pourcentage(valeur)
+            }
+        }
+        for ligne in lignes {
+            if let match = ligne.firstMatch(of: /\d{1,3}(?:[ \u{00A0}\u{202F}.,]\d{3})+|\d{3,}/),
+               let points = entier(match.output) {
+                return .points(actuels: points, max: nil)
+            }
+        }
+        return nil
     }
 
     private static func entier(_ texte: Substring) -> Int? {

@@ -22,8 +22,8 @@ enum GenreLecture: String, CaseIterable, Sendable {
     /// Le tchat, en bas à gauche, où le canal combat annonce les effets : comme
     /// la vie, en combat et panneau d'aide montré.
     case tchat
-    /// Le cadre du combattant survolé, en bas à gauche : nom et points de vie
-    /// — ceux du Comte, que le cœur ne montre pas. Comme la vie, en combat et
+    /// Le panneau du combattant survolé, à la place de la barre de sorts : nom
+    /// et points de vie — ceux du Comte, que le cœur ne montre pas. Comme la vie, en combat et
     /// panneau d'aide montré.
     case survol
 
