@@ -122,7 +122,8 @@ capture est gardée ; un élément absent garde la sienne. Banc : `detectionSurC
 Onglet Lecture de l'écran, une ligne par genre (défaut / calibrée). Chaque genre a sa capture
 (l'élément n'est visible qu'en combat, en chasse, suivi ouvert) : prise après 5 s de compte à
 rebours sur le perso devant, contenu entier à l'échelle de la lecture, gardée dans
-`~/Library/Caches/Synfus/Calibrage/<genre>.png` (`CapturesCalibrage`, jamais le dépôt). Un tracé
+`~/Library/Caches/Synfus/Calibrage/<genre>.png` (`CapturesCalibrage`, jamais le dépôt ; aussi
+`grille.png`, la grille du combat, `fichier(nom:)`). Un tracé
 pose la zone ; l'essai (`LecteurEcran.lire(image:genre:)`) relit la zone découpée sans réencodage
 (`CapturesCalibrage.decouper`) et l'interprète.
 

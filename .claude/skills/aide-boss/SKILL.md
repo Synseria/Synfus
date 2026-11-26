@@ -26,7 +26,32 @@ Synfus lit l'écran et affiche ; viser et lancer restent au joueur (CGU : aucun 
 - **Vie du Comte** : lue au survol (genre `survol`, `Harebourg.vieDuComte` : une ligne qui porte
   « Harebourg », puis le premier nombre dessous), gardée pour le combat (`SuiviConfusion.comte`) ;
   sa part se dit par rapport au maximum DofusDB du plus haut grade (indicatif, « ≈ »).
-- **Grille** : la conversion case ↔ point est `GrilleIso` (`Lecture/`), seule source.
+- **Grille** : la conversion case ↔ point est `GrilleIso` (`Lecture/`), seule source ; la grille du
+  combat (`grilleCombat`) en fractions du contenu — origine, demi-largeur `a` en fraction de la
+  **hauteur**, rapport largeur/hauteur (±1 %, sinon invalide) —, calibrée à deux clics
+  (`CalibrationGrilleView`, Réglages ▸ Aides, capture `grille.png`). Mesuré sur une fenêtre de
+  2000 × 1234 px : `a` = 53 px (0,043 de la hauteur) ; une capture zoomée donnait 75 px.
+
+## Visée sur le plateau — `ViseeHarebourg` (pur), `ViseePanel`
+
+- Réglage `harebourgVisee`, éteint par défaut. Le calque ne fait que dessiner : `NSPanel` sans
+  bord, non activable, `ignoresMouseEvents`, posé sur le contenu de la fenêtre du perso devant.
+- Pivot : raccourci « Marquer ma case » (`marquerLanceurHotKey`, sans défaut) → la case sous le
+  pointeur, rangée sous le perso au premier plan (même relevé que le calque) ; tous les pivots sont
+  oubliés au placement (`AideBoss.combats`). Rien à marquer : bip. Le Diagnostic garde la raison
+  vue en jeu quand Dofus passe derrière (`raisonAffichee`).
+- Arrivée : `arrivee = pivot + caseAtteinte(survolée − pivot)`, la voisine en pointillés à une
+  limite de tranche ; l'estimation compte déjà les coups. `Confusion.caseAtteinte` est l'inverse
+  exact de `caseVisee`.
+- Actif pendant le tour du perso devant (`ViseeHarebourg.inactive`, raison au Diagnostic) : réglage,
+  Comte suivi, `BossPanel.montre`, son tour, grille calibrée et valable pour le rapport de la
+  fenêtre, pivot, confusion connue, pointeur sur le jeu (pas sur une fenêtre de Synfus).
+- Coûts : veille à 2 Hz réglage allumé contre le Comte (cadre de la fenêtre par le serveur de
+  fenêtres, `CrossSpaceTitles.cadreAffiche` — un client gelé ne bloque rien) ; pointeur à 30 Hz
+  seulement calque possible ; publication au changement de case. Aucune capture.
+- Dessin en Nuit (`CalqueVisee`) : arrivée `succes` pleine et « Tombe ici », voisine
+  `avertissement` en pointillés, case visée d'un filet, pivot cerclé, chaque trait sur un halo.
+- Non vu en jeu à l'écriture : plein écran, changement de rapport, clic qui traverse, caméra zoomée.
 - **Canal combat** : `[14:04] Nom : …` ; un angle en degrés ou en Pi (`3Pi/2`, `1/2 pi`, `π`) **et**
   un sens (`horaire`, `contre horaire`, en/es aussi) — sans sens, rien (le jeu l'écrit toujours,
   demi-tour compris). Une ligne repliée se recolle à celle du dessus (sans heure). Le nom avant

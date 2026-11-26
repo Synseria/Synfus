@@ -159,9 +159,17 @@ diagonale ↘ » ; grille dessinée par-dessus, réglage fin (décalage, `a`) ; 
 - **A1 (fait).** `GrilleIso` (projection, case sous un point, losange), `SchemaVisee` branché
   dessus. Le reste de la struct (origine, rapport, `depuis`) et `caseAtteinte` arrivent avec leur
   appelant, en A2.
-- **A2. Pointeur, `ViseeHarebourg`, raccourci, réglages, `ViseePanel`, calibrage à deux clics.**
-  Fin en combat réel : pivot marqué, losange qui suit le pointeur, clics qui passent, calque masqué
-  hors du tour, hors du contenu ou au changement de rapport ; raison d'inactivité au Diagnostic.
+- **A2 (fait, non éprouvé en jeu).** Pointeur, `ViseeHarebourg`, raccourci, réglages, `ViseePanel`,
+  calibrage à deux clics. Reste à voir en combat réel : pivot marqué, losange qui suit le pointeur,
+  clics qui passent, calque masqué hors du tour, hors du contenu ou au changement de rapport, plein
+  écran. Écarts au plan : pas de modificateur (ni réglage ni cause `modificateur`) ; niveau
+  `.statusBar` (le `.floating` disparaît sous un espace plein écran), caché sur une fenêtre de
+  Synfus ; cadre de la fenêtre lu par le serveur de fenêtres (`CrossSpaceTitles.cadreAffiche`), pas
+  par l'Accessibilité ; grille calibrée dans Réglages ▸ Aides, sous l'interrupteur, sans réglage fin
+  (deux clics éloignés suffisent : moins de 2 % sur `a`) ni note `<nom>.json` du pointeur ;
+  `inactive(_:) -> Inactive?` au lieu d'un `Result`. Mesure : `a` = 53 px sur un contenu de
+  2000 × 1234 (0,043 de la hauteur) ; la capture « 1.png » (2000 × 1054) donne 75 px — zoomée ou
+  rognée, à confirmer.
 - **A3. « Détecter » la grille** — `Lecture/AjustementGrille.swift` (pur, sur `LumaBitmap`) :
   énergie de bord projetée sur `y − x/2` et `y + x/2`, autocorrélation → période `a`, phases →
   origine ; score, refus sous un seuil. Fin : banc synthétique vert ; `RealCaptureTests` retrouve
