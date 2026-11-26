@@ -170,16 +170,18 @@ struct HarebourgTests {
 
     @Test("Le cadre survolé donne les points du Comte, et d'aucun autre")
     func survolDuComte() {
-        #expect(Harebourg.vieDuComte(survol: ["Comte Harebourg", "2604 ♥ 12 ★", "0 6"]) == 2604)
-        #expect(Harebourg.vieDuComte(survol: ["Count Harebourg", "12 450 ♥"]) == 12450)
-        #expect(Harebourg.vieDuComte(survol: ["Conde Harebourq", "3 087"]) == 3087)
+        #expect(Harebourg.vieDuComte(survol: ["Comte Harebourg", "2604 ♥ 12 ★", "0 6"]) == .points(actuels: 2604, max: nil))
+        #expect(Harebourg.vieDuComte(survol: ["Count Harebourg", "12 450 ♥"]) == .points(actuels: 12450, max: nil))
+        #expect(Harebourg.vieDuComte(survol: ["Conde Harebourq", "3 087"]) == .points(actuels: 3087, max: nil))
+        // Le cadre détaillé écrit le maximum et le pourcentage.
+        #expect(Harebourg.vieDuComte(survol: ["Comte Harebourg", "2 604 / 4 200 (62%)"]) == .pourcentage(62))
         #expect(Harebourg.vieDuComte(survol: ["Chevalier d'Astrub", "4000 ♥ 12 ★"]) == nil)
         #expect(Harebourg.vieDuComte(survol: ["Comte Harebourg"]) == nil)
         // Lue pour le combat : oubliée au placement du suivant.
         var suivi = SuiviConfusion()
-        suivi.vieComte(2604, le: t0)
+        suivi.vieComte(.points(actuels: 2604, max: nil), le: t0)
         suivi.combat("A", avant: .pasMonTour, apres: .horsCombat, le: t0)
-        #expect(suivi.comte?.points == 2604)
+        #expect(suivi.comte?.vie == .points(actuels: 2604, max: nil))
         suivi.combat("A", avant: .horsCombat, apres: .placement, le: t0)
         #expect(suivi.comte == nil)
     }

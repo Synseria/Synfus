@@ -44,18 +44,25 @@ struct HarebourgVue: View {
         }
     }
 
-    /// Les points du Comte lus au survol, et leur part du maximum que DofusDB
+    /// La vie du Comte lue au survol : son pourcentage s'il est écrit, sinon
+    /// ses points et leur part du maximum lu, ou à défaut de celui que DofusDB
     /// lui donne au plus haut grade — indicatif, d'où le « ≈ ». Pâlie quand la
     /// lecture vieillit : il a pu perdre des points depuis.
     private func vieDuComte(_ comte: SuiviConfusion.VieComte) -> some View {
         TimelineView(.periodic(from: .now, by: 5)) { contexte in
             let ancienne = contexte.date.timeIntervalSince(comte.le) > Self.fraicheurComte
-            let max = aide.fiches[Boss.harebourg.monstre]?.vie
             Group {
-                if let max, max > 0, comte.points <= max {
-                    Text(L("boss.comte.vie.part", comte.points.formatted(), Int((Double(comte.points) / Double(max) * 100).rounded())))
-                } else {
-                    Text(L("boss.comte.vie", comte.points.formatted()))
+                switch comte.vie {
+                case .pourcentage(let valeur):
+                    Text(L("boss.comte.vie.pourcentage", Int(valeur)))
+                case .points(let actuels, let max?):
+                    Text(L("boss.comte.vie.part", actuels.formatted(), Int((Double(actuels) / Double(max) * 100).rounded())))
+                case .points(let actuels, nil):
+                    if let max = aide.fiches[Boss.harebourg.monstre]?.vie, max > 0, actuels <= max {
+                        Text(L("boss.comte.vie.estimee", actuels.formatted(), Int((Double(actuels) / Double(max) * 100).rounded())))
+                    } else {
+                        Text(L("boss.comte.vie", actuels.formatted()))
+                    }
                 }
             }
             .font(Jetons.typoMeta.font)

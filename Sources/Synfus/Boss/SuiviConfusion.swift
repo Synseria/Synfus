@@ -74,9 +74,9 @@ struct SuiviConfusion: Equatable, Sendable {
         }
     }
 
-    /// Les points de vie du Comte, lus au survol, pour ce combat.
+    /// La vie du Comte, lue au survol, pour ce combat.
     struct VieComte: Equatable, Sendable {
-        let points: Int
+        let vie: Harebourg.Vie
         let le: Date
     }
 
@@ -157,9 +157,9 @@ struct SuiviConfusion: Equatable, Sendable {
         persos[perso] = suivi
     }
 
-    /// Les points du Comte, lus au survol.
-    mutating func vieComte(_ points: Int, le date: Date) {
-        comte = VieComte(points: points, le: date)
+    /// La vie du Comte, lue au survol.
+    mutating func vieComte(_ vie: Harebourg.Vie, le date: Date) {
+        comte = VieComte(vie: vie, le: date)
     }
 
     /// Le tchat lu dans la fenêtre de `fenetre`, en lignes de haut en bas.

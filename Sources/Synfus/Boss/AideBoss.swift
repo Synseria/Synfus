@@ -128,8 +128,8 @@ final class AideBoss: ObservableObject {
     }
 
     func recevoirSurvol(_ lignes: [String]) {
-        guard boss == .special(.harebourg), let points = Harebourg.vieDuComte(survol: lignes) else { return }
-        suivi.vieComte(points, le: Date())
+        guard boss == .special(.harebourg), let vie = Harebourg.vieDuComte(survol: lignes) else { return }
+        suivi.vieComte(vie, le: Date())
     }
 
     func recevoirTchat(_ lignes: [String], perso: String) {

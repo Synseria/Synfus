@@ -143,21 +143,16 @@ enum Harebourg {
         return entier(Substring(nette))
     }
 
-    /// Le cadre du combattant survolé, en bas à gauche en combat : son nom,
-    /// puis ses points de vie (« 4000 ♥ »), ses PA et PM. Les points du Comte
-    /// si c'est lui qu'on survole ; `nil` pour tout autre combattant. Son nom
-    /// porte « Harebourg » dans les trois langues du jeu.
-    static func vieDuComte(survol lignes: [String]) -> Int? {
+    /// Le cadre du combattant survolé : son nom, puis ses points de vie
+    /// (« 4000 ♥ », ou « 4 162 / 4 162 (100%) » selon le cadre), ses PA et PM.
+    /// La vie du Comte si c'est lui qu'on survole, lue comme le cœur ; `nil`
+    /// pour tout autre combattant. Son nom porte « Harebourg » dans les trois
+    /// langues du jeu.
+    static func vieDuComte(survol lignes: [String]) -> Vie? {
         guard let nom = lignes.firstIndex(where: {
             Ressemblance.distanceDansTexte("harebourg", Ressemblance.normaliser($0)) <= 1
         }) else { return nil }
-        for ligne in lignes[(nom + 1)...] {
-            if let match = ligne.firstMatch(of: /\d{1,3}(?:[ \u{00A0}\u{202F}.,]\d{3})+|\d+/),
-               let points = entier(match.output), points > 0 {
-                return points
-            }
-        }
-        return nil
+        return vie(Array(lignes[(nom + 1)...]))
     }
 
     private static func entier(_ texte: Substring) -> Int? {

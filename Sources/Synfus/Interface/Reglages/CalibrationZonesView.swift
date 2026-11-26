@@ -321,8 +321,12 @@ struct CalibrationZonesView: View {
             let confusion = HarebourgVue.libelle(lu.constat.confusion)
             return lu.constat.perso.map { L("calibration.essai.tchat", $0, confusion) } ?? confusion
         case .survol:
-            return Harebourg.vieDuComte(survol: lignes).map { L("boss.comte.vie", $0.formatted()) }
-                ?? L("calibration.essai.survol.rien")
+            switch Harebourg.vieDuComte(survol: lignes) {
+            case .pourcentage(let valeur)?: return L("boss.comte.vie.pourcentage", Int(valeur))
+            case .points(let actuels, let max?)?: return L("boss.comte.vie.part", actuels.formatted(), Int((Double(actuels) / Double(max) * 100).rounded()))
+            case .points(let actuels, nil)?: return L("boss.comte.vie", actuels.formatted())
+            case nil: return L("calibration.essai.survol.rien")
+            }
         }
     }
 
