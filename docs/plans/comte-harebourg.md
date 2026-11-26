@@ -210,28 +210,17 @@ Ligne par ligne (les milliers ne se cherchent que dans une ligne), dans l'ordre 
 sur une ligne ou à cheval (`a /` puis `b`) ; **deux lignes de nombres consécutives** (courant puis
 max, gardées si courant ≤ max) ; un nombre seul (courant) ; une ligne sans chiffres (`nom`).
 
-**`Boss/MemoirePV.swift` (nouveau, pur, persisté)** :
+**PV max des persos : pour le combat seulement** (arbitrage du 26/11/2026). Fait au lot B1, dans
+`SuiviConfusion` (`maxConnu`) : rien de persisté, pas de « ≈ ».
 
-```swift
-struct MemoirePV: Codable, Equatable, Sendable {
-    struct MaxLu: Codable, Equatable, Sendable { let valeur: Int; let le: Date }
-    private(set) var maxLus: [String: MaxLu]
-    mutating func lu(_ vie: VieLue, perso: String, le: Date)
-    enum Fiabilite: Equatable, Sendable { case ecrit, retenu(le: Date) }
-    struct Pourcentage: Equatable, Sendable { let valeur: Double; let fiabilite: Fiabilite }
-    func pourcentage(actuels: Int, maxDuMoment: Int?, perso: String) -> Pourcentage?
-}
-```
+- Le **dernier max écrit par le jeu fait foi**, pas le plus grand vu.
+- Un max qui s'écarte de plus de 30 % du connu doit être lu **deux fois de suite**.
+- `actuels > max connu` : max périmé, oublié.
+- Pas de borne basse. Max et vie s'oublient à la sortie du combat et au placement.
+- Deux lignes de nombres = courant puis max, seulement si le max vaut ≥ 100 : sous le cœur, les PA
+  et les PM (« 12 », « 5 ») ne sont pas un max.
 
-- Le **dernier max écrit par le jeu fait foi** (stuff, niveau), pas le plus grand vu.
-- Un max qui s'écarte de plus de 30 % du retenu doit être lu **deux fois de suite**.
-- `actuels > max retenu` : max périmé, oublié, pas de pourcentage.
-- Pas de « borne basse » (plus grand courant vu) par défaut : elle contredit « jamais supposé »
-  (question 3).
-
-**`Boss/SuiviConfusion.swift`** : `memoire: MemoirePV` remplace `maxConnu` ; `vie(_:perso:le:)`
-passe par `memoire.pourcentage` ; `Source.vie(pourcentage:, retenu: Bool)` (« ≈ » à l'écran). Le
-Comte, gardé **une seule fois** :
+**`Boss/SuiviConfusion.swift`** : le Comte, gardé **une seule fois** :
 
 ```swift
 struct VieComte: Equatable, Sendable {
@@ -257,18 +246,17 @@ liste `zones` de `LecteurEcran.start()` ; le `switch` de `lire` (`AideBoss.recev
 `capturer` reçoit la zone calculée au moment de la capture (`genre.zone(pointeur:)`).
 
 **`Boss/AideBoss.swift`** : `recevoirSurvol(_:perso:)` → `VieLue.depuis` ; nom proche du Comte
-(noms fr/en/es du monstre 3416, `Ressemblance`) → `vieComte` ; perso connu → `memoire.lu` pour lui,
-même derrière ; `recevoirVie` alimente aussi `memoire`. Persistance : `Preferences.pvMaxLus`
-(`.facultatif`, `[:]`), relu au lancement, purgé avec l'oubli d'un perso.
+(noms fr/en/es du monstre 3416, `Ressemblance`) → `vieComte` ; perso connu → son max du combat,
+même derrière.
 
 **`Boss/HarebourgVue.swift`** : ligne « Comte : 62 % · 2 604 / 4 200 », grisée et datée au-delà de
-10 s, sa source dite (« au survol », « max DofusDB ») ; « ≈ » et « max lu le … » quand `retenu` ;
-`boss.vie.sansMax` seulement si aucun max n'a jamais été lu pour ce perso.
+10 s, sa source dite (« au survol », « max DofusDB ») ;
+`boss.vie.sansMax` seulement si aucun max n'a été lu pour ce perso dans ce combat.
 
 ### 3.2 Étapes
 
-- **B1.** `VieLue`, bug des deux lignes, `MemoirePV`, persistance, « ≈ ». Gain immédiat : le cœur
-  « 3087 » donne un pourcentage dès qu'un max a été lu une fois.
+- **B1 (fait).** Bug des deux lignes, max du combat. Le cœur
+  « 3087 » donne un pourcentage dès qu'un max a été lu dans le combat.
 - **B2.** Captures A0 du survol (Comte, son perso, un portrait de la timeline) → (a) ou (b),
   `survolParDefaut` mesuré.
 - **B3.** Genre `.survol` de bout en bout + calibrage. Fin : `RealCaptureTests`
@@ -284,11 +272,9 @@ même derrière ; `recevoirVie` alimente aussi `memoire`. Persistance : `Prefere
 - `VieLueTests` : `["950", "4200"]` → 950/4200 (le bug) ; `["3 450 / 4 200"]` ;
   `["3450 /", "4200"]` ; `["Comte Harebourg", "2604", "4200"]` ; `["57 %"]` ; `["3087"]` ;
   `["4200", "950"]` refusé en paire ; bruit OCR, `\u{202F}` ; nom fr/en/es.
-- `MemoirePVTests` : max écrit puis courant seul → `.retenu` ; le dernier max remplace ; saut > 30 %
-  = deux lectures ; `actuels > max` oublie ; aller-retour `Codable`.
-- `HarebourgTests` : estimation par vie avec max retenu ; le Comte hors des persos ; `maxIndicatif`
+- `HarebourgTests` : le Comte hors des persos ; `maxIndicatif`
   seulement à défaut.
-- `PreferencesTests` : nouvelles clés ; sauvegarde amputée relue avec `pvMaxLus = [:]`.
+- `PreferencesTests` : nouvelles clés.
 
 ## 4. Réglages, libellés, skills
 
@@ -299,15 +285,14 @@ même derrière ; `recevoirVie` alimente aussi `memoire`. Persistance : `Prefere
 | `grilleCombat` | `GrilleIso?`, `nil` | A |
 | `marquerLanceurHotKey` | `HotKey?`, `nil` | A |
 | `zoneSurvol` | `ZoneEcran?`, `nil` | B |
-| `pvMaxLus` | `[String: MemoirePV.MaxLu]`, `[:]` | B |
 
 Libellés (fr/en/es) : `boss.visee.*`, `lecture.grille*`, `lecture.genre.survol`, `boss.comte.vie*`,
-`boss.vie.retenu`, `raccourcis.marquerLanceur`.
+`raccourcis.marquerLanceur`.
 
 Skills : `aide-boss` (visée, vie du Comte, mémoire des PV, mesures de grille), `lecture-ocr`
 (genres `survol`, `plateau`, `timeline`, coûts, note du pointeur, variables de `RealCaptureTests`),
 `raccourcis` (nouvelle action sans défaut), `interface-barre` (calibrage de la grille, calque qui
-laisse passer les clics). `AGENTS.md` : foyers `GrilleIso`, `VieLue`, `MemoirePV`, `ViseePanel`.
+laisse passer les clics). `AGENTS.md` : foyers `GrilleIso`, `VieLue`, `ViseePanel`.
 
 Avant de dire un lot fini : `swift build`, `sh test.sh`, skill `analyse-swift`, skill `grille-ui`,
 lancement réel en combat.
@@ -316,7 +301,7 @@ lancement réel en combat.
 
 | Lot | Contenu | Risque |
 |---|---|---|
-| 1 | B1 : `VieLue`, bug des deux lignes, `MemoirePV`, « ≈ » | Faible, gain immédiat |
+| 1 | B1 : bug des deux lignes, max du combat (fait) | Faible, gain immédiat |
 | 2 | A0/B2 : captures (utilisateur) + note du pointeur | Aucun |
 | 3 | A1 : `GrilleIso`, extraction, `caseAtteinte` | Faible |
 | 4 | A2 : visée V1 | Moyen (caméra, pivot périmé) |
@@ -330,8 +315,8 @@ lancement réel en combat.
    qu'une information, ou des phases dépendent-elles de **sa** vie ?
 2. Les « deux lignes » courant / max : cadre fixe en haut à gauche, infobulle au-dessus du
    combattant, ou survol d'un portrait de la timeline ?
-3. PV max par perso : retenu d'un combat à l'autre (proposé : oui, daté) ? Accepter une borne
-   basse (plus grand courant vu) ? L'érosion baisse-t-elle le max affiché ?
+3. ~~PV max par perso~~ : tranché, pour le combat seulement. L'érosion baisse-t-elle le max
+   affiché ?
 4. Un calque qui ne dessine qu'un losange et laisse passer les clics te convient-il au regard des
    CGU, ou seulement l'indication dans le panneau (« tombe 2 cases ↘ ») ?
 5. Pivot en V1 par raccourci « marquer ma case » : quelle combinaison ? L'oublier à chaque tour ou
