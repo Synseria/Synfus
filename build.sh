@@ -2,8 +2,9 @@
 # build.sh — build Release signé de Synfus.
 #   sh build.sh                    → dist/Synfus.app
 #   sh build.sh --release [X.Y.Z]  → + dist/Synfus-X.Y.Z-macos<N>-<arch>.dmg
-#   sh build.sh --publish X.Y.Z[-rc.N] → depuis main propre : main et tag
-#                                    poussés, DMG publiés (une rc : pre-release)
+#   sh build.sh --publish X.Y.Z → depuis main propre : version finale ; depuis
+#                                releases/rc : la rc suivante de X.Y.Z (pre-release).
+#                                Branche et tag poussés, DMG publiés
 #   sh build.sh --help
 # Installer et lancer, c'est `sh run.sh --install [--start]`.
 #
@@ -51,18 +52,37 @@ if [ -n "$VERSION_DEMANDEE" ] && [[ ! "$VERSION_DEMANDEE" =~ ^[0-9]+\.[0-9]+\.[0
 fi
 
 if [ "$MODE" = "publish" ]; then
-    TAG="v$VERSION_DEMANDEE"
-    [ "$(git rev-parse --abbrev-ref HEAD)" = "main" ] || { echo "build.sh : --publish se lance depuis main" >&2; exit 1; }
+    # La branche dit le canal : main publie la version finale X.Y.Z, releases/rc
+    # la préversion suivante de X.Y.Z (rc.1, rc.2… comptés sur les tags), que
+    # personne n'a à numéroter.
+    BRANCHE="$(git rev-parse --abbrev-ref HEAD)"
     [ -z "$(git status --porcelain)" ] || { echo "build.sh : l'arbre n'est pas propre" >&2; exit 1; }
-    git fetch -q origin main --tags
-    git merge-base --is-ancestor origin/main HEAD \
-        || { echo "build.sh : main a divergé d'origin/main" >&2; exit 1; }
+    git fetch -q origin --tags
+    case "$BRANCHE" in
+        main)
+            [[ "$VERSION_DEMANDEE" != *-rc.* ]] \
+                || { echo "build.sh : une rc se publie depuis releases/rc, avec X.Y.Z seul" >&2; exit 1; } ;;
+        releases/rc)
+            [[ "$VERSION_DEMANDEE" != *-rc.* ]] \
+                || { echo "build.sh : sur releases/rc, donner X.Y.Z : le numéro de rc se calcule" >&2; exit 1; }
+            ! git rev-parse -q --verify "refs/tags/v$VERSION_DEMANDEE" >/dev/null \
+                || { echo "build.sh : $VERSION_DEMANDEE est déjà publiée : une rc vise la suivante" >&2; exit 1; }
+            DERNIERE="$(git tag -l "v$VERSION_DEMANDEE-rc.*" | sed 's/.*-rc\.//' | sort -n | tail -1)"
+            VERSION_DEMANDEE="$VERSION_DEMANDEE-rc.$(( ${DERNIERE:-0} + 1 ))"
+            echo "==> releases/rc : $VERSION_DEMANDEE" ;;
+        *) echo "build.sh : --publish se lance depuis main ou releases/rc" >&2; exit 1 ;;
+    esac
+    TAG="v$VERSION_DEMANDEE"
+    if git fetch -q origin "$BRANCHE" 2>/dev/null; then
+        git merge-base --is-ancestor "origin/$BRANCHE" HEAD \
+            || { echo "build.sh : $BRANCHE a divergé d'origin/$BRANCHE" >&2; exit 1; }
+    fi
     ! git rev-parse -q --verify "refs/tags/$TAG" >/dev/null || { echo "build.sh : le tag $TAG existe déjà" >&2; exit 1; }
     bash Tools/notes-de-version.sh "$VERSION_DEMANDEE" >/dev/null || exit 1
     if [ "$PUBLICATION_PAR_CI" = "0" ]; then
         bash test.sh || { echo "build.sh : tests en échec, rien n'est publié" >&2; exit 1; }
     fi
-    git push origin main
+    git push origin "$BRANCHE"
     git tag -a "$TAG" -m "Synfus $VERSION_DEMANDEE"
     git push origin "$TAG"
     if [ "$PUBLICATION_PAR_CI" = "1" ]; then

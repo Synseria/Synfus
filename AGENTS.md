@@ -21,8 +21,10 @@ sh build.sh [--release [X.Y.Z] | --publish X.Y.Z]   # dist/Synfus.app, + DMG, ou
 ```
 
 Scripts, signature, version (dernier tag `vX.Y.Z`), lots et publication suivent la convention
-commune : **skill `livraison`**. `--publish` (depuis `main` propre, refuse une version sans section
-dans `CHANGELOG.md`) teste, pousse `main` et le tag, puis **publie depuis ce Mac**
+commune : **skill `livraison`**. Les lots visent **`releases/rc`**, fusionnée dans `main` quand la
+rc est éprouvée. `--publish X.Y.Z` (arbre propre, refuse une version sans section `## X.Y.Z` dans
+`CHANGELOG.md`) : depuis `main`, la version finale ; depuis `releases/rc`, la rc suivante de X.Y.Z
+(`-rc.N` compté sur les tags, notes de `## X.Y.Z`). Il teste, pousse la branche et le tag, puis **publie depuis ce Mac**
 (`PUBLICATION_PAR_CI=0`, le runner n'a pas Xcode 27) : `Tools/publier-release.sh` compile arm64 +
 x86_64 en `DISTRIBUTION=1` (ad hoc), fait DMG, SHA256 et release GitHub, notes
 tirées de `CHANGELOG.md`. `release.yml` ne fait que rejouer ce script.
