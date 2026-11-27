@@ -10,7 +10,7 @@ user-invocable: false
 | --- | --- |
 | Aperçus des fenêtres (ScreenCaptureKit, appariement, préchauffe) | `reference/apercus.md` |
 | Rangement des fenêtres, plein écran, « Lancer la session » | `reference/rangement.md` |
-| Revoir ou refaire un écran (avec le skill global `grille-ui`) | `reference/grille-ui.md` |
+| Revoir ou refaire un écran (avec le skill global `interface`) | `reference/grille-ui.md` |
 
 **Un réglage n'apparaît que s'il sert** : les options d'une fonction coupée sont masquées, pas
 grisées (options de la barre sous « Afficher la barre », touche de l'enchaînement au clic sous
