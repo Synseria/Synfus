@@ -21,7 +21,7 @@ sh build.sh [--release [X.Y.Z] | --publish X.Y.Z]   # dist/Synfus.app, + DMG, ou
 ```
 
 Scripts, signature, version (dernier tag `vX.Y.Z`), lots et publication suivent la convention
-commune : **skills `retours` et `publier`**. `--publish` (depuis `main` propre, refuse une version sans section
+commune : **skill `livraison`**. `--publish` (depuis `main` propre, refuse une version sans section
 dans `CHANGELOG.md`) teste, pousse `main` et le tag, puis **publie depuis ce Mac**
 (`PUBLICATION_PAR_CI=0`, le runner n'a pas Xcode 27) : `Tools/publier-release.sh` compile arm64 +
 x86_64 en `DISTRIBUTION=1` (ad hoc), fait DMG, SHA256 et release GitHub, notes
@@ -132,7 +132,7 @@ nouveau fichier va dans le dossier de son domaine ; un fichier sans domaine en a
 | `lecture-ocr` | lecture de la position et du combat |
 | `aide-boss` | aide aux boss (Comte Harebourg), lecture de la vie et du canal combat |
 | `fermeture-gel` | fermeture des clients, abattage des gelés |
-| `interface-barre` | barre flottante, réglages, menu, aperçus, rangement des fenêtres ; ses exceptions à la grille UI (skill global `interface`) |
+| `interface-barre` | barre flottante, réglages, menu, aperçus, rangement des fenêtres ; ses exceptions à la grille UI (skill global `grille-ui`) |
 | `localisation` | tout libellé visible, tables JSON |
 | `preferences` | ajouter ou changer un réglage, un défaut |
 | `mise-a-jour` | mise à jour depuis GitHub, assets d'une release, rafraîchissement des données DofusDB |
