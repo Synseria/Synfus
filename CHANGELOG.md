@@ -3,7 +3,7 @@
 Une section par version, `## X.Y.Z — AAAA-MM-JJ` : la release GitHub de `vX.Y.Z` en reprend le
 contenu (`Tools/notes-de-version.sh`), et `sh build.sh --publish` refuse une version absente d'ici.
 
-## 0.15.0 — 2026-11-26
+## 0.15.0 — 2026-11-27
 
 ### Nouveautés
 
@@ -21,6 +21,13 @@ contenu (`Tools/notes-de-version.sh`), et `sh build.sh --publish` refuse une ver
 - **Panneau Recette** épinglable à côté du jeu ; un clic copie le nom d'un ingrédient.
 - **Chasse au trésor** : flèches des étapes mieux lues (aucune direction posée si elle n'est pas
   sûre) ; panneau compact avec boussole, historique des étapes et `/travel` vers le départ.
+- **Assistant de forgemagie** (bouton de la barre) : il lit l'atelier, compte succès, neutres et
+  échecs, et conseille les runes vers le jet parfait ou la cible choisie, avec un score ; la rune
+  conseillée est entourée sur le jeu. Après un clic dans l'atelier, il relit aussitôt (« Lecture… »).
+  Il ne pose ni ne fusionne jamais rien.
+- **Comte Harebourg** : sa vie lue au survol ; **visée sur le plateau** (Réglages → Aides, éteinte
+  par défaut) : sort préparé et case à portée, la case où retombe le sort, en rouge s'il part hors
+  de la zone. Plateau et case du perso sont lus seuls, rien à calibrer.
 
 ### Améliorations
 
@@ -29,29 +36,9 @@ contenu (`Tools/notes-de-version.sh`), et `sh build.sh --publish` refuse une ver
 - **Boss** : aides repliées sous leur consigne, schéma déplaçable, conseils copiables ; fiche de
   combat plus lisible.
 - **Quêtes** : liste ouverte avec retour, « Ici » replié en bas et compté.
+- **Trajets** : le zaap est proposé dès une carte gagnée (gain minimal à 1 par défaut).
 - **Statistiques d'utilisation** : la télémétrie commune aux apps Synseria (des compteurs, jamais
   de contenu).
-
-## 0.15.0-rc.2 — 2026-11-22
-
-Préversion : elle ne se propose pas d'elle-même, elle s'installe par son DMG.
-
-### Améliorations
-
-- **Chasse au trésor** : détection des flèches des étapes fiabilisée sur de vraies captures
-  (gabarits à la forme de la flèche du jeu, vrai début du texte estimé quand l'OCR englobe la
-  flèche) ; si la flèche n'est pas lue sûrement, aucune direction n'est posée — on clique sur
-  la boussole, et re-cliquer la débloque. Direction et indice toujours lus sur la même ligne
-  « EN COURS ».
-- **Panneau de chasse** redessiné et compact : départ (x, y) centré en haut — champs nombre
-  bornés à [-100, 100], stepper et roulette de souris —, boussole 3×3 (« Lire » au centre,
-  position actuelle en haut à droite, horloge en bas à gauche, maison en bas à droite). La
-  maison copie le `/zaap` ou `/travel` vers le départ ; l'horloge ouvre l'historique des étapes
-  de la chasse en cours, jalons validés en couleur. Chaque scan est journalisé
-  (`~/Library/Logs/Synfus/chasse.log`) avec sa capture PNG.
-- **Barre** : infobulle en fenêtre dédiée, curseur de clic fiable, onglet Données.
-- **Quêtes** : liste ouverte avec bouton retour, suivi couvert, « Ici » replié en bas compté.
-- **Boss** : schéma déplaçable, conseils copiables, consignes tactiques.
 
 ## 0.15.0-rc.1 — 2026-11-19
 
