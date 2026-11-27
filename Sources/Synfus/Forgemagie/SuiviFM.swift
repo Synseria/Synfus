@@ -54,7 +54,7 @@ struct SuiviFM: Equatable, Sendable {
             return ObjetFM.Ligne(effet: ligne.effet, valeur: ligne.valeur, max: max)
         }
         return AtelierFM(objet: ObjetFM(lignes: lignes), inconnues: lecture.inconnues, reliquat: lecture.reliquat,
-                         historique: lecture.historique, cadre: lecture.cadre)
+                         historique: lecture.historique, cadre: lecture.cadre, runes: lecture.runes)
     }
 
     /// Deux lectures qui disent la même chose de l'objet.
@@ -66,5 +66,41 @@ struct SuiviFM: Equatable, Sendable {
     static func memeObjet(_ a: ObjetFM, _ b: ObjetFM) -> Bool {
         let communes = a.lignes.compactMap { ligne in b.ligne(ligne.effet).map { (ligne, $0) } }
         return !communes.isEmpty && communes.allSatisfy { $0.max == nil || $1.max == nil || $0.max == $1.max }
+    }
+}
+
+extension SuiviFM {
+    /// Après un clic du joueur dans l'atelier, quand la lecture redevient sûre :
+    /// deux lectures de suite qui disent la même chose, autre chose qu'avant le
+    /// clic, ou la même chose depuis `stable` (le clic n'a rien fusionné) ; au
+    /// plus `maximum` après le clic. Pur.
+    struct AttenteClic: Equatable, Sendable {
+        static let stable: TimeInterval = 1.2
+        static let maximum: TimeInterval = 4
+
+        let le: Date
+        /// L'atelier sûr au moment du clic.
+        let avant: AtelierFM?
+        private var vue: AtelierFM?
+        private var depuis: Date
+
+        init(le: Date, avant: AtelierFM?) {
+            self.le = le
+            self.avant = avant
+            depuis = le
+        }
+
+        /// Une lecture (`nil` : pas d'atelier lu) ; vrai quand l'attente est finie.
+        mutating func lu(_ atelier: AtelierFM?, a maintenant: Date) -> Bool {
+            if maintenant.timeIntervalSince(le) > Self.maximum { return true }
+            guard let atelier else { return false }
+            guard let vue, SuiviFM.memesValeurs(vue, atelier) else {
+                self.vue = atelier
+                depuis = maintenant
+                return false
+            }
+            let change = avant.map { !SuiviFM.memesValeurs($0, atelier) } ?? true
+            return change || maintenant.timeIntervalSince(depuis) >= Self.stable
+        }
     }
 }

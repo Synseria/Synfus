@@ -1,4 +1,5 @@
 import CoreGraphics
+import Foundation
 import Testing
 @testable import Synfus
 
@@ -49,6 +50,22 @@ struct AtelierFMTests {
         #expect(ligne(atelier, 174) == .init(effet: 174, valeur: 49, max: 200))
         #expect(ligne(atelier, 158) == .init(effet: 158, valeur: 237, max: 200))
         #expect(atelier.objet.lignes.count == 3)
+    }
+
+    @Test("Les cases des runes : la colonne de chaque rang, la rangée de chaque ligne")
+    func casesDesRunes() throws {
+        let atelier = try lu(FixturesAtelierFM.apresTroisRunes)
+        let runes = try #require(atelier.runes)
+        // Au milieu des stocks lus : 550, 192, 169 dans la rangée de la Vitalité.
+        let pa = try #require(runes.centre(effet: 125, rang: .pa))
+        let simple = try #require(runes.centre(effet: 125, rang: .simple))
+        let ra = try #require(runes.centre(effet: 158, rang: .ra))
+        #expect(abs(pa.x - 0.878) < 0.004)
+        #expect(abs(pa.y - 0.2511) < 0.004)
+        #expect(abs(simple.x - 0.8331) < 0.004)
+        #expect(abs(ra.x - 0.9244) < 0.004)
+        #expect(abs(ra.y - 0.3623) < 0.004)
+        #expect(runes.centre(effet: 999, rang: .simple) == nil)
     }
 
     @Test("L'écran entier : suivi de quêtes et infobulle n'entrent pas dans l'atelier")
@@ -124,5 +141,43 @@ struct AtelierFMTests {
     func absent() {
         #expect(AtelierFM.lire([DetectionZones.TexteVu(texte: "Inventaire", cadre: CGRect(x: 0.5, y: 0.1, width: 0.1, height: 0.02))],
                                catalogue: catalogue) == nil)
+    }
+}
+
+@Suite("Lecture sûre après un clic dans l'atelier")
+struct AttenteClicTests {
+    private func atelier(_ valeur: Int) -> AtelierFM {
+        AtelierFM(objet: ObjetFM(lignes: [.init(effet: 125, valeur: valeur, max: 45)]), inconnues: [], reliquat: 0,
+                  historique: [], cadre: .zero)
+    }
+
+    private let t0 = Date(timeIntervalSinceReferenceDate: 0)
+
+    private func lire(_ attente: inout SuiviFM.AttenteClic, _ lu: AtelierFM?, a date: Date) -> Bool {
+        attente.lu(lu, a: date)
+    }
+
+    @Test("Une fusion : la valeur change, sûre à la deuxième lecture identique")
+    func fusion() {
+        var attente = SuiviFM.AttenteClic(le: t0, avant: atelier(34))
+        // Le jeu n'a pas encore montré la fusion.
+        #expect(!lire(&attente, atelier(34), a: t0.addingTimeInterval(0.25)))
+        #expect(!lire(&attente, atelier(39), a: t0.addingTimeInterval(0.6)))
+        #expect(lire(&attente, atelier(39), a: t0.addingTimeInterval(0.95)))
+    }
+
+    @Test("Un clic qui ne fusionne rien : sûre une fois la lecture stable assez longtemps")
+    func rienFusionne() {
+        var attente = SuiviFM.AttenteClic(le: t0, avant: atelier(34))
+        #expect(!lire(&attente, atelier(34), a: t0.addingTimeInterval(0.25)))
+        #expect(!lire(&attente, atelier(34), a: t0.addingTimeInterval(0.6)))
+        #expect(lire(&attente, atelier(34), a: t0.addingTimeInterval(1.5)))
+    }
+
+    @Test("Rien de lu : on cesse d'attendre au bout du délai")
+    func delai() {
+        var attente = SuiviFM.AttenteClic(le: t0, avant: nil)
+        #expect(!lire(&attente, nil, a: t0.addingTimeInterval(1)))
+        #expect(lire(&attente, nil, a: t0.addingTimeInterval(4.5)))
     }
 }

@@ -28,6 +28,10 @@ final class ForgemagiePanel: NSObject, ObservableObject {
         appliquer(force: false)
     }
 
+    func basculer() {
+        if ouvert { fermer() } else { ouvrir() }
+    }
+
     func basculerPliage() {
         PanneauxJeu.basculerPliage(.forgemagie, hauteur: panel?.frame.height ?? 0)
     }
@@ -35,6 +39,7 @@ final class ForgemagiePanel: NSObject, ObservableObject {
     func revoirVisibilite(force: Bool) {
         if force { impose = false }
         appliquer(force: force)
+        ForgemagieModele.shared.revoirCalque()
     }
 
     func recentrer() {
@@ -138,7 +143,15 @@ struct SeanceForgemagie: View {
                     .monospacedDigit()
             }
             Spacer(minLength: 0)
-            if let derniere = suivi.derniere {
+            if modele.enLecture {
+                HStack(spacing: Jetons.espace1) {
+                    ProgressView().controlSize(.mini)
+                    Text(L("forgemagie.lecture"))
+                        .font(Jetons.typoMeta.font)
+                        .foregroundStyle(Color.jeton(\.encre2))
+                }
+                .help(L("forgemagie.lecture.aide"))
+            } else if let derniere = suivi.derniere {
                 Badge(texte: Self.libelle(derniere.issue), ton: Self.ton(derniere.issue))
                     .help(Self.pertes(derniere, catalogue: catalogue))
             }
@@ -153,11 +166,19 @@ struct SeanceForgemagie: View {
         }
     }
 
-    /// Les trois meilleures runes : un clic copie leur nom, à chercher à l'hôtel de vente.
+    /// Les trois meilleures runes : un clic copie leur nom, à chercher à
+    /// l'hôtel de vente. Après un clic dans l'atelier, voilées le temps de la
+    /// lecture : elles conseillaient l'objet d'avant.
     @ViewBuilder
     private func conseils(_ atelier: AtelierFM, catalogue: CatalogueFM) -> some View {
-        let propositions = ConseilFM.propositions(objet: atelier.objet, cible: modele.cible, reliquat: atelier.reliquat,
-                                                  catalogue: catalogue, nombre: 3)
+        VStack(alignment: .leading, spacing: Jetons.espace2) { listeConseils(atelier, catalogue: catalogue) }
+            .opacity(modele.enLecture ? 0.35 : 1)
+            .animation(.easeOut(duration: 0.15), value: modele.enLecture)
+    }
+
+    @ViewBuilder
+    private func listeConseils(_ atelier: AtelierFM, catalogue: CatalogueFM) -> some View {
+        let propositions = modele.propositions(nombre: 3)
         HStack {
             Text(propositions.isEmpty ? L("forgemagie.conseil.atteint") : L("forgemagie.conseil.titre"))
                 .font(Jetons.typoMeta.font)
@@ -300,5 +321,28 @@ private struct LigneFM: View {
         .font(Jetons.typoMeta.font)
         .foregroundStyle(Color.jeton(\.encre2))
         .help(L("forgemagie.cible.aide"))
+    }
+}
+
+/// Sur le jeu, la case de la rune conseillée entourée de vert, tant que la
+/// lecture est sûre (`ForgemagieModele.revoirCalque`) ; en Nuit quel que soit
+/// le thème : posé sur le jeu, il se lit sur n'importe quel décor.
+struct CalqueForgemagie: View {
+    @ObservedObject private var modele = ForgemagieModele.shared
+
+    var body: some View {
+        GeometryReader { geo in
+            if let rune = modele.runeEntouree {
+                let cote = rune.pas * geo.size.width * 0.78
+                let cadre = RoundedRectangle(cornerRadius: Jetons.rayon2)
+                ZStack {
+                    cadre.stroke(Color.jeton(\.plaque, en: .nuit).opacity(Jetons.opacitePlaque), lineWidth: Jetons.epaisseurFocus * 2.5)
+                    cadre.stroke(Color.jeton(\.succes, en: .nuit), lineWidth: Jetons.epaisseurFocus)
+                }
+                .frame(width: cote, height: cote)
+                .position(x: rune.centre.x * geo.size.width, y: rune.centre.y * geo.size.height)
+            }
+        }
+        .accessibilityHidden(true)
     }
 }

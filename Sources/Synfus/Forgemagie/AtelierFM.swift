@@ -6,7 +6,7 @@ import Foundation
 /// « Effets / Carac. ») donne ses colonnes, l'historique est à sa gauche.
 /// L'OCR rend les cases de la table une à une et dans le désordre : elles se
 /// rangent par leur position. Les stocks de runes (colonnes Pa, Ra) se lisent
-/// trop mal pour servir. Pur.
+/// trop mal pour servir ; leur place, elle, dit où poser chaque rune. Pur.
 struct AtelierFM: Equatable, Sendable {
     /// L'objet tel que la table le montre ; la table défile, il peut en manquer.
     let objet: ObjetFM
@@ -19,6 +19,25 @@ struct AtelierFM: Equatable, Sendable {
     /// Ce que couvrent l'en-tête, la table et l'historique, dans le repère des
     /// textes : la lecture suivante peut s'y borner.
     let cadre: CGRect
+    /// Où se trouve chaque rune des lignes lues ; `nil` sans les en-têtes Pa et Ra.
+    var runes: EmplacementsRunes?
+
+    /// Les cases des runes : une rangée par ligne de l'objet, une colonne par
+    /// rang (simple, Pa, Ra), dans le repère des textes.
+    struct EmplacementsRunes: Equatable, Sendable {
+        /// Le milieu de la case de chaque rang.
+        let colonnes: [CGFloat]
+        /// Le milieu de la rangée de chaque effet.
+        let rangees: [Int: CGFloat]
+
+        /// L'écart entre deux cases voisines, en largeur de contenu.
+        var pas: CGFloat { colonnes[colonnes.count - 1] - colonnes[colonnes.count - 2] }
+
+        func centre(effet: Int, rang: CatalogueFM.Rang) -> CGPoint? {
+            guard colonnes.indices.contains(rang.rawValue), let y = rangees[effet] else { return nil }
+            return CGPoint(x: colonnes[rang.rawValue], y: y)
+        }
+    }
 
     static func lire(_ textes: [DetectionZones.TexteVu], catalogue: CatalogueFM) -> AtelierFM? {
         // Une infobulle peut porter elle aussi « Effets » : le premier en-tête complet compte.
@@ -32,6 +51,7 @@ struct AtelierFM: Equatable, Sendable {
 
         // Les lignes de la table : un effet dans sa colonne, ses bornes à côté.
         var lignes: [ObjetFM.Ligne] = []
+        var rangees: [Int: CGFloat] = [:]
         var inconnues: [String] = []
         var occupe = en.cadre
         let effets = textes.filter {
@@ -54,6 +74,7 @@ struct AtelierFM: Equatable, Sendable {
             let max = en.nombre(dans: rang, colonne: en.max)
             // Ni min ni max : une exo (« - »). Un min sans max : une case mal lue.
             lignes.append(ObjetFM.Ligne(effet: effet.id, valeur: points, max: max, exo: min == nil && max == nil))
+            rangees[effet.id] = texte.cadre.midY
         }
 
         // L'historique : à gauche de la table, sous la barre de fusion, sur
@@ -69,7 +90,8 @@ struct AtelierFM: Equatable, Sendable {
 
         return AtelierFM(objet: ObjetFM(lignes: lignes.sorted { $0.effet < $1.effet }), inconnues: inconnues,
                          reliquat: reliquatVu.flatMap { TexteFM.reliquat([$0.texte]) }, historique: historique,
-                         cadre: occupe.union(reliquatVu?.cadre ?? occupe))
+                         cadre: occupe.union(reliquatVu?.cadre ?? occupe),
+                         runes: en.colonnesRunes(textes, rangees: rangees).map { EmplacementsRunes(colonnes: $0, rangees: rangees) })
     }
 
     /// Sans accents ni casse, ponctuation réduite à une espace.
@@ -83,6 +105,25 @@ struct AtelierFM: Equatable, Sendable {
         let finEffets: CGFloat
         let hauteur: CGFloat
         let cadre: CGRect
+        let pa: DetectionZones.TexteVu?
+        let ra: DetectionZones.TexteVu?
+
+        /// Le milieu des cases simple, Pa et Ra. Les en-têtes Pa et Ra sont
+        /// calés à gauche de leur case (un cinquième de pas) ; les stocks lus
+        /// dans les rangées, au milieu de la case, les corrigent.
+        func colonnesRunes(_ textes: [DetectionZones.TexteVu], rangees: [Int: CGFloat]) -> [CGFloat]? {
+            guard let pa, let ra, ra.cadre.midX > pa.cadre.midX else { return nil }
+            let pas = ra.cadre.midX - pa.cadre.midX
+            let estimees = [pa.cadre.midX - pas, pa.cadre.midX, ra.cadre.midX].map { $0 + 0.2 * pas }
+            let stocks = textes.filter { texte in
+                Int(texte.texte.trimmingCharacters(in: .whitespaces)) != nil
+                    && rangees.values.contains { abs($0 - texte.cadre.midY) < hauteur }
+            }
+            return estimees.map { x in
+                let vus = stocks.map(\.cadre.midX).filter { abs($0 - x) < pas / 3 }.sorted()
+                return vus.isEmpty ? x : vus[vus.count / 2]
+            }
+        }
 
         init?(_ textes: [DetectionZones.TexteVu], effets: DetectionZones.TexteVu) {
             let ligne = textes.filter { abs($0.cadre.midY - effets.cadre.midY) < effets.cadre.height }
@@ -96,7 +137,9 @@ struct AtelierFM: Equatable, Sendable {
                       .min(by: { $0.cadre.minX < $1.cadre.minX })
             else { return nil }
             let modif = mot("modif")
-            let stocks = [mot("pa"), mot("ra")].compactMap(\.self)
+            pa = mot("pa")
+            ra = mot("ra")
+            let stocks = [pa, ra].compactMap(\.self)
             self.min = min
             self.max = max
             let droite = (stocks.map(\.cadre.maxX) + [modif?.cadre.maxX ?? effets.cadre.maxX]).max() ?? effets.cadre.maxX

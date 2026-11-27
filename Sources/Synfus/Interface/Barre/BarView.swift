@@ -11,6 +11,7 @@ struct BarView: View {
     @ObservedObject private var chasse = ChassePanel.shared
     @ObservedObject private var quetes = QuetePanel.shared
     @ObservedObject private var boss = BossPanel.shared
+    @ObservedObject private var forgemagie = ForgemagiePanel.shared
     @ObservedObject private var palette = PalettePanel.shared
     @Environment(\.accessibilityReduceMotion) private var sansMouvement
     @State private var dragging: String?
@@ -225,6 +226,7 @@ struct BarView: View {
             case .quetes: quetesButton.contextMenu { MasquerBouton(bouton: bouton) }
             case .boss: bossButton.contextMenu { MasquerBouton(bouton: bouton) }
             case .chasse: chasseButton.contextMenu { MasquerBouton(bouton: bouton) }
+            case .forgemagie: forgemagieButton.contextMenu { MasquerBouton(bouton: bouton) }
             case .almanax: almanaxButton.contextMenu { MasquerBouton(bouton: bouton) }
             case .rangement: ArrangeMenuButton()
             case .palette: zaapButton
@@ -278,6 +280,13 @@ struct BarView: View {
             aide: infobulle(.chasse)
         ) {
             ChassePanel.shared.basculer()
+        }
+    }
+
+    /// L'assistant de forgemagie, posé à côté de l'atelier du jeu.
+    private var forgemagieButton: some View {
+        ModeButton(icone: BoutonBarre.forgemagie.symbole, actif: forgemagie.ouvert, aide: infobulle(.forgemagie)) {
+            ForgemagiePanel.shared.basculer()
         }
     }
 
