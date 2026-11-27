@@ -7,7 +7,7 @@ import Foundation
 /// Le presse-papiers n'est réécrit que s'il contient **exactement** une
 /// commande `/travel x,y` : tout autre texte est ignoré, quel qu'il soit.
 enum ItineraireZaap {
-    static let gainParDefaut = 5
+    static let gainParDefaut = 1
     static let gainsPossibles = 1...30
 
     static func travel(vers cible: (x: Int, y: Int)) -> String {

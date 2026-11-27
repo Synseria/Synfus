@@ -407,7 +407,7 @@ final class Preferences: ObservableObject {
     /// reprise correspondante dans `adoptDefaults` — chaque fois que les défauts
     /// changent, sans quoi les installations existantes resteraient sur les
     /// anciens à jamais.
-    static let defaultsVersion = 9
+    static let defaultsVersion = 10
 
     /// Les défauts de la génération 1, ceux qu'une installation existante peut
     /// encore porter sans que l'utilisateur les ait choisis. Seules ces
@@ -421,6 +421,8 @@ final class Preferences: ObservableObject {
     private static let legacyInvite = HotKey(keyCode: 47, modifiers: UInt32(cmdKey))
     /// Le tri de la palette jusqu'à la génération 7.
     private static let legacyPaletteTri = TriPalette.proximite
+    /// Le gain minimal d'un trajet par zaap jusqu'à la génération 9.
+    private static let legacyZaapGainMinimal = 5
 
     /// Fait passer une sauvegarde ancienne au jeu de raccourcis courant.
     ///
@@ -489,6 +491,7 @@ final class Preferences: ObservableObject {
                 self[keyPath: chemin] = defaut
             }
         }
+        if from < 10, zaapGainMinimal == Self.legacyZaapGainMinimal { zaapGainMinimal = ItineraireZaap.gainParDefaut }
         return true
     }
 

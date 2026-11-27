@@ -482,6 +482,16 @@ struct PreferencesTests {
         #expect(prefs.characterOrder == ["Alpha", "Beta"])
     }
 
+    @Test("Le gain minimal d'un trajet passe de 5 à 1 ; une valeur choisie reste")
+    func gainMinimalReprisAUn() {
+        func relu(_ gain: Int) -> Int {
+            let ancien = #"{"characterOrder":[],"hotKeys":[],"barVisible":true,"showNumbers":true,"slotCount":5,"defaultsVersion":9,"zaapGainMinimal":\#(gain)}"#
+            return Preferences.forTesting(store: StockageMemoire([Preferences.key: Data(ancien.utf8)])).zaapGainMinimal
+        }
+        #expect(relu(5) == 1)
+        #expect(relu(8) == 8)
+    }
+
     @Test("Une sauvegarde illisible ramène aux valeurs par défaut")
     func sauvegardeIllisible() {
         let store = StockageMemoire([Preferences.key: Data("pas du JSON".utf8)])
@@ -516,7 +526,7 @@ struct PreferencesTests {
      "boutonsMasques":["quetes","boss","chasse","palette"],"characterOrder":["Amarine","Nelo"],
      "chasseHotKey":{"keyCode":5,"modifiers":2048},
      "cycleNext":{"keyCode":122,"modifiers":0},"cyclePrevious":{"keyCode":120,"modifiers":0},
-     "defaultsVersion":9,"equipeSuivanteHotKey":{"keyCode":17,"modifiers":256},
+     "defaultsVersion":10,"equipeSuivanteHotKey":{"keyCode":17,"modifiers":256},
      "etiquettes":{"1:-78,-41":"Fri 1"},"lieuxFavoris":["lieu:2738"],"pnjsFavoris":["pnj:6309"],
      "paletteHotKey":{"keyCode":47,"modifiers":256},"paletteRecents":["/zaap 5,7"],"paletteTri":"type",
      "paletteFrequentation":{"lieu:2738":{"dernier":12,"fois":3}},"quetesEpinglees":[18,42],"quetesEtape":{"18":2},
@@ -740,11 +750,11 @@ struct PreferencesTests {
         {"advanceModifier":"fn","advanceOnClick":false,"attentionAction":"highlight",
          "autoCenterBar":true,"barOnlyWithDofus":false,"panneauxSeulementDofus":true,"panneauxPlies":{},"barVisible":true,"bossChoisi":"harebourg",
          "boutonsMasques":[],"characterOrder":[],"harebourgVisee":false,
-         "defaultsVersion":9,"equipes":[],"etiquettes":{},"hotKeys":[null],"inviteFormat":"/invite %nom","inviteGroupee":false,
+         "defaultsVersion":10,"equipes":[],"etiquettes":{},"hotKeys":[null],"inviteFormat":"/invite %nom","inviteGroupee":false,
          "killFrozenClients":true,"lireCombat":false,"aideHuppermage":true,"lireCombatDerriere":false,"lirePosition":false,"menuBarIcon":"logo","iconeApp":{"motif":"oeuf","fond":"transparent"},"theme":{"teinte":260,"fond":{"accorde":{}},"suivreLeSysteme":true,"clarte":200,"clarteClaire":200,"clarteSombre":800},
          "reduirePersosInactifs":false,"showClasses":true,"showNumbers":true,"showPreviewOnHover":false,
          "signalerBascule":true,"zaapAuto":false,
-         "zaapGainMinimal":5,"zaapDuJeu":true,"zaapIntercalees":"/a","canalDeMiseAJour":"stable","partagerStatistiques":true,"zaapsAjoutes":[],"zaapsChoix":{},"zaapsFavoris":[],"zaapsVueCarte":true,
+         "zaapGainMinimal":1,"zaapDuJeu":true,"zaapIntercalees":"/a","canalDeMiseAJour":"stable","partagerStatistiques":true,"zaapsAjoutes":[],"zaapsChoix":{},"zaapsFavoris":[],"zaapsVueCarte":true,
          "lieuxFavoris":[],"pnjsFavoris":[],"paletteRecents":[],"paletteTri":"auto","paletteFrequentation":{},"quetesEpinglees":[],"quetesEtape":{},
          "quetesValides":{},"quetesMasquerObjets":false,
          "quetesCompact":true,"quetesConsigne":true,"quetesVignettes":false,
