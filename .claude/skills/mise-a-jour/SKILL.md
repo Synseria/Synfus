@@ -8,7 +8,7 @@ user-invocable: false
 
 ## Comportement
 
-Le déroulé est celui de `SynseriaKit` ▸ `MiseAJour` (skill globale `socle-synseria`), au geste
+Le déroulé est celui de `SynseriaKit` ▸ `MiseAJour` (skill globale `synseriakit`), au geste
 (`.auGeste`) ; `ReleasesDeSynfus` en est la part propre à Synfus.
 
 - **Vérification** au lancement puis toutes les 24 h tant que `verifierMisesAJour` (Réglages ›
@@ -95,7 +95,7 @@ qui ne l'a pas pris avant la 0.15 installerait directement la 0.15.
 
 ## Statistiques d'utilisation
 
-Une release envoie les statistiques (`Usage/UsageStore`, sur `SynseriaKit.Telemetrie` : skill globale `socle-synseria`) : `publier-release.sh` lit l'adresse du
+Une release envoie les statistiques (`Usage/UsageStore`, sur `SynseriaKit.Telemetrie` : skill globale `synseriakit`) : `publier-release.sh` lit l'adresse du
 collecteur et le jeton de Synfus dans le coffre (`secret run`, `domus:telemetrie/prod/URL` et
 `…/SYNFUS`, Touch ID) ou dans l'environnement (`TELEMETRIE_URL`, `TELEMETRIE_JETON` : secrets de la
 CI), et refuse de construire sans eux. `sh run.sh --install` les lit aussi dans le coffre (sans
