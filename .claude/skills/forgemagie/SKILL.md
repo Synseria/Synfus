@@ -52,7 +52,7 @@ Synfus lit l'atelier et l'affiche ; il ne pose ni ne fusionne jamais une rune (C
   (`LecteurEcran.imageDevant` puis `textes`), l'atelier se retrouve par l'en-tête « Min / Max / Effets /
   Carac. » (le premier complet : une infobulle peut porter « Effets » ; « Max » se lit parfois en
   lettres cyrilliques : c'est la case entre Min et les effets), et les suivantes se bornent à son
-  cadre élargi (stocks compris). Toutes les 2 s, panneau ouvert et Dofus devant ; 5 s atelier absent ;
+  cadre élargi (stocks compris). Toutes les 1,5 s, panneau ouvert et Dofus devant ; 5 s atelier absent ;
   une image identique à la précédente ne repasse pas par l'OCR.
 - L'historique est sur cinq pas et demi de colonne (pas Min–Max) à gauche de « Min » : il se lit aussi
   dans une lecture bornée, et le suivi de quêtes n'y entre pas. Il n'est pas encore recoupé avec la table.
@@ -62,5 +62,13 @@ Synfus lit l'atelier et l'affiche ; il ne pose ni ne fusionne jamais une rune (C
   « VIDER L'HISTORIQUE » (le suivi de quêtes, plus à gauche, n'y entre pas).
 - L'icône d'une ligne se lit en caractères parasites (« 3 46 Sagesse », « - 7% Critique »,
   « 9 190 Pods ») : le nombre retenu est le dernier avant le nom, son signe seulement s'il y est collé.
-- Stocks de runes (Pa, Ra) trop mal lus (« 55.0 », « 870 ») : pas lus.
+- Stocks de runes (Pa, Ra) trop mal lus (« 55.0 », « 870 ») : leur nombre n'est pas lu, leur place
+  si (`AtelierFM.runes`) : colonnes simple, Pa, Ra au milieu des stocks lus, sinon à un cinquième de
+  pas à droite des en-têtes Pa et Ra ; rangée de chaque effet. Le calque (`CalqueForgemagie`, sur
+  `CalqueSurJeu`) y entoure la case de la meilleure rune.
+- **Après un clic** du joueur dans le cadre de l'atelier (observé par un moniteur global passif,
+  jamais émis) : relecture à 250 ms puis toutes les 350 ms jusqu'à une lecture sûre
+  (`SuiviFM.AttenteClic` : deux lectures égales et différentes d'avant le clic, ou égales depuis
+  1,2 s, ou 4 s passées) ; pendant ce temps, « Lecture… », conseils voilés et calque retiré.
+  Le conseil n'a qu'une source : `ForgemagieModele.propositions`.
 - Fixtures : `FixturesAtelierFM` (textes et cadres de quatre captures, sans image ni tchat).

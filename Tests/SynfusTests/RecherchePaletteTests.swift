@@ -275,7 +275,7 @@ struct RecherchePaletteTests {
         let bram = try #require(premiere("bram", avecPersos))
         #expect(bram.effet == .basculer("1#0") && bram.touche == "⌘1" && bram.classe == "Iop")
         #expect(bram.sousTitre == "Iop · \(Coordonnees.texte(-2, 0))")
-        #expect(RecherchePalette.entrees("cid", avecPersos).first?.sousTitre == nil)
+        #expect(RecherchePalette.entrees("cob", avecPersos).first?.sousTitre == nil)
         #expect(RecherchePalette.texte(de: bram.effet, avecPersos) == nil)
         #expect(RecherchePalette.entrees("/invite bram", avecPersos).map(\.effet) == [.copier("/invite Bram")])
         // Sans perso connecté, rien ne se propose.

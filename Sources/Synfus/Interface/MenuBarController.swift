@@ -84,10 +84,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             icone: BoutonBarre.quetes.symbole).state = QuetePanel.shared.ouvert ? .on : .off
         add(to: menu, title: L("menu.chasse"), action: #selector(openHunt), raccourci: prefs.chasseHotKey,
             icone: BoutonBarre.chasse.symbole).state = ChassePanel.shared.ouvert ? .on : .off
-        add(to: menu, title: BoutonBarre.forgemagie.libelle, action: #selector(openForgemagie), raccourci: nil,
-            icone: BoutonBarre.forgemagie.symbole).state = ForgemagiePanel.shared.ouvert ? .on : .off
         add(to: menu, title: BoutonBarre.almanax.libelle, action: #selector(openAlmanax), raccourci: prefs.almanaxHotKey,
             icone: BoutonBarre.almanax.symbole)
+        add(to: menu, title: BoutonBarre.forgemagie.libelle, action: #selector(openForgemagie), raccourci: nil,
+            icone: BoutonBarre.forgemagie.symbole).state = ForgemagiePanel.shared.ouvert ? .on : .off
         add(to: menu, title: L("menu.boss"), action: #selector(openBoss), raccourci: prefs.bossHotKey,
             icone: BoutonBarre.boss.symbole).state = BossPanel.shared.ouvert ? .on : .off
         menu.addItem(.separator())

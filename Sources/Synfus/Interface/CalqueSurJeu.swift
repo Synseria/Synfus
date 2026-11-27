@@ -38,7 +38,7 @@ final class CalqueSurJeu {
     private var panel: NSPanel?
     private let vue: AnyView
 
-    init(_ vue: some View) { self.vue = AnyView(vue.racineSynfus()) }
+    init(_ vue: some View) { self.vue = AnyView(vue) }
 
     /// Posé sur cette fenêtre, ou retiré (`nil`).
     func poser(sur fenetre: FenetreJeu?) {
@@ -57,7 +57,7 @@ final class CalqueSurJeu {
     private func construire() -> NSPanel {
         let panel = NSPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel],
                             backing: .buffered, defer: true)
-        panel.contentView = NSHostingView(rootView: vue)
+        panel.contentView = NSHostingView(rootView: vue.racineSynfus())
         panel.ignoresMouseEvents = true
         panel.isFloatingPanel = true
         panel.level = .statusBar

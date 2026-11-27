@@ -8,7 +8,7 @@
 enum BoutonBarre: String, CaseIterable, Sendable {
     // Les panneaux de jeu d'abord, du plus servi au plus rare, puis les
     // fenêtres ; le même ordre que le menu de la barre de menus.
-    case quetes, boss, chasse, forgemagie, almanax, rangement, palette, passageAuto
+    case quetes, boss, chasse, almanax, forgemagie, rangement, palette, passageAuto
 
     /// Les boutons montrés, dans l'ordre de la barre.
     static func affiches(sauf masques: Set<BoutonBarre>) -> [BoutonBarre] {

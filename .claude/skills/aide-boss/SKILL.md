@@ -32,17 +32,17 @@ Synfus lit l'écran et affiche ; viser et lancer restent au joueur (CGU : aucun 
   gardée pour le combat (`SuiviConfusion.comte`) ; sans maximum lu, la part se dit par rapport au
   maximum DofusDB du plus haut grade (« ≈ »). « a / b » : chaque nombre borné au motif des milliers.
 - **Grille** : la conversion case ↔ point est `GrilleIso` (`Lecture/`), seule source ; la grille du
-  combat (`grilleCombat`) en fractions du contenu — origine, demi-largeur `a` en fraction de la
-  **hauteur**, rapport largeur/hauteur (±1 %, sinon invalide) —, calibrée à deux clics
-  (`CalibrationGrilleView`, Réglages ▸ Aides, capture `grille.png`). Mesuré sur une fenêtre de
-  2000 × 1234 px : `a` = 53 px (0,043 de la hauteur) ; une capture zoomée donnait 75 px.
+  combat en fractions du contenu — origine, demi-largeur `a` en fraction de la **hauteur**, rapport
+  largeur/hauteur (±1 %, sinon invalide) —, **jamais réglée à la main** : un état de `ViseePanel`,
+  retrouvé sur l'écran à chaque tour (plus de feuille de calibrage ni de réglage). Mesuré sur une
+  fenêtre de 2000 × 1234 px : `a` = 53 px (0,043 de la hauteur) ; une capture zoomée donnait 75 px.
 
 ## Visée sur le plateau — `ViseeHarebourg` (pur), `ViseePanel`
 
-- Réglage `harebourgVisee`, éteint par défaut. Le calque ne fait que dessiner : `NSPanel` sans
-  bord, non activable, `ignoresMouseEvents`, posé sur le contenu de la fenêtre du perso devant.
-- **Autocalibrage** (`PlateauCombat`, pur ; `ViseePanel.caler`, une capture par seconde au plus,
-  pendant le tour) : la grille est retrouvée à chaque tour par la périodicité des joints (énergie des
+- Réglage `harebourgVisee`, éteint par défaut. Le calque ne fait que dessiner : `CalqueSurJeu`
+  (commun avec la forgemagie), posé sur le contenu de la fenêtre du perso devant (`FenetreJeu`).
+- **Relevé du plateau** (`PlateauCombat`, `PorteeSort`, purs ; `ViseePanel.relever`, deux captures par
+  seconde au plus, pendant le tour) : la grille est retrouvée à chaque tour par la périodicité des joints (énergie des
   bords projetée sur `x + 2y` et `2y − x`, autocorrélation, repli lissé sur la portée de la mesure —
   un joint répond par deux pics ; demi-période vérifiée). Une grille qui coïncide avec celle en place
   (`GrilleIso.coincide` : l'origine retrouvée tombe sur une autre case) la laisse, pivots compris ;
@@ -50,7 +50,15 @@ Synfus lit l'écran et affiche ; viser et lancer restent au joueur (CGU : aucun 
   case dont le losange porte le liseré blanc et creux du perso actif (côtés du bas surtout, que le
   perso masque moins ; intérieur et pourtour non blancs ; points bordés de rouge écartés — le liseré
   de la case visée ; cases du plateau seulement, `grilleLocale` ; nette avance sur la suivante),
-  retenue à la seconde lecture identique. Un sort préparé peut masquer le liseré : rien plutôt que faux.
+  retenue à la seconde lecture identique, et seulement sans sort préparé (il masque le liseré).
+- **Portée** (`PorteeSort`) : le jeu teinte de bleu les cases à portée, foncé avec ligne de vue,
+  clair sans. Le sol change d'une carte à l'autre : une case n'est bleuie que comparée à elle-même
+  sans sort (la référence, reprise à chaque lecture sans sort). Cinq taches par case (centre, près
+  des sommets) ; bleuie si le bleu monte devant le rouge **et** le vert (le vert d'un déplacement
+  monte aussi devant le rouge) sur trois taches ; couverte (perso, marque rouge de la visée du jeu) :
+  elle garde ce qu'on en savait. Foncé / clair : coupe d'Otsu sur la luminance, une seule teinte si
+  les moyennes sont à moins de 15. Moins de trois cases bleuies : pas de sort. Banc :
+  `SYNFUS_PORTEE=<sans sort>:<sort préparé> sh test.sh porteeSurCapturesReelles`.
   Mesuré : une case de 52 px sur 2000 × 1234 (deux monstres voisins le confirment ; le motif du sol trompe l'œil).
   Banc : `SYNFUS_PLATEAU=<capture> sh test.sh plateauSurCaptureReelle` ; les captures de calibrage
   (`combat.png`, `vie.png`…) donnent 0,0433 de la hauteur, la mesure à la main.
@@ -61,15 +69,18 @@ Synfus lit l'écran et affiche ; viser et lancer restent au joueur (CGU : aucun 
   vue en jeu quand Dofus passe derrière (`raisonAffichee`).
 - Arrivée : `arrivee = pivot + caseAtteinte(survolée − pivot)`, la voisine en pointillés à une
   limite de tranche ; l'estimation compte déjà les coups. `Confusion.caseAtteinte` est l'inverse
-  exact de `caseVisee`.
-- Actif pendant le tour du perso devant (`ViseeHarebourg.inactive`, raison au Diagnostic) : réglage,
-  Comte suivi, `BossPanel.montre`, son tour, grille calibrée et valable pour le rapport de la
-  fenêtre, pivot, confusion connue, pointeur sur le jeu (pas sur une fenêtre de Synfus).
+  exact de `caseVisee`. Hors des cases bleuies (ni foncée, ni claire, ni couverte) : `dansLaZone`
+  faux, le sort part dans le vide.
+- Actif pendant le tour du perso devant (`ViseeHarebourg.inactive`, raison au Diagnostic et dans le
+  panneau) : réglage, Comte suivi, `BossPanel.montre`, son tour, grille lue et valable pour le
+  rapport de la fenêtre, pivot, confusion connue, **sort préparé**, pointeur sur le jeu (pas sur une
+  fenêtre de Synfus), **case visée foncée ou couverte** (`visable` ; le bleu clair n'a pas de ligne de vue).
 - Coûts : veille à 2 Hz réglage allumé contre le Comte (cadre de la fenêtre par le serveur de
-  fenêtres, `CrossSpaceTitles.cadreAffiche` — un client gelé ne bloque rien) ; pointeur à 30 Hz
-  seulement calque possible ; publication au changement de case. Aucune capture.
-- Dessin en Nuit (`CalqueVisee`) : arrivée `succes` pleine et « Tombe ici », voisine
-  `avertissement` en pointillés, case visée d'un filet, pivot cerclé, chaque trait sur un halo.
+  fenêtres, `CrossSpaceTitles.cadreAffiche` — un client gelé ne bloque rien) ; relevé du plateau à
+  2 Hz pendant son tour ; pointeur à 30 Hz seulement calque possible, sur la portée gardée.
+- Dessin en Nuit (`CalqueVisee`) : arrivée `succes` pleine et « Tombe ici » — `danger` et « Tombe
+  hors zone » hors de la zone —, voisine `avertissement` en pointillés, case visée d'un filet,
+  pivot cerclé, chaque trait sur un halo.
 - Non vu en jeu à l'écriture : plein écran, changement de rapport, clic qui traverse, caméra zoomée.
 - **Canal combat** : `[14:04] Nom : …` ; un angle en degrés ou en Pi (`3Pi/2`, `1/2 pi`, `π`) **et**
   un sens (`horaire`, `contre horaire`, en/es aussi) — sans sens, rien (le jeu l'écrit toujours,

@@ -123,7 +123,7 @@ struct SeanceForgemagie: View {
 
     var body: some View {
         seance(atelier)
-        conseils(atelier, catalogue: catalogue)
+        conseils
         Divider()
         ForEach(atelier.objet.lignes, id: \.effet) { ligne in
             LigneFM(ligne: ligne, objet: atelier.objet, catalogue: catalogue)
@@ -170,14 +170,14 @@ struct SeanceForgemagie: View {
     /// l'hôtel de vente. Après un clic dans l'atelier, voilées le temps de la
     /// lecture : elles conseillaient l'objet d'avant.
     @ViewBuilder
-    private func conseils(_ atelier: AtelierFM, catalogue: CatalogueFM) -> some View {
-        VStack(alignment: .leading, spacing: Jetons.espace2) { listeConseils(atelier, catalogue: catalogue) }
+    private var conseils: some View {
+        VStack(alignment: .leading, spacing: Jetons.espace2) { listeConseils }
             .opacity(modele.enLecture ? 0.35 : 1)
-            .animation(.easeOut(duration: 0.15), value: modele.enLecture)
+            .animation(Jetons.courbeStandard.animation(Jetons.dureeRapide), value: modele.enLecture)
     }
 
     @ViewBuilder
-    private func listeConseils(_ atelier: AtelierFM, catalogue: CatalogueFM) -> some View {
+    private var listeConseils: some View {
         let propositions = modele.propositions(nombre: 3)
         HStack {
             Text(propositions.isEmpty ? L("forgemagie.conseil.atteint") : L("forgemagie.conseil.titre"))

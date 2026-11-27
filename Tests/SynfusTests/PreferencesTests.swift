@@ -1041,7 +1041,7 @@ extension PreferencesTests {
     func boutonsAffiches() {
         #expect(BoutonBarre.affiches(sauf: []) == BoutonBarre.allCases)
         #expect(BoutonBarre.affiches(sauf: [.palette, .quetes])
-                == [.boss, .chasse, .almanax, .rangement, .passageAuto])
+                == [.boss, .chasse, .almanax, .forgemagie, .rangement, .passageAuto])
         // L'almanax suit la chasse et se montre d'office, même sur une sauvegarde d'avant lui.
         let ordre = BoutonBarre.affiches(sauf: [])
         #expect(ordre.firstIndex(of: .almanax) == ordre.firstIndex(of: .chasse)! + 1)
