@@ -56,21 +56,27 @@ struct ForgemagieTests {
         (2803, 10, "#1{{~1~2 à }}#2% Résistance mêlée"),
         (2804, 15, "#1{{~1~2 à }}#2% Dommages distance"),
         (2807, 10, "#1{{~1~2 à }}#2% Résistance distance"),
+        (2808, 15, "#1{{~1~2 à }}#2% Dommages d'armes"),
+        (2812, 15, "#1{{~1~2 à }}#2% Dommages aux sorts"),
     ]
 
     static let catalogue: CatalogueFM = {
         typealias O = CatalogueFM.ObjetDofusDB
         let effets = releves.map { CatalogueFM.EffetDofusDB(id: $0.id, effectPowerRate: $0.poids, description: ["fr": $0.gabarit]) }
-        func rune(_: Int, _: String, _ effet: Int, _ puissance: Int) -> O {
-            O(effects: [.init(effectId: effet, from: puissance)])
+        func rune(_: Int, _ nom: String, _ effet: Int, _ puissance: Int) -> O {
+            O(name: ["fr": nom], effects: [.init(effectId: effet, from: puissance)])
         }
         let runes = [
             rune(1551, "Rune Ra Fo", 118, 10), rune(1519, "Rune Fo", 118, 1), rune(1545, "Rune Pa Fo", 118, 3),
             rune(1525, "Rune Cha", 123, 1), rune(1550, "Rune Pa Cha", 123, 3), rune(1556, "Rune Ra Cha", 123, 10),
             rune(1523, "Rune Vi", 125, 5), rune(1548, "Rune Pa Vi", 125, 15), rune(1554, "Rune Ra Vi", 125, 50),
-            rune(1557, "Rune Ga Pa", 111, 1), rune(7448, "Rune Ini", 174, 10),
+            rune(1557, "Rune Ga Pa", 111, 1), rune(7448, "Rune Ini", 174, 10), rune(7449, "Rune Pa Ini", 174, 30),
+            rune(7450, "Rune Ra Ini", 174, 100), rune(1524, "Rune Age", 119, 1), rune(1549, "Rune Pa Age", 119, 3),
+            rune(1555, "Rune Ra Age", 119, 10), rune(1521, "Rune Sa", 124, 1), rune(1546, "Rune Pa Sa", 124, 3),
+            rune(1552, "Rune Ra Sa", 124, 10), rune(1522, "Rune Ine", 126, 1), rune(1547, "Rune Pa Ine", 126, 3),
+            rune(1553, "Rune Ra Ine", 126, 10), rune(7451, "Rune Prospe", 176, 1), rune(10662, "Rune Pa Prospe", 176, 3),
             rune(10057, "Rune de chasse", 795, 0),
-            O(effects: []),
+            O(name: ["fr": "Rune de Signature"], effects: []),
         ]
         return CatalogueFM(effets: effets, runes: runes)
     }()
@@ -103,7 +109,7 @@ struct ForgemagieTests {
         #expect(try rune(111, .simple).poids == 100)
         // Chasse (puissance nulle) et signature (sans effet) n'en sont pas.
         #expect(catalogue.runes[795] == nil)
-        #expect(catalogue.runes.values.joined().count == 11)
+        #expect(catalogue.runes.values.joined().count == 24)
     }
 
     @Test("Le nom lu retrouve son effet, à une faute près, jamais à égalité")
@@ -158,25 +164,35 @@ struct ForgemagieTests {
 
     @Test("L'issue se lit dans la différence de deux tables")
     func issues() throws {
-        let avant = [123: 13, 125: 224]
-        func constat(_ apres: [Int: Int], _ ra: Double? = nil, _ rb: Double? = nil) -> FusionFM? {
+        func objet(_ valeurs: [Int: Int], exo: Set<Int> = []) -> ObjetFM {
+            ObjetFM(lignes: valeurs.sorted { $0.key < $1.key }.map {
+                .init(effet: $0.key, valeur: $0.value, max: exo.contains($0.key) ? nil : 300, exo: exo.contains($0.key))
+            })
+        }
+        let avant = objet([123: 13, 125: 224])
+        func constat(_ apres: ObjetFM, _ ra: Double? = nil, _ rb: Double? = nil) -> FusionFM? {
             FusionFM.constater(avant: avant, apres: apres, catalogue: catalogue, reliquatAvant: ra, reliquatApres: rb)
         }
-        let sc = try #require(constat([123: 16, 125: 224]))
+        let sc = try #require(constat(objet([123: 16, 125: 224])))
         #expect(sc.issue == .succesCritique && sc.gains == [123: 3] && sc.pertes.isEmpty)
-        let sn = try #require(constat([123: 16, 125: 209]))
+        let sn = try #require(constat(objet([123: 16, 125: 209])))
         #expect(sn.issue == .succesNeutre && sn.pertes == [125: 15])
         #expect(abs(sn.poidsPerdu - 3) < 0.01)
-        #expect(try #require(constat([123: 3, 125: 224])).issue == .echec)
+        #expect(try #require(constat(objet([123: 3, 125: 224]))).issue == .echec)
         // Le puits a payé : aucune ligne ne baisse, le reliquat si.
-        #expect(try #require(constat([123: 16, 125: 224], 12, 9)).issue == .succesNeutre)
-        #expect(try #require(constat([123: 13, 125: 224], 12, 9)).issue == .echec)
-        #expect(constat([123: 13, 125: 224]) == nil)
-        // Une exo : une ligne apparaît, aucune ne disparaît.
-        let exo = try #require(constat([123: 13, 125: 224, 111: 1]))
+        #expect(try #require(constat(objet([123: 16, 125: 224]), 12, 9)).issue == .succesNeutre)
+        #expect(try #require(constat(objet([123: 13, 125: 224]), 12, 9)).issue == .echec)
+        #expect(constat(objet([123: 13, 125: 224])) == nil)
+        // Une exo : une ligne sans min ni max apparaît, de la puissance d'une rune.
+        let exo = try #require(constat(objet([123: 13, 125: 224, 111: 1], exo: [111])))
         #expect(exo.issue == .succesCritique && exo.gains == [111: 1])
+        // Une ligne revenue dans la vue (elle a ses min et max, ou une valeur qu'aucune rune ne donne) n'est pas un gain.
+        #expect(constat(objet([123: 13, 125: 224, 118: 40])) == nil)
+        #expect(constat(objet([123: 13, 125: 224, 118: 40], exo: [118])) == nil)
         // La table a défilé : une ligne sortie de la vue n'est pas une perte.
-        #expect(constat([125: 224, 111: 1]) == nil)
+        #expect(constat(objet([125: 224, 111: 1], exo: [111])) == nil)
+        // Deux lignes qui montent : pas une fusion.
+        #expect(constat(objet([123: 16, 125: 239])) == nil)
     }
 
     // MARK: - Texte lu

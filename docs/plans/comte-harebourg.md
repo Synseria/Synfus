@@ -170,7 +170,11 @@ diagonale ↘ » ; grille dessinée par-dessus, réglage fin (décalage, `a`) ; 
   `inactive(_:) -> Inactive?` au lieu d'un `Result`. Mesure : `a` = 53 px sur un contenu de
   2000 × 1234 (0,043 de la hauteur) ; la capture « 1.png » (2000 × 1054) donne 75 px — zoomée ou
   rognée, à confirmer.
-- **A3. « Détecter » la grille** — `Lecture/AjustementGrille.swift` (pur, sur `LumaBitmap`) :
+- **A3 (fait, autocalibrage).** `PlateauCombat` : la grille retrouvée à chaque tour par la périodicité
+  des joints (sans calibrage), le pivot par le losange blanc et creux que le jeu trace autour du perso
+  actif (deux lectures identiques de suite). Éprouvé sur deux captures réelles : grille juste sur les
+  deux, case active juste en mode normal, rien (et non faux) quand un sort préparé la masque.
+- **A3 (plan d'origine). « Détecter » la grille** — `Lecture/AjustementGrille.swift` (pur, sur `LumaBitmap`) :
   énergie de bord projetée sur `y − x/2` et `y + x/2`, autocorrélation → période `a`, phases →
   origine ; score, refus sous un seuil. Fin : banc synthétique vert ; `RealCaptureTests` retrouve
   la grille de `combat.png` à 2 % de la mesure manuelle.

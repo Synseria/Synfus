@@ -21,9 +21,21 @@ Synfus lit l'atelier et l'affiche ; il ne pose ni ne fusionne jamais une rune (C
 - **Malus** : une ligne en malus garde l'effet positif, à valeur négative.
 - **Exo** : ni min ni max lus (« - »). Un min sans max est une case mal lue, pas une exo.
 - **Issue** (`FusionFM.constater`) : de la différence de deux tables, jamais de la couleur ; la rune
-  posée ne se lit pas. La table **défile** : seules comptent les lignes vues des deux côtés, plus une
-  ligne apparue quand aucune n'a disparu (exo). Gain sans perte → critique, sauf reliquat en baisse
-  (le puits a payé) ; gain et perte → neutre ; perte seule → échec ; rien → pas de fusion.
+  posée ne se lit pas. La table **défile** : seules comptent les lignes vues des deux côtés. Une ligne
+  apparue n'est une exo gagnée que si aucune n'a disparu, qu'elle n'a ni min ni max et que sa valeur
+  est la puissance d'une rune (sinon : une ligne revenue dans la vue). Deux lignes qui montent : pas
+  une fusion. Gain sans perte → critique, sauf reliquat en baisse (le puits a payé) ; gain et perte →
+  neutre ; perte seule → échec ; rien → pas de fusion.
+- **Séance** (`SuiviFM`, une par perso, oubliée à la fermeture du panneau) : une lecture ne compte que
+  **confirmée** par la suivante, identique (animation du jeu, chiffre mal lu) ; les jets max lus
+  restent connus (une case mal lue n'en fait pas une exo).
+- **Conseil** (`ConseilFM`) : pour chaque ligne sous sa cible (jet max par défaut, ou la cible réglée au
+  survol de la ligne), chaque rune de son effet reçoit un score 0–100 : avancer vers la cible (0,40),
+  sans la dépasser (0,25), au bon palier (0,20 ; rang attendu : la ligne pèse plus de 20 fois le
+  poids du rang précédent), en risquant peu (0,10 ; perte probable = poids × (1 − critique), critique
+  d'après la 1.27 : 66 % sous 80 % du max, 34 % au max, 15 % au-delà, moins ce que le reliquat
+  absorbe), ligne précieuse (0,05) ; un over (au-delà du max) ×0,6 ; jamais au-delà du plafond. Les
+  pondérations sont un choix, pas une mesure : les éprouver en jeu avant d'y toucher.
 - **Puits** : le jeu l'**affiche** (« reliquat : 0.1 ») ; l'historique ne dit que « + reliquat » /
   « - reliquat ». L'ordre des pertes n'est pas publié : il se constate.
 - **Plafond** : over + exo d'une ligne ≤ 101 de poids (`ObjetFM`) ; par ligne ou par objet reste à
@@ -33,9 +45,13 @@ Synfus lit l'atelier et l'affiche ; il ne pose ni ne fusionne jamais une rune (C
 ## Lecture de l'atelier — `AtelierFM` (pur), `ForgemagieModele`
 
 - Pas de zone calibrée ni de genre : la première lecture fait l'OCR du contenu entier
-  (`LecteurEcran.textesDevant`), l'atelier se retrouve par l'en-tête « Min / Max / Effets / Carac. »
-  (« Max » se lit parfois en lettres cyrilliques : c'est la case entre Min et les effets), et les
-  suivantes se bornent à son cadre élargi. Toutes les 2 s, panneau ouvert et Dofus devant.
+  (`LecteurEcran.imageDevant` puis `textes`), l'atelier se retrouve par l'en-tête « Min / Max / Effets /
+  Carac. » (le premier complet : une infobulle peut porter « Effets » ; « Max » se lit parfois en
+  lettres cyrilliques : c'est la case entre Min et les effets), et les suivantes se bornent à son
+  cadre élargi (stocks compris). Toutes les 2 s, panneau ouvert et Dofus devant ; 5 s atelier absent ;
+  une image identique à la précédente ne repasse pas par l'OCR.
+- L'historique est sur cinq pas et demi de colonne (pas Min–Max) à gauche de « Min » : il se lit aussi
+  dans une lecture bornée, et le suivi de quêtes n'y entre pas. Il n'est pas encore recoupé avec la table.
 - L'OCR rend les cases **une à une et dans le désordre** : rangées par position. Colonne des effets
   entre « Max » et « Modif. » (l'infobulle d'une rune, à droite, n'y entre pas) ; min et max à
   mi-pas de leur en-tête. Historique : à gauche de « Min », sous « FUSIONNER », au-dessus de

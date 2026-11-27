@@ -5,7 +5,7 @@ import Foundation
 /// d'identifiants. Gardés sur le disque, retéléchargés tous les 30 jours.
 enum CatalogueFMDofusDB {
     struct Gardees: Codable {
-        static let formatActuel = 1
+        static let formatActuel = 2
         let format: Int
         let date: Date
         let effets: [CatalogueFM.EffetDofusDB]
@@ -14,8 +14,9 @@ enum CatalogueFMDofusDB {
 
     /// Le type d'objet « rune de forgemagie ».
     static let typeRune = 78
-    /// Moins de runes : une réponse tronquée, la précédente est gardée.
+    /// Moins de runes ou d'effets : une réponse tronquée, la précédente est gardée.
     static let minimumPlausible = 80
+    static let effetsPlausibles = 40
 
     enum Echec: Error { case listeSuspecte(Int) }
 
@@ -44,6 +45,7 @@ enum CatalogueFMDofusDB {
         let ids = runes.compactMap { $0.effects?.first?.effectId }
         let effets: [CatalogueFM.EffetDofusDB] = try await DofusDB.parIdentifiants(
             "effects", ids, DofusDB.selection(CatalogueFM.EffetDofusDB.champs))
+        guard effets.count >= effetsPlausibles else { throw Echec.listeSuspecte(effets.count) }
         return Gardees(format: Gardees.formatActuel, date: maintenant, effets: effets, runes: runes)
     }
 }

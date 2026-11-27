@@ -21,7 +21,9 @@ struct AtelierFM: Equatable, Sendable {
     let cadre: CGRect
 
     static func lire(_ textes: [DetectionZones.TexteVu], catalogue: CatalogueFM) -> AtelierFM? {
-        guard let en = EnTete(textes) else { return nil }
+        // Une infobulle peut porter elle aussi « Effets » : le premier en-tête complet compte.
+        guard let en = textes.lazy.filter({ normal($0.texte).hasPrefix("effets") }).compactMap({ EnTete(textes, effets: $0) }).first
+        else { return nil }
         let reliquatVu = textes.first { TexteFM.reliquat([$0.texte]) != nil }
         let haut = max(reliquatVu?.cadre.maxY ?? -.infinity,
                        textes.filter { normal($0.texte).hasPrefix("fusionner") }.map(\.cadre.maxY).max() ?? -.infinity)
@@ -35,15 +37,18 @@ struct AtelierFM: Equatable, Sendable {
         let effets = textes.filter {
             $0.cadre.minY > en.cadre.maxY && $0.cadre.maxY < bas
                 && $0.cadre.minX >= en.max.cadre.maxX - en.hauteur && $0.cadre.minX < en.finEffets
-                && $0.texte.firstMatch(of: /\d+\s+à\s+\d+/) == nil
+                // La ligne d'arme, « 9 à 11 dommages Eau » (l'accent parfois perdu), ne se forgemage pas.
+                && normal($0.texte).firstMatch(of: /\d+ a \d+/) == nil
         }
-        for texte in effets {
+        for texte in effets.sorted(by: { $0.cadre.midY < $1.cadre.midY }) {
             guard case .ligne(let points, let nom, let pourcent)? = TexteFM.entree(texte.texte) else { continue }
             occupe = occupe.union(texte.cadre)
             guard let effet = catalogue.effet(nomme: nom, pourcent: pourcent) else {
                 inconnues.append(texte.texte)
                 continue
             }
+            // Un effet lu deux fois : la seconde est une erreur de lecture.
+            guard !lignes.contains(where: { $0.effet == effet.id }) else { continue }
             let rang = textes.filter { abs($0.cadre.midY - texte.cadre.midY) < en.hauteur }
             let min = en.nombre(dans: rang, colonne: en.min)
             let max = en.nombre(dans: rang, colonne: en.max)
@@ -51,8 +56,11 @@ struct AtelierFM: Equatable, Sendable {
             lignes.append(ObjetFM.Ligne(effet: effet.id, valeur: points, max: max, exo: min == nil && max == nil))
         }
 
-        // L'historique : à gauche de la table, sous la barre de fusion.
-        let gauche = en.min.cadre.minX - 0.55 * (en.droite - en.min.cadre.minX)
+        // L'historique : à gauche de la table, sous la barre de fusion, sur
+        // cinq pas et demi de colonne — le suivi de quêtes, plus à gauche, n'y
+        // entre pas. Le pas Min–Max se lit même quand la lecture ne couvre plus
+        // les stocks, à droite.
+        let gauche = en.min.cadre.minX - 5.5 * (en.max.cadre.midX - en.min.cadre.midX)
         let colonne = textes
             .filter { $0.cadre.midX >= gauche && $0.cadre.maxX < en.min.cadre.minX && $0.cadre.minY > haut && $0.cadre.maxY < (pied?.cadre.minY ?? bas) }
             .sorted { $0.cadre.midY < $1.cadre.midY }
@@ -73,13 +81,10 @@ struct AtelierFM: Equatable, Sendable {
         let max: DetectionZones.TexteVu
         /// La colonne des effets finit où commence « Modif. », sinon à mi-chemin des stocks.
         let finEffets: CGFloat
-        /// Le bord droit de la table (« Ra », « Pa » ou « Modif. »).
-        let droite: CGFloat
         let hauteur: CGFloat
         let cadre: CGRect
 
-        init?(_ textes: [DetectionZones.TexteVu]) {
-            guard let effets = textes.first(where: { AtelierFM.normal($0.texte).hasPrefix("effets") }) else { return nil }
+        init?(_ textes: [DetectionZones.TexteVu], effets: DetectionZones.TexteVu) {
             let ligne = textes.filter { abs($0.cadre.midY - effets.cadre.midY) < effets.cadre.height }
             func mot(_ attendu: String) -> DetectionZones.TexteVu? {
                 ligne.first { AtelierFM.normal($0.texte) == attendu }
@@ -94,10 +99,11 @@ struct AtelierFM: Equatable, Sendable {
             let stocks = [mot("pa"), mot("ra")].compactMap(\.self)
             self.min = min
             self.max = max
-            droite = (stocks.map(\.cadre.maxX) + [modif?.cadre.maxX ?? effets.cadre.maxX]).max() ?? effets.cadre.maxX
+            let droite = (stocks.map(\.cadre.maxX) + [modif?.cadre.maxX ?? effets.cadre.maxX]).max() ?? effets.cadre.maxX
             finEffets = modif?.cadre.minX ?? (effets.cadre.maxX + droite) / 2
             hauteur = effets.cadre.height
-            cadre = [max, effets].map(\.cadre).reduce(min.cadre) { $0.union($1) }
+            // Le cadre couvre la table jusqu'aux stocks : la lecture suivante, bornée à lui, garde « Modif. ».
+            cadre = ([max, effets] + [modif].compactMap(\.self) + stocks).map(\.cadre).reduce(min.cadre) { $0.union($1) }
         }
 
         /// Le nombre d'une case dans la colonne de `colonne`, à mi-chemin de la

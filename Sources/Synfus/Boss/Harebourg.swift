@@ -121,12 +121,18 @@ enum Harebourg {
     /// Les milliers peuvent être séparés d'une espace (fine ou non) ou d'un
     /// point, jamais d'un saut de ligne : « 950 » puis « 4200 » ne font pas
     /// 950 420. `nil` : rien de lisible.
+    /// « a / b », chaque nombre aux milliers séparés ou non, jamais plus : « 2 604 /
+    /// 4 200 62%) » donne 4 200, pas 420 062.
+    static var barre: Regex<(Substring, Substring, Substring)> {
+        /(\d{1,3}(?:[ \u{00A0}\u{202F}.,]\d{3})+|\d+)\s*\/\s*(\d{1,3}(?:[ \u{00A0}\u{202F}.,]\d{3})+|\d+)/
+    }
+
     static func vie(_ lignes: [String]) -> Vie? {
         let texte = lignes.joined(separator: "\n")
         if let match = texte.firstMatch(of: /(\d{1,3})\s*%/), let valeur = Double(match.1), valeur <= 100 {
             return .pourcentage(valeur)
         }
-        if let barre = texte.firstMatch(of: /(\d[\d \u{00A0}\u{202F}.,]*)\s*\/\s*(\d[\d \u{00A0}\u{202F}.,]*)/),
+        if let barre = texte.firstMatch(of: Self.barre),
            let actuels = entier(barre.1), let max = entier(barre.2), max > 0 {
             return .points(actuels: actuels, max: max)
         }
@@ -163,7 +169,7 @@ enum Harebourg {
             Ressemblance.distanceDansTexte("harebourg", Ressemblance.normaliser($0)) <= 1
         }) else { return nil }
         for ligne in lignes {
-            if let barre = ligne.firstMatch(of: /(\d[\d \u{00A0}\u{202F}.,]*)\s*\/\s*(\d[\d \u{00A0}\u{202F}.,]*)/),
+            if let barre = ligne.firstMatch(of: Self.barre),
                let actuels = entier(barre.1), let max = entier(barre.2), max > 0 {
                 return .points(actuels: actuels, max: max)
             }

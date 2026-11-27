@@ -27,18 +27,18 @@ struct AtelierFMTests {
         #expect(ligne(atelier, 241) == .init(effet: 241, valeur: 12, max: 12))
         // Son max mal lu n'en fait pas une exo.
         #expect(ligne(atelier, 178) == .init(effet: 178, valeur: 4, max: nil, exo: false))
-        #expect(atelier.objet.lignes.count >= 13)
+        #expect(atelier.objet.lignes.count == 14)
         // L'historique, la plus récente en bas.
         #expect(atelier.historique.last == .reliquat(gagne: false))
         #expect(atelier.historique.contains(.ligne(points: -18, nom: "Initiative", pourcent: false)))
     }
 
-    @Test("Une exo n'a ni min ni max ; un effet inconnu reste affiché")
+    @Test("Une exo n'a ni min ni max")
     func exo() throws {
         let atelier = try lu(FixturesAtelierFM.exoDommagesAuxSorts)
         #expect(ligne(atelier, 125) == .init(effet: 125, valeur: 341, max: 350))
-        // « Dommages aux sorts » n'est pas dans l'extrait du catalogue des tests.
-        #expect(atelier.inconnues == ["1% Dommages aux sorts"])
+        #expect(ligne(atelier, 2812) == .init(effet: 2812, valeur: 1, max: nil, exo: true))
+        #expect(atelier.inconnues.isEmpty)
     }
 
     @Test("« Маx » en lettres cyrilliques, le reliquat à une décimale")
@@ -51,7 +51,7 @@ struct AtelierFMTests {
         #expect(atelier.objet.lignes.count == 3)
     }
 
-    @Test("L'écran entier : suivi de quêtes, infobulle et tchat n'entrent pas dans l'atelier")
+    @Test("L'écran entier : suivi de quêtes et infobulle n'entrent pas dans l'atelier")
     func ecranEntier() throws {
         let atelier = try lu(FixturesAtelierFM.ecranEntier)
         #expect(atelier.objet.lignes.map(\.effet) == [125, 158, 174])
@@ -65,29 +65,54 @@ struct AtelierFMTests {
         #expect(atelier.cadre.minX > 0.12 && atelier.cadre.maxX < 0.62)
     }
 
-    @Test("Une séance : chaque fusion comptée, un autre objet repart de zéro")
+    @Test("Une séance : chaque fusion comptée, sur des lectures confirmées ; un autre objet repart de zéro")
     func seance() {
         func atelier(_ lignes: [ObjetFM.Ligne], _ reliquat: Double = 0) -> AtelierFM {
             AtelierFM(objet: ObjetFM(lignes: lignes), inconnues: [], reliquat: reliquat, historique: [], cadre: .zero)
         }
         var suivi = SuiviFM()
-        #expect(suivi.lu(atelier([.init(effet: 174, valeur: 39, max: 200), .init(effet: 158, valeur: 255, max: 200)]),
-                         catalogue: catalogue) == nil)
-        let sn = suivi.lu(atelier([.init(effet: 174, valeur: 49, max: 200), .init(effet: 158, valeur: 251, max: 200)]),
-                          catalogue: catalogue)
+        /// Deux lectures identiques de suite : une lecture sûre.
+        func deuxFois(_ a: AtelierFM) -> FusionFM? {
+            suivi.lu(a, catalogue: catalogue)
+            return suivi.lu(a, catalogue: catalogue)
+        }
+        #expect(deuxFois(atelier([.init(effet: 174, valeur: 39, max: 200), .init(effet: 158, valeur: 255, max: 200)])) == nil)
+        // Une lecture isolée (animation, chiffre mal lu) ne compte pas.
+        suivi.lu(atelier([.init(effet: 174, valeur: 99, max: 200), .init(effet: 158, valeur: 255, max: 200)]), catalogue: catalogue)
+        #expect(suivi.comptes.isEmpty)
+        let sn = deuxFois(atelier([.init(effet: 174, valeur: 49, max: 200), .init(effet: 158, valeur: 251, max: 200)]))
         #expect(sn?.issue == .succesNeutre)
-        suivi.lu(atelier([.init(effet: 174, valeur: 59, max: 200), .init(effet: 158, valeur: 251, max: 200)]), catalogue: catalogue)
+        deuxFois(atelier([.init(effet: 174, valeur: 59, max: 200), .init(effet: 158, valeur: 251, max: 200)]))
         #expect(suivi.comptes == [.succesNeutre: 1, .succesCritique: 1])
         // Rien de changé : pas de fusion.
-        suivi.lu(atelier([.init(effet: 174, valeur: 59, max: 200), .init(effet: 158, valeur: 251, max: 200)]), catalogue: catalogue)
+        deuxFois(atelier([.init(effet: 174, valeur: 59, max: 200), .init(effet: 158, valeur: 251, max: 200)]))
         #expect(suivi.comptes.values.reduce(0, +) == 2)
+        // Le max mal lu d'une ligne reste connu : pas une exo.
+        deuxFois(atelier([.init(effet: 174, valeur: 59, max: nil, exo: true), .init(effet: 158, valeur: 251, max: 200)]))
+        #expect(suivi.atelier?.objet.ligne(174) == .init(effet: 174, valeur: 59, max: 200))
         // Un autre objet : un jet max différent.
-        suivi.lu(atelier([.init(effet: 174, valeur: 400, max: 500)]), catalogue: catalogue)
+        deuxFois(atelier([.init(effet: 174, valeur: 400, max: 500)]))
         #expect(suivi.comptes.isEmpty && suivi.derniere == nil)
     }
 
+    @Test("La lecture bornée au cadre de l'atelier garde son historique")
+    func lectureBornee() throws {
+        let premiere = try lu(FixturesAtelierFM.apresTroisRunes)
+        let zone = ForgemagieModele.autour(premiere.cadre)
+        // Ce que la capture de la zone aurait montré : les textes dedans, en fractions de la zone.
+        let r = zone.rect
+        let dedans = FixturesAtelierFM.apresTroisRunes.filter { r.contains($0.cadre) }.map {
+            DetectionZones.TexteVu(texte: $0.texte, cadre: CGRect(x: ($0.cadre.minX - r.minX) / r.width, y: ($0.cadre.minY - r.minY) / r.height,
+                                                                width: $0.cadre.width / r.width, height: $0.cadre.height / r.height))
+        }
+        let seconde = try lu(ForgemagieModele.dansLeContenu(dedans, region: zone))
+        #expect(seconde.objet == premiere.objet)
+        #expect(seconde.historique == premiere.historique)
+        #expect(!seconde.historique.isEmpty)
+    }
+
     @Test("La région suivante entoure l'atelier lu, bornée au contenu")
-    @MainActor func region() {
+    func region() {
         let zone = ForgemagieModele.autour(CGRect(x: 0.02, y: 0.3, width: 0.5, height: 0.6))
         #expect(zone.x == 0 && abs(zone.y - 0.22) < 1e-9 && abs(zone.largeur - 0.6) < 1e-9 && abs(zone.hauteur - 0.76) < 1e-9)
     }

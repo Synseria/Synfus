@@ -22,10 +22,14 @@ Synfus lit l'écran et affiche ; viser et lancer restent au joueur (CGU : aucun 
   (maximum ≥ `maxPlancher` : les PA et PM sous le cœur n'en sont pas ; les milliers ne passent
   jamais d'une ligne à l'autre), ou points seuls (pourcentage par un maximum lu **dans ce combat**,
   jamais supposé). Le maximum (`SuiviConfusion`) : le dernier écrit fait foi, un saut de plus de
-  30 % attend une seconde lecture, des points au-delà l'invalident, oublié au placement suivant.
-- **Vie du Comte** : lue au survol (genre `survol`, `Harebourg.vieDuComte` : une ligne qui porte
-  « Harebourg », puis le premier nombre dessous), gardée pour le combat (`SuiviConfusion.comte`) ;
-  sa part se dit par rapport au maximum DofusDB du plus haut grade (indicatif, « ≈ »).
+  30 % attend une seconde lecture (le douteux ne sert pas au pourcentage), des points au-delà
+  l'invalident. Un nouveau combat (`SuiviConfusion.nouveauCombat`, appelé par `AideBoss` au premier
+  placement vu, une fois par combat — `dureePlacementMax`) oublie vie et maximum de **tous** les persos.
+- **Vie du Comte** : lue au survol, dans le panneau qui remplace la barre de sorts (genre `survol`,
+  `Harebourg.vieDuComte` : un nom qui porte « Harebourg », puis `a / b` d'abord — l'OCR rend aussi
+  résistances et « 10% » dans le désordre —, le pourcentage entre parenthèses, un nombre seul),
+  gardée pour le combat (`SuiviConfusion.comte`) ; sans maximum lu, la part se dit par rapport au
+  maximum DofusDB du plus haut grade (« ≈ »). « a / b » : chaque nombre borné au motif des milliers.
 - **Grille** : la conversion case ↔ point est `GrilleIso` (`Lecture/`), seule source ; la grille du
   combat (`grilleCombat`) en fractions du contenu — origine, demi-largeur `a` en fraction de la
   **hauteur**, rapport largeur/hauteur (±1 %, sinon invalide) —, calibrée à deux clics
@@ -36,9 +40,19 @@ Synfus lit l'écran et affiche ; viser et lancer restent au joueur (CGU : aucun 
 
 - Réglage `harebourgVisee`, éteint par défaut. Le calque ne fait que dessiner : `NSPanel` sans
   bord, non activable, `ignoresMouseEvents`, posé sur le contenu de la fenêtre du perso devant.
-- Pivot : raccourci « Marquer ma case » (`marquerLanceurHotKey`, sans défaut) → la case sous le
-  pointeur, rangée sous le perso au premier plan (même relevé que le calque) ; tous les pivots sont
-  oubliés au placement (`AideBoss.combats`). Rien à marquer : bip. Le Diagnostic garde la raison
+- **Autocalibrage** (`PlateauCombat`, pur ; `ViseePanel.caler`, une capture par seconde au plus,
+  pendant le tour) : la grille est retrouvée à chaque tour par la périodicité des joints (énergie des
+  bords projetée sur `x + 2y` et `2y − x`, autocorrélation, repli lissé sur la portée de la mesure —
+  un joint répond par deux pics ; demi-période vérifiée), et écrase `grilleCombat`. Le pivot : la
+  case dont le losange porte le liseré blanc et creux du perso actif (côtés du bas surtout, que le
+  perso masque moins ; intérieur et pourtour non blancs ; points bordés de rouge écartés — le liseré
+  de la case visée ; cases du plateau seulement, `grilleLocale` ; nette avance sur la suivante),
+  retenue à la seconde lecture identique. Un sort préparé peut masquer le liseré : rien plutôt que faux.
+  Mesuré : une case de 52 px sur 2000 × 1234 (deux monstres voisins le confirment ; le motif du sol trompe l'œil).
+- Pivot à la main : raccourci « Marquer ma case » (`marquerLanceurHotKey`, sans défaut) → la case sous le
+  pointeur (pas sur une fenêtre de Synfus), rangée sous le perso au premier plan ; tous les pivots
+  sont oubliés au nouveau combat (`AideBoss.combats`). Le calque ignore les fenêtres de Synfus qui
+  laissent passer les clics (`ignoresMouseEvents`) et celles d'un autre bureau. Rien à marquer : bip. Le Diagnostic garde la raison
   vue en jeu quand Dofus passe derrière (`raisonAffichee`).
 - Arrivée : `arrivee = pivot + caseAtteinte(survolée − pivot)`, la voisine en pointillés à une
   limite de tranche ; l'estimation compte déjà les coups. `Confusion.caseAtteinte` est l'inverse

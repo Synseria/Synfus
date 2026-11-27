@@ -43,6 +43,15 @@ final class ViseePanel: ObservableObject {
         let pleinEcran: Bool
     }
 
+    /// L'autocalibrage en cours, et quand il a fini : une capture par seconde au plus.
+    private var calage: Task<Void, Never>?
+    private var dernierCalage = Date.distantPast
+    private static let intervalleCalage: TimeInterval = 1
+    /// Le tour pour lequel la grille a été retrouvée : chaque tour la recale (la carte change d'un combat à l'autre).
+    private var tourCale: (perso: String, tour: Int?)?
+    /// Une case active vue une fois : retenue comme pivot à la seconde lecture identique.
+    private var pivotVu: (perso: String, position: GrilleIso.Case)?
+
     private static let intervalleVeille: TimeInterval = 0.5
     private static let intervalleSuivi: TimeInterval = 1.0 / 30
 
@@ -83,6 +92,7 @@ final class ViseePanel: ObservableObject {
     private func veiller() {
         cible = Self.cibleDevant()
         let entrees = entrees()
+        if entrees.reglage, entrees.harebourg, entrees.sonTour, let cible { caler(cible.perso) }
         // Tout est là sauf, peut-être, le pointeur : on le suit.
         let pointeurSuivi = [nil, .horsDuJeu].contains(ViseeHarebourg.inactive(entrees)) && entrees.contenu != nil
         if pointeurSuivi, suivi == nil {
@@ -118,10 +128,14 @@ final class ViseePanel: ObservableObject {
                                   pleinEcran: cible.pleinEcran)
     }
 
-    /// Le pointeur est-il sur une fenêtre de Synfus (panneau, barre, réglages) ?
+    /// Le pointeur est-il sur une fenêtre de Synfus qui prend les clics (panneau,
+    /// barre, réglages) ? Pas celles qui les laissent passer au jeu (tableau de
+    /// l'Huppermage, infobulle, vue de carte), ni une fenêtre d'un autre bureau.
     private func surSynfus() -> Bool {
         let souris = NSEvent.mouseLocation
-        return NSApp.windows.contains { $0 !== panel && $0.isVisible && $0.frame.contains(souris) }
+        return NSApp.windows.contains {
+            $0 !== panel && $0.isVisible && $0.isOnActiveSpace && !$0.ignoresMouseEvents && $0.frame.contains(souris)
+        }
     }
 
     private func entrees() -> ViseeHarebourg.Entrees {
@@ -146,10 +160,53 @@ final class ViseePanel: ObservableObject {
     /// case »). Le même relevé que le calque : le pivot va au perso qu'il dessine.
     func caseSousLePointeur() -> (perso: String, position: GrilleIso.Case)? {
         guard let cible = Self.cibleDevant(), let grille = Preferences.shared.grilleCombat,
-              let fraction = pointeur(cible) else { return nil }
+              let fraction = pointeur(cible), !surSynfus() else { return nil }
         let taille = contenu(cible).size
         guard grille.valable(pour: taille) else { return nil }
         return (cible.perso, grille.caseSous(fraction: fraction, contenu: taille))
+    }
+
+    // MARK: - Autocalibrage
+
+    /// Pendant le tour, une fois par seconde : la grille retrouvée sur le
+    /// plateau (au premier passage du tour), puis la case du perso, cernée de
+    /// blanc par le jeu, qui devient le pivot si deux lectures de suite la
+    /// donnent. Le raccourci « Marquer ma case » reste le recours.
+    private func caler(_ perso: String) {
+        guard calage == nil, Date().timeIntervalSince(dernierCalage) >= Self.intervalleCalage else { return }
+        let tour = AideBoss.shared.tour
+        let recaler = tourCale.map { $0.perso != perso || $0.tour != tour } ?? true
+        calage = Task {
+            defer { calage = nil; dernierCalage = Date() }
+            guard let capture = await LecteurEcran.shared.imageDevant(region: .entiere) else { return }
+            let connue = Preferences.shared.grilleCombat
+            let (trouvee, pivot) = await Task.detached(priority: .utility) { Self.lirePlateau(capture, recaler: recaler, connue: connue) }.value
+            if let trouvee {
+                Preferences.shared.grilleCombat = trouvee
+                tourCale = (perso, tour)
+            }
+            guard let grille = Preferences.shared.grilleCombat else { return }
+            guard let pivot, let taille = cible.map({ contenu($0).size }), grille.valable(pour: taille) else { return }
+            let position = grille.caseSous(fraction: pivot, contenu: taille)
+            if let vu = pivotVu, vu.perso == perso, vu.position == position {
+                AideBoss.shared.marquer(position, perso: perso)
+            }
+            pivotVu = (perso, position)
+        }
+    }
+
+    /// Hors du fil principal : la grille retrouvée (si `recaler`), et le centre
+    /// de la case active en fractions du contenu, sur la grille trouvée ou connue.
+    nonisolated private static func lirePlateau(_ capture: CGImage, recaler: Bool, connue: GrilleIso?) -> (GrilleIso?, CGPoint?) {
+        guard let image = ImageRVB(cgImage: capture) else { return (nil, nil) }
+        let w = CGFloat(image.width), h = CGFloat(image.height)
+        let trouvee = recaler ? PlateauCombat.grille(image)?.enFractions(image: CGSize(width: w, height: h)) : nil
+        guard let grille = trouvee ?? connue else { return (nil, nil) }
+        let enPixels = PlateauCombat.Grille(a: grille.demiLargeur * Double(h),
+                                            centre: CGPoint(x: grille.origine.x * w, y: grille.origine.y * h))
+        guard let (x, y) = PlateauCombat.caseActive(image, grille: enPixels) else { return (trouvee, nil) }
+        let p = GrilleIso.projeter(x, y, a: CGFloat(enPixels.a), centre: enPixels.centre)
+        return (trouvee, CGPoint(x: p.x / w, y: p.y / h))
     }
 
     // MARK: - Dessin

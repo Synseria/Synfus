@@ -112,17 +112,22 @@ struct SuiviConfusion: Equatable, Sendable {
             suivi.oublierLeTour()
             if apres == .horsCombat { anonyme = nil }
         }
-        // Un nouveau combat : son placement. Pas la sortie — un bouton masqué un
-        // instant (une fenêtre du jeu par-dessus) se lit hors combat, et le
-        // maximum, que le cœur n'écrit pas d'office, ne reviendrait pas.
-        if apres == .placement && avant != .placement {
-            comte = nil
-            suivi.vie = nil
-            suivi.vieLue = nil
-            suivi.maxConnu = nil
-            suivi.maxDouteux = nil
-        }
         persos[perso] = suivi
+    }
+
+    /// Un nouveau combat (son placement, vu une fois pour tous les persos) :
+    /// la vie et le maximum de chacun s'oublient — l'équipement change entre
+    /// deux combats —, même d'un perso qu'on n'a pas lu en placement. Pas à la
+    /// sortie : un bouton masqué un instant se lit hors combat, et le maximum,
+    /// que le cœur n'écrit pas d'office, ne reviendrait pas.
+    mutating func nouveauCombat() {
+        comte = nil
+        for perso in persos.keys {
+            persos[perso]?.vie = nil
+            persos[perso]?.vieLue = nil
+            persos[perso]?.maxConnu = nil
+            persos[perso]?.maxDouteux = nil
+        }
     }
 
     /// Un maximum qui s'écarte du connu de plus de cette part doit être lu
@@ -132,11 +137,14 @@ struct SuiviConfusion: Equatable, Sendable {
     /// Le cœur de vie lu chez `perso`.
     mutating func vie(_ lue: Harebourg.Vie, perso: String, le date: Date) {
         var suivi = persos[perso] ?? Perso()
+        // Le pourcentage se prend sur un maximum cru : pas sur un douteux.
+        var retenue = lue
         switch lue {
-        case .points(_, let max?):
+        case .points(let actuels, let max?):
             if let connu = suivi.maxConnu, abs(Double(max - connu)) > Double(connu) * Self.ecartMaxDouteux,
                suivi.maxDouteux != max {
                 suivi.maxDouteux = max
+                retenue = .points(actuels: actuels, max: nil)
             } else {
                 suivi.maxConnu = max
                 suivi.maxDouteux = nil
@@ -148,7 +156,7 @@ struct SuiviConfusion: Equatable, Sendable {
             break
         }
         suivi.vieLue = lue
-        if let pourcentage = lue.pourcentage(maxConnu: suivi.maxConnu) {
+        if let pourcentage = retenue.pourcentage(maxConnu: suivi.maxConnu) {
             suivi.vie = pourcentage
             if let debut = suivi.debutTour, date.timeIntervalSince(debut) <= Self.delaiVieDebut {
                 suivi.vieDebutTour = pourcentage

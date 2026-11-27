@@ -596,22 +596,13 @@ final class LecteurEcran: ObservableObject {
         return (client.name, lignes, cadres, image, coupe)
     }
 
-    /// Les textes d'une région du perso devant (fractions du contenu), et
-    /// leurs cadres en fractions du contenu entier : l'atelier de forgemagie se
-    /// retrouve par ce qu'il écrit, sans zone calibrée. `nil` sans perso devant,
-    /// sans autorisation ou sans capture.
-    func textesDevant(region: ZoneEcran) async -> [DetectionZones.TexteVu]? {
+    /// Une région du contenu du perso devant (fractions), à l'échelle de la
+    /// lecture ; `nil` sans perso devant, sans autorisation ou sans capture.
+    func imageDevant(region: ZoneEcran) async -> CGImage? {
         guard WindowPreviewService.shared.authorized, let client = clientDevant else { return nil }
-        guard let image = await WindowPreviewService.shared.captureImage(
+        return await WindowPreviewService.shared.captureImage(
             client, region: region.rect, maxWidth: nil, inventaireGarde: true,
             contenu: CaptureContenu(pleinEcran: client.pleinEcran, normaliser: true))
-        else { return nil }
-        let r = region.rect
-        return await moteur.textes(image: image).map { texte in
-            let c = texte.cadre
-            return DetectionZones.TexteVu(texte: texte.texte, cadre: CGRect(
-                x: r.minX + c.minX * r.width, y: r.minY + c.minY * r.height, width: c.width * r.width, height: c.height * r.height))
-        }
     }
 
     private func appliquerPosition(_ lignes: [String], nom: String) {

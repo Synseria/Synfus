@@ -23,6 +23,8 @@ struct CatalogueFM: Equatable, Sendable {
     }
 
     struct Rune: Equatable, Sendable {
+        /// Son nom dans le jeu, à chercher à l'hôtel de vente : « Rune Pa Fo ».
+        let nom: String
         let effet: Int
         /// Les points qu'elle ajoute (Rune Vi 5, Pa Vi 15, Ra Vi 50).
         let puissance: Int
@@ -45,8 +47,9 @@ struct CatalogueFM: Equatable, Sendable {
     }
 
     struct ObjetDofusDB: Codable, Sendable {
-        static let champs = ["effects"]
+        static let champs = ["name", "effects"]
         struct EffetObjet: Codable, Sendable { let effectId: Int; let from: Int }
+        let name: [String: String]?
         let effects: [EffetObjet]?
     }
 
@@ -64,16 +67,18 @@ struct CatalogueFM: Equatable, Sendable {
             effets[effet.id] = Effet(id: effet.id, poids: (poids * 1000).rounded() / 1000, nom: Self.nom(gabarit: gabarit),
                                      pourcent: gabarit.contains("#2%"))
         }
-        var parEffet: [Int: [Int]] = [:]
+        var parEffet: [Int: [Int: String]] = [:]
         for objet in reponseRunes {
             guard let premier = objet.effects?.first, premier.from > 0, effets[premier.effectId] != nil else { continue }
-            parEffet[premier.effectId, default: []].append(premier.from)
+            parEffet[premier.effectId, default: [:]][premier.from] = objet.name?[langue] ?? objet.name?["fr"] ?? ""
         }
         var runes: [Int: [Rune]] = [:]
-        for (effet, liste) in parEffet {
+        for (effet, noms) in parEffet {
             let poids = effets[effet]?.poids ?? 0
-            runes[effet] = Array(Set(liste)).sorted().enumerated().compactMap { index, puissance in
-                Rang(rawValue: index).map { Rune(effet: effet, puissance: puissance, rang: $0, poids: Double(puissance) * poids) }
+            runes[effet] = noms.keys.sorted().enumerated().compactMap { index, puissance in
+                Rang(rawValue: index).map {
+                    Rune(nom: noms[puissance] ?? "", effet: effet, puissance: puissance, rang: $0, poids: Double(puissance) * poids)
+                }
             }
         }
         self.effets = effets

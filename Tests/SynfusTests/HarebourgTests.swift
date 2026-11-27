@@ -196,6 +196,8 @@ struct HarebourgTests {
                        "® 14%", "29%", "12", "10%"]
         #expect(Harebourg.vieDuComte(survol: panneau) == .points(actuels: 2604, max: 4200))
         #expect(Harebourg.vieDuComte(survol: ["Comte Harebourg", "(62%)", "10%"]) == .pourcentage(62))
+        // La parenthèse perdue n'allonge pas le maximum.
+        #expect(Harebourg.vieDuComte(survol: ["Comte Harebourg", "2 604 / 4 200 62%)"]) == .points(actuels: 2604, max: 4200))
         // Le cœur réel : courant au-dessus du maximum.
         #expect(Harebourg.vie(["4162", "4162"]) == .points(actuels: 4162, max: 4162))
         #expect(Harebourg.vieDuComte(survol: ["Chevalier d'Astrub", "4000 ♥ 12 ★"]) == nil)
@@ -205,7 +207,7 @@ struct HarebourgTests {
         suivi.vieComte(.points(actuels: 2604, max: nil), le: t0)
         suivi.combat("A", avant: .pasMonTour, apres: .horsCombat, le: t0)
         #expect(suivi.comte?.vie == .points(actuels: 2604, max: nil))
-        suivi.combat("A", avant: .horsCombat, apres: .placement, le: t0)
+        suivi.nouveauCombat()
         #expect(suivi.comte == nil)
     }
 
@@ -226,6 +228,8 @@ struct HarebourgTests {
         suivi.vie(.points(actuels: 3000, max: 4000), perso: "A", le: t0)
         // Un saut de plus de 30 % attend une seconde lecture.
         suivi.vie(.points(actuels: 3000, max: 9000), perso: "A", le: t0)
+        // Le douteux ne sert pas au pourcentage : 3000 sur le 4000 connu.
+        #expect(suivi.estimation("A")?.source == .vie(pourcentage: 75))
         suivi.vie(.points(actuels: 2000, max: nil), perso: "A", le: t0)
         #expect(suivi.estimation("A")?.source == .vie(pourcentage: 50))
         suivi.vie(.points(actuels: 3000, max: 9000), perso: "A", le: t0)
@@ -241,10 +245,14 @@ struct HarebourgTests {
         suivi.combat("A", avant: .horsCombat, apres: .pasMonTour, le: t0)
         suivi.vie(.points(actuels: 1000, max: nil), perso: "A", le: t0)
         #expect(suivi.estimation("A")?.source == .vie(pourcentage: 25))
-        // Le combat suivant, à son placement, maximum et vie s'oublient.
-        suivi.combat("A", avant: .horsCombat, apres: .placement, le: t0)
+        // Le combat suivant, à son placement, maximum et vie s'oublient —
+        // chez tous les persos, même un que le placement n'a pas lu.
+        suivi.vie(.points(actuels: 4500, max: 4500), perso: "B", le: t0)
+        suivi.nouveauCombat()
         suivi.vie(.points(actuels: 1000, max: nil), perso: "A", le: t0)
         #expect(suivi.estimation("A") == nil)
+        suivi.vie(.points(actuels: 4000, max: nil), perso: "B", le: t0)
+        #expect(suivi.estimation("B") == nil)
         suivi.vie(.points(actuels: 1000, max: 2000), perso: "A", le: t0)
         suivi.vie(.points(actuels: 1500, max: nil), perso: "A", le: t0)
         #expect(suivi.estimation("A")?.source == .vie(pourcentage: 75))

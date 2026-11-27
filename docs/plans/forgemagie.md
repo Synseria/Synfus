@@ -139,7 +139,7 @@ de l'objet fini, ou > objet neuf + FM depuis zéro.
 | F1 (fait) | `CatalogueFM` (effets, runes), `ObjetFM`, `FusionFM` (issue, puits), `TexteFM` (historique, reliquat) + tests ; téléchargement et cache de DofusDB avec leur appelant (F3) | Puits recompté juste sur des historiques écrits à la main |
 | F2 (fait) | `AtelierFM` : l'atelier retrouvé par l'en-tête de sa table (pas de zone calibrée ni de genre), fixtures textuelles de quatre captures | Table lue sur les captures F0 à l'identique |
 | F3a (fait, à éprouver en jeu) | `ForgemagiePanel` : reliquat, issue de chaque fusion et compte de la séance, lignes et poids over/exo sur le plafond | Issues justes en jeu |
-| F3b | `Conseil` heuristique : rune conseillée | En jeu : rune conseillée |
+| F3b (fait, à éprouver en jeu) | `ConseilFM` : runes conseillées avec un score de 0 à 100 et leurs raisons, vers le jet parfait ou la cible réglée ligne par ligne | En jeu : rune conseillée |
 | F4 | `CoutSession` (runes, exo PA/PM/PO), prix estimé lu au survol d'une rune (OCR de l'infobulle) | Coût affiché avec son intervalle |
 | F5 | `Probabilites` apprises + affichage des taux observés | Comptes persistés, a priori respecté sans données |
 | F6 (V2) | Décision par espérance de coût  ; Dracorunes (3.8) | Sur mesures |

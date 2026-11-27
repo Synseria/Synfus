@@ -573,6 +573,32 @@ struct CapturesTests {
         }
     }
 
+    /// L'assistant de forgemagie sur l'atelier d'une capture réelle (ses textes
+    /// seulement, `FixturesAtelierFM`) : runes conseillées, cibles, plafond.
+    @Test("Capture de l'assistant de forgemagie", .enabled(if: dossier != nil))
+    func forgemagie() throws {
+        let dossier = URL(fileURLWithPath: try #require(Self.dossier), isDirectory: true)
+        try FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)
+        let catalogue = ForgemagieTests.catalogue
+        var suivi = SuiviFM()
+        for textes in [FixturesAtelierFM.tableQuiDefile, FixturesAtelierFM.tableQuiDefile] {
+            suivi.lu(try #require(AtelierFM.lire(textes, catalogue: catalogue)), catalogue: catalogue)
+        }
+        let atelier = try #require(suivi.atelier)
+        for largeur in [ForgemagieVue.largeurs.lowerBound, ForgemagieVue.largeur, ForgemagieVue.largeurs.upperBound] {
+            let vue = VStack(alignment: .leading, spacing: Jetons.espace2) {
+                SeanceForgemagie(atelier: atelier, suivi: suivi, catalogue: catalogue)
+            }
+            .padding(Jetons.espace2)
+            .frame(width: largeur, alignment: .leading)
+            .surfaceFlottante()
+            .padding(24)
+            .background(Self.fondCapture)
+            .environment(\.colorScheme, Self.schema)
+            try ecrire(vue, vers: dossier.appending(path: "forgemagie-\(Int(largeur)).png"))
+        }
+    }
+
     /// Une fiche de donjon aux données factices : une capture par onglet, la palette la fiche ouverte sous sa
     /// ligne (sur l'onglet le plus court et le plus long : même hauteur), un donjon à deux boss et deux clefs.
     @Test("Capture de la fiche d'un donjon", .enabled(if: dossier != nil))
