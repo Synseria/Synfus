@@ -292,9 +292,6 @@ final class Preferences: ObservableObject {
     /// Le calque de visée contre le Comte Harebourg (`ViseePanel`). Éteint par défaut.
     @Published var harebourgVisee: Bool = false { didSet { save() } }
 
-    /// La grille du plateau de combat, calibrée à deux clics ; `nil` : jamais calibrée.
-    @Published var grilleCombat: GrilleIso? { didSet { save() } }
-
     /// Le boss que montre le panneau d'aide.
     @Published var bossChoisi: CibleBoss = .special(.harebourg) { didSet { save() } }
     /// Le nom du boss de donjon choisi en toutes langues, tel que DofusDB l'a rendu : il
@@ -622,7 +619,6 @@ final class Preferences: ObservableObject {
         .optionnel("almanaxHotKey", \.almanaxHotKey),
         .optionnel("marquerLanceurHotKey", \.marquerLanceurHotKey),
         .facultatif("harebourgVisee", \.harebourgVisee),
-        .optionnel("grilleCombat", \.grilleCombat),
         .facultatif("bossChoisi", \.bossChoisi),
         .optionnel("nomsBossChoisi", \.nomsBossChoisi),
         .facultatif("lieuxFavoris", \.lieuxFavoris),

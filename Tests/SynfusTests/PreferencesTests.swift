@@ -511,7 +511,7 @@ struct PreferencesTests {
      "arrangeHotKey":{"keyCode":40,"modifiers":256},"attentionAction":"focus",
      "autoCenterBar":false,"barOnlyWithDofus":true,"panneauxSeulementDofus":false,"barOriginX":120.5,"barOriginY":640,
      "barVisible":false,"bossChoisi":"kimbo","nomsBossChoisi":{"fr":"Bouftou Royal"},
-     "harebourgVisee":true,"grilleCombat":{"origine":[0.5,0.25],"demiLargeur":0.0625,"rapport":1.5},
+     "harebourgVisee":true,
      "marquerLanceurHotKey":{"keyCode":46,"modifiers":2048},
      "boutonsMasques":["quetes","boss","chasse","palette"],"characterOrder":["Amarine","Nelo"],
      "chasseHotKey":{"keyCode":5,"modifiers":2048},
@@ -551,12 +551,9 @@ struct PreferencesTests {
         [HotKey(keyCode: 18, modifiers: 256), nil, HotKey(keyCode: 20, modifiers: 2048)]
         + Array(repeating: nil, count: HotKey.digitRow.count - 3)
 
-    private static let grilleEmpreinte = GrilleIso(origine: CGPoint(x: 0.5, y: 0.25), demiLargeur: 0.0625, rapport: 1.5)
-
     /// Vérifie que `prefs` porte exactement les valeurs de `empreinte`.
     private func porteLEmpreinte(_ prefs: Preferences) {
         #expect(prefs.harebourgVisee)
-        #expect(prefs.grilleCombat == Self.grilleEmpreinte)
         #expect(prefs.marquerLanceurHotKey == HotKey(keyCode: 46, modifiers: 2048))
         #expect(prefs.characterOrder == ["Amarine", "Nelo"])
         #expect(prefs.hotKeys == Self.raccourcisEmpreinte)
@@ -715,7 +712,6 @@ struct PreferencesTests {
         prefs.bossChoisi = .special(.kimbo)
         prefs.nomsBossChoisi = ["fr": "Bouftou Royal"]
         prefs.harebourgVisee = true
-        prefs.grilleCombat = Self.grilleEmpreinte
         prefs.marquerLanceurHotKey = HotKey(keyCode: 46, modifiers: 2048)
         prefs.boutonsMasques = [.palette, .chasse, .boss, .quetes]
         prefs.lireCombatDerriere = true

@@ -129,6 +129,28 @@ struct RealCaptureTests {
         }
     }
 
+    /// `SYNFUS_PORTEE=<sans sort>:<sort préparé>` : la portée lue sur deux
+    /// captures du même plateau, la grille cherchée sur la première.
+    @Test("La portée d'un sort sur deux captures", .enabled(if: ProcessInfo.processInfo.environment["SYNFUS_PORTEE"] != nil))
+    func porteeSurCapturesReelles() throws {
+        let chemins = try #require(ProcessInfo.processInfo.environment["SYNFUS_PORTEE"]).split(separator: ":").map(String.init)
+        #expect(chemins.count == 2)
+        var images: [ImageRVB] = []
+        for chemin in chemins {
+            let capture = try #require(SimulationCapture.charger(chemin))
+            images.append(try #require(ImageRVB(cgImage: capture)))
+        }
+        let trouvee = PlateauCombat.grille(images[0]) ?? PlateauCombat.grille(images[1])
+        let grille = try #require(trouvee)
+        var portee = PorteeSort()
+        portee.lire(PorteeSort.mesurer(images[0], grille: grille))
+        portee.lire(PorteeSort.mesurer(images[1], grille: grille))
+        let compte = Dictionary(grouping: portee.teintes.values, by: { "\($0)" }).mapValues(\.count)
+        Sortie.dire("a = \(grille.a) px, centre \(grille.centre) : \(compte.sorted { $0.key < $1.key })")
+        let foncees = portee.teintes.filter { $0.value == .portee }.keys.sorted { ($0.x, $0.y) < ($1.x, $1.y) }
+        Sortie.dire("foncées : \(foncees.map { "(\($0.x),\($0.y))" }.joined(separator: " "))")
+    }
+
     /// `SYNFUS_ATELIER=<capture>[:<capture>…]` : la chaîne de l'assistant de
     /// forgemagie sur de vrais pixels, comme en jeu — OCR du contenu, atelier
     /// retrouvé, séance (chaque capture lue deux fois, donc confirmée), runes

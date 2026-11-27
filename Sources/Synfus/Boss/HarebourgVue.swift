@@ -8,6 +8,8 @@ struct HarebourgVue: View {
     @ObservedObject private var aide = AideBoss.shared
     @ObservedObject private var lecteur = LecteurEcran.shared
     @ObservedObject private var previews = WindowPreviewService.shared
+    @ObservedObject private var prefs = Preferences.shared
+    @ObservedObject private var calque = ViseePanel.shared
     @State private var regleDepliee = false
     // periphery:ignore - lu par son `$` (le dépliable), que Periphery ne voit pas
     @State private var attenteDepliee = false
@@ -23,6 +25,12 @@ struct HarebourgVue: View {
             reponse.frame(minHeight: Self.hauteurSchema, alignment: .leading)
         }
         if let comte = aide.suivi.comte { vieDuComte(comte) }
+        // La visée allumée qui ne dessine pas dit pourquoi, là où le joueur regarde.
+        if prefs.harebourgVisee, let raison = calque.inactive, raison != .reglage {
+            Label(L("boss.visee.attente", ViseePanel.libelle(raison)), systemImage: "scope")
+                .font(Jetons.typoMeta.font)
+                .foregroundStyle(Color.jeton(\.encre3))
+        }
         coups
         aLaMain
         if let estimation = aide.estimation { details(estimation) }

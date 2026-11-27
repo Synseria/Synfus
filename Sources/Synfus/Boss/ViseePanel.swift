@@ -4,9 +4,10 @@ import SwiftUI
 import SynseriaDesign
 
 /// Le calque de visée contre le Comte Harebourg : posé exactement sur le
-/// contenu de la fenêtre du perso devant, il dessine la case survolée, où le
-/// sort retombera (`ViseeHarebourg.arrivees`) et le pivot marqué. Il ne fait
-/// que dessiner : `ignoresMouseEvents`, jamais clé — les clics vont au jeu.
+/// contenu de la fenêtre du perso devant, il dessine, sort préparé et case
+/// visée à portée, où le sort retombera (`ViseeHarebourg.arrivees`) et le
+/// pivot. Grille, pivot et portée sont relus sur l'écran pendant le tour. Il ne
+/// fait que dessiner : `ignoresMouseEvents`, jamais clé — les clics vont au jeu.
 ///
 /// Pas un `PanneauDeJeu` : il n'a ni place à garder ni hauteur de contenu, il
 /// prend le cadre du contenu. Au niveau `.statusBar` comme eux (`.floating`
@@ -43,12 +44,17 @@ final class ViseePanel: ObservableObject {
         let pleinEcran: Bool
     }
 
-    /// L'autocalibrage en cours, et quand il a fini : une capture par seconde au plus.
-    private var calage: Task<Void, Never>?
-    private var dernierCalage = Date.distantPast
-    private static let intervalleCalage: TimeInterval = 1
+    /// Le relevé du plateau en cours, et quand il a fini : deux captures par seconde au plus.
+    private var releve: Task<Void, Never>?
+    private var dernierReleve = Date.distantPast
+    private static let intervalleReleve: TimeInterval = 0.5
+    /// La grille du plateau, retrouvée sur l'écran : jamais réglée à la main.
+    private var grille: GrilleIso?
     /// Le tour pour lequel la grille a été retrouvée : chaque tour la recale (la carte change d'un combat à l'autre).
     private var tourCale: (perso: String, tour: Int?)?
+    /// La portée du sort préparé, sur la grille en place, chez ce perso.
+    private var portee = PorteeSort()
+    private var persoPortee: String?
     /// Une case active vue une fois : retenue comme pivot à la seconde lecture identique.
     private var pivotVu: (perso: String, position: GrilleIso.Case)?
 
@@ -91,8 +97,10 @@ final class ViseePanel: ObservableObject {
 
     private func veiller() {
         cible = Self.cibleDevant()
+        // La fenêtre a changé de proportions : la grille ne vaut plus, on la recherche.
+        if let grille, let cible, !grille.valable(pour: contenu(cible).size) { tourCale = nil }
         let entrees = entrees()
-        if entrees.reglage, entrees.harebourg, entrees.sonTour, let cible { caler(cible.perso) }
+        if entrees.reglage, entrees.harebourg, entrees.sonTour, let cible { relever(cible.perso) }
         // Tout est là sauf, peut-être, le pointeur : on le suit.
         let pointeurSuivi = [nil, .horsDuJeu].contains(ViseeHarebourg.inactive(entrees)) && entrees.contenu != nil
         if pointeurSuivi, suivi == nil {
@@ -145,55 +153,81 @@ final class ViseePanel: ObservableObject {
         e.reglage = prefs.harebourgVisee
         e.harebourg = aide.boss == .special(.harebourg)
         e.panneauMontre = BossPanel.shared.montre
-        e.grille = prefs.grilleCombat
         guard let cible else { return e }
         if case .monTour = LecteurEcran.shared.combats[cible.perso] { e.sonTour = true }
-        e.contenu = contenu(cible).size
+        let taille = contenu(cible).size
+        e.contenu = taille
+        e.grille = grille.flatMap { $0.valable(pour: taille) ? $0 : nil }
         e.lanceur = aide.visee.lanceur(cible.perso)
         e.confusion = aide.suivi.estimation(cible.perso) != nil
-        e.pointeurSurLeJeu = pointeur(cible) != nil && !surSynfus()
+        e.sortPrepare = persoPortee == cible.perso && portee.sortPrepare
+        let fraction = pointeur(cible)
+        e.pointeurSurLeJeu = fraction != nil && !surSynfus()
+        if let fraction, let grille = e.grille {
+            e.survoleeVisable = ViseeHarebourg.visable(portee.teinte(grille.caseSous(fraction: fraction, contenu: taille)))
+        }
         return e
     }
 
     /// Le perso au premier plan et la case sous le pointeur, sur la grille
-    /// calibrée et valable pour sa fenêtre ; `nil` sinon (raccourci « Marquer ma
+    /// retrouvée et valable pour sa fenêtre ; `nil` sinon (raccourci « Marquer ma
     /// case »). Le même relevé que le calque : le pivot va au perso qu'il dessine.
     func caseSousLePointeur() -> (perso: String, position: GrilleIso.Case)? {
-        guard let cible = Self.cibleDevant(), let grille = Preferences.shared.grilleCombat,
+        guard let cible = Self.cibleDevant(), let grille,
               let fraction = pointeur(cible), !surSynfus() else { return nil }
         let taille = contenu(cible).size
         guard grille.valable(pour: taille) else { return nil }
         return (cible.perso, grille.caseSous(fraction: fraction, contenu: taille))
     }
 
-    // MARK: - Autocalibrage
+    // MARK: - Relevé du plateau
 
-    /// Pendant le tour, une fois par seconde : la grille retrouvée sur le
-    /// plateau (au premier passage du tour), puis la case du perso, cernée de
-    /// blanc par le jeu, qui devient le pivot si deux lectures de suite la
-    /// donnent. Le raccourci « Marquer ma case » reste le recours.
-    private func caler(_ perso: String) {
-        guard calage == nil, Date().timeIntervalSince(dernierCalage) >= Self.intervalleCalage else { return }
+    /// Ce qu'une capture donne, lu hors du fil principal.
+    private struct Lecture: Sendable {
+        /// La grille retrouvée, si elle était recherchée.
+        var trouvee: GrilleIso?
+        /// Le centre de la case cernée de blanc, en fractions du contenu.
+        var pivot: CGPoint?
+        /// Les cases mesurées, sur la grille employée (`trouvee` ou la connue).
+        var signatures: [GrilleIso.Case: PorteeSort.Signature] = [:]
+    }
+
+    /// Pendant le tour, deux fois par seconde : la grille retrouvée sur le
+    /// plateau (au premier passage du tour), la portée du sort préparé, et sans
+    /// sort la case du perso, cernée de blanc par le jeu, qui devient le pivot
+    /// si deux lectures de suite la donnent (un sort préparé cache le contour).
+    /// Le raccourci « Marquer ma case » reste le recours.
+    private func relever(_ perso: String) {
+        guard releve == nil, Date().timeIntervalSince(dernierReleve) >= Self.intervalleReleve else { return }
         let tour = AideBoss.shared.tour
         let recaler = tourCale.map { $0.perso != perso || $0.tour != tour } ?? true
-        calage = Task {
-            defer { calage = nil; dernierCalage = Date() }
+        let connue = grille
+        releve = Task {
+            defer { releve = nil; dernierReleve = Date() }
             guard let capture = await LecteurEcran.shared.imageDevant(region: .entiere) else { return }
-            let connue = Preferences.shared.grilleCombat
-            let (trouvee, pivot) = await Task.detached(priority: .utility) { Self.lirePlateau(capture, recaler: recaler, connue: connue) }.value
-            if let trouvee {
+            let lu = await Task.detached(priority: .utility) { Self.lirePlateau(capture, recaler: recaler, connue: connue) }.value
+            let taille = CGSize(width: capture.width, height: capture.height)
+            if let trouvee = lu.trouvee {
                 tourCale = (perso, tour)
                 // La même grille, retrouvée sur une autre case : on garde celle en place, et les pivots avec.
-                let taille = CGSize(width: capture.width, height: capture.height)
                 if connue.map({ !$0.coincide(avec: trouvee, contenu: taille) }) ?? true {
-                    Preferences.shared.grilleCombat = trouvee
+                    grille = trouvee
                     AideBoss.shared.oublierPivots()
                     pivotVu = nil
+                    portee = PorteeSort()
                 }
+            } else if recaler {
+                // À recaler sans grille retrouvée : rien de lu sur l'ancienne.
+                return
             }
-            guard let grille = Preferences.shared.grilleCombat else { return }
-            guard let pivot, let taille = cible.map({ contenu($0).size }), grille.valable(pour: taille) else { return }
-            let position = grille.caseSous(fraction: pivot, contenu: taille)
+            guard let grille, let cible, grille.valable(pour: contenu(cible).size) else { return }
+            if persoPortee != perso {
+                portee = PorteeSort()
+                persoPortee = perso
+            }
+            portee.lire(lu.signatures)
+            guard !portee.sortPrepare, let pivot = lu.pivot else { return }
+            let position = grille.caseSous(fraction: pivot, contenu: contenu(cible).size)
             if let vu = pivotVu, vu.perso == perso, vu.position == position {
                 AideBoss.shared.marquer(position, perso: perso)
             }
@@ -201,28 +235,31 @@ final class ViseePanel: ObservableObject {
         }
     }
 
-    /// Hors du fil principal : la grille retrouvée (si `recaler`), et le centre
-    /// de la case active en fractions du contenu, sur la grille trouvée ou connue.
-    nonisolated private static func lirePlateau(_ capture: CGImage, recaler: Bool, connue: GrilleIso?) -> (GrilleIso?, CGPoint?) {
-        guard let image = ImageRVB(cgImage: capture) else { return (nil, nil) }
+    /// Hors du fil principal : la grille retrouvée (si `recaler`), puis sur la
+    /// grille employée — la connue si la retrouvée coïncide, celle des cases
+    /// gardées — les cases mesurées et le centre de la case active.
+    nonisolated private static func lirePlateau(_ capture: CGImage, recaler: Bool, connue: GrilleIso?) -> Lecture {
+        guard let image = ImageRVB(cgImage: capture) else { return Lecture() }
         let w = CGFloat(image.width), h = CGFloat(image.height)
-        let trouvee = recaler ? PlateauCombat.grille(image)?.enFractions(image: CGSize(width: w, height: h)) : nil
-        // À recaler sans grille trouvée : l'ancienne ne vaut peut-être plus, pas de pivot cherché dessus.
-        if recaler, trouvee == nil { return (nil, nil) }
-        // Une grille retrouvée qui coïncide avec la connue : le pivot se cherche sur la connue, celle des cases gardées.
+        var lu = Lecture()
+        lu.trouvee = recaler ? PlateauCombat.grille(image)?.enFractions(image: CGSize(width: w, height: h)) : nil
+        if recaler, lu.trouvee == nil { return lu }
         let grille: GrilleIso
-        if let trouvee, let connue, connue.coincide(avec: trouvee, contenu: CGSize(width: w, height: h)) {
+        if let trouvee = lu.trouvee, let connue, connue.coincide(avec: trouvee, contenu: CGSize(width: w, height: h)) {
             grille = connue
-        } else if let choisie = trouvee ?? connue {
+        } else if let choisie = lu.trouvee ?? connue {
             grille = choisie
         } else {
-            return (nil, nil)
+            return lu
         }
         let enPixels = PlateauCombat.Grille(a: grille.demiLargeur * Double(h),
                                             centre: CGPoint(x: grille.origine.x * w, y: grille.origine.y * h))
-        guard let (x, y) = PlateauCombat.caseActive(image, grille: enPixels) else { return (trouvee, nil) }
-        let p = GrilleIso.projeter(x, y, a: CGFloat(enPixels.a), centre: enPixels.centre)
-        return (trouvee, CGPoint(x: p.x / w, y: p.y / h))
+        lu.signatures = PorteeSort.mesurer(image, grille: enPixels)
+        if let (x, y) = PlateauCombat.caseActive(image, grille: enPixels) {
+            let p = GrilleIso.projeter(x, y, a: CGFloat(enPixels.a), centre: enPixels.centre)
+            lu.pivot = CGPoint(x: p.x / w, y: p.y / h)
+        }
+        return lu
     }
 
     // MARK: - Dessin
@@ -238,9 +275,8 @@ final class ViseePanel: ObservableObject {
         else { return montrer(nil, cible: nil) }
         let taille = contenu(cible).size
         let survolee = grille.caseSous(fraction: fraction, contenu: taille)
-        montrer(Dessin(grille: grille, lanceur: lanceur, survolee: survolee,
-                       arrivees: ViseeHarebourg.arrivees(survolee: survolee, lanceur: lanceur, estimation: estimation)),
-                cible: cible)
+        let arrivees = ViseeHarebourg.arrivees(survolee: survolee, lanceur: lanceur, estimation: estimation, portee: portee)
+        montrer(Dessin(grille: grille, lanceur: lanceur, survolee: survolee, arrivees: arrivees), cible: cible)
     }
 
     /// Publie au seul changement ; pose le calque sur le contenu, ou le retire.
@@ -267,10 +303,11 @@ final class ViseePanel: ObservableObject {
         case .panneauCache: L("boss.visee.inactive.panneauCache")
         case .pasSonTour: L("boss.visee.inactive.pasSonTour")
         case .grilleAbsente: L("boss.visee.inactive.grilleAbsente")
-        case .grilleInvalide: L("boss.visee.inactive.grilleInvalide")
         case .sansLanceur: L("boss.visee.inactive.sansLanceur")
         case .sansConfusion: L("boss.visee.inactive.sansConfusion")
+        case .sansSort: L("boss.visee.inactive.sansSort")
         case .horsDuJeu: L("boss.visee.inactive.horsDuJeu")
+        case .horsPortee: L("boss.visee.inactive.horsPortee")
         }
     }
 
@@ -301,7 +338,7 @@ struct ViseeVue: View {
 }
 
 /// Le dessin du calque : la case survolée d'un filet, l'arrivée pleine et
-/// nommée, la voisine en pointillés, le pivot cerclé — en Nuit quel que soit le
+/// nommée (rouge hors de la zone du sort), la voisine en pointillés, le pivot cerclé — en Nuit quel que soit le
 /// thème de l'app : posé sur le jeu, il se lit sur n'importe quel décor.
 struct CalqueVisee: View {
     let dessin: ViseePanel.Dessin
@@ -309,19 +346,23 @@ struct CalqueVisee: View {
     var body: some View {
         GeometryReader { geo in
             Canvas { contexte, _ in Self.dessiner(dessin, taille: geo.size, dans: contexte) } symbols: {
-                Text(L("boss.visee.tombeIci"))
-                    .font(Jetons.typoMicro.font)
-                    .foregroundStyle(Color.jeton(\.encre, en: .nuit))
-                    .padding(.horizontal, Jetons.espace1)
-                    .background(RoundedRectangle(cornerRadius: Jetons.rayon1)
-                        .fill(Color.jeton(\.plaque, en: .nuit).opacity(Jetons.opacitePlaque)))
-                    .tag(Symbole.tombeIci)
+                Self.etiquette(L("boss.visee.tombeIci")).tag(Symbole.tombeIci)
+                Self.etiquette(L("boss.visee.tombeDehors")).tag(Symbole.tombeDehors)
             }
         }
         .accessibilityHidden(true)
     }
 
-    private enum Symbole: Hashable { case tombeIci }
+    private enum Symbole: Hashable { case tombeIci, tombeDehors }
+
+    private static func etiquette(_ texte: String) -> some View {
+        Text(texte)
+            .font(Jetons.typoMicro.font)
+            .foregroundStyle(Color.jeton(\.encre, en: .nuit))
+            .padding(.horizontal, Jetons.espace1)
+            .background(RoundedRectangle(cornerRadius: Jetons.rayon1)
+                .fill(Color.jeton(\.plaque, en: .nuit).opacity(Jetons.opacitePlaque)))
+    }
 
     /// Assez pour voir l'arrivée d'un coup d'œil, assez peu pour voir la case du jeu dessous.
     private static let voileArrivee = 0.55
@@ -352,15 +393,18 @@ struct CalqueVisee: View {
                largeur: Jetons.epaisseurFilet, dans: contexte)
         for arrivee in dessin.arrivees.reversed() {
             let losange = chemin(grille.losange(arrivee.position, contenu: taille))
+            // Hors de la zone du sort, la case est rouge : le sort partirait dans le vide.
+            let couleur = arrivee.dansLaZone ? Color.jeton(\.succes, en: .nuit) : Color.jeton(\.danger, en: .nuit)
             if arrivee.principale {
-                contexte.fill(losange, with: .color(Color.jeton(\.succes, en: .nuit).opacity(Self.voileArrivee)))
-                tracer(losange, Color.jeton(\.succes, en: .nuit), largeur: trait, dans: contexte)
+                contexte.fill(losange, with: .color(couleur.opacity(Self.voileArrivee)))
+                tracer(losange, couleur, largeur: trait, dans: contexte)
             } else {
-                tracer(losange, Color.jeton(\.avertissement, en: .nuit), largeur: trait, pointille: true, dans: contexte)
+                tracer(losange, arrivee.dansLaZone ? Color.jeton(\.avertissement, en: .nuit) : couleur,
+                       largeur: trait, pointille: true, dans: contexte)
             }
         }
         if let principale = dessin.arrivees.first(where: \.principale),
-           let etiquette = contexte.resolveSymbol(id: Symbole.tombeIci) {
+           let etiquette = contexte.resolveSymbol(id: principale.dansLaZone ? Symbole.tombeIci : Symbole.tombeDehors) {
             let centre = grille.centre(principale.position, contenu: taille)
             contexte.draw(etiquette, at: CGPoint(x: centre.x, y: centre.y - a / 2 - Jetons.espace1), anchor: .bottom)
         }

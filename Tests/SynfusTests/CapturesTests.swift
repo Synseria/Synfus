@@ -493,12 +493,20 @@ struct CapturesTests {
         .frame(width: taille.width, height: taille.height)
         .environment(\.colorScheme, Self.schema)
         try ecrire(calque, vers: dossier.appending(path: "visee-calque.png"))
+        let dehors = ViseePanel.Dessin(grille: grille, lanceur: GrilleIso.Case(0, 0), survolee: GrilleIso.Case(-1, -3),
+                                       arrivees: [.init(position: GrilleIso.Case(3, -1), principale: true, dansLaZone: false)])
+        let calqueDehors = ZStack {
+            Image(decorative: damier, scale: 1)
+            CalqueVisee(dessin: dehors)
+        }
+        .frame(width: taille.width, height: taille.height)
+        .environment(\.colorScheme, Self.schema)
+        try ecrire(calqueDehors, vers: dossier.appending(path: "visee-calque-dehors.png"))
 
         let prefs = Preferences.shared
-        let (avant, grilleAvant) = (prefs.harebourgVisee, prefs.grilleCombat)
-        defer { prefs.harebourgVisee = avant; prefs.grilleCombat = grilleAvant }
+        let avant = prefs.harebourgVisee
+        defer { prefs.harebourgVisee = avant }
         prefs.harebourgVisee = true
-        prefs.grilleCombat = nil
         let aides = SettingsView(onglet: OngletReglages(.propre(.aides)), hauteur: 680)
             .background(Color(nsColor: .windowBackgroundColor))
             .environment(\.colorScheme, Self.schema)
@@ -509,10 +517,6 @@ struct CapturesTests {
                 .environment(\.colorScheme, Self.schema)
             try ecrire(page, vers: dossier.appending(path: nom + ".png"))
         }
-        prefs.grilleCombat = grille
-        let feuille = CalibrationGrilleView(capture: CapturesCalibrage.Capture(image: damier, date: Date()))
-            .environment(\.colorScheme, Self.schema)
-        try ecrire(feuille, vers: dossier.appending(path: "visee-calibrage.png"))
     }
 
     // swiftlint:disable:next couleur_en_dur - le sol d'un plateau synthétique, une image du jeu imitée hors des jetons
