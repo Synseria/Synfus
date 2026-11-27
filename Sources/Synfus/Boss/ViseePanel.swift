@@ -28,7 +28,8 @@ final class ViseePanel: ObservableObject {
     @Published private(set) var inactive: ViseeHarebourg.Inactive? = .reglage
     @Published private(set) var dessin: Dessin?
 
-    private let calque = CalqueSurJeu(ViseeVue())
+    // Paresseux : la vue observe `shared`, qui ne doit pas se construire pendant sa propre initialisation.
+    private lazy var calque = CalqueSurJeu(ViseeVue())
     /// Le relevé lent : cadre de la fenêtre, tour, pivot — tant que le réglage est allumé.
     private var veille: Timer?
     /// Le suivi du pointeur, seulement quand le calque peut dessiner.

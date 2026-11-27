@@ -144,3 +144,13 @@ struct ViseeHarebourgTests {
         #expect(ViseeHarebourg.raisonAffichee(.pasSonTour, avant: .sansLanceur, dofusDevant: true) == .pasSonTour)
     }
 }
+
+@Suite("Calques sur le jeu")
+@MainActor
+struct CalquesSurJeuTests {
+    @Test("Les modèles des calques se construisent : leur vue observe `shared`, qui ne la construit pas à son init")
+    func singletons() {
+        _ = ViseePanel.shared
+        _ = ForgemagieModele.shared
+    }
+}

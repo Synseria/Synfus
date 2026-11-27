@@ -51,7 +51,8 @@ final class ForgemagieModele: ObservableObject {
     private var moniteurClic: Any?
     /// Le clic en attente de sa lecture sûre.
     private var clic: SuiviFM.AttenteClic?
-    private let calque = CalqueSurJeu(CalqueForgemagie())
+    // Paresseux : la vue observe `shared`, qui ne doit pas se construire pendant sa propre initialisation.
+    private lazy var calque = CalqueSurJeu(CalqueForgemagie())
 
     private init() {}
 
