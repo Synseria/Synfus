@@ -61,4 +61,17 @@ struct PlateauCombatTests {
         let uni = ImageRVB(width: 300, height: 200, pixels: [UInt8](repeating: 128, count: 300 * 200 * 4))
         #expect(PlateauCombat.grille(uni) == nil)
     }
+
+    @Test("Une grille retrouvée sur une autre case coïncide avec la première")
+    func coincide() {
+        let contenu = CGSize(width: 1600, height: 1000)
+        let g = GrilleIso(origine: CGPoint(x: 0.5, y: 0.4), demiLargeur: 0.04, rapport: 1.6)
+        let a = 0.04 * 1000
+        // Trois cases plus loin (x + 3, y − 1) : mêmes cases.
+        let ailleurs = CGPoint(x: (800 + (3 - -1) * a) / 1600, y: (400 + (3 + -1) * a / 2) / 1000)
+        #expect(g.coincide(avec: GrilleIso(origine: ailleurs, demiLargeur: 0.0402, rapport: 1.6), contenu: contenu))
+        // Une demi-case de côté, ou une autre taille : une autre grille.
+        #expect(!g.coincide(avec: GrilleIso(origine: CGPoint(x: (800 + a / 2) / 1600, y: 0.4), demiLargeur: 0.04, rapport: 1.6), contenu: contenu))
+        #expect(!g.coincide(avec: GrilleIso(origine: g.origine, demiLargeur: 0.045, rapport: 1.6), contenu: contenu))
+    }
 }

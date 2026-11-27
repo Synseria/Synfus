@@ -187,9 +187,10 @@ struct HarebourgTests {
 
     @Test("Le cadre survolé donne les points du Comte, et d'aucun autre")
     func survolDuComte() {
-        #expect(Harebourg.vieDuComte(survol: ["Comte Harebourg", "2604 ♥ 12 ★", "0 6"]) == .points(actuels: 2604, max: nil))
-        #expect(Harebourg.vieDuComte(survol: ["Count Harebourg", "12 450 ♥"]) == .points(actuels: 12450, max: nil))
-        #expect(Harebourg.vieDuComte(survol: ["Conde Harebourq", "3 087"]) == .points(actuels: 3087, max: nil))
+        #expect(Harebourg.vieDuComte(survol: ["Count Harebourg", "12 450 / 13 000"]) == .points(actuels: 12450, max: 13000))
+        #expect(Harebourg.vieDuComte(survol: ["Conde Harebourq", "3 087 / 4 200 (73%)"]) == .points(actuels: 3087, max: 4200))
+        // Un nombre seul n'est pas sûr : l'initiative en est un aussi.
+        #expect(Harebourg.vieDuComte(survol: ["Comte Harebourg", "Oméga 79", "2 359"]) == nil)
         // Le panneau survolé tel que l'OCR le rend (capture du 26/11/2026), le
         // nom remplacé : d'autres pourcentages, dans le désordre.
         let panneau = ["Comte Harebourg", "→ 0%", "1 15", "0%", "2 359", "Oméga 79", "2 604 / 4 200 (62%)", "30", ") 0%)",

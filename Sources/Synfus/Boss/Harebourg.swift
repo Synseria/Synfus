@@ -162,8 +162,7 @@ enum Harebourg {
     /// son nom, « 4 162 / 4 162 (100%) », et d'autres pourcentages
     /// (résistances, « 10% ») que l'OCR rend dans le désordre. La vie du Comte
     /// si c'est lui qu'on survole — `a / b` d'abord, puis le pourcentage entre
-    /// parenthèses, puis un nombre de points seul ; `nil` pour tout autre
-    /// combattant. Son nom porte « Harebourg » dans les trois langues du jeu.
+    /// parenthèses ; `nil` pour tout autre combattant, ou sans l'un des deux. Son nom porte « Harebourg » dans les trois langues du jeu.
     static func vieDuComte(survol lignes: [String]) -> Vie? {
         guard lignes.contains(where: {
             Ressemblance.distanceDansTexte("harebourg", Ressemblance.normaliser($0)) <= 1
@@ -179,12 +178,7 @@ enum Harebourg {
                 return .pourcentage(valeur)
             }
         }
-        for ligne in lignes {
-            if let match = ligne.firstMatch(of: /\d{1,3}(?:[ \u{00A0}\u{202F}.,]\d{3})+|\d{3,}/),
-               let points = entier(match.output) {
-                return .points(actuels: points, max: nil)
-            }
-        }
+        // Pas de repli sur un nombre seul : le panneau en porte d'autres (initiative, « 2 359 »).
         return nil
     }
 

@@ -182,8 +182,14 @@ final class ViseePanel: ObservableObject {
             let connue = Preferences.shared.grilleCombat
             let (trouvee, pivot) = await Task.detached(priority: .utility) { Self.lirePlateau(capture, recaler: recaler, connue: connue) }.value
             if let trouvee {
-                Preferences.shared.grilleCombat = trouvee
                 tourCale = (perso, tour)
+                // La même grille, retrouvée sur une autre case : on garde celle en place, et les pivots avec.
+                let taille = CGSize(width: capture.width, height: capture.height)
+                if connue.map({ !$0.coincide(avec: trouvee, contenu: taille) }) ?? true {
+                    Preferences.shared.grilleCombat = trouvee
+                    AideBoss.shared.oublierPivots()
+                    pivotVu = nil
+                }
             }
             guard let grille = Preferences.shared.grilleCombat else { return }
             guard let pivot, let taille = cible.map({ contenu($0).size }), grille.valable(pour: taille) else { return }
@@ -201,7 +207,17 @@ final class ViseePanel: ObservableObject {
         guard let image = ImageRVB(cgImage: capture) else { return (nil, nil) }
         let w = CGFloat(image.width), h = CGFloat(image.height)
         let trouvee = recaler ? PlateauCombat.grille(image)?.enFractions(image: CGSize(width: w, height: h)) : nil
-        guard let grille = trouvee ?? connue else { return (nil, nil) }
+        // À recaler sans grille trouvée : l'ancienne ne vaut peut-être plus, pas de pivot cherché dessus.
+        if recaler, trouvee == nil { return (nil, nil) }
+        // Une grille retrouvée qui coïncide avec la connue : le pivot se cherche sur la connue, celle des cases gardées.
+        let grille: GrilleIso
+        if let trouvee, let connue, connue.coincide(avec: trouvee, contenu: CGSize(width: w, height: h)) {
+            grille = connue
+        } else if let choisie = trouvee ?? connue {
+            grille = choisie
+        } else {
+            return (nil, nil)
+        }
         let enPixels = PlateauCombat.Grille(a: grille.demiLargeur * Double(h),
                                             centre: CGPoint(x: grille.origine.x * w, y: grille.origine.y * h))
         guard let (x, y) = PlateauCombat.caseActive(image, grille: enPixels) else { return (trouvee, nil) }

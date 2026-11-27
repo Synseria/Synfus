@@ -37,12 +37,14 @@ enum ConseilFM {
     enum PalierRune: Equatable, Sendable { case adapte, tropLourde, tropLegere }
 
     /// Les pondérations du score : avancer vers la cible d'abord, sans la
-    /// dépasser, au bon palier, en risquant peu.
-    static let poidsProgres = 0.40
+    /// dépasser, au bon palier, en risquant peu ; à mérite égal, les lignes
+    /// lourdes d'abord (les guides : on les finit avant que des pertes ne les
+    /// entament, les légères servent ensuite de tampon).
+    static let poidsProgres = 0.35
     static let poidsJustesse = 0.25
-    static let poidsPalier = 0.20
+    static let poidsPalier = 0.15
     static let poidsRisque = 0.10
-    static let poidsPrecieux = 0.05
+    static let poidsPrecieux = 0.15
 
     /// Une rune passe bien tant que la ligne reste sous environ 20 fois son
     /// poids : rune simple jusqu'à 20, Pa jusqu'à 60, Ra au-delà (Force).
@@ -56,9 +58,9 @@ enum ConseilFM {
         return 0.15
     }
 
-    /// Les propositions, la meilleure d'abord, `nombre` au plus. Une ligne à sa
-    /// cible ou au-delà n'en a pas ; une rune qui passerait le plafond over + exo
-    /// non plus.
+    /// Les propositions, la meilleure d'abord, `nombre` au plus, une par ligne
+    /// (sa meilleure rune). Une ligne à sa cible ou au-delà n'en a pas ; une
+    /// rune qui passerait le plafond over + exo non plus.
     static func propositions(objet: ObjetFM, cible: (ObjetFM.Ligne) -> Int, reliquat: Double?,
                              catalogue: CatalogueFM, nombre: Int = 5) -> [Proposition] {
         var resultat: [Proposition] = []
@@ -95,7 +97,10 @@ enum ConseilFM {
                 resultat.append(Proposition(rune: rune, score: Int((valeur * 100).rounded()), apres: apres, raisons: raisons))
             }
         }
-        return Array(resultat.sorted { ($0.score, $0.rune.poids) > ($1.score, $1.rune.poids) }.prefix(nombre))
+        let parLigne = Dictionary(grouping: resultat, by: \.rune.effet).values.compactMap { propositions in
+            propositions.max { ($0.score, $0.rune.poids) < ($1.score, $1.rune.poids) }
+        }
+        return Array(parLigne.sorted { ($0.score, $0.rune.poids) > ($1.score, $1.rune.poids) }.prefix(nombre))
     }
 
     /// Le rang de rune que la valeur de la ligne appelle : le plus lourd dont

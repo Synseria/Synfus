@@ -24,7 +24,8 @@ Synfus lit l'écran et affiche ; viser et lancer restent au joueur (CGU : aucun 
   jamais supposé). Le maximum (`SuiviConfusion`) : le dernier écrit fait foi, un saut de plus de
   30 % attend une seconde lecture (le douteux ne sert pas au pourcentage), des points au-delà
   l'invalident. Un nouveau combat (`SuiviConfusion.nouveauCombat`, appelé par `AideBoss` au premier
-  placement vu, une fois par combat — `dureePlacementMax`) oublie vie et maximum de **tous** les persos.
+  placement vu après un tour — `combatEngage` : un autre perso lu en placement avant tout tour, c'est
+  le même combat) oublie vie et maximum de **tous** les persos, et les pivots.
 - **Vie du Comte** : lue au survol, dans le panneau qui remplace la barre de sorts (genre `survol`,
   `Harebourg.vieDuComte` : un nom qui porte « Harebourg », puis `a / b` d'abord — l'OCR rend aussi
   résistances et « 10% » dans le désordre —, le pourcentage entre parenthèses, un nombre seul),
@@ -43,12 +44,16 @@ Synfus lit l'écran et affiche ; viser et lancer restent au joueur (CGU : aucun 
 - **Autocalibrage** (`PlateauCombat`, pur ; `ViseePanel.caler`, une capture par seconde au plus,
   pendant le tour) : la grille est retrouvée à chaque tour par la périodicité des joints (énergie des
   bords projetée sur `x + 2y` et `2y − x`, autocorrélation, repli lissé sur la portée de la mesure —
-  un joint répond par deux pics ; demi-période vérifiée), et écrase `grilleCombat`. Le pivot : la
+  un joint répond par deux pics ; demi-période vérifiée). Une grille qui coïncide avec celle en place
+  (`GrilleIso.coincide` : l'origine retrouvée tombe sur une autre case) la laisse, pivots compris ;
+  une autre la remplace et oublie les pivots ; non retrouvée, pas de pivot cherché. Le pivot : la
   case dont le losange porte le liseré blanc et creux du perso actif (côtés du bas surtout, que le
   perso masque moins ; intérieur et pourtour non blancs ; points bordés de rouge écartés — le liseré
   de la case visée ; cases du plateau seulement, `grilleLocale` ; nette avance sur la suivante),
   retenue à la seconde lecture identique. Un sort préparé peut masquer le liseré : rien plutôt que faux.
   Mesuré : une case de 52 px sur 2000 × 1234 (deux monstres voisins le confirment ; le motif du sol trompe l'œil).
+  Banc : `SYNFUS_PLATEAU=<capture> sh test.sh plateauSurCaptureReelle` ; les captures de calibrage
+  (`combat.png`, `vie.png`…) donnent 0,0433 de la hauteur, la mesure à la main.
 - Pivot à la main : raccourci « Marquer ma case » (`marquerLanceurHotKey`, sans défaut) → la case sous le
   pointeur (pas sur une fenêtre de Synfus), rangée sous le perso au premier plan ; tous les pivots
   sont oubliés au nouveau combat (`AideBoss.combats`). Le calque ignore les fenêtres de Synfus qui

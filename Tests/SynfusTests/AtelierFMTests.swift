@@ -87,6 +87,9 @@ struct AtelierFMTests {
         // Rien de changé : pas de fusion.
         deuxFois(atelier([.init(effet: 174, valeur: 59, max: 200), .init(effet: 158, valeur: 251, max: 200)]))
         #expect(suivi.comptes.values.reduce(0, +) == 2)
+        // Deux runes entre deux lectures (+40 Initiative) : pas une fusion qu'on sache lire.
+        deuxFois(atelier([.init(effet: 174, valeur: 99, max: 200), .init(effet: 158, valeur: 251, max: 200)]))
+        #expect(suivi.comptes.values.reduce(0, +) == 2)
         // Le max mal lu d'une ligne reste connu : pas une exo.
         deuxFois(atelier([.init(effet: 174, valeur: 59, max: nil, exo: true), .init(effet: 158, valeur: 251, max: 200)]))
         #expect(suivi.atelier?.objet.ligne(174) == .init(effet: 174, valeur: 59, max: 200))

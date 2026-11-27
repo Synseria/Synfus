@@ -11,6 +11,8 @@ struct SuiviFM: Equatable, Sendable {
     private(set) var atelier: AtelierFM?
     private(set) var derniere: FusionFM?
     private(set) var comptes: [FusionFM.Issue: Int] = [:]
+    /// Change à chaque nouvel objet posé sur l'atelier.
+    private(set) var objet = 0
     /// La lecture vue une fois, en attente de confirmation.
     private var brouillon: AtelierFM?
     /// Les jets max de l'objet, par effet, lus pendant la séance.
@@ -34,6 +36,7 @@ struct SuiviFM: Equatable, Sendable {
             derniere = nil
             comptes = [:]
             maxConnus = [:]
+            objet += 1
             return nil
         }
         guard let fusion = FusionFM.constater(avant: avant.objet, apres: complete.objet, catalogue: catalogue,

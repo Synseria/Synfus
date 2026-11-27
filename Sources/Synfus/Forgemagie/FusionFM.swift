@@ -26,8 +26,8 @@ struct FusionFM: Equatable, Sendable {
     /// les lignes vues dans les deux. Une ligne apparue n'est un gain que si
     /// aucune n'a disparu, qu'elle n'a ni min ni max (une exo) et que sa valeur
     /// est la puissance d'une rune : sinon c'est une ligne revenue dans la vue
-    /// (curseur, infobulle, lecture manquée). Une rune ne monte qu'une ligne :
-    /// deux qui montent ne sont pas une fusion. Le reliquat qui baisse sans
+    /// (curseur, infobulle, lecture manquée). Une rune ne monte qu'une ligne, de
+    /// sa puissance : sinon ce n'est pas une fusion qu'on sache lire. Le reliquat qui baisse sans
     /// ligne perdue : le puits a payé, succès neutre — ou échec, si rien ne
     /// monte. `nil` : pas une fusion.
     static func constater(avant: ObjetFM, apres: ObjetFM, catalogue: CatalogueFM,
@@ -47,7 +47,11 @@ struct FusionFM: Equatable, Sendable {
                 gains[exo.effet] = exo.valeur
             }
         }
-        guard gains.count <= 1 else { return nil }
+        // Une rune ajoute sa puissance : un autre gain, ce sont plusieurs runes
+        // entre deux lectures (« Fusionner tout »), qu'on ne sait pas démêler.
+        guard gains.count <= 1, gains.allSatisfy({ gain in
+            catalogue.runes[gain.key]?.contains { $0.puissance == gain.value } == true
+        }) else { return nil }
         let poidsPerdu = pertes.reduce(0.0) { $0 + Double($1.value) * (catalogue.effets[$1.key]?.poids ?? 0) }
         let puitsEntame = reliquatAvant.flatMap { avant in reliquatApres.map { $0 < avant } } ?? false
         let issue: Issue

@@ -196,6 +196,13 @@ struct SeanceForgemagie: View {
             }
             .buttonStyle(.plain)
             .help(Self.raisons(proposition))
+            // Les infobulles d'une app inactive se montrent mal : les raisons de la première restent en vue.
+            if rang == 0 {
+                Text(Self.raisons(proposition, courtes: true))
+                    .font(Jetons.typoMeta.font)
+                    .foregroundStyle(Color.jeton(\.encre2))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 
@@ -223,8 +230,9 @@ struct SeanceForgemagie: View {
             .joined(separator: ", ")
     }
 
-    /// Les raisons du score, une par ligne, puis ce que le score ne sait pas.
-    static func raisons(_ proposition: ConseilFM.Proposition) -> String {
+    /// Les raisons du score, une par ligne, puis ce que le score ne sait pas ;
+    /// `courtes` : jointes en une phrase, sans la réserve.
+    static func raisons(_ proposition: ConseilFM.Proposition, courtes: Bool = false) -> String {
         let lignes = proposition.raisons.map { raison -> String in
             switch raison {
             case .comble(let points, let manque): L("forgemagie.raison.comble", points, manque)
@@ -237,7 +245,7 @@ struct SeanceForgemagie: View {
             case .over: L("forgemagie.raison.over")
             }
         }
-        return (lignes + [L("forgemagie.raison.limite")]).joined(separator: "\n")
+        return courtes ? lignes.joined(separator: " · ") : (lignes + [L("forgemagie.raison.limite")]).joined(separator: "\n")
     }
 }
 

@@ -35,6 +35,8 @@ final class ForgemagieModele: ObservableObject {
     private var tache: Task<Void, Never>?
     private var region: ZoneEcran?
     private var empreinte: Int?
+    /// La dernière lecture de l'atelier : une image inchangée la confirme sans OCR.
+    private var derniereLecture: (perso: String, atelier: AtelierFM)?
     private var telechargement: Task<Void, Never>?
     private var dernierEssai = Date.distantPast
 
@@ -57,6 +59,7 @@ final class ForgemagieModele: ObservableObject {
         suivis = [:]
         region = nil
         empreinte = nil
+        derniereLecture = nil
         cibles = [:]
         absent = false
     }
@@ -66,8 +69,10 @@ final class ForgemagieModele: ObservableObject {
     /// La cible d'une ligne : celle choisie, sinon son jet max, sinon sa valeur (une exo).
     func cible(_ ligne: ObjetFM.Ligne) -> Int { cibles[ligne.effet] ?? ligne.max ?? ligne.valeur }
 
-    func changerCible(_ ligne: ObjetFM.Ligne, de pas: Int) {
-        let nouvelle = max(0, cible(ligne) + pas)
+    /// Un cran de cible : la puissance de la plus petite rune de l'effet (5 en Vitalité, 10 en Initiative).
+    func changerCible(_ ligne: ObjetFM.Ligne, de sens: Int) {
+        let pas = catalogue?.runes[ligne.effet]?.first?.puissance ?? 1
+        let nouvelle = max(0, cible(ligne) + sens * pas)
         cibles[ligne.effet] = nouvelle == (ligne.max ?? ligne.valeur) ? nil : nouvelle
     }
 
@@ -105,7 +110,11 @@ final class ForgemagieModele: ObservableObject {
         guard let image = await LecteurEcran.shared.imageDevant(region: zone), !Task.isCancelled else { return Self.intervalle }
         // Rien n'a bougé : pas d'OCR.
         let signature = Self.empreinte(image)
-        guard signature != empreinte else { return absent ? Self.intervalleAbsent : Self.intervalle }
+        if signature == empreinte {
+            // L'image n'a pas bougé : la même lecture, qui confirme la précédente.
+            if let derniere = derniereLecture, derniere.perso == devant { appliquer(derniere.atelier, perso: devant, catalogue: catalogue) }
+            return absent ? Self.intervalleAbsent : Self.intervalle
+        }
         empreinte = signature
         let textes = Self.dansLeContenu(await LecteurEcran.shared.textes(image: image), region: zone)
         guard !Task.isCancelled else { return Self.intervalle }
@@ -121,11 +130,23 @@ final class ForgemagieModele: ObservableObject {
         }
         absent = false
         region = Self.autour(atelier.cadre)
-        if perso != devant { perso = devant }
-        var suivi = suivis[devant] ?? SuiviFM()
-        suivi.lu(atelier, catalogue: catalogue)
-        if suivi != suivis[devant] { suivis[devant] = suivi }
+        derniereLecture = (devant, atelier)
+        appliquer(atelier, perso: devant, catalogue: catalogue)
         return Self.intervalle
+    }
+
+    /// Une lecture versée à la séance du perso. Un autre perso, ou un autre
+    /// objet sur l'atelier : la cible réglée ne vaut plus.
+    private func appliquer(_ atelier: AtelierFM, perso devant: String, catalogue: CatalogueFM) {
+        if perso != devant {
+            perso = devant
+            cibles = [:]
+        }
+        var suivi = suivis[devant] ?? SuiviFM()
+        let objet = suivi.objet
+        suivi.lu(atelier, catalogue: catalogue)
+        if suivi.objet != objet { cibles = [:] }
+        if suivi != suivis[devant] { suivis[devant] = suivi }
     }
 
     /// Les cadres des textes d'une région, ramenés au contenu entier.

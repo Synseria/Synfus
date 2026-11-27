@@ -24,18 +24,22 @@ Synfus lit l'atelier et l'affiche ; il ne pose ni ne fusionne jamais une rune (C
   posée ne se lit pas. La table **défile** : seules comptent les lignes vues des deux côtés. Une ligne
   apparue n'est une exo gagnée que si aucune n'a disparu, qu'elle n'a ni min ni max et que sa valeur
   est la puissance d'une rune (sinon : une ligne revenue dans la vue). Deux lignes qui montent : pas
-  une fusion. Gain sans perte → critique, sauf reliquat en baisse (le puits a payé) ; gain et perte →
+  une fusion ; un gain qui n'est la puissance d'aucune rune de l'effet (plusieurs runes entre deux
+  lectures, « Fusionner tout ») non plus. Gain sans perte → critique, sauf reliquat en baisse (le puits a payé) ; gain et perte →
   neutre ; perte seule → échec ; rien → pas de fusion.
 - **Séance** (`SuiviFM`, une par perso, oubliée à la fermeture du panneau) : une lecture ne compte que
-  **confirmée** par la suivante, identique (animation du jeu, chiffre mal lu) ; les jets max lus
-  restent connus (une case mal lue n'en fait pas une exo).
+  **confirmée** par la suivante, identique (animation du jeu, chiffre mal lu) — une image inchangée,
+  sans OCR, rejoue la dernière lecture et la confirme ; les jets max lus restent connus (une case mal
+  lue n'en fait pas une exo). Un autre objet ou un autre perso oublie la cible réglée.
 - **Conseil** (`ConseilFM`) : pour chaque ligne sous sa cible (jet max par défaut, ou la cible réglée au
-  survol de la ligne), chaque rune de son effet reçoit un score 0–100 : avancer vers la cible (0,40),
-  sans la dépasser (0,25), au bon palier (0,20 ; rang attendu : la ligne pèse plus de 20 fois le
-  poids du rang précédent), en risquant peu (0,10 ; perte probable = poids × (1 − critique), critique
-  d'après la 1.27 : 66 % sous 80 % du max, 34 % au max, 15 % au-delà, moins ce que le reliquat
-  absorbe), ligne précieuse (0,05) ; un over (au-delà du max) ×0,6 ; jamais au-delà du plafond. Les
-  pondérations sont un choix, pas une mesure : les éprouver en jeu avant d'y toucher.
+  survol de la ligne, par crans de la plus petite rune), chaque rune de son effet reçoit un score
+  0–100 : avancer vers la cible (0,35), sans la dépasser (0,25), au bon palier (0,15 ; rang attendu :
+  la ligne pèse plus de 20 fois le poids du rang précédent), en risquant peu (0,10 ; perte probable =
+  poids × (1 − critique), critique d'après la 1.27 : 66 % sous 80 % du max, 34 % au max, 15 % au-delà,
+  moins ce que le reliquat absorbe), ligne lourde d'abord (0,15) ; un over ×0,6 ; jamais au-delà du
+  plafond. Une proposition par ligne (sa meilleure rune), trois montrées ; les raisons de la première
+  restent en vue (les infobulles d'une app inactive se montrent mal). Les pondérations sont un choix,
+  pas une mesure : les éprouver en jeu avant d'y toucher.
 - **Puits** : le jeu l'**affiche** (« reliquat : 0.1 ») ; l'historique ne dit que « + reliquat » /
   « - reliquat ». L'ordre des pertes n'est pas publié : il se constate.
 - **Plafond** : over + exo d'une ligne ≤ 101 de poids (`ObjetFM`) ; par ligne ou par objet reste à

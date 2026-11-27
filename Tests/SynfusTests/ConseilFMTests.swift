@@ -45,8 +45,9 @@ struct ConseilFMTests {
         #expect(premiere.raisons.contains(.procheDuMax))
         #expect(premiere.raisons.contains(.reliquatCouvre))
         #expect((0...100).contains(premiere.score))
-        // Les propositions sont triées, la meilleure d'abord.
+        // Une proposition par ligne, triées, la meilleure d'abord.
         let toutes = conseils([.init(effet: 118, valeur: 30, max: 60), .init(effet: 125, valeur: 100, max: 250)])
         #expect(toutes.map(\.score) == toutes.map(\.score).sorted(by: >))
+        #expect(Set(toutes.map(\.rune.effet)).count == toutes.count)
     }
 }

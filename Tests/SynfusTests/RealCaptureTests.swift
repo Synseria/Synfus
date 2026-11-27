@@ -108,4 +108,24 @@ struct RealCaptureTests {
             #expect(noms == attendues.split(separator: "|").map(String.init))
         }
     }
+
+    /// `SYNFUS_PLATEAU=<capture d'un combat>` : la grille et la case du perso
+    /// actif retrouvées sans calibrage (`PlateauCombat`), en pixels de l'image
+    /// réduite ; `SYNFUS_PLATEAU_A=<demi-largeur en fraction de la hauteur>`
+    /// vérifie la taille de case à 3 % près.
+    @Test("Le plateau d'une capture de combat", .enabled(if: ProcessInfo.processInfo.environment["SYNFUS_PLATEAU"] != nil))
+    func plateauSurCaptureReelle() throws {
+        let env = ProcessInfo.processInfo.environment
+        let chemin = try #require(env["SYNFUS_PLATEAU"])
+        let capture = try #require(SimulationCapture.charger(chemin))
+        let image = try #require(ImageRVB(cgImage: capture))
+        let grille = try #require(PlateauCombat.grille(image))
+        let active = PlateauCombat.caseActive(image, grille: grille)
+        let centre = active.map { GrilleIso.projeter($0.x, $0.y, a: CGFloat(grille.a), centre: grille.centre) }
+        Sortie.dire("image \(image.width) × \(image.height) : a = \(grille.a) px (\(grille.a / Double(image.height)) de la hauteur), "
+                    + "centre \(grille.centre), case active \(centre.map { "\($0)" } ?? "—")")
+        if let attendu = env["SYNFUS_PLATEAU_A"].flatMap(Double.init) {
+            #expect(abs(grille.a / Double(image.height) / attendu - 1) < 0.03)
+        }
+    }
 }

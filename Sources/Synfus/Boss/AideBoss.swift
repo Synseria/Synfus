@@ -20,10 +20,10 @@ final class AideBoss: ObservableObject {
 
     /// Le dernier état de combat vu de chaque perso.
     private var combatsVus: [String: EtatCombat] = [:]
-    /// Le placement qui a ouvert le combat en cours.
-    private var debutCombat: Date?
-    /// Plus long qu'un placement : un placement vu au-delà ouvre un autre combat.
-    static let dureePlacementMax: TimeInterval = 120
+    /// Un tour (le sien ou celui d'un autre) vu depuis le dernier nouveau combat :
+    /// le placement suivant en ouvre un autre ; d'ici là, un placement lu chez un
+    /// autre perso est celui du même combat.
+    private var combatEngage = true
     private var abonnement: AnyCancellable?
     private var abonnementSalle: AnyCancellable?
     private var abonnementDonjons: AnyCancellable?
@@ -157,10 +157,11 @@ final class AideBoss: ObservableObject {
             let avant = combatsVus[perso]
             // Un placement ouvre un combat. Pas une première lecture en combat :
             // chaque perso est lu quand il passe devant, souvent bien après.
-            // Une fois par combat : un autre perso vu en placement peu avant, c'est le même.
-            if etat == .placement, avant != .placement,
-               debutCombat.map({ maintenant.timeIntervalSince($0) > Self.dureePlacementMax }) ?? true {
-                debutCombat = maintenant
+            if case .monTour = etat { combatEngage = true }
+            if etat == .pasMonTour { combatEngage = true }
+            // Une fois par combat : tant qu'aucun tour n'a été vu, un autre placement est le même.
+            if etat == .placement, avant != .placement, combatEngage {
+                combatEngage = false
                 // Tous les persos : un perso jamais vu en placement garderait ce qu'il avait.
                 session = SessionBoss()
                 visee = ViseeHarebourg()
@@ -190,6 +191,9 @@ final class AideBoss: ObservableObject {
         guard let (perso, position) = ViseePanel.shared.caseSousLePointeur() else { return NSSound.beep() }
         marquer(position, perso: perso)
     }
+
+    /// Une autre grille : les cases des pivots ne désignent plus les mêmes.
+    func oublierPivots() { visee = ViseeHarebourg() }
 
     /// Le pivot de la visée : marqué au raccourci, ou trouvé sur l'écran.
     func marquer(_ position: GrilleIso.Case, perso: String) {

@@ -80,6 +80,16 @@ struct GrilleIso: Codable, Equatable, Sendable {
         Self.losange(c.x, c.y, a: a(contenu), centre: centreOrigine(contenu))
     }
 
+    /// Les deux grilles posent-elles leurs cases aux mêmes endroits ? Même
+    /// taille (2 %), et l'origine de l'autre sur un centre de celle-ci (0,15 case) :
+    /// l'origine retrouvée d'un tour à l'autre peut tomber sur n'importe quelle case.
+    func coincide(avec autre: GrilleIso, contenu: CGSize) -> Bool {
+        guard abs(autre.demiLargeur / demiLargeur - 1) <= 0.02 else { return false }
+        let point = CGPoint(x: autre.origine.x * contenu.width, y: autre.origine.y * contenu.height)
+        let centreProche = centre(caseSous(fraction: autre.origine, contenu: contenu), contenu: contenu)
+        return hypot(point.x - centreProche.x, point.y - centreProche.y) <= 0.15 * a(contenu)
+    }
+
     /// La grille vaut-elle pour un contenu de cette taille ?
     func valable(pour contenu: CGSize) -> Bool {
         guard contenu.width > 0, contenu.height > 0, rapport > 0 else { return false }
