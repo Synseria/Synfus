@@ -1,0 +1,404 @@
+[
+ {
+  "id": "R01",
+  "titre": "Refonte A : 5 onglets par intention, « Avancé » replié",
+  "tache": "Je veux trouver un réglage en devinant son onglet, sans ouvrir les neuf.",
+  "constat": "reglages-fenetre.png : pas de barre latérale, mais un bandeau de 9 onglets (7 de Synfus + Général, Thème) rangés par module technique (SettingsView.swift:9-12) ; « Données », « Aides », « Lecture » et « Palette » se partagent les mêmes sujets (trajets, quêtes, chasse, boss).",
+  "capture": "reglages/sombre/reglages-fenetre.png",
+  "zone": {
+   "x": 10,
+   "y": 1,
+   "w": 85,
+   "h": 9
+  },
+  "avant": "Bandeau : Personnages · Barre · Raccourcis · Palette · Données · Aides · Lecture | Général · Thème. Les réglages d'une même aide sont à trois endroits (ex. quêtes : panneau dans Données, zone dans Lecture, raccourci dans Raccourcis).",
+  "apres": "Même bandeau, 5 onglets propres : « Personnages » (blocs Ordre et équipes ; Bascule = Quand un personnage m'appelle, Enchaîner au clic, Clignoter à chaque bascule ; Icônes des classes replié) · « Barre » (inchangé) · « Raccourcis » (touches seulement) · « En jeu » (blocs Palette : Tri, Inviter tout le monde d'un coup ; Trajets ; Quêtes : les cinq interrupteurs du panneau, « Panneaux seulement devant Dofus » ; Aides de combat : Visée du Comte Harebourg, Combinaisons de l'Huppermage ; Lecture de l'écran : Position, Combat) · « Lieux » (Vues des cartes, puis segment Zaaps | Lieux | PNJ) | Général · Thème. Un seul repli « Avancé » à chevron par page, fermé par défaut (`EnTeteRepliable` de la trousse) : En jeu → zones de lecture, réglages fins des trajets, format d'invitation ; Personnages → client gelé, dossier des icônes ; Général → données du jeu, Diagnostic. Palette, Données, Aides et Lecture disparaissent ; les quatre liens des panneaux vers Lecture visent En jeu.",
+  "alternative": "Même découpage, mais aucun repli dans les pages : tout l'avancé réuni dans un 6e onglet « Avancé » en fin de bandeau (zones de lecture, Diagnostic, client gelé, données du jeu, réglages fins des trajets).",
+  "gain": "De 9 à 7 onglets, un sujet = un endroit, et rien de technique visible sans le demander.",
+  "effort": "L",
+  "fichiers": [
+   "Sources/Synfus/Interface/Reglages/SettingsView.swift",
+   "Sources/Synfus/Interface/Reglages/CharactersSettings.swift",
+   "Sources/Synfus/Interface/Reglages/ShortcutsSettings.swift",
+   "Sources/Synfus/Interface/Reglages/PaletteSettings.swift",
+   "Sources/Synfus/Interface/Reglages/DonneesSettings.swift",
+   "Sources/Synfus/Interface/Reglages/AidesSettings.swift",
+   "Sources/Synfus/Interface/Reglages/LectureSettings.swift",
+   "Sources/Synfus/Interface/Reglages/GeneralSettings.swift",
+   "Sources/Synfus/Interface/Reglages/SettingsComponents.swift",
+   "Resources/Localisation/fr.json",
+   "Sources/Synfus/Chasse/ChasseVue.swift",
+   "Sources/Synfus/Boss/HarebourgVue.swift",
+   "Sources/Synfus/Quetes/QuetePanel.swift",
+   "Sources/Synfus/Palette/PaletteVue.swift"
+  ]
+ },
+ {
+  "id": "R02",
+  "titre": "Refonte B : barre latérale à trois groupes titrés",
+  "tache": "Je veux voir d'un coup d'œil ce qui règle mes persos, ce qui règle les aides en jeu et ce qui règle l'app.",
+  "constat": "reglages-fenetre.png : neuf onglets à plat dans le bandeau commun (`BarreDesOnglets` du socle SynseriaKit, posé par `CadreDesReglages`, SettingsView.swift:75), sans titre de groupe ; un filet sépare seulement les sept onglets de Synfus de Général et Thème.",
+  "capture": "reglages/sombre/reglages-fenetre.png",
+  "zone": {
+   "x": 10,
+   "y": 1,
+   "w": 85,
+   "h": 9
+  },
+  "avant": "Bandeau horizontal de 9 icônes + libellés, lu de gauche à droite sans hiérarchie.",
+  "apres": "Barre latérale à gauche (≈ 200 pt), trois titres de groupe : « Mes personnages » → Personnages, Barre, Raccourcis ; « En jeu » → Palette et trajets, Quêtes, Aides de combat, Zaaps et lieux ; « Synfus » → Général, Thème, Avancé (zones de lecture, données du jeu, client gelé, Diagnostic). La ligne choisie est surlignée, la page à droite garde la colonne actuelle. Coût : `CadreDesReglages` change dans le socle, donc pour toutes les apps Synseria.",
+  "alternative": "Barre latérale sans groupes mais avec un champ « Rechercher un réglage » en tête : taper « zaap » ou « calibrer » filtre les lignes de toutes les pages et mène à la bonne.",
+  "gain": "Une hiérarchie lisible et de la place pour une page par aide, sans serrer un bandeau.",
+  "effort": "L",
+  "fichiers": [
+   "Sources/Synfus/Interface/Reglages/SettingsView.swift",
+   "Sources/Synfus/Interface/Reglages/SettingsWindowController.swift",
+   "SynseriaKit 2.2.1 (paquet Synseria/SynseriaKit, Trousse/Reglages.swift : CadreDesReglages, BarreDesOnglets)",
+   "Resources/Localisation/fr.json",
+   "Sources/Synfus/Chasse/ChasseVue.swift",
+   "Sources/Synfus/Boss/HarebourgVue.swift",
+   "Sources/Synfus/Quetes/QuetePanel.swift",
+   "Sources/Synfus/Palette/PaletteVue.swift"
+  ]
+ },
+ {
+  "id": "R03",
+  "titre": "Refonte C : chaque aide se règle dans son panneau",
+  "tache": "Je veux régler le panneau des quêtes ou la chasse là où je m'en sers, pas dans une fenêtre à part.",
+  "constat": "reglages-aides.png : l'onglet Aides n'a qu'un seul vrai réglage (« Visée sur le plateau ») et six boutons « Ouvrir » (AidesSettings.swift:18, 46) ; les quatre réglages du panneau des quêtes sont au fond de Données (DonneesSettings.swift:22-35).",
+  "capture": "reglages/sombre/reglages-aides.png",
+  "zone": {
+   "x": 21,
+   "y": 5.5,
+   "w": 58,
+   "h": 20
+  },
+  "avant": "Les réglages d'un panneau posé sur le jeu vivent dans la fenêtre des Réglages, dans un onglet qui ne porte pas son nom.",
+  "apres": "La fenêtre garde 4 onglets propres : « Personnages » (avec Classes), « Barre », « Raccourcis », « Lieux » (zaaps à activer et « Ajouter », lieux, PNJ) + Général, Thème. Chaque panneau porte ses réglages dans son menu d'en-tête « ⋯ » : Quêtes → Mode compact, Consigne de l'étape, Masquer les objets de quête, Cocher d'après le suivi, Vignettes dans la liste ; Boss → Visée sur le plateau ; Palette (⌘:) → Tri (déjà ⌘T), Vues des cartes, Inviter tout le monde d'un coup. Ce qui n'a pas de panneau (zones de lecture, Position, Combat, Huppermage, réglages fins des trajets, format d'invitation, client gelé, Diagnostic) : repli « Avancé » de Général. Palette, Données, Aides et Lecture disparaissent.",
+  "alternative": "Garder ces réglages dans la fenêtre (refonte A) et ajouter dans le menu « ⋯ » de chaque panneau une seule entrée « Réglages de ce panneau… » qui ouvre la fenêtre sur le bon bloc.",
+  "gain": "Le réglage se trouve à côté de ce qu'il change, et la fenêtre tombe à 6 onglets.",
+  "effort": "L",
+  "fichiers": [
+   "Sources/Synfus/Interface/Reglages/SettingsView.swift",
+   "Sources/Synfus/Interface/Reglages/AidesSettings.swift",
+   "Sources/Synfus/Interface/Reglages/DonneesSettings.swift",
+   "Sources/Synfus/Interface/Reglages/PaletteSettings.swift",
+   "Sources/Synfus/Quetes/MenuQuetes.swift",
+   "Sources/Synfus/Boss/BossVue.swift",
+   "Sources/Synfus/Chasse/ChasseVue.swift",
+   "Sources/Synfus/Palette/PaletteVue.swift",
+   "Sources/Synfus/Interface/Reglages/LectureSettings.swift",
+   "Sources/Synfus/Interface/Reglages/GeneralSettings.swift"
+  ]
+ },
+ {
+  "id": "R04",
+  "titre": "« Vues des cartes » : un seul interrupteur au lieu de trois",
+  "tache": "Je veux couper ou remettre les vues des cartes sans me demander lequel des trois interrupteurs compte.",
+  "constat": "Le même réglage `vuesCartes` est posé trois fois : PaletteSettings.swift:15, DonneesSettings.swift:14 et :30 (visible deux fois sur les captures Palette et Données, la troisième est sous le pli).",
+  "capture": "reglages/sombre/reglages-donnees.png",
+  "zone": {
+   "x": 21,
+   "y": 7.9,
+   "w": 58,
+   "h": 2.3
+  },
+  "avant": "« Vues des cartes » apparaît dans Palette, en tête de Données et dans « Panneau des quêtes » ; les trois bougent ensemble.",
+  "apres": "Une seule ligne « Vues des cartes », la première de Données, où elle est déjà (DonneesSettings.swift:14) ; celles de Palette et de « Panneau des quêtes » sont retirées. Dans le bloc Quêtes, « Vignettes dans la liste » reste seule ; vues coupées, elle est grisée avec l'état « Vues des cartes coupées ».",
+  "alternative": "La ranger dans Général ▸ Icônes renommé « Images » (Icône de l'app, Icône de la barre de menus, Vues des cartes) : tout ce qui est image au même endroit, côté app.",
+  "gain": "Un réglage, une ligne : plus de doute sur celui qui fait foi.",
+  "effort": "S",
+  "fichiers": [
+   "Sources/Synfus/Interface/Reglages/PaletteSettings.swift",
+   "Sources/Synfus/Interface/Reglages/DonneesSettings.swift",
+   "Sources/Synfus/Interface/Reglages/DonneesComposants.swift"
+  ]
+ },
+ {
+  "id": "R05",
+  "titre": "Autorisation d'écran : une seule ligne, un seul libellé",
+  "tache": "Je veux savoir une fois pour toutes si Synfus peut lire l'écran, et le lui accorder d'un geste.",
+  "constat": "La même demande a quatre formes : Général « Lecture de l'écran · manquante · Autoriser » (GeneralSettings.swift:36), Lecture (LectureSettings.swift:22), Aides « Lecture de l'écran · Autoriser » sans pastille (AidesSettings.swift:24), Trajets « Autoriser la lecture de l'écran » (DonneesSettings.swift:65).",
+  "capture": "reglages/sombre/reglages-aides.png",
+  "zone": {
+   "x": 21,
+   "y": 23.2,
+   "w": 58,
+   "h": 2.2
+  },
+  "avant": "Quatre lignes différentes selon la page, dont une rangée parmi les boss et une logée dans le bouton d'un autre réglage.",
+  "apres": "Une seule forme, celle des panneaux (`LigneAutorisation`, Composants.swift:182) : cadenas + « Lecture de l'écran » + bouton « Autoriser », posée en première ligne de toute page qui en dépend, et seulement tant qu'elle manque. Général ▸ Autorisations reste l'endroit de référence (pastilles « accordée » / « manquante »). Les lignes d'Aides et de Trajets disparaissent.",
+  "alternative": "Aucune ligne dans les pages : un bandeau fin sous les onglets, commun à toute la fenêtre, « Lecture de l'écran manquante · Autoriser », qui disparaît une fois accordée (coût : socle, `CadreDesReglages`).",
+  "gain": "La même demande se reconnaît partout et ne se confond plus avec un réglage.",
+  "effort": "S",
+  "fichiers": [
+   "Sources/Synfus/Interface/Reglages/AidesSettings.swift",
+   "Sources/Synfus/Interface/Reglages/DonneesSettings.swift",
+   "Sources/Synfus/Interface/Reglages/LectureSettings.swift",
+   "Sources/Synfus/Interface/Composants.swift"
+  ]
+ },
+ {
+  "id": "R06",
+  "titre": "Zones de lecture : sept « Calibrer » sous « Avancé »",
+  "tache": "Je veux activer la lecture de l'écran sans voir sept boutons de calibrage dont je n'ai pas besoin.",
+  "constat": "reglages-lecture.png : sept lignes « Calibrer » + « Détecter » occupent la page, alors que chaque zone a déjà une valeur par défaut (ZoneEcran.swift:38-62, LecteurEcran.swift:55) : le calibrage n'est qu'un rattrapage.",
+  "capture": "reglages/sombre/reglages-lecture.png",
+  "zone": {
+   "x": 21,
+   "y": 5.9,
+   "w": 58,
+   "h": 20.3
+  },
+  "avant": "Bloc « Zones de lecture » : Position et Combat (interrupteur + Calibrer), Combinaisons de l'Huppermage, puis Chasse, Suivi de quêtes, Cœur de vie, Tchat, Combattant survolé, chacun avec « Calibrer ».",
+  "apres": "Bloc « Lecture de l'écran » à trois lignes : « Position », « Combat » (interrupteurs seuls), « Aussi les personnages derrière ». En dessous, dans la même page Lecture, ligne « Avancé » à chevron, repliée : bloc « Zones de lecture » avec « Détecter » en en-tête et les sept zones, état « Automatique » ou « Calibrée » avant le bouton « Calibrer ». L'état de lecture, « Tout lire » et « Zones lues » (LectureSettings.swift:50-69) passent aussi sous ce repli. « Combinaisons de l'Huppermage » rejoint la page Aides (R13).",
+  "alternative": "Garder les zones visibles mais en une seule ligne : « Zones de lecture · 2 calibrées sur 7 » + bouton « Régler… » qui ouvre une feuille avec la liste et « Détecter ».",
+  "gain": "La page passe de onze contrôles à trois pour le joueur qui n'a rien à rattraper.",
+  "effort": "M",
+  "fichiers": [
+   "Sources/Synfus/Interface/Reglages/LectureSettings.swift",
+   "Sources/Synfus/Interface/Reglages/SettingsComponents.swift",
+   "Sources/Synfus/Interface/Reglages/AidesSettings.swift",
+   "Resources/Localisation/fr.json"
+  ]
+ },
+ {
+  "id": "R07",
+  "titre": "Zone introuvable : Synfus la retrouve seul, sans Réglages",
+  "tache": "Je veux que la chasse ou le suivi de quêtes se lise chez moi sans tracer un rectangle sur une capture.",
+  "constat": "Quand rien n'est lu, les panneaux renvoient à l'onglet Lecture par un bouton « Calibrer » (ChasseVue.swift:261, HarebourgVue.swift:190, QuetePanel.swift:284). Or `AutoCalibrage.detecter` (AutoCalibrage.swift:47) sait retrouver six zones sur sept (pas « Combattant survolé », absent de DetectionZones.swift), mais seulement derrière « Détecter » et son décompte de 5 s.",
+  "capture": "reglages/sombre/reglages-lecture.png",
+  "zone": {
+   "x": 70,
+   "y": 5.9,
+   "w": 9,
+   "h": 20.3
+  },
+  "avant": "Lecture ratée → « Calibrer » → fenêtre des Réglages → « Détecter », revenir au jeu en 5 s, ou tracer la zone à la main.",
+  "apres": "Lecture ratée dans un panneau : Synfus capture le contenu du perso devant et applique la zone trouvée (même chemin `AutoCalibrage`), le panneau affiche « Zone retrouvée » puis relit ; le bouton « Calibrer » des panneaux disparaît. S'il ne trouve rien : « Rien de lisible à l'écran » + « Réessayer ». Dans les Réglages, les sept lignes ne restent que sous l'« Avancé » de Lecture (R06). Coût : un OCR du contenu entier par échec, à borner (une fois par panneau et par taille de fenêtre).",
+  "alternative": "Garder un geste, mais sur place : dans le panneau, bouton « Retrouver la zone » qui lance la détection sans décompte ni fenêtre de Réglages (l'élément est déjà à l'écran).",
+  "gain": "Le calibrage à la main cesse d'être un passage obligé quand l'interface du joueur diffère du défaut.",
+  "effort": "L",
+  "fichiers": [
+   "Sources/Synfus/Lecture/AutoCalibrage.swift",
+   "Sources/Synfus/Lecture/DetectionZones.swift",
+   "Sources/Synfus/Chasse/ChasseVue.swift",
+   "Sources/Synfus/Boss/HarebourgVue.swift",
+   "Sources/Synfus/Quetes/QuetePanel.swift",
+   "Sources/Synfus/Interface/Reglages/LectureSettings.swift"
+  ]
+ },
+ {
+  "id": "R08",
+  "titre": "Position et combat lus dès l'autorisation donnée",
+  "tache": "Je veux que la palette sache où je suis et que la barre montre mes combats sans chercher deux interrupteurs.",
+  "constat": "`lirePosition` et `lireCombat` valent `false` par défaut (Preferences.swift:99, 103) et ne s'allument que dans l'onglet Lecture ; la palette et les Trajets y renvoient (PaletteVue.swift:96, DonneesSettings.swift:60-69, état « Lecture de la position éteinte »).",
+  "capture": "reglages/sombre/reglages-lecture.png",
+  "zone": {
+   "x": 21,
+   "y": 9.7,
+   "w": 58,
+   "h": 4.2
+  },
+  "avant": "Autorisation accordée, rien ne se lit encore : il faut ouvrir Réglages ▸ Lecture et allumer « Position », puis « Combat ».",
+  "apres": "Les deux lectures s'allument à l'instant où l'autorisation d'écran est accordée (défaut changé, arbitrage produit : coût machine d'une lecture continue du perso devant). Les deux interrupteurs restent, allumés, dans « Lecture de l'écran » ; sans autorisation ils sont grisés sous la ligne « Lecture de l'écran · Autoriser ». Le bouton « Lire la position » de la palette (`palette.origine.lire`) et l'état « Lecture de la position éteinte » des Trajets disparaissent.",
+  "alternative": "Ne rien allumer d'office, mais fondre les deux en une ligne « Lire l'écran du jeu » (un interrupteur), « Position » et « Combat » devenant deux cases sous « Avancé ».",
+  "gain": "Les aides marchent dès l'installation, sans passage par une page technique.",
+  "effort": "M",
+  "fichiers": [
+   "Sources/Synfus/Preferences/Preferences.swift",
+   "Sources/Synfus/Interface/Reglages/LectureSettings.swift",
+   "Sources/Synfus/Interface/Reglages/DonneesSettings.swift",
+   "Sources/Synfus/Palette/PaletteVue.swift"
+  ]
+ },
+ {
+  "id": "R09",
+  "titre": "Diagnostic : hors de Lecture, sous « Avancé » de Général",
+  "tache": "Je veux régler la lecture sans tomber sur des pid, des titres bruts et un journal de sonde.",
+  "constat": "reglages-lecture.png : sous les zones, un titre « Diagnostic » puis « Fenêtres détectées » (titres bruts, pid), « Dernier rangement », « Appels d'attention » (sonde, chemin du journal), posés par `BlocsDiagnostic()` (LectureSettings.swift:71-73) ; rien de cela ne concerne la lecture.",
+  "capture": "reglages/sombre/reglages-lecture.png",
+  "zone": {
+   "x": 21,
+   "y": 26.3,
+   "w": 58,
+   "h": 33
+  },
+  "avant": "Trois blocs de diagnostic toujours dépliés au bas de l'onglet Lecture, plus « Gelés achevés » et l'état du calque de visée quand ils existent.",
+  "apres": "Dans Général, après « Icônes » (l'emplacement que `ReglagesGeneraux` donne aux sections de l'app, GeneralSettings.swift:27-51 : pas de changement du socle) : une ligne « Avancé » à chevron, repliée par défaut. Dépliée, elle montre le titre « Diagnostic » et les mêmes blocs (Fenêtres détectées, Dernier rangement, Appels d'attention, Gelés achevés, Calque de visée). La poser tout en bas, sous « Mise à jour », demanderait un second emplacement dans le socle (coût commun aux apps).",
+  "alternative": "Sortir le diagnostic de la fenêtre : entrée « Diagnostic… » du menu de la barre de menus, montrée seulement touche ⌥ tenue, qui ouvre une petite fenêtre à part.",
+  "gain": "Le joueur ne voit plus d'informations de dépannage, et le support sait toujours où les trouver.",
+  "effort": "S",
+  "fichiers": [
+   "Sources/Synfus/Interface/Reglages/LectureSettings.swift",
+   "Sources/Synfus/Interface/Reglages/GeneralSettings.swift",
+   "Sources/Synfus/Interface/Reglages/DiagnosticSettings.swift",
+   "Resources/Localisation/fr.json"
+  ]
+ },
+ {
+  "id": "R10",
+  "titre": "Données DofusDB : plus de « Mettre à jour » sur chaque page",
+  "tache": "Je veux que les données du jeu soient à jour sans avoir à cliquer quatre boutons dans trois onglets.",
+  "constat": "Quatre boutons « Mettre à jour » avec date et heure : carte (reglages-donnees.png, 1re ligne), quêtes (sous le pli, DonneesSettings.swift:19-21), classes (reglages-personnages.png), indices de chasse (reglages-aides.png). Or carte, quêtes et classes se rafraîchissent seules chaque jour (App/DonneesDuJeu.swift:19-23).",
+  "capture": "reglages/sombre/reglages-donnees.png",
+  "zone": {
+   "x": 21,
+   "y": 5.8,
+   "w": 58,
+   "h": 2.3
+  },
+  "avant": "« Liste DofusDB du 10 nov. 2026 à 18:04 · 835 lieux, dont 45 zaaps · Mettre à jour », et l'équivalent pour les quêtes, les classes et les indices.",
+  "apres": "Ces quatre lignes disparaissent des pages. Une seule ligne dans le repli « Avancé » de Général (celui de R09, après « Icônes ») : « Données du jeu · à jour le 21 nov. » + bouton « Actualiser », qui relance les quatre. En cas d'échec seulement, la page concernée garde son état actuel « … indisponibles · Réessayer ». Les indices de chasse entrent dans `DonneesDuJeu.rafraichir` (aujourd'hui chargés à la demande, ChasseModele.swift:142).",
+  "alternative": "Garder une ligne par source mais toutes ensemble, dans un bloc « Données du jeu » du repli « Avancé » de Général : Carte, Quêtes, Classes, Indices de chasse, chacune avec sa date et « Actualiser ».",
+  "gain": "Quatre boutons et quatre dates en moins sous les yeux, pour un rafraîchissement qui se fait déjà seul.",
+  "effort": "M",
+  "fichiers": [
+   "Sources/Synfus/Interface/Reglages/DonneesComposants.swift",
+   "Sources/Synfus/Interface/Reglages/DonneesSettings.swift",
+   "Sources/Synfus/Interface/Reglages/ClassesSettings.swift",
+   "Sources/Synfus/Interface/Reglages/AidesSettings.swift",
+   "Sources/Synfus/Interface/Reglages/GeneralSettings.swift",
+   "Sources/Synfus/App/DonneesDuJeu.swift"
+  ]
+ },
+ {
+  "id": "R11",
+  "titre": "Classes : 19 lignes « Choisir » repliées",
+  "tache": "Je veux ranger mes persos et mes équipes sans faire défiler la liste des 19 classes.",
+  "constat": "reglages-personnages.png : le bloc « Classes » (ClassesSettings.swift:11-30) occupe les trois quarts de la page avec 19 boutons « Choisir », « Dossier des icônes · Recharger · Ouvrir » et une mention légale, pour un geste rare (remplacer un emblème).",
+  "capture": "reglages/sombre/reglages-personnages.png",
+  "zone": {
+   "x": 21,
+   "y": 23.6,
+   "w": 58,
+   "h": 46.8
+  },
+  "avant": "Sous « Ordre et équipes » et « Fermeture » : source DofusDB, dossier des icônes, 19 lignes classe + « Choisir », mention Ankama.",
+  "apres": "Une ligne « Icônes des classes » à chevron, repliée par défaut, état « 19 classes » (ou « 2 remplacées »). Dépliée : une grille de 19 emblèmes ronds avec le nom dessous ; un clic ouvre le sélecteur, le glisser-déposer reste, un emblème remplacé porte un « × » au survol pour le retirer. « Dossier des icônes » et « Recharger » passent dans le repli « Avancé » en bas de Personnages (R12) ; la mention Ankama reste en dernière ligne.",
+  "alternative": "Sans bloc Classes : dans « Ordre et équipes », chaque ligne de perso gagne l'emblème de sa classe devant le nom (aujourd'hui une simple pastille de connexion) ; un clic dessus propose « Changer l'icône… ». On ne règle que les classes qu'on joue.",
+  "gain": "La page Personnages tient en un écran et montre d'abord les persos.",
+  "effort": "M",
+  "fichiers": [
+   "Sources/Synfus/Interface/Reglages/ClassesSettings.swift",
+   "Sources/Synfus/Interface/Reglages/CharactersSettings.swift",
+   "Sources/Synfus/Interface/Reglages/SettingsComponents.swift"
+  ]
+ },
+ {
+  "id": "R12",
+  "titre": "« Achever les clients gelés » sous « Avancé »",
+  "tache": "Je veux une page Personnages qui ne parle que de mes persos.",
+  "constat": "reglages-personnages.png : un bloc « Fermeture » d'une seule ligne, « Achever les clients gelés à la fermeture » (CharactersSettings.swift:63-65), allumé par défaut (Preferences.swift:136) et incompréhensible sans son infobulle.",
+  "capture": "reglages/sombre/reglages-personnages.png",
+  "zone": {
+   "x": 21,
+   "y": 19.8,
+   "w": 58,
+   "h": 3.5
+  },
+  "avant": "Bloc « Fermeture » entre la liste des persos et les classes, une ligne technique, interrupteur allumé.",
+  "apres": "Le bloc « Fermeture » quitte la page. En bas de la page Personnages, une ligne « Avancé » à chevron, repliée par défaut, qui la contient, relibellée « Forcer à quitter un client gelé » ; elle reste allumée par défaut.",
+  "alternative": "Supprimer le réglage : le comportement devient permanent (c'est déjà le défaut), et le journal « Gelés achevés » du Diagnostic reste la seule trace. Arbitrage produit.",
+  "gain": "Un bloc et un terme technique en moins sur la première page de Synfus.",
+  "effort": "S",
+  "fichiers": [
+   "Sources/Synfus/Interface/Reglages/CharactersSettings.swift",
+   "Resources/Localisation/fr.json",
+   "Sources/Synfus/Preferences/Preferences.swift"
+  ]
+ },
+ {
+  "id": "R13",
+  "titre": "Aides : six boutons « Ouvrir » ne sont pas des réglages",
+  "tache": "Je veux ouvrir l'aide d'un boss depuis le jeu, et ne trouver dans les Réglages que ce qui se règle.",
+  "constat": "reglages-aides.png : sur huit lignes, six sont des lanceurs « Ouvrir » (chasse et cinq boss, AidesSettings.swift:16-19, 46) que le panneau des boss offre déjà dans son menu de titre (BossVue.swift:63, 91) ; le seul réglage, « Visée sur le plateau », est glissé entre Comte Harebourg et Kimbo.",
+  "capture": "reglages/sombre/reglages-aides.png",
+  "zone": {
+   "x": 21,
+   "y": 9.6,
+   "w": 58,
+   "h": 13.5
+  },
+  "avant": "Bloc « Boss » : Comte Harebourg · Ouvrir, Visée sur le plateau (interrupteur), Kimbo · Ouvrir, Toxoliath · Ouvrir, Ilyzaelle · Ouvrir, Tal Kasha · Ouvrir.",
+  "apres": "La page Aides ne garde qu'un bloc « Aides de combat » à deux interrupteurs : « Visée du Comte Harebourg » et « Combinaisons de l'Huppermage » (aujourd'hui dans Lecture, LectureSettings.swift:36). Les lignes « Ouvrir » disparaissent : la barre, le menu et ⌥⌘B ouvrent le panneau, son titre choisit le boss. Le bloc « Chasse au trésor » disparaît tant que les indices sont chargés ; en échec seulement, une ligne « Indices de chasse indisponibles · Réessayer » (déjà AidesSettings.swift:36-39).",
+  "alternative": "Garder la liste des boss mais comme choix : « Boss suivis » avec un interrupteur par boss, qui décide lesquels paraissent dans le menu du panneau.",
+  "gain": "La page ne montre plus que des réglages, et la visée n'est plus perdue entre deux lanceurs.",
+  "effort": "S",
+  "fichiers": [
+   "Sources/Synfus/Interface/Reglages/AidesSettings.swift",
+   "Sources/Synfus/Interface/Reglages/LectureSettings.swift",
+   "Resources/Localisation/fr.json"
+  ]
+ },
+ {
+  "id": "R14",
+  "titre": "Données : cinq listes empilées → un segment, sans les quêtes",
+  "tache": "Je veux activer un zaap ou étiqueter un PNJ sans faire défiler des centaines de lignes pour atteindre la bonne liste.",
+  "constat": "reglages-donnees.png : après les trajets viennent 45 zaaps, puis (sous le pli, code : DonneesSettings.swift:17-37) Lieux, source des quêtes, Panneau des quêtes, 200 quêtes avec « Ouvrir » et 150 PNJ ; le panneau des quêtes est introuvable et la liste des quêtes double la palette.",
+  "capture": "reglages/sombre/reglages-donnees.png",
+  "zone": {
+   "x": 21,
+   "y": 20.3,
+   "w": 58,
+   "h": 79.5
+  },
+  "avant": "Une page de plusieurs milliers de points : Carte, Trajets, Zaaps, Lieux, Quêtes (source), Panneau des quêtes, Quêtes (liste), PNJ.",
+  "apres": "La page Données, renommée « Lieux » : en tête un segment « Zaaps | Lieux | PNJ » (`SegmenteTexte`), un seul champ de filtre, une seule liste à la fois avec son compte à droite (« 39 actifs sur 45 »). La liste des quêtes est retirée (la palette les ouvre, ⌥⌘Q aussi). « Trajets » et « Panneau des quêtes » partent en tête de la page Palette (blocs « Trajets » et « Quêtes »), qui n'a aujourd'hui que quatre lignes.",
+  "alternative": "Garder une page unique mais chaque liste repliée derrière sa ligne d'en-tête : « Zaaps · 39 actifs sur 45 », « Lieux · 835 », « PNJ » et son compte, un clic déplie.",
+  "gain": "Chaque liste est à un clic, et les réglages des quêtes ne sont plus enfouis sous 45 zaaps.",
+  "effort": "M",
+  "fichiers": [
+   "Sources/Synfus/Interface/Reglages/DonneesSettings.swift",
+   "Sources/Synfus/Interface/Reglages/ZaapsSettings.swift",
+   "Sources/Synfus/Interface/Reglages/LieuxSettings.swift",
+   "Sources/Synfus/Interface/Reglages/DonneesComposants.swift"
+  ]
+ },
+ {
+  "id": "R15",
+  "titre": "Trajets : deux lignes visibles, le reste sous « Avancé »",
+  "tache": "Je veux que mes /travel passent par le bon zaap sans comprendre « /a » ni « gain minimal ».",
+  "constat": "reglages-donnees.png, bloc « Trajets » (DonneesSettings.swift:47-70) : « Gain minimal · 5 cartes », « Zaap désigné par le jeu », « Commandes entre zaap et trajet · /a », et une 4e ligne serrée « Réécrire chaque /travel copié · Lecture de la position éteinte · Autoriser la lecture de l'écran ».",
+  "capture": "reglages/sombre/reglages-donnees.png",
+  "zone": {
+   "x": 21,
+   "y": 10.5,
+   "w": 58,
+   "h": 9.6
+  },
+  "avant": "Quatre lignes de même poids, dont trois de réglage fin ; la seule décision du joueur (réécrire ou non) est la dernière et porte un état et un bouton d'un autre sujet.",
+  "apres": "Bloc « Trajets » : une ligne « Ajouter le zaap à chaque /travel copié » (interrupteur, l'actuel « Réécrire chaque /travel copié ») ; l'allumer allume la lecture de la position et demande l'autorisation si elle manque, sans état ni second bouton. Sous une ligne « Avancé » repliée, en bas de la même page : « Gain minimal », « Zaap désigné par le jeu », « Commandes entre zaap et trajet », et « Format » de l'invitation (/invite %nom, aujourd'hui dans Palette).",
+  "alternative": "Garder « Gain minimal » visible sous la forme d'un segment « Toujours | Dès 5 cartes | Dès 10 cartes » à côté de l'interrupteur, et ne replier que les deux champs de commandes.",
+  "gain": "Une décision claire à l'écran, trois réglages d'expert hors de vue.",
+  "effort": "S",
+  "fichiers": [
+   "Sources/Synfus/Interface/Reglages/DonneesSettings.swift",
+   "Sources/Synfus/Interface/Reglages/PaletteSettings.swift",
+   "Resources/Localisation/fr.json"
+  ]
+ },
+ {
+  "id": "R16",
+  "titre": "Raccourcis : que des touches ; les comportements ailleurs",
+  "tache": "Je veux régler la réaction quand un perso m'appelle sans la chercher dans une page de raccourcis clavier.",
+  "constat": "reglages-raccourcis.png : entre les combinaisons se glissent trois comportements — « Faire clignoter le personnage à chaque bascule » (ShortcutsSettings.swift:48), « Enchaîner au clic » (:82-106) et « Attention · Réaction » (:109-114) ; « Passer par le zaap » et « Inviter » sont rangés sous « Panneaux ».",
+  "capture": "reglages/sombre/reglages-raccourcis.png",
+  "zone": {
+   "x": 21,
+   "y": 58,
+   "w": 58,
+   "h": 9.5
+  },
+  "avant": "Blocs Aller à un personnage, Naviguer (+ un interrupteur), Panneaux, Fenêtres, Enchaîner (interrupteur), Attention (menu + raccourci), Tous les raccourcis.",
+  "apres": "Raccourcis ne garde que des lignes à touches : « Aller à un personnage », « Naviguer » (où passe « Activer ou couper le passage automatique », aujourd'hui dans Attention), « Panneaux », « Copier » (Passer par le zaap le plus proche, Inviter le personnage suivant), « Fenêtres ». « Tous les raccourcis · Rétablir » devient un bouton d'en-tête de page ; la ligne des combinaisons refusées, quand elle existe, monte en première ligne. Les trois comportements forment un bloc « Bascule » dans Personnages, sous « Ordre et équipes » : « Quand un personnage m'appelle » (menu : Le signaler dans la barre…), « Enchaîner au clic » (interrupteur + touche, « Clics captés » dessous), « Clignoter à chaque bascule ».",
+  "alternative": "Laisser les comportements dans Raccourcis mais réunis en un seul bloc final « Bascule », après toutes les touches, au lieu de trois endroits.",
+  "gain": "Une page = une nature de réglage : on n'y cherche plus un comportement parmi 25 touches.",
+  "effort": "S",
+  "fichiers": [
+   "Sources/Synfus/Interface/Reglages/ShortcutsSettings.swift",
+   "Sources/Synfus/Interface/Reglages/CharactersSettings.swift",
+   "Resources/Localisation/fr.json"
+  ]
+ }
+]
