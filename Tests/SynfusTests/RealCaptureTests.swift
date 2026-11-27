@@ -128,4 +128,34 @@ struct RealCaptureTests {
             #expect(abs(grille.a / Double(image.height) / attendu - 1) < 0.03)
         }
     }
+
+    /// `SYNFUS_ATELIER=<capture>[:<capture>…]` : la chaîne de l'assistant de
+    /// forgemagie sur de vrais pixels, comme en jeu — OCR du contenu, atelier
+    /// retrouvé, séance (chaque capture lue deux fois, donc confirmée), runes
+    /// conseillées vers le jet parfait.
+    @Test("L'atelier de forgemagie de captures successives", .enabled(if: ProcessInfo.processInfo.environment["SYNFUS_ATELIER"] != nil))
+    func atelierSurCapturesReelles() async throws {
+        let chemins = try #require(ProcessInfo.processInfo.environment["SYNFUS_ATELIER"]).split(separator: ":").map(String.init)
+        // Celui du disque, sinon téléchargé par le chemin de l'app (sans l'écrire).
+        var gardees = CatalogueFMDofusDB.gardees()
+        if gardees == nil { gardees = try await CatalogueFMDofusDB.telecharger() }
+        let catalogueGarde = try #require(gardees)
+        let catalogue = CatalogueFM(effets: catalogueGarde.effets, runes: catalogueGarde.runes)
+        Sortie.dire("catalogue : \(catalogue.effets.count) effets, \(catalogue.runes.values.joined().count) runes")
+        let moteur = MoteurOCR()
+        var suivi = SuiviFM()
+        for chemin in chemins {
+            let image = try #require(SimulationCapture.charger(chemin))
+            let atelier = try #require(AtelierFM.lire(await moteur.textes(image: image), catalogue: catalogue), "\(chemin)")
+            suivi.lu(atelier, catalogue: catalogue)
+            let fusion = suivi.lu(atelier, catalogue: catalogue)
+            let lignes = atelier.objet.lignes.map { "\(catalogue.effets[$0.effet]?.nom ?? "?") \($0.valeur)/\($0.max.map(String.init) ?? "-")" }
+            Sortie.dire("\((chemin as NSString).lastPathComponent) : reliquat \(atelier.reliquat.map { "\($0)" } ?? "—"), "
+                        + "\(lignes.joined(separator: ", ")), inconnues \(atelier.inconnues), fusion \(fusion.map { "\($0.issue)" } ?? "—")")
+            let conseils = ConseilFM.propositions(objet: atelier.objet, cible: { $0.max ?? $0.valeur }, reliquat: atelier.reliquat,
+                                                  catalogue: catalogue, nombre: 3)
+            Sortie.dire("  conseils : \(conseils.map { "\($0.rune.nom) → \($0.apres) (\($0.score))" })")
+            #expect(atelier.inconnues.isEmpty)
+        }
+    }
 }
